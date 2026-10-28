@@ -610,7 +610,6 @@ the suite use POSIX shell fakes.
 
 ```sh
 npx playwright install chromium
-npm run typecheck
 npm test
 ```
 
@@ -618,23 +617,33 @@ Install Chromium once after setup, and again when a Playwright upgrade needs it.
 
 - `npm run typecheck` checks schema freshness and TypeScript across production,
   development and test code.
-- `npm test` first checks schema freshness, formatting, lint and unused code,
-  then builds. It then runs the browser flows and Vitest. To diagnose a failure
-  before the tests run, use `npm run schemas:check`, `npm run format:check`,
-  `npm run lint`, `npm run knip` or `npm run build`.
+- `npm test` checks schema freshness, then runs formatting, lint, unused code
+  and all three TypeScript projects alongside the build and tests. The tests
+  wait for fresh production bundles. Browser flows finish before Vitest starts,
+  so their workers do not compete. Every check and test must pass. The runner
+  waits for all children before reporting a failure.
+- `npm run check` runs the checks and build without tests. It checks schemas
+  without rewriting them and builds fresh bundles without repeating type checks.
+  Standalone `npm run build` still regenerates schemas and type checks the service.
+  For individual failures, use `npm run schemas:check`, `npm run format:check`,
+  `npm run lint`, `npm run knip` or `npm run typecheck`.
 
 For focused checks during iteration:
 
-| Command                      | Runs                         |
-| ---------------------------- | ---------------------------- |
-| `npm run test:e2e`           | Browser flows, after a build |
-| `npm run test:unit`          | Vitest `unit` project        |
-| `npm run test:integration`   | Vitest `integration` project |
-| `npx vitest run <test-file>` | One test file                |
-| `npm run test:watch`         | Vitest in watch mode         |
+| Command                      | Runs                                  |
+| ---------------------------- | ------------------------------------- |
+| `npm run test:e2e`           | Browser flows, after a build          |
+| `npm run test:unit`          | Vitest `unit` and `unit-dom` projects |
+| `npm run test:integration`   | Vitest `integration` project          |
+| `npx vitest run <test-file>` | One test file                         |
+| `npm run test:watch`         | Vitest in watch mode                  |
 
 The Vitest commands skip the `npm test` preflight. Regenerate schemas after
 contract edits, and build first when a test reads `dist/`.
+
+Vitest keeps file isolation. The `unit-dom` project uses VM threads. Keep
+process, SQLite and native-boundary tests in the Node projects because objects
+returned by native APIs can cross VM realms.
 
 Format edited files with `npx eslint --fix <files>`, then
 `npx prettier --write <files>`. ESLint also lints Markdown, but check cross-file
@@ -703,6 +712,12 @@ past a rendering block, unless the test checks scale itself.
 Keep fixture replay and preview simulation tests when production flows cannot
 exercise their behavior.
 
+Use worker checkpoints for queue and steer assertions, reserving elapsed-time
+waits for timing behavior. Held checkpoints must remain interruptible during
+cleanup. Paste incidental fixture text, and keep actual typing for keyboard
+behavior. Mount the owning page for local form checks, and keep the full shell
+for navigation, focus restoration and scope changes.
+
 ### Browser flows
 
 `npm run test:e2e` builds, then runs workers on half the CPU cores. Each test
@@ -731,13 +746,13 @@ message latency and scheduler work before changing performance behavior.
 
 ## Troubleshooting
 
-| Symptom                                       | Cause and fix                                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup                    |
-| Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match           |
-| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                |
-| Service exits on start                        | Another service owns the data directory, or the port is taken, for example by the demo     |
-| `npm test` fails before running tests         | A schema, formatting, lint, unused code or build check failed. Run the checks individually |
-| Missing or stale generated schema             | Run `npm run schemas:generate`, then `npm run schemas:check`                               |
-| No schema contracts found under `src`         | Run the command from the project root, and check that source files use `*-contract.ts`     |
-| Permissive validator rejected                 | Import the type from a discovered `*-contract.ts` file, or write the schema by hand        |
+| Symptom                                       | Cause and fix                                                                                 |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup                       |
+| Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match              |
+| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                   |
+| Service exits on start                        | Another service owns the data directory, or the port is taken, for example by the demo        |
+| `npm test` reports a check failure            | Run the schema, formatting, lint, unused code, type or build check individually to isolate it |
+| Missing or stale generated schema             | Run `npm run schemas:generate`, then `npm run schemas:check`                                  |
+| No schema contracts found under `src`         | Run the command from the project root, and check that source files use `*-contract.ts`        |
+| Permissive validator rejected                 | Import the type from a discovered `*-contract.ts` file, or write the schema by hand           |

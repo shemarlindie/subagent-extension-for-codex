@@ -3,6 +3,8 @@ import { installChatCycle } from "./chat-cycle-test-harness";
 import { startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
+test.use({ reducedMotion: "no-preference" });
+
 for (const width of [1280, 420]) {
   test(`cycling replies keep their geometry through handoff at ${width}px`, async ({
     consolePage: page,

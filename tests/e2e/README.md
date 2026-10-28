@@ -18,6 +18,13 @@ covers when to add one.
   reopens the same data directory on the same port.
 - Suites configure the fixture worker with `test.use({ fixtureProvider })`, for
   example to fail provider session deletion.
+- Default browser fixtures skip incidental thinking and reply pacing. Explicit
+  scenario timing markers still apply. `streaming-fixtures.ts` holds reply chunks
+  while the browser checks partial content, then releases the next chunk through
+  real SSE delivery. Use these checkpoints when a test needs an observable stream.
+- Functional flows use reduced motion. The streaming, caret, conversation-cycle,
+  arrival and Changes navigator suites explicitly enable animations to verify
+  their geometry and transitions.
 
 ## Performance
 
@@ -27,6 +34,11 @@ compare the default worker count. Add `--repeat-each=3` to check repeatability
 and isolation. The JSON report records total and per-test durations, and trace
 hooks separate setup from the flow. Keep condition-based assertions and failure
 diagnostics when optimizing.
+
+For the full pipeline, compare `npm test` from the same checkout with the same
+Node version, available CPUs and browser installation. It overlaps static checks
+with the build and tests, and runs browser flows before Vitest. Measure focused suites
+separately from full runs so competing processes do not skew the comparison.
 
 ## Verified behaviors
 

@@ -12,6 +12,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",
   use: {
+    // Functional flows need stable controls. Motion suites opt into animations.
+    reducedMotion: "reduce",
     actionTimeout: 10_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

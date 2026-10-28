@@ -65,6 +65,8 @@ const conversationGeometry = (history: Locator) =>
     };
   });
 
+test.use({ reducedMotion: "no-preference" });
+
 for (const width of [1280, 420]) {
   test(`Markdown ending carets stay with the final text without moving Chat at ${width}px`, async ({
     consolePage: page,

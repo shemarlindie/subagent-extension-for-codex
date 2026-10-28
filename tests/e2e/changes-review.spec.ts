@@ -1,6 +1,8 @@
 import { openAdvancedTask, send } from "./console-actions";
 import { expect, test } from "./fixtures";
 
+test.use({ reducedMotion: "no-preference" });
+
 test("review several changed files across scopes, viewed marks and previews", async ({
   consolePage: page,
 }) => {

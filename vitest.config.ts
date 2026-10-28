@@ -9,6 +9,8 @@ const integration = [
   "src/**/*.integration.test.ts",
 ];
 
+const dom = ["tests/ui/**/*.test.ts", "src/**/*.test.tsx"];
+
 // Unit tests fail fast: a stall should surface in seconds. Integration suites
 // spawn processes and Git worktrees, so they keep a longer limit.
 const unitTimeout = 15_000;
@@ -17,6 +19,8 @@ const integrationTimeout = 60_000;
 export default defineConfig({
   plugins: [react()],
   test: {
+    pool: "threads",
+    fsModuleCache: true,
     environmentOptions: {
       jsdom: { url: "http://localhost/", pretendToBeVisual: true },
     },
@@ -35,8 +39,21 @@ export default defineConfig({
             "dev/**/*.test.ts",
             "dev/**/*.test.tsx",
           ],
-          exclude: [...integration, "**/node_modules/**"],
+          exclude: [...integration, ...dom, "**/node_modules/**"],
           environment: "node",
+          testTimeout: unitTimeout,
+          hookTimeout: unitTimeout,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "unit-dom",
+          include: dom,
+          // Reuse the worker while each file keeps its own DOM and module scope.
+          pool: "vmThreads",
+          vmMemoryLimit: "512MB",
+          environment: "jsdom",
           testTimeout: unitTimeout,
           hookTimeout: unitTimeout,
         },

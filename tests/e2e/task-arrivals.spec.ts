@@ -1,6 +1,8 @@
 import { send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
+test.use({ reducedMotion: "no-preference" });
+
 test("announce new tasks without moving the reader, then open one with View", async ({
   consolePage: page,
 }) => {

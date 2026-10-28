@@ -111,6 +111,12 @@ test.describe("when the agent session cannot be deleted", () => {
       "session deletion failed",
     );
 
+    await expect(agentTask).toBeChecked();
+
+    await expect(
+      confirmation.getByRole("button", { name: "Delete task", exact: true }),
+    ).toBeEnabled();
+
     // The local task stays, so deletion can be retried.
     await confirmation
       .getByRole("button", { name: "Cancel", exact: true })
