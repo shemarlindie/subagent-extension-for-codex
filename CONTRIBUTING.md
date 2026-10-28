@@ -22,7 +22,7 @@ request.
 4. Run the relevant [checks](docs/development.md#checks), including browser
    checks when needed.
 5. Update the documentation the change affects.
-6. Open a pull request that says what changed and why, and how you checked it.
+6. Open a pull request and fill in its template.
 
 [Agent instructions](AGENTS.md) hold the project's code, test and writing
 conventions.
