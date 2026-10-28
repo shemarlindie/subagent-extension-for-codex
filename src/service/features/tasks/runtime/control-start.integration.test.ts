@@ -2,16 +2,15 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { claudeMetadata } from "../../../../shared/providers/metadata.js";
 import type { ModelChoice } from "../../../../shared/providers/types.js";
 import { Projects } from "../../projects/projects.js";
 import { claudeTaskPolicy } from "../../providers/claude/configuration/task-policy.js";
 import type { Provider } from "../../providers/types.js";
-import { input, setup, until } from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 
 test("worker discovery exposes SDK metadata and falls back when discovery fails", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
 
   const models: ModelChoice[] = [
     {
@@ -47,7 +46,7 @@ test("worker discovery exposes SDK metadata and falls back when discovery fails"
 });
 
 test("discovery and effort validation use each owner's current settings", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
 
   provider.models = async (settings) => [
     {
@@ -102,7 +101,7 @@ test("discovery and effort validation use each owner's current settings", async 
 });
 
 test("an unready provider blocks task starts and model discovery but stays listed", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
   let discoveries = 0;
 
   provider.models = async () => {
@@ -147,7 +146,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
 });
 
 test("known model effort metadata rejects invalid work before queueing while unknown metadata permits execution", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
 
   provider.models = async () => [
     {
@@ -228,7 +227,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
 });
 
 test("Claude rejects unsupported direct and inherited effort before persisting or running work", async () => {
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
   provider.id = "claude";
   provider.taskPolicy = claudeTaskPolicy;
   provider.metadata = claudeMetadata;
@@ -282,7 +281,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
 });
 
 test("task titles come from trimmed descriptions while workers receive full instructions", async () => {
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
   const original = provider.run.bind(provider);
   let received: string | undefined;
 
@@ -317,7 +316,7 @@ test("task titles come from trimmed descriptions while workers receive full inst
 });
 
 test("invalid descriptions cannot persist or execute a task", async () => {
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
   let runs = 0;
 
   provider.run = async () => {
@@ -426,7 +425,7 @@ test("workspace root allowlist rejects external repositories", async () => {
 });
 
 test("unsupported budgets and providers fail before task persistence, and an explicit null cost limit runs", async () => {
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
   provider.capabilities.cost_budget = false;
   const { c, repo } = await setup(provider);
 

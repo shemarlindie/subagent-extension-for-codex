@@ -3,6 +3,9 @@ import type { Locator, Page } from "@playwright/test";
 import type { Task } from "../../src/shared/tasks/model";
 import { send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
+import { streamingTest } from "./streaming-fixtures";
+
+test.use({ reducedMotion: "no-preference" });
 
 /** How far Chat's scroll position is from its end, in pixels. */
 const distanceFromEnd = (history: Locator) =>
@@ -56,10 +59,12 @@ const paragraphOffset = (history: Locator, index: number) =>
     );
   }, index);
 
+type RowMotionEnd = { type: string; streaming: boolean };
+
 /** Records opacity-only arrival fades, excluding height transitions that can retarget. */
 const recordRowMotion = (page: Page) =>
   page.evaluate(() => {
-    const endings: string[] = [];
+    const endings: RowMotionEnd[] = [];
     const animate = Element.prototype.animate;
 
     Element.prototype.animate = function (...args) {
@@ -80,8 +85,12 @@ const recordRowMotion = (page: Page) =>
             frame.transform === undefined,
         )
       ) {
+        const streaming = this.getAttribute("data-streaming") === "true";
+
         for (const type of ["finish", "cancel"]) {
-          animation.addEventListener(type, () => endings.push(type));
+          animation.addEventListener(type, () =>
+            endings.push({ type, streaming }),
+          );
         }
       }
 
@@ -91,8 +100,14 @@ const recordRowMotion = (page: Page) =>
     Object.assign(window, { rowMotion: endings });
   });
 
-const rowMotion = (page: Page) =>
-  page.evaluate(() => (window as unknown as { rowMotion: string[] }).rowMotion);
+const rowMotion = (page: Page, streamingOnly = false) =>
+  page.evaluate(
+    (streamingOnly) =>
+      (window as unknown as { rowMotion: RowMotionEnd[] }).rowMotion
+        .filter((ending) => !streamingOnly || ending.streaming)
+        .map((ending) => ending.type),
+    streamingOnly,
+  );
 
 /**
  * Samples the first Chat row's offset each frame and records its largest
@@ -227,92 +242,109 @@ test("activity labels reserve one line without moving the conversation", async (
   }
 });
 
-test("streamed replies follow the end, hold a reading position in history and return to latest", async ({
-  consolePage: page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 640 });
-  await page.getByRole("button", { name: "New task", exact: true }).click();
+streamingTest(
+  "streamed replies follow the end, hold a reading position in history and return to latest",
+  async ({ consolePage: page, replyStream }) => {
+    await page.setViewportSize({ width: 1280, height: 640 });
+    await page.getByRole("button", { name: "New task", exact: true }).click();
 
-  await page
-    .getByRole("textbox", { name: "Task message" })
-    .fill("Fill the chat [fixture:reply lines=30]");
+    await page
+      .getByRole("textbox", { name: "Task message" })
+      .fill("Fill the chat [fixture:reply lines=30]");
 
-  await page.getByRole("button", { name: "Start task", exact: true }).click();
-  const history = page.getByRole("region", { name: "Chat history" });
-  await expect(history).toContainText("Fixture reply line 30.");
-  const streaming = history.locator("[aria-busy=true]");
+    await page.getByRole("button", { name: "Start task", exact: true }).click();
+    const history = page.getByRole("region", { name: "Chat history" });
+    await expect(history).toContainText("Fixture reply line 30.");
+    const streaming = history.locator("[aria-busy=true]");
 
-  const latest = page.getByRole("button", {
-    name: "Scroll to latest message",
-    exact: true,
-  });
+    const latest = page.getByRole("button", {
+      name: "Scroll to latest message",
+      exact: true,
+    });
 
-  // At the end, Chat follows a reply as it streams. It glides, so it can trail
-  // the end until the reply settles. The slow pace keeps the reply streaming
-  // long enough for slow CI runners to observe it.
-  await recordRowMotion(page);
-  await recordRowShift(history);
-  await send(page, "Stream at the end [fixture:reply lines=30 pace=30]");
-  await expect(streaming).toBeVisible();
-  const partial = (await streaming.textContent())?.length ?? 0;
+    // At the end, Chat follows a reply as it streams. It glides, so it can trail
+    // the end until the reply settles. Checkpoints keep each partial reply
+    // observable even on slow CI runners.
+    await recordRowMotion(page);
+    await recordRowShift(history);
+    await send(page, "Stream at the end [fixture:reply lines=30]");
+    await expect(streaming).toBeVisible();
+    const partial = (await streaming.textContent())?.length ?? 0;
+    replyStream.resume(2, 30);
 
-  await expect
-    .poll(async () => (await streaming.textContent())?.length)
-    .toBeGreaterThan(partial);
+    await expect
+      .poll(async () => (await streaming.textContent())?.length)
+      .toBeGreaterThan(partial);
 
-  await expect(latest).toBeHidden();
-  await expect(history).toContainText("Fixture session turn: 2.");
-  await expect(streaming).toHaveCount(0);
-  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
-  await expect(latest).toBeHidden();
+    await expect(latest).toBeHidden();
 
-  // New messages fade in fully, even while the reply re-renders Chat.
-  await expect.poll(() => rowMotion(page)).toContain("finish");
-  expect(await rowMotion(page)).not.toContain("cancel");
+    // The arrival fade must finish while the reply is still streaming.
+    await expect.poll(() => rowMotion(page, true)).toContain("finish");
+    await expect(streaming).toBeVisible();
 
-  // Earlier messages only move up as new ones arrive, without jitter.
-  expect(await rowShift(page)).toBeLessThanOrEqual(1);
+    replyStream.resume(2, 80);
+    await expect(history).toContainText("Fixture session turn: 2.");
+    await expect(streaming).toHaveCount(0);
+    await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+    await expect(latest).toBeHidden();
 
-  // In history, the paragraph being read stays put while the reply grows.
-  await send(page, "Stream while reading [fixture:reply lines=30 pace=30]");
-  await expect(streaming).toBeVisible();
-  await history.hover();
-  await page.mouse.wheel(0, -900);
-  await expect(latest).toBeVisible();
-  const anchor = await middleParagraph(history);
+    // New messages fade in fully, even while the reply re-renders Chat.
+    await expect.poll(() => rowMotion(page)).toContain("finish");
+    expect(await rowMotion(page)).not.toContain("cancel");
 
-  const moved = async () =>
-    Math.abs((await paragraphOffset(history, anchor.index)) - anchor.offset);
+    // Earlier messages only move up as new ones arrive, without jitter.
+    expect(await rowShift(page)).toBeLessThanOrEqual(1);
 
-  await expect(history).toContainText("Fixture session turn: 3.");
-  await expect(streaming).toHaveCount(0);
-  expect(await moved()).toBeLessThanOrEqual(1);
-  expect(await distanceFromEnd(history)).toBeGreaterThan(300);
+    // In history, the paragraph being read stays put while the reply grows.
+    await send(page, "Stream while reading [fixture:reply lines=30]");
+    await expect(streaming).toBeVisible();
+    await history.hover();
+    await page.mouse.wheel(0, -900);
+    await expect(latest).toBeVisible();
+    const anchor = await middleParagraph(history);
+    const readingPartial = (await streaming.textContent())?.length ?? 0;
 
-  // The reply arrived out of view, so the task is unread until the reader returns.
-  const unread = page.getByRole("button", {
-    name: "Scroll to unread messages",
-    exact: true,
-  });
+    const moved = async () =>
+      Math.abs((await paragraphOffset(history, anchor.index)) - anchor.offset);
 
-  const row = page
-    .getByRole("complementary", { name: "Delegated tasks" })
-    .getByRole("button", { name: /Fill the chat/ });
+    replyStream.resume(3, 30);
 
-  await expect(unread).toBeVisible();
-  await expect(row).toContainText("Unread");
+    await expect
+      .poll(async () => (await streaming.textContent())?.length ?? 0)
+      .toBeGreaterThan(readingPartial);
 
-  // Chat restores the reading position when its tab returns.
-  await page.getByRole("tab", { name: "Activity" }).click();
-  await expect(history).toHaveCount(0);
-  await page.getByRole("tab", { name: "Chat" }).click();
-  await expect(history).toContainText("Fixture session turn: 3.");
-  await expect(unread).toBeVisible();
-  await expect.poll(moved).toBeLessThanOrEqual(2);
+    replyStream.resume(3, 80);
 
-  await unread.click();
-  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
-  await expect(unread).toBeHidden();
-  await expect(latest).toBeHidden();
-  await expect(row).not.toContainText("Unread");
-});
+    await expect(history).toContainText("Fixture session turn: 3.");
+    await expect(streaming).toHaveCount(0);
+    expect(await moved()).toBeLessThanOrEqual(1);
+    expect(await distanceFromEnd(history)).toBeGreaterThan(300);
+
+    // The reply arrived out of view, so the task is unread until the reader returns.
+    const unread = page.getByRole("button", {
+      name: "Scroll to unread messages",
+      exact: true,
+    });
+
+    const row = page
+      .getByRole("complementary", { name: "Delegated tasks" })
+      .getByRole("button", { name: /Fill the chat/ });
+
+    await expect(unread).toBeVisible();
+    await expect(row).toContainText("Unread");
+
+    // Chat restores the reading position when its tab returns.
+    await page.getByRole("tab", { name: "Activity" }).click();
+    await expect(history).toHaveCount(0);
+    await page.getByRole("tab", { name: "Chat" }).click();
+    await expect(history).toContainText("Fixture session turn: 3.");
+    await expect(unread).toBeVisible();
+    await expect.poll(moved).toBeLessThanOrEqual(2);
+
+    await unread.click();
+    await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+    await expect(unread).toBeHidden();
+    await expect(latest).toBeHidden();
+    await expect(row).not.toContainText("Unread");
+  },
+);

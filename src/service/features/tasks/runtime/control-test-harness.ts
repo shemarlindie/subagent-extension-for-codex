@@ -1,12 +1,15 @@
-import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { structuredPatch } from "diff";
 import { onTestFinished } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
+import {
+  FixtureProvider,
+  type FixtureProviderOptions,
+} from "../../../../../dev/service/fixture-provider.js";
+import { copyCommittedRepository } from "../../../../../tests/support/repository-test-harness.js";
 import type { Provider, RunContext } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
@@ -24,27 +27,14 @@ export async function until(fn: () => boolean) {
 }
 
 export async function setup(
-  provider: Provider = new FixtureProvider(),
+  provider: Provider = new TestProvider(),
   concurrency = 2,
 ) {
   const dir = await mkdtemp(join(tmpdir(), "codex-subagent-extension-test-"));
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
   const repo = join(dir, "repo");
-  await mkdir(repo);
-  execFileSync("git", ["init", "-q", repo]);
+  await copyCommittedRepository(repo);
 
-  execFileSync("git", [
-    "-C",
-    repo,
-    "config",
-    "user.email",
-    "test@example.invalid",
-  ]);
-
-  execFileSync("git", ["-C", repo, "config", "user.name", "Test"]);
-  await writeFile(join(repo, "README.md"), "hello\n");
-  execFileSync("git", ["-C", repo, "add", "."]);
-  execFileSync("git", ["-C", repo, "commit", "-qm", "initial"]);
   const db = join(dir, "tasks.sqlite");
   const store = new Store(db);
 
@@ -70,8 +60,15 @@ export const input = (repository: string, description = "Investigate") => ({
   workspace_strategy: "worktree",
 });
 
+/** Skip incidental delays, retaining explicit millisecond timing markers. */
+export class TestProvider extends FixtureProvider {
+  constructor(options: FixtureProviderOptions = {}) {
+    super({ turnDelayMs: 0, replyPaceMs: 0, ...options });
+  }
+}
+
 /** The prompt each turn of a task started with. */
-export class PromptRecorder extends FixtureProvider {
+export class PromptRecorder extends TestProvider {
   prompts: string[] = [];
   override async run(c: RunContext, p: string) {
     this.prompts.push(p);
@@ -89,7 +86,7 @@ export function eventData(store: Store, id: string, type: string) {
 }
 
 /** Records dependency prompts and the file written by the prerequisite task. */
-export class DependencyWriter extends FixtureProvider {
+export class DependencyWriter extends TestProvider {
   readonly prompts = new Map<string, string>();
 
   constructor(

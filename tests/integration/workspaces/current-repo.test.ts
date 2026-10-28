@@ -19,7 +19,7 @@ import type {
 import { structuredPatch } from "diff";
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
 import { ClaudeAgentProvider } from "../../../src/service/features/providers/claude/runtime/provider.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -53,7 +53,7 @@ async function setup() {
   );
 
   const workspaces = new Workspaces(join(dir, "worktrees"), [repo]);
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
 
   const c = new Control(
     new Store(join(dir, "tasks.sqlite")),

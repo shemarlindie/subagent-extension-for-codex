@@ -2,20 +2,26 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,
   input,
   PromptRecorder,
   setup,
+  TestProvider,
   until,
 } from "./control-test-harness.js";
+import { TurnCheckpoints } from "./turn-checkpoints-test-harness.js";
 
 test("a steer reaches the running turn at its next step without interrupting it", async () => {
-  const { c, store, repo } = await setup();
-  const t = await c.start("alice", input(repo, "[slow]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  const checkpoints = new TurnCheckpoints(1);
+
+  const { c, store, repo } = await setup(
+    new TestProvider({ beforeReply: checkpoints.beforeReply }),
+  );
+
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
   const sent = await c.send("alice", t.id, "Mind the edge cases", "user");
   assert.equal(sent.state, "pending_steer");
 
@@ -24,6 +30,7 @@ test("a steer reaches the running turn at its next step without interrupting it"
     ["Mind the edge cases"],
   );
 
+  checkpoints.release();
   await until(() => store.get(t.id, "alice").status === "completed");
   const done = store.get(t.id, "alice");
   assert.equal(done.turn, 1);
@@ -50,10 +57,11 @@ test("a steer reaches the running turn at its next step without interrupting it"
 });
 
 test("a queued message waits for its own turn, which follows at once", async () => {
-  const recorder = new PromptRecorder();
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
-  const t = await c.start("alice", input(repo, "[slow]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
 
   const sent = await c.send("alice", t.id, "Then write the docs", "parent", {
     delivery: "queue",
@@ -76,6 +84,7 @@ test("a queued message waits for its own turn, which follows at once", async () 
     },
   ]);
 
+  checkpoints.release();
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
   assert.deepEqual(recorder.prompts.slice(1), ["Then write the docs"]);
@@ -124,10 +133,11 @@ test("a queued message waits for its own turn, which follows at once", async () 
 });
 
 test("a steer the turn ends without taking starts the next turn from the front of the queue", async () => {
-  const recorder = new PromptRecorder();
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
   const t = await c.start("alice", input(repo, "[late]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  await checkpoints.ready();
   const steer = await c.send("alice", t.id, "Late thought", "user");
   assert.equal(steer.state, "pending_steer");
 
@@ -135,6 +145,7 @@ test("a steer the turn ends without taking starts the next turn from the front o
     delivery: "queue",
   });
 
+  checkpoints.release();
   await until(() => store.get(t.id, "alice").turn === 3);
   await until(() => store.get(t.id, "alice").status === "completed");
   assert.deepEqual(recorder.prompts.slice(1), ["Late thought", "Afterwards"]);
@@ -156,10 +167,11 @@ test("a steer the turn ends without taking starts the next turn from the front o
 });
 
 test("an interrupt with pending steers sends them at once as one new turn", async () => {
-  const recorder = new PromptRecorder();
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
   const t = await c.start("alice", input(repo, "[late]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  await checkpoints.ready();
   await c.send("alice", t.id, "First thought", "user");
   await c.send("alice", t.id, "Later", "user", { delivery: "queue" });
 
@@ -186,10 +198,11 @@ test("an interrupt with pending steers sends them at once as one new turn", asyn
 });
 
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
-  const recorder = new PromptRecorder();
+  const checkpoints = new TurnCheckpoints(1, 5);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
   const t = await c.start("alice", input(repo, "[late]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  await checkpoints.ready();
   await c.send("alice", t.id, "Pending", "user");
   await c.send("alice", t.id, "Queued", "user", { delivery: "queue" });
   await c.interrupt("alice", t.id);
@@ -224,7 +237,7 @@ test("a plain interrupt pauses the queue, keeping pending steers at its front, u
 
   // Resume starts the next queued message on an idle task.
   await c.send("alice", t.id, "[late] once more", "user");
-  await until(() => store.get(t.id, "alice").status === "running");
+  await checkpoints.ready(5);
   await c.send("alice", t.id, "Kept", "user", { delivery: "queue" });
   await c.interrupt("alice", t.id);
   assert.equal(store.get(t.id, "alice").queue_paused, true);
@@ -236,10 +249,11 @@ test("a plain interrupt pauses the queue, keeping pending steers at its front, u
 });
 
 test("queued messages can be reordered behind the steers the worker already has", async () => {
-  const recorder = new PromptRecorder();
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
   const t = await c.start("alice", input(repo, "[late]"));
-  await until(() => store.get(t.id, "alice").status === "running");
+  await checkpoints.ready();
   await c.send("alice", t.id, "Pending", "user");
 
   const [a, , last] = [
@@ -420,11 +434,15 @@ test.each([true, false])(
 );
 
 test("steering the last queued message rejects stale IDs and other owners", async () => {
-  const { c, store, repo } = await setup();
+  const checkpoints = new TurnCheckpoints(1);
+
+  const { c, store, repo } = await setup(
+    new TestProvider({ beforeReply: checkpoints.beforeReply }),
+  );
 
   try {
-    const task = await c.start("alice", input(repo, "[slow]"));
-    await until(() => store.get(task.id, "alice").status === "running");
+    const task = await c.start("alice", input(repo));
+    await checkpoints.ready();
 
     const queued = await c.send("alice", task.id, "Use this now", "user", {
       delivery: "queue",
@@ -443,6 +461,7 @@ test("steering the last queued message rejects stale IDs and other owners", asyn
       /no longer queued/,
     );
 
+    checkpoints.release();
     await until(() => store.get(task.id, "alice").status === "completed");
     assert.equal(store.get(task.id, "alice").turn, 1);
     assert.equal(eventData(store, task.id, "task.instruction").length, 1);
@@ -452,7 +471,7 @@ test("steering the last queued message rejects stale IDs and other owners", asyn
 });
 
 test("queued steering before provider startup adds the original message to the first turn instructions", async () => {
-  const { c, store, repo } = await setup(new FixtureProvider(), 0);
+  const { c, store, repo } = await setup(new TestProvider(), 0);
 
   try {
     const task = await c.start("alice", input(repo));

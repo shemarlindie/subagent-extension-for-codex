@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +18,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
+import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
 class PermissionProvider extends FixtureProvider {
   override async run(ctx: RunContext): Promise<TurnOutput> {
@@ -41,20 +41,7 @@ async function until(predicate: () => boolean) {
 
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "approval-http-")));
-  execFileSync("git", ["init", "-q", dir]);
-
-  execFileSync("git", [
-    "-C",
-    dir,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "--allow-empty",
-    "-qm",
-    "initial",
-  ]);
+  await copyCommittedRepository(dir);
 
   const html = join(dir, "app.html");
   await writeFile(html, "<!doctype html><title>Approval test</title>");

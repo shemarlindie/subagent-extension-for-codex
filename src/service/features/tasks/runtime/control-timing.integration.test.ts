@@ -2,14 +2,13 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../providers/types.js";
-import { input, setup, until } from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 import { sendRef } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
 
 /** Holds "Hold" turns until released or interrupted. */
-class Held extends FixtureProvider {
+class Held extends TestProvider {
   release?: () => void;
 
   override async run(c: RunContext, prompt: string) {

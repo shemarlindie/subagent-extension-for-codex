@@ -32,6 +32,13 @@ export interface FixtureProviderOptions {
   modelChoices?: ModelChoice[];
   deleteSessionError?: boolean;
   closeError?: boolean;
+  /** Defaults for incidental execution. Explicit wait/pace markers win. */
+  turnDelayMs?: number;
+  replyPaceMs?: number;
+  /** Before taking steers, replacing the short slow/late timing windows. */
+  beforeReply?: (context: RunContext) => Promise<void>;
+  /** Hold a streaming boundary without relying on elapsed time. */
+  beforeReplyChunk?: (context: RunContext, index: number) => Promise<void>;
 }
 
 /**
@@ -57,8 +64,10 @@ export class FixtureProvider implements Provider {
   private modelFailurePending: boolean;
   private deleteSessionError: boolean;
   private closeError: boolean;
+  private runOptions: FixtureProviderOptions;
 
   constructor(options: FixtureProviderOptions = {}) {
+    this.runOptions = { ...options };
     this.modelsMode = options.models ?? "default";
     this.readinessMode = options.readiness ?? "ready";
     this.readinessDelayMs = Math.max(0, options.readinessDelayMs ?? 0);
@@ -142,6 +151,6 @@ export class FixtureProvider implements Provider {
   }
 
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {
-    return runFixtureTurn(c, prompt, this.runState);
+    return runFixtureTurn(c, prompt, this.runState, this.runOptions);
   }
 }

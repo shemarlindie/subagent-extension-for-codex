@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { test, type TestContext } from "vitest";
 
-import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
 import { claudeTaskPolicy } from "../../../src/service/features/providers/claude/configuration/task-policy.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -15,6 +14,7 @@ import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { claudeMetadata } from "../../../src/shared/providers/metadata.js";
 import { waitForListening } from "../../support/helpers.js";
+import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
 const parentMeta = {
   "codex/sandbox-state-meta": {
@@ -28,22 +28,9 @@ async function setup(t: TestContext) {
     await mkdtemp(join(tmpdir(), "native-permission-http-")),
   );
 
-  execFileSync("git", ["init", "-q", dir]);
+  await copyCommittedRepository(dir);
 
-  execFileSync("git", [
-    "-C",
-    dir,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "--allow-empty",
-    "-qm",
-    "initial",
-  ]);
-
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
   provider.id = "claude";
   provider.taskPolicy = claudeTaskPolicy;
   provider.metadata = claudeMetadata;

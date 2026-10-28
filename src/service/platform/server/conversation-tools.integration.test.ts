@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { expect, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
+import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-helpers.js";
+import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
 import {
   PARENT_DELEGATION_PROTOCOL,
   PARENT_REPORT_PROTOCOL,
@@ -18,6 +19,7 @@ import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { sendRef } from "../../features/tasks/runtime/timing.js";
 import { captureTiming } from "../../features/tasks/runtime/timing-test-harness.js";
+import { TurnCheckpoints } from "../../features/tasks/runtime/turn-checkpoints-test-harness.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { withLogContext } from "../logging/logger.js";
@@ -33,17 +35,11 @@ async function until(fn: () => boolean) {
   throw new Error("Timed out");
 }
 
-async function setup(provider: Provider = new FixtureProvider()) {
+async function setup(provider: Provider = fixtureProvider()) {
   const dir = await mkdtemp(join(tmpdir(), "conversation-tools-"));
   const repo = join(dir, "repo");
-  await mkdir(repo);
-  const git = (...args: string[]) => execFileSync("git", ["-C", repo, ...args]);
-  git("init", "-q");
-  git("config", "user.email", "test@example.invalid");
-  git("config", "user.name", "Test");
-  await writeFile(join(repo, "README.md"), "hello\n");
-  git("add", ".");
-  git("commit", "-qm", "initial");
+  onTestFinished(() => rm(dir, { recursive: true, force: true }));
+  await copyCommittedRepository(repo);
   const store = new Store(join(dir, "tasks.sqlite"));
 
   const c = new Control(
@@ -302,11 +298,15 @@ test("a confirmed rejected send preserves its message and permits changed delive
 });
 
 test("the user can steer an existing queued message and its original sender survives", async () => {
-  const { c, store, parent, user, start } = await setup();
+  const checkpoints = new TurnCheckpoints(1);
+
+  const { c, store, parent, user, start } = await setup(
+    fixtureProvider({ beforeReply: checkpoints.beforeReply }),
+  );
 
   try {
     const task = await start("[slow]");
-    await until(() => store.get(task.id, "alice").status === "running");
+    await checkpoints.ready();
 
     const queued = await parent<{ message_id: string }>("send_message", {
       task_id: task.id,
@@ -431,11 +431,15 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
 });
 
 test("interrupt with send_pending sends the pending steers as the next turn", async () => {
-  const { c, store, parent, start } = await setup();
+  const checkpoints = new TurnCheckpoints(1);
+
+  const { c, store, parent, start } = await setup(
+    fixtureProvider({ beforeReply: checkpoints.beforeReply }),
+  );
 
   try {
     const t = await start("[late]");
-    await until(() => store.get(t.id, "alice").status === "running");
+    await checkpoints.ready();
 
     const steer = await parent<{ state: string }>("send_message", {
       task_id: t.id,

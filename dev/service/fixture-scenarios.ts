@@ -159,8 +159,12 @@ export function safeToolName(value: string | undefined, fallback: string) {
 }
 
 /** Parse explicit scenario keys while preserving the original short test markers. */
-export function readScenarios(prompt: string): FixtureScenarios {
+export function readScenarios(
+  prompt: string,
+  replyPaceMs?: number,
+): FixtureScenarios {
   const scenarios = defaultScenarios();
+  if (replyPaceMs !== undefined) scenarios.replyPaceMs = replyPaceMs;
   const markers = prompt.matchAll(/\[fixture:([^\]]+)\]/gi);
 
   for (const match of markers) {

@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { structuredPatch } from "diff";
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../providers/types.js";
 import { Store } from "../storage/store.js";
 import {
@@ -14,6 +13,7 @@ import {
   input,
   PromptRecorder,
   setup,
+  TestProvider,
   until,
 } from "./control-test-harness.js";
 
@@ -324,7 +324,7 @@ test("applying an increased limit persists without starting a turn", async () =>
 });
 
 test("cost counts each turn once, though a resumed session reports its running total", async () => {
-  class Costly extends FixtureProvider {
+  class Costly extends TestProvider {
     totals = [0.5, 0.8, 0.3];
     override async run(c: RunContext, p: string) {
       c.emit("agent.completed", { cost_usd: this.totals.shift() });
@@ -395,7 +395,7 @@ test("restart recovery marks live task interrupted and clears stale permissions"
 });
 
 test("a follow-up revalidates provider budget support before changing an interrupted task", async () => {
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
   const { c, repo } = await setup(provider);
   c.stopped = true;
 
@@ -424,7 +424,7 @@ test("cancelled queued input rejects promptly without bypassing the active permi
   let queuedRejected = false;
   let firstApproved = false;
   let thirdApproved: boolean | undefined;
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   provider.run = async (ctx) => {
     const first = ctx.input("Bash", { command: "first" }, ctx.signal);
@@ -568,7 +568,7 @@ test("user task renaming checks ownership and persists across active turn update
 test("completion reports wait for successful finalization while blockers persist immediately", async () => {
   const started = Promise.withResolvers<RunContext>();
   const finish = Promise.withResolvers<void>();
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   provider.run = async (context) => {
     started.resolve(context);
@@ -629,7 +629,7 @@ test.each(["failed", "interrupted"] as const)(
   async (outcome) => {
     const started = Promise.withResolvers<RunContext>();
     const finish = Promise.withResolvers<void>();
-    const provider = new FixtureProvider();
+    const provider = new TestProvider();
 
     provider.run = async (context) => {
       if (context.task.turn === 1) {
@@ -698,7 +698,7 @@ test.each(["failed", "interrupted"] as const)(
 test("runtime budget expiry retains recorded edits and discards the completion report", async () => {
   const started = Promise.withResolvers<RunContext>();
   const finish = Promise.withResolvers<void>();
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   provider.run = async (context) => {
     await writeFile(

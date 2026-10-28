@@ -7,38 +7,41 @@ import { Store } from "../../src/service/features/tasks/storage/store.js";
 import type { ModelChoice } from "../../src/shared/providers/types.js";
 import { startSchema } from "../../src/shared/tasks/model.js";
 import { fixtureSdkActivityTypes } from "./fixture-events.js";
-import { FixtureProvider } from "./fixture-provider.js";
-import { context, task } from "./fixture-provider-test-helpers.js";
+import {
+  context,
+  fixtureProvider,
+  task,
+} from "./fixture-provider-test-helpers.js";
 import { fixtureStreamFrameTypes } from "./fixture-scenarios.js";
 
 test("fixture readiness and model discovery expose configured states", async () => {
-  assert.equal((await new FixtureProvider().readiness()).ready, true);
+  assert.equal((await fixtureProvider().readiness()).ready, true);
 
   assert.equal(
-    (await new FixtureProvider({ readiness: "unavailable" }).readiness()).ready,
+    (await fixtureProvider({ readiness: "unavailable" }).readiness()).ready,
     false,
   );
 
   await assert.rejects(
-    new FixtureProvider({ readiness: "error" }).readiness(),
+    fixtureProvider({ readiness: "error" }).readiness(),
     /readiness check failed/,
   );
 
-  assert.deepEqual(await new FixtureProvider({ models: "empty" }).models(), []);
+  assert.deepEqual(await fixtureProvider({ models: "empty" }).models(), []);
 
   await assert.rejects(
-    new FixtureProvider({ models: "error" }).models(),
+    fixtureProvider({ models: "error" }).models(),
     /model discovery failed/,
   );
 
-  const transient = new FixtureProvider({ models: "error-once" });
+  const transient = fixtureProvider({ models: "error-once" });
   await assert.rejects(transient.models(), /failed once/);
   assert.equal((await transient.models()).length, 2);
 });
 
 test("fixture stream key emits a complete stream lifecycle", async () => {
   const f = context();
-  await new FixtureProvider().run(f.runContext, "[fixture:stream]");
+  await fixtureProvider().run(f.runContext, "[fixture:stream]");
 
   const frames = f.events.flatMap((event) => {
     const raw = event.data.raw_response as
@@ -59,7 +62,7 @@ test("fixture stream key emits a complete stream lifecycle", async () => {
 
 test("fixture cost marker supports a zero-cost completion", async () => {
   const f = context(task("task_zero_cost"));
-  await new FixtureProvider().run(f.runContext, "[fixture:cost usd=0]");
+  await fixtureProvider().run(f.runContext, "[fixture:cost usd=0]");
 
   assert.equal(
     f.events.find((event) => event.type === "agent.completed")?.data.cost_usd,
@@ -68,8 +71,8 @@ test("fixture cost marker supports a zero-cost completion", async () => {
 });
 
 test("fixture provider instances keep metadata and permission options isolated", () => {
-  const first = new FixtureProvider();
-  const second = new FixtureProvider();
+  const first = fixtureProvider();
+  const second = fixtureProvider();
 
   const firstPermissions = first.metadata.nativePermissions;
   const secondPermissions = second.metadata.nativePermissions;
@@ -104,7 +107,7 @@ test("fixture model catalogs copy caller data and returned effort levels", async
     },
   ];
 
-  const provider = new FixtureProvider({ modelChoices: [...modelChoices] });
+  const provider = fixtureProvider({ modelChoices: [...modelChoices] });
 
   const [choice] = modelChoices;
   assert.ok(choice);
@@ -120,7 +123,7 @@ test("fixture model catalogs copy caller data and returned effort levels", async
 });
 
 test("fixture run keys emit every SDK activity and stream frame", async () => {
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
 
   const activityTypes = [
     "init",
@@ -173,7 +176,7 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
       "alice",
     );
 
-    const provider = new FixtureProvider();
+    const provider = fixtureProvider();
 
     const prepare = (
       permissionMode: string,
@@ -250,4 +253,70 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
   } finally {
     store.close();
   }
+});
+
+test("fixture checkpoints hold the turn until steers arrive and preserve the streamed reply", async () => {
+  const f = context();
+  const ready = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let accept!: Parameters<typeof f.runContext.acceptSteers>[0];
+  const taken: string[] = [];
+  const deltas: string[] = [];
+
+  f.runContext.acceptSteers = (callback) => {
+    accept = callback;
+  };
+
+  f.runContext.steerTaken = (id) => {
+    taken.push(id);
+  };
+
+  f.runContext.delta = (_id, text) => {
+    deltas.push(text);
+  };
+
+  const running = fixtureProvider({
+    beforeReply: async () => {
+      ready.resolve();
+      await release.promise;
+    },
+  }).run(f.runContext, "Checkpoint fixture");
+
+  await ready.promise;
+
+  assert.equal(
+    f.events.some((event) => event.type === "agent.completed"),
+    false,
+  );
+
+  assert.equal(accept({ id: "steer", text: "Include this detail" }), true);
+  release.resolve();
+  const output = await running;
+  assert.deepEqual(taken, ["steer"]);
+  assert.match(output.reply, /Also took: Include this detail/);
+  assert.equal(deltas.join(""), output.reply);
+});
+
+test("interrupting a held streaming checkpoint finishes without releasing it", async () => {
+  const f = context();
+  const streaming = Promise.withResolvers<void>();
+
+  const running = fixtureProvider({
+    beforeReplyChunk: async (_context, index) => {
+      if (index !== 1) return;
+      streaming.resolve();
+      await new Promise<void>(() => {});
+    },
+  }).run(f.runContext, "Held streaming fixture");
+
+  await streaming.promise;
+  f.controller.abort();
+  await assert.rejects(running, /Fixture interrupted/);
+
+  assert.deepEqual(
+    f.events
+      .filter((event) => event.type === "agent.completed")
+      .map((event) => event.data.subtype),
+    ["interrupted"],
+  );
 });

@@ -7,11 +7,14 @@ import {
   fixtureSdkAssistantErrorTypes,
   fixtureSdkResultSubtypes,
 } from "./fixture-events.js";
-import { FixtureProvider } from "./fixture-provider.js";
-import { context, task } from "./fixture-provider-test-helpers.js";
+import {
+  context,
+  fixtureProvider,
+  task,
+} from "./fixture-provider-test-helpers.js";
 
 test("fixture assistant-error keys cover every SDK assistant error code", async () => {
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
 
   for (const [index, error] of fixtureSdkAssistantErrorTypes.entries()) {
     const f = context(task(`task_assistant_error_${index}`));
@@ -42,7 +45,7 @@ test("fixture failure triggers stop at each stage", async () => {
     const f = context();
 
     await assert.rejects(
-      new FixtureProvider().run(f.runContext, `[fixture:fail stage=${stage}]`),
+      fixtureProvider().run(f.runContext, `[fixture:fail stage=${stage}]`),
       new RegExp(`Fixture failure at ${stage}`),
     );
 
@@ -58,7 +61,7 @@ test("fixture fail alias produces a reply and failed completion", async () => {
   const f = context();
 
   await assert.rejects(
-    new FixtureProvider().run(f.runContext, "[fixture:fail]"),
+    fixtureProvider().run(f.runContext, "[fixture:fail]"),
     /Fixture completion: error_during_execution/,
   );
 
@@ -96,7 +99,7 @@ test("fixture completion triggers emit each failed SDK result", async () => {
     const f = context();
 
     await assert.rejects(
-      new FixtureProvider().run(
+      fixtureProvider().run(
         f.runContext,
         `[fixture:completion subtype=${key}]`,
       ),
@@ -116,14 +119,14 @@ test("fixture can expose provider session deletion and shutdown errors", async (
   const taskWithSession = { session_id: "fixture-session" } as Task;
 
   await assert.rejects(
-    new FixtureProvider({ deleteSessionError: true }).deleteSession(
+    fixtureProvider({ deleteSessionError: true }).deleteSession(
       taskWithSession,
     ),
     /session deletion failed/,
   );
 
   await assert.rejects(
-    new FixtureProvider({ closeError: true }).close(),
+    fixtureProvider({ closeError: true }).close(),
     /provider close failed/,
   );
 });

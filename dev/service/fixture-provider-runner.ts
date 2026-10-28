@@ -5,6 +5,7 @@ import type {
   Steer,
   TurnOutput,
 } from "../../src/service/features/providers/types.js";
+import type { FixtureProviderOptions } from "./fixture-provider.js";
 import { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import { createFixtureRunEvents } from "./fixture-run-events.js";
 import {
@@ -30,8 +31,9 @@ export async function runFixtureTurn(
   c: RunContext,
   prompt: string,
   state: FixtureProviderRunState,
+  options: FixtureProviderOptions = {},
 ): Promise<TurnOutput> {
-  const scenarios = readScenarios(prompt);
+  const scenarios = readScenarios(prompt, options.replyPaceMs);
   const steers: Steer[] = [];
   const taken: string[] = [];
   const actions: string[] = [];
@@ -157,6 +159,8 @@ export async function runFixtureTurn(
 
     failAt("after-tools");
 
+    if (options.beforeReply) await checkpoint(c, () => options.beforeReply!(c));
+
     await waitAndTakeSteers(
       c,
       scenarios.slow,
@@ -164,6 +168,8 @@ export async function runFixtureTurn(
       scenarios.late,
       steers,
       taken,
+      options.turnDelayMs,
+      Boolean(options.beforeReply),
     );
 
     failAt("before-reply");
@@ -177,7 +183,15 @@ export async function runFixtureTurn(
     );
 
     turnRecord.reply = reply;
-    await emitFixtureReply(c, reply, taskId, turn, scenarios.replyPaceMs);
+
+    await emitFixtureReply(
+      c,
+      reply,
+      taskId,
+      turn,
+      scenarios.replyPaceMs,
+      options.beforeReplyChunk,
+    );
 
     const usage = createUsage(prompt, reply);
     session.costUsd += scenarios.costUsd ?? 0.001;
@@ -233,8 +247,11 @@ async function waitAndTakeSteers(
   late: boolean,
   steers: Steer[],
   taken: string[],
+  turnDelayMs = 80,
+  controlled = false,
 ) {
-  const duration = requestedWaitMs ?? (slow ? 480 : 80);
+  const implicitDuration = slow ? 480 : turnDelayMs;
+  const duration = requestedWaitMs ?? (controlled ? 0 : implicitDuration);
 
   let steps = 1;
 
@@ -245,7 +262,11 @@ async function waitAndTakeSteers(
   }
 
   for (let step = 0; step < steps; step++) {
-    await setTimeout(duration / steps, undefined, { signal: c.signal });
+    if (duration > 0) {
+      await setTimeout(duration / steps, undefined, { signal: c.signal });
+    }
+
+    c.signal.throwIfAborted();
     if (late) continue;
 
     for (const steer of steers.splice(0)) {
@@ -254,7 +275,9 @@ async function waitAndTakeSteers(
     }
   }
 
-  if (late) await setTimeout(200, undefined, { signal: c.signal });
+  if (late && !controlled) {
+    await setTimeout(200, undefined, { signal: c.signal });
+  }
 }
 
 function createFixtureReply(
@@ -286,12 +309,15 @@ async function emitFixtureReply(
   taskId: string,
   turn: number,
   paceMs: number,
+  beforeChunk?: FixtureProviderOptions["beforeReplyChunk"],
 ) {
   const messageId = `fixture_msg_${taskId}_${turn}`;
 
-  for (const piece of reply.match(/\S+\s*/g) ?? []) {
+  for (const [index, piece] of (reply.match(/\S+\s*/g) ?? []).entries()) {
+    if (beforeChunk) await checkpoint(c, () => beforeChunk(c, index));
     c.delta(messageId, piece);
-    await setTimeout(paceMs, undefined, { signal: c.signal });
+    if (paceMs > 0) await setTimeout(paceMs, undefined, { signal: c.signal });
+    c.signal.throwIfAborted();
   }
 
   // Like Claude's normalized messages, the reply shares its draft's id.
@@ -309,4 +335,23 @@ function createUsage(prompt: string, reply: string) {
     input_tokens: Math.max(1, Math.ceil(prompt.length / 4)),
     output_tokens: Math.max(1, Math.ceil(reply.length / 4)),
   };
+}
+
+/** Interrupt a held fixture even when a test does not release its checkpoint. */
+async function checkpoint(c: RunContext, work: () => Promise<void>) {
+  c.signal.throwIfAborted();
+  let abort!: () => void;
+
+  const interrupted = new Promise<never>((_resolve, reject) => {
+    abort = () =>
+      reject(new Error("Fixture interrupted", { cause: c.signal.reason }));
+
+    c.signal.addEventListener("abort", abort, { once: true });
+  });
+
+  try {
+    await Promise.race([work(), interrupted]);
+  } finally {
+    c.signal.removeEventListener("abort", abort);
+  }
 }

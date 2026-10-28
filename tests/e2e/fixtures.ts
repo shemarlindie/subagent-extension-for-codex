@@ -38,7 +38,7 @@ export async function createRepository(repository: string) {
 }
 
 export const test = base.extend<ConsoleFixtures>({
-  fixtureProvider: [{}, { option: true }],
+  fixtureProvider: [{ turnDelayMs: 0, replyPaceMs: 0 }, { option: true }],
   inProcessService: async ({ fixtureProvider }, use) => {
     const service = await startConsoleService(fixtureProvider);
 

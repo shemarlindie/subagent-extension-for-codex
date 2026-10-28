@@ -6,6 +6,7 @@ import {
   cp,
   mkdir,
   mkdtemp,
+  open,
   readdir,
   readFile,
   realpath,
@@ -247,8 +248,15 @@ describe("packed artifact", () => {
     const native = [];
 
     for (const file of files) {
-      if (nativeExecutable(await readFile(file))) {
-        native.push(relative(pkg, file));
+      const handle = await open(file, "r");
+
+      try {
+        const bytes = Buffer.alloc(4);
+        await handle.read(bytes, 0, bytes.length, 0);
+
+        if (nativeExecutable(bytes)) native.push(relative(pkg, file));
+      } finally {
+        await handle.close();
       }
     }
 

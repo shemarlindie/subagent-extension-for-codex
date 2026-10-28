@@ -7,12 +7,11 @@ import { join } from "node:path";
 import { structuredPatch } from "diff";
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../providers/types.js";
-import { input, setup, until } from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 
 test("recorded worktree edits include committed and untracked files without touching primary checkout", async () => {
-  class Writer extends FixtureProvider {
+  class Writer extends TestProvider {
     override async run(c: RunContext, p: string) {
       await writeFile(join(c.task.workspace!, "README.md"), "changed\n");
 
@@ -39,6 +38,10 @@ test("recorded worktree edits include committed and untracked files without touc
       execFileSync("git", [
         "-C",
         c.task.workspace!,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
         "commit",
         "-qm",
         "worker edit",

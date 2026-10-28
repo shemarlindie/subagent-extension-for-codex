@@ -6,11 +6,14 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import { decodeEventView } from "../../src/shared/events/decode.js";
-import { FixtureProvider } from "./fixture-provider.js";
-import { context, task } from "./fixture-provider-test-helpers.js";
+import {
+  context,
+  fixtureProvider,
+  task,
+} from "./fixture-provider-test-helpers.js";
 
 test("fixture tool and content scenarios produce representative synthetic events", async () => {
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
   const f = context();
 
   const prompt = [
@@ -120,7 +123,7 @@ test("fixture tool and content scenarios produce representative synthetic events
 });
 
 test("fixture restrictions and child workers follow configured policy", async () => {
-  const provider = new FixtureProvider();
+  const provider = fixtureProvider();
   const f = context();
 
   const restrictions = [
@@ -196,7 +199,7 @@ test("fixture change scenarios write only into isolated worktrees", async () => 
     f.runContext.task.workspace = workspace;
     f.runContext.task.workspace_strategy = "worktree";
 
-    await new FixtureProvider().run(f.runContext, "[fixture:change]");
+    await fixtureProvider().run(f.runContext, "[fixture:change]");
 
     const file = `fixture-scenario-${f.runContext.task.id}-turn-${f.runContext.task.turn}.md`;
 
@@ -218,7 +221,7 @@ test("fixture change scenarios write only into isolated worktrees", async () => 
     unsafe.runContext.task.workspace_strategy = "current_repo";
 
     await assert.rejects(
-      new FixtureProvider().run(unsafe.runContext, "[fixture:change]"),
+      fixtureProvider().run(unsafe.runContext, "[fixture:change]"),
       /require an isolated worktree task/,
     );
   } finally {

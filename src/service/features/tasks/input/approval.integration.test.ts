@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test } from "vitest";
 
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
+import { copyCommittedRepository } from "../../../../../tests/support/repository-test-harness.js";
 import { approvalModes, type Task } from "../../../../shared/tasks/model.js";
 import { callTool } from "../../../platform/server/tools.js";
 import { type RunContext, type TurnOutput } from "../../providers/types.js";
@@ -50,22 +50,7 @@ class PermissionProvider extends FixtureProvider {
 async function setup(provider = new PermissionProvider()) {
   const dir = await mkdtemp(join(tmpdir(), "approval-test-"));
   const repo = join(dir, "repo");
-  await mkdir(repo);
-  execFileSync("git", ["init", "-q", repo]);
-  await writeFile(join(repo, "README.md"), "fixture\n");
-  execFileSync("git", ["-C", repo, "add", "."]);
-
-  execFileSync("git", [
-    "-C",
-    repo,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "-qm",
-    "initial",
-  ]);
+  await copyCommittedRepository(repo);
 
   const store = new Store(join(dir, "tasks.sqlite"));
 

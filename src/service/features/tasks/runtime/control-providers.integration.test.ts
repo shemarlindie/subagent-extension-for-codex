@@ -2,10 +2,9 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { type ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { Provider } from "../../providers/types.js";
-import { input, setup, until } from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 
 test("scheduler enforces concurrency and independent branches run together", async () => {
   const { c, store, repo } = await setup(undefined, 2);
@@ -34,7 +33,7 @@ test("scheduler enforces concurrency and independent branches run together", asy
 });
 
 test("a new provider controls preparation and input policy without built-in identity assumptions", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
   provider.id = "new-built-in";
   const prepared: string[] = [];
   const decisions: boolean[] = [];
@@ -201,7 +200,7 @@ test("a new provider controls preparation and input policy without built-in iden
 });
 
 test("a new provider owns native session continuation after a restart", async () => {
-  const provider: Provider = new FixtureProvider();
+  const provider: Provider = new TestProvider();
   provider.id = "new-native";
   let sessionValid = false;
   const validated: string[] = [];

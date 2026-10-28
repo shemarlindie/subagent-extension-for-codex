@@ -3,13 +3,18 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
 import type { RunContext } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
 import { Control } from "./control.js";
-import { input, pause, setup, until } from "./control-test-harness.js";
+import {
+  input,
+  pause,
+  setup,
+  TestProvider,
+  until,
+} from "./control-test-harness.js";
 
 test("send receipts survive restart, scope senders and reject conflicting retries", async () => {
   const { c, repo, db, dir } = await setup(undefined, 0);
@@ -53,7 +58,7 @@ test("send receipts survive restart, scope senders and reject conflicting retrie
 
   assert.notEqual(parent.message_id, sent.message_id);
   await c.close();
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   const restarted = new Control(
     new Store(db),
@@ -151,7 +156,7 @@ test("send retries coalesce before repository validation and rollback receipts",
 test("interrupt send receipts replay before shutdown finishes", async () => {
   const started = Promise.withResolvers<RunContext>();
   const finish = Promise.withResolvers<void>();
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   provider.run = async (context) => {
     started.resolve(context);
@@ -236,7 +241,7 @@ test.each(["queue", "steer"] as const)(
   async (delivery) => {
     const started = Promise.withResolvers<void>();
     const finish = Promise.withResolvers<void>();
-    const provider = new FixtureProvider();
+    const provider = new TestProvider();
 
     provider.run = async () => {
       started.resolve();
@@ -284,7 +289,7 @@ test.each(["queue", "steer"] as const)(
 test("accepted interrupt sends retain uncertain delivery if stopping fails", async () => {
   const started = Promise.withResolvers<void>();
   const finish = Promise.withResolvers<void>();
-  const provider = new FixtureProvider();
+  const provider = new TestProvider();
 
   provider.run = async () => {
     started.resolve();
@@ -327,7 +332,7 @@ test("accepted interrupt sends retain uncertain delivery if stopping fails", asy
 });
 
 test("drain finishes running turns and leaves queued tasks for the next service", async () => {
-  const { c, store, repo, db } = await setup(new FixtureProvider(), 1);
+  const { c, store, repo, db } = await setup(new TestProvider(), 1);
   const running = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(running.id, "alice").pending_input);
   const queued = await c.start("alice", input(repo, "Queued work"));

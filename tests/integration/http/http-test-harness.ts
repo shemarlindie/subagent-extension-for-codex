@@ -9,7 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { TestContext } from "vitest";
 
-import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
@@ -18,6 +18,7 @@ import { Auth } from "../../../src/service/platform/server/auth.js";
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
+import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
 // Panel tools return loosely shaped structured content; tests narrow each field.
 export const panel = (response: object) =>
@@ -34,25 +35,12 @@ export const panel = (response: object) =>
 export async function httpFixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-http-")));
   t.onTestFinished(() => rm(dir, { recursive: true, force: true }));
-  execFileSync("git", ["init", "-q", dir]);
-
-  execFileSync("git", [
-    "-C",
-    dir,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "--allow-empty",
-    "-qm",
-    "initial",
-  ]);
+  await copyCommittedRepository(dir);
 
   const c = new Control(
     new Store(join(dir, "test.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([["fixture", new FixtureProvider()]]),
+    new Map([["fixture", fixtureProvider()]]),
   );
 
   t.onTestFinished(() => c.close());

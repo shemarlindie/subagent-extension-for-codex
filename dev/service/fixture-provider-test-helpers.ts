@@ -7,6 +7,10 @@ import {
   resolveClaudePolicy,
 } from "../../src/shared/providers/claude/permissions.js";
 import { startSchema, type Task } from "../../src/shared/tasks/model.js";
+import {
+  FixtureProvider,
+  type FixtureProviderOptions,
+} from "./fixture-provider.js";
 
 export function task(id = "task_fixture"): Task {
   return {
@@ -71,5 +75,10 @@ export function context(currentTask = task()) {
     },
   } as unknown as RunContext;
 
-  return { edits, events, inputs, sessions, runContext };
+  return { edits, events, inputs, sessions, runContext, controller };
+}
+
+/** Keep incidental provider work immediate while preserving explicit timing markers. */
+export function fixtureProvider(options: FixtureProviderOptions = {}) {
+  return new FixtureProvider({ turnDelayMs: 0, replyPaceMs: 0, ...options });
 }

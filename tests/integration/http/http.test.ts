@@ -9,7 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { beforeEach, describe, test } from "vitest";
 
-import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
 import { Projects } from "../../../src/service/features/projects/projects.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -1010,7 +1010,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
   const c = new Control(
     new Store(join(dir, "db.sqlite")),
     new Workspaces(join(dir, "worktrees"), [dir]),
-    new Map([["fixture", new FixtureProvider()]]),
+    new Map([["fixture", fixtureProvider()]]),
   );
 
   const app = application(
