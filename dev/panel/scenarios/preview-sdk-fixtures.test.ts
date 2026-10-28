@@ -73,34 +73,16 @@ const providerTypes = new Set([
   "tool.completed",
 ]);
 
-// Events the service records itself (src/service/features/tasks/runtime/control.ts, src/service/features/tasks/storage/store.ts).
-// `agent.permission_decided` is only emitted for non-Claude providers.
-const serviceTypes = new Set([
-  "parent.message",
-  "parent.message_attempted",
-  "parent.message_delivery",
-  "parent.message_acknowledged",
-  "task.queued",
-  "task.started",
-  "task.waiting",
-  "task.instruction",
-  "task.control_requested",
-  "task.interrupted",
-  "task.completed",
-  "task.failed",
-  "task.worktree_removed",
-  "task.worktree_recreated",
-  "task.session_started",
-  "task.turn_ended",
-  "task.queue_changed",
-  "task.steer_taken",
-  "task.message_removed",
-  "task.branch_deleted",
-  "agent.input_required",
-  "agent.input_submitted",
-  "agent.input_decision",
-  "agent.reply",
-]);
+// Only emitted for non-Claude providers.
+const nonClaudeTypes = new Set(["agent.permission_decided"]);
+
+// Every other contract event is recorded by the service itself, so a new event
+// type fails the coverage test below until a fixture shows it.
+const serviceTypes = new Set(
+  Object.keys(eventPayloadMapSchema.shape).filter(
+    (type) => !providerTypes.has(type) && !nonClaudeTypes.has(type),
+  ),
+);
 
 const kindOf = (message: Record<string, unknown>) =>
   message.type === "system"
