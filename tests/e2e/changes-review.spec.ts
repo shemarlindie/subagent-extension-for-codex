@@ -100,6 +100,31 @@ test("review several changed files across scopes, viewed marks and previews", as
   await expect(files).toHaveCount(0);
   await expect(picker).toBeFocused();
 
+  // The last file reaches the top, clear of the navigator, and reads as current.
+  const secondPath = (await second.textContent())!;
+
+  const secondPick = files.getByRole("button", {
+    name: secondPath,
+    exact: true,
+  });
+
+  await picker.click();
+  await secondPick.click();
+  await expect(secondPick).toHaveAttribute("aria-current", "location");
+
+  await expect
+    .poll(async () => {
+      const [diff, viewport] = await Promise.all([
+        changes.locator(`[data-changed-file="${secondPath}"]`).boundingBox(),
+        changes.boundingBox(),
+      ]);
+
+      return diff && viewport && Math.round(diff.y - viewport.y);
+    })
+    .toBe(0);
+
+  await page.keyboard.press("Escape");
+
   await changes
     .getByRole("button", { name: "Preview all changes", exact: true })
     .click();

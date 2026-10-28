@@ -40,6 +40,7 @@ export function ChangesView({
     [viewed, setViewed] = useViewedFiles(task.id),
     entries = changedFileEntries(changes),
     listRef = useRef<HTMLDivElement>(null),
+    diffsRef = useRef<HTMLDivElement>(null),
     positionedReveal = useRef<Reveal>(undefined),
     [reveal, setReveal] = useState<Reveal>();
 
@@ -60,9 +61,24 @@ export function ChangesView({
 
     // Move only the Changes scroller, leaving the floating navigator in place.
     if (file) {
-      container.scrollTop +=
-        file.getBoundingClientRect().top -
-        container.getBoundingClientRect().top;
+      const offset =
+          file.getBoundingClientRect().top -
+          container.getBoundingClientRect().top,
+        diffs = diffsRef.current,
+        shortfall =
+          container.scrollTop +
+          offset +
+          container.clientHeight -
+          container.scrollHeight;
+
+      // A file near the end can't reach the top, so it would stay under the
+      // open navigator and the file above would read as current. Add space
+      // after the last file so it can.
+      if (diffs && shortfall > 0) {
+        diffs.style.paddingBottom = `${(parseFloat(diffs.style.paddingBottom) || 0) + shortfall}px`;
+      }
+
+      container.scrollTop += offset;
 
       // A pending layout restore must use the reader's new destination too.
       reading.position = measurePosition(list, container);
@@ -83,7 +99,7 @@ export function ChangesView({
           onSelect={revealFile}
         />
       )}
-      <div className="diff-view">
+      <div className="diff-view" ref={diffsRef}>
         {entries.map((entry, index) => {
           const { path } = entry.file;
 
