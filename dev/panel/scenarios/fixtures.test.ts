@@ -9,6 +9,7 @@ import { readClaudeTaskOptions } from "../../../src/shared/providers/claude/task
 import { currentActivityStatus } from "../../../src/shared/tasks/activity/activity-status";
 import { groupActivity } from "../../../src/shared/tasks/activity/activity-timeline";
 import type { Task } from "../../../src/shared/tasks/model";
+import { previewChanges } from "./change-fixtures";
 import {
   PREVIEW_THREAD,
   previewEvents,
@@ -60,6 +61,17 @@ test("preview task and event ids are unique", () => {
 test("Claude preview tasks store complete options, so Details shows their permissions", () => {
   for (const task of previewTasks.filter((t) => t.provider === "claude")) {
     assert.doesNotThrow(() => readClaudeTaskOptions(task), task.id);
+  }
+});
+
+// The panel reads these flags from the preview task, and the fixture service
+// builds the repository from the change fixture.
+test("preview tasks flag the worktrees and branches their change fixtures remove", () => {
+  for (const task of previewTasks) {
+    const changes = previewChanges[task.id]?.();
+
+    assert.equal(task.workspace_removed, changes?.removed, task.id);
+    assert.equal(task.branch_deleted, changes?.branchDeleted, task.id);
   }
 });
 

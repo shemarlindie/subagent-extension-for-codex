@@ -406,6 +406,7 @@ export const lifecycleTasks: Task[] = [
     cost_usd: 1.18,
     // Its worktree was removed; the Changes tab names the branch.
     ...worktree("preview-failed"),
+    workspace_removed: true,
     ...timestamps(30, 6),
   },
   {
@@ -435,6 +436,8 @@ export const lifecycleTasks: Task[] = [
     status: "interrupted",
     // Its worktree and branch were deleted.
     ...worktree("preview-release"),
+    workspace_removed: true,
+    branch_deleted: true,
     ...timestamps(75, 1),
   },
   {
