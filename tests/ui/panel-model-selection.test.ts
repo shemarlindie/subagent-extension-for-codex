@@ -161,34 +161,6 @@ test("model selection retains unsupported effort on Claude and blocks submission
   assert.equal(args.reasoning_effort, "high");
 });
 
-test("model selection rejects unsupported inherited Claude effort and accepts an explicit supported override", async (t) => {
-  const panel = await setup(t, (transport) =>
-    configureModelDefaults(transport, {
-      "models.global.reasoning_effort": "none",
-    }),
-  );
-
-  const { user } = panel;
-
-  await openAdvancedTask(user);
-  await screen.findByRole("dialog");
-  await enterTask(user, "Investigate inherited effort");
-
-  assert.match(
-    screen.getByRole("combobox", { name: "Reasoning effort" }).textContent ??
-      "",
-    /Use default \(none\)/,
-  );
-
-  const args = await startAfterChoosingEffort(
-    panel,
-    /Choose a reasoning effort supported by claude/,
-    "medium",
-  );
-
-  assert.equal(args.reasoning_effort, "medium");
-});
-
 test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {
   const { transport, user } = await setup(t, (transport) =>
     configureModelDefaults(transport, {

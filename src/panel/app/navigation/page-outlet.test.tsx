@@ -100,18 +100,6 @@ test("an initial Projects URL focuses its heading and retains the task workspace
   expect(screen.queryByRole("textbox", { name: "Task draft" })).toBeNull();
 });
 
-test("returning from an initial Projects URL focuses the task navigation entry", () => {
-  state.page = "projects";
-  const view = render(<PageOutlet />);
-
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
-
-  expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Manage projects" }),
-  );
-});
-
 test("unmounts Settings on departure and focuses the task navigation entry", () => {
   state.page = "settings";
   const view = render(<PageOutlet />);

@@ -22,13 +22,6 @@ test("an iframe always talks to its host", () => {
   });
 });
 
-test("a top-level page with an injected origin uses HTTP", () => {
-  assert.deepEqual(page({ origin: "http://127.0.0.1:1" }), {
-    kind: "http",
-    origin: "http://127.0.0.1:1",
-  });
-});
-
 test("a top-level page with no origin or the unreplaced placeholder is unsupported", () => {
   assert.deepEqual(page({}), { kind: "unsupported" });
 

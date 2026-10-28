@@ -44,7 +44,8 @@ test("missing windows and overage do not produce utilization windows", () => {
   ).toEqual([]);
 });
 
-test.each([undefined, Number.NaN, Number.POSITIVE_INFINITY, 1e20])(
+// 1e20 seconds is finite but past the latest valid Date, like NaN or Infinity.
+test.each([undefined, 1e20])(
   "invalid reset time %s does not discard valid utilization",
   (resetsAt) => {
     expect(

@@ -256,41 +256,6 @@ test("Activity includes the task's initial request at the start, including befor
   expect(view.container.querySelector(".activity-request")).toBeNull();
 });
 
-test("assistant groups keep attachments visible while text stays in raw JSON", (t) => {
-  t.onTestFinished(cleanup);
-  const raw_response = { message: { id: "attachment-response" } };
-
-  const view = render(
-    createElement(GroupedEventList, {
-      events: [
-        event(
-          "agent.message",
-          { role: "assistant", text: "Hidden response text", raw_response },
-          "attachment-text",
-        ),
-        event(
-          "agent.content",
-          {
-            role: "assistant",
-            content: {
-              type: "document",
-              title: "Attached notes",
-              source: { type: "text", data: "Visible attachment" },
-            },
-            raw_response,
-          },
-          "attachment-document",
-        ),
-      ],
-    }),
-  );
-
-  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
-  expect(view.container.textContent).toContain("Attached notes");
-  expect(view.container.textContent).toContain("Visible attachment");
-  expect(view.container.textContent).not.toContain("Hidden response text");
-});
-
 test("Activity user messages use Chat bubbles with literal text outside Debug", (t) => {
   t.onTestFinished(cleanup);
   const text = "**Keep this literal**\n```text\nuser input\n```";

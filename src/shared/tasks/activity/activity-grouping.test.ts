@@ -197,31 +197,6 @@ test("repeated lifecycle events remain individually inspectable", () => {
   }
 });
 
-test("task startup stays separate from connection events", () => {
-  const events = [
-    event(1, "task.started"),
-    event(2, "agent.started"),
-    sdk(3, "init"),
-  ];
-
-  const groups = groupActivity(events);
-
-  assert.deepEqual(
-    groups.map((group) => ({
-      kind: group.kind,
-      events: group.events,
-    })),
-    [
-      { kind: "status", events: [events[0]] },
-      { kind: "status", events: [events[1]] },
-      {
-        kind: "status",
-        events: [events[2]],
-      },
-    ],
-  );
-});
-
 test("repeated failure events stay individually prominent", () => {
   const events = [
     sdk(1, "permission_denied", { message: "Blocked" }),

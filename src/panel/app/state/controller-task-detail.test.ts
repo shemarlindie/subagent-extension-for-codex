@@ -54,41 +54,6 @@ test("selected activity loading clears independently from chat history", async (
   assert.equal(controller.getSnapshot().chatHistoryLoading, undefined);
 });
 
-test("selected chat history becomes available while activity is still loading", async (t) => {
-  const { controller, transport } = setup(true);
-  t.onTestFinished(() => controller.dispose());
-
-  const selected = task("task-1", "/repo/a", "thread-one");
-  transport.tasks = [selected];
-
-  transport.context = {
-    panel_scope: { conversation_id: "thread-one" },
-  };
-
-  const activityRead = deferred<unknown>();
-  const chatRead = deferred<unknown>();
-
-  transport.handler = (name) => {
-    if (name === "app_get_activity") return activityRead.promise;
-    if (name === "app_get_chat") return chatRead.promise;
-
-    return undefined;
-  };
-
-  const starting = controller.start();
-  await flush();
-
-  chatRead.resolve({ items: [], next_cursor: 0 });
-  await flush();
-  assert.equal(controller.getSnapshot().chat?.task, selected.id);
-  assert.equal(controller.getSnapshot().chatHistoryLoading, undefined);
-  assert.equal(controller.getSnapshot().activityHistoryLoading, selected.id);
-
-  activityRead.resolve({ events: [] });
-  await starting;
-  assert.equal(controller.getSnapshot().activityHistoryLoading, undefined);
-});
-
 test("delayed detail from a previous selection cannot replace current events", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

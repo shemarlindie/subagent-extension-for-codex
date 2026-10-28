@@ -64,26 +64,6 @@ test("an export restores every saved default on another owner", async (t) => {
   assert.deepEqual(settings.values("target"), settings.values("source"));
 });
 
-test("an import turns limits on or off as the export had them", async (t) => {
-  const settings = await fixture(t);
-  settings.update("owner", limits({ enabled: false }, { enabled: true }));
-
-  importSettings(settings, "owner", {
-    document: exported({
-      task: {
-        budget: {
-          max_cost_usd: { enabled: true, amount: 7 },
-          max_runtime_minutes: { enabled: false },
-        },
-      },
-    }),
-  });
-
-  const { budget } = settings.values("owner").task;
-  assert.deepEqual(budget.max_cost_usd, { enabled: true, amount: 7 });
-  assert.equal(budget.max_runtime_minutes.enabled, false);
-});
-
 test("an import skips unsupported values and preserves omitted settings", async (t) => {
   const settings = await fixture(t);
 

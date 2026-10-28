@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { act } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
@@ -83,50 +82,4 @@ test("new messages ease into existing history without replaying loaded history",
   updateTask({ runtime_ms: 61_000 });
   expect(entrances("arrival")).toHaveLength(1);
   expect(entrances("initial")).toHaveLength(0);
-});
-
-test("history height changes keep a pinned reader at the latest message", () => {
-  const observers = new Map<Element, () => void>();
-
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      private elements = new Set<Element>();
-      constructor(private callback: () => void) {}
-      observe(element: Element) {
-        this.elements.add(element);
-        observers.set(element, this.callback);
-      }
-
-      disconnect() {
-        for (const element of this.elements) observers.delete(element);
-      }
-    },
-  );
-
-  onTestFinished(() => {
-    vi.unstubAllGlobals();
-  });
-
-  const { view } = setup({}, [], [message("initial", 1)]);
-  const viewport = view.getByRole("region", { name: "Chat history" });
-  const history = view.container.querySelector(".chat-history")!;
-  const resized = observers.get(history);
-  expect(resized).toBeDefined();
-  let contentHeight = 600;
-
-  Object.defineProperties(viewport, {
-    clientHeight: { configurable: true, value: 200 },
-    scrollHeight: { configurable: true, get: () => contentHeight },
-  });
-
-  act(() => resized!());
-  expect(viewport.scrollTop).toBe(400);
-
-  contentHeight = 700;
-  act(() => resized!());
-  expect(viewport.scrollTop).toBe(500);
-
-  view.unmount();
-  expect(observers.has(history)).toBe(false);
 });

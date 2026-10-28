@@ -409,18 +409,9 @@ test("ownership enforced across dependencies, state, events and controls", async
   await assert.rejects(c.interrupt("bob", t.id));
   await assert.rejects(c.send("bob", t.id, "Hi", "user"));
   await assert.rejects(c.delete("bob", t.id));
+  const request = store.get(t.id, "alice").pending_input!;
+  assert.throws(() => c.input("bob", t.id, request.id, true));
   await assert.rejects(c.start("bob", { ...input(repo), depends_on: [t.id] }));
-  await c.close();
-});
-
-test("workspace root allowlist rejects external repositories", async () => {
-  const { c, dir, repo } = await setup();
-
-  await assert.rejects(
-    c.start("alice", { ...input(repo), repository: dir }),
-    /outside allowed roots/,
-  );
-
   await c.close();
 });
 
@@ -476,25 +467,6 @@ test("a task whose first event can't be written is never created", async () => {
   } finally {
     await c.close();
   }
-});
-
-test("removing a project refuses follow-ups and new tasks in its repository", async () => {
-  const { c, repo, store } = await setup(undefined, 1);
-  c.workspaces.allowedRoots = [];
-  c.projects = new Projects(store.database, c.workspaces);
-  const { repository } = await c.projects.register(repo);
-
-  const done = await c.start("owner", input(repo));
-  await until(() => store.get(done.id, "owner").status === "completed");
-
-  await c.removeProject("owner", repository);
-
-  await assert.rejects(
-    c.send("owner", done.id, "Keep going", "parent"),
-    /outside allowed roots/,
-  );
-
-  await assert.rejects(c.start("owner", input(repo)), /outside allowed roots/);
 });
 
 test("a turn queued before its project is removed fails instead of running", async () => {

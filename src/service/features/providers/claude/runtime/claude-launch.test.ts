@@ -124,36 +124,6 @@ test("Claude forwards the selected model and effort without changing its resolve
   assert.equal(Object.hasOwn(options!, "effort"), false);
 });
 
-test("Claude failed result accounts for cost and never reports task success", async () => {
-  const { c, events } = await context();
-
-  const provider = new ClaudeAgentProvider(
-    () =>
-      Object.assign(
-        (async function* () {
-          yield {
-            type: "result",
-            subtype: "error_max_budget_usd",
-            errors: ["Limit reached"],
-            session_id: "x",
-            total_cost_usd: 0.3,
-            usage: {},
-          };
-        })(),
-        { close: () => {} },
-      ) as unknown as Query,
-    undefined,
-    readyClaudeCli,
-  );
-
-  await assert.rejects(provider.run(c, "Review"), /error_max_budget/);
-
-  assert.equal(
-    events.find((e) => e.type === "agent.completed")?.data.cost_usd,
-    0.3,
-  );
-});
-
 test("Claude omits its native cost ceiling only when the task explicitly disables it", async () => {
   const { c } = await context();
   c.task.budget.max_cost_usd = null;

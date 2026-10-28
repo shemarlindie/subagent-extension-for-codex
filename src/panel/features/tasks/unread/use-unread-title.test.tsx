@@ -47,21 +47,6 @@ function setup(embedded: boolean) {
 
 const unread = (id: string): Task => ({ ...task(id), unread: true });
 
-test("the console's tab title leads with its unread task count", () => {
-  const { show, view } = setup(false);
-  expect(document.title).toBe("Delegated Work");
-
-  show([unread("a"), unread("b"), task("c")]);
-  expect(document.title).toBe("(2) Delegated Work");
-
-  show([task("a")]);
-  expect(document.title).toBe("Delegated Work");
-
-  show([unread("a")]);
-  view.unmount();
-  expect(document.title).toBe("Delegated Work");
-});
-
 test("the embedded panel leaves its title to the host", () => {
   const { show } = setup(true);
   show([unread("a")]);

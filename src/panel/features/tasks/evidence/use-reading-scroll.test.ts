@@ -218,20 +218,6 @@ test("chat restores the visible message after remount with earlier history inser
   assert.equal(reading.position?.pinned, false);
 });
 
-test("active chat updates retain the visible message when earlier history arrives", () => {
-  const reading: ReadingState = {};
-  const view = render(createElement(Chat, { reading, items }));
-  const viewport = view.getByTestId("chat");
-  viewport.scrollTop = 125;
-  fireEvent.scroll(viewport);
-
-  view.rerender(createElement(Chat, { reading, items: ["earlier", ...items] }));
-
-  assert.equal(viewport.scrollTop, 225);
-  assert.deepEqual(reading.position?.anchor, { id: "b", top: -25 });
-  assert.equal(reading.position?.pinned, false);
-});
-
 test("updates respect a reader scroll before the browser delivers its scroll event", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));

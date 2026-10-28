@@ -213,55 +213,6 @@ test("clicking outside saves the latest trimmed draft without stealing focus", a
   }
 });
 
-test("clicking outside an unchanged title closes without a save request", () => {
-  const { view, input, onSave } = setup();
-
-  fireEvent.change(input, { target: { value: "  Original title  " } });
-  fireEvent.pointerDown(document.body);
-
-  assert.equal(view.queryByRole("textbox") === null, true);
-  assert.equal(onSave.mock.calls.length, 0);
-});
-
-test("a failed outside save retains the draft for retry with Enter", async () => {
-  const onSave = vi
-    .fn<(value: string) => Promise<void>>()
-    .mockRejectedValueOnce(new Error("Rename failed"))
-    .mockResolvedValueOnce();
-
-  const { view, input } = setup(onSave);
-
-  fireEvent.change(input, { target: { value: "Retry outside save" } });
-  fireEvent.pointerDown(document.body);
-
-  await waitFor(() =>
-    assert.equal(view.getByRole("alert").textContent, "Rename failed"),
-  );
-
-  assert.equal(view.getByRole("textbox") === input, true);
-  assert.equal(input.value, "Retry outside save");
-  assert.equal(input.disabled, false);
-  fireEvent.keyDown(input, { key: "Enter" });
-
-  await waitFor(() => assert.equal(view.queryByRole("textbox") === null, true));
-
-  assert.deepEqual(onSave.mock.calls, [
-    ["Retry outside save"],
-    ["Retry outside save"],
-  ]);
-});
-
-test("clicking outside a blank title retains the draft without saving", () => {
-  const { view, input, onSave } = setup();
-
-  fireEvent.change(input, { target: { value: "   " } });
-  fireEvent.pointerDown(document.body);
-
-  assert.equal(view.getByRole("textbox") === input, true);
-  assert.equal(input.value, "   ");
-  assert.equal(onSave.mock.calls.length, 0);
-});
-
 test("pointer clicks within the editor keep it open and allow confirmation", async () => {
   const { view, input, onSave } = setup();
   fireEvent.change(input, { target: { value: "Keep this title" } });

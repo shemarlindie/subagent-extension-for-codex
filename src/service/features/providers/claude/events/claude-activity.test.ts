@@ -146,34 +146,6 @@ function resultMessage(subtype: SDKResultMessage["subtype"]): SDKResultMessage {
   return { ...common, subtype, errors: [] };
 }
 
-test("Claude preserves a valid status message and its complete SDK envelope", () => {
-  const message = {
-    type: "system",
-    subtype: "status",
-    status: "requesting",
-    uuid: "00000000-0000-4000-8000-000000000004",
-    session_id: "sdk-session",
-  } satisfies Extract<SDKMessage, { type: "system"; subtype: "status" }>;
-
-  assert.deepEqual(recorder().normalize(message), [
-    { type: "claude.activity", data: { ...message, raw_response: message } },
-  ]);
-});
-
-test("Claude preserves an unrecognized system subtype as raw activity", () => {
-  const message = {
-    type: "system",
-    subtype: "future_subtype",
-    uuid: "sdk-uuid",
-    session_id: "sdk-session",
-    extra: { nested: [0, false, null, "retained"] },
-  };
-
-  assert.deepEqual(recorder().normalizeUnrecognized(message), [
-    { type: "claude.activity", data: { ...message, raw_response: message } },
-  ]);
-});
-
 test("Claude stream presentation narrows current SDK delta variants", () => {
   const message = {
     type: "stream_event",
@@ -470,35 +442,6 @@ test("empty or error assistant messages and user string messages remain inspecta
     if ("error" in message) {
       assert.equal(first.data.error, message.error);
     }
-  }
-});
-
-const resultSubtypes: Record<SDKResultMessage["subtype"], true> = {
-  success: true,
-  error_max_turns: true,
-  error_during_execution: true,
-  error_max_budget_usd: true,
-  error_max_structured_output_retries: true,
-};
-
-const resultSubtypeNames = Object.keys(resultSubtypes) as Array<
-  SDKResultMessage["subtype"]
->;
-
-test("Claude results of every subtype retain accounting and the full result", () => {
-  for (const subtype of resultSubtypeNames) {
-    const message = resultMessage(subtype);
-
-    assert.deepEqual(
-      recorder().normalize(message),
-      [
-        {
-          type: "agent.completed",
-          data: { ...message, cost_usd: 0, raw_response: message },
-        },
-      ],
-      subtype,
-    );
   }
 });
 

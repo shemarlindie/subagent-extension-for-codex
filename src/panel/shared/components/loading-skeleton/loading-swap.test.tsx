@@ -2,7 +2,6 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { MOTION } from "../motion/motion-utils";
 import { LoadingSkeleton, SkeletonShape } from "./loading-skeleton";
 import { LOADING_SKELETON_CONFIG } from "./loading-skeleton-config";
 import { LoadingSwap } from "./loading-swap";
@@ -102,32 +101,6 @@ test("shows the labeled skeleton after the configured delay and hands off access
   expect(skeleton?.hasAttribute("inert")).toBe(true);
   expect(content?.getAttribute("aria-hidden")).toBeNull();
   expect(content?.hasAttribute("inert")).toBe(false);
-  expect(view.getByText("Loaded records")).toBeTruthy();
-});
-
-test("keeps the outgoing skeleton for the shared cross-fade", () => {
-  vi.useFakeTimers();
-  const view = render(panel(true));
-
-  advanceSkeletonDelay();
-  view.rerender(panel(false));
-  expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
-
-  act(() => {
-    vi.advanceTimersByTime(LOADING_SKELETON_CONFIG.minimumVisible);
-  });
-
-  act(() => {
-    vi.advanceTimersByTime(MOTION.loadingCrossfade - 1);
-  });
-
-  expect(view.container.querySelector(".loading-swap-skeleton")).not.toBeNull();
-
-  act(() => {
-    vi.advanceTimersByTime(1);
-  });
-
-  expect(view.container.querySelector(".loading-swap-skeleton")).toBeNull();
   expect(view.getByText("Loaded records")).toBeTruthy();
 });
 

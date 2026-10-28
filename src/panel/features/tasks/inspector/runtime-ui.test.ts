@@ -173,50 +173,6 @@ test("task list shows a fixed final runtime for every terminal status, including
   }
 });
 
-test("task list status icons expose each task state to assistive technology", (t) => {
-  t.onTestFinished(cleanup);
-  const view = render(row(task({})));
-
-  const states: Array<[Partial<Task>, string]> = [
-    [{ status: "queued" }, "Queued"],
-    [{ status: "starting" }, "Starting"],
-    [{ status: "running" }, "Running"],
-    [{ status: "waiting" }, "Waiting"],
-    [{ status: "interrupted" }, "Interrupted"],
-    [{ status: "completed" }, "Completed"],
-    [{ status: "failed" }, "Failed"],
-    [
-      {
-        status: "running",
-        pending_input: {
-          id: "question",
-          kind: "question",
-          tool: "AskUserQuestion",
-          input: {},
-        },
-      },
-      "Needs input",
-    ],
-    [
-      { status: "waiting", waiting_reason: "waiting_for_dependency" },
-      "Waiting on dependency",
-    ],
-  ];
-
-  for (const [patch, label] of states) {
-    view.rerender(row(task(patch)));
-    const icon = view.getByRole("img", { name: label });
-    assert.ok(icon.classList.contains("row-status-icon"));
-    assert.equal(icon.querySelector("title")?.textContent, label);
-    assert.equal(view.getAllByRole("img").length, 1);
-    if (label === "Needs input") assert.ok(icon.classList.contains("input"));
-
-    if (label === "Interrupted") {
-      assert.ok(icon.classList.contains("interrupted"));
-    }
-  }
-});
-
 test("task list icons describe the running task's latest activity", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({})));

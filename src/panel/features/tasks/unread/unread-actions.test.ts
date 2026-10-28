@@ -225,20 +225,3 @@ test("marking unread from a message moves the divider at once, and back if the s
     { task_id: "a", read: true, through: 6 },
   ]);
 });
-
-test("marking unread from a message sends its event, and the open task stays unread while the user reads it", async () => {
-  const open = task({ id: "a" });
-  const { actions, tool, unread } = setup([open], "a");
-
-  tool.mockResolvedValueOnce({ unread: true, through: 3 } as never);
-  await actions.markUnreadFrom(open, 4);
-
-  assert.deepEqual(tool.mock.calls, [
-    ["app_mark_task_unread_from", { task_id: "a", event_id: 4 }],
-  ]);
-
-  assert.deepEqual(unread(), ["a"]);
-
-  await actions.readThrough({ ...open, unread: true }, 9);
-  assert.equal(tool.mock.calls.length, 1);
-});

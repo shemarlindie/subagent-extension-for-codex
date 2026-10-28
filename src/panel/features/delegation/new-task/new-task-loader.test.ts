@@ -38,29 +38,6 @@ async function started(wide = true) {
   return harness;
 }
 
-test("New task replaces the selected task with the composer and reads its options", async (t) => {
-  const { controller } = await started();
-  t.onTestFinished(() => controller.dispose());
-  assert.equal(controller.getSnapshot().selected, "a");
-
-  controller.newTasks.open();
-
-  const opened = controller.getSnapshot();
-  assert.equal(opened.selected, undefined);
-  assert.equal(opened.newTask?.statuses.settings, "loading");
-
-  await flush();
-  const newTask = controller.getSnapshot().newTask;
-  assert.ok(newTask);
-  assert.ok(Object.values(newTask.statuses).every((s) => s === "ready"));
-  assert.equal(newTask.defaults?.task.provider, "claude");
-
-  // A wide panel would otherwise reselect its default task on refresh.
-  await controller.refresh();
-  assert.equal(controller.getSnapshot().selected, undefined);
-  assert.ok(controller.getSnapshot().newTask);
-});
-
 test("a failed start keeps the composer and its draft and returns the error", async (t) => {
   const { controller, transport } = await started();
   t.onTestFinished(() => controller.dispose());

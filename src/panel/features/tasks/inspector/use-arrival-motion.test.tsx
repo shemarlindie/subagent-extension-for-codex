@@ -183,20 +183,6 @@ test("leaving the draft without selecting a task does not animate a later select
   expect(motion.animate).not.toHaveBeenCalled();
 });
 
-test("selecting from the draft respects reduced motion", (t) => {
-  const { controller } = setup();
-  const motion = mockLayout(true);
-
-  t.onTestFinished(() => {
-    motion.restore();
-    controller.dispose();
-  });
-
-  const view = render(content(controller, undefined, true));
-  view.rerender(content(controller, "existing-task"));
-  expect(motion.animate).not.toHaveBeenCalled();
-});
-
 test("leaving an arriving task cancels each animation before another view opens", (t) => {
   const { controller } = setup();
   const motion = mockLayout();

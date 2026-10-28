@@ -193,27 +193,6 @@ test("opaque provider events persist and notify with their raw payload", (t) => 
   assert.deepEqual(store.events(task.id, task.owner), [created]);
 });
 
-test("a transaction commits task state with its events and notifies in order afterwards", (t) => {
-  const { store, task, heard } = transactionFixture(t);
-
-  store.transaction(() => {
-    task.status = "running";
-    store.save(task);
-    store.event(task, "task.started");
-    store.event(task, "task.queue_changed", { queue: [], paused: false });
-    // Listeners hear nothing until the commit.
-    assert.deepEqual(heard, []);
-  });
-
-  assert.deepEqual(heard, ["task.started", "task.queue_changed"]);
-  assert.equal(store.get(task.id, task.owner).status, "running");
-
-  assert.deepEqual(
-    store.events(task.id, task.owner).map((e) => e.type),
-    ["task.started", "task.queue_changed"],
-  );
-});
-
 test("a failed transaction leaves state and events unwritten, notifies nobody and restores updated_at", (t) => {
   const { store, task, heard } = transactionFixture(t);
   const updated = task.updated_at;

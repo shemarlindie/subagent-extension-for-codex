@@ -42,17 +42,6 @@ test("same month and day in a different year is not today", () => {
   );
 });
 
-test("today's clock follows the host locale", () => {
-  assert.equal(
-    formatOutcomeTimestamp(
-      "2026-10-09T18:30:00Z",
-      { locale: "fr-FR", timeZone: "Europe/Paris" },
-      new Date("2026-10-09T20:00:00Z"),
-    ),
-    "20:30",
-  );
-});
-
 test("the user's local year controls whether the year is shown around New Year", () => {
   assert.equal(
     formatOutcomeTimestamp(

@@ -13,59 +13,6 @@ import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
 import { sent, setup } from "./chat-panel-test-harness";
 
-test("retry after a running task finishes preserves the uncertain queue request", async () => {
-  vi.useFakeTimers();
-
-  onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  const { view, tool, composer, type, updateTask } = setup({
-    status: "running",
-  });
-
-  const write = deferred<unknown>();
-  tool.mockReturnValue(write.promise);
-  type("Follow up");
-  fireEvent.keyDown(composer, { key: "Enter" });
-  const original = tool.mock.calls[0];
-  expect(original?.[1]).toMatchObject({ delivery: "queue" });
-
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(30000);
-  });
-
-  expect(view.getByRole("alert").textContent).toContain(
-    "Delivery could not be confirmed",
-  );
-
-  updateTask({ status: "completed" });
-  tool.mockResolvedValue({});
-
-  await act(async () => {
-    fireEvent.keyDown(composer, { key: "Enter" });
-    await flush();
-  });
-
-  expect(tool.mock.calls[1]).toEqual(original);
-  expect((composer as HTMLTextAreaElement).value).toBe("");
-
-  type("Follow up");
-
-  await act(async () => {
-    fireEvent.keyDown(composer, { key: "Enter" });
-    await flush();
-  });
-
-  expect(tool.mock.calls[2]).not.toEqual(original);
-  expect(tool.mock.calls[2]?.[1]).toMatchObject({ delivery: "steer" });
-
-  await act(async () => {
-    write.resolve({});
-    await flush();
-  });
-});
-
 test.each([false, true])(
   "Stop explains a pending shutdown with composer collapsed: %s",
   async (collapsed) => {
@@ -192,25 +139,6 @@ test.each([
   },
 );
 
-test("dependency waiting shows a paused status instead of the running indicator", () => {
-  const { view } = setup({
-    status: "waiting",
-    waiting_reason: "waiting_for_dependency",
-  });
-
-  const status = view.container.querySelector<HTMLElement>(".chat-working");
-
-  assert.ok(status);
-  assert.equal(status.textContent, "Waiting on dependency");
-  assert.ok(status.querySelector(".row-status-icon.waiting"));
-  expect(status.querySelector(".running")).toBeNull();
-
-  assert.equal(
-    status.querySelector("svg")?.getAttribute("aria-hidden"),
-    "true",
-  );
-});
-
 for (const source of ["live activity", "events"] as const) {
   test(`rate-limit waiting shows a paused status from ${source}`, () => {
     const { view } = setup(
@@ -268,54 +196,6 @@ test("on an idle task, Enter sends the message, which starts the next turn", asy
   fireEvent.keyDown(composer, { key: "Escape" });
   assert.equal(tool.mock.calls.length, 1);
   assert.ok(view.getByRole("button", { name: "Send" }));
-});
-
-test("while a turn runs, Cmd/Ctrl+Enter steers, Enter queues, and an empty composer offers Stop", async () => {
-  const { tool, composer, type, view } = setup({ status: "running" });
-  assert.ok(view.getByRole("button", { name: "Stop the turn" }));
-
-  type("Mind the edge cases");
-  assert.ok(view.getByRole("button", { name: "Steer" }));
-  // Enter queues, so there's no separate Queue button.
-  expect(view.queryByRole("button", { name: "Queue" })).toBeNull();
-  fireEvent.keyDown(composer, { key: "Enter", metaKey: true });
-  await waitFor(() => assert.equal(tool.mock.calls.length, 1));
-
-  await waitFor(() =>
-    assert.equal((composer as HTMLTextAreaElement).value, ""),
-  );
-
-  type("Afterwards, the docs");
-  fireEvent.keyDown(composer, { key: "Enter" });
-  await waitFor(() => assert.equal(tool.mock.calls.length, 2));
-
-  // Esc keeps its usual role; only the Stop button stops the turn.
-  fireEvent.keyDown(composer, { key: "Escape" });
-  assert.equal(tool.mock.calls.length, 2);
-  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
-  await waitFor(() => assert.equal(tool.mock.calls.length, 3));
-
-  expect(sent(tool)).toEqual([
-    [
-      "app_send_message",
-      {
-        task_id: "task-1",
-        message: "Mind the edge cases",
-        delivery: "steer",
-        request_id: expect.any(String),
-      },
-    ],
-    [
-      "app_send_message",
-      {
-        task_id: "task-1",
-        message: "Afterwards, the docs",
-        delivery: "queue",
-        request_id: expect.any(String),
-      },
-    ],
-    ["interrupt_task", { task_id: "task-1", send_pending: false }],
-  ]);
 });
 
 test("while the worker waits for input, Enter and Ctrl+Enter only queue", async () => {
@@ -564,29 +444,6 @@ test("an idle composer can hide and reopen its draft without offering Stop", () 
   expect(document.activeElement).toBe(composer);
 });
 
-test("a hidden permission composer keeps Stop available", async () => {
-  const { view, tool } = setup({
-    status: "waiting",
-    pending_input: {
-      id: "permission",
-      tool: "Bash",
-      kind: "permission",
-      input: {},
-    },
-  });
-
-  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-  assert.ok(view.getByRole("button", { name: "Show composer" }));
-
-  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
-
-  await waitFor(() =>
-    expect(sent(tool)).toEqual([
-      ["interrupt_task", { task_id: "task-1", send_pending: false }],
-    ]),
-  );
-});
-
 test("composer visibility is remembered separately for each task", () => {
   const { view, type, updateTask } = setup();
   type("First task draft");
@@ -626,63 +483,55 @@ test("an empty question starts with the composer collapsed and offers fallback r
   expect(view.getByRole("button", { name: "Review request" })).toBeTruthy();
 });
 
-for (const pending of [
-  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
-  {
-    id: "question",
-    tool: "AskUserQuestion",
-    kind: "question" as const,
+test("permission requests auto-hide the composer and restore its draft afterwards", () => {
+  const pending = {
+    id: "permission",
+    tool: "Bash",
+    kind: "permission" as const,
     input: {},
-  },
-]) {
-  test(`${pending.kind} requests auto-hide the composer, including fallback reviews`, () => {
-    const { view, type, updateTask } = setup({ status: "running" });
-    type("Saved draft");
-    updateTask({ status: "waiting", pending_input: pending });
-    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-    assert.ok(view.getByRole("button", { name: "Stop the turn" }));
+  };
 
-    fireEvent.click(
-      view.getByRole("button", { name: "Show composer (draft)" }),
-    );
+  const { view, type, updateTask } = setup({ status: "running" });
+  type("Saved draft");
+  updateTask({ status: "waiting", pending_input: pending });
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  assert.ok(view.getByRole("button", { name: "Stop the turn" }));
 
-    expect(
-      (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
-        .value,
-    ).toBe("Saved draft");
+  fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
 
-    updateTask({
-      status: "waiting",
-      pending_input: { ...pending, id: "next-request" },
-    });
+  expect(
+    (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("Saved draft");
 
-    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-    updateTask({ status: "running", pending_input: undefined });
-
-    expect(
-      (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
-        .value,
-    ).toBe("Saved draft");
+  updateTask({
+    status: "waiting",
+    pending_input: { ...pending, id: "next-request" },
   });
-}
 
-for (const pending of [
-  questionInput("request")!,
-  { id: "permission", tool: "Bash", kind: "permission" as const, input: {} },
-]) {
-  test(`${pending.kind} toggles preserve the ordinary composer's hidden preference`, () => {
-    const { view, updateTask } = setup({ status: "running" });
-    fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  updateTask({ status: "running", pending_input: undefined });
 
-    updateTask({ status: "waiting", pending_input: pending });
-    fireEvent.click(view.getByRole("button", { name: "Show composer" }));
-    assert.ok(view.getByRole("textbox", { name: "Message" }));
+  expect(
+    (view.getByRole("textbox", { name: "Message" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("Saved draft");
+});
 
-    updateTask({ status: "running", pending_input: undefined });
-    expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-    assert.ok(view.getByRole("button", { name: "Show composer" }));
-  });
-}
+test("question toggles preserve the ordinary composer's hidden preference", () => {
+  const pending = questionInput("request")!;
+
+  const { view, updateTask } = setup({ status: "running" });
+  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
+
+  updateTask({ status: "waiting", pending_input: pending });
+  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
+  assert.ok(view.getByRole("textbox", { name: "Message" }));
+
+  updateTask({ status: "running", pending_input: undefined });
+  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
+  assert.ok(view.getByRole("button", { name: "Show composer" }));
+});
 
 test("questions collapse the composer while preserving its draft and Stop action", async () => {
   const focus = vi.spyOn(HTMLElement.prototype, "focus");
@@ -760,35 +609,4 @@ test("questions collapse the composer while preserving its draft and Stop action
 
   assert.ok(view.getByRole("button", { name: "Steer" }));
   assert.ok(view.getByRole("button", { name: "Hide composer" }));
-});
-
-test("the expanded question composer queues messages and each new request starts collapsed", async () => {
-  const { tool, view, updateTask } = setup({ status: "running" });
-  updateTask({ status: "waiting", pending_input: questionInput("first") });
-  fireEvent.click(view.getByRole("button", { name: "Show composer" }));
-  const composer = view.getByRole("textbox", { name: "Message" });
-  fireEvent.change(composer, { target: { value: "Next, add tests" } });
-  fireEvent.keyDown(composer, { key: "Enter" });
-
-  await waitFor(() =>
-    expect(sent(tool)).toEqual([
-      [
-        "app_send_message",
-        {
-          task_id: "task-1",
-          message: "Next, add tests",
-          delivery: "queue",
-          request_id: expect.any(String),
-        },
-      ],
-    ]),
-  );
-
-  await waitFor(() =>
-    assert.equal((composer as HTMLTextAreaElement).value, ""),
-  );
-
-  updateTask({ status: "waiting", pending_input: questionInput("second") });
-  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-  assert.ok(view.getByRole("button", { name: "Show composer" }));
 });

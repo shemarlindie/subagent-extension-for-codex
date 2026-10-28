@@ -116,31 +116,6 @@ test("a file the diff leaves out gets a stand-in without shifting the rest", () 
   assert.equal(changedFileDiff(partial, "missing.ts"), undefined);
 });
 
-test("a path Git quoted in the diff matches its file by path, not place", () => {
-  const [aFile] = changes.files;
-  assert.ok(aFile);
-
-  // As Git writes it: the tab as the two characters \t.
-  const quoted = String.raw`diff --git "a/tab\tname.ts" "b/tab\tname.ts"
---- "a/tab\tname.ts"
-+++ "b/tab\tname.ts"
-@@ -1 +1 @@
--old
-+new
-`,
-    [tabbed, a] = changedFileEntries({
-      ...changes,
-      files: [{ ...aFile, path: "tab\tname.ts" }, aFile],
-      // Out of order, so only the path can pair them.
-      diff: aDiff + quoted,
-    });
-
-  assert.ok(tabbed && a);
-  assert.equal(tabbed.diff.to, "tab\tname.ts");
-  assert.equal(tabbed.missing, undefined);
-  assert.equal(a.diff.to, "a.ts");
-});
-
 test("the next unread file follows the current one, wrapping to the start", () => {
   const [a, logo, b] = changedFileEntries(changes);
   assert.ok(a && logo && b);

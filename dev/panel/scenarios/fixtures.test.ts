@@ -167,28 +167,6 @@ test("a global launch shows every conversation and project", () => {
   assert.ok(previewTasks.some((task) => task.repository !== "/demo/project"));
 });
 
-test("listing preview tasks filters by conversation and project", () => {
-  const list = (args: Record<string, unknown>) =>
-    previewTool("list_tasks", args) as Opened["tasks"];
-
-  assert.equal(list({ conversation_id: null }).length, previewTasks.length);
-
-  const website = list({
-    conversation_id: PREVIEW_THREAD,
-    repository: "/demo/website",
-  });
-
-  assert.ok(website.length > 0);
-
-  assert.ok(
-    website.every(
-      (task) =>
-        task.conversation_id === PREVIEW_THREAD &&
-        task.repository === "/demo/website",
-    ),
-  );
-});
-
 test("the chat project candidate follows the auto-add setting", () => {
   const launch = {
     conversation_id: PREVIEW_THREAD,

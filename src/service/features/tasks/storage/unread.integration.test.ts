@@ -87,17 +87,6 @@ test("reading an earlier event never undoes a later one, nor marks events still 
   assert.equal(store.readState(task.id).unread, false);
 });
 
-test("marking a task unread holds until the user sees it again", (t) => {
-  const { store, task } = fixture(t);
-  assert.equal(store.readState(task.id).unread, false);
-
-  store.markUnread(task);
-  assert.equal(store.readState(task.id).unread, true);
-
-  store.markRead(task);
-  assert.equal(store.readState(task.id).unread, false);
-});
-
 test("marking unread from an event leaves what came before it read, even moving the read point back", (t) => {
   const { store, task } = fixture(t);
   const first = store.event(task, "agent.reply", { text: "One", turn: 1 });

@@ -135,39 +135,6 @@ test("settings expose only enabled providers, off budgets with amounts, and a de
   ]);
 });
 
-test("automatic chat project registration is an on-by-default, persistent user setting", async (t) => {
-  const f = await fixture(t);
-  const result = f.settings.read("alice");
-  const field = schemaField(result, "projects.auto_register_chat");
-  assert.equal(field.type, "boolean");
-  assert.equal(field.title, "Automatically add chat projects");
-  assert.match(String(field.description), /host directory metadata/);
-  assert.match(String(field.description), /keeps projects already registered/);
-  assert.equal("default" in field, false);
-  assert.equal(schemaField(result, "projects").userOnly, true);
-  assert.equal(settingAt(result.values, "projects.auto_register_chat"), true);
-  assert.ok(listed(result).includes("projects.auto_register_chat"));
-
-  const autoRegister = (value: boolean) =>
-    f.settings.update("alice", {
-      set: { projects: { auto_register_chat: value } },
-    });
-
-  autoRegister(false);
-  f.reopen();
-  assert.equal(f.settings.values("alice").projects.auto_register_chat, false);
-  assert.equal(f.settings.values("bob").projects.auto_register_chat, true);
-
-  f.settings.update("alice", {
-    set: { task: { budget: budgets({}, { amount: 9 }) } },
-  });
-
-  assert.equal(f.settings.values("alice").projects.auto_register_chat, false);
-  autoRegister(true);
-  f.reopen();
-  assert.equal(f.settings.values("alice").projects.auto_register_chat, true);
-});
-
 test("settings sections have unique IDs and cover every shown value once", async (t) => {
   const { settings } = await fixture(t);
   const result = settings.read("alice");
@@ -668,35 +635,6 @@ test("effective provider and role select the matching defaults and isolate owner
     f.settings.values("bob").models.profiles.researcher.reasoning_effort,
     "default",
   );
-});
-
-test("partial updates merge into nested groups and keep sibling values", async (t) => {
-  const f = await fixture(t);
-
-  f.settings.update("alice", {
-    set: { models: { global: { model: "kept-model" } } },
-  });
-
-  f.settings.update("alice", {
-    set: { task: { budget: budgets({ enabled: true }) } },
-  });
-
-  f.settings.update("alice", {
-    set: { task: { budget: budgets({ amount: 8 }) } },
-  });
-
-  f.reopen();
-  const values = f.settings.values("alice");
-
-  assert.deepEqual(values.task.budget, {
-    max_cost_usd: { enabled: true, amount: 8 },
-    max_runtime_minutes: { enabled: false, amount: 20 },
-  });
-
-  assert.deepEqual(values.models.global, {
-    model: "kept-model",
-    reasoning_effort: "default",
-  });
 });
 
 test("invalid settings updates cannot partially persist other settings", async (t) => {

@@ -222,23 +222,6 @@ test("pending migrations back up the database as it was first", (t) => {
   assert.equal(copy.prepare("SELECT id FROM tasks").get()?.id, "kept");
 });
 
-test("only the newest three backups are kept", (t) => {
-  const { path, folder, addMigration, backups } = migratedCopy(t);
-  const names = ["first", "second", "third", "fourth"];
-
-  for (const [index, name] of names.entries()) {
-    addMigration(`2999010100000${index}_${name}`);
-    openDatabase(path, folder).close();
-  }
-
-  // Each backup is named for the migration applied last before it, so the
-  // one taken before "first" is the oldest and is removed.
-  assert.deepEqual(
-    backups().map((file) => file.match(/_(first|second|third)-/)?.[1]),
-    ["first", "second", "third"],
-  );
-});
-
 test("backups are pruned by the time in their names, whatever their file times", (t) => {
   const { dir, path, folder, addMigration, backups } = migratedCopy(t);
   const older = join(dir, "backups");

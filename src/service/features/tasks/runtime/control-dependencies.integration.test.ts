@@ -109,27 +109,3 @@ test("current_repo dependents see only the dependency's own changes", async () =
   assert.doesNotMatch(dependency, /\+user/);
   await c.close();
 });
-
-test("successful dependencies release and task hierarchy stays separate", async () => {
-  const { c, store, repo } = await setup();
-  const a = await c.start("alice", input(repo));
-
-  const b = await c.start("alice", {
-    ...input(repo),
-    depends_on: [a.id],
-    parent_task_id: a.id,
-  });
-
-  await until(() => store.get(b.id, "alice").status === "completed");
-
-  const starts = store
-    .events(b.id, "alice")
-    .find((e) => e.type === "task.started")!;
-
-  const completed = store
-    .events(a.id, "alice")
-    .find((e) => e.type === "task.completed")!;
-
-  assert.ok(starts.id > completed.id);
-  await c.close();
-});

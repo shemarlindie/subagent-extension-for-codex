@@ -70,9 +70,11 @@ test("fixture cost marker supports a zero-cost completion", async () => {
   );
 });
 
-test("fixture provider instances keep metadata and permission options isolated", () => {
+test("fixture provider instances keep capabilities, metadata and permission options isolated", () => {
   const first = fixtureProvider();
   const second = fixtureProvider();
+  first.capabilities.cost_budget = false;
+  assert.equal(second.capabilities.cost_budget, true);
 
   const firstPermissions = first.metadata.nativePermissions;
   const secondPermissions = second.metadata.nativePermissions;

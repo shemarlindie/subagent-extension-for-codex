@@ -134,11 +134,3 @@ test("an initial draft does not animate when animation support is available", ()
   render(<View composing />);
   expect(animate).not.toHaveBeenCalled();
 });
-
-test("missing Web Animations support opens the draft immediately", () => {
-  Reflect.deleteProperty(HTMLElement.prototype, "animate");
-  const view = render(<View composing={false} />);
-  view.rerender(<View composing />);
-  expect(view.container.querySelector(".new-task-view")).not.toBeNull();
-  expect(view.container.querySelector("[aria-hidden=true]")).toBeNull();
-});

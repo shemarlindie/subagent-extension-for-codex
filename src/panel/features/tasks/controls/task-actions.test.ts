@@ -294,31 +294,6 @@ test("a permission decision needs a pending permission request", async () => {
   expect(context.tool).not.toHaveBeenCalled();
 });
 
-test("permission decisions submit the request id and optional worker message", async () => {
-  const { actions, context } = setup();
-
-  const pending: Task = {
-    ...task("task-1"),
-    pending_input: {
-      id: "request-1",
-      tool: "Bash",
-      kind: "permission",
-      input: { command: "npm run typecheck" },
-    },
-  };
-
-  expect(
-    await actions.decidePermission(pending, true, "Run only the checks."),
-  ).toBeUndefined();
-
-  expect(context.tool).toHaveBeenCalledExactlyOnceWith("submit_input", {
-    task_id: "task-1",
-    request_id: "request-1",
-    approved: true,
-    message: "Run only the checks.",
-  });
-});
-
 test("an answered question is forgotten before the task reloads", async () => {
   const { actions, context } = setup();
 

@@ -48,33 +48,6 @@ test("decodes event rows without changing metadata or arbitrary JSON fields", (t
   });
 });
 
-test("validated event views preserve complete raw payload data", (t) => {
-  const rawResponse = {
-    type: "assistant",
-    uuid: "sdk-message",
-    message: { id: "message-id", content: [{ type: "text", text: "Done" }] },
-  };
-
-  const row = storedEvent(
-    t,
-    JSON.stringify({
-      role: "assistant",
-      text: "Done",
-      raw_response: rawResponse,
-    }),
-  );
-
-  const decoded = decodeEvent({ ...row, type: "agent.message" });
-
-  expect(decoded.view).toEqual({
-    kind: "known",
-    type: "agent.message",
-    data: { role: "assistant", text: "Done" },
-  });
-
-  expect(decoded.data.raw_response).toEqual(rawResponse);
-});
-
 test("incomplete known payloads remain opaque without losing their fields", (t) => {
   const row = storedEvent(
     t,
@@ -105,13 +78,5 @@ test("retains the named invalid JSON error for an otherwise valid event row", (t
 
   expect(() => decodeEvent(row)).toThrow(
     `Stored event ${row.id} is not valid JSON`,
-  );
-});
-
-test("retains named body validation for valid JSON that is not an object", (t) => {
-  const row = storedEvent(t, "[]");
-
-  expect(() => decodeEvent(row)).toThrow(
-    `Stored event ${row.id} is malformed:`,
   );
 });

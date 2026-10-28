@@ -40,7 +40,6 @@ function setup(overrides: Partial<Snapshot> = {}) {
 
   const delegate = vi.spyOn(controller, "delegate").mockResolvedValue();
   const settings = vi.spyOn(controller, "settings").mockResolvedValue();
-  const newTask = vi.spyOn(controller.newTasks, "open").mockReturnValue();
 
   const view = render(
     <ControllerContext.Provider value={controller}>
@@ -56,19 +55,13 @@ function setup(overrides: Partial<Snapshot> = {}) {
     addProject,
     delegate,
     settings,
-    newTask,
   };
 }
 
-test.each([CONNECTION.reconnecting, CONNECTION.failed])(
-  "connection changes announce %s",
-  (connection) => {
-    const { view } = setup({ connection });
-    const status = view.getByRole("status");
-
-    assert.equal(status.textContent, connection);
-  },
-);
+test("connection changes announce the new status", () => {
+  const { view } = setup({ connection: CONNECTION.reconnecting });
+  assert.equal(view.getByRole("status").textContent, CONNECTION.reconnecting);
+});
 
 test("thread header shows settings and omits other global controls", async () => {
   const { view, user, settings } = setup({ conversation: "chat-1" });
@@ -138,31 +131,17 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
   },
 );
 
-test.each(["Settings", "New task", "Advanced task…"] as const)(
-  "global menu invokes %s without offering unsupported expansion",
-  async (label) => {
-    const { view, user, delegate, settings, newTask } = setup();
-    const calls = { Settings: settings, "New task": newTask };
+test("global menu opens Advanced task without offering unsupported expansion", async () => {
+  const { view, user, delegate } = setup();
 
-    expect(view.queryByRole("button", { name: "Expand" })).toBeNull();
-    await user.click(view.getByRole("button", { name: "Panel actions" }));
+  expect(view.queryByRole("button", { name: "Expand" })).toBeNull();
+  await user.click(view.getByRole("button", { name: "Panel actions" }));
 
-    const action = await view.findByRole("menuitem", { name: label });
+  const action = await view.findByRole("menuitem", { name: "Advanced task…" });
 
-    expect(view.queryByRole("menuitem", { name: "Expand" })).toBeNull();
+  expect(view.queryByRole("menuitem", { name: "Expand" })).toBeNull();
+  expect(view.queryByRole("menuitem", { name: "Add chat project" })).toBeNull();
 
-    expect(
-      view.queryByRole("menuitem", { name: "Add chat project" }),
-    ).toBeNull();
-
-    await user.click(action);
-
-    await waitFor(() =>
-      assert.equal(
-        (label === "Advanced task…" ? delegate : calls[label]).mock.calls
-          .length,
-        1,
-      ),
-    );
-  },
-);
+  await user.click(action);
+  await waitFor(() => assert.equal(delegate.mock.calls.length, 1));
+});

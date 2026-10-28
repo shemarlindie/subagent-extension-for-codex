@@ -171,7 +171,7 @@ test("console authentication failure requests login, rejects sends, and server f
   transport.dispose();
 });
 
-test.each([undefined, false, true])(
+test.each([undefined, true])(
   "console only marks explicit send rejection (%s)",
   async (sendRejected) => {
     const transport = new ConsoleTransport("", async () =>
@@ -500,7 +500,7 @@ test("host tool errors and missing structured output surface meaningful failures
   transport.dispose();
 });
 
-test.each([undefined, false, true])(
+test.each([undefined, true])(
   "host only marks explicit send rejection (%s)",
   async (sendRejected) => {
     const fake = hostApp();

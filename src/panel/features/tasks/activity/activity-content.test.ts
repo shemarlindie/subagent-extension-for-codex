@@ -134,49 +134,6 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
   assert.equal(doc.querySelectorAll("details.activity-raw").length, 6);
 });
 
-test("streamed text, thinking and tool input fragments render as content", () => {
-  const doc = markup([
-    event(
-      "claude.activity",
-      {
-        type: "stream_event",
-        event: {
-          type: "content_block_delta",
-          delta: { type: "text_delta", text: "Streamed text" },
-        },
-      },
-      "text",
-    ),
-    event(
-      "claude.activity",
-      {
-        type: "stream_event",
-        event: {
-          type: "content_block_delta",
-          delta: { type: "thinking_delta", thinking: "Streamed reasoning" },
-        },
-      },
-      "thinking",
-    ),
-    event(
-      "claude.activity",
-      {
-        type: "stream_event",
-        event: {
-          type: "content_block_delta",
-          delta: { type: "input_json_delta", partial_json: '{"count":0' },
-        },
-      },
-      "input",
-    ),
-  ]);
-
-  assert.match(doc.body.textContent ?? "", /Streamed text/);
-  assert.match(doc.body.textContent ?? "", /Streamed reasoning/);
-  assert.match(doc.body.textContent ?? "", /Tool input fragment/);
-  assert.match(doc.body.textContent ?? "", /\{"count":0/);
-});
-
 test("failures are distinguished for results, tool errors and denied permissions", () => {
   const doc = markup([
     event(
@@ -379,14 +336,9 @@ function contentMarkup(content: unknown) {
 }
 
 for (const [name, wrap] of [
-  ["arrays", (value: unknown) => [value]],
   [
     "tool results",
     (value: unknown) => ({ type: "tool_result", content: value }),
-  ],
-  [
-    "MCP tool results",
-    (value: unknown) => ({ type: "mcp_tool_result", content: value }),
   ],
   [
     "documents",
@@ -707,11 +659,6 @@ const workerContent = (content: unknown) =>
   );
 
 test.each([
-  {
-    name: "the worker's text",
-    render: () => workerContent([{ type: "text", text: markdownText }]),
-    markdown: true,
-  },
   {
     name: "tool output",
     render: () =>

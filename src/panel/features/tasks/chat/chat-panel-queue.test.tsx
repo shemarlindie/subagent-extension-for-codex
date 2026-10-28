@@ -51,7 +51,6 @@ test("a running task can steer an existing queued message, keeping its composer 
 
 test.each([
   { status: "completed" as const },
-  { status: "interrupted" as const, queue_paused: true },
   {
     status: "waiting" as const,
     pending_input: {

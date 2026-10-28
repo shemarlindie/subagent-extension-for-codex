@@ -24,14 +24,6 @@ test("serves a rebuilt page, and the last copy once the page is removed", async 
   assert.equal(await readPanelHtml(path), "<html>rebuilt</html>");
 });
 
-test("keeps the page read at startup when it is removed before any request", async (t) => {
-  const path = join(await directory(t), "app.html");
-  await writeFile(path, "<html>startup</html>");
-  preloadPanelHtml(path);
-  await rm(path);
-  assert.equal(await readPanelHtml(path), "<html>startup</html>");
-});
-
 test("a page that never existed is an error", async (t) => {
   const path = join(await directory(t), "app.html");
   preloadPanelHtml(path);

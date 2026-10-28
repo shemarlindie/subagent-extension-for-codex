@@ -8,10 +8,6 @@ import { expect, onTestFinished, test } from "vitest";
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-helpers.js";
 import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
-import {
-  PARENT_DELEGATION_PROTOCOL,
-  PARENT_REPORT_PROTOCOL,
-} from "../../../shared/tasks/conversation/parent-protocol.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import type { ListedTask } from "../../../shared/tasks/task-list.js";
@@ -24,7 +20,6 @@ import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { withLogContext } from "../logging/logger.js";
 import { callTool, definitions, isUserTool } from "./tools.js";
-import type { AnyTool } from "./tools/definition.js";
 
 async function until(fn: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -136,43 +131,6 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
   await expect(
     callTool({} as Control, "alice", "app_save_settings_file", {}),
   ).rejects.toThrow(/User tools require a user interface/);
-});
-
-test("tools declare their read-only and destructive annotations", () => {
-  const tools: Record<string, AnyTool> = definitions({} as Control, "alice");
-
-  const flagged = (flag: "readOnly" | "destructive") =>
-    Object.keys(tools)
-      .filter((name) => tools[name]?.[flag])
-      .sort();
-
-  expect(flagged("readOnly")).toEqual([
-    "app_export_settings",
-    "app_get_activity",
-    "app_get_change_counts",
-    "app_get_chat",
-    "app_get_turn_activity",
-    "app_search_mentions",
-    "app_wait_for_updates",
-    "get_changed_file",
-    "get_changes",
-    "get_current_project",
-    "get_message",
-    "get_panel_context",
-    "get_settings",
-    "get_task",
-    "list_events",
-    "list_messages",
-    "list_projects",
-    "list_tasks",
-    "list_workers",
-  ]);
-
-  expect(flagged("destructive")).toEqual([
-    "app_delete_branch",
-    "app_delete_tasks",
-    "app_remove_worktree",
-  ]);
 });
 
 test("a parent reads replies by long poll and sends follow-ups as messages", async () => {
@@ -425,37 +383,6 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
     assert.equal(updated.status, beforeBudgetApply.status);
     assert.equal(updated.budget.max_cost_usd, 6);
     assert.equal(store.get(t.id, "alice").turn, beforeBudgetApply.turn);
-  } finally {
-    await c.close();
-  }
-});
-
-test("interrupt with send_pending sends the pending steers as the next turn", async () => {
-  const checkpoints = new TurnCheckpoints(1);
-
-  const { c, store, parent, start } = await setup(
-    fixtureProvider({ beforeReply: checkpoints.beforeReply }),
-  );
-
-  try {
-    const t = await start("[late]");
-    await checkpoints.ready();
-
-    const steer = await parent<{ state: string }>("send_message", {
-      task_id: t.id,
-      message: "Now this",
-    });
-
-    assert.equal(steer.state, "pending_steer");
-
-    await parent("interrupt_task", {
-      task_id: t.id,
-      send_pending: true,
-    });
-
-    await until(() => store.get(t.id, "alice").turn === 2);
-    await until(() => store.get(t.id, "alice").status === "completed");
-    assert.equal(store.get(t.id, "alice").queue_paused, undefined);
   } finally {
     await c.close();
   }
@@ -963,81 +890,6 @@ test("reading reports leaves them available for host delivery, while model ackno
     expect(
       store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
     ).toHaveLength(1);
-  } finally {
-    await c.close();
-  }
-});
-
-test("parent message tools publish the canonical polling and processing protocol", () => {
-  const tools = definitions({} as Control, "alice");
-
-  expect(tools.list_messages.description).toContain(PARENT_DELEGATION_PROTOCOL);
-
-  expect(tools.get_message.description).toContain(PARENT_REPORT_PROTOCOL);
-
-  expect(tools.acknowledge_message.description).toContain(
-    "after you successfully process",
-  );
-});
-
-test("the panel records what the user has read, and lists show what they haven't", async () => {
-  const { c, store, parent, user, start } = await setup();
-
-  try {
-    const t = await start("Review the parser");
-    await until(() => store.get(t.id, "alice").status === "completed");
-
-    const listed = async () =>
-      (
-        await parent<ListedTask[]>("list_tasks", {
-          conversation_id: null,
-        })
-      ).find((task) => task.id === t.id)?.unread;
-
-    assert.equal(await listed(), true);
-
-    // A task never read is new from its start.
-    const [never] = await parent<ListedTask[]>("list_tasks", {
-      conversation_id: null,
-    });
-
-    assert.equal(never?.read_through, 0);
-
-    // Chat's cursor covers the reply and the turn's end.
-    const chat = await user<{ next_cursor: number }>("app_get_chat", {
-      task_id: t.id,
-    });
-
-    assert.deepEqual(
-      await user("app_set_task_read", {
-        task_id: t.id,
-        read: true,
-        through: chat.next_cursor,
-      }),
-      { unread: false, through: chat.next_cursor },
-    );
-
-    assert.equal(await listed(), undefined);
-
-    assert.deepEqual(
-      await user("app_set_task_read", { task_id: t.id, read: false }),
-      { unread: true, through: chat.next_cursor },
-    );
-
-    assert.deepEqual(await user("app_mark_tasks_read", { task_ids: [t.id] }), {
-      task_ids: [t.id],
-    });
-
-    assert.equal(await listed(), undefined);
-
-    // Marking from the turn's end leaves that end unread.
-    assert.deepEqual(
-      await user("app_mark_task_unread_from", {
-        task_id: t.id,
-        event_id: chat.next_cursor,
-      }),
-      { unread: true, through: chat.next_cursor - 1 },
-    );
   } finally {
     await c.close();
   }

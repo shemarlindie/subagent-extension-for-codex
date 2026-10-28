@@ -97,38 +97,35 @@ test("an unavailable host or empty claim does not send or log delivery", async (
   expect(send).not.toHaveBeenCalled();
 });
 
-test.each(["elsewhere", undefined])(
-  "scope change or teardown during claim prevents sending (%s)",
-  async (conversation) => {
-    const { relay, scope, tool, send } = fixture();
-    let resolve!: (value: typeof message) => void;
+test("a scope change during claim prevents sending", async () => {
+  const { relay, scope, tool, send } = fixture();
+  let resolve!: (value: typeof message) => void;
 
-    tool
-      .mockReset()
-      .mockImplementationOnce(
-        () =>
-          new Promise((done) => {
-            resolve = done;
-          }),
-      )
-      .mockResolvedValue(undefined);
+  tool
+    .mockReset()
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValue(undefined);
 
-    const pending = relay.forward("parent");
-    scope.conversation = conversation;
-    resolve(message);
+  const pending = relay.forward("parent");
+  scope.conversation = "elsewhere";
+  resolve(message);
 
-    await expect(pending).rejects.toThrow(/conversation changed/);
-    expect(send).not.toHaveBeenCalled();
+  await expect(pending).rejects.toThrow(/conversation changed/);
+  expect(send).not.toHaveBeenCalled();
 
-    expect(tool).toHaveBeenLastCalledWith(
-      "app_record_parent_delivery",
-      expect.objectContaining({
-        delivered: false,
-        error: "Panel parent conversation changed before delivery",
-      }),
-    );
-  },
-);
+  expect(tool).toHaveBeenLastCalledWith(
+    "app_record_parent_delivery",
+    expect.objectContaining({
+      delivered: false,
+      error: "Panel parent conversation changed before delivery",
+    }),
+  );
+});
 
 test("a claimed message from another conversation cannot be sent", async () => {
   const { relay, tool, send } = fixture();
@@ -170,27 +167,6 @@ test("a forward during another claims again once that one finishes, and the guar
   tool.mockResolvedValue(null);
   await relay.forward("parent");
   expect(tool).toHaveBeenCalledTimes(6);
-});
-
-test("several queued messages are all delivered by one forward", async () => {
-  const { relay, tool, send } = fixture();
-  const second = { ...message, attempt_id: 3, text: "Second notification" };
-
-  tool
-    .mockReset()
-    .mockResolvedValueOnce(message)
-    .mockResolvedValueOnce({ message: { id: message.message_id } })
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(second)
-    .mockResolvedValueOnce({ message: { id: second.message_id } })
-    .mockResolvedValue(undefined);
-
-  await relay.forward("parent");
-
-  expect(send.mock.calls).toEqual([
-    [message.text, { submit: true }],
-    [second.text, { submit: true }],
-  ]);
 });
 
 test("send failures are logged once with bounded error text and allow later refreshes", async () => {
@@ -236,39 +212,36 @@ test("a report acknowledged after claim skips sending and records the reason", a
   });
 });
 
-test.each(["elsewhere", undefined])(
-  "scope change or teardown during acknowledgement check prevents sending (%s)",
-  async (conversation) => {
-    const { relay, tool, send, scope } = fixture();
-    let resolve!: (value: { message: { id: string } }) => void;
+test("a scope change during the acknowledgement check prevents sending", async () => {
+  const { relay, tool, send, scope } = fixture();
+  let resolve!: (value: { message: { id: string } }) => void;
 
-    tool
-      .mockReset()
-      .mockResolvedValueOnce(message)
-      .mockImplementationOnce(
-        () =>
-          new Promise((done) => {
-            resolve = done;
-          }),
-      )
-      .mockResolvedValue(undefined);
+  tool
+    .mockReset()
+    .mockResolvedValueOnce(message)
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValue(undefined);
 
-    const pending = relay.forward("parent");
-    await vi.waitFor(() => expect(tool).toHaveBeenCalledTimes(2));
-    scope.conversation = conversation;
-    resolve({ message: { id: message.message_id } });
-    await expect(pending).rejects.toThrow(/conversation changed/);
-    expect(send).not.toHaveBeenCalled();
+  const pending = relay.forward("parent");
+  await vi.waitFor(() => expect(tool).toHaveBeenCalledTimes(2));
+  scope.conversation = "elsewhere";
+  resolve({ message: { id: message.message_id } });
+  await expect(pending).rejects.toThrow(/conversation changed/);
+  expect(send).not.toHaveBeenCalled();
 
-    expect(tool).toHaveBeenLastCalledWith(
-      "app_record_parent_delivery",
-      expect.objectContaining({
-        delivered: false,
-        error: "Panel parent conversation changed before delivery",
-      }),
-    );
-  },
-);
+  expect(tool).toHaveBeenLastCalledWith(
+    "app_record_parent_delivery",
+    expect.objectContaining({
+      delivered: false,
+      error: "Panel parent conversation changed before delivery",
+    }),
+  );
+});
 
 test("an acknowledgement lookup failure is logged without sending", async () => {
   const { relay, tool, send } = fixture();

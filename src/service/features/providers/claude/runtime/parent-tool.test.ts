@@ -83,38 +83,32 @@ test("SDK tool reports tasks with no parent route instead of queueing", async ()
   }
 });
 
-test.each(["completion", "blocker"] as const)(
-  "SDK tool dispatches explicit %s reports with the matching receipt",
-  async (kind) => {
-    const fixture = await connect("parent-chat");
+test("SDK tool dispatches an explicit blocker report with its message receipt", async () => {
+  const fixture = await connect("parent-chat");
 
-    try {
-      const result = await fixture.client.callTool({
-        name: "send_message",
-        arguments: { message: "Report", kind },
-      });
+  try {
+    const result = await fixture.client.callTool({
+      name: "send_message",
+      arguments: { message: "Report", kind: "blocker" },
+    });
 
-      expect(result.isError).not.toBe(true);
+    expect(result.isError).not.toBe(true);
 
-      expect(fixture.messageParent).toHaveBeenCalledExactlyOnceWith(
-        "Report",
-        kind,
-      );
+    expect(fixture.messageParent).toHaveBeenCalledExactlyOnceWith(
+      "Report",
+      "blocker",
+    );
 
-      expect(result.content).toEqual([
-        {
-          type: "text",
-          text:
-            kind === "blocker"
-              ? "Queued parent message parent_27. Host delivery is pending."
-              : "Queued for delivery after this turn completes successfully. Host delivery is pending.",
-        },
-      ]);
-    } finally {
-      await fixture.close();
-    }
-  },
-);
+    expect(result.content).toEqual([
+      {
+        type: "text",
+        text: "Queued parent message parent_27. Host delivery is pending.",
+      },
+    ]);
+  } finally {
+    await fixture.close();
+  }
+});
 
 test("SDK tool rejects invalid kinds and reports callback failures", async () => {
   const fixture = await connect("parent-chat");

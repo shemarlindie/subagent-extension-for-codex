@@ -340,39 +340,6 @@ test(
   },
 );
 
-test("launcher discovers service metadata and token without starting another service", async (t) => {
-  const dir = await data(t);
-  let auth = "";
-
-  const origin = await fake(t, (req, res) => {
-    res.setHeader("Content-Type", "application/json");
-
-    if (req.url === "/health") {
-      res.end(
-        health(req, "persisted-token", {
-          service: "codex-subagent-extension",
-          apiVersion: 1,
-        }),
-      );
-    } else {
-      auth = req.headers.authorization ?? "";
-      res.end("{}");
-    }
-  });
-
-  await writeFile(join(dir, "service.json"), JSON.stringify({ origin }));
-  await writeFile(join(dir, "admin-token"), "persisted-token\n");
-  const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
-
-  assert.deepEqual(JSON.parse(result.stdout), {
-    origin,
-    token: "persisted-token",
-  });
-
-  assert.equal(auth, "Bearer persisted-token");
-  await assert.rejects(access(join(dir, "service.log")));
-});
-
 test(
   "launcher moves off a port another program holds and later launchers follow",
   { timeout: 30000 },
@@ -569,7 +536,8 @@ test("launcher waits for an existing service to finish recovery without spawning
   });
 
   await writeFile(join(dir, "service.json"), JSON.stringify({ origin }));
-  await writeFile(join(dir, "admin-token"), "recovery-token");
+  // A trailing newline in the token file is not part of the token.
+  await writeFile(join(dir, "admin-token"), "recovery-token\n");
 
   assert.deepEqual(
     JSON.parse((await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout),

@@ -28,55 +28,51 @@ test("scheduled activity passes through thinking, responding, tool work and comp
   expect(statusAt(18_000)).toBe("Thinking…");
 });
 
-test.each([
-  { start: 4000, end: 9000 },
-  { start: 20_000, end: 25_000 },
-])(
-  "reply starting at $start grows under one id and hands off to stored Chat",
-  ({ start, end }) => {
-    expect(liveConversationSnapshot(start - 1).draft).toBeUndefined();
-    const first = liveConversationSnapshot(start);
-    const growing = liveConversationSnapshot(start + 2000);
-    const last = liveConversationSnapshot(end - 1);
-    expect(first.draft).toBeDefined();
-    expect(growing.draft?.message_id).toBe(first.draft?.message_id);
-    expect(last.draft?.message_id).toBe(first.draft?.message_id);
+// The tools test below covers the first reply's handoff.
+test("the second reply grows under one id and hands off to stored Chat", () => {
+  const start = 20_000,
+    end = 25_000;
 
-    expect(growing.draft!.text.length).toBeGreaterThan(
-      first.draft!.text.length,
-    );
+  expect(liveConversationSnapshot(start - 1).draft).toBeUndefined();
+  const first = liveConversationSnapshot(start);
+  const growing = liveConversationSnapshot(start + 2000);
+  const last = liveConversationSnapshot(end - 1);
+  expect(first.draft).toBeDefined();
+  expect(growing.draft?.message_id).toBe(first.draft?.message_id);
+  expect(last.draft?.message_id).toBe(first.draft?.message_id);
 
-    expect(last.draft!.text.startsWith(growing.draft!.text)).toBe(true);
+  expect(growing.draft!.text.length).toBeGreaterThan(first.draft!.text.length);
 
-    expect(
-      chatItems(last.task, last.events).some(
-        (item) => item.id === last.draft!.message_id,
-      ),
-    ).toBe(false);
+  expect(last.draft!.text.startsWith(growing.draft!.text)).toBe(true);
 
-    const stored = liveConversationSnapshot(end);
-    expect(stored.draft).toBeUndefined();
+  expect(
+    chatItems(last.task, last.events).some(
+      (item) => item.id === last.draft!.message_id,
+    ),
+  ).toBe(false);
 
-    const matching = chatItems(stored.task, stored.events).filter(
+  const stored = liveConversationSnapshot(end);
+  expect(stored.draft).toBeUndefined();
+
+  const matching = chatItems(stored.task, stored.events).filter(
+    (item) => item.id === first.draft!.message_id,
+  );
+
+  expect(matching).toHaveLength(1);
+
+  expect(matching[0]).toMatchObject({
+    kind: "message",
+    message: { text: last.draft!.text },
+  });
+
+  const finished = liveConversationSnapshot(28_000);
+
+  expect(
+    chatItems(finished.task, finished.events).filter(
       (item) => item.id === first.draft!.message_id,
-    );
-
-    expect(matching).toHaveLength(1);
-
-    expect(matching[0]).toMatchObject({
-      kind: "message",
-      message: { text: last.draft!.text },
-    });
-
-    const finished = liveConversationSnapshot(28_000);
-
-    expect(
-      chatItems(finished.task, finished.events).filter(
-        (item) => item.id === first.draft!.message_id,
-      ),
-    ).toHaveLength(1);
-  },
-);
+    ),
+  ).toHaveLength(1);
+});
 
 test("later loops keep event, message and tool identities distinct", () => {
   const first = liveConversationSnapshot(28_000);

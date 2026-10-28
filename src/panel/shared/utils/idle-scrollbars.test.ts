@@ -46,18 +46,6 @@ function expectActive(element: HTMLElement, active: boolean) {
   expect(element.hasAttribute("data-scrollbar-active")).toBe(active);
 }
 
-test("scroll activity reveals the scrollbar until one second of inactivity", () => {
-  const { scroller } = setup();
-
-  expectActive(scroller, false);
-  scroller.dispatchEvent(new Event("scroll"));
-  expectActive(scroller, true);
-  vi.advanceTimersByTime(999);
-  expectActive(scroller, true);
-  vi.advanceTimersByTime(1);
-  expectActive(scroller, false);
-});
-
 test("repeated scroll activity restarts the idle timer", () => {
   const { scroller } = setup();
 

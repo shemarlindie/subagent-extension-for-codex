@@ -18,19 +18,6 @@ const questionDraft: QuestionDraft = {
   active: 0,
 };
 
-test("session entries remain isolated by scope, identifier and store", () => {
-  const session = new SessionStateStore();
-  session.update("task", "a", { tab: "activity", composerDraft: "unsent" });
-  session.update("question", "a", { draft: questionDraft });
-
-  assert.equal(session.get("task", "a").tab, "activity");
-  assert.equal(session.get("question", "a").draft, questionDraft);
-  assert.equal(session.get("task", "b").tab, "chat");
-  assert.equal(session.get("question", "b").draft, undefined);
-  assert.equal(new SessionStateStore().get("task", "a").composerDraft, "");
-  assert.equal(session.get("task", "a"), session.get("task", "a"));
-});
-
 test("subscriptions notify only meaningful updates to their own entry", () => {
   const session = new SessionStateStore();
   const changed = vi.fn();

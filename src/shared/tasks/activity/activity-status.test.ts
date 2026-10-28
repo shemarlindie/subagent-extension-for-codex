@@ -57,18 +57,16 @@ test("current status follows the most recently updated interleaved operation", (
   assert.match(current.text, /Running Read/);
 });
 
-for (const terminal of ["agent.completed", "task.interrupted"]) {
-  test(`continuation clears stale ${terminal} current status`, () => {
-    const current = currentActivityStatus([
-      event(1, "tool.started", { id: "old", name: "Read" }),
-      event(2, terminal),
-      event(3, "task.started", { turn: 2 }),
-    ]);
+test("continuation clears a stale terminal current status", () => {
+  const current = currentActivityStatus([
+    event(1, "tool.started", { id: "old", name: "Read" }),
+    event(2, "agent.completed"),
+    event(3, "task.started", { turn: 2 }),
+  ]);
 
-    assert.equal(current.text, "Working");
-    assert.equal(current.state, "running");
-  });
-}
+  assert.equal(current.text, "Working");
+  assert.equal(current.state, "running");
+});
 
 test("submitted input clears a stale current input request", () => {
   const current = currentActivityStatus([

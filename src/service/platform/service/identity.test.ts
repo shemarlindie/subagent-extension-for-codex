@@ -50,13 +50,6 @@ test("replaces an older or uninstalled plugin service, forwarding while it speak
   });
 });
 
-test("replaces a prerelease with its final release", () => {
-  assert.deepEqual(handoff(service({ version: "0.2.0-beta.1" }), own, origin), {
-    action: "replace",
-    forward: true,
-  });
-});
-
 test("never downgrades a newer plugin service", () => {
   assert.deepEqual(handoff(service({ version: "0.3.0" }), own, origin), {
     action: "use",

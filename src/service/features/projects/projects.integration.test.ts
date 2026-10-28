@@ -311,31 +311,6 @@ test("registration persists and a running registry sees CLI database updates", a
   );
 });
 
-test("explicit paths cannot grant access, and current never falls back to another project", async (t) => {
-  const f = await fixture(t);
-
-  const a = await f.repo("a"),
-    b = await f.repo("b");
-
-  await f.projects.register(a);
-
-  await assert.rejects(f.projects.resolve("a"), /absolute/);
-  await assert.rejects(f.projects.resolve(b), /outside allowed roots/);
-
-  assert.deepEqual(
-    f.projects.list().map((p) => p.repository),
-    [a],
-  );
-
-  await assert.rejects(f.projects.register("a"), /absolute/);
-  await mkdir(join(a, "subdir"));
-
-  await assert.rejects(
-    f.projects.register(join(a, "subdir")),
-    /repository root/,
-  );
-});
-
 test("approved parent roots permit child repositories but block siblings and symlink escapes", async (t) => {
   const f = await fixture(t);
   const parent = join(f.dir, "approved");

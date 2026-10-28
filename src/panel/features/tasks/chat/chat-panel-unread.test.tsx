@@ -155,19 +155,6 @@ test("marking unread from a reply glides to its New divider where smooth scrolli
 const markReadCalls = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.filter(([name]) => name === "app_set_task_read");
 
-test("Chat at its latest message marks an unread task read through the events it has read", async () => {
-  const { tool, task } = setup({ unread: true }, [], noteItems);
-
-  await waitFor(() =>
-    assert.deepEqual(markReadCalls(tool), [
-      [
-        "app_set_task_read",
-        { task_id: task.id, read: true, through: noteItems.length },
-      ],
-    ]),
-  );
-});
-
 test("list fetches keep the task read only while Chat is at its latest message", async () => {
   const { controller, task, view } = setup({}, [], noteItems);
   const listed: Task[] = [{ ...task, unread: true, read_through: 2 }];

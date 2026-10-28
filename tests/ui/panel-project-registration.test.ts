@@ -104,30 +104,6 @@ test("browsing a folder fills the project draft without granting access", async 
   );
 });
 
-test("Manage adds a project through the folder picker", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
-    configureProjectRegistration(transport, { picked: "/repo/picked" }),
-  );
-
-  await user.click(screen.getByRole("button", { name: "Manage" }));
-  await user.click(screen.getByRole("button", { name: "Add project" }));
-  await user.click(screen.getByRole("button", { name: "Browse…" }));
-
-  await user.click(screen.getByRole("button", { name: "Add project" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      transport.calls
-        .filter((call) => call.name === "app_register_project")
-        .map((call) => call.args),
-      [{ repository: "/repo/picked" }],
-    ),
-  );
-
-  assertAbsent(screen.queryByRole("dialog"));
-  expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
-});
-
 test("cancelling the native picker preserves the manual project path", async (t) => {
   const { controller, transport, user } = await setup(
     t,

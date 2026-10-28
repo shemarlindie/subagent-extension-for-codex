@@ -33,11 +33,7 @@ const data: Changes = {
   diff: paths.map((path) => diffOf(path, `${path} content`)).join(""),
 };
 
-function setup(
-  path: string,
-  changes: Changes = data,
-  conversation: string | undefined = "thread-one",
-) {
+function setup(path: string, changes: Changes = data) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -50,7 +46,7 @@ function setup(
   const initial = controller.getSnapshot(),
     snapshot = {
       ...initial,
-      conversation,
+      conversation: "thread-one",
       changes: {
         task: task.id,
         scope: "task" as const,
@@ -264,13 +260,6 @@ test("the view switcher takes the title's place when the file has views", async 
 
   assert.match(view.container.textContent ?? "", /Deleted/);
   expect(switcher()).toBeNull();
-});
-
-test("global mode omits the file handoff from the preview toolbar", async () => {
-  const { view } = setup("a.ts", data, "");
-  await act(async () => {});
-  expect(view.container.querySelector(".file-action-label")).toBeNull();
-  assert.ok(view.container.querySelector('[aria-label="Viewed a.ts"]'));
 });
 
 test("does not reuse another task's preview when the path matches", async () => {

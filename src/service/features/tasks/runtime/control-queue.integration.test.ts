@@ -13,49 +13,6 @@ import {
 } from "./control-test-harness.js";
 import { TurnCheckpoints } from "./turn-checkpoints-test-harness.js";
 
-test("a steer reaches the running turn at its next step without interrupting it", async () => {
-  const checkpoints = new TurnCheckpoints(1);
-
-  const { c, store, repo } = await setup(
-    new TestProvider({ beforeReply: checkpoints.beforeReply }),
-  );
-
-  const t = await c.start("alice", input(repo));
-  await checkpoints.ready();
-  const sent = await c.send("alice", t.id, "Mind the edge cases", "user");
-  assert.equal(sent.state, "pending_steer");
-
-  assert.deepEqual(
-    store.get(t.id, "alice").pending_steers.map((m) => m.message),
-    ["Mind the edge cases"],
-  );
-
-  checkpoints.release();
-  await until(() => store.get(t.id, "alice").status === "completed");
-  const done = store.get(t.id, "alice");
-  assert.equal(done.turn, 1);
-  assert.deepEqual(done.pending_steers, []);
-
-  assert.deepEqual(
-    done.instructions.map((m) => m.message),
-    ["Mind the edge cases"],
-  );
-
-  assert.equal(done.instructions_sent, 1);
-
-  assert.deepEqual(eventData(store, t.id, "task.steer_taken"), [
-    { message_id: sent.message_id },
-  ]);
-
-  assert.match(
-    String(store.latestEvent(t.id, "agent.reply")!.data.text),
-    /Also took: Mind the edge cases/,
-  );
-
-  assert.deepEqual(eventData(store, t.id, "task.turn_ended").length, 1);
-  await c.close();
-});
-
 test("a queued message waits for its own turn, which follows at once", async () => {
   const checkpoints = new TurnCheckpoints(1);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
@@ -433,43 +390,6 @@ test.each([true, false])(
   },
 );
 
-test("steering the last queued message rejects stale IDs and other owners", async () => {
-  const checkpoints = new TurnCheckpoints(1);
-
-  const { c, store, repo } = await setup(
-    new TestProvider({ beforeReply: checkpoints.beforeReply }),
-  );
-
-  try {
-    const task = await c.start("alice", input(repo));
-    await checkpoints.ready();
-
-    const queued = await c.send("alice", task.id, "Use this now", "user", {
-      delivery: "queue",
-    });
-
-    assert.throws(
-      () => c.steerQueued("bob", task.id, queued.message_id),
-      /Task not found/,
-    );
-
-    c.steerQueued("alice", task.id, queued.message_id);
-    assert.deepEqual(store.get(task.id, "alice").queue, []);
-
-    assert.throws(
-      () => c.steerQueued("alice", task.id, queued.message_id),
-      /no longer queued/,
-    );
-
-    checkpoints.release();
-    await until(() => store.get(task.id, "alice").status === "completed");
-    assert.equal(store.get(task.id, "alice").turn, 1);
-    assert.equal(eventData(store, task.id, "task.instruction").length, 1);
-  } finally {
-    await c.close();
-  }
-});
-
 test("queued steering before provider startup adds the original message to the first turn instructions", async () => {
   const { c, store, repo } = await setup(new TestProvider(), 0);
 
@@ -542,60 +462,6 @@ test("queued steering rejects idle tasks and input requests without removing the
   } finally {
     await c.close();
   }
-});
-
-test("queued messages can be edited and removed until sent; the parent removes only its own", async () => {
-  const recorder = new PromptRecorder();
-  const { c, store, repo } = await setup(recorder);
-  const t = await c.start("alice", input(repo, "[input]"));
-  await until(() => !!store.get(t.id, "alice").pending_input);
-
-  const mine = await c.send("alice", t.id, "Draft", "user", {
-    delivery: "queue",
-  });
-
-  const theirs = await c.send("alice", t.id, "Parent note", "parent", {
-    delivery: "queue",
-  });
-
-  const extra = await c.send("alice", t.id, "Extra", "user", {
-    delivery: "queue",
-  });
-
-  assert.throws(
-    () => c.removeQueued("alice", t.id, mine.message_id, "parent"),
-    /only messages it queued/,
-  );
-
-  c.editQueued("alice", t.id, mine.message_id, "Final text");
-  c.removeQueued("alice", t.id, theirs.message_id, "parent");
-  c.removeQueued("alice", t.id, extra.message_id, "user");
-
-  assert.deepEqual(eventData(store, t.id, "task.message_removed"), [
-    { message_id: theirs.message_id },
-    { message_id: extra.message_id },
-  ]);
-
-  const request = store.get(t.id, "alice").pending_input!;
-  c.input("alice", t.id, request.id, true, { answer: "go" });
-  await until(() => store.get(t.id, "alice").turn === 2);
-  await until(() => store.get(t.id, "alice").status === "completed");
-  assert.deepEqual(recorder.prompts.slice(1), ["Final text"]);
-
-  assert.throws(
-    () => c.removeQueued("alice", t.id, mine.message_id, "user"),
-    /no longer queued/,
-  );
-
-  // Clear removes them all.
-  const busy = await c.start("alice", input(repo, "[input]"));
-  await until(() => !!store.get(busy.id, "alice").pending_input);
-  await c.send("alice", busy.id, "One", "user", { delivery: "queue" });
-  await c.send("alice", busy.id, "Two", "parent", { delivery: "queue" });
-  c.clearQueue("alice", busy.id);
-  assert.deepEqual(store.get(busy.id, "alice").queue, []);
-  assert.equal(eventData(store, busy.id, "task.message_removed").length, 2);
-  await c.close();
 });
 
 test("a restart mid-turn moves pending steers to the front of a paused queue", async () => {

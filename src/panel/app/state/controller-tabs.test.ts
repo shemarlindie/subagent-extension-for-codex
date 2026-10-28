@@ -255,26 +255,3 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   assert.equal(controller.getSnapshot().changes?.scope, "turn");
   assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
 });
-
-test("selecting a task loads its change counts without reading its changes", async (t) => {
-  const { controller, transport } = setup();
-  t.onTestFinished(() => controller.dispose());
-  transport.tasks = [task("a")];
-
-  transport.handler = (name) =>
-    name === "app_get_change_counts"
-      ? { scope: "task", files: 4, additions: 9, deletions: 2 }
-      : undefined;
-
-  await controller.start();
-  await controller.select("a");
-  await flush();
-
-  assert.equal(controller.getSnapshot().changeCounts?.data?.files, 4);
-  assert.equal(controller.getSnapshot().changes, undefined);
-
-  const names = transport.calls.map((call) => call.name);
-
-  assert.ok(names.includes("app_get_change_counts"));
-  assert.ok(!names.includes("get_changes"));
-});

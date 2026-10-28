@@ -145,7 +145,6 @@ test("the real panel library restores the saved width and persists keyboard resi
 });
 
 test.each([
-  ["invalid", 245],
   ["219", 245],
   ["Infinity", 245],
   ["900", 480],

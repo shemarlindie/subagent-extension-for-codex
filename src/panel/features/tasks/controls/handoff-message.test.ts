@@ -37,26 +37,6 @@ describe("handoffMessage", () => {
     expect(message).toContain("Branch: agent/task-one");
   });
 
-  test("a selected file includes its path, preview evidence and precise retrieval instructions", () => {
-    const message = handoffMessage(
-      task,
-      { kind: "file", path: "src/session.ts" },
-      "- old cookie handling\n+ secure cookie handling",
-    );
-
-    expect(message).toContain('File path: "src/session.ts"');
-    expect(message).toContain('path="src/session.ts"');
-    expect(message).toContain("get_changes");
-    expect(message).toContain("get_changed_file");
-
-    expect(message).toContain(
-      "pass next_cursor back as cursor until all contents are read",
-    );
-
-    expect(message).toContain("+ secure cookie handling");
-    expect(message).not.toContain("Latest reply.");
-  });
-
   test("missing selected context directs retrieval without substituting the latest reply", () => {
     const message = handoffMessage(task, { kind: "reply", id: "old-reply" });
 

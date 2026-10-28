@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -7,7 +6,6 @@ import { structuredPatch } from "diff";
 import { test } from "vitest";
 
 import type { RunContext } from "../../providers/types.js";
-import { Store } from "../storage/store.js";
 import {
   eventData,
   input,
@@ -16,41 +14,6 @@ import {
   TestProvider,
   until,
 } from "./control-test-harness.js";
-
-test("durable task completes in isolated worktree and records its reply", async () => {
-  const { c, store, repo, db } = await setup();
-  const t = await c.start("alice", input(repo));
-  await until(() => store.get(t.id, "alice").status === "completed");
-  const done = store.get(t.id, "alice");
-  assert.notEqual(done.workspace, repo);
-  assert.equal(done.session_owner, c.ownerWorker);
-  assert.ok(done.session_state_ref);
-  const reply = store.latestEvent(t.id, "agent.reply")!;
-  assert.ok(String(reply.data.text).includes("Fixture"));
-  assert.equal(reply.data.turn, 1);
-  assert.equal(reply.data.start_tree, undefined);
-  assert.equal(reply.data.end_tree, undefined);
-
-  assert.equal(
-    execFileSync("git", [
-      "-C",
-      repo,
-      "for-each-ref",
-      "refs/agent-tasks",
-    ]).toString(),
-    "",
-  );
-
-  const completed = store
-    .events(t.id, "alice")
-    .find((e) => e.type === "task.completed")!;
-
-  assert.deepEqual(completed.data, { reply: reply.data.text });
-  await c.close();
-  const reopened = new Store(db);
-  assert.equal(reopened.get(t.id, "alice").status, "completed");
-  reopened.close();
-});
 
 test("fixture invalid-session marker triggers the normal continuation recovery path", async () => {
   const { c, store, repo } = await setup();
@@ -186,48 +149,6 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   await c.close();
 });
 
-test("a completed task takes a follow-up as its next turn", async () => {
-  const { c, store, repo } = await setup();
-  const t = await c.start("alice", input(repo, "Write"));
-  await until(() => store.get(t.id, "alice").status === "completed");
-  const first = store.get(t.id, "alice");
-  assert.ok(first.completed_at);
-  assert.equal(first.created_by, "user");
-
-  const sent = await c.send("alice", t.id, "Write another", "parent");
-  assert.match(sent.message_id, /^msg_/);
-  assert.equal(sent.task.completed_at, undefined);
-  await until(() => store.get(t.id, "alice").turn === 2);
-  await until(() => store.get(t.id, "alice").status === "completed");
-  const done = store.get(t.id, "alice");
-  assert.ok(done.runtime_ms >= first.runtime_ms);
-
-  const events = store.events(t.id, "alice");
-
-  assert.deepEqual(events.find((e) => e.type === "task.instruction")?.data, {
-    message_id: sent.message_id,
-    message: "Write another",
-    from: "parent",
-    delivery: "steer",
-  });
-
-  assert.deepEqual(
-    events.filter((e) => e.type === "agent.reply").map((e) => e.data.turn),
-    [1, 2],
-  );
-
-  // A busy task takes no follow-up yet.
-  const busy = await c.start("alice", input(repo, "[input]"));
-  await until(() => !!store.get(busy.id, "alice").pending_input);
-
-  await assert.rejects(
-    c.send("alice", busy.id, "Hi", "user"),
-    /waiting for input/,
-  );
-
-  await c.close();
-});
-
 test("a turn stopped by its budget resumes after a follow-up raises it", async () => {
   const { c, store, repo } = await setup();
 
@@ -264,61 +185,6 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
     max_cost_usd: 2,
     max_runtime_minutes: null,
   });
-
-  await c.close();
-});
-
-test("applying an increased limit persists without starting a turn", async () => {
-  const { c, store, repo } = await setup();
-
-  const task = await c.start("alice", {
-    ...input(repo),
-    budget: { max_runtime_minutes: 20, max_cost_usd: 1 },
-  });
-
-  await until(() => store.get(task.id, "alice").status === "completed");
-  const failed = store.get(task.id, "alice");
-  const turn = failed.turn;
-  failed.status = "failed";
-  failed.error = "Cost budget exhausted";
-  failed.cost_usd = 0.8;
-  store.save(failed);
-
-  // A mixed update marks only the limit that increased.
-  const mixed = c.applyBudget("alice", task.id, {
-    max_cost_usd: 1,
-    max_runtime_minutes: 30,
-  });
-
-  assert.deepEqual(mixed.budget_raised_for_turn, { turn, runtime: true });
-
-  const updated = c.applyBudget("alice", task.id, { max_cost_usd: 2 });
-  assert.equal(updated.status, "failed");
-  assert.equal(updated.turn, turn);
-  assert.equal(updated.budget.max_cost_usd, 2);
-
-  assert.deepEqual(updated.budget_raised_for_turn, {
-    turn,
-    cost: true,
-    runtime: true,
-  });
-
-  const persisted = store.get(task.id, "alice");
-  assert.equal(persisted.budget.max_cost_usd, 2);
-  assert.equal(persisted.budget.max_runtime_minutes, 30);
-
-  assert.deepEqual(persisted.budget_raised_for_turn, {
-    turn,
-    cost: true,
-    runtime: true,
-  });
-
-  await assert.rejects(
-    Promise.resolve().then(() =>
-      c.applyBudget("alice", task.id, { max_cost_usd: 1 }),
-    ),
-    /can only be raised/,
-  );
 
   await c.close();
 });

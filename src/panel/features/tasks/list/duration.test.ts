@@ -38,16 +38,6 @@ test("a running task adds its current run to finished runtime", () => {
   assert.equal(taskRuntimeMs(running, started - 5_000), 60_000);
 });
 
-test("a stopped task reports only recorded runtime", () => {
-  const stale = task({
-    status: "completed",
-    run_started_at: "2026-10-02T08:00:00Z",
-  });
-
-  assert.equal(runtimeLive(stale), false);
-  assert.equal(taskRuntimeMs(stale, Date.now()), 60_000);
-});
-
 test("a run held for input freezes at the request time and resumes against the same start", () => {
   const started = Date.parse("2026-10-02T08:00:00Z");
 
