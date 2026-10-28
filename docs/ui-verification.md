@@ -63,7 +63,7 @@ Host settings:
 | Task                                        | Scenario                                                                                                                                                                            |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Review recorded edits                       | Typed SDK tool results replay through the mapper. Covers added, modified, deleted, command and incomplete rows and the command warning in both scopes.                              |
-| Refactor the billing module                 | Running task with recorded modified, added and deleted files, command tags, incomplete files and a command warning in both scopes.                                                  |
+| Refactor the billing module                 | Running task with recorded modified, added and deleted files, command tags, incomplete files and a command warning.                                                                 |
 | Live: …                                     | Latest activity and clocks for thinking, tool, compaction, retry, rate limit, ordinary work, finishing, hook, background task and provider failure.                                 |
 | Live: conversation cycle                    | Repeats a 32-second turn with thinking, two streamed replies, a long tool command, compaction and completion. Reloads show up to three recent turns.                                |
 | Live: streaming reply                       | Chat draft grows over time and restarts.                                                                                                                                            |
@@ -85,7 +85,7 @@ Host settings:
 | Tighten the task inspector layout           | Two committed turns, the **This turn** option, recorded changes and clean worktree removal.                                                                                         |
 | Fix the flaky retry test                    | Removed worktree with its branch retained.                                                                                                                                          |
 | Draft the release notes                     | Removed worktree and deleted branch.                                                                                                                                                |
-| Speed up the production build               | 60-file recorded diff. Removal asks before discarding checkout changes.                                                                                                             |
+| Speed up the production build               | 60-file recorded diff, listed as 61 files because its rename shows as a deletion and an addition. Removal asks before discarding checkout changes.                                  |
 | Profile the production build                | Large added files and multiple pages of diff and file previews.                                                                                                                     |
 
 Read state:
@@ -99,10 +99,12 @@ Read state:
 
 Changes fixtures in `dev/panel/scenarios/change-fixtures.ts` replay recorded
 edits into real temporary Git repositories for file previews and worktree
-actions. Worktree actions change these repositories. A Vite restart or a
-service source edit rebuilds them. `large-files.ts` supplies the 60-file diff,
-minified JSON, a large CSV, a log file, long Markdown with heading links, a
-single long line and an oversized SVG that displays as source.
+actions. Worktree actions change these repositories. A Vite restart or a service
+source edit rebuilds them. To get fresh state without restarting a shared dev
+host, start another with `npx vite --port <port> --strictPort`. `large-files.ts`
+supplies the 60-file diff, minified JSON, a large CSV, a log file, long Markdown
+with heading links, a single long line and an oversized SVG that displays as
+source.
 
 ## Measurement and checks in Codex
 
