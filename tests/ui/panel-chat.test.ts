@@ -329,7 +329,7 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 });
 
 test("View activity scrolls to a recent turn and reads an older one on its own", async (t) => {
-  const { controller, user } = await setup(t, (transport) => {
+  const { controller, transport, user } = await setup(t, (transport) => {
     const events: ReturnType<typeof decodedEvent>[] = [];
 
     const add = (type: string, data: Record<string, unknown> = {}) =>
@@ -389,10 +389,21 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
   assert.equal(controller.getSnapshot().tab, "activity");
   assertAbsent(screen.queryByText(/Showing activity for/));
 
+  assert.equal(
+    transport.calls.some((call) => call.name === "app_get_turn_activity"),
+    false,
+  );
+
   await user.click(screen.getByRole("tab", { name: "Chat" }));
   await user.click(first);
 
   assert.ok(await screen.findByText("Showing activity for"));
+
+  assert.deepEqual(
+    transport.calls.find((call) => call.name === "app_get_turn_activity")?.args,
+    { task_id: "one", turn: 1 },
+  );
+
   assert.ok(screen.getByText("turn 1", { selector: "strong" }));
 
   assert.ok(

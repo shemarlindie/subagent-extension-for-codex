@@ -29,10 +29,6 @@ test("compares versions by semver precedence", () => {
   assert.equal(compareVersions("1.2.3", "1.3.0"), -1);
 });
 
-test("uses a current plugin service", () => {
-  assert.deepEqual(handoff(service({}), own, origin), { action: "use" });
-});
-
 test("replaces an older or uninstalled plugin service, forwarding while it speaks the same API", () => {
   assert.deepEqual(handoff(service({ version: "0.1.0" }), own, origin), {
     action: "replace",

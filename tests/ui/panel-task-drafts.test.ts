@@ -53,6 +53,37 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   ).toBe(field);
 
   assert.equal((field as HTMLTextAreaElement).value, "Keep this draft");
+
+  assert.ok(
+    controller
+      .getSnapshot()
+      .projects.some((project) => project.repository === "/repo/b"),
+  );
+
+  assert.equal(
+    screen
+      .getByRole("switch", { name: "Runtime limit" })
+      .getAttribute("aria-checked"),
+    "true",
+  );
+
+  assert.equal(
+    screen.getByLabelText<HTMLInputElement>("Runtime limit (mins)").value,
+    "0.5",
+  );
+
+  assert.equal(
+    screen
+      .getByRole("switch", { name: "Cost limit" })
+      .getAttribute("aria-checked"),
+    "false",
+  );
+
+  assert.equal(
+    screen.getByLabelText<HTMLInputElement>("Cost limit (USD)").value,
+    "5",
+  );
+
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 

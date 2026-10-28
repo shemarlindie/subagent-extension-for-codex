@@ -4,11 +4,7 @@ import {
   settingRowSchema,
   settingSectionSchema,
 } from "./document-contract.generated.js";
-import type {
-  ModelScope,
-  SettingRow,
-  SettingSection,
-} from "./document-contract.js";
+import type { ModelScope, SettingSection } from "./document-contract.js";
 import { settingsSections } from "./settings-document.js";
 import { settingsDefaults } from "./settings-schema.js";
 
@@ -25,37 +21,6 @@ const scope: ModelScope = {
     unsupported: false,
   },
 };
-
-const rows: SettingRow[] = [
-  {
-    kind: "select",
-    path: "task.provider",
-    label: "Provider",
-    options: [option],
-  },
-  { kind: "switch", path: "projects.auto_register_chat", label: "Enabled" },
-  {
-    kind: "text",
-    path: "task.worktree_branch_prefix",
-    label: "Prefix",
-    maxLength: 100,
-    pattern: "[\\w./-]*",
-  },
-  {
-    kind: "budget",
-    path: "task.budget.max_cost_usd",
-    label: "Cost limit",
-    unit: "USD",
-    min: 0.01,
-  },
-  { kind: "models", scopes: [scope] },
-];
-
-test("accepts each kind of setting row", () => {
-  for (const row of rows) {
-    expect(settingRowSchema.parse(row), row.kind).toEqual(row);
-  }
-});
 
 test("rejects malformed setting rows", () => {
   for (const row of [

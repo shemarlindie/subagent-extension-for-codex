@@ -68,11 +68,16 @@ test("a task is unread once it has a reply, outcome or request after what the us
 test("reading an earlier event never undoes a later one, nor marks events still to come", (t) => {
   const { store, task } = fixture(t);
   const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
+  store.markRead(task, first.id);
   const second = store.event(task, "agent.reply", { text: "Two", turn: 1 });
+
+  assert.deepEqual(store.readState(task.id), {
+    unread: true,
+    through: first.id,
+  });
 
   store.markRead(task, first.id);
   assert.equal(store.readState(task.id).unread, true);
-
   store.markRead(task, second.id);
   store.markRead(task, first.id);
   assert.equal(store.readState(task.id).unread, false);
@@ -134,16 +139,4 @@ test("deleting a task deletes what the user saw of it", (t) => {
     store.database.client.prepare("SELECT * FROM task_read").all(),
     [],
   );
-});
-
-test("a task's read state keeps where the user stopped reading", (t) => {
-  const { store, task } = fixture(t);
-  const first = store.event(task, "agent.reply", { text: "One", turn: 1 });
-  store.markRead(task, first.id);
-  store.event(task, "agent.reply", { text: "Two", turn: 1 });
-
-  assert.deepEqual(store.readState(task.id), {
-    unread: true,
-    through: first.id,
-  });
 });

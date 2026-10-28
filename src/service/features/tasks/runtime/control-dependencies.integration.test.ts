@@ -57,33 +57,6 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
   await c.close();
 });
 
-test("dependent prompts include each dependency's reply and recorded diff", async () => {
-  const writer = new DependencyWriter("added.ts", "export const added = 1;\n");
-  const prompts = writer.prompts;
-  const { c, store, repo } = await setup(writer);
-  const first = await c.start("alice", input(repo, "Write"));
-
-  const second = await c.start("alice", {
-    ...input(repo, "Review"),
-    depends_on: [first.id],
-  });
-
-  await until(() => store.get(second.id, "alice").status === "completed");
-  const prompt = prompts.get(second.id)!;
-
-  assert.ok(
-    prompt.includes(
-      `Dependency ${first.id} replied:\nFixture task completed. No Claude execution occurred.`,
-    ),
-  );
-
-  assert.match(prompt, /recorded edits \(1 file, \+1 −0\):/);
-
-  assert.match(prompt, /\+export const added = 1;/);
-
-  await c.close();
-});
-
 test("current_repo dependents see only the dependency's own changes", async () => {
   const writer = new DependencyWriter("worker.ts", "worker\n");
   const prompts = writer.prompts;

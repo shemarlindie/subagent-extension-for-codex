@@ -39,27 +39,13 @@ test("a stalled send reports uncertain delivery without cancelling its write", a
   expect(vi.getTimerCount()).toBe(0);
 });
 
-test("an acknowledged send returns its response and clears the deadline", async () => {
+test("a failing observer keeps the call's own response and error", async () => {
   vi.useFakeTimers();
 
   onTestFinished(() => {
     vi.useRealTimers();
   });
 
-  const response = { accepted: true };
-
-  await expect(
-    boundedRequest(
-      async () => response,
-      "Late",
-      () => {},
-    ),
-  ).resolves.toBe(response);
-
-  expect(vi.getTimerCount()).toBe(0);
-});
-
-test("a failing observer keeps the call's own response and error", async () => {
   const response = { accepted: true };
   const failure = new Error("Rejected");
 
@@ -70,6 +56,8 @@ test("a failing observer keeps the call's own response and error", async () => {
   await expect(
     boundedRequest(async () => response, "Late", settled),
   ).resolves.toBe(response);
+
+  expect(vi.getTimerCount()).toBe(0);
 
   await expect(
     boundedRequest(() => Promise.reject(failure), "Late", settled),

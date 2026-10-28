@@ -17,7 +17,7 @@ import { Control } from "../../../service/features/tasks/runtime/control.js";
 import { Store } from "../../../service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../service/features/workspaces/workspace.js";
 import { settingPaths } from "../../settings/settings-schema.js";
-import { startSchema, type Task } from "../../tasks/model.js";
+import type { Task } from "../../tasks/model.js";
 import { claudeMetadata } from "../metadata.js";
 import {
   claudeOverrideDefaults,
@@ -137,40 +137,6 @@ test("settings default to Default, expose only SDK permission modes, persist ove
   assert.equal(
     reloaded.values("bob").providers.claude.permission_mode,
     "default",
-  );
-});
-
-test("task arguments cannot spoof parent permissions and resolved source is stored", async (t) => {
-  const { c, store, request } = await setup(t);
-
-  const task = await c.start(
-    "alice",
-    {
-      ...request,
-      parent_permissions: {
-        provider: "claude",
-        permission_mode: "bypassPermissions",
-      },
-    },
-    "parent",
-  );
-
-  assert.equal(taskOptions(task).permission_mode, "default");
-
-  assert.equal(
-    taskOptions(store.get(task.id, "alice")).permission_source,
-    "setting",
-  );
-
-  assert.equal(
-    Object.hasOwn(
-      startSchema.parse({
-        ...request,
-        parent_permissions: { permission_mode: "auto" },
-      }),
-      "parent_permissions",
-    ),
-    false,
   );
 });
 

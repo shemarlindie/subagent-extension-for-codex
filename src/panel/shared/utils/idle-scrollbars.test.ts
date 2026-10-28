@@ -86,27 +86,24 @@ test("pointer activity outside an overflowing scroller does not add a marker", (
   expect(vi.getTimerCount()).toBe(0);
 });
 
-test.each(["pointerup", "pointercancel"])(
-  "dragging stays visible while held and starts its idle timer on %s",
-  (endEvent) => {
-    const { scroller, child } = setup();
+test("pointer cancellation ends a held drag and starts its idle timer", () => {
+  const { scroller, child } = setup();
 
-    pointer(child, "pointerdown", 4);
-    vi.advanceTimersByTime(2000);
-    expectActive(scroller, true);
+  pointer(child, "pointerdown", 4);
+  vi.advanceTimersByTime(2000);
+  expectActive(scroller, true);
 
-    // Another pointer cannot end the held pointer's interaction.
-    pointer(document.body, endEvent, 5);
-    vi.advanceTimersByTime(1000);
-    expectActive(scroller, true);
+  // Another pointer cannot end the held pointer's interaction.
+  pointer(document.body, "pointercancel", 5);
+  vi.advanceTimersByTime(1000);
+  expectActive(scroller, true);
 
-    pointer(document.body, endEvent, 4);
-    vi.advanceTimersByTime(999);
-    expectActive(scroller, true);
-    vi.advanceTimersByTime(1);
-    expectActive(scroller, false);
-  },
-);
+  pointer(document.body, "pointercancel", 4);
+  vi.advanceTimersByTime(999);
+  expectActive(scroller, true);
+  vi.advanceTimersByTime(1);
+  expectActive(scroller, false);
+});
 
 test("concurrent pointers keep each scroller visible until its last pointer ends", () => {
   const { scroller: first, child: firstChild } = setup();

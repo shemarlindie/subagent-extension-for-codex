@@ -41,31 +41,6 @@ test("settings opens before its read and keeps its section across scope changes"
   assert.equal(controller.getDialogDraft("settings"), undefined);
 });
 
-test("refresh preserves dialog identity and reviewed defaults while discovering new projects", async (t) => {
-  const { controller, transport } = setup();
-  t.onTestFinished(() => controller.dispose());
-  await controller.start();
-  await controller.delegate();
-  await flush();
-  const dialog = controller.getSnapshot().dialog;
-  assert.equal(dialog?.kind, "delegate");
-  if (dialog?.kind !== "delegate") throw new Error("Expected delegate dialog");
-
-  assert.deepEqual(dialog.defaults.task.budget, {
-    max_runtime_minutes: { enabled: true, amount: 0.5 },
-    max_cost_usd: { enabled: false, amount: 5 },
-  });
-
-  transport.projects = [
-    ...transport.projects,
-    { repository: "/repo/b", kind: "repository" },
-  ];
-
-  await controller.refresh();
-  assert.equal(controller.getSnapshot().dialog, dialog);
-  assert.equal(controller.getSnapshot().projects.length, 2);
-});
-
 test("delegation project lookup discarded when conversation changes", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

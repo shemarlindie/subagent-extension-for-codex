@@ -1,99 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { structuredPatch } from "diff";
 import { test } from "vitest";
 
-import type { RunContext } from "../../providers/types.js";
-import { input, setup, TestProvider, until } from "./control-test-harness.js";
-
-test("recorded worktree edits include committed and untracked files without touching primary checkout", async () => {
-  class Writer extends TestProvider {
-    override async run(c: RunContext, p: string) {
-      await writeFile(join(c.task.workspace!, "README.md"), "changed\n");
-
-      await writeFile(
-        join(c.task.workspace!, "new.ts"),
-        "export const answer = 42;\n",
-      );
-
-      c.fileChanged({
-        path: join(c.task.workspace!, "README.md"),
-        hunks: structuredPatch("", "", "hello\n", "changed\n").hunks,
-        source: "tool",
-      });
-
-      c.fileChanged({
-        path: join(c.task.workspace!, "new.ts"),
-        hunks: structuredPatch("", "", "", "export const answer = 42;\n").hunks,
-        created: true,
-        source: "tool",
-      });
-
-      execFileSync("git", ["-C", c.task.workspace!, "add", "README.md"]);
-
-      execFileSync("git", [
-        "-C",
-        c.task.workspace!,
-        "-c",
-        "user.name=Test",
-        "-c",
-        "user.email=test@example.invalid",
-        "commit",
-        "-qm",
-        "worker edit",
-      ]);
-
-      return super.run(c, p);
-    }
-  }
-
-  const { c, store, repo } = await setup(new Writer());
-  const t = await c.start("alice", input(repo));
-
-  await until(
-    () =>
-      !c.active.has(t.id) && store.get(t.id, "alice").status === "completed",
-  );
-
-  // The worktree is on the task's own branch, which holds the worker's commit.
-  const done = store.get(t.id, "alice");
-  assert.equal(done.branch, `agent/${t.id}`);
-
-  assert.equal(
-    execFileSync("git", ["-C", repo, "log", "-1", "--format=%s", done.branch])
-      .toString()
-      .trim(),
-    "worker edit",
-  );
-
-  assert.equal(
-    execFileSync("git", ["-C", done.workspace!, "branch", "--show-current"])
-      .toString()
-      .trim(),
-    done.branch,
-  );
-
-  const { diff, files } = c.changes.changes(done);
-
-  assert.deepEqual(
-    files.map((file) => [file.path, file.status]),
-    [
-      ["README.md", "modified"],
-      ["new.ts", "added"],
-    ],
-  );
-
-  assert.match(diff, /changed/);
-  assert.match(diff, /answer = 42/);
-  execFileSync("git", ["-C", repo, "apply", "--check", "-"], { input: diff });
-
-  assert.equal(await readFile(join(repo, "README.md"), "utf8"), "hello\n");
-  await c.close();
-});
+import { input, setup, until } from "./control-test-harness.js";
 
 test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
   const { c, store, repo } = await setup();

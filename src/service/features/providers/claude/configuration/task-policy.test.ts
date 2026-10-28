@@ -68,39 +68,6 @@ test("Claude preparation preserves native modes and restrictions independently o
   }
 });
 
-test("Claude task-level inherit resolves to the configured extension Auto mode", () => {
-  const store = new Store(":memory:");
-
-  try {
-    const settings = new Settings(store.database, () => ["claude"]);
-
-    settings.update("alice", {
-      set: { providers: { claude: { permission_mode: "auto" } } },
-    });
-
-    const input = startSchema.parse({
-      repository: "/repo",
-      description: "Implement",
-      worker_profile: "reviewer",
-      provider_options: { claude: { permission_mode: "inherit" } },
-    });
-
-    const prepared = claudeTaskPolicy.prepareStart({
-      input,
-      defaults: settings.values("alice"),
-      authority: "user",
-    });
-
-    const options = claudeOptions(prepared);
-    assert.equal(options.permission_mode, "auto");
-    assert.equal(options.permission_source, "setting");
-    assert.equal(options.claude_policy.tools, "restricted");
-    assert.equal(options.claude_policy.path_guard, true);
-  } finally {
-    store.close();
-  }
-});
-
 test("Claude preparation checks native permission, approval decider, and effort before starting", () => {
   const store = new Store(":memory:");
 

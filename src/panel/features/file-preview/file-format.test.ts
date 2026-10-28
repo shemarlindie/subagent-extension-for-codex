@@ -45,12 +45,7 @@ test("images become data URLs: base64 for rasters, encoded markup for SVG", () =
   );
 });
 
-test("large SVGs and malformed diffs fall back to source", () => {
-  // Large SVGs are never rendered as images.
-  assert.deepEqual(fileViews(file("a.svg", "x".repeat(64 * 1024 + 1))), [
-    "source",
-  ]);
-
+test("malformed diffs fall back to source", () => {
   assert.deepEqual(fileViews(file("a.diff", "not a diff")), ["source"]);
 
   assert.deepEqual(

@@ -62,8 +62,9 @@ async function service(t: import("vitest").TestContext) {
 
 const bearer = { Authorization: `Bearer ${token}` };
 
-test("only the administrator token can drain the service, which then closes connections", async (t) => {
+test("drain requires a hook and administrator token, then closes connections", async (t) => {
   const { app, base, post, health } = await service(t);
+  assert.equal((await post("/api/service/drain", bearer)).status, 501);
   let drains = 0;
 
   app.locals.drain = () => {
@@ -100,11 +101,6 @@ test("only the administrator token can drain the service, which then closes conn
   const call = await post("/api/tools/list_tasks", bearer);
   assert.equal(call.status, 200);
   assert.equal(call.headers.get("connection"), "close");
-});
-
-test("a service without a drain hook refuses to drain", async (t) => {
-  const { post } = await service(t);
-  assert.equal((await post("/api/service/drain", bearer)).status, 501);
 });
 
 test("a stopping service reports it and refuses calls", async (t) => {

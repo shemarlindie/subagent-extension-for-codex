@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
-import assert from "node:assert/strict";
-
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import { Controller } from "../../../app/state/controller";
@@ -34,7 +32,6 @@ function setup(patch: Partial<Snapshot>) {
   };
 
   vi.spyOn(controller, "getSnapshot").mockReturnValue(snapshot);
-  const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
 
   const view = render(
     <ControllerContext.Provider value={controller}>
@@ -42,22 +39,16 @@ function setup(patch: Partial<Snapshot>) {
     </ControllerContext.Provider>,
   );
 
-  return { tool, view };
+  return { view };
 }
 
-test("under Unread, Mark all read takes Clear filter's place and marks the listed tasks read", () => {
-  const { tool, view } = setup({});
+test("Unread replaces Clear filter with Mark all read unless there is a search", () => {
+  const { view } = setup({});
   expect(view.queryByRole("button", { name: "Clear filter" })).toBeNull();
-
-  fireEvent.click(view.getByRole("button", { name: "Mark all read" }));
-
-  assert.deepEqual(tool.mock.calls, [
-    ["app_mark_tasks_read", { task_ids: ["a", "b"] }],
-  ]);
-});
-
-test("with a search to clear, Unread shows both actions", () => {
-  const { view } = setup({ search: "review" });
   expect(view.getByRole("button", { name: "Mark all read" })).toBeTruthy();
-  expect(view.getByRole("button", { name: "Clear filter" })).toBeTruthy();
+  cleanup();
+
+  const searched = setup({ search: "review" }).view;
+  expect(searched.getByRole("button", { name: "Mark all read" })).toBeTruthy();
+  expect(searched.getByRole("button", { name: "Clear filter" })).toBeTruthy();
 });

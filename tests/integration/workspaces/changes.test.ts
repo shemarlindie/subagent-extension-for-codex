@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -241,14 +248,42 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
   try {
     const t = await s.start(async (c) => {
       await edit(c, "existing.txt", "before\n", "recorded\n");
+      await edit(c, "new.txt", "", "new content\n");
     }, "worktree");
 
     const args = { task_id: t.id };
     const original = await s.tool<Changes>("get_changes", args);
-    s.git(t.workspace!, "add", ".");
+    expect(t.branch).toBe(`agent/${t.id}`);
+
+    expect(s.git(t.workspace!, "branch", "--show-current").trim()).toBe(
+      t.branch,
+    );
+
+    expect(original.files.map((file) => [file.path, file.status])).toEqual([
+      ["existing.txt", "modified"],
+      ["new.txt", "added"],
+    ]);
+
+    expect(original.diff).toContain("+recorded");
+    expect(original.diff).toContain("+new content");
+
+    execFileSync("git", ["-C", s.repo, "apply", "--check", "-"], {
+      input: original.diff,
+    });
+
+    expect(await readFile(join(s.repo, "existing.txt"), "utf8")).toBe(
+      "before\n",
+    );
+
+    s.git(t.workspace!, "add", "existing.txt");
     s.git(t.workspace!, "commit", "-qm", "task edits");
+
+    expect(s.git(s.repo, "log", "-1", "--format=%s", t.branch!).trim()).toBe(
+      "task edits",
+    );
+
     expect(await s.tool<Changes>("get_changes", args)).toEqual(original);
-    await s.c.workspaces.removeWorktree(t);
+    await s.c.workspaces.removeWorktree(t, true);
     expect(await s.tool<Changes>("get_changes", args)).toEqual(original);
 
     expect(
@@ -295,8 +330,16 @@ test("file tools read current disk content, page UTF-8, preview images and restr
       path: "existing.txt",
     });
 
-    expect(file.content).toBe(content);
+    expect(file).toMatchObject({
+      state: "present",
+      encoding: "utf8",
+      content,
+      size: Buffer.byteLength(content),
+    });
+
     let part = await s.c.changes.changedFile(t, "existing.txt", undefined, 50);
+    const firstCursor = part.next_cursor;
+    expect(firstCursor).toBeDefined();
     let joined = part.content!;
 
     while (part.next_cursor) {
@@ -311,6 +354,24 @@ test("file tools read current disk content, page UTF-8, preview images and restr
     }
 
     expect(joined).toBe(content);
+
+    await writeFile(join(s.repo, "existing.txt"), "changed again\n");
+
+    await expect(
+      s.tool("get_changed_file", {
+        ...args,
+        path: "existing.txt",
+        cursor: firstCursor,
+      }),
+    ).rejects.toThrow(/Stale/);
+
+    await expect(
+      s.tool("get_changed_file", {
+        ...args,
+        path: "existing.txt",
+        cursor: "invalid",
+      }),
+    ).rejects.toThrow(/Invalid/);
 
     expect(
       await s.tool<ChangedFileContent>("get_changed_file", {
@@ -378,6 +439,8 @@ test("dependent prompts include the recorded diff within the existing size limit
       [first.id],
     );
 
+    expect(prompt).toContain(`Dependency ${first.id} replied:\nDone`);
+
     expect(prompt).toContain(
       `Dependency ${first.id}'s recorded edits (2 files, +2 −0):`,
     );
@@ -391,6 +454,7 @@ test("dependent prompts include the recorded diff within the existing size limit
     );
 
     expect(prompt).toContain("diff --git a/large.txt b/large.txt");
+    expect(prompt).toContain(`+${"x".repeat(100)}`);
     expect(prompt).toContain("diff truncated");
     expect(prompt).not.toContain("end-of-diff");
   } finally {

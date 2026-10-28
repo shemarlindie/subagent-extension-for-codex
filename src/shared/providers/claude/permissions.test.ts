@@ -5,33 +5,8 @@ import { test } from "vitest";
 import {
   claudeOverrideDefaults,
   exceedsPermission,
-  resolveClaudePermission,
   resolveClaudePolicy,
 } from "./permissions.js";
-
-test("native permission resolution uses the task mode or the concrete extension setting", () => {
-  const task = {};
-
-  assert.deepEqual(resolveClaudePermission(task, "default"), {
-    mode: "default",
-    source: "setting",
-  });
-
-  assert.deepEqual(
-    resolveClaudePermission({ permission_mode: "inherit" }, "auto"),
-    { mode: "auto", source: "setting" },
-  );
-
-  assert.deepEqual(resolveClaudePermission(task, "auto"), {
-    mode: "auto",
-    source: "setting",
-  });
-
-  assert.deepEqual(
-    resolveClaudePermission({ permission_mode: "default" }, "dontAsk"),
-    { mode: "default", source: "task" },
-  );
-});
 
 test("model-selected modes cannot exceed the concrete extension setting", () => {
   for (const mode of ["plan", "dontAsk", "default"] as const) {

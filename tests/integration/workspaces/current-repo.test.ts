@@ -122,28 +122,6 @@ async function until(done: () => boolean) {
   throw new Error("Task did not complete");
 }
 
-test("current repository uses HEAD and includes staged, unstaged and untracked edits without creating a worktree", async () => {
-  const s = await setup();
-
-  try {
-    await dirty(s.repo, s.git);
-    const before = s.git("status", "--porcelain");
-    const t = task(s.repo);
-    await s.workspaces.create(t);
-    assert.equal(t.workspace, s.repo);
-    assert.equal(t.base_commit, s.git("rev-parse", "HEAD").trim());
-
-    assert.equal(
-      s.git("worktree", "list", "--porcelain").match(/^worktree /gm)?.length,
-      1,
-    );
-
-    assert.equal(s.git("status", "--porcelain"), before);
-  } finally {
-    await s.close();
-  }
-});
-
 test("current repository rejects a non-HEAD revision without altering the checkout", async () => {
   const s = await setup();
 
@@ -204,8 +182,17 @@ test("current repository review receives the working tree diff in its provider p
       assert.ok(receivedPrompt.includes(content), content);
     }
 
+    const completed = s.c.store.get(started.id, "alice");
+    assert.equal(completed.workspace, s.repo);
+    assert.equal(completed.base_commit, s.git("rev-parse", "HEAD").trim());
+
+    assert.equal(
+      s.git("worktree", "list", "--porcelain").match(/^worktree /gm)?.length,
+      1,
+    );
+
     // The task's own changes leave out the user's earlier edits.
-    const changes = s.c.changes.changes(s.c.store.get(started.id, "alice"));
+    const changes = s.c.changes.changes(completed);
 
     assert.deepEqual(changes.files, []);
     assert.equal(s.git("status", "--porcelain"), before);

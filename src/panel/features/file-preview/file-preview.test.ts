@@ -128,7 +128,7 @@ test("an SVG over 64 KB shows as source with a note, never as an image", (t) => 
 
   const view = show({
     path: "graph.svg",
-    content: `<svg xmlns="http://www.w3.org/2000/svg">${"<g/>".repeat(17_000)}</svg>`,
+    content: `<svg>${" ".repeat(64 * 1024 - 10)}</svg>`,
   });
 
   view.getByText(/over 64 KB, so it is shown as source only/);

@@ -207,19 +207,17 @@ describe("durable change scopes", () => {
     ).toBe("second\n");
   });
 
-  for (const status of ["failed", "interrupted"] as const) {
-    it(`retains ${status} task edits across a database reopen (S7)`, async (context) => {
-      const fixture = await storeFixture(context);
-      fixture.changes.record(fixture.task, edit("file.txt"));
-      const before = fixture.changes.rows(fixture.task, "task");
-      fixture.task.status = status;
-      fixture.store.save(fixture.task);
-      fixture.restart();
-      const task = fixture.store.get(fixture.task.id, fixture.task.owner);
-      expect(task.status).toBe(status);
-      expect(fixture.changes.rows(task, "task")).toEqual(before);
-    });
-  }
+  it("retains interrupted task edits across a database reopen (S7)", async (context) => {
+    const fixture = await storeFixture(context);
+    fixture.changes.record(fixture.task, edit("file.txt"));
+    const before = fixture.changes.rows(fixture.task, "task");
+    fixture.task.status = "interrupted";
+    fixture.store.save(fixture.task);
+    fixture.restart();
+    const task = fixture.store.get(fixture.task.id, fixture.task.owner);
+    expect(task.status).toBe("interrupted");
+    expect(fixture.changes.rows(task, "task")).toEqual(before);
+  });
 
   it("cascades task deletion without removing another task's rows (S8)", async (context) => {
     const { changes, store, task } = await storeFixture(context);

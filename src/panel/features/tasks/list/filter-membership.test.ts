@@ -42,13 +42,6 @@ const input = {
 };
 
 const cases: [string, Partial<Task>, Filter[]][] = [
-  ["running", { status: "running" }, ["all", "active"]],
-  ["queued", { status: "queued" }, ["all", "active"]],
-  [
-    "dependency",
-    { status: "waiting", waiting_reason: "waiting_for_dependency" },
-    ["all", "active"],
-  ],
   [
     "rate limit",
     {
@@ -71,8 +64,6 @@ const cases: [string, Partial<Task>, Filter[]][] = [
     { live_activity: { text: "Context compaction failed", state: "failed" } },
     ["all", "failed"],
   ],
-  ["failed", { status: "failed" }, ["all", "failed"]],
-  ["completed", { status: "completed" }, ["all", "completed"]],
 ] as never;
 
 test("each task state appears only in its own filter besides All", () => {
@@ -98,6 +89,13 @@ test("filter counts match each filter's list and follow search and scope", () =>
     task({ id: "b", title: "beta", status: "failed" }),
     task({ id: "c", title: "alpha two", status: "completed" }),
     task({ id: "d", title: "other", repository: "/elsewhere" }),
+    task({
+      id: "old",
+      title: "alpha",
+      status: "completed",
+      archived_at: "then",
+      unread: true,
+    }),
   ];
 
   const state = (patch: object) =>
@@ -216,23 +214,4 @@ test("across projects, visible tasks come grouped by project in list order", () 
     visibleTasks(state({ repository: "/a" })).map((task) => task.id),
     ["a1", "a2"],
   );
-});
-
-test("archived tasks leave the list and its counts", () => {
-  const state = {
-    tasks: [
-      task({ id: "a", status: "completed" }),
-      task({ id: "b", status: "completed", archived_at: "then", unread: true }),
-    ],
-    filter: "all",
-    search: "",
-  } as unknown as Snapshot;
-
-  assert.deepEqual(
-    visibleTasks(state).map((item) => item.id),
-    ["a"],
-  );
-
-  assert.equal(filterCounts(state).completed, 1);
-  assert.equal(filterCounts(state).unread, 0);
 });

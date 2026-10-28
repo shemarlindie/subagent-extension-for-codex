@@ -4,25 +4,6 @@ import { test } from "vitest";
 
 import { diffPath, diffRows, parseDiffFiles } from "./diff-format";
 
-test("diffs parse into files with paths", () => {
-  const files = parseDiffFiles(`diff --git a/a.ts b/a.ts
---- a/a.ts
-+++ b/a.ts
-@@ -1,2 +1,2 @@
--old
-+new
- same
-diff --git a/gone.ts b/gone.ts
-deleted file mode 100644
---- a/gone.ts
-+++ /dev/null
-@@ -1 +0,0 @@
--bye`);
-
-  assert.deepEqual(files.map(diffPath), ["a.ts", "gone.ts"]);
-  assert.deepEqual(parseDiffFiles("not a diff"), []);
-});
-
 test("paths Git quoted in a diff parse as the paths themselves", () => {
   // As Git writes them: a tab, a quote and backslashes, then octal UTF-8.
   const files =
@@ -53,7 +34,16 @@ diff --git "a/caf\303\251.ts" "b/caf\303\251.ts"
   ]);
 });
 
-test("diff markers between lines are notes, and CRLF endings are dropped", () => {
+test("diff parsing handles deleted files, malformed input, notes and CRLF", () => {
+  assert.deepEqual(parseDiffFiles("not a diff"), []);
+
+  const [deleted] = parseDiffFiles(
+    "diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-bye",
+  );
+
+  assert.ok(deleted);
+  assert.equal(diffPath(deleted), "gone.ts");
+
   const [noNewline] = parseDiffFiles(
     "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n",
   );

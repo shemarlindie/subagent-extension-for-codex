@@ -70,9 +70,22 @@ test("chat project registration is enabled by default and opt-out is owner scope
     /outside allowed roots/,
   );
 
+  assert.match(
+    String(
+      (await currentChatProject(f.control, "alice", hostMeta(repository)))
+        .next_step,
+    ),
+    /^Ask the user/,
+  );
+
   assert.equal(
     await autoRegisterChatProject(f.control, "bob", hostMeta(repository)),
     repository,
+  );
+
+  assert.deepEqual(
+    await currentChatProject(f.control, "alice", hostMeta(repository)),
+    { repository, registered: true, auto_register_on_task_start: false },
   );
 });
 
@@ -122,47 +135,6 @@ test("registration failures never block the task start", async (t) => {
   assert.equal(
     await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
     undefined,
-  );
-});
-
-test("current chat project lookup is read-only and suggests asking the user", async (t) => {
-  const f = await fixture(t);
-  const repository = await f.repo("project");
-
-  await assert.rejects(
-    currentChatProject(f.control, "alice", undefined),
-    /Add project/,
-  );
-
-  const missing = await currentChatProject(
-    f.control,
-    "alice",
-    hostMeta(repository),
-  );
-
-  assert.equal(missing.registered, false);
-  assert.equal(missing.auto_register_on_task_start, true);
-  assert.match(String(missing.next_step), /Add project/);
-  assert.deepEqual(f.control.projects!.list(), []);
-  f.enable("alice", false);
-
-  assert.match(
-    String(
-      (await currentChatProject(f.control, "alice", hostMeta(repository)))
-        .next_step,
-    ),
-    /^Ask the user/,
-  );
-
-  await f.control.projects!.register(repository);
-
-  assert.deepEqual(
-    await currentChatProject(f.control, "alice", hostMeta(repository)),
-    {
-      repository,
-      registered: true,
-      auto_register_on_task_start: false,
-    },
   );
 });
 

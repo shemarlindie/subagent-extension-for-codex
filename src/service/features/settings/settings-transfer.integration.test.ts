@@ -42,7 +42,7 @@ test("an export restores every saved default on another owner", async (t) => {
         worker_profile: "researcher",
         budget: {
           max_cost_usd: { enabled: true, amount: 12 },
-          max_runtime_minutes: { enabled: false },
+          max_runtime_minutes: { enabled: false, amount: 43 },
         },
       },
       providers: {
@@ -62,6 +62,19 @@ test("an export restores every saved default on another owner", async (t) => {
 
   assert.deepEqual(result.ignored, []);
   assert.deepEqual(settings.values("target"), settings.values("source"));
+
+  assert.deepEqual(settings.values("target").task.budget.max_runtime_minutes, {
+    enabled: false,
+    amount: 43,
+  });
+
+  settings.update("source", limits({ enabled: false, amount: 17 }, {}));
+  importSettings(settings, "target", exportSettings(settings, "source"));
+
+  assert.deepEqual(settings.values("target").task.budget.max_cost_usd, {
+    enabled: false,
+    amount: 17,
+  });
 });
 
 test("an import skips unsupported values and preserves omitted settings", async (t) => {
@@ -128,20 +141,6 @@ test("an import refuses a format 1 export from before settings were grouped", as
   );
 
   assert.equal(settings.values("owner").task.worker_profile, "reviewer");
-});
-
-test("a transfer preserves amounts kept while both budgets are off", async (t) => {
-  const settings = await fixture(t);
-
-  settings.update(
-    "source",
-    limits({ enabled: false, amount: 17 }, { enabled: false, amount: 43 }),
-  );
-
-  importSettings(settings, "target", exportSettings(settings, "source"));
-  const { budget } = settings.values("target").task;
-  assert.deepEqual(budget.max_cost_usd, { enabled: false, amount: 17 });
-  assert.deepEqual(budget.max_runtime_minutes, { enabled: false, amount: 43 });
 });
 
 test("a fresh source restores default budget amounts over the target's saved amounts", async (t) => {

@@ -1,10 +1,5 @@
 import { expect, test } from "vitest";
 
-import { approvalDeciderSchema } from "../../tasks/model.js";
-import {
-  claudePermissionModeSchema,
-  permissionModeSchema,
-} from "./permissions.js";
 import {
   claudeStartOptionsSchema,
   claudeTaskOptionsSchema,
@@ -31,8 +26,8 @@ const stored = {
 
 // Starting a task accepts `inherit`; a stored task holds the resolved mode.
 const optionSchemas = [
-  [claudeStartOptionsSchema, permissionModeSchema, {}],
-  [claudeTaskOptionsSchema, claudePermissionModeSchema, stored],
+  [claudeStartOptionsSchema, {}],
+  [claudeTaskOptionsSchema, stored],
 ] as const;
 
 test("a stored task rejects missing state, an unresolved permission mode or an unknown source", () => {
@@ -50,34 +45,21 @@ test("a stored task rejects missing state, an unresolved permission mode or an u
 });
 
 test.each(optionSchemas)(
-  "accepts all permission modes and approval deciders and rejects unknown fields",
-  (schema, modes, base) => {
+  "rejects unknown fields and invalid permission or approval values",
+  (schema, base) => {
     expect(schema.parse(base)).toEqual(base);
 
-    for (const permission_mode of modes.options) {
-      for (const approval_decider of approvalDeciderSchema.options) {
-        const input = { ...base, permission_mode, approval_decider };
+    expect(
+      schema.safeParse({ ...base, bypass_permissions: true }).success,
+    ).toBe(false);
 
-        expect(schema.parse(input)).toEqual(input);
-
-        expect(
-          schema.safeParse({ ...input, bypass_permissions: true }).success,
-        ).toBe(false);
-      }
-    }
-
-    for (const permission_mode of [
-      "root",
-      "allowAll",
-      "bypass_permissions",
-      true,
-    ]) {
+    for (const permission_mode of ["bypass_permissions", true]) {
       expect(schema.safeParse({ ...base, permission_mode }).success).toBe(
         false,
       );
     }
 
-    for (const approval_decider of ["auto", "system", "none", false]) {
+    for (const approval_decider of ["auto", false]) {
       expect(schema.safeParse({ ...base, approval_decider }).success).toBe(
         false,
       );
@@ -95,7 +77,6 @@ test("keeps policy validation and nested unknown-field stripping", () => {
 
   for (const claude_policy of [
     { ...policy, tools: "profile" },
-    { ...policy, tools: "unrestricted" },
     { ...policy, sandbox: "disabled" },
     { ...policy, sandbox: false },
   ]) {

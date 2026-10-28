@@ -134,7 +134,7 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
 });
 
 test("a parent reads replies by long poll and sends follow-ups as messages", async () => {
-  const { c, store, parent, start } = await setup();
+  const { c, store, parent, user, start } = await setup();
 
   try {
     const t = await start("Review the parser");
@@ -176,12 +176,21 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.deepEqual(quiet.messages, []);
     assert.equal(quiet.next_cursor, all.next_cursor);
 
+    const listedArchive = async () =>
+      (
+        await parent<ListedTask[]>("list_tasks", { conversation_id: null })
+      ).find((task) => task.id === t.id)?.archived_at;
+
+    await user("app_set_tasks_archived", { task_ids: [t.id], archived: true });
+    assert.ok(await listedArchive());
+
     const sent = await parent<{ message_id: string; state: string }>(
       "send_message",
       { task_id: t.id, message: "Check the lexer too" },
     );
 
     assert.equal(sent.state, "started");
+    assert.equal(await listedArchive(), undefined);
 
     const next = await parent<Messages>("list_messages", {
       task_id: t.id,
@@ -890,67 +899,6 @@ test("reading reports leaves them available for host delivery, while model ackno
     expect(
       store.eventsOfTypes(task.id, ["parent.message_acknowledged"]),
     ).toHaveLength(1);
-  } finally {
-    await c.close();
-  }
-});
-
-test("the panel archives, unarchives and deletes tasks, and a follow-up unarchives", async () => {
-  const { c, store, parent, user, start } = await setup();
-
-  try {
-    const t = await start("Review the parser");
-    await until(() => store.get(t.id, "alice").status === "completed");
-
-    const listed = async () =>
-      (
-        await parent<ListedTask[]>("list_tasks", {
-          conversation_id: null,
-        })
-      ).find((task) => task.id === t.id)?.archived_at;
-
-    assert.equal(await listed(), undefined);
-
-    assert.deepEqual(
-      await user("app_set_tasks_archived", {
-        task_ids: [t.id],
-        archived: true,
-      }),
-      { task_ids: [t.id], skipped: [] },
-    );
-
-    const archivedAt = await listed();
-    assert.equal(typeof archivedAt, "string");
-
-    // Sending a message runs the task again, so it's listed again.
-    await parent("send_message", { task_id: t.id, message: "Again" });
-    assert.equal(await listed(), undefined);
-
-    await until(() => store.get(t.id, "alice").status === "completed");
-
-    assert.deepEqual(
-      await user("app_set_tasks_archived", {
-        task_ids: [t.id],
-        archived: true,
-      }),
-      { task_ids: [t.id], skipped: [] },
-    );
-
-    assert.deepEqual(
-      await user("app_set_tasks_archived", {
-        task_ids: [t.id],
-        archived: false,
-      }),
-      { task_ids: [t.id], skipped: [] },
-    );
-
-    assert.equal(await listed(), undefined);
-
-    assert.deepEqual(await user("app_delete_tasks", { task_ids: [t.id] }), {
-      status: "deleted",
-    });
-
-    assert.throws(() => store.get(t.id, "alice"), /not found/);
   } finally {
     await c.close();
   }

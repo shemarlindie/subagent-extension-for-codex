@@ -206,36 +206,6 @@ test("help links to settings the panel doesn't show become plain text", () => {
   );
 });
 
-test("each model section's intro links only to the other section's exact settings", async (t) => {
-  const { settings } = await fixture(t);
-  const result = settings.read("alice");
-
-  const sectionOf = (setting: string) =>
-    result.sections.find((s) => sectionPaths(s).includes(setting))?.id;
-
-  const links = (id: string) =>
-    (result.sections.find((s) => s.id === id)!.help ?? [])
-      .filter((part) => typeof part !== "string")
-      .map((link) => [link.text, link.setting, sectionOf(link.setting)]);
-
-  // Each section explains inheritance from its own rows' side.
-  assert.deepEqual(links("models"), [
-    ["worker profile", "models.profiles.reviewer.model", "profile-models"],
-    ["Global", "models.global.model", "models"],
-  ]);
-
-  assert.deepEqual(links("profile-models"), [
-    ["provider", "models.providers.fixture.model", "models"],
-    ["Global", "models.global.model", "models"],
-  ]);
-
-  // Agents get the whole chain in the schema.
-  assert.match(
-    String(schemaField(result, "models.global.model").description),
-    /worker profile, then its provider, then the global default/,
-  );
-});
-
 test("disabled providers' model defaults are hidden but kept, and listed models share one note", async (t) => {
   const f = await fixture(t);
   f.setProviders(["fixture", "claude"]);

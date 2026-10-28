@@ -1,4 +1,4 @@
-import { readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -16,47 +16,6 @@ describe("change reads", () => {
     expect(() => changes.changes(task, "task", "invalid")).toThrow(/Invalid/u);
     changes.record(task, edit("a.txt", "after\n", "latest\n"));
     expect(() => changes.changes(task, "task", cursor)).toThrow(/Stale/u);
-  });
-
-  it("reads the current file including later edits, and paginates it (R5)", async (context) => {
-    const { changes, workspace, task } = await changesFixture(context);
-    changes.record(task, edit("file.txt"));
-
-    await writeFile(
-      join(workspace, "file.txt"),
-      "later edit by someone else\n",
-    );
-
-    const first = await changes.changedFile(task, "file.txt", undefined, 5);
-
-    const second = await changes.changedFile(
-      task,
-      "file.txt",
-      first.next_cursor,
-      100,
-    );
-
-    expect(first).toMatchObject({
-      state: "present",
-      encoding: "utf8",
-      content: "later",
-      size: 27,
-    });
-
-    expect(first.content! + second.content!).toBe(
-      await readFile(join(workspace, "file.txt"), "utf8"),
-    );
-
-    expect(second.next_cursor).toBeUndefined();
-    await writeFile(join(workspace, "file.txt"), "changed again\n");
-
-    await expect(
-      changes.changedFile(task, "file.txt", first.next_cursor),
-    ).rejects.toThrow(/Stale/u);
-
-    await expect(
-      changes.changedFile(task, "file.txt", "invalid"),
-    ).rejects.toThrow(/Invalid/u);
   });
 
   it("allows previews from the latest turn when the task's net diff cancels out (R5)", async (context) => {
