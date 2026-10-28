@@ -5,10 +5,12 @@ import {
   assert,
   assertAbsent,
   budgetRow,
+  pasteText,
   scope,
   screen,
   serveSettings,
   setup,
+  setupSettings,
   test,
   waitFor,
 } from "./panel-test-support";
@@ -23,7 +25,7 @@ async function waitForSettingsSaved() {
 }
 
 test("settings saves only changed fields across sections", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         task: {
@@ -77,7 +79,6 @@ test("settings saves only changed fields across sections", async (t) => {
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
 
   const task = screen.getByRole("tab", { name: "Task" }),
@@ -123,7 +124,7 @@ test("settings saves only changed fields across sections", async (t) => {
 });
 
 test("settings edits made during a save remain as unsaved changes", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         providers: { claude: { subagents: true } },
@@ -163,7 +164,6 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
     return result;
   };
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
   await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
@@ -187,7 +187,7 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
 });
 
 test("settings validates hidden budgets, types uncatalogued models, and flags unsupported effort", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
@@ -220,7 +220,6 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
 
   // An off limit keeps its amount visible but prevents edits.
@@ -254,7 +253,8 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
   );
 
   // A model without discovered choices is typed.
-  await user.type(
+  await pasteText(
+    user,
     screen.getByRole("textbox", { name: "Researcher model" }),
     "custom-id",
   );
@@ -270,7 +270,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
     false,
   );
 
-  await user.type(amount, "8");
+  await pasteText(user, amount, "8");
   await user.click(screen.getByRole("button", { name: "Save 2 changes" }));
   await waitForSettingsSaved();
 
@@ -286,7 +286,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
 });
 
 test("settings explains invalid disabled budgets and lets the user restore editing", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
@@ -295,14 +295,13 @@ test("settings explains invalid disabled budgets and lets the user restore editi
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
 
   const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" }),
     toggle = screen.getByRole("switch", { name: "Cost limit" });
 
   await user.clear(amount);
-  await user.type(amount, "500");
+  await pasteText(user, amount, "500");
   await user.click(toggle);
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
   await screen.findByText("Enter an amount from 0.01 to 100 USD.");
@@ -316,7 +315,7 @@ test("settings explains invalid disabled budgets and lets the user restore editi
 
   await user.click(toggle);
   await user.clear(amount);
-  await user.type(amount, "8");
+  await pasteText(user, amount, "8");
   await user.click(toggle);
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
   await waitForSettingsSaved();
@@ -347,7 +346,7 @@ test("settings help links show the setting they name, except within their own se
     ["profiles", "Profiles", "models.profiles.reviewer", "Reviewer"],
   ];
 
-  const { user } = await setup(t, (transport) =>
+  const { user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         models: {
@@ -364,7 +363,6 @@ test("settings help links show the setting they name, except within their own se
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
 
   const selected = (name: string) =>
@@ -394,7 +392,7 @@ test("settings help links show the setting they name, except within their own se
 });
 
 test("settings resets preserve another section's draft and saved override", async (t) => {
-  const { user } = await setup(t, (transport) =>
+  const { user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
         providers: { claude: { subagents: false } },
@@ -430,7 +428,6 @@ test("settings resets preserve another section's draft and saved override", asyn
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Settings" }));
   await screen.findByRole("heading", { name: "Settings" });
   const subagents = screen.getByRole("switch", { name: "Allow subagents" });
 
@@ -438,7 +435,7 @@ test("settings resets preserve another section's draft and saved override", asyn
   await user.click(screen.getByRole("tab", { name: "Models" }));
   const model = screen.getByRole("textbox", { name: "Global model" });
   await user.clear(model);
-  await user.type(model, "draft-model");
+  await pasteText(user, model, "draft-model");
 
   assertAbsent(screen.queryByRole("button", { name: "Reset" }));
 

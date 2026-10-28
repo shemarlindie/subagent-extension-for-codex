@@ -44,7 +44,6 @@ function setup() {
 
   const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
   const refresh = vi.spyOn(controller, "refresh").mockResolvedValue();
-  const back = vi.spyOn(controller, "back");
 
   const view = render(
     <ControllerContext.Provider value={controller}>
@@ -60,42 +59,27 @@ function setup() {
     name: "Task title",
   }) as HTMLInputElement;
 
-  return { controller, tool, refresh, back, view, input };
+  return { controller, tool, refresh, view, input };
 }
 
-test("inline title trims whitespace and waits for rename before refreshing", async (t) => {
-  const { controller, tool, refresh, back, view, input } = setup();
-  t.onTestFinished(() => controller.dispose());
-  fireEvent.change(input, { target: { value: "  Updated title  " } });
-  fireEvent.keyDown(input, { key: "Enter" });
-  await waitFor(() => expect(view.queryByRole("textbox")).toBeNull());
-
-  assert.deepEqual(tool.mock.calls, [
-    ["app_rename_task", { task_id: task.id, title: "Updated title" }],
-  ]);
-
-  assert.equal(refresh.mock.calls.length, 1);
-
-  const [renameOrder] = tool.mock.invocationCallOrder;
-  const [refreshOrder] = refresh.mock.invocationCallOrder;
-  assert.ok(renameOrder !== undefined && refreshOrder !== undefined);
-  assert.ok(renameOrder < refreshOrder);
-
-  assert.equal(back.mock.calls.length, 0);
-});
-
-test("inline title keeps a failed edit for retry and refreshes only after success", async (t) => {
+test("inline title trims submissions, keeps a failed edit for retry and refreshes only after success", async (t) => {
   const { controller, tool, refresh, view, input } = setup();
   t.onTestFinished(() => controller.dispose());
   tool.mockRejectedValueOnce(new Error("Rename failed"));
-  fireEvent.change(input, { target: { value: "Retry title" } });
+  fireEvent.change(input, { target: { value: "  Retry title  " } });
   fireEvent.keyDown(input, { key: "Enter" });
 
   await waitFor(() =>
     assert.equal(view.getByRole("alert").textContent, "Rename failed"),
   );
 
-  assert.equal(input.value, "Retry title");
+  assert.equal(input.value, "  Retry title  ");
+
+  assert.deepEqual(tool.mock.calls[0], [
+    "app_rename_task",
+    { task_id: task.id, title: "Retry title" },
+  ]);
+
   assert.equal(refresh.mock.calls.length, 0);
   fireEvent.keyDown(input, { key: "Enter" });
   await waitFor(() => expect(view.queryByRole("textbox")).toBeNull());

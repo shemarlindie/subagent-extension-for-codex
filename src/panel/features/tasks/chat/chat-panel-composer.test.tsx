@@ -4,16 +4,14 @@ import assert from "node:assert/strict";
 import { act, fireEvent, waitFor } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import { previewEvents } from "../../../../../dev/panel/scenarios/fixtures";
+import {
+  rateLimit,
+  Timeline,
+} from "../../../../../dev/panel/scenarios/timeline";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
 import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
-import {
-  noteItems,
-  scrollIntoHistory,
-  sent,
-  setup,
-} from "./chat-panel-test-harness";
+import { sent, setup } from "./chat-panel-test-harness";
 
 test("retry after a running task finishes preserves the uncertain queue request", async () => {
   vi.useFakeTimers();
@@ -194,16 +192,6 @@ test.each([
   },
 );
 
-// useReadingScroll's tests cover the control's behavior.
-test("Chat exposes a scroll-to-latest control once the reader leaves its latest message", () => {
-  const { view } = setup({}, [], noteItems);
-  scrollIntoHistory(view);
-
-  expect(
-    view.getByRole("button", { name: "Scroll to latest message" }),
-  ).toBeTruthy();
-});
-
 test("dependency waiting shows a paused status instead of the running indicator", () => {
   const { view } = setup({
     status: "waiting",
@@ -234,9 +222,10 @@ for (const source of ["live activity", "events"] as const) {
             : undefined,
       },
       source === "events"
-        ? previewEvents.filter(
-            (event) => event.task_id === "preview-live-rate-limited",
-          )
+        ? rateLimit(
+            new Timeline("task-1", "2026-10-09T12:00:00Z", 1),
+            "rejected",
+          ).events
         : [],
     );
 

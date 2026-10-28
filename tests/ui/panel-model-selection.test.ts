@@ -4,6 +4,7 @@ import {
   configureModelDefaults,
   enterTask,
   openAdvancedTask,
+  pasteText,
   screen,
   selectOption,
   setup,
@@ -124,7 +125,7 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
   await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Use custom model ID");
-  await user.type(screen.getByLabelText("Model"), "custom-model");
+  await pasteText(user, screen.getByLabelText("Model"), "custom-model");
   assert.ok(screen.getByText(/Reasoning support for this model is unknown/));
   await selectOption(user, "Reasoning effort", "high");
   await user.click(screen.getByRole("button", { name: "Start task" }));
@@ -211,7 +212,7 @@ test("model selection updates role and provider defaults while preserving explic
     /Use default \(max\)/,
   );
 
-  await user.type(field, "explicit-model");
+  await pasteText(user, field, "explicit-model");
   await selectOption(user, "Worker", "claude · researcher");
   assert.equal(field.placeholder, "claude-model");
   assert.equal(field.value, "explicit-model");

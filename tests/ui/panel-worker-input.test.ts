@@ -2,8 +2,10 @@
 import { expect } from "vitest";
 
 import {
+  act,
   assert,
   assertAbsent,
+  pasteText,
   screen,
   setup,
   SKIPPED_ANSWER,
@@ -58,7 +60,8 @@ test("worker question accepts a custom answer with no preset selection", async (
 
   await user.click(screen.getByRole("radio", { name: "Preset" }));
 
-  await user.type(
+  await pasteText(
+    user,
     screen.getByLabelText("Write your own answer"),
     "Custom approach",
   );
@@ -123,7 +126,8 @@ test("a question without options answers in a text box and shows send failures i
     };
   });
 
-  await user.type(
+  await pasteText(
+    user,
     screen.getByRole("textbox", { name: "Which branch?" }),
     "main",
   );
@@ -204,19 +208,20 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
 
-  await user.type(
+  await pasteText(
+    user,
     screen.getByRole("textbox", { name: "Write your own answer" }),
     "Platform team",
   );
 
   const reopen = async () => {
-    controller.back();
+    act(() => controller.back());
 
     await waitFor(() =>
       assertAbsent(screen.queryByRole("button", { name: "Respond" })),
     );
 
-    await controller.select("one");
+    await act(() => controller.select("one"));
     await screen.findByText(/Question \d of 3/);
   };
 

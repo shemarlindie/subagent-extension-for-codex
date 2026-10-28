@@ -9,6 +9,7 @@ import {
   assertAbsent,
   describe,
   openAdvancedTask,
+  pasteText,
   screen,
   setup,
   task,
@@ -152,7 +153,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   const { controller, transport, user } = await setup(t);
   await openAdvancedTask(user);
   const field = await screen.findByLabelText("Description");
-  await user.type(field, "Preserve this suspended draft");
+  await pasteText(user, field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
   await act(() => transport.expand());
   assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));

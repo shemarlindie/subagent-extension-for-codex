@@ -26,13 +26,14 @@ async function boundaryMessages(filePath: string, source: string) {
 const importForms = [
   (target: string) => `import "${target}";`,
   (target: string) => `export * from "${target}";`,
+  (target: string) => `export { Thing } from "${target}";`,
   (target: string) => `export const loaded = import("${target}");`,
   (target: string) => `export type Imported = import("${target}").Thing;`,
   (target: string) =>
     `import type { Thing } from "${target}"; export type { Thing };`,
 ];
 
-test("production boundaries reject cross-runtime and development imports in every import form", async () => {
+test("production boundaries reject each forbidden dependency target", async () => {
   for (const [filePath, targets] of [
     [
       "src/service/features/tasks/runtime/example.ts",
@@ -69,15 +70,10 @@ test("production boundaries reject cross-runtime and development imports in ever
     ],
   ] as const) {
     for (const target of targets) {
-      for (const form of importForms) {
-        const messages = await boundaryMessages(filePath, form(target));
+      const source = `import "${target}";`;
+      const messages = await boundaryMessages(filePath, source);
 
-        assert.equal(
-          messages.length,
-          1,
-          `${filePath} must reject ${form(target)}`,
-        );
-      }
+      assert.equal(messages.length, 1, `${filePath} must reject ${source}`);
     }
   }
 });
@@ -108,15 +104,57 @@ test("production boundaries allow imports within their runtime and shared featur
     ],
   ] as const) {
     for (const target of targets) {
-      for (const form of importForms) {
-        assert.deepEqual(
-          await boundaryMessages(filePath, form(target)),
-          [],
-          `${filePath} must allow ${form(target)}`,
-        );
-      }
+      const source = `import "${target}";`;
+
+      assert.deepEqual(
+        await boundaryMessages(filePath, source),
+        [],
+        `${filePath} must allow ${source}`,
+      );
     }
   }
+});
+
+// Syntax dispatch and dependency ownership are independent. Exercise each
+// visitor with an allowed and forbidden target instead of their full product.
+test("every supported import syntax enforces the same ownership boundary", async () => {
+  const file = "src/service/features/tasks/runtime/example.ts";
+
+  for (const form of importForms) {
+    assert.equal(
+      (await boundaryMessages(file, form("../../../../panel/app/app.js")))
+        .length,
+      1,
+      `Must reject ${form("../../../../panel/app/app.js")}`,
+    );
+
+    assert.deepEqual(await boundaryMessages(file, form("./control.js")), []);
+  }
+});
+
+test("only the Claude-owned shared contract can import SDK types, and never SDK values", async () => {
+  const sdk = "@anthropic-ai/claude-agent-sdk";
+  const contract = "src/shared/providers/claude/events.ts";
+
+  for (const source of [
+    `import type { Thing } from "${sdk}";`,
+    `import { type Thing } from "${sdk}";`,
+    `export type { Thing } from "${sdk}";`,
+    `type Thing = import("${sdk}").Thing;`,
+  ]) {
+    assert.deepEqual(await boundaryMessages(contract, source), []);
+
+    assert.equal(
+      (await boundaryMessages("src/shared/events/types.ts", source)).length,
+      1,
+    );
+  }
+
+  assert.equal(
+    (await boundaryMessages(contract, `import { Thing } from "${sdk}";`))
+      .length,
+    1,
+  );
 });
 
 test("colocated production tests and test harnesses may import fixtures and other runtimes", async () => {

@@ -89,7 +89,17 @@ async function run(directory: string, args: string[]): Promise<Run> {
   }
 }
 
-function generate(directory: string, check = false) {
+// The CLI smoke checks below cover process dispatch. Behavioral cases reuse the
+// generator so each assertion does not reload TypeScript and ESLint in Node.
+const { generateSchemas } = await import(
+  new URL("../../../scripts/generate-schemas.mjs", import.meta.url).href
+);
+
+function generate(directory: string, check = false): Promise<void> {
+  return generateSchemas({ root: directory, check });
+}
+
+function cli(directory: string, check = false) {
   return run(directory, [
     "scripts/generate-schemas.mjs",
     ...(check ? ["--check"] : []),
@@ -118,7 +128,7 @@ test.concurrent(
       'import { settingRowSchema } from "./document-contract.generated.js";\n',
     );
 
-    const generated = await generate(directory);
+    const generated = await cli(directory);
 
     assert.equal(generated.status, 0, generated.stderr);
 
@@ -136,9 +146,7 @@ settingRowSchema.safeParse({});
 
     assert.equal(imported.status, 0, imported.stderr);
 
-    const checked = await generate(directory, true);
-
-    assert.equal(checked.status, 0, checked.stderr);
+    await generate(directory, true);
     assert.deepEqual(snapshot(directory), before);
 
     const staleFile = join(directory, `${contracts[0]}.generated.ts`);
@@ -146,7 +154,7 @@ settingRowSchema.safeParse({});
     writeFileSync(staleFile, `${readFileSync(staleFile, "utf8")}\n// stale\n`);
 
     const staleBefore = snapshot(directory);
-    const staleCheck = await generate(directory, true);
+    const staleCheck = await cli(directory, true);
 
     assert.notEqual(staleCheck.status, 0);
 
@@ -163,9 +171,7 @@ test.concurrent(
   "rejects a type imported from outside a contract before writing a permissive validator",
   async (t) => {
     const directory = fixture(t);
-    const generated = await generate(directory);
-
-    assert.equal(generated.status, 0, generated.stderr);
+    await generate(directory);
 
     const file = join(directory, panelContract);
     const source = readFileSync(file, "utf8");
@@ -188,10 +194,10 @@ test.concurrent(
       "utf8",
     );
 
-    const result = await generate(directory);
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Permissive validator.*panel-contract.ts/);
+    await assert.rejects(
+      generate(directory),
+      /Permissive validator.*panel-contract.ts/,
+    );
 
     const after = readFileSync(
       join(directory, `${contracts[1]}.generated.ts`),
@@ -218,9 +224,7 @@ test.concurrent(
       )}`,
     );
 
-    const result = await generate(directory);
-
-    assert.equal(result.status, 0, result.stderr);
+    await generate(directory);
 
     const output = readFileSync(
       join(directory, `${contracts[1]}.generated.ts`),
@@ -237,9 +241,7 @@ test.concurrent(
       /options: z\.array\(settingOptionSchema\)\.optional\(\)/,
     );
 
-    const checked = await generate(directory, true);
-
-    assert.equal(checked.status, 0, checked.stderr);
+    await generate(directory, true);
   },
 );
 
@@ -249,9 +251,7 @@ test.concurrent(
     const directory = fixture(t);
     const feature = join(directory, "src/service/features/new-feature/nested");
     const output = join(feature, "message-contract.generated.ts");
-    const initial = await generate(directory);
-
-    assert.equal(initial.status, 0, initial.stderr);
+    await generate(directory);
 
     const before = snapshot(directory);
 
@@ -267,17 +267,15 @@ test.concurrent(
       "export interface TestOnly { value: number; }\n",
     );
 
-    const missing = await generate(directory, true);
+    await assert.rejects(
+      generate(directory, true),
+      /Missing schema:.*message-contract\.generated\.ts.*Run npm run schemas:generate/,
+    );
 
-    assert.notEqual(missing.status, 0);
-    assert.match(missing.stderr, /message-contract\.generated\.ts/);
-    assert.match(missing.stderr, /Run npm run schemas:generate/);
     assert.equal(existsSync(output), false);
     assert.deepEqual(snapshot(directory), before);
 
-    const generated = await generate(directory);
-
-    assert.equal(generated.status, 0, generated.stderr);
+    await generate(directory);
     assert.match(readFileSync(output, "utf8"), /export const messageSchema/);
 
     assert.equal(
@@ -285,9 +283,7 @@ test.concurrent(
       false,
     );
 
-    const checked = await generate(directory, true);
-
-    assert.equal(checked.status, 0, checked.stderr);
+    await generate(directory, true);
   },
 );
 
@@ -298,12 +294,8 @@ test.concurrent(
 
     rmSync(join(directory, "src"), { recursive: true, force: true });
 
-    const result = await generate(directory, true);
-
-    assert.notEqual(result.status, 0);
-
-    assert.match(
-      result.stderr,
+    await assert.rejects(
+      generate(directory, true),
       /No schema contracts found under src\. Run this command from the project root\./,
     );
   },

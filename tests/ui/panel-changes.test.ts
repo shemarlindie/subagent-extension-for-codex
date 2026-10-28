@@ -6,6 +6,7 @@ import {
   assert,
   assertAbsent,
   changePages,
+  pasteText,
   screen,
   setup,
   task,
@@ -218,7 +219,7 @@ test("Ask Codex about a previewed file prepares its context and restores the pre
   expect(transport.messages).toEqual([]);
   expect(transport.shared).toEqual(sharedBeforeClick);
   await user.clear(field);
-  await user.type(field, "Explain the change in src/a.ts.");
+  await pasteText(user, field, "Explain the change in src/a.ts.");
 
   await user.click(
     within(dialog).getByRole("button", {

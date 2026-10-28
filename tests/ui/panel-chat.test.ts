@@ -6,6 +6,7 @@ import {
   act,
   assert,
   assertAbsent,
+  pasteText,
   screen,
   setup,
   test,
@@ -59,7 +60,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   assert.deepEqual(transport.messages, []);
   const field = document.getElementById("handoff-message")!;
   await user.clear(field);
-  await user.type(field, "Edited handoff for this chat");
+  await pasteText(user, field, "Edited handoff for this chat");
 
   await user.click(
     screen.getByRole("button", { name: "Send to conversation" }),
@@ -129,7 +130,7 @@ test("Ask Codex about an older reply prepares that reply and sends only the edit
   expect(transport.shared).toEqual(sharedBeforeRefresh);
 
   await user.clear(field);
-  await user.type(field, "Explain the earlier authentication finding.");
+  await pasteText(user, field, "Explain the earlier authentication finding.");
 
   await user.click(
     within(dialog).getByRole("button", {
@@ -242,7 +243,7 @@ test("a standalone reply handoff copies the edited message without sending", asy
 
   const field = within(dialog).getByRole("textbox", { name: "Message" });
   await user.clear(field);
-  await user.type(field, "Copied question for Codex.");
+  await pasteText(user, field, "Copied question for Codex.");
 
   await user.click(
     within(dialog).getByRole("button", { name: "Copy message" }),

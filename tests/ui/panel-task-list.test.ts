@@ -5,7 +5,6 @@ import {
   act,
   assert,
   assertAbsent,
-  enterTask,
   openAdvancedTask,
   screen,
   setup,
@@ -90,7 +89,7 @@ test("search clears with Escape and focuses with the slash key", async (t) => {
   expect(document.activeElement).not.toBe(search);
   // Typing a slash in another text field leaves the shortcut alone.
   await openAdvancedTask(user);
-  await enterTask(user, "a/b");
+  await user.type(screen.getByLabelText("Description"), "a/b");
   expect(document.activeElement).not.toBe(search);
 });
 

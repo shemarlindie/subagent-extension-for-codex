@@ -102,6 +102,7 @@ import { createElement } from "react";
 import { AppShell } from "../../src/panel/app/app-shell";
 import { Controller } from "../../src/panel/app/state/controller";
 import { ControllerContext } from "../../src/panel/app/state/controller-context";
+import { SettingsPage } from "../../src/panel/features/settings/settings-page";
 import { SKIPPED_ANSWER } from "../../src/panel/features/tasks/controls/question-answers";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
@@ -201,10 +202,20 @@ export class FakeTransport implements Transport {
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
 
-    const activityEvents = decodePanelToolResult<{ events: Event[] }>(
-      "app_get_activity",
-      { events: this.taskEvents },
-    ).events;
+    // Activity fixtures can be large. Decode and window them only for reads
+    // that request activity, as the service does.
+    if (name === "app_get_activity" || name === "app_get_turn_activity") {
+      const events = decodePanelToolResult<{ events: Event[] }>(name, {
+        events: this.taskEvents,
+      }).events;
+
+      return decodePanelToolResult<T>(
+        name,
+        name === "app_get_activity"
+          ? windowActivity(events, Number(args.after ?? 0))
+          : windowTurnActivity(events, Number(args.turn)),
+      );
+    }
 
     const values: Record<string, unknown> = {
       get_panel_context: { panel_scope: { conversation_id: null } },
@@ -222,11 +233,6 @@ export class FakeTransport implements Transport {
         },
       ],
       list_tasks: this.tasks,
-      app_get_activity: windowActivity(activityEvents, Number(args.after ?? 0)),
-      app_get_turn_activity: windowTurnActivity(
-        activityEvents,
-        Number(args.turn),
-      ),
       app_get_chat: { items: this.chat, next_cursor: 0 },
       app_get_change_counts: changeCounts(this.changes[0]),
       get_changes: this.changes[Number(args.cursor ?? 0)],
@@ -298,6 +304,7 @@ export async function setup(
     conversation?: string;
     displayMode?: HostState["displayMode"];
     start?: boolean;
+    view?: "settings";
   } = {},
 ) {
   const transport = new FakeTransport();
@@ -317,6 +324,14 @@ export async function setup(
     wide: () => options.wide ?? true,
   });
 
+  const restorePanelGeometry = mockPanelGeometry();
+
+  t.onTestFinished(() => {
+    cleanup();
+    controller.dispose();
+    restorePanelGeometry();
+  });
+
   if (options.scoped || options.conversation) {
     controller.applyScope(
       {
@@ -330,27 +345,28 @@ export async function setup(
   }
 
   if (options.start !== false) await controller.start();
+  if (options.view === "settings") await controller.settings();
 
   function Harness() {
     return createElement(
       ControllerContext.Provider,
       { value: controller },
-      createElement(AppShell),
+      createElement(options.view === "settings" ? SettingsPage : AppShell),
     );
   }
 
-  const restorePanelGeometry = mockPanelGeometry();
-
-  t.onTestFinished(() => {
-    cleanup();
-    controller.dispose();
-    restorePanelGeometry();
+  await act(async () => {
+    render(createElement(Harness));
   });
-
-  render(createElement(Harness));
 
   // Tests await each action, so keystrokes need no macrotask between them.
   const user = userEvent.setup({ document: document, delay: null });
+
+  if (options.view === "settings") {
+    await waitFor(() =>
+      expect(controller.getSnapshot().dialog?.kind).toBe("settings"),
+    );
+  }
 
   return { controller, transport, user };
 }
@@ -439,8 +455,29 @@ export function selectedProjectPath() {
     : (project.querySelector(".select-value-description")?.textContent ?? "");
 }
 
-export async function enterTask(user: any, description: string) {
-  await user.type(screen.getByLabelText("Description"), description);
+/** Fill incidental text with one input event. Keyboard tests use user.type. */
+export async function pasteText(
+  user: ReturnType<typeof userEvent.setup>,
+  field: Element,
+  text: string,
+) {
+  await user.click(field);
+  await user.paste(text);
+}
+
+export async function enterTask(
+  user: ReturnType<typeof userEvent.setup>,
+  description: string,
+) {
+  await pasteText(user, screen.getByLabelText("Description"), description);
+}
+
+/** Page-local settings cases do not need the retained Tasks page. */
+export function setupSettings(
+  t: TestContext,
+  configure: (transport: FakeTransport) => void,
+) {
+  return setup(t, configure, { view: "settings" });
 }
 
 /** Serves saved settings with the given values, keyed by dotted path. */
