@@ -1,8 +1,5 @@
 # Contributing
 
-This guide covers how to report problems and propose changes.
-[Local development](docs/development.md) covers building and checking the code.
-
 ## Report a problem
 
 Open an issue with the bug report template. Include the versions it asks for and
@@ -18,8 +15,7 @@ Open an issue before starting a large change, so we can agree on the approach
 first. Small fixes and documentation corrections can go straight to a pull
 request.
 
-1. Read the [README](README.md), then [Architecture](docs/architecture.md) and
-   the guide for the area you are changing.
+1. Read the guides in the [documentation reading order](README.md#documentation).
 2. Follow [Setup](docs/development.md#setup) and make your change on a branch.
 3. Follow [Choosing test coverage](docs/development.md#choosing-test-coverage)
    when adding or changing tests.
@@ -29,7 +25,7 @@ request.
 6. Open a pull request that says what changed and why, and how you checked it.
 
 [Agent instructions](AGENTS.md) hold the project's code, test and writing
-conventions. They apply to people as well as coding agents.
+conventions.
 
 ## Commits
 

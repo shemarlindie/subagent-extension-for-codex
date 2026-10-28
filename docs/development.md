@@ -1,7 +1,6 @@
 # Local development
 
-Use this guide to build, run, change and check the project from a checkout. It
-is for contributors and agents working on the code.
+Use this guide to build, run, change and check the project from a checkout.
 
 - [Architecture](architecture.md) covers code ownership and runtime boundaries.
 - [UI verification](ui-verification.md) covers browser and Codex checks of the

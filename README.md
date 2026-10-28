@@ -8,9 +8,6 @@ scheduling, durable task state and Git worktrees, so tasks keep running when a
 client disconnects. The service runs for one user and listens on loopback by
 default.
 
-This README covers installation and orientation. The
-[guides](#documentation) cover use, configuration and development.
-
 ## Install
 
 You need:
@@ -134,8 +131,7 @@ access from other devices during development, see
 
 ## Documentation
 
-Choose a guide for your task from the tables below. Before working on the
-codebase, read in this order:
+Before working on the codebase, read in this order:
 
 1. [Architecture](docs/architecture.md) for runtime ownership and code
    boundaries.

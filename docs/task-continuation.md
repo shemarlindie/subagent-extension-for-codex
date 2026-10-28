@@ -3,7 +3,6 @@
 Use this guide to choose a workspace, continue a task, and keep service state
 across restarts, updates and backups.
 
-- The [README](../README.md) covers installation and connecting Codex.
 - [Configuration](configuration.md) covers environment variables, task
   defaults, repository approvals and permissions.
 - The [panel guide](panel-guide.md) covers task controls.

@@ -1,7 +1,5 @@
 # Security policy
 
-This guide covers reporting security problems and proposing fixes.
-
 ## Report a vulnerability
 
 Security reports and fixes are welcome through

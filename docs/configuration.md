@@ -8,7 +8,6 @@ defaults and control what delegated Claude sessions may do.
   ordinary defaults.
 - Raising permissions or relaxing session restrictions requires user authority.
 
-The [README](../README.md#install) covers installation.
 [Local development](development.md#connect-codex-from-a-checkout) covers
 connecting a checkout, and [Task continuation](task-continuation.md) covers
 continuing tasks and preserving state.
