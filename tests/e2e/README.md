@@ -30,44 +30,44 @@ diagnostics when optimizing.
 
 ## Verified behaviors
 
-The browser flows verify:
+The browser flows verify these behaviors. Spec names omit `.spec.ts`.
 
-| ID  | Expected behavior                                                                                                           |
-| --- | --------------------------------------------------------------------------------------------------------------------------- |
-| E1  | Sign in and explicitly register a project through the console.                                                              |
-| E2  | Start a task, answer its question and approve a simulated tool request.                                                     |
-| E3  | Reload persisted history, then send a follow-up in the same worker session.                                                 |
-| E4  | Start in a worktree, preview recorded edits, remove the worktree and branch, then reload the retained diff.                 |
-| E5  | Preserve a failed turn across reload and successfully continue the same task.                                               |
-| E6  | Start a task with Enter, keep composer focus, archive and restore it, cancel deletion and explicitly delete it.             |
-| E7  | Save settings, reload persisted values and retain a new-task draft while visiting settings.                                 |
-| E8  | Queue messages, edit, reorder and remove them, interrupt, reload the paused queue and resume in order.                      |
-| E9  | Exhaust a runtime budget, raise its limit, reload and successfully continue.                                                |
-| E10 | Create a dependency through the task form, preserve its wait across reload and release it after the prerequisite completes. |
-| E11 | Rename a project and verify both removal choices, retaining checkout files and cleaning task worktrees only when requested. |
-| E12 | Crash a service with running and queued work, restart, sign in and resume the recovered queue without losing its order.     |
-| E13 | Answer stacked questions with typed and multiple choices, undo and keep skips, then deny a tool with a message.             |
-| E14 | Keep tasks unread until read, mark them read or unread by menu, reply or bulk action, and reload the results.               |
-| E15 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
-| E16 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |
-| E17 | Glide after a reply at the end, fade new messages in without moving others back, hold and restore the reading position.     |
-| E18 | Steer a running turn, promote a queued message, interrupt to send it now and clear a paused queue.                          |
-| E19 | Reject a lower cost limit, raise a spent cost budget and continue.                                                          |
-| E20 | Fail a dependent with its failed prerequisite, then resume both with follow-ups.                                            |
-| E21 | Filter, search and rename tasks, keeping the filter and title across reload.                                                |
-| E22 | Reject an invalid setting, keep drafts, confirm discarding edits, reset a section and start from saved defaults.            |
-| E23 | Start a task with a chosen model and permission mode and see the policy applied.                                            |
-| E24 | Review recorded diffs across scopes, use floating file navigation, mark viewed files and use previews.                      |
-| E25 | Delete a running task with its agent session and bulk delete archived tasks.                                                |
-| E26 | Keep a task whose agent session can't be deleted, then delete it locally.                                                   |
-| E27 | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
-| E28 | Search, open a task and move between its tabs by keyboard.                                                                  |
-| E29 | Announce a new task, preserve the open task, draft, focus and reading position, then open it with View.                     |
-| E30 | Add a project from the new-task composer, select it there without changing the list scope and start a task in it.           |
-| E31 | Keep reply and caret geometry stable through streamed handoffs and preserve reading position through changing activity.     |
-| E32 | Save or copy settings, recover from a failed save, reject invalid pasted exports and import settings, listing skipped keys. |
-| E33 | Lock settings fields while an import runs, keep the pasted export after a failed import and restore editing.                |
-| E34 | Save multi-line custom instructions under a collapsed worker profile, reload them and see a new task keep them in Details.  |
+| ID  | Spec                                            | Expected behavior                                                                                                           |
+| --- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| E1  | `task-flows`                                    | Sign in and explicitly register a project through the console.                                                              |
+| E2  | `task-flows`                                    | Start a task, answer its question and approve a simulated tool request.                                                     |
+| E3  | `task-flows`                                    | Reload persisted history, then send a follow-up in the same worker session.                                                 |
+| E4  | `task-flows`                                    | Start in a worktree, preview recorded edits, remove the worktree and branch, then reload the retained diff.                 |
+| E5  | `task-flows`                                    | Preserve a failed turn across reload and successfully continue the same task.                                               |
+| E6  | `task-flows`                                    | Start a task with Enter, keep composer focus, archive and restore it, cancel deletion and explicitly delete it.             |
+| E7  | `task-flows`                                    | Save settings, reload persisted values and retain a new-task draft while visiting settings.                                 |
+| E8  | `task-controls`                                 | Queue messages, edit, reorder and remove them, interrupt, reload the paused queue and resume in order.                      |
+| E9  | `task-controls`                                 | Exhaust a runtime budget, raise its limit, reload and successfully continue.                                                |
+| E10 | `task-controls`                                 | Create a dependency through the task form, preserve its wait across reload and release it after the prerequisite completes. |
+| E11 | `project-management`                            | Rename a project and verify both removal choices, retaining checkout files and cleaning task worktrees only when requested. |
+| E12 | `service-recovery`                              | Crash a service with running and queued work, restart, sign in and resume the recovered queue without losing its order.     |
+| E13 | `task-decisions`                                | Answer stacked questions with typed and multiple choices, undo and keep skips, then deny a tool with a message.             |
+| E14 | `read-state`                                    | Keep tasks unread until read, mark them read or unread by menu, reply or bulk action, and reload the results.               |
+| E15 | `send-delivery`                                 | Lose a send's response, keep the draft with retry guidance and deliver the retried message once.                            |
+| E16 | `send-delivery`                                 | Lose the event stream, show reconnection and display work finished while disconnected.                                      |
+| E17 | `chat-reading`                                  | Glide after a reply at the end, fade new messages in without moving others back, hold and restore the reading position.     |
+| E18 | `task-controls`                                 | Steer a running turn, promote a queued message, interrupt to send it now and clear a paused queue.                          |
+| E19 | `task-failures`                                 | Reject a lower cost limit, raise a spent cost budget and continue.                                                          |
+| E20 | `task-failures`                                 | Fail a dependent with its failed prerequisite, then resume both with follow-ups.                                            |
+| E21 | `task-organization`                             | Filter, search and rename tasks, keeping the filter and title across reload.                                                |
+| E22 | `settings`                                      | Reject an invalid setting, keep drafts, confirm discarding edits, reset a section and start from saved defaults.            |
+| E23 | `settings`                                      | Start a task with a chosen model and permission mode and see the policy applied.                                            |
+| E24 | `changes-review`                                | Review recorded diffs across scopes, use floating file navigation, mark viewed files and use previews.                      |
+| E25 | `task-deletion`                                 | Delete a running task with its agent session and bulk delete archived tasks.                                                |
+| E26 | `task-deletion`                                 | Keep a task whose agent session can't be deleted, then delete it locally.                                                   |
+| E27 | `layout`                                        | Switch between the list and a task in a narrow console without horizontal overflow.                                         |
+| E28 | `layout`                                        | Search, open a task and move between its tabs by keyboard.                                                                  |
+| E29 | `task-arrivals`                                 | Announce a new task, preserve the open task, draft, focus and reading position, then open it with View.                     |
+| E30 | `project-management`                            | Add a project from the new-task composer, select it there without changing the list scope and start a task in it.           |
+| E31 | `chat-caret`, `chat-live-cycle`, `chat-reading` | Keep reply and caret geometry stable through streamed handoffs and preserve reading position through changing activity.     |
+| E32 | `settings`                                      | Save or copy settings, recover from a failed save, reject invalid pasted exports and import settings, listing skipped keys. |
+| E33 | `settings`                                      | Lock settings fields while an import runs, keep the pasted export after a failed import and restore editing.                |
+| E34 | `settings`                                      | Save multi-line custom instructions under a collapsed worker profile, reload them and see a new task keep them in Details.  |
 
 Accepted limits:
 

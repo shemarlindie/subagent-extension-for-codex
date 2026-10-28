@@ -20,13 +20,13 @@ such as `CH1` for the first Changes check.
 behavior. Then find what already exists for the area:
 
 - [Verified behaviors](../../../tests/e2e/README.md#verified-behaviors) lists
-  the browser flows. Check their behaviors by running the affected specs with
-  `npm run build && npx playwright test <spec>`.
+  the browser flows and their specs. Check their behaviors by running the
+  affected specs with `npm run build && npx playwright test <spec>`.
 - The [fixture catalogue](../../../docs/ui-verification.md#fixture-catalogue)
   lists the dev host tasks that show prepared states.
 - [Prompt markers](../../../docs/fixture-scenarios.md#prompt-markers) and the
   scenario tables after them show how to make the demo's fake worker produce
-  it.
+  each state.
 
 These areas need setup the tables don't describe:
 
@@ -72,14 +72,16 @@ through standard input so they resolve its packages:
 node --input-type=module < /tmp/verify-<area>/check.mjs
 ```
 
-Such a script can also import `./tests/e2e/console-actions.ts`.
+Such a script can also import `./tests/e2e/console-actions.ts`. Other modules
+in `/tmp` can't resolve the checkout's packages, so pass them what they need,
+such as `chromium`.
 
 ### Dev host
 
 The dev host embeds the panel in an iframe, so use
 `page.frameLocator("iframe").first()` for panel elements. The host toolbar's
-selects carry labels you can target with `getByLabel`. Pass these option
-values to `selectOption`:
+selects sit inside labels you can target with `getByLabel`, without
+`exact: true`. Pass these option values to `selectOption`:
 
 | Label   | Values                      |
 | ------- | --------------------------- |
@@ -91,8 +93,10 @@ values to `selectOption`:
 
 A fresh browser starts with **Launch: Thread** and **Display: inline**. Use
 **Launch: Global** with the **All** filter to list every fixture task, and
-**Display: fullscreen** to open Settings and the task inspector. Also check the
-compact inline summary when the change affects it, since Codex shows it first.
+**Display: fullscreen** to open Settings and the task inspector. Filter names
+include a count, so match **All** with `getByRole("radio", { name: /^All,/ })`.
+Also check the compact inline summary when the change affects it, since Codex
+shows it first.
 
 ### Demo console
 
@@ -100,12 +104,18 @@ The console at `http://127.0.0.1:17317` needs a sign-in, and agent tool calls
 need a bearer token.
 [Drive the demo from scripts](../../../docs/development.md#drive-the-demo-from-scripts)
 shows both. `tests/e2e/console-actions.ts` has `startTask`, `send` and
-`openAdvancedTask` for common steps.
+`openAdvancedTask` for common steps. `send` needs the Chat tab open.
 
 ### Checking results
 
-- Pass `exact: true` to `getByRole` and `getByLabel` name queries. Names match
-  partially by default, so "Reviewer" also matches "Security reviewer".
+- Names match partially by default, so "Reviewer" also matches "Security
+  reviewer". Pass `exact: true` for fixed names, and an anchored pattern for
+  names with changing text. The Changes tab reads "Changes 8", and a task
+  row's name adds its profile and elapsed time, so match them with
+  `/^Changes/` and `/^<title>/`.
+- Wait with `expect` from `@playwright/test`, such as
+  `await expect(locator).toBeVisible()`, which retries until the condition
+  holds. Fixed timeouts can report a state before it settles.
 - Reload the page to confirm a change persisted. Wait for the mutation to
   finish first.
 - Check each behavior at the widths, themes and states the
@@ -131,7 +141,7 @@ List what you couldn't check and why, including any
 Follow [Choosing test coverage](../../../docs/development.md#choosing-test-coverage).
 When a gap needs new coverage:
 
-- Add a new browser flow's ID to
+- Add a new browser flow's ID and spec to
   [Verified behaviors](../../../tests/e2e/README.md#verified-behaviors).
 - Add a missing fixture as a scenario in `dev/panel/scenarios/`, registered
   in `fixtures.ts`, or as a marker in `dev/service/fixture-scenarios.ts`.
