@@ -20,8 +20,8 @@ such as `CH1` for the first Changes check.
 behavior. Then find what already exists for the area:
 
 - [Verified behaviors](../../../tests/e2e/README.md#verified-behaviors) lists
-  the browser flows. Skip behaviors a flow already verifies unless the change
-  touched them.
+  the browser flows. Check their behaviors by running the affected specs with
+  `npm run build && npx playwright test <spec>`.
 - The [fixture catalogue](../../../docs/ui-verification.md#fixture-catalogue)
   lists the dev host tasks that show prepared states.
 - [Prompt markers](../../../docs/fixture-scenarios.md#prompt-markers) and the
@@ -31,11 +31,10 @@ behavior. Then find what already exists for the area:
 These areas need setup the tables don't describe:
 
 - **Settings changes.** Prepared fixtures can't save, export or import
-  settings, so use the demo. To check
-  custom instructions on a task, save them, start a task with that profile and
-  open Details.
+  settings, so use the demo. To check custom instructions on a task, save
+  them, start a task with that profile and open Details.
 - **New task toasts.** In the demo, open a task, then start another from a
-  second console tab or through MCP.
+  second console tab or with an agent `start_task` call.
 - **User-only settings.** An agent `update_settings` call that sets
   `approvals`, `projects`, `profiles` or `providers.<id>` must fail and name
   the setting. `src/service/features/settings/settings.integration.test.ts`
@@ -65,12 +64,22 @@ holds it, ask the user before stopping that service, since it may be their own.
 ## 3. Drive it in a browser
 
 Use the project's Playwright with the Chromium that
-[Checks](../../../docs/development.md#checks) installs. The dev host embeds the
-panel in an iframe, so use `page.frameLocator("iframe").first()` for panel
-elements.
+[Checks](../../../docs/development.md#checks) installs. Keep scripts outside
+the checkout, such as in `/tmp/verify-<area>/`, and run them from the checkout
+through standard input so they resolve its packages:
 
-The host toolbar's selects carry labels you can target with `getByLabel`. Pass
-these option values to `selectOption`:
+```sh
+node --input-type=module < /tmp/verify-<area>/check.mjs
+```
+
+Such a script can also import `./tests/e2e/console-actions.ts`.
+
+### Dev host
+
+The dev host embeds the panel in an iframe, so use
+`page.frameLocator("iframe").first()` for panel elements. The host toolbar's
+selects carry labels you can target with `getByLabel`. Pass these option
+values to `selectOption`:
 
 | Label   | Values                      |
 | ------- | --------------------------- |
@@ -82,12 +91,27 @@ these option values to `selectOption`:
 
 A fresh browser starts with **Launch: Thread** and **Display: inline**. Use
 **Launch: Global** with the **All** filter to list every fixture task, and
-**Display: fullscreen** to open Settings and the task inspector.
+**Display: fullscreen** to open Settings and the task inspector. Also check the
+compact inline summary when the change affects it, since Codex shows it first.
 
-Check each behavior at the widths, themes and states the
-[workflow](../../../docs/ui-verification.md#workflow) lists. Save screenshots
-under a temporary directory, such as `/tmp/verify-<area>/`, and look at them.
-Text checks alone miss layout faults.
+### Demo console
+
+The console at `http://127.0.0.1:17317` needs a sign-in, and agent tool calls
+need a bearer token.
+[Drive the demo from scripts](../../../docs/development.md#drive-the-demo-from-scripts)
+shows both. `tests/e2e/console-actions.ts` has `startTask`, `send` and
+`openAdvancedTask` for common steps.
+
+### Checking results
+
+- Pass `exact: true` to `getByRole` and `getByLabel` name queries. Names match
+  partially by default, so "Reviewer" also matches "Security reviewer".
+- Reload the page to confirm a change persisted. Wait for the mutation to
+  finish first.
+- Check each behavior at the widths, themes and states the
+  [workflow](../../../docs/ui-verification.md#workflow) lists. Save
+  screenshots beside the script and look at them. Text checks alone miss
+  layout faults.
 
 ## 4. Record results
 

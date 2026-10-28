@@ -461,6 +461,30 @@ service configured in `.env`.
 [Fixture scenarios](fixture-scenarios.md) lists the prompt triggers, expected
 outcomes, queue controls and failure cases.
 
+### Drive the demo from scripts
+
+A browser script signs in the way the browser flows do, by posting the demo
+token to `/api/login` with the service's `Origin`:
+
+```js
+await page.request.post("http://127.0.0.1:17317/api/login", {
+  data: { token: "local-demo-only-not-a-real-token" },
+  headers: { Origin: "http://127.0.0.1:17317" },
+});
+```
+
+To call a tool with agent authority, post its arguments with the token as a
+bearer credential and the `X-Codex-Subagent-Extension` header. Console
+sessions and `/api/user-tools/` calls carry
+[user authority](mcp-reference.md#app-and-user-authority).
+
+```sh
+curl -s http://127.0.0.1:17317/api/tools/update_settings \
+  -H "Authorization: Bearer local-demo-only-not-a-real-token" \
+  -H "X-Codex-Subagent-Extension: 1" -H "Content-Type: application/json" \
+  -d '{"set":{"approvals":{"execution_mode":"deny"}}}'
+```
+
 ## What reloads when
 
 | Change                               | To see it                                                               |
