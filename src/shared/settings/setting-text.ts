@@ -23,14 +23,22 @@ export const settingMeta = (schema: z.ZodType): Record<string, unknown> =>
   unwrapped(schema).meta() ?? {};
 
 /**
- * A setting's label and help, read from its schema's `title` and
- * `description`, so section rows and the schema agents read never drift.
+ * A setting's label, help and search keywords, read from its schema's
+ * `title`, `description` and `keywords`, so section rows and the schema agents
+ * read never drift.
  */
 export function settingText(schema: z.ZodType) {
-  const { title, description } = settingMeta(schema);
+  const { title, description, keywords } = settingMeta(schema);
 
   return {
     label: typeof title === "string" ? title : "",
     ...(typeof description === "string" ? { help: [description] } : {}),
+    ...(Array.isArray(keywords)
+      ? {
+          keywords: keywords.filter(
+            (keyword): keyword is string => typeof keyword === "string",
+          ),
+        }
+      : {}),
   };
 }

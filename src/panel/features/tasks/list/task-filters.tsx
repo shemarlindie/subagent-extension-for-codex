@@ -1,10 +1,6 @@
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  useEffect,
-  useRef,
-} from "react";
+import { useEffect, useRef } from "react";
 
 import {
   useController,
@@ -16,21 +12,13 @@ import {
   filterCounts,
 } from "../../../app/state/selectors";
 import type { Filter } from "../../../app/state/types";
-import { Button } from "../../../shared/components/button/button";
-import { Icon } from "../../../shared/components/icons/icons";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { Presence } from "../../../shared/components/motion/presence";
+import { SearchField } from "../../../shared/components/search/search-field";
 import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 
 const FILTER_EDGE_GAP = 16;
-
-// Typing a "/" into a text field or a dialog must not be hijacked by the shortcut.
-const typing = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  (target.isContentEditable ||
-    /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) ||
-    target.closest('[role="dialog"]') !== null);
 
 export function TaskFilters() {
   const controller = useController(),
@@ -38,7 +26,6 @@ export function TaskFilters() {
     loading = state.taskListLoading,
     counts = filterCounts(state),
     current = effectiveFilter(state),
-    searchRef = useRef<HTMLInputElement>(null),
     groupRef = useRef<HTMLDivElement>(null),
     // A load or scope switch passes through an empty list, so the batch that follows sets every
     // pill at once; it appears in place. Only changes between populated renders animate.
@@ -56,39 +43,6 @@ export function TaskFilters() {
   const shown = (filter: Filter) =>
     filter === "all" || counts[filter] > 0 || filter === current;
 
-  const onSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Escape") return;
-    if (state.search) controller.setSearch("");
-    else event.currentTarget.blur();
-  };
-
-  const clearSearch = () => {
-    controller.setSearch("");
-    searchRef.current?.focus();
-  };
-
-  // "/" jumps to search from anywhere outside a text field or dialog.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key !== "/" ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.altKey ||
-        typing(event.target)
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      searchRef.current?.focus();
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   // Keep the selected filter visible when the group scrolls sideways.
   useEffect(() => {
     const group = groupRef.current,
@@ -103,32 +57,15 @@ export function TaskFilters() {
 
   return (
     <>
-      <div className="search-box">
-        <Icon name="search" size={10} className="search-icon" />
-        <input
-          id="search"
-          ref={searchRef}
-          className="search"
-          type="search"
-          placeholder="Search tasks"
-          aria-label="Search tasks"
-          aria-keyshortcuts="/"
-          value={state.search}
-          onChange={(event) => controller.setSearch(event.target.value)}
-          onKeyDown={onSearchKeyDown}
-        />
-        {/* The native clear button is hidden; this one also restores focus to the input. */}
-        {state.search && (
-          <Button
-            variant="text"
-            className="search-clear"
-            aria-label="Clear search"
-            onClick={clearSearch}
-          >
-            <Icon name="close" size={8} />
-          </Button>
-        )}
-      </div>
+      <SearchField
+        className="task-search"
+        label="Search tasks"
+        clearLabel="Clear search"
+        focusShortcut
+        value={state.search}
+        onValueChange={(value) => controller.setSearch(value)}
+        blurOnEmptyEscape
+      />
       <RadioGroup
         ref={groupRef}
         className="filters"

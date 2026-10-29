@@ -501,3 +501,259 @@ test("saving settings reports failures and the service computer's full path", as
       .evaluate((element) => element.scrollWidth <= element.clientWidth),
   ).toBe(true);
 });
+
+test("settings search keeps hidden drafts and reveals invalid fields on save", async ({
+  consolePage: page,
+}) => {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  const search = page.getByRole("searchbox", { name: "Search settings" }),
+    prefix = page.getByRole("textbox", {
+      name: "Worktree branch prefix",
+      exact: true,
+    });
+
+  // The hidden tasks page keeps its search mounted, but "/" focuses this one.
+  await page.keyboard.press("/");
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
+
+  await prefix.fill("bad prefix!");
+  await search.fill("  RESEARCHER instructions  ");
+
+  await expect(
+    page.getByRole("button", {
+      name: "Researcher custom instructions",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name: "Reviewer custom instructions",
+      exact: true,
+    }),
+  ).toBeHidden();
+
+  await expect(prefix).toBeHidden();
+  await search.press("Enter");
+  await expect(search).toHaveValue("  RESEARCHER instructions  ");
+
+  await page
+    .getByRole("button", { name: "Save 1 change", exact: true })
+    .click();
+
+  await expect(search).toHaveValue("");
+  await expect(prefix).toBeFocused();
+  await expect(prefix).toHaveValue("bad prefix!");
+  await prefix.fill("search-draft/");
+
+  await search.fill("task.worktree_branch_prefix");
+  await expect(prefix).toBeVisible();
+
+  await expect(
+    page.getByRole("combobox", { name: "Workspace", exact: true }),
+  ).toBeHidden();
+
+  await expect(
+    page.getByRole("button", { name: "Reset to defaults", exact: true }),
+  ).toBeHidden();
+
+  await search.fill("no-such-setting");
+
+  await expect(page.getByRole("status")).toHaveText(
+    "No settings match “no-such-setting”.",
+  );
+
+  await search.fill("JSON");
+
+  await expect(
+    page.getByRole("button", { name: "Copy JSON", exact: true }),
+  ).toBeVisible();
+});
+
+test("settings search groups all matches, explains choices and keeps saved edits visible", async ({
+  consolePage: page,
+}) => {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Worker profiles", exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "Search settings" });
+  await search.fill("model");
+
+  await expect(
+    page.getByRole("region", { name: "Model defaults", exact: true }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("region", { name: "Worker profiles", exact: true }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("tablist", { name: "Settings sections" }),
+  ).toBeHidden();
+
+  await expect(page.getByRole("status")).toHaveText(
+    /\d+ results across 2 sections/,
+  );
+
+  await expect(
+    page.locator("mark").filter({ hasText: /model/i }).first(),
+  ).toBeVisible();
+
+  await search.fill("researcher");
+
+  await expect(
+    page.getByText("Includes Researcher", { exact: true }),
+  ).toBeVisible();
+
+  await search.fill("timeout");
+
+  await expect(
+    page.getByRole("spinbutton", { name: "Runtime limit (mins)" }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Related to timeout", { exact: true }),
+  ).toBeVisible();
+
+  await search.fill("researcher instructions");
+
+  const instructions = page.getByRole("textbox", {
+    name: "Researcher custom instructions",
+    exact: true,
+  });
+
+  await expect(instructions).toBeVisible();
+  const node = await instructions.elementHandle();
+  await instructions.fill("Keep citations short.");
+  await expect(instructions).toBeFocused();
+  await expect(search).toHaveValue("researcher instructions");
+
+  await expect(page.getByRole("status")).toHaveText(
+    "1 result across 1 section",
+  );
+
+  await page
+    .getByRole("button", { name: "Save 1 change", exact: true })
+    .click();
+
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeDisabled();
+
+  await expect(search).toHaveValue("researcher instructions");
+  await expect(instructions).toHaveValue("Keep citations short.");
+
+  expect(
+    await instructions.evaluate(
+      (element, original) => element === original,
+      node,
+    ),
+  ).toBe(true);
+
+  await page
+    .getByRole("button", {
+      name: "Researcher custom instructions",
+      exact: true,
+    })
+    .click();
+
+  await expect(instructions).toBeHidden();
+  await page.getByRole("button", { name: "Clear settings search" }).click();
+  await expect(search).toBeFocused();
+
+  // Search expansion leaves the previous browsing expansion state intact.
+  await expect(instructions).toBeHidden();
+
+  await search.fill("researcher instructions");
+  await expect(instructions).toBeVisible();
+  await expect(instructions).toHaveValue("Keep citations short.");
+
+  await search.fill("profiles.researcher.instructions");
+  await expect(instructions).toBeVisible();
+
+  await expect(
+    page.getByLabel("Researcher model", { exact: true }),
+  ).toHaveAccessibleDescription(/Setting: profiles\.researcher\.instructions/);
+});
+
+test("clearing settings search restores browsing position and expanded drafts", async ({
+  consolePage: page,
+}) => {
+  await page.setViewportSize({ width: 1000, height: 430 });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Worker profiles", exact: true }).click();
+
+  await page
+    .getByRole("button", {
+      name: "Researcher custom instructions",
+      exact: true,
+    })
+    .click();
+
+  const instructions = page.getByRole("textbox", {
+    name: "Researcher custom instructions",
+    exact: true,
+  });
+
+  await instructions.fill("Preserve this draft.");
+  const pageFrame = page.locator(".settings-page");
+  const search = page.getByRole("searchbox", { name: "Search settings" });
+  await search.focus();
+
+  const focusedPosition = await pageFrame.evaluate(
+    (element) => element.scrollTop,
+  );
+
+  await pageFrame.evaluate((element) => {
+    element.scrollTop += 120;
+  });
+
+  const position = await pageFrame.evaluate((element) => element.scrollTop);
+  expect(position).toBeGreaterThan(focusedPosition);
+  await search.fill("timeout");
+  await expect(instructions).toBeHidden();
+  await search.press("Escape");
+  await expect(search).toBeFocused();
+  await expect(instructions).toHaveValue("Preserve this draft.");
+  await expect(instructions).toBeVisible();
+
+  await expect(
+    page.getByRole("tab", { name: /^Worker profiles/ }),
+  ).toHaveAttribute("aria-selected", "true");
+
+  await expect
+    .poll(() => pageFrame.evaluate((element) => element.scrollTop))
+    .toBe(position);
+
+  // Sticky controls stay separate with narrow panels and host font sizes.
+  await page.setViewportSize({ width: 360, height: 600 });
+
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty("--font-text-sm-size", "28px");
+  });
+
+  await pageFrame.evaluate((element) => {
+    element.scrollTop = 300;
+  });
+
+  await expect(async () => {
+    const bounds = await pageFrame.evaluate((element) => ({
+      headerBottom: element
+        .querySelector(".page-frame-heading")!
+        .getBoundingClientRect().bottom,
+      searchTop: element
+        .querySelector(".settings-search")!
+        .getBoundingClientRect().top,
+      searchBottom: element
+        .querySelector(".settings-search")!
+        .getBoundingClientRect().bottom,
+      tabsTop: element
+        .querySelector(".settings-section-tabs-list")!
+        .getBoundingClientRect().top,
+    }));
+
+    expect(bounds.searchTop).toBeGreaterThanOrEqual(bounds.headerBottom);
+    expect(bounds.tabsTop).toBeGreaterThanOrEqual(bounds.searchBottom);
+  }).toPass();
+});

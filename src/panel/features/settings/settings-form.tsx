@@ -6,12 +6,16 @@ import { type FieldErrors, useWatch } from "react-hook-form";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
-import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { Presence } from "../../shared/components/motion/presence";
 import { Notice } from "../../shared/components/notice/notice";
+import { SearchField } from "../../shared/components/search/search-field";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
-import { Help, SettingRowView, SettingsContext } from "./settings-fields";
+import { settingsSearch } from "./search/settings-search";
+import { SettingsSearchContext } from "./search/settings-search-context";
+import { SettingsSearchSummary } from "./search/settings-search-summary";
+import { useSettingsSearchView } from "./search/use-settings-search-view";
+import { SettingsContext } from "./settings-fields";
 import {
   activeSection,
   changes,
@@ -28,12 +32,14 @@ import {
   LoadingSettingsSection,
 } from "./settings-loading-section";
 import { SettingsLoadingTaskDefaults } from "./settings-loading-task-defaults";
-import { ModelTable } from "./settings-model-table";
+import { SettingsSectionRows } from "./settings-section-rows";
 import {
-  SettingsSectionTabs,
+  SettingsSections,
   type SettingsSectionView,
-} from "./settings-section-tabs";
+} from "./settings-sections";
 import { SettingsTransfer } from "./settings-transfer";
+import { useSettingsDiscardPrompt } from "./use-settings-discard-prompt";
+import { useSettingsStickyLayout } from "./use-settings-sticky-layout";
 
 export type SettingsFormDialog =
   | Extract<DialogState, { kind: "settings" }>
@@ -100,6 +106,9 @@ export function SettingsForm({
     element = useRef<HTMLFormElement>(null),
     discardPrompt = useRef<HTMLDivElement>(null);
 
+  const { query, setQuery } = useSettingsSearchView(element),
+    search = useMemo(() => settingsSearch(query), [query]);
+
   const isLoading = status === "loading",
     isError = status === "error",
     showDiscard = !loading && discarding && total > 0;
@@ -114,61 +123,8 @@ export function SettingsForm({
     });
   }, [onSaveActionChange, saveButtonDisabled, saveButtonLabel]);
 
-  useEffect(() => {
-    if (!showDiscard) return;
-    const prompt = discardPrompt.current;
-    if (!prompt) return;
-    let cancelled = false;
-
-    const reveal = () => {
-      if (cancelled) return;
-
-      prompt
-        .querySelector<HTMLButtonElement>("button")
-        ?.focus({ preventScroll: true });
-
-      prompt.scrollIntoView({
-        block: "start",
-        behavior: reducedMotion(prompt) ? "instant" : "smooth",
-      });
-    };
-
-    if (typeof prompt.getAnimations !== "function") {
-      reveal();
-
-      return;
-    }
-
-    // Wait until Base UI removes its starting styles, then wait for the
-    // resulting height transition. Scrolling uses the final expanded bounds.
-    let waiting = false;
-
-    const finishExpansion = async () => {
-      if (waiting || prompt.hasAttribute("data-starting-style")) return;
-      waiting = true;
-      prompt.getBoundingClientRect();
-
-      await Promise.allSettled(
-        prompt.getAnimations().map((animation) => animation.finished),
-      );
-
-      reveal();
-    };
-
-    const observer = new MutationObserver(() => void finishExpansion());
-
-    observer.observe(prompt, {
-      attributes: true,
-      attributeFilter: ["data-starting-style"],
-    });
-
-    void finishExpansion();
-
-    return () => {
-      cancelled = true;
-      observer.disconnect();
-    };
-  }, [showDiscard]);
+  useSettingsDiscardPrompt(showDiscard, discardPrompt);
+  useSettingsStickyLayout(element);
 
   // Leaving with unsaved edits asks first; saving keeps the page open.
   const dirty = useRef(false);
@@ -197,7 +153,11 @@ export function SettingsForm({
   const reveal = (path: string) => {
     const section = sectionOf(path);
     if (!section) return;
-    flushSync(() => selectSection(section.id));
+
+    flushSync(() => {
+      setQuery("");
+      selectSection(section.id);
+    });
 
     const field = element.current?.querySelector<HTMLInputElement>(
       `#setting-${fieldName(path)}`,
@@ -233,7 +193,8 @@ export function SettingsForm({
 
   const sectionViews: SettingsSectionView[] = settings
     ? sections.map((section, index) => {
-        const paths = sectionPaths(section),
+        const matches = search.sectionMatches(section),
+          paths = sectionPaths(section),
           resets = Object.assign(
             {},
             ...section.rows.map((row) => rowForm(row, settings.defaults)),
@@ -242,6 +203,9 @@ export function SettingsForm({
         return {
           id: section.id,
           title: section.title,
+          hidden: matches.length === 0,
+          matches: matches.length,
+          score: Math.min(...matches.map((match) => match.score)),
           edits: edits[index],
           content: (
             <SettingsContext.Provider
@@ -252,33 +216,14 @@ export function SettingsForm({
                 form,
               }}
             >
-              {section.help?.length ? (
-                <div className="settings-section-intro">
-                  <Help
-                    id={`settings-${section.id}-help`}
-                    parts={section.help}
-                  />
-                </div>
-              ) : null}
-              {section.rows.map((row) =>
-                row.kind === "models" ? (
-                  <ModelTable
-                    key="models"
-                    scopes={row.scopes}
-                    control={control}
-                    register={register}
-                  />
-                ) : (
-                  <SettingRowView
-                    key={row.path}
-                    row={row}
-                    control={control}
-                    register={register}
-                  />
-                ),
-              )}
-              {/* Shown only while something here differs from its default. */}
-              <Presence show={differs(resets, form)}>
+              <SettingsSectionRows
+                section={section}
+                search={search}
+                control={control}
+                register={register}
+              />
+              {/* Section resets include hidden rows, so keep them out of search. */}
+              <Presence show={!search.active && differs(resets, form)}>
                 <div className="settings-section-footer">
                   <Button
                     variant="text"
@@ -309,9 +254,23 @@ export function SettingsForm({
           ),
       }));
 
+  // The transfer section has no setting rows, so search matches its title and
+  // its own keywords.
+  const transfer = {
+      id: "transfer",
+      title: "Import and export",
+      keywords: ["settings", "JSON", "copy", "file"],
+    },
+    transferMatches = search.matches(
+      [transfer.title, ...transfer.keywords].join(" "),
+    );
+
   sectionViews.push({
-    id: "transfer",
-    title: "Import and export",
+    id: transfer.id,
+    title: transfer.title,
+    hidden: !transferMatches,
+    matches: transferMatches ? 1 : 0,
+    score: 3,
     content: (
       <SettingsTransfer
         ready={!loading}
@@ -321,7 +280,20 @@ export function SettingsForm({
     ),
   });
 
-  const activeSectionId = activeSection(selectedSection, sectionViews);
+  const activeSectionId = activeSection(selectedSection, sectionViews),
+    matchingSections = sectionViews.filter((section) => !section.hidden),
+    resultCount = matchingSections.reduce(
+      (sum, section) => sum + (section.matches ?? 0),
+      0,
+    );
+
+  const clearSearch = () => {
+    setQuery("");
+
+    element.current
+      ?.querySelector<HTMLInputElement>('[type="search"]')
+      ?.focus({ preventScroll: true });
+  };
 
   const submit = handleSubmit((submitted) => {
     if (!settings) return;
@@ -378,36 +350,58 @@ export function SettingsForm({
         disabled={importing}
         aria-label="Settings values"
       >
-        <Presence show={!isError}>
-          <div
-            className={
-              isLoading
-                ? "loading-skeleton settings-loading-skeleton"
-                : "settings-sections-layer"
-            }
-          >
-            <SettingsSectionTabs
-              sections={sectionViews}
-              value={activeSectionId ?? ""}
-              loading={isLoading}
-              onValueChange={selectSection}
+        <SettingsSearchContext.Provider value={search}>
+          <div className="settings-search-toolbar">
+            <SearchField
+              className="settings-search"
+              label="Search settings"
+              clearLabel="Clear settings search"
+              value={query}
+              onValueChange={setQuery}
+              disabled={loading}
+              focusShortcut
             />
           </div>
-        </Presence>
-        <Presence show={isError}>
-          <div className="settings-loading-error">
-            <p className="form-error form-field-error" role="alert">
-              {loadError}
-              {loading && !loadError ? "Settings could not be loaded." : null}
-            </p>
-            <Button
-              variant="primary"
-              onClick={() => controller.retryDialogLoad()}
+          {search.active && !loading && (
+            <SettingsSearchSummary
+              query={query}
+              results={resultCount}
+              sections={matchingSections.length}
+              onClear={clearSearch}
+            />
+          )}
+          <Presence show={!isError}>
+            <div
+              className={
+                isLoading
+                  ? "loading-skeleton settings-loading-skeleton"
+                  : "settings-sections-layer"
+              }
             >
-              Retry
-            </Button>
-          </div>
-        </Presence>
+              <SettingsSections
+                sections={sectionViews}
+                value={activeSectionId ?? ""}
+                loading={isLoading}
+                searching={search.active}
+                onValueChange={selectSection}
+              />
+            </div>
+          </Presence>
+          <Presence show={isError}>
+            <div className="settings-loading-error">
+              <p className="form-error form-field-error" role="alert">
+                {loadError}
+                {loading && !loadError ? "Settings could not be loaded." : null}
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => controller.retryDialogLoad()}
+              >
+                Retry
+              </Button>
+            </div>
+          </Presence>
+        </SettingsSearchContext.Provider>
       </fieldset>
       <Presence show={Boolean(state.formError)}>
         <div id="form-error" className="form-error error" role="alert">

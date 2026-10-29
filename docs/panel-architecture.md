@@ -73,10 +73,11 @@ scroll. Answered questions clear their entry.
 Forms keep editable drafts in React Hook Form, so refreshes preserve field nodes
 and unsent input. Use Base UI (`@base-ui/react`) with project styling for
 dialogs, tabs, selection, autocomplete and switches. Keep simple buttons, text
-inputs and textareas native. Reuse the shared selection fields and `TabList` for
-consistent keyboard and focus behavior. Keep search text separate from selected
-values in lookup fields. When selection can change outside a tab strip, reveal
-the selected tab without scrolling its parent.
+inputs and textareas native, except the shared Base UI search field. Reuse the
+shared selection fields and `TabList` for consistent keyboard and focus behavior.
+Keep search text separate from selected values in lookup fields. When selection
+can change outside a tab strip, reveal the selected tab without scrolling its
+parent.
 
 ### New-task composer
 
@@ -161,6 +162,11 @@ inspect pending states in the fixture UI.
 
 ## Shared controls
 
+- `SearchField` shares Base UI input and clear-button controls between task and
+  settings search. It clears on Escape and restores focus after clearing. Its
+  `/` shortcut focuses the field on the visible page, and an inline key hint
+  shows while the field is empty and unfocused. Tasks also blur on Escape when
+  empty.
 - `Notice` shows banner messages, and `NoticeText` shows expandable long text.
   Keep shared presentation out of feature-specific banner classes.
 - `Icon` renders the shared icon catalog, and `Chevron` renders compact carets.
@@ -274,7 +280,11 @@ restores saved dialogs.
   between.
 - **Settings:** the service supplies typed sections and rows. Save only changed
   fields, preserve disabled budget amounts, and keep section drafts during
-  navigation and validation.
+  navigation and validation. Search and browsing share mounted controls to
+  retain drafts and field identity.
+  Search matches metadata independently of draft values, so editing a result
+  keeps it in place. Synonyms come from each setting schema's `keywords`
+  metadata.
 - **Activity:** grouping keeps the original events for debug inspection. Render
   expensive raw responses only when their inspector opens.
 - **File preview:** `features/file-preview/` owns format detection and reusable

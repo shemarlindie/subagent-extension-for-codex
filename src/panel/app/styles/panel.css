@@ -176,11 +176,6 @@ header .toolbar {
   /* No side padding: children inset themselves so #task-list's scrollbar can reach the edge. */
   padding: 12px 0 0;
 }
-.search {
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
 .filters {
   margin: 10px 0;
 }

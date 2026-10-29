@@ -26,7 +26,7 @@
 @import "../shared/components/motion/motion.css";
 @import "../shared/components/loading-skeleton/loading-skeleton.css";
 @import "../features/tasks/list/task-list.css";
-@import "../features/tasks/list/search.css";
+@import "../shared/components/search/search.css";
 @import "../shared/components/button/button.css";
 @import "../shared/components/scroll-latest-button/scroll-latest-button.css";
 @import "../features/tasks/list/filters.css";

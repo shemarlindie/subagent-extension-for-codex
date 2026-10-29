@@ -19,6 +19,7 @@ const settingRowBaseSchema = z.object({
   path: z.string(),
   label: z.string(),
   help: z.array(helpPartSchema).optional(),
+  keywords: z.array(z.string()).optional(),
 });
 
 const selectSettingRowSchema = settingRowBaseSchema.extend({

@@ -38,6 +38,8 @@ interface SettingRowBase {
   path: string;
   label: string;
   help?: HelpPart[];
+  /** Other words settings search matches, such as synonyms. */
+  keywords?: string[];
 }
 
 export interface SelectSettingRow extends SettingRowBase {

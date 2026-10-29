@@ -12,8 +12,16 @@
   overflow: clip;
 }
 .page-frame.settings-page {
+  --settings-search-top: calc(var(--settings-heading-height, 54px) + 10px);
+  --settings-tabs-top: calc(
+    var(--settings-search-top) + var(--settings-search-height, 36px) + 16px
+  );
+  scroll-padding-block-start: var(--settings-heading-height, 54px);
   display: flex;
   flex-direction: column;
+}
+.settings-page .page-frame-heading {
+  margin-bottom: 8px;
 }
 .settings-page .page-frame-inner {
   display: flex;
@@ -437,6 +445,9 @@ input[type="number"]::-webkit-inner-spin-button {
   gap: 4px;
   padding: 4px 2px 8px;
 }
+.profile-instructions-content > .help {
+  margin: 0;
+}
 .profile-instructions-set {
   margin-inline-start: auto;
   color: var(--muted);
@@ -488,4 +499,65 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 .project-selection > button {
   flex-shrink: 0;
+}
+
+.search-box.settings-search {
+  margin: 0;
+}
+.settings-search-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 16px;
+  background: var(--bg);
+}
+.settings-search-row {
+  display: contents;
+}
+.settings-search-row[hidden],
+.model-table-row[hidden] {
+  display: none;
+}
+
+.settings-section-navigation {
+  display: contents;
+}
+.settings-section-navigation[hidden] {
+  display: none;
+}
+.settings-section-tabs.settings-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.settings-search-results > .settings-section-tab-panel {
+  width: 100%;
+}
+.settings-search-summary {
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.settings-search-summary p {
+  margin: 0 0 6px;
+}
+.settings-search-note {
+  overflow-wrap: anywhere;
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.settings-search-highlight {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: inherit;
+}
+
+.settings-page .settings-search-toolbar {
+  top: var(--settings-heading-height, 54px);
+  padding-top: 10px;
+}
+.settings-page .settings-section-tabs .settings-section-tabs-list {
+  top: var(--settings-tabs-top);
 }

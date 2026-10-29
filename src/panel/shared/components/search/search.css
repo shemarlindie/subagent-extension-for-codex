@@ -1,0 +1,59 @@
+/* Search fields shared by tasks and settings; themes supply the colors. */
+.search-box {
+  position: relative;
+}
+.search-box .search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 7px 28px 7px 28px;
+}
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.search-shortcut {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  min-width: 14px;
+  padding: 0 3px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font:
+    10px/14px ui-monospace,
+    monospace;
+  text-align: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+/* The shortcut is only useful before the field has focus. */
+.search-box:focus-within .search-shortcut {
+  display: none;
+}
+.search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+}

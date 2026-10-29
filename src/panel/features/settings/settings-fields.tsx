@@ -12,6 +12,7 @@ import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormSelect } from "../../shared/forms/form-select";
 import { FormSwitch } from "../../shared/forms/form-switch";
 import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
+import { SettingsSearchHighlight } from "./search/settings-search-highlight";
 import {
   helpId,
   type HelpPart,
@@ -48,7 +49,9 @@ function LinkedText({ parts }: { parts: HelpPart[] }) {
   const settings = useContext(SettingsContext);
 
   return parts.map((part, index) => {
-    if (typeof part === "string") return part;
+    if (typeof part === "string") {
+      return <SettingsSearchHighlight key={index} text={part} />;
+    }
 
     // A link stays plain text when its setting is in this section or missing.
     const section = settings.current.includes(part.setting)
@@ -63,10 +66,10 @@ function LinkedText({ parts }: { parts: HelpPart[] }) {
         title={`Show in ${section}`}
         onClick={() => settings.show(part.setting)}
       >
-        {part.text}
+        <SettingsSearchHighlight text={part.text} />
       </Button>
     ) : (
-      part.text
+      <SettingsSearchHighlight key={index} text={part.text} />
     );
   });
 }
@@ -114,6 +117,12 @@ function SettingSwitch({
 interface SettingRowProps extends SettingsControls {
   row: Exclude<SettingRow, { kind: "models" }>;
   loading?: boolean;
+  searchNoteId?: string;
+}
+
+/** Join the IDs of present descriptions for `aria-describedby`. */
+export function descriptionIds(...ids: (string | undefined)[]) {
+  return ids.filter(Boolean).join(" ") || undefined;
 }
 
 /** One setting: label and help beside a select, switch, or budget. */
@@ -122,11 +131,15 @@ export function SettingRowView({
   control,
   register,
   loading = false,
+  searchNoteId,
 }: SettingRowProps) {
   const { form } = useContext(SettingsContext),
     { name, enabledName } = rowFieldNames(row),
     id = `setting-${name}`,
-    describedBy = row.help?.length ? helpId(row.path) : undefined;
+    describedBy = descriptionIds(
+      row.help?.length ? helpId(row.path) : undefined,
+      searchNoteId,
+    );
 
   const { errors } = useFormState({ control, name }),
     error = errors[name],
@@ -153,7 +166,7 @@ export function SettingRowView({
       <div className="setting-row">
         {text(
           <label htmlFor={id} className="setting-label">
-            {row.label}
+            <SettingsSearchHighlight text={row.label} />
           </label>,
         )}
         <div className="setting-control">
@@ -185,7 +198,7 @@ export function SettingRowView({
       <div className="setting-row">
         {text(
           <label htmlFor={id} className="setting-label">
-            {row.label}
+            <SettingsSearchHighlight text={row.label} />
           </label>,
         )}
         <div className="setting-control">
@@ -227,7 +240,7 @@ export function SettingRowView({
     <div className="setting-row setting-row-inline">
       {text(
         <span id={`${id}-label`} className="setting-label">
-          {row.label}
+          <SettingsSearchHighlight text={row.label} />
         </span>,
       )}
       <div className="setting-control">

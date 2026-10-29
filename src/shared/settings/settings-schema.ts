@@ -41,7 +41,12 @@ export const settingHelp = {
 export const profileInstructionsMaxLength = 4000;
 
 // A limit keeps its amount while it's off, so turning it on restores it.
-const budget = (title: string, unit: string, amount: number) =>
+const budget = (
+  title: string,
+  unit: string,
+  amount: number,
+  keywords: string[],
+) =>
   z
     .strictObject({
       enabled: z
@@ -54,7 +59,7 @@ const budget = (title: string, unit: string, amount: number) =>
         .meta({ title: `${title} (${unit})` })
         .default(amount),
     })
-    .meta({ title })
+    .meta({ title, keywords })
     .prefault({});
 
 const modelScope = (label: string) =>
@@ -118,8 +123,16 @@ export const settingsSchema = z.strictObject({
       .default("agent/"),
     budget: z
       .strictObject({
-        max_cost_usd: budget("Cost limit", "USD", 5),
-        max_runtime_minutes: budget("Runtime limit", "minutes", 20),
+        max_cost_usd: budget("Cost limit", "USD", 5, [
+          "spending",
+          "price",
+          "cost budget",
+        ]),
+        max_runtime_minutes: budget("Runtime limit", "minutes", 20, [
+          "timeout",
+          "time limit",
+          "duration",
+        ]),
       })
       .prefault({}),
   }),

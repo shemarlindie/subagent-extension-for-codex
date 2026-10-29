@@ -1,3 +1,6 @@
+.task-search {
+  margin: 0 8px;
+}
 /* Narrow panels scroll the filters sideways, clipped at the panel edge like the tabs. */
 .filters {
   position: relative;
