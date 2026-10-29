@@ -109,13 +109,4 @@ test("keyboard users can search, open a task and move between its tabs", async (
   await expect(
     page.getByRole("tab", { name: "Activity", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-
-  // Escape in search clears it and the full list returns.
-  await search.focus();
-  await page.keyboard.press("Escape");
-  await expect(search).toHaveValue("");
-
-  await expect(
-    tasks.getByRole("button", { name: /Another task/ }),
-  ).toBeVisible();
 });

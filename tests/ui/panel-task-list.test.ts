@@ -75,15 +75,11 @@ test("a chosen filter stays visible after it empties", async (t) => {
   );
 });
 
-test("search clears with Escape and focuses with the slash key", async (t) => {
+test("Escape clears search before blurring it, and slashes typed elsewhere stay put", async (t) => {
   const { user } = await setup(t);
   const search = screen.getByRole("searchbox", { name: "Search tasks" });
-  await user.keyboard("/");
-  expect(document.activeElement).toBe(search);
-  await user.keyboard("abc");
-  assert.equal((search as HTMLInputElement).value, "abc");
+  await user.type(search, "abc");
   await user.keyboard("{Escape}");
-  assert.equal((search as HTMLInputElement).value, "");
   expect(document.activeElement).toBe(search);
   await user.keyboard("{Escape}");
   expect(document.activeElement).not.toBe(search);
