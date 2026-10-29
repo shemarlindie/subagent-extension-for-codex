@@ -101,6 +101,8 @@ for (const width of [1280, 420]) {
         const message = history.locator('[data-message="msg_cycle_0_first"]');
         await expect(message).toHaveAttribute("aria-busy", "true");
         await expect(history).not.toHaveAttribute("aria-busy", "true");
+        // A shown skeleton holds its minimum visible time after loading ends.
+        await expect(history.locator(".loading-swap-skeleton")).toHaveCount(0);
 
         const tail = await message.evaluate((element) => {
           const body = element.querySelector(".markdown-body")!;

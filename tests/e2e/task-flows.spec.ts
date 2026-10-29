@@ -111,6 +111,9 @@ test("reload restores composer messages and successful submissions clear them", 
     .getByRole("button", { name: new RegExp(title) })
     .click();
 
+  // The restored draft appears before Chat loads, and the composer ignores
+  // Enter until it does.
+  await expect(history).toContainText(title);
   await expect(reply).toHaveValue(unsentReply);
   await reply.press("Enter");
   await expect(history).toContainText("Fixture session turn: 2.");
