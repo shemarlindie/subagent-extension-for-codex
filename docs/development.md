@@ -19,7 +19,8 @@ npm ci
 cp -n .env.example .env
 ```
 
-`npm run dev`, `npm start`, `npm run projects` and `npm run dev:ui` load `.env`
+`npm run dev`, `npm start`, `npm run projects`, `npm run dev:reset` and
+`npm run dev:ui` load `.env`
 when present. Shell variables take precedence. `.env` is gitignored, and the
 example keeps data in `.codex-subagent-extension/live`. See the
 [configuration table](configuration.md#environment-variables) for every
@@ -160,6 +161,13 @@ contents of `<data-directory>/admin-token`. On macOS,
 `pbcopy < .codex-subagent-extension/live/admin-token` copies it. Use the
 configured origin. `localhost` and `127.0.0.1` are different browser origins,
 and the service's origin checks can reject the substitute.
+
+### Reset service data
+
+`npm run dev:reset` asks for confirmation, clears the configured data directory
+and restarts the service only if it was running. The replacement uses the current
+build in the background and logs to `<data-directory>/service.log`. On Windows,
+stop the service manually first.
 
 ## Choosing a development tool
 

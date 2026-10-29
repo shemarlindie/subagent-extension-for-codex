@@ -32,6 +32,7 @@
     "prepack": "npm run build",
     "package:plugin": "npm pack",
     "dev:ui": "vite",
+    "dev:reset": "node --import tsx --env-file-if-exists=.env dev/service/reset-data.ts",
     "format:check": "prettier --check --cache .",
     "test:watch": "vitest",
     "lint": "eslint .",
