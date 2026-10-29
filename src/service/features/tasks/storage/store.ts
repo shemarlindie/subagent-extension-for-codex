@@ -511,6 +511,8 @@ export class Store {
   chatEvents(id: string, types: string[]): Event[] {
     const compaction = and(
       eq(events.type, "claude.activity"),
+      // A plain text match first, so most activity skips parsing its JSON.
+      sql`instr(${events.data}, 'compact') > 0`,
       sql`(json_extract(${events.data},'$.raw_response.subtype')='compact_boundary' OR json_extract(${events.data},'$.raw_response.compact_result')='failed')`,
     );
 
