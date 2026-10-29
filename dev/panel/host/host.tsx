@@ -656,7 +656,7 @@ export function Host() {
           aria-labelledby={`inspector-tab-${activeInspectorTab}`}
           tabIndex={0}
         >
-          {activeInspectorTab === "bridge-log" && (
+          {settings.showInspector && activeInspectorTab === "bridge-log" && (
             <>
               <div className="inspector-section-header">
                 <strong>Bridge log</strong>
