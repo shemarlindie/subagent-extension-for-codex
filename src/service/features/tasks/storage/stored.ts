@@ -18,6 +18,7 @@ import {
 import { events } from "./schema.js";
 
 const eventRowSchema = createSelectSchema(events);
+const eventDataSchema = z.record(z.string(), z.unknown());
 
 // Stored records are checked for the fields that ownership, scheduling and
 // the queue depend on. Other fields, such as provider state, pass through
@@ -94,11 +95,7 @@ export function decodeEvent(row: typeof events.$inferSelect) {
 
   const event = {
     ...stored,
-    data: decodeStored(
-      z.record(z.string(), z.unknown()),
-      stored.data,
-      `event ${stored.id}`,
-    ),
+    data: decodeStored(eventDataSchema, stored.data, `event ${stored.id}`),
   } satisfies EventEnvelope;
 
   return decodedEvent(event);

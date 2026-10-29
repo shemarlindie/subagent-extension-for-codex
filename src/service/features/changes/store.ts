@@ -12,13 +12,15 @@ import { composeHunks } from "./compose.js";
 import { changePath } from "./paths.js";
 import { fileChanges } from "./schema.js";
 
-const hunkSchema = z.object({
-  oldStart: z.number().int().nonnegative(),
-  oldLines: z.number().int().nonnegative(),
-  newStart: z.number().int().nonnegative(),
-  newLines: z.number().int().nonnegative(),
-  lines: z.array(z.string()),
-});
+const hunksSchema = z.array(
+  z.object({
+    oldStart: z.number().int().nonnegative(),
+    oldLines: z.number().int().nonnegative(),
+    newStart: z.number().int().nonnegative(),
+    newLines: z.number().int().nonnegative(),
+    lines: z.array(z.string()),
+  }),
+);
 
 const rowSchema = createSelectSchema(fileChanges);
 
@@ -36,7 +38,7 @@ function decodeRow(row: StoredChange): RecordedChange {
   return {
     ...row,
     hunks: decodeStored(
-      z.array(hunkSchema),
+      hunksSchema,
       row.hunks,
       `file change ${row.task_id}/${row.scope}/${row.path}`,
     ),
