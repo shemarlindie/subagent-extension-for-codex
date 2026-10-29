@@ -65,6 +65,27 @@ const conversationGeometry = (history: Locator) =>
     };
   });
 
+/** Waits for a slow runner to finish laying out Chat after a reload. */
+async function settledGeometry(history: Locator) {
+  let previous = await conversationGeometry(history);
+
+  await expect
+    .poll(
+      async () => {
+        const current = await conversationGeometry(history),
+          same = JSON.stringify(current) === JSON.stringify(previous);
+
+        previous = current;
+
+        return same;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+
+  return previous;
+}
+
 test.use({ reducedMotion: "no-preference" });
 
 for (const width of [1280, 420]) {
@@ -103,6 +124,7 @@ for (const width of [1280, 420]) {
         await expect(history).not.toHaveAttribute("aria-busy", "true");
         // A shown skeleton holds its minimum visible time after loading ends.
         await expect(history.locator(".loading-swap-skeleton")).toHaveCount(0);
+        const before = await settledGeometry(history);
 
         const tail = await message.evaluate((element) => {
           const body = element.querySelector(".markdown-body")!;
@@ -151,7 +173,6 @@ for (const width of [1280, 420]) {
         expect(caret.top).toBeGreaterThanOrEqual(tail.messageTop - 1);
         expect(caret.bottom).toBeLessThanOrEqual(tail.messageBottom + 1);
         expect(caret.right).toBeLessThanOrEqual(tail.messageRight + 1);
-        const before = await conversationGeometry(history);
         await cycle.refresh(9000, markdown);
         await expect(message).not.toHaveAttribute("aria-busy", "true");
 
