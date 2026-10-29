@@ -15,6 +15,9 @@ interface WorkerAvailability {
   profiles: string[];
 }
 
+// Keep mention implementation available while host integration is paused.
+export const composerMentionsEnabled = false;
+
 export const mentionSearchToolName = "app_search_mentions";
 
 export const mentionSearchToolConfig = {

@@ -54,20 +54,6 @@ With **Automatically add chat projects** on (the default), starting a task from
 a chat registers its project. Use **Manage → Add project** or `npm run projects`
 to register others. See [Repository access](configuration.md#repository-access).
 
-### Test composer mentions
-
-To diagnose [composer mentions](host-capabilities.md#composer-mentions), add
-`CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1` to `.env` and reload the MCP
-connection. The stdio proxy reads this setting from `.env` and answers mention
-search itself, so the service needs no restart.
-
-Every query then returns a labeled sample `Claude` result and appends the query,
-timestamp, result names and skipped provider checks to
-`<data-directory>/mention-search.jsonl`. The proxy uses the `.env` data
-directory for this log only when its MCP environment sets none. The sample does
-not prove that a Claude provider is available. Remove the setting after
-testing.
-
 ## Generated validation schemas
 
 Pick the validation source by what the contract owns:

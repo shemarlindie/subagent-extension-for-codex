@@ -14,6 +14,7 @@ import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
+  composerMentionsEnabled,
   mentionSearchToolConfig,
   mentionSearchToolName,
   readClaudeMention,
@@ -51,21 +52,24 @@ export function mcp(
     },
   );
 
-  server.registerTool(
-    mentionSearchToolName,
-    mentionSearchToolConfig,
-    async ({ query }) => ({
-      content: [],
-      structuredContent: await searchAgentMentions(query, c.workers()),
-    }),
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
+  if (composerMentionsEnabled) {
+    server.registerTool(
+      mentionSearchToolName,
+      mentionSearchToolConfig,
+      async ({ query }) => ({
+        content: [],
+        structuredContent: await searchAgentMentions(query, c.workers()),
+      }),
+    );
 
-  server.registerResource(
-    "Claude provider mention",
-    claudeMentionUri,
-    claudeMentionResource,
-    () => readClaudeMention(),
-  );
+    server.registerResource(
+      "Claude provider mention",
+      claudeMentionUri,
+      claudeMentionResource,
+      () => readClaudeMention(),
+    );
+  }
 
   const tools: Record<string, AnyTool> = definitions(c, owner);
 

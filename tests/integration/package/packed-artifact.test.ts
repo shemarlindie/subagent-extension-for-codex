@@ -167,7 +167,7 @@ beforeAll(async () => {
   await exec("tar", ["-xzf", filename], { cwd: root });
   pkg = join(root, "package");
 
-  // A packaged .env is read relative to the package; test mode makes mention search log locally.
+  // Mention test mode must not re-enable composer mentions in the packaged proxy.
   await writeFile(
     join(pkg, ".env"),
     "CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1\n",
@@ -316,7 +316,7 @@ describe("packed artifact", () => {
     );
   });
 
-  test("stdio starts the packaged service and serves tools, icons, the panel and the packaged .env", async () => {
+  test("stdio starts the packaged service and keeps composer mentions disabled in test mode", async () => {
     const client = await connectStdio();
 
     const { version } = JSON.parse(
@@ -355,12 +355,28 @@ describe("packed artifact", () => {
       const html = (await client.readResource({ uri: panel!.uri })).contents[0];
       assert.match(String((html as { text?: string }).text), /<html/i);
 
-      await client.callTool({
+      assert.equal(
+        (await client.listTools()).tools.some(
+          (tool) => tool.name === "app_search_mentions",
+        ),
+        false,
+      );
+
+      assert.equal(
+        resources.some(
+          (resource) =>
+            resource.uri === "codex-subagent-extension://providers/claude",
+        ),
+        false,
+      );
+
+      const mentionResult = await client.callTool({
         name: "app_search_mentions",
         arguments: { query: "review" },
       });
 
-      await access(join(main.data, "mention-search.jsonl"));
+      assert.equal(mentionResult.isError, true);
+      await assert.rejects(access(join(main.data, "mention-search.jsonl")));
     } finally {
       await client.close();
     }

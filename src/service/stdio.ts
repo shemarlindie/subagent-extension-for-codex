@@ -13,6 +13,7 @@ import { SERVER_INSTRUCTIONS } from "./platform/server/instructions.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
+  composerMentionsEnabled,
   mentionSearchToolConfig,
   mentionSearchToolName,
   mentionTestModeEnv,
@@ -36,22 +37,6 @@ import {
   packageVersion,
 } from "./platform/service/runtime.js";
 import { serviceClient } from "./platform/service/service-client.js";
-
-let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, installRoot);
-
-try {
-  const envFile = await readFile(packagePath(".env"), "utf8");
-
-  mentionSearchEnv = resolveMentionSearchEnv(
-    process.env,
-    parseEnv(envFile),
-    installRoot,
-  );
-} catch (error) {
-  if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
-    throw error;
-  }
-}
 
 const service = serviceClient(connectService);
 
@@ -119,24 +104,47 @@ async function serviceTool(name: string, args: Record<string, unknown>) {
   return body.result;
 }
 
-server.registerTool(
-  mentionSearchToolName,
-  mentionSearchToolConfig,
-  async ({ query }) => ({
-    content: [],
-    structuredContent:
-      mentionSearchEnv[mentionTestModeEnv] === "1"
-        ? await searchAgentMentions(query, [], mentionSearchEnv)
-        : await serviceTool(mentionSearchToolName, { query }),
-  }),
-);
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
+if (composerMentionsEnabled) {
+  let mentionSearchEnv = resolveMentionSearchEnv(process.env, {}, installRoot);
 
-server.registerResource(
-  "Claude provider mention",
-  claudeMentionUri,
-  claudeMentionResource,
-  () => readClaudeMention(mentionSearchEnv),
-);
+  try {
+    const envFile = await readFile(packagePath(".env"), "utf8");
+
+    mentionSearchEnv = resolveMentionSearchEnv(
+      process.env,
+      parseEnv(envFile),
+      installRoot,
+    );
+  } catch (error) {
+    if (!(
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )) {
+      throw error;
+    }
+  }
+
+  server.registerTool(
+    mentionSearchToolName,
+    mentionSearchToolConfig,
+    async ({ query }) => ({
+      content: [],
+      structuredContent:
+        mentionSearchEnv[mentionTestModeEnv] === "1"
+          ? await searchAgentMentions(query, [], mentionSearchEnv)
+          : await serviceTool(mentionSearchToolName, { query }),
+    }),
+  );
+
+  server.registerResource(
+    "Claude provider mention",
+    claudeMentionUri,
+    claudeMentionResource,
+    () => readClaudeMention(mentionSearchEnv),
+  );
+}
 
 for (const [name, d] of Object.entries(tools)) {
   if (name === mentionSearchToolName) continue;

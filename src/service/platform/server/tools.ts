@@ -143,12 +143,15 @@ export async function callTool(
         throw new Error("User tools require a user interface");
       }
 
-      if (!Object.hasOwn(defs, name)) throw new Error("Unknown tool");
-      const d: AnyTool = defs[name as keyof typeof defs];
+      const d: AnyTool | undefined = Object.hasOwn(defs, name)
+        ? defs[name as keyof typeof defs]
+        : undefined;
+
+      if (!d) throw new Error("Unknown tool");
 
       return d.run(d.schema.parse(args ?? {}));
     },
     Object.hasOwn(defs, name) &&
-      defs[name as keyof typeof defs].readOnly === true,
+      defs[name as keyof typeof defs]?.readOnly === true,
   );
 }

@@ -132,17 +132,9 @@ chosen path for registration. Other platforms use the path field.
 
 ## Composer mentions
 
-Both transports expose app-only `app_search_mentions` and the Claude resource
-link. Search matches worker and profile terms, with the server name as an alias,
-and returns Claude when the reviewer profile is available. A selected mention is
-a provider hint. It selects no repository and changes no permissions.
-
-The server appears in the desktop picker. Delivery of the selected item and the
-full delegation flow are unverified. When mentions are unavailable, use ordinary
-MCP tools and the delegation skill. The
-[extension guide](https://developers.openai.com/plugins/build/extensions) and
-[mention specification](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#composer-at-mentions)
-describe the intended host surface.
+Composer mentions are temporarily disabled. The flow in Codex is unverified.
+To test, set `composerMentionsEnabled` to `true` in
+`src/service/platform/server/mentions.ts`.
 
 ## Plugin startup and hooks
 
@@ -162,7 +154,7 @@ in the panel. See
 | ----------------------- | ------------------------------------------------------------- |
 | Transport/context tests | Precedence, scope isolation, validation and protocol behavior |
 | Browser fixtures        | Rendering without paid workers                                |
-| Observation in Codex    | Sidebar startup and mention search results                    |
+| Observation in Codex    | Sidebar startup                                               |
 
 None of these proves host placement, folder selection, mention selection and
 handoff, or background message delivery.

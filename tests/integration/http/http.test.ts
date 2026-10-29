@@ -94,7 +94,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
   });
 
   test("MCP tools and UI resource metadata", async () => {
-    const { client, tools, opener, ui, base } = fixture;
+    const { client, tools, opener, ui, base, post } = fixture;
     assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
     assert.equal(client.getInstructions(), SERVER_INSTRUCTIONS);
 
@@ -130,23 +130,30 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       (tool) => tool.name === "app_search_mentions",
     );
 
-    assert.ok(mentionTool);
-    assert.equal(mentionTool.title, "Choose a worker");
-    assert.equal(mentionTool._meta?.connector_name, "Delegate to Claude");
+    assert.equal(mentionTool, undefined);
 
-    assert.deepEqual((mentionTool._meta as any)["openai/extensions"], {
-      "mentions/search": {},
+    const directMentionSearch = await post(
+      "/api/user-tools/app_search_mentions",
+      { query: "claude" },
+      {
+        Authorization: "Bearer private-token",
+        "X-Codex-Subagent-Extension": "1",
+      },
+    );
+
+    assert.equal(directMentionSearch.status, 400);
+
+    assert.deepEqual(await directMentionSearch.json(), {
+      error: "Unknown user tool",
     });
 
-    assert.deepEqual((mentionTool._meta as any).ui.visibility, ["app"]);
-
-    const mentionResults = await client.callTool({
-      name: "app_search_mentions",
-      arguments: { query: "claude" },
-    });
-
-    assert.equal(mentionResults.isError, undefined);
-    assert.deepEqual(mentionResults.structuredContent, { items: [] });
+    await assert.rejects(
+      client.callTool({
+        name: "app_search_mentions",
+        arguments: { query: "claude" },
+      }),
+      /Tool app_search_mentions not found/,
+    );
 
     assert.ok(
       tools.tools.some((t) => t.name === "open_codex_subagent_extension"),
@@ -196,20 +203,19 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       ),
     );
 
-    assert.ok(
+    assert.equal(
       resources.resources.some(
         (resource) =>
           resource.uri === "codex-subagent-extension://providers/claude",
       ),
+      false,
     );
 
-    const mentionResource = await client.readResource({
-      uri: "codex-subagent-extension://providers/claude",
-    });
-
-    const mentionContent = mentionResource.contents[0];
-    assert.ok(mentionContent && "text" in mentionContent);
-    assert.match(mentionContent.text, /Claude/);
+    await assert.rejects(
+      client.readResource({
+        uri: "codex-subagent-extension://providers/claude",
+      }),
+    );
 
     assert.deepEqual(
       opener.icons?.map((icon) => icon.theme),
@@ -610,16 +616,21 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         arguments: { query: "claude" },
       });
 
-      assert.equal(proxyMentionResults.isError, undefined);
-      assert.deepEqual(proxyMentionResults.structuredContent, { items: [] });
+      assert.equal(proxyMentionResults.isError, true);
 
-      const proxyMentionResource = await stdio.readResource({
-        uri: "codex-subagent-extension://providers/claude",
-      });
+      assert.equal(
+        (await stdio.listResources()).resources.some(
+          (resource) =>
+            resource.uri === "codex-subagent-extension://providers/claude",
+        ),
+        false,
+      );
 
-      const proxyMentionContent = proxyMentionResource.contents[0];
-      assert.ok(proxyMentionContent && "text" in proxyMentionContent);
-      assert.match(proxyMentionContent.text, /Claude/);
+      await assert.rejects(
+        stdio.readResource({
+          uri: "codex-subagent-extension://providers/claude",
+        }),
+      );
 
       const proxyUi = await stdio.readResource({
         uri: (opener._meta as any).ui.resourceUri,

@@ -134,10 +134,10 @@ Automated tests and fixture screenshots cannot show message delivery or
 placement in Codex. For changes that affect the panel in Codex, build and open
 an approved repository in Codex, then check:
 
-| Change            | Check                                                                                                                                                           |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Any panel change  | Scope and New task prefills, without submitting. Then reopen an existing task.                                                                                  |
-| Entrypoints       | The sidebar entrypoint and switching between inline and expanded.                                                                                               |
-| Folder browsing   | On macOS, **Browse** and cancel leaves the selection unchanged. Choosing a valid Git root registers and selects it without starting a task.                     |
-| Scope             | Two chats with different projects stay separate.                                                                                                                |
-| Composer mentions | Search finds Claude, selecting it delivers the provider hint, and the delegation flow uses it. See [Composer mentions](host-capabilities.md#composer-mentions). |
+| Change            | Check                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Any panel change  | Scope and New task prefills, without submitting. Then reopen an existing task.                                                              |
+| Entrypoints       | The sidebar entrypoint and switching between inline and expanded.                                                                           |
+| Folder browsing   | On macOS, **Browse** and cancel leaves the selection unchanged. Choosing a valid Git root registers and selects it without starting a task. |
+| Scope             | Two chats with different projects stay separate.                                                                                            |
+| Composer mentions | Temporarily disabled.                                                                                                                       |

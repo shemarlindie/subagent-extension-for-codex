@@ -19,6 +19,7 @@ import {
   sendRef,
 } from "../../../features/tasks/runtime/timing.js";
 import {
+  composerMentionsEnabled,
   mentionSearchSchema,
   mentionSearchToolName,
   searchAgentMentions,
@@ -29,24 +30,28 @@ import { settingsTransferTools } from "./settings-transfer-tools.js";
 
 /**
  * App-only tools, named with an `app_` prefix. The panel calls them on the
- * user's behalf, and the host composer calls the mention search. `callTool`
- * refuses them to other callers. Several extend an agent tool with user
- * authority.
+ * user's behalf. `callTool` refuses them to other callers. Several extend
+ * an agent tool with user authority.
  */
 export function userTools(
   { c, owner, hostMeta }: ToolContext,
   tools: ReturnType<typeof agentTools>,
 ) {
   return {
-    // The host's composer calls this. The HTTP and stdio servers register it
-    // with the mention extension metadata.
-    [mentionSearchToolName]: tool({
-      readOnly: true,
-      description:
-        "Search for the configured Claude provider in the composer mention picker.",
-      schema: mentionSearchSchema,
-      run: ({ query }) => searchAgentMentions(query, c.workers()),
-    }),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
+    ...(composerMentionsEnabled
+      ? {
+          // The host's composer calls this. The HTTP and stdio servers register it
+          // with the mention extension metadata.
+          [mentionSearchToolName]: tool({
+            readOnly: true,
+            description:
+              "Search for the configured Claude provider in the composer mention picker.",
+            schema: mentionSearchSchema,
+            run: ({ query }) => searchAgentMentions(query, c.workers()),
+          }),
+        }
+      : {}),
     app_register_project: tool({
       description:
         "User interface only: approve and persist a Git repository selected by the user. Does not approve its parent or nested repositories.",
