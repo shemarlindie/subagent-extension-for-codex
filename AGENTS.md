@@ -42,7 +42,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 ### Large changes
 
 - Before building on an external behavior or an unproven approach, confirm it with a small probe or prototype. Keep it so tests can reuse it.
-- Plan a verification checklist of expected behaviors with IDs, and list accepted limits separately. In the plan, have each planned commit name the IDs it verifies.
+- Plan a verification checklist of expected behaviors with IDs, and list accepted limits separately. In the plan, have each planned commit name the IDs it verifies. Evidence can be a new or existing test or a browser check. Keep IDs in the plan, out of code and test names.
 
 ## Writing style
 

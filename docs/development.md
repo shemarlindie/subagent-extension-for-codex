@@ -668,9 +668,11 @@ tests that make model calls.
 
 ### Choosing test coverage
 
-Inspect existing coverage before adding tests. Give each behavior one primary
-test layer, starting from the broadest that can reliably exercise it. Extend
-the owning suite when possible.
+Before adding a test, name the behavior it protects and inspect existing
+coverage. Give each behavior one primary test layer, starting from the broadest
+that can reliably exercise it. Extend the test or suite that already owns it
+when possible. These rules apply to tests added in the same change as well as
+existing ones.
 
 | Layer             | Location                                                                       | Covers                                                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -692,15 +694,16 @@ tests for deterministic failures, concurrent edits, keyboard behavior and host
 bridge interactions that console browser tests cannot reproduce.
 
 Remove happy-path unit and mocked UI tests once a browser or integration test
-owns the same behavior. Trim cases and assertions individually, preserving
-unique rules and edge cases. Name retained tests for the behavior they protect.
+owns the same behavior, including tests written to check work in progress. Trim
+cases and assertions individually, preserving unique rules and edge cases. Name
+retained tests for the behavior they protect.
 
 Test behavior and documented contracts. Skip assertions that only copy constant
 tables, property projections, CSS declarations, SVG artwork or placeholder
 markup. Derive expected results independently of the production helper being
-tested. Keep parameterized cases only when they protect distinct rules or
-boundaries. Leave framework and standard-library behavior to their own tests.
-Use the smallest fixtures that cross the relevant boundary, such as one row
+tested. Keep parameterized cases, including viewport and theme loops, only when
+they protect distinct rules or boundaries. Leave framework and standard-library
+behavior to their own tests. Use the smallest fixtures that cross the relevant boundary, such as one row
 past a rendering block, unless the test checks scale itself.
 
 Keep fixture replay and preview simulation tests when production flows cannot
@@ -730,7 +733,7 @@ commands distinct `--output` directories so one run cannot delete another's
 results.
 
 [Browser flows](../tests/e2e/README.md) describes how the flows set up state,
-how to measure their performance and which behaviors they verify.
+how to measure their performance and what they leave to other checks.
 
 ## Send latency measurements
 

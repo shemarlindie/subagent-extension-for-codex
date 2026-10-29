@@ -19,9 +19,9 @@ such as `CH1` for the first Changes check.
 [Delegated Work panel](../../../docs/panel-guide.md) describes the expected
 behavior. Then find what already exists for the area:
 
-- [Verified behaviors](../../../tests/e2e/README.md#verified-behaviors) lists
-  the browser flows and their specs. Check their behaviors by running the
-  affected specs with `npm run build && npx playwright test <spec>`.
+- Browser flows live in `tests/e2e/`, with specs named for their feature area.
+  `npx playwright test --list` shows each flow's behavior. Check them by
+  running the affected specs with `npm run build && npx playwright test <spec>`.
 - The [fixture catalogue](../../../docs/ui-verification.md#fixture-catalogue)
   lists the dev host tasks that show prepared states.
 - [Prompt markers](../../../docs/fixture-scenarios.md#prompt-markers) and the
@@ -141,8 +141,6 @@ List what you couldn't check and why, including any
 Follow [Choosing test coverage](../../../docs/development.md#choosing-test-coverage).
 When a gap needs new coverage:
 
-- Add a new browser flow's ID and spec to
-  [Verified behaviors](../../../tests/e2e/README.md#verified-behaviors).
 - Add a missing fixture as a scenario in `dev/panel/scenarios/`, registered
   in `fixtures.ts`, or as a marker in `dev/service/fixture-scenarios.ts`.
   Then add it to the owning guide's catalogue.
