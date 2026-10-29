@@ -6,17 +6,14 @@ import { buttonClass } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
 import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";
 import { FormSelect } from "../../shared/forms/form-select";
+import { descriptionIds } from "../../shared/utils/description-ids";
 import {
   WorkerProfileIcon,
   workerProfileIconName,
 } from "../tasks/list/worker-profile-icon";
 import { SettingsSearchContext } from "./search/settings-search-context";
 import { SettingsSearchHighlight } from "./search/settings-search-highlight";
-import {
-  descriptionIds,
-  SettingsContext,
-  type SettingsControls,
-} from "./settings-fields";
+import { SettingsContext, type SettingsControls } from "./settings-fields";
 import { fieldName, type ModelScope } from "./settings-layout";
 import { ProfileInstructions } from "./settings-profile-instructions";
 

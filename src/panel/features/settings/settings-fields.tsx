@@ -11,6 +11,7 @@ import { AsyncControl } from "../../shared/forms/async-control";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormSelect } from "../../shared/forms/form-select";
 import { FormSwitch } from "../../shared/forms/form-switch";
+import { descriptionIds } from "../../shared/utils/description-ids";
 import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
 import { SettingsSearchHighlight } from "./search/settings-search-highlight";
 import {
@@ -120,11 +121,6 @@ interface SettingRowProps extends SettingsControls {
   searchNoteId?: string;
 }
 
-/** Join the IDs of present descriptions for `aria-describedby`. */
-export function descriptionIds(...ids: (string | undefined)[]) {
-  return ids.filter(Boolean).join(" ") || undefined;
-}
-
 /** One setting: label and help beside a select, switch, or budget. */
 export function SettingRowView({
   row,
@@ -143,7 +139,8 @@ export function SettingRowView({
 
   const { errors } = useFormState({ control, name }),
     error = errors[name],
-    errorId = `${id}-error`;
+    errorId = `${id}-error`,
+    describedByWithError = descriptionIds(describedBy, error && errorId);
 
   const text = (labelElement: React.ReactNode) => (
     <div className="setting-text">
@@ -211,10 +208,7 @@ export function SettingRowView({
               maxLength={row.maxLength}
               disabled={loading}
               aria-invalid={Boolean(error)}
-              aria-describedby={
-                [describedBy, error && errorId].filter(Boolean).join(" ") ||
-                undefined
-              }
+              aria-describedby={describedByWithError}
               // Checked by the form, like budgets: inactive panels are hidden.
               {...register(name, {
                 validate: (value) =>
@@ -259,10 +253,7 @@ export function SettingRowView({
                 disabled={!on || loading}
                 aria-label={`${row.label} (${row.unit})`}
                 aria-invalid={Boolean(error)}
-                aria-describedby={
-                  [describedBy, error && errorId].filter(Boolean).join(" ") ||
-                  undefined
-                }
+                aria-describedby={describedByWithError}
                 // The form checks this itself: inactive panels are hidden,
                 // where the browser cannot point to the field. A limit that is
                 // off may be blank, but an amount it would restore must fit.
@@ -286,10 +277,7 @@ export function SettingRowView({
         <SettingSwitch
           name={enabledName ?? name}
           labelId={`${id}-label`}
-          describedBy={
-            [describedBy, error && errorId].filter(Boolean).join(" ") ||
-            undefined
-          }
+          describedBy={describedByWithError}
           control={control}
           loading={loading}
         />

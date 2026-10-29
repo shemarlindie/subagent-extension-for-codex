@@ -17,6 +17,7 @@ import { useListMotion } from "../../../../shared/components/motion/use-list-mot
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
+import { descriptionIds } from "../../../../shared/utils/description-ids";
 import { providerName } from "../../../providers/provider-name";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
 import { TaskRunSettings } from "./task-run-settings";
@@ -337,14 +338,10 @@ export function Composer({
                 id="chat-composer"
                 aria-label="Message"
                 disabled={disabled}
-                aria-describedby={
-                  [
-                    spent ? undefined : "chat-composer-hint",
-                    error ? "chat-composer-error" : undefined,
-                  ]
-                    .filter(Boolean)
-                    .join(" ") || undefined
-                }
+                aria-describedby={descriptionIds(
+                  spent ? undefined : "chat-composer-hint",
+                  error ? "chat-composer-error" : undefined,
+                )}
                 rows={1}
                 maxLength={20000}
                 placeholder={`Work with ${provider}`}

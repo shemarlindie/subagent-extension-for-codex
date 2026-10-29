@@ -1,8 +1,9 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { UseFormRegister } from "react-hook-form";
 
+import { descriptionIds } from "../../shared/utils/description-ids";
 import { SettingsSearchHighlight } from "./search/settings-search-highlight";
-import { descriptionIds, Help } from "./settings-fields";
+import { Help } from "./settings-fields";
 import { fieldName, type ProseSetting, type Values } from "./settings-layout";
 
 interface ProfileInstructionsProps {

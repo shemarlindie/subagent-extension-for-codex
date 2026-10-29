@@ -10,6 +10,7 @@ import {
   SelectField,
   type SelectFieldProps,
 } from "../components/select/select-field";
+import { descriptionIds } from "../utils/description-ids";
 import { FormFieldError } from "./form-field-error";
 
 /** Connect library controls through RHF's supported controlled-field integration. */
@@ -32,10 +33,10 @@ export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
       triggerRef: field.ref,
       onBlur: field.onBlur,
       invalid: fieldState.invalid,
-      describedBy:
-        [props.describedBy, fieldState.error ? errorId : undefined]
-          .filter(Boolean)
-          .join(" ") || undefined,
+      describedBy: descriptionIds(
+        props.describedBy,
+        fieldState.error ? errorId : undefined,
+      ),
     };
 
   return (
