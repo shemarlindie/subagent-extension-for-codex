@@ -50,7 +50,7 @@ export function delegationPanel(
     uri: panelUri,
     tool: {
       description:
-        "Open Delegated Work beside this chat when supported. Supply the actual approved repository and revision for first-use defaults, or task_id to activate an existing delegated task. Conversation correlation can be supplied by the host. Existing task tools remain usable without the panel.",
+        "Open the Delegated Work panel beside this chat when the host supports it. Pass task_id to show an existing task, or a registered repository and revision to prefill New task. Task tools work without the panel.",
       title: "Delegated Work",
       icons: productGlyphIcons,
       inputSchema: panelContextInput,

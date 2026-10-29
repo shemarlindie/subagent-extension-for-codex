@@ -25,7 +25,7 @@ export const messageInput = taskId.extend({
     .enum(deliveries)
     .default("steer")
     .describe(
-      "steer (default): a running turn takes it at its next tool boundary, without stopping. queue: it waits and starts a turn of its own after the current one. interrupt: stop the running turn and start the next one with this message and any pending steers. On an idle task, each starts the next turn. A task waiting for input can't be steered; answer it with submit_input, or queue the message.",
+      "steer (default): the running turn takes it at its next tool boundary without stopping. queue: it waits for a turn of its own. interrupt: stops the running turn and starts the next one with this message and any pending steers. On an idle task, each starts the next turn. A task waiting for input cannot be steered. Answer it with submit_input or queue the message.",
     ),
   budget: budgetRaiseSchema
     .optional()

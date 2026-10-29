@@ -16,12 +16,13 @@ import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
+import { SERVER_INSTRUCTIONS } from "../../../src/service/platform/server/instructions.js";
 import {
   challengeHeader,
   healthProof,
   provesToken,
 } from "../../../src/service/platform/service/health-proof.js";
-import { PARENT_DELEGATION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
+import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
@@ -95,7 +96,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
   test("MCP tools and UI resource metadata", async () => {
     const { client, tools, opener, ui, base } = fixture;
     assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
-    assert.ok(client.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
+    assert.equal(client.getInstructions(), SERVER_INSTRUCTIONS);
 
     assert.deepEqual(
       client.getServerCapabilities()?.experimental?.[
@@ -111,6 +112,12 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     assert.ok(tools.tools.some((t) => t.name === "start_task"));
+
+    assert.ok(
+      tools.tools
+        .find((t) => t.name === "list_messages")
+        ?.description?.includes(PARENT_SUPERVISION_PROTOCOL),
+    );
 
     const ackTool = tools.tools.find(
       (tool) => tool.name === "acknowledge_message",
@@ -520,7 +527,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         undefined,
       );
 
-      assert.ok(stdio.getInstructions()?.includes(PARENT_DELEGATION_PROTOCOL));
+      assert.equal(stdio.getInstructions(), SERVER_INSTRUCTIONS);
       const stdioTools = await stdio.listTools();
 
       // The SDKs emit different JSON Schema draft identifiers for the same contract.

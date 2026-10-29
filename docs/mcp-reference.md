@@ -186,9 +186,19 @@ host support and unverified delivery cases.
 
 ### Parent delegation protocol
 
-`src/shared/tasks/conversation/parent-protocol.ts` defines the runtime
-instructions that feed both MCP entrypoints, message tool descriptions and
-parent notifications. The delegation skill follows the same protocol:
+`src/service/platform/server/instructions.ts` defines the server instructions,
+and `src/shared/tasks/conversation/parent-protocol.ts` defines the parent
+protocol. Each rule appears once in what the model sees:
+
+| Constant                      | Content                     | Delivered in                                           |
+| ----------------------------- | --------------------------- | ------------------------------------------------------ |
+| `SERVER_INSTRUCTIONS`         | The delegation workflow     | Server instructions for both MCP entrypoints           |
+| `PARENT_SUPERVISION_PROTOCOL` | Polling and completion      | The `list_messages` description                        |
+| `PARENT_REPORT_PROTOCOL`      | Reading and acknowledgement | The `get_message` description and parent notifications |
+
+Tool descriptions own each tool's contract, because hosts can drop server
+instructions. The delegation skill covers the judgment calls the tools leave to
+the agent and defers to the tool descriptions. Together they give this protocol:
 
 1. Keep polling with `wait_seconds` while the worker runs, passing `next_cursor`
    as `after`. A timeout or empty message list does not mean the task completed.

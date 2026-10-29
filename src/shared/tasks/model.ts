@@ -70,7 +70,12 @@ export const startSchema = z.object({
     .describe(
       "Worker provider id from list_workers; only enabled providers can run.",
     ),
-  worker_profile: z.enum(roles).default("reviewer"),
+  worker_profile: z
+    .enum(roles)
+    .default("reviewer")
+    .describe(
+      "reviewer, researcher and security_reviewer are read-only in either workspace. Other profiles can edit their workspace.",
+    ),
   model: modelNameSchema
     .optional()
     .describe(
@@ -88,17 +93,27 @@ export const startSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Explicit absolute Git repository root approved by list_projects.",
+      "Explicit absolute Git root from list_projects or get_current_project. Starting a task for the chat's unregistered project registers it when the user allows.",
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
-  depends_on: z.array(z.string()).max(50).default([]),
-  context: z.array(z.string().max(20000)).max(20).default([]),
+  depends_on: z
+    .array(z.string())
+    .max(50)
+    .default([])
+    .describe("Task IDs that must finish before this task starts."),
+  context: z
+    .array(z.string().max(20000))
+    .max(20)
+    .default([])
+    .describe(
+      "Bounded excerpts the worker needs, such as a diff or file sections. Conversation history is not copied.",
+    ),
   workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .default("current_repo")
     .describe(
-      "worktree creates an isolated checkout at revision; current_repo uses the approved repository directly, including uncommitted files, and requires revision HEAD. Write profiles edit that checkout directly.",
+      "current_repo uses the registered checkout directly, including uncommitted files, and requires revision HEAD. worktree creates an isolated checkout at revision without uncommitted files. Use it for isolated or parallel edits.",
     ),
   budget: z
     .object({
