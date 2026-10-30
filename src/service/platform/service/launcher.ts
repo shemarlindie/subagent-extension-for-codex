@@ -35,6 +35,16 @@ function refused(error: unknown) {
   );
 }
 
+/**
+ * A stopping service can reset a connection while its socket closes, so a
+ * dropped connection never proves the port is foreign.
+ */
+function dropped(error: unknown) {
+  const code = (error as { cause?: { code?: string } }).cause?.code;
+
+  return code === "ECONNRESET" || code === "UND_ERR_SOCKET";
+}
+
 /** A busy service can miss the probe timeout, so a timeout never proves the port is foreign. */
 function timedOut(error: unknown) {
   return (error as { name?: string }).name === "TimeoutError";
@@ -110,6 +120,13 @@ export async function connectService() {
       });
     } catch (error) {
       if (refused(error) || timedOut(error)) throw error;
+
+      if (dropped(error)) {
+        throw new ServiceTransitionError("The service dropped the connection", {
+          cause: error,
+        });
+      }
+
       throw foreign(error);
     }
 

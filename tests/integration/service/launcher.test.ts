@@ -549,6 +549,50 @@ test("launcher waits for an existing service to finish recovery without spawning
   await assert.rejects(access(join(dir, "service.log")));
 });
 
+test("launcher waits through dropped connections without spawning", async (t) => {
+  const dir = await data(t);
+  let probes = 0;
+
+  const origin = await fake(t, (req, res) => {
+    if (req.url === "/health" && ++probes < 3) {
+      // A stopping service can reset connections while its socket closes.
+      req.socket.destroy();
+
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/json");
+
+    res.end(
+      req.url === "/health"
+        ? health(req, "dropped-token", {
+            service: "codex-subagent-extension",
+            status: "ok",
+            apiVersion: 1,
+          })
+        : "{}",
+    );
+  });
+
+  await writeFile(join(dir, "service.json"), JSON.stringify({ origin }));
+  await writeFile(join(dir, "admin-token"), "dropped-token");
+
+  assert.deepEqual(
+    JSON.parse(
+      (
+        await connect({
+          CODEX_SUBAGENT_EXTENSION_DATA: dir,
+          PORT: new URL(origin).port,
+        })
+      ).stdout,
+    ),
+    { origin, token: "dropped-token" },
+  );
+
+  assert.equal(probes, 3);
+  await assert.rejects(access(join(dir, "service.log")));
+});
+
 test("launcher rejects remote and credential-bearing service URLs", async (t) => {
   const dir = await data(t);
 
