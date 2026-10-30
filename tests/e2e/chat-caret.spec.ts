@@ -176,19 +176,24 @@ for (const width of [1280, 420]) {
         await cycle.refresh(9000, markdown);
         await expect(message).not.toHaveAttribute("aria-busy", "true");
 
+        // Lists each field that moved, so a failure shows what changed.
         await expect
           .poll(async () => {
             const after = await conversationGeometry(history);
 
-            return Math.max(
-              ...Object.keys(before).map((key) => {
-                const field = key as keyof typeof before;
+            return Object.fromEntries(
+              Object.entries(after)
+                .map(([key, value]) => {
+                  const earlier = before[key as keyof typeof before];
 
-                return Math.abs(after[field] - before[field]);
-              }),
+                  return [key, { before: earlier, after: value }] as const;
+                })
+                .filter(
+                  ([, field]) => Math.abs(field.after - field.before) > 1,
+                ),
             );
           })
-          .toBeLessThanOrEqual(1);
+          .toEqual({});
       });
     }
   });
