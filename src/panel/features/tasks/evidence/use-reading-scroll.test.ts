@@ -578,7 +578,7 @@ test.each(["wheel", "touch", "keyboard"] as const)(
   },
 );
 
-test("a smooth return that never moves is judged where it stopped", (t) => {
+test("a smooth return that never moves finishes at the end", (t) => {
   vi.useFakeTimers();
 
   t.onTestFinished(() => {
@@ -605,7 +605,48 @@ test("a smooth return that never moves is judged where it stopped", (t) => {
     vi.advanceTimersByTime(1500);
   });
 
-  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
+  assert.equal(viewport.scrollTop, 400);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+});
+
+test("a stalled follow glide finishes at the end and keeps following", (t) => {
+  vi.useFakeTimers();
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const reading: ReadingState = {};
+  const props = { reading, follow: true };
+  const view = render(createElement(Chat, { ...props, items }));
+  const viewport = view.getByTestId("chat");
+  const scrollTo = vi.fn();
+
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: scrollTo,
+  });
+
+  view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
+  expect(scrollTo).toHaveBeenCalledWith({ top: 500, behavior: "smooth" });
+  assert.equal(viewport.scrollTop, 400, "The browser never moves");
+
+  act(() => {
+    vi.advanceTimersByTime(1500);
+  });
+
+  assert.equal(viewport.scrollTop, 500);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+
+  view.rerender(createElement(Chat, { ...props, items: [...items, "g", "h"] }));
+
+  expect(scrollTo).toHaveBeenLastCalledWith({ top: 600, behavior: "smooth" });
 });
 
 test("reduced motion returns to latest without a smooth glide", () => {

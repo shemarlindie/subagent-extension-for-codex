@@ -298,6 +298,8 @@ streamingTest(
     // In history, the paragraph being read stays put while the reply grows.
     await send(page, "Stream while reading [fixture:reply lines=30]");
     await expect(streaming).toBeVisible();
+    // Leave only after Chat reaches the reply. Leaving earlier skips unseen rows.
+    await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
     await history.hover();
     await page.mouse.wheel(0, -900);
     await expect(latest).toBeVisible();

@@ -98,3 +98,11 @@ export function glideProgress(glide: Glide, top: number) {
 
   return closer ? "closer" : "held";
 }
+
+/** Jumps to `target`, returning the position whose scroll event to ignore. */
+export function jump(container: HTMLElement, target: number) {
+  const moved = Math.abs(container.scrollTop - target) >= 1;
+  container.scrollTop = target;
+
+  return moved ? target : undefined;
+}

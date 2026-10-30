@@ -16,6 +16,7 @@ import {
   glideAhead,
   glideProgress,
   glideTarget,
+  jump,
   restoreReadingAnchor,
 } from "./scroll-geometry";
 
@@ -285,10 +286,16 @@ export function useReadingScroll({
       if (!started || glide.current !== started) return;
       glide.current = undefined;
       const viewport = viewportRef.current;
+      if (!viewport || !activeRef.current) return;
+      const container = scrollContainer(viewport);
 
-      if (viewport && activeRef.current) {
-        judge(viewport, scrollContainer(viewport));
+      // A busy page can stall a glide to the end. The reader did not take
+      // over, so finish there instead of unpinning them short of it.
+      if (!started.row) {
+        correctedScrollTop.current = jump(container, end(container));
       }
+
+      judge(viewport, container);
     }, GLIDE_STALL_MS);
   }, [judge]);
 
@@ -514,8 +521,7 @@ export function useReadingScroll({
       startGlide(container, target);
     } else {
       glide.current = undefined;
-      correctedScrollTop.current = distance >= 1 ? target : undefined;
-      container.scrollTop = target;
+      correctedScrollTop.current = jump(container, target);
     }
 
     viewport.focus({ preventScroll: true });
