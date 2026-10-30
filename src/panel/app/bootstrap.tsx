@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { ConsoleTransport } from "../transports/console";
 import { HostTransport } from "../transports/host";
-import { AppShell } from "./app-shell";
+import { applyBodyLayout, AppShell } from "./app-shell";
 import { detectEnvironment, type Environment } from "./environment";
 import { Controller } from "./state/controller";
 import { ControllerContext } from "./state/controller-context";
@@ -36,6 +36,7 @@ export function mount() {
 
   const controller = new Controller(transport, undefined, viewState);
 
+  applyBodyLayout(controller.getSnapshot(), transport.embedded);
   const root = createRoot(document.getElementById("root")!);
 
   root.render(
