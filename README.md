@@ -2,11 +2,13 @@
 
 [![CI](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml)
 
-Delegate Claude coding tasks from Codex through a local MCP service. Claude runs
-through the Claude Agent SDK and the Claude Code harness. One service owns
-scheduling, durable task state and Git worktrees, so tasks keep running when a
-client disconnects. The service runs for one user and listens on loopback by
-default.
+> _Prompt: Chat, build something that lets Claude keep you in line._
+
+Delegate Claude coding tasks from Codex through a local MCP service, then
+follow, steer and review them in the Delegated Work panel without leaving Codex.
+Claude runs through the Claude Agent SDK and the Claude Code harness.
+
+And yes, some of us still use Codex.
 
 ## Install
 
