@@ -7,7 +7,6 @@
         "permission_source": "task",
         "claude_policy": {
           "sandbox": "user_config",
-          "environment": "inherit",
           "tools": "all",
           "path_guard": false,
           "subagents": true,

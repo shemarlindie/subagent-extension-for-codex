@@ -161,7 +161,6 @@ export async function runWithPolicy(
 
 export const parity = {
   sandbox: "user_config",
-  environment: "inherit",
   tools: "all",
   path_guard: false,
   subagents: true,

@@ -152,10 +152,9 @@ service checks authentication and task ownership separately.
 
 The service distinguishes user actions from parent and model calls. Model calls
 can't raise approval authority or relax configured provider restrictions.
-Provider-native permissions, tool and profile restrictions, environment
-filtering, path guards and sandbox choices are separate controls. Provider
-settings and task policy decide which apply to each task. See
-[Provider contract](provider-contract.md).
+Provider settings and task policy decide which controls apply to each task:
+provider-native permissions, tool and profile restrictions, path guards and
+sandbox choices. See [Provider contract](provider-contract.md).
 
 The embedded panel uses the authenticated MCP bridge. The standalone console
 uses service HTTP endpoints and session authentication. Keep service bearer

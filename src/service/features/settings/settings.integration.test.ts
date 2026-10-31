@@ -822,7 +822,6 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   const keys = [
     "sandbox",
-    "environment",
     "tools",
     "path_guard",
     "subagents",

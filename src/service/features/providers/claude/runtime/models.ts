@@ -23,7 +23,7 @@ export class ModelCatalog {
     private cli: Pick<ClaudeCli, "executable">,
     private configuration: Pick<
       ClaudeOverrides,
-      "settings_files" | "environment"
+      "settings_files"
     > = claudeOverrideDefaults,
   ) {}
 
@@ -70,8 +70,8 @@ export class ModelCatalog {
       prompt,
       options: {
         pathToClaudeCodeExecutable,
-        // Match the user's task environment and settings-file policy.
-        env: claudeEnvironment(process.env, this.configuration.environment),
+        // Match the task environment and the user's settings-file policy.
+        env: claudeEnvironment(process.env),
         abortController,
         persistSession: false,
         settingSources: this.configuration.settings_files

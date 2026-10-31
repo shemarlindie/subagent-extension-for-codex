@@ -8,7 +8,6 @@ import {
 
 const policy = {
   sandbox: "extension_locked",
-  environment: "filtered",
   tools: "restricted",
   path_guard: true,
   subagents: false,

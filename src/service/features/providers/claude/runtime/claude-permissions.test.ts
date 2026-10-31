@@ -234,7 +234,6 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
   setClaudeOptions(c.task, {
     claude_policy: {
       sandbox: "extension",
-      environment: "filtered",
       tools: "restricted",
       path_guard: true,
       subagents: false,

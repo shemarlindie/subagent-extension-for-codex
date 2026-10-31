@@ -80,7 +80,6 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
   vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
   vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
   vi.stubEnv("OPENAI_API_KEY", "synthetic-app-key");
-  vi.stubEnv("CLAUDE_CODE_OAUTH_TOKEN", "synthetic-subscription-token");
   const { options, check, decide, asked } = await runWithPolicy(parity);
   assert.equal(options.sandbox, undefined);
   assert.equal(options.managedSettings, undefined);
@@ -88,11 +87,7 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
   assert.deepEqual(options.disallowedTools, []);
   assert.equal(options.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
-  for (const name of [
-    "CODEX_SUBAGENT_EXTENSION_TOKEN",
-    "OPENAI_API_KEY",
-    "CLAUDE_CODE_OAUTH_TOKEN",
-  ]) {
+  for (const name of ["CODEX_SUBAGENT_EXTENSION_TOKEN", "OPENAI_API_KEY"]) {
     assert.equal(options.env![name], undefined, name);
   }
 

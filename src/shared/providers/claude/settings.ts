@@ -6,7 +6,6 @@ import type {
 } from "../../settings/document-contract.js";
 import { settingText } from "../../settings/setting-text.js";
 import {
-  claudeEnvironmentSchema,
   claudeOverrideDefaults,
   claudeOverrideLabels,
   claudePathGuardSchema,
@@ -22,8 +21,6 @@ const help = {
     "Tasks use this mode unless you choose another. Your other Claude Code settings still apply while Load Claude Code settings is on.",
   sandbox:
     "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
-  environment:
-    "The full environment is the service's, minus the extension's secrets. The filtered allowlist passes only basic process variables and Claude credentials.",
   tools:
     "All tools offers every Claude Code tool. The restricted set offers file, search, Bash, question, skill and MCP tools, and only read, question and skill tools to read-only work. By worker profile restricts only read-only profiles.",
   path_guard:
@@ -53,9 +50,6 @@ export const claudeSettingsSchema = z
     sandbox: claudeSandboxSchema
       .meta({ title: "Bash sandbox", description: help.sandbox })
       .default(claudeOverrideDefaults.sandbox),
-    environment: claudeEnvironmentSchema
-      .meta({ title: "Environment", description: help.environment })
-      .default(claudeOverrideDefaults.environment),
     tools: claudeToolsSchema
       .meta({ title: "Tools", description: help.tools })
       .default(claudeOverrideDefaults.tools),
@@ -109,11 +103,6 @@ export const claudeRestrictionsSection: SettingSection = {
       kind: "select",
       ...row("sandbox"),
       options: options(claudeOverrideLabels.sandbox),
-    },
-    {
-      kind: "select",
-      ...row("environment"),
-      options: options(claudeOverrideLabels.environment),
     },
     {
       kind: "select",

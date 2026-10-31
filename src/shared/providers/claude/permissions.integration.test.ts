@@ -416,7 +416,6 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
       providers: {
         claude: {
           sandbox: "extension_locked",
-          environment: "filtered",
           subagents: false,
           settings_files: false,
           user_mcp: false,
@@ -432,7 +431,6 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
       withClaudeOptions(request, {
         claude_policy: {
           sandbox: "user_config",
-          environment: "inherit",
           tools: "all",
           path_guard: false,
           subagents: true,
@@ -449,7 +447,6 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
 
   assert.deepEqual(taskOptions(store.get(write.id, "alice")).claude_policy, {
     sandbox: "extension_locked",
-    environment: "filtered",
     tools: "all",
     path_guard: false,
     subagents: false,

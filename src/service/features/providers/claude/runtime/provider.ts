@@ -120,7 +120,6 @@ export class ClaudeAgentProvider implements Provider {
     const configuration = {
       settings_files:
         claude?.settings_files ?? claudeOverrideDefaults.settings_files,
-      environment: claude?.environment ?? claudeOverrideDefaults.environment,
     };
 
     const key = JSON.stringify(configuration);

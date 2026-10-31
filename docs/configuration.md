@@ -226,9 +226,9 @@ fail the task when it runs.
 
 Claude model suggestions come from the installed CLI. Discovery submits no
 user turn and turns off tools, settings-file hooks and external MCP servers.
-It follows your settings-file loading and environment choices. Discovery runs
-in the service directory, so project-specific model configuration can still
-differ from a task workspace.
+It uses the same environment as tasks and follows your settings-file choice.
+Discovery runs in the service directory, so project-specific model
+configuration can differ from a task workspace.
 Custom model IDs work when discovery is unavailable, but effort support may
 then be unknown.
 
@@ -292,6 +292,9 @@ settings. These include `CLAUDE.md`, rules, skills, hooks, permission allow and
 deny rules, MCP servers, connectors, sandbox settings and environment settings.
 A native allow or deny rule may decide a call before the extension sees it.
 
+Delegated sessions receive the service's environment variables, except
+`CODEX_SUBAGENT_EXTENSION_*` and `OPENAI_*`.
+
 These user-only settings under `providers.claude` restrict delegated sessions.
 Each task stores its resolved restrictions, so later changes never broaden an
 existing task.
@@ -299,7 +302,6 @@ existing task.
 | Setting          | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
 | ---------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sandbox`        | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
-| `environment`    | `inherit`     | `inherit` passes the service environment except `CODEX_SUBAGENT_EXTENSION_*`, `OPENAI_*` and `CLAUDE_CODE_OAUTH_TOKEN`. `filtered` passes basic process variables plus `CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`. Settings-file `env` applies in both while settings files load.              |
 | `tools`          | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools plus the parent report tool. `profile` restricts read-only profiles only.                                                                           |
 | `path_guard`     | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
 | `subagents`      | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |

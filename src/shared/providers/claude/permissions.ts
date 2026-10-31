@@ -29,13 +29,11 @@ export const claudeSandboxSchema = z.enum([
   "extension_locked",
 ]);
 
-export const claudeEnvironmentSchema = z.enum(["inherit", "filtered"]);
 export const claudeToolsSchema = z.enum(["profile", "all", "restricted"]);
 export const claudePathGuardSchema = z.enum(["profile", "on", "off"]);
 
 export type ClaudeOverrides = {
   sandbox: z.infer<typeof claudeSandboxSchema>;
-  environment: z.infer<typeof claudeEnvironmentSchema>;
   tools: z.infer<typeof claudeToolsSchema>;
   path_guard: z.infer<typeof claudePathGuardSchema>;
   subagents: boolean;
@@ -47,7 +45,6 @@ export type ClaudeOverrides = {
 // session's native permission mode.
 export const claudeOverrideDefaults: ClaudeOverrides = {
   sandbox: "user_config",
-  environment: "inherit",
   tools: "profile",
   path_guard: "profile",
   subagents: true,
@@ -67,10 +64,6 @@ export const claudeOverrideLabels: ClaudeOverrideLabels = {
     user_config: "Your Claude Code settings",
     extension: "Extension sandbox",
     extension_locked: "Extension sandbox with locked network",
-  },
-  environment: {
-    inherit: "Full environment",
-    filtered: "Filtered allowlist",
   },
   tools: {
     profile: "By worker profile",
@@ -142,7 +135,6 @@ export function exceedsPermission(
 
 export const claudePolicySchema = z.object({
   sandbox: claudeSandboxSchema,
-  environment: claudeEnvironmentSchema,
   tools: z.enum(["all", "restricted"]),
   path_guard: z.boolean(),
   subagents: z.boolean(),
@@ -172,7 +164,6 @@ export function resolveClaudePolicy(
 
   return {
     sandbox: overrides.sandbox,
-    environment: overrides.environment,
     tools: resolveTools(overrides.tools, readOnly),
     path_guard:
       overrides.path_guard === "profile"

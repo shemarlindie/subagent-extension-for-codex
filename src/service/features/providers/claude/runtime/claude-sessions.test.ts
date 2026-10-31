@@ -107,7 +107,7 @@ test("Claude session deletion only tolerates the SDK's missing-session error", a
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
   let time = 1000;
   vi.spyOn(Date, "now").mockImplementation(() => time);
-  vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
+  vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
   vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
   let launches = 0;
   let closes = 0;
@@ -157,8 +157,8 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.deepEqual(options!.settings, { disableAllHooks: true });
   assert.equal(options!.persistSession, false);
   assert.equal(options!.strictMcpConfig, true);
-  // Discovery uses the default task environment, not the filtered allowlist.
-  assert.equal(options!.env!.CLAUDE_CODE_USE_BEDROCK, "1");
+  // Discovery uses the same environment as tasks.
+  assert.equal(options!.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
   assert.equal(options!.env!.CODEX_SUBAGENT_EXTENSION_TOKEN, undefined);
   const next = discoveryPrompt![Symbol.asyncIterator]().next();
   let emitted = false;
@@ -226,21 +226,13 @@ test("failed Claude model discovery closes the query and retries after a short c
   assert.equal(closes, 2);
 });
 
-test("Claude discovery keeps concurrent requests, results and failures separate by settings and environment", async () => {
-  vi.stubEnv("CLAUDE_CODE_USE_BEDROCK", "1");
-
+test("Claude discovery keeps concurrent requests, results and failures separate by settings", async () => {
   const defaults = settingsDefaults("claude");
 
   const isolated = withSetting(
     defaults,
     "providers.claude.settings_files",
     false,
-  );
-
-  const filtered = withSetting(
-    isolated,
-    "providers.claude.environment",
-    "filtered",
   );
 
   const launches: Options[] = [];
@@ -264,21 +256,14 @@ test("Claude discovery keeps concurrent requests, results and failures separate 
 
   const loaded = provider.models(defaults);
   const unloaded = provider.models(isolated);
-  const restricted = provider.models(filtered);
   assert.equal(provider.models({ ...isolated }), unloaded);
   assert.notEqual(loaded, unloaded);
-  assert.notEqual(unloaded, restricted);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(launches.length, 3);
+  assert.equal(launches.length, 2);
 
   assert.deepEqual(
     launches.map((options) => options.settingSources),
-    [["user", "project", "local"], [], []],
-  );
-
-  assert.deepEqual(
-    launches.map((options) => options.env!.CLAUDE_CODE_USE_BEDROCK),
-    ["1", "1", undefined],
+    [["user", "project", "local"], []],
   );
 
   const loadedFailure = assert.rejects(loaded, /settings discovery failed/);
@@ -288,15 +273,9 @@ test("Claude discovery keeps concurrent requests, results and failures separate 
     { value: "isolated-model", displayName: "Isolated", description: "" },
   ]);
 
-  releases[2]!([
-    { value: "filtered-model", displayName: "Filtered", description: "" },
-  ]);
-
   await loadedFailure;
   assert.equal((await unloaded)[0]!.value, "isolated-model");
-  assert.equal((await restricted)[0]!.value, "filtered-model");
   assert.equal((await provider.models(isolated))[0]!.value, "isolated-model");
-  assert.equal((await provider.models(filtered))[0]!.value, "filtered-model");
   await assert.rejects(provider.models(defaults), /settings discovery failed/);
-  assert.equal(launches.length, 3);
+  assert.equal(launches.length, 2);
 });

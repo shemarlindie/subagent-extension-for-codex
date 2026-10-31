@@ -126,13 +126,7 @@ test("fixture restrictions and child workers follow configured policy", async ()
   const provider = fixtureProvider();
   const f = context();
 
-  const restrictions = [
-    "sandbox",
-    "environment",
-    "tools",
-    "path_guard",
-    "subagents",
-  ];
+  const restrictions = ["sandbox", "tools", "path_guard", "subagents"];
 
   await provider.run(
     f.runContext,
@@ -169,7 +163,6 @@ test("fixture restrictions and child workers follow configured policy", async ()
       ...blocked.runContext.task.provider_options?.fixture,
       claude_policy: {
         sandbox: "extension",
-        environment: "filtered",
         tools: "restricted",
         path_guard: true,
         subagents: false,

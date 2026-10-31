@@ -139,7 +139,7 @@ export async function claudeTurnOptions(
     ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"
       ? { effort: c.task.reasoning_effort as Options["effort"] }
       : {}),
-    env: claudeEnvironment(process.env, policy.environment),
+    env: claudeEnvironment(process.env),
     ...sandbox,
     abortController,
     persistSession: true,

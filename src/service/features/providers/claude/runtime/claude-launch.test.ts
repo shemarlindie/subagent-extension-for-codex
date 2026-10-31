@@ -155,32 +155,17 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
 });
 
-test("filtered Claude environment excludes service and other-provider credentials at the real SDK spawn boundary", async () => {
+test("The Claude Agent SDK starts Claude Code without private variables", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
-  const env = claudeEnvironment(
-    {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      ANTHROPIC_API_KEY: "synthetic-claude-key",
-      CLAUDE_CONFIG_DIR: "/synthetic/claude-state",
-      OPENAI_API_KEY: "synthetic-app-key",
-      OPENAI_EXECUTOR_API_KEY: "synthetic-executor-key",
-      CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
-      SSH_AUTH_SOCK: "/synthetic/ssh-agent",
-      AWS_SECRET_ACCESS_KEY: "synthetic-cloud-key",
-      NODE_OPTIONS: "--require /untrusted.js",
-      HTTPS_PROXY: "http://synthetic-proxy-credential@example.invalid",
-    },
-    "filtered",
-  );
+  const env = claudeEnvironment({
+    PATH: process.env.PATH,
+    USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
+    OPENAI_API_KEY: "synthetic-app-key",
+    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
+  });
 
-  assert.deepEqual(Object.keys(env).sort(), [
-    "ANTHROPIC_API_KEY",
-    "CLAUDE_CONFIG_DIR",
-    "HOME",
-    "PATH",
-  ]);
+  assert.deepEqual(Object.keys(env).sort(), ["PATH", "USER_TOOLCHAIN_HOME"]);
 
   let spawned: Record<string, string | undefined> | undefined;
 
@@ -191,7 +176,7 @@ test("filtered Claude environment excludes service and other-provider credential
         env,
         spawnClaudeCodeProcess: (options) => {
           spawned = options.env;
-          throw new Error("Synthetic spawn refusal; no process or model call");
+          throw new Error("Synthetic spawn refusal");
         },
       },
     });
@@ -206,23 +191,14 @@ test("filtered Claude environment excludes service and other-provider credential
   }, /Synthetic spawn refusal/);
 
   assert.ok(spawned);
-  assert.equal(spawned.ANTHROPIC_API_KEY, "synthetic-claude-key");
-  assert.equal(spawned.CLAUDE_CONFIG_DIR, "/synthetic/claude-state");
   assert.equal(spawned.PATH, process.env.PATH);
+  assert.equal(spawned.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
-  for (const name of [
-    "OPENAI_API_KEY",
-    "OPENAI_EXECUTOR_API_KEY",
-    "CODEX_SUBAGENT_EXTENSION_TOKEN",
-    "SSH_AUTH_SOCK",
-    "AWS_SECRET_ACCESS_KEY",
-    "NODE_OPTIONS",
-    "HTTPS_PROXY",
-  ]) {
+  for (const name of ["CODEX_SUBAGENT_EXTENSION_TOKEN", "OPENAI_API_KEY"]) {
     assert.equal(
       spawned[name],
       undefined,
-      `${name} must not reach the native harness`,
+      `${name} must not reach Claude Code`,
     );
   }
 });

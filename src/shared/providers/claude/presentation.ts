@@ -21,7 +21,6 @@ export const claudeTaskFacts = (task: Task): Record<string, string> => {
       options.approval_decider === "parent_agent" ? "Parent agent" : "User",
     "Session restrictions": [
       `Sandbox: ${claudeOverrideLabels.sandbox[policy.sandbox]}`,
-      `Environment: ${claudeOverrideLabels.environment[policy.environment]}`,
       `Tools: ${claudeOverrideLabels.tools[policy.tools]}`,
       `Path guard: ${policy.path_guard ? "On" : "Off"}`,
       `Subagents: ${policy.subagents ? "On" : "Off"}`,
