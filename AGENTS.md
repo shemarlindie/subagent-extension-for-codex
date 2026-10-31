@@ -1,5 +1,7 @@
 # Agent instructions
 
+Keep things simple and treat over-engineering as a defect. See [Component and change conventions](#component-and-change-conventions).
+
 ## Essential reading
 
 - Read the [README overview and task behavior](README.md) to understand the product.
@@ -65,8 +67,8 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 
 - Keep responsibility boundaries clear, modules cohesive, state and lifecycle ownership appropriate, and dependency direction consistent. Follow established patterns when suitable. Address architectural weaknesses introduced or directly affected by the change. Leave broader improvements as recommendations outside the task's scope.
 - Organize modules around feature ownership and reasons to change. Keep feature logic, types, UI and styles together. Group subfolders by responsibility rather than file type. Put UI domain logic in `src/panel/features` and reusable generic helpers in `src/panel/shared/utils`. Keep browser-safe contracts and domain functions used by both runtimes in feature-scoped `src/shared` modules. These must not import service execution or panel rendering. Keep application composition and state in `src/panel/app/state`. Limit panel shared code to stable cross-feature concepts and platform integrations.
-- Reuse existing components, logic, styles and infrastructure where responsibilities align. Preserve distinct behavior and presentation where the domain requires them. Introduce abstractions when they simplify ownership and maintenance without excessive configuration or coupling.
-- Prefer the simplest code that achieves the required behavior. Remove unnecessary duplication, obsolete code and needless indirection within the affected area. Keep components and utilities small and focused, with components responsible for rendering and reusable helpers in their owning modules. Split files by responsibility without needless fragmentation, normally keeping one React component per file. Use kebab-case component filenames.
+- Reuse existing components, logic, styles and infrastructure where responsibilities align. Preserve distinct behavior and presentation where the domain requires them. Introduce an abstraction only when it removes real duplication or clarifies ownership, and keep it free of excessive configuration or coupling.
+- Keep new and existing code as simple as the task allows. Build for current requirements and avoid speculative options, generality, layers and handling for cases that cannot occur. Apply the same restraint to tests, documentation and plans. Within the affected area, simplify over-engineered code and remove unnecessary duplication, obsolete code and needless indirection. Keep components and utilities small and focused, with components responsible for rendering and reusable helpers in their owning modules. Split files by responsibility without needless fragmentation, normally keeping one React component per file. Use kebab-case component filenames.
 - Prefer named prop and state types. Use existing types or `satisfies` when they simplify code or replace repeated assertions.
 - Name components for their actual scope. Use a generic name only when the component and its styling are genuinely reusable. Use a domain-specific name when behavior or styling is domain-specific.
 - Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
