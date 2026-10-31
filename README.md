@@ -10,7 +10,12 @@ Claude runs through the Claude Agent SDK and the Claude Code harness.
 
 And yes, some of us still use Codex.
 
-https://github.com/user-attachments/assets/47cf7d00-261d-4e3b-8f2d-14c941476925
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/f243e980-8ff5-48ff-8d49-b5decbbe8209">
+  <img width="1088" alt="Codex delegates a task to Claude and follows it in the Delegated Work panel" src="https://github.com/user-attachments/assets/b11c5734-fb6c-44c6-bbda-9f9209394a04">
+</picture>
+
+Watch in [full quality](https://github.com/user-attachments/assets/47cf7d00-261d-4e3b-8f2d-14c941476925)
 
 **Is this allowed?** Yes, when you run it on your own computer for your own
 work. It uses your local copy of Claude Code and your own sign-in, and it never
