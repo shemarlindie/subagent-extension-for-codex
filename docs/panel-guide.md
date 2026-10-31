@@ -232,6 +232,7 @@ follow-ups, worker messages, replies and turn outcomes. Worker and parent-agent
 text renders as
 [Markdown](../src/panel/features/file-preview/README.md#markdown), and your text
 shows as typed. Draft replies stream until the stored message replaces them.
+Code blocks in Chat and Activity have a copy action in their header.
 
 Turn outcomes show duration, cost and time. Their actions copy the response, ask
 Codex about it or open that turn's activity. Hover a timestamp for its full date

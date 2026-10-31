@@ -5,14 +5,18 @@ import { highlightLines } from "../highlight";
 
 type MarkdownCodeProps = ComponentProps<"code"> & { node?: unknown };
 
+/** A fenced block's language from its `language-*` class. */
+export const codeLanguage = (className: string | undefined) =>
+  // Info strings can hold symbols, as in c++ or objective-c.
+  /(?:^|\s)language-(\S+)/.exec(className ?? "")?.[1];
+
 export function MarkdownCode({
   node: _node,
   className,
   children,
   ...rest
 }: MarkdownCodeProps) {
-  // Info strings can hold symbols, as in c++ or objective-c.
-  const language = /(?:^|\s)language-(\S+)/.exec(className ?? "")?.[1];
+  const language = codeLanguage(className);
 
   if (!language) {
     return (

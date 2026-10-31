@@ -46,7 +46,10 @@ SVG content is markup.
   source in a tooltip. A worker could otherwise send data out through a remote
   image URL, and relative paths cannot resolve.
 - **Code.** Fenced blocks highlight with the languages registered in
-  `highlight.ts`. Unknown languages render as plain code.
+  `highlight.ts`. Unknown languages render as plain code. A header row shows
+  the fence's language and a copy action, which copies the source without
+  highlight markup. Activity's plain text, such as tool output, shows its
+  fenced blocks with the same header.
 
 ## Large content
 

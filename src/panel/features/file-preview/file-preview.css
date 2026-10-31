@@ -604,3 +604,34 @@
 .hljs .hljs-strong {
   font-weight: var(--font-weight-semibold);
 }
+
+/* Code under a header row, so the copy action never covers code. The wrapper
+   owns the block's frame and spacing. */
+.code-block {
+  margin: 8px 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 2px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 11px var(--font-mono);
+}
+.code-block-language {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.code-block > pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}

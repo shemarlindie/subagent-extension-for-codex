@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { MarkdownCode } from "./markdown-code";
 import { MarkdownImage } from "./markdown-image";
 import { MarkdownLink } from "./markdown-link";
+import { MarkdownPre } from "./markdown-pre";
 
 type MarkdownViewProps = {
   /** Markdown; embedded HTML shows as literal text, so prose like `<Foo>` stays visible. */
@@ -16,6 +17,7 @@ const COMPONENTS: Components = {
   a: MarkdownLink,
   code: MarkdownCode,
   img: MarkdownImage,
+  pre: MarkdownPre,
 };
 
 const REMARK_PLUGINS = [remarkGfm];

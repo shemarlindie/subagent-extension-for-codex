@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { scalarText } from "../../../../shared/text";
+import { CodeBlock } from "../../file-preview/code-block";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
@@ -8,9 +9,9 @@ import { NestedContentOmitted } from "./nested-content-omitted";
 
 export { ActivityValue };
 
-// A closed ``` fence with an optional info string; group 1 is the code. Unclosed
-// fences (still streaming) do not match and stay plain text.
-const FENCE = /```[^\n`]*\n([\s\S]*?)```/g;
+// A closed ``` fence: group 1 is the optional info string and group 2 the code.
+// Unclosed fences (still streaming) do not match and stay plain text.
+const FENCE = /```([^\n`]*)\n([\s\S]*?)```/g;
 
 /** Plain text with fenced code blocks shown as code; no other markdown. */
 function Prose({ text }: { text: string }): ReactNode {
@@ -29,11 +30,19 @@ function Prose({ text }: { text: string }): ReactNode {
       );
     }
 
+    // FENCE's code group is required, so every match has it.
+    const code = match[2]!.replace(/\n$/, ""),
+      language = match[1]?.trim().split(/\s/)[0];
+
     parts.push(
-      <pre key={match.index} className="activity-code">
-        {/* FENCE's one capture group is required, so every match has it. */}
-        {match[1]!.replace(/\n$/, "")}
-      </pre>,
+      <CodeBlock
+        key={match.index}
+        text={code}
+        language={language}
+        className="activity-code"
+      >
+        {code}
+      </CodeBlock>,
     );
 
     last = match.index + match[0].length;

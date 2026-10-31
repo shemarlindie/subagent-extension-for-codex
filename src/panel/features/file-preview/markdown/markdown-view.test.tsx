@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, expect, onTestFinished, test, vi } from "vitest";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
@@ -36,15 +36,63 @@ test("relative and unsafe links render as text, not broken links", () => {
   expect(screen.getByText("web").getAttribute("target")).toBe("_blank");
 });
 
+function renderWithController(content: string) {
+  const report = vi.fn();
+
+  const view = render(
+    <ControllerContext.Provider value={{ report } as unknown as Controller}>
+      <MarkdownView content={content} />
+    </ControllerContext.Provider>,
+  );
+
+  return { ...view, report };
+}
+
 test("fenced code highlights languages named with symbols or aliases", () => {
-  const { container } = render(
-    <MarkdownView content={"```c++\nint x;\n```\n\n```console\n$ ls\n```"} />,
+  const { container } = renderWithController(
+    "```c++\nint x;\n```\n\n```console\n$ ls\n```",
   );
 
   const [cpp, shell] = container.querySelectorAll("pre code");
   assert.ok(cpp && shell);
   expect(cpp.querySelector(".hljs-type")).not.toBeNull();
   expect(shell.querySelector(".hljs-meta")).not.toBeNull();
+});
+
+test("fenced code copies its source text without highlight markup", async () => {
+  const writeText = vi.fn(async () => {});
+
+  const previous = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+
+  onTestFinished(() => {
+    if (previous) Object.defineProperty(navigator, "clipboard", previous);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  const { report } = renderWithController(
+    "Use `inline` code.\n\n```ts\nconst a = 1;\nconst b = <T>() => a;\n```",
+  );
+
+  const [copy, ...others] = screen.getAllByRole("button", {
+    name: "Copy code",
+  });
+
+  assert.ok(copy);
+  expect(others).toHaveLength(0);
+
+  // The header names the fence's language.
+  expect(screen.getByText("ts")).toBeTruthy();
+
+  fireEvent.click(copy);
+  await screen.findByRole("button", { name: "Copy code — copied" });
+
+  expect(writeText).toHaveBeenCalledWith("const a = 1;\nconst b = <T>() => a;");
+  expect(report).not.toHaveBeenCalled();
 });
 
 test("footnotes stay unique across views and jump within their own", () => {

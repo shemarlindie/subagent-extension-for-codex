@@ -6,6 +6,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 
+import type { Controller } from "../../../app/state/controller";
+import { ControllerContext } from "../../../app/state/controller-context";
 import { ActivityContent, ActivityValue } from "./activity-content";
 import {
   assertAbsent,
@@ -331,7 +333,14 @@ function wrapNested(
 
 function contentMarkup(content: unknown) {
   return parseHtml(
-    renderToStaticMarkup(createElement(ActivityContent, { content })),
+    renderToStaticMarkup(
+      // Code blocks hold a copy action, which reports through the controller.
+      createElement(
+        ControllerContext.Provider,
+        { value: {} as Controller },
+        createElement(ActivityContent, { content }),
+      ),
+    ),
   );
 }
 
@@ -513,6 +522,8 @@ test("fenced code in message text renders as a code block", () => {
   ]);
 
   assert.equal(doc.querySelector("pre.activity-code")?.textContent, "npm test");
+  assert.equal(doc.querySelector(".code-block-language")?.textContent, "sh");
+  assert.ok(doc.querySelector(".code-block button[aria-label='Copy code']"));
 
   assert.deepEqual(
     [...doc.querySelectorAll("p.activity-text")].map((p) => p.textContent),
