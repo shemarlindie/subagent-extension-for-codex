@@ -770,7 +770,10 @@ Wait for mutations to finish before reloading. A modal hiding background
 content from role queries does not prove that the mutation succeeded.
 
 Rerun against an existing build with `npx playwright test`. Failures keep
-traces and screenshots in `test-results/`, which CI uploads. Inspect a trace
+traces and screenshots in `test-results/`, which CI uploads. A failed streamed
+reply flow in `chat-reading.spec.ts` also saves `chat-scroll.json`, which logs
+Chat's scroll position, scroll button and rows with each scroll event and reader
+input. Traces do not record scroll positions after each change. Inspect a trace
 with `npx playwright show-trace <trace.zip>`. Give concurrent Playwright
 commands distinct `--output` directories so one run cannot delete another's
 results.

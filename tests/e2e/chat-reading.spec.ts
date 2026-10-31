@@ -1,3 +1,5 @@
+import { writeFile } from "node:fs/promises";
+
 import type { Locator, Page } from "@playwright/test";
 
 import type { Task } from "../../src/shared/tasks/model";
@@ -146,6 +148,94 @@ const rowShift = (page: Page) =>
     return rowShift.down;
   });
 
+/**
+ * Logs Chat's scroll geometry, scroll button and rows whenever one changes,
+ * with the scroll events and reader input around it. A failed test saves the
+ * log, so a slow runner shows which event moved Chat away from its end.
+ */
+const recordChatScroll = (page: Page) =>
+  page.evaluate(() => {
+    const log: unknown[] = [];
+    const start = performance.now();
+    let last = "";
+
+    const record = (event: string) => {
+      const history = document.querySelector<HTMLElement>(
+        '[role="region"][aria-label="Chat history"]',
+      );
+
+      const state = history && {
+        top: Math.round(history.scrollTop),
+        height: history.scrollHeight,
+        client: history.clientHeight,
+        loading:
+          history
+            .querySelector(".loading-swap")
+            ?.getAttribute("data-loading") ?? undefined,
+        button:
+          document
+            .querySelector(".chat-scroll-latest")
+            ?.getAttribute("aria-label") ?? undefined,
+        // A trailing ~ marks a reply that is still streaming.
+        rows: [
+          ...history.querySelectorAll<HTMLElement>("[data-chat-item]"),
+        ].map(
+          (row) =>
+            row.dataset.chatItem +
+            (row.dataset.streaming === "true" ? "~" : ""),
+        ),
+      };
+
+      const signature = JSON.stringify(state);
+      if (event === "frame" && signature === last) return;
+      last = signature;
+
+      if (log.length < 5000) {
+        log.push({
+          at: Math.round(performance.now() - start),
+          event,
+          ...state,
+        });
+      }
+    };
+
+    for (const type of [
+      "scroll",
+      "scrollend",
+      "wheel",
+      "keydown",
+      "pointerdown",
+    ]) {
+      document.addEventListener(type, () => record(type), {
+        capture: true,
+        passive: true,
+      });
+    }
+
+    const sample = () => {
+      record("frame");
+      requestAnimationFrame(sample);
+    };
+
+    requestAnimationFrame(sample);
+    Object.assign(window, { chatScroll: log });
+  });
+
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+
+  const log = await page
+    .evaluate(() => (window as { chatScroll?: unknown }).chatScroll)
+    .catch(() => undefined);
+
+  if (log) {
+    await writeFile(
+      testInfo.outputPath("chat-scroll.json"),
+      JSON.stringify(log, null, 2),
+    );
+  }
+});
+
 test("activity labels reserve one line without moving the conversation", async ({
   consolePage: page,
 }) => {
@@ -246,6 +336,7 @@ streamingTest(
   "streamed replies follow the end, hold a reading position in history and return to latest",
   async ({ consolePage: page, replyStream }) => {
     await page.setViewportSize({ width: 1280, height: 640 });
+    await recordChatScroll(page);
     await page.getByRole("button", { name: "New task", exact: true }).click();
 
     await page
