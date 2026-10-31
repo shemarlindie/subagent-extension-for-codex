@@ -1,4 +1,4 @@
-# Codex subagent extension
+# Subagent Extension for Codex
 
 [![CI](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml)
 

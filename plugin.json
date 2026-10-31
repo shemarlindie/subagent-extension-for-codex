@@ -13,8 +13,9 @@
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Codex Subagent Extension",
+        "displayName": "Subagent Extension for Codex",
         "shortDescription": "Delegate, inspect, and control Claude coding tasks.",
+        "websiteURL": "https://github.com/shemarlindie/codex-subagent-extension",
         "brandColor": "#3a7ca5",
         "composerIcon": "./assets/brand/brand-glyph-black.svg",
         "composerIconDark": "./assets/brand/brand-glyph-white.svg",

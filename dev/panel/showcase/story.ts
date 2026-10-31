@@ -85,7 +85,7 @@ export const story: StoryStep[] = [
         icon: "mcp",
         text: "MCP start_task on codex_subagent_extension",
       },
-      { kind: "app", name: "Codex Subagent Extension" },
+      { kind: "app", name: "Subagent Extension for Codex" },
       {
         kind: "prose",
         text: "Claude is reviewing the design. I'll keep mapping call sites in the meantime.",

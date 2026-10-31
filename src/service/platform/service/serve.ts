@@ -190,7 +190,7 @@ export async function serve({
       : "from CODEX_SUBAGENT_EXTENSION_TOKEN";
 
   console.error(
-    `Codex subagent extension service: ${origin}\nLogin token ${tokenSource}`,
+    `Subagent Extension for Codex service: ${origin}\nLogin token ${tokenSource}`,
   );
 
   if (network) {

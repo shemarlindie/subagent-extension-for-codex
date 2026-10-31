@@ -85,7 +85,7 @@ export function StoryPanel({ feed, theme, mode, tick, now }: StoryPanelProps) {
   return (
     <iframe
       ref={frame}
-      title="Codex Subagent Extension"
+      title="Subagent Extension for Codex"
       style={mode === "inline" ? { height } : undefined}
     />
   );
