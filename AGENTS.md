@@ -35,6 +35,7 @@ Read the matching guide's relevant sections before working in an area. Unrelated
 
 Check in the browser when a change is large, when seeing it would help, or when the user asks. Skip small changes that tests cover.
 
+- For large changes, use the `verify-features` skill. It covers the tools, scripts, and the widths, themes and states to check. For other checks, a screenshot of the affected state is enough.
 - Follow [UI verification](docs/ui-verification.md) for dev-server setup, fixture cases, host controls and browser measurements. Use fixture data. Use live data only for behavior fixtures cannot show, and do not start tasks in live mode.
 - Build preview events with the typed builder in `dev/panel/scenarios/timeline.ts` or [record them](docs/development.md#recorded-fixtures) with `npm run fixture:record`. Add a fixture for every new event or activity row kind. `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays synthetic and recorded events through the provider.
 - Start or restart a needed dev server without asking for permission and notify the user. Stop any dev server you started for validation when you are done. Leave pre-existing servers running.
