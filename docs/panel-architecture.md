@@ -248,7 +248,9 @@ reload.
   They keep open dialog descriptors, form drafts and the last Settings section
   in browser storage. Unsent task and new-task composer text also stays in
   browser storage until sent or cleared.
-- **Task list width:** saved in browser storage wherever it is available.
+- **Task list width and collapsed project groups:** saved in browser storage
+  wherever it is available. Groups expanded with **Show more** stay expanded
+  while the project groups are shown.
 - **Composer model and reasoning:** saved on the service as profile settings.
   See [New-task composer](#new-task-composer).
 

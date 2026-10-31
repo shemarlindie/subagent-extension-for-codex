@@ -6,6 +6,8 @@ import { startSchema } from "../../../../shared/tasks/model.js";
 import {
   effectiveFilter,
   filterCounts,
+  GROUP_ROW_LIMIT,
+  groupRows,
   visibleTasks,
 } from "../../../app/state/selectors";
 import type { Filter, Snapshot, Task } from "../../../app/state/types";
@@ -214,4 +216,29 @@ test("across projects, visible tasks come grouped by project in list order", () 
     visibleTasks(state({ repository: "/a" })).map((task) => task.id),
     ["a1", "a2"],
   );
+});
+
+test("a long group stops at the row limit and keeps the selected task shown", () => {
+  const tasks = Array.from({ length: 9 }, (_, index) =>
+    task({ id: `t${index}` }),
+  );
+
+  const ids = (rows: { shown: Task[]; hidden: Task[] }) => ({
+    shown: rows.shown.map((task) => task.id),
+    hidden: rows.hidden.map((task) => task.id),
+  });
+
+  assert.deepEqual(ids(groupRows(tasks)), {
+    shown: ["t0", "t1", "t2", "t3", "t4"],
+    hidden: ["t5", "t6", "t7", "t8"],
+  });
+
+  assert.deepEqual(ids(groupRows(tasks, "t7")), {
+    shown: ["t0", "t1", "t2", "t3", "t4", "t7"],
+    hidden: ["t5", "t6", "t8"],
+  });
+
+  // When only one row would hide, the group shows it.
+  assert.equal(groupRows(tasks.slice(0, GROUP_ROW_LIMIT + 1)).hidden.length, 0);
+  assert.equal(groupRows(tasks.slice(0, 7), "t6").hidden.length, 0);
 });

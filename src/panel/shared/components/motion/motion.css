@@ -133,9 +133,19 @@
   transform: rotate(180deg);
 }
 
-/* Collapsible panels open to their measured height, so content below slides. */
+/* Collapsible and accordion panels open to their measured height, so content
+   below slides. Each panel sets only its own variable, so neither inherits
+   from an outer panel of the other kind. */
+@property --collapsible-panel-height {
+  syntax: "*";
+  inherits: false;
+}
+@property --accordion-panel-height {
+  syntax: "*";
+  inherits: false;
+}
 .collapse-panel {
-  height: var(--collapsible-panel-height);
+  height: var(--collapsible-panel-height, var(--accordion-panel-height));
   overflow: hidden;
   transition:
     height var(--motion-base) var(--ease-out),

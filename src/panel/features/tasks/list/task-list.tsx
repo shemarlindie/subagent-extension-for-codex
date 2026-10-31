@@ -13,7 +13,6 @@ import {
   profileLabel,
   projectChoices,
   scopedTasks,
-  tasksByProject,
   terminal,
   visibleTasks,
 } from "../../../app/state/selectors";
@@ -26,10 +25,9 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { useNow } from "../../../shared/utils/use-now";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
-import { ProjectArchiveMenu } from "../archive/project-archive-menu";
 import { UnreadDot } from "../unread/unread-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
-import { TaskGroup } from "./task-group";
+import { ProjectGroups } from "./project-groups";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
 import { rowStatus } from "./task-status";
@@ -240,22 +238,14 @@ export function TaskList() {
 
       if (state.repository) return tasks.map(renderRow);
 
-      // Across projects, each project's tasks sit under its own header.
-      return tasksByProject(tasks).map(({ repository, tasks }) => (
-        <TaskGroup
-          key={repository}
-          repository={repository}
-          name={projectName(repository)}
-          actions={
-            <ProjectArchiveMenu
-              repository={repository}
-              name={projectName(repository)}
-            />
-          }
-        >
-          {tasks.map(renderRow)}
-        </TaskGroup>
-      ));
+      // Across projects, each project's tasks sit under their own header.
+      return (
+        <ProjectGroups
+          tasks={tasks}
+          projectName={projectName}
+          renderRow={renderRow}
+        />
+      );
     }
 
     return (

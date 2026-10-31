@@ -157,10 +157,10 @@
   width: 54px;
   height: 7px;
 }
-/* Project groups in the all-projects list. Medium weight sets headers apart
-   from the scope label above the list. */
+/* Project groups in the all-projects list. Primary text sets headers apart
+   from the muted scope label above the list. */
 #task-list {
-  --task-group-header-height: 20px;
+  --task-group-header-height: 28px;
 }
 .task-group-header {
   position: sticky;
@@ -170,22 +170,72 @@
   align-items: center;
   gap: 4px;
   height: var(--task-group-header-height);
-  padding: 4px 6px 3px 10px;
+  padding: 2px 6px 2px 2px;
   background: var(--sidebar-bg);
-  color: var(--muted);
   font-size: 11px;
-  font-weight: 500;
   line-height: 13px;
 }
-.task-group-name {
+.task-group-heading {
+  display: flex;
   flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  font: inherit;
+}
+/* The whole header, save its menu, toggles the group. */
+.task-group-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  color: var(--text);
+  font-weight: 600;
+  text-align: start;
+}
+.task-group-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.task-group-toggle:not([data-panel-open]) .task-group-chevron {
+  transform: rotate(-90deg);
+}
+.task-group-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The project menu fits the short header and shows on hover or focus, or
-   always where nothing hovers. */
+.task-group-count {
+  flex: none;
+  margin-inline-end: auto;
+  color: var(--muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+/* "Show more" and "Show less" match the header toggle's box. The extra bottom
+   margin matches a row's bottom padding, so a later group sits as far below
+   them as below a row. */
+.task-group-more {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: calc(100% - 8px);
+  height: calc(var(--task-group-header-height) - 4px);
+  margin: 2px 6px 9px 2px;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: start;
+}
+.task-group-more:hover {
+  color: var(--text);
+}
+/* The project menu shows on hover or focus, or always where nothing hovers. */
 .task-group-menu {
   display: inline-flex;
   align-items: center;
@@ -193,7 +243,6 @@
   flex: none;
   width: 18px;
   height: 18px;
-  margin: -3px 0 -2px;
   padding: 0;
   color: var(--muted);
   opacity: 0;
@@ -208,12 +257,16 @@
     opacity: 1;
   }
 }
-/* A spaced rule separates each later group. It sits on the group, so every
-   header keeps the same height and the rule scrolls away with the rows. */
+/* Space separates each later group, about twice the space below its header so
+   the header reads as part of the group under it. It sits on the group, so
+   every header keeps the same height. */
 .task-group + .task-group {
-  margin-top: 8px;
-  padding-top: 4px;
-  border-top: 1px solid var(--line);
+  margin-top: 16px;
+}
+/* A collapsed group ends at its header, which sits closer to the next group
+   than a row's text does. */
+.task-group[data-closed] {
+  padding-bottom: 4px;
 }
 /* Scrolling a row into view keeps it clear of its group's header. */
 .task-group .row {

@@ -117,6 +117,29 @@ export function tasksByProject(tasks: Task[]): ProjectTasks[] {
   return [...groups].map(([repository, tasks]) => ({ repository, tasks }));
 }
 
+/** Rows a project group shows before "Show more" when several projects share the list. */
+export const GROUP_ROW_LIMIT = 5;
+
+/**
+ * A long group's rows before "Show more": the first few, plus the selected
+ * task wherever it sits. When only one row would hide, the group shows it.
+ */
+export function groupRows(tasks: Task[], selected?: string) {
+  const shown = tasks.filter(
+    (task, index) => index < GROUP_ROW_LIMIT || task.id === selected,
+  );
+
+  const hidden = tasks.filter((task) => !shown.includes(task));
+
+  return hidden.length > 1 ? { shown, hidden } : { shown: tasks, hidden: [] };
+}
+
+/** What a group's header or "Show more" row flags about tasks it hides. */
+export const groupSignals = (tasks: Task[]) => ({
+  unread: tasks.some((task) => task.unread),
+  needsInput: tasks.some((task) => matchesFilter(task, "attention")),
+});
+
 export function filterCounts(state: Snapshot) {
   const scoped = scopedTasks(state);
 

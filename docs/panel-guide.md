@@ -88,6 +88,17 @@ the profile icon for the worker's name. Under **All projects**, tasks group
 under a header for each project. Each group appears at the position of its
 newest task, and its header stays visible while its rows scroll.
 
+- The header shows the project's task count. Click it to collapse the group.
+  The panel remembers collapsed groups across reloads where browser storage is
+  available.
+- A collapsed header shows a pencil when a hidden task needs input and an
+  accent dot when one is unread.
+- When several projects are listed, a long group shows its first five tasks and
+  **Show N more**, which flags hidden tasks the same way. **Show less** folds it
+  again. The selected task always stays listed. Searching shows every match.
+- Choosing a task from outside the list, such as from a toast, opens its group.
+- **Show only this project** in the header's actions menu selects that project.
+
 While you view a task, a toast announces new tasks in the current scope.
 **View** opens the task. The current task, draft, reading position and focus
 stay in place until you navigate. If several other tasks arrive together, the
