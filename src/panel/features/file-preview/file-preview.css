@@ -313,7 +313,7 @@
 .markdown-body :not(pre) > code {
   padding: 0.1em 0.35em;
   border-radius: 4px;
-  background: var(--surface);
+  background: var(--code-bg);
   font: 0.9em var(--font-mono);
 }
 .markdown-body pre {

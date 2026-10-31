@@ -107,7 +107,7 @@ test("a thinking row with nothing after it counts up only while the worker runs"
   assertAbsent(view.container.querySelector(".activity-duration"));
 });
 
-test("a reply shows its plain preview outside Debug with More and Less controls", (t) => {
+test("a reply shows its Markdown preview outside Debug with More and Less controls", (t) => {
   t.onTestFinished(cleanup);
   const text = `**Done.**\n\n- one\n\n${"More detail. ".repeat(12)}`;
 
@@ -156,8 +156,14 @@ test("a reply shows its plain preview outside Debug with More and Less controls"
   expect(group.querySelector(".activity-group-secondary")).toBeNull();
   expect(group.querySelector(".activity-debug-body")).toBeNull();
 
-  const responseBody = group.querySelector(".activity-body .activity-text")!;
-  expect(responseBody.textContent).toBe(`${text.slice(0, 100).trimEnd()}...`);
+  const responseBody = () =>
+    group.querySelector(".activity-body .activity-markdown")!;
+
+  const preview = `${"More detail. ".repeat(6)}More...`;
+
+  expect(responseBody().querySelector("strong")?.textContent).toBe("Done.");
+  expect(responseBody().textContent).toContain(preview);
+  expect(responseBody().textContent).not.toContain("**");
 
   const more = group.querySelector<HTMLButtonElement>(
     ".activity-reply-toggle",
@@ -165,10 +171,11 @@ test("a reply shows its plain preview outside Debug with More and Less controls"
 
   expect(more.textContent).toBe("More");
   fireEvent.click(more);
-  expect(responseBody.textContent).toBe(text);
+  expect(responseBody().textContent).not.toContain("...");
+  expect(responseBody().textContent).toContain("More detail. ".repeat(11));
   expect(more.textContent).toBe("Less");
   fireEvent.click(more);
-  expect(responseBody.textContent).toBe(`${text.slice(0, 100).trimEnd()}...`);
+  expect(responseBody().textContent).toContain(preview);
   expect(more.textContent).toBe("More");
 
   fireEvent.click(group.querySelector(".activity-debug-toggle")!);

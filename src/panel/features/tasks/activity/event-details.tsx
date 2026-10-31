@@ -49,7 +49,7 @@ function ReplyResult({ text }: { text: string }) {
 
   return (
     <>
-      <ActivityContent content={expanded ? text : preview} />
+      <ActivityContent content={expanded ? text : preview} markdown />
       {shortened && (
         <Button
           variant="text"

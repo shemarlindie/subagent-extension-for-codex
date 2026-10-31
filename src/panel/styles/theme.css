@@ -106,6 +106,8 @@
     var(--color-text-primary) 5%,
     transparent
   );
+  /* Code tints whatever sits behind it, so it stands out on the page and on cards. */
+  --code-bg: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
   --notice-bg: color-mix(
     in srgb,
     var(--color-text-primary) 5%,

@@ -536,7 +536,8 @@ pre {
     monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: var(--surface);
+  background: var(--code-bg);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 12px;
   max-height: 320px;

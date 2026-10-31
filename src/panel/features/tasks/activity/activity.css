@@ -478,7 +478,7 @@
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  background: var(--code-bg);
   white-space: pre;
   font:
     12px/1.5 ui-monospace,
