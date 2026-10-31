@@ -134,6 +134,26 @@ for (const width of [1280, 420]) {
       }),
     ).toBeVisible();
 
+    // The wheel scroll can still be moving when Playwright returns, so anchor
+    // only once samples an interval apart agree.
+    let scrollTop: number | undefined;
+
+    await expect
+      .poll(
+        async () => {
+          const current = await history.evaluate(
+              (element) => element.scrollTop,
+            ),
+            settled = current === scrollTop;
+
+          scrollTop = current;
+
+          return settled;
+        },
+        { intervals: [100] },
+      )
+      .toBe(true);
+
     const anchorId = await history.evaluate((element) => {
       const frame = element.getBoundingClientRect();
 
