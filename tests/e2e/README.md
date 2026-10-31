@@ -10,7 +10,8 @@ covers when to add one.
 
 - One flow covers login and explicit project registration in full. Other flows
   log in and register through the public HTTP endpoints, sharing cookies with
-  their fresh browser context.
+  their fresh browser context, then open the registered project through the
+  console URL. The registration flow checks project-picker selection.
 - Reloads establish persistence. Playwright routing drops responses, and closing
   the service's open connections drops the event stream.
 - Most services run inside their Playwright worker process. The recovery flow
@@ -22,6 +23,9 @@ covers when to add one.
   scenario timing markers still apply. `streaming-fixtures.ts` holds reply chunks
   while the browser checks partial content, then releases the next chunk through
   real SSE delivery. Use these checkpoints when a test needs an observable stream.
+  `first-reply-fixtures.ts` holds the first task before its reply so tests can
+  switch tasks or disconnect before completion. Held workers remain interruptible
+  during cleanup.
 - Functional flows use reduced motion. The streaming, caret, conversation-cycle,
   arrival and Changes navigator suites explicitly enable animations to verify
   their geometry and transitions.
