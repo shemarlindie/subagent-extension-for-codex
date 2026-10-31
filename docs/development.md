@@ -600,6 +600,49 @@ The workflow relies on repository settings made by hand:
 settings file tests, including its native Downloads lookup. Other parts of
 the suite use POSIX shell fakes.
 
+## CI runner
+
+The macOS checks run on a self-hosted runner when the `MACOS_RUNNER` repository
+variable names its label, and on `macos-latest` when the variable is unset.
+Release runs reuse these checks, so they follow the same routing. The release
+`publish` and `install` jobs always use GitHub-hosted runners.
+
+Use the runner only while the repository is private. In a public repository,
+anyone could open a fork pull request that runs code on the host Mac. Run
+`install.sh --uninstall` before making the repository public.
+
+The scripts in `dev/ci-runner` host the runner on a Mac. Each job runs in a
+fresh [Tart](https://tart.run) VM cloned from the `macos-tahoe-base` image,
+which includes the Actions runner and Node 24. `run.sh` deletes the VM after
+the job. The scripts use your `gh` login to register runners and set the variable.
+`dev/ci-runner/config.sh` holds the repository, image, label and VM size.
+
+Install Tart and sleepwatcher, then the launchd agents:
+
+```sh
+brew install sleepwatcher
+# Install Tart from https://github.com/cirruslabs/tart/releases
+dev/ci-runner/install.sh
+```
+
+The agents run copies of the scripts, so rerun `install.sh` after changing
+them. `install.sh --uninstall` removes the agents. Logs are in
+`~/Library/Logs/ci-runner`.
+
+The runner agent sets the variable when it starts and deletes it when it stops.
+A sleepwatcher agent deletes it when the Mac sleeps and sets it again on wake.
+A job that is running when the Mac sleeps fails.
+
+If the variable stays set while the runner is offline, for example after a
+crash or power loss, macOS jobs wait in the queue. Delete it under **Settings →
+Secrets and variables → Actions → Variables** or with
+`gh variable delete MACOS_RUNNER`, then cancel and re-run the waiting jobs.
+Changing the variable doesn't move jobs that are already queued.
+
+When GitHub releases a new Actions runner, pull a newer image with
+`tart pull ghcr.io/cirruslabs/macos-tahoe-base:latest`. An outdated runner
+updates itself at the start of every job.
+
 ## Checks
 
 ```sh

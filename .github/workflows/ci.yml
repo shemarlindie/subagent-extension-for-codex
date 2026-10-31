@@ -16,7 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    # The MACOS_RUNNER variable moves the macOS checks to a self-hosted runner.
+    # The matrix value stays macos-latest so check names don't change.
+    runs-on: ${{ matrix.os == 'macos-latest' && vars.MACOS_RUNNER || matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
