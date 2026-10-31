@@ -5,6 +5,7 @@ import { test, vi } from "vitest";
 import type { ArchiveResult } from "../../../../shared/tasks/archive.js";
 import { task as taskFixture } from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task } from "../../../app/state/types";
+import { undoRecorder } from "../../../app/state/undo-test-harness";
 import { ArchiveActions } from "./archive-actions";
 
 const task = ({ id, ...patch }: Partial<Task> & { id: string }): Task => ({
@@ -35,6 +36,12 @@ function setup(
     snapshot = { ...snapshot, selected: undefined };
   });
 
+  const select = vi.fn(async (id: string) => {
+    snapshot = { ...snapshot, selected: id };
+  });
+
+  const { recorder, entries } = undoRecorder();
+
   const actions = new ArchiveActions({
     snapshot: () => snapshot,
     closed: () => false,
@@ -43,9 +50,18 @@ function setup(
     },
     tool,
     leaveSelection,
+    select,
+    undo: recorder,
   });
 
-  return { actions, tool, archived, shown, leaveSelection };
+  return {
+    actions,
+    tool,
+    archived,
+    shown,
+    leaveSelection,
+    entries,
+  };
 }
 
 test("archiving shows at once, sends only tasks that can change and keeps what the service skipped listed", async () => {
@@ -113,4 +129,35 @@ test("archiving the open task closes it, while other changes keep it open", asyn
 
   await actions.setArchived([open, other], true);
   assert.equal(leaveSelection.mock.calls.length, 1);
+});
+
+test("undo and redo change only the tasks the service archived", async () => {
+  const done = task({ id: "done" });
+  const skipped = task({ id: "skipped" });
+
+  const { actions, tool, entries } = setup([done, skipped], () =>
+    Promise.resolve({ task_ids: ["done"], skipped: ["skipped"] }),
+  );
+
+  await actions.setArchived([done, skipped], true);
+  await entries[0]!.undo();
+  await entries[0]!.redo();
+
+  assert.deepEqual(
+    tool.mock.calls.slice(1).map(([, args]) => args),
+    [
+      { task_ids: ["done"], archived: false },
+      { task_ids: ["done"], archived: true },
+    ],
+  );
+});
+
+test("an archive the service skips entirely leaves nothing to undo", async () => {
+  const { actions, entries } = setup([task({ id: "a" })], () =>
+    Promise.resolve({ task_ids: [], skipped: ["a"] }),
+  );
+
+  await actions.setArchived([task({ id: "a" })], true);
+  await Promise.resolve();
+  assert.equal(entries.length, 0);
 });

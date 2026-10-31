@@ -152,6 +152,53 @@ them, or select none to act on all.
 
 A task also returns to the task list when Codex sends it a message.
 
+### Undo and redo
+
+Undo reverses your recent changes in the panel, up to the last 20.
+
+| Keys                                | Action |
+| ----------------------------------- | ------ |
+| Cmd+Z or Ctrl+Z                     | Undo   |
+| Shift+Cmd+Z, Shift+Ctrl+Z or Ctrl+Y | Redo   |
+
+You can undo these changes:
+
+- Archiving, unarchiving and renaming tasks.
+- Marking tasks read or unread, including **Mark unread from here** and **Mark
+  all read**. Undo puts back each task's **New** divider.
+- Removing, clearing, editing and reordering queued messages.
+- Adding, renaming and removing projects. Removing a project's tasks with it
+  and removing a parent folder grant can't be undone.
+- Changing the composer's model or reasoning, which saves the profile's
+  default.
+- Marking a file viewed in Changes.
+
+Undo and redo always show a toast that says what changed, and name the task
+when it isn't on screen. Pressing them again while the toast is open adds each
+step to its list, and the toast's **Undo** or **Redo** button reverses every
+step it lists. Quick presses all count, in order.
+
+A change itself shows a toast with **Undo** only when it takes something off
+the screen: archiving or unarchiving, removing or clearing queued messages,
+removing a project and **Mark all read**. Bulk changes list up to three of the
+tasks or messages they touched.
+
+- When an undo or redo fails, a warning toast says why, for example when a
+  queued message was already sent. It stays longer, and the panel forgets that
+  change.
+- Text fields, open dialogs and the Settings page keep their own undo. Settings
+  saves nothing until you choose **Save**.
+- A new change clears what you could redo. The history lasts while the panel is
+  open, including after you switch project or conversation.
+- Undo puts removed queued messages back in their places with their original
+  text and sender. A task that isn't running keeps them in a paused queue, so
+  undo never starts a turn.
+- Undoing an archive reopens the task that archiving closed, when the current
+  task list includes it.
+
+Sending, steering, interrupting, resuming a queue, answering requests, raising
+budgets and deleting can't be undone.
+
 ### Create and rename tasks
 
 Global launch offers **New task** and **Advanced task…** from the split button,
@@ -264,7 +311,8 @@ service rules.
 - A pending steer offers **Interrupt and send now**. An unconsumed steer stays at
   the front of the queue.
 - Queued messages offer **Edit** and **Remove**. Reorder them by dragging, or
-  with Alt+Up and Alt+Down on a focused message.
+  with Alt+Up and Alt+Down on a focused message. See
+  [Undo and redo](#undo-and-redo) to reverse these changes.
 - A paused queue offers **Resume** and **Clear**. Sending the next message also
   resumes it.
 - When a budget runs out, Chat shows the cost and runtime limits in a warning.

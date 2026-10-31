@@ -28,12 +28,12 @@ export function TaskArrivalNotification({
   }, [add, controller, taskId, title]);
 
   return (
-    <Toast.Viewport className="task-arrival-region">
+    <Toast.Viewport className="toast-viewport">
       {toasts.map((toast) => (
         <Toast.Root
           key={toast.id}
           toast={toast}
-          className="task-arrival-toast"
+          className="toast-card task-arrival-toast"
           swipeDirection={[]}
         >
           <div className="task-arrival-copy">

@@ -55,6 +55,10 @@ test("filter, search and rename tasks, keeping the choices across reload", async
   await title.fill("Audit login flow");
   await title.press("Enter");
   await expect(row(/Audit login flow/)).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(row(/Review login flow/)).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(row(/Audit login flow/)).toBeVisible();
   await page.reload();
 
   await expect(

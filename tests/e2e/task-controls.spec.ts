@@ -62,24 +62,52 @@ test("edit, reorder and remove queued messages, then stop and resume after reloa
     queue.getByText("Edited first turn", { exact: true }),
   ).toBeVisible();
 
+  // Edits and moves show in place. The shortcuts undo and redo them, and the
+  // composer keeps its own undo.
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(queue.getByText("First queued turn")).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(queue.getByText("Edited first turn")).toBeVisible();
+
   const moving = row("Second queued turn").locator("[aria-keyshortcuts]");
   await expect(moving).toHaveAttribute("draggable", "true");
   await moving.press("Alt+ArrowUp");
 
-  await expect(queue.getByRole("listitem")).toHaveText([
+  const reordered = [
     "Second queued turn",
     "Edited first turn",
     "Remove this turn",
+  ];
+
+  await expect(queue.getByRole("listitem")).toHaveText(reordered);
+  await composer.press("ControlOrMeta+z");
+  await expect(queue.getByRole("listitem")).toHaveText(reordered);
+  await moving.press("ControlOrMeta+z");
+
+  await expect(queue.getByRole("listitem")).toHaveText([
+    "Edited first turn",
+    "Second queued turn",
+    "Remove this turn",
   ]);
 
+  await moving.press("ControlOrMeta+Shift+z");
+  await expect(queue.getByRole("listitem")).toHaveText(reordered);
+
+  // A removal offers Undo, which puts the message back in its place.
   await row("Remove this turn")
     .getByRole("button", { name: "Remove", exact: true })
     .click();
 
-  await expect(queue.getByRole("listitem")).toHaveText([
-    "Second queued turn",
-    "Edited first turn",
-  ]);
+  await expect(queue.getByRole("listitem")).toHaveText(reordered.slice(0, 2));
+
+  await page
+    .getByRole("dialog", { name: "Removed “Remove this turn” from the queue" })
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
+
+  await expect(queue.getByRole("listitem")).toHaveText(reordered);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(queue.getByRole("listitem")).toHaveText(reordered.slice(0, 2));
 
   await page
     .getByRole("button", { name: "Stop the turn", exact: true })

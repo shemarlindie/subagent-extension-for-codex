@@ -10,6 +10,8 @@ import { PageOutlet } from "./navigation/page-outlet";
 import { useController, useSnapshot } from "./state/controller-context";
 import type { Snapshot } from "./state/types";
 import { TaskArrivalToast } from "./task-arrival-toast";
+import { UndoToast } from "./undo-toast";
+import { useUndoShortcuts } from "./use-undo-shortcuts";
 
 /** Whether the panel shows only the inline preview of an embedded host. */
 function isCompact(state: Snapshot, embedded: boolean) {
@@ -36,6 +38,7 @@ export function AppShell() {
   const compact = isCompact(state, embedded);
   useEffect(() => trackIdleScrollbars(document), []);
   useUnreadTitle();
+  useUndoShortcuts();
 
   // Before paint, so a change never shows the previous layout.
   useLayoutEffect(() => applyBodyLayout(state, embedded), [state, embedded]);
@@ -53,7 +56,11 @@ export function AppShell() {
               </div>
             )}
           </Presence>
-          <TaskArrivalToast />
+          {/* Toasts share one stack at the top: a new task, then undo. */}
+          <div className="toast-stack">
+            <TaskArrivalToast />
+            <UndoToast />
+          </div>
           <PageOutlet />
           <LoginForm />
         </>

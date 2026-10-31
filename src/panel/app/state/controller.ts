@@ -16,6 +16,7 @@ import {
   renamedProject,
   withoutProject,
 } from "../../features/projects/project-list";
+import { projectUndoSteps } from "../../features/projects/project-undo";
 import {
   activityCursor,
   mergeActivity,
@@ -64,6 +65,7 @@ import type {
   UiStatePersistence,
   Worker,
 } from "./types";
+import { UndoHistory } from "./undo-history";
 import { UpdateFollower } from "./update-follower";
 
 /** How long a quiet panel waits before refreshing anyway, for writes the service can't announce. */
@@ -151,7 +153,10 @@ export class Controller {
     this.tool<Worker[]>("list_workers"),
   );
 
-  /** What the new-task forms share: state access and the reads they need. */
+  /**
+   * State access and the reads the new-task forms need. Undo history and
+   * project undo steps use its state access and tool calls too.
+   */
   private formContext = {
     snapshot: () => this.state,
     closed: () => this.disposed,
@@ -188,6 +193,10 @@ export class Controller {
     },
   });
 
+  /** The user's reversible changes, for undo and redo. */
+  readonly undo = new UndoHistory(this.formContext);
+  private projectUndo = projectUndoSteps(this.formContext);
+
   readonly taskActions = new TaskActions({
     snapshot: () => this.state,
     closed: () => this.disposed,
@@ -197,6 +206,8 @@ export class Controller {
     report: (error) => this.report(error),
     forgetQuestion: (requestId) => this.session.remove("question", requestId),
     leaveSelection: () => this.leaveSelection(true),
+    select: (id) => this.select(id),
+    undo: this.undo,
   });
 
   private changeLoader = new ChangeLoader({
@@ -1347,6 +1358,7 @@ export class Controller {
     ++this.projectGeneration;
     this.patch({ busy: true, formError: "" });
     let succeeded = false;
+    const before = this.state.projects.find((p) => p.repository === repository);
 
     try {
       const result = await this.tool<{ name?: string }>(
@@ -1373,6 +1385,8 @@ export class Controller {
 
       succeeded = true;
       if (removalDialog) this.closeDialog();
+      const change = this.projectUndo.change(before, name, deleteTasks);
+      if (change) this.undo.record(change);
 
       if (
         name === undefined &&
@@ -1505,6 +1519,9 @@ export class Controller {
       if (!this.disposed && scope === this.state.scopeVersion) {
         this.patch({ projects: result.projects, projectsLoaded: true });
       }
+
+      const added = result.projects.find((p) => p.repository === registered);
+      if (added) this.undo.record(this.projectUndo.addition(added));
     });
 
     if (

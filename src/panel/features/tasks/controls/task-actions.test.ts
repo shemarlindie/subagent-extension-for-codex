@@ -7,6 +7,7 @@ import {
   task,
 } from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task } from "../../../app/state/types";
+import { undoRecorder } from "../../../app/state/undo-test-harness";
 import { TaskActions } from "./task-actions";
 
 function setup(
@@ -19,6 +20,7 @@ function setup(
   const busyChanges: boolean[] = [];
 
   const toolCall = vi.fn(tool);
+  const undo = undoRecorder();
 
   const context = {
     snapshot: () => state,
@@ -35,11 +37,14 @@ function setup(
     report: vi.fn(),
     forgetQuestion: vi.fn(),
     leaveSelection: vi.fn(),
+    select: vi.fn(async () => {}),
+    undo: undo.recorder,
   };
 
   return {
     actions: new TaskActions(context),
     context: { ...context, tool: toolCall },
+    entries: undo.entries,
     busyChanges,
     setBusy: (busy: boolean) => (state = { ...state, busy }),
   };
@@ -320,4 +325,60 @@ test("an answer sent while busy does nothing", async () => {
 
   expect(await actions.answer(question, { Pick: "A" })).toBeUndefined();
   expect(context.tool).not.toHaveBeenCalled();
+});
+
+const queued = (...ids: string[]): Task => ({
+  ...task("task-1"),
+  queue: ids.map((id) => ({
+    id,
+    message: `Text ${id}`,
+    from: "user" as const,
+    delivery: "queue" as const,
+  })),
+});
+
+test("undoing a clear restores each message's place, and redo removes only those messages", async () => {
+  const { actions, context, entries } = setup();
+
+  await actions.clearQueue(queued("a", "c"));
+  await entries[0]!.undo();
+  await entries[0]!.redo();
+
+  expect(context.tool.mock.calls.slice(1)).toEqual([
+    [
+      "app_restore_queued_messages",
+      {
+        task_id: "task-1",
+        messages: [
+          { message_id: "a", index: 0 },
+          { message_id: "c", index: 1 },
+        ],
+      },
+    ],
+    // Naming the messages keeps any queued since.
+    ["app_clear_queue", { task_id: "task-1", message_ids: ["a", "c"] }],
+  ]);
+});
+
+test("a refused or failed change leaves nothing to undo, and a failed undo rejects with its message", async () => {
+  let fail = true;
+
+  const { actions, entries, setBusy } = setup(async () => {
+    if (fail) throw new Error("That message is no longer queued.");
+  });
+
+  await actions.removeQueued(queued("a"), "a");
+  await Promise.resolve();
+  expect(entries).toEqual([]);
+
+  setBusy(true);
+  await actions.removeQueued(queued("a"), "a");
+  expect(entries).toEqual([]);
+  setBusy(false);
+
+  fail = false;
+  await actions.removeQueued(queued("a"), "a");
+  fail = true;
+
+  await expect(entries[0]!.undo()).rejects.toThrow("no longer queued");
 });

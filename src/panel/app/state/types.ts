@@ -22,6 +22,7 @@ import type { HostState } from "../../transports/types.js";
 import type { PageId } from "../navigation/pages";
 import type { ConnectionLabel } from "./connection.js";
 import type { ComposerDraftPersistence } from "./session/session-state";
+import type { UndoNotice } from "./undo-history";
 
 export type PanelData = {
   // Host data arrives unchecked; applyScope validates these before use.
@@ -185,6 +186,10 @@ export type Snapshot = {
   /** Where Chat's "New" divider moved when the user marked the task unread from a message. */
   newMark?: NewMark;
   taskArrival?: Pick<Task, "id" | "title">;
+  /** The undo toast's message, until it times out or is closed. */
+  undoNotice?: UndoNotice;
+  /** Counts applied undo and redo steps, so views with their own reads reload. */
+  undoRevision: number;
   selected?: string;
   /** Set while the inspector shows the new-task composer instead of a task. */
   newTask?: NewTaskState;

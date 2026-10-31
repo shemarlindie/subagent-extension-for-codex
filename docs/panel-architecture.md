@@ -60,6 +60,7 @@ use these entry points:
 - `controller.newTasks` runs the new-task composer.
 - `controller.submit` submits dialogs.
 - `controller.session` holds session memory.
+- `controller.undo` holds the undo history and the undo toast's notice.
 
 Components subscribe to immutable snapshots and call controller actions. Pure
 rendering components can take props directly. Transport revisions and draft
@@ -223,6 +224,18 @@ To add a page:
   `DialogHost` stays a generic shell. Submit through `controller.submit` to keep
   busy and error handling and the scope captured when the dialog opened. Send
   messages or run tools only after the user submits.
+- **Undoable action:** remember each deliberate user change in
+  `controller.undo`, or the action context's `undo`. Use `track` when the
+  panel shows the change before the service confirms it, so the shortcut never
+  skips past a change still saving to an older one. Use `record` for changes
+  shown only after success. Steps call service tools or session memory with
+  the values captured before the change, never component state, and reject
+  with a message the user can read. Set `toast` only when the change takes
+  something off the screen, list a bulk change's `items`, and give a `view`
+  such as `taskView` when the label doesn't name what changed. Views with
+  their own reads, such as a project's archive, read again when
+  `undoRevision` changes. Don't record automatic changes, such as Chat marking
+  a task read, or changes that start work or reach the worker.
 - **Selector:** add one for a pure calculation shared across views. Keep
   transport calls and mutations out of selectors.
 - **Transport:** add one when the connection mechanism changes. Implement

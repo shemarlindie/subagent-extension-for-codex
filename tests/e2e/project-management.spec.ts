@@ -49,10 +49,19 @@ test("rename a project and remove its approval while retaining task history and 
     .getByRole("textbox", { name: "Project name", exact: true })
     .press("Enter");
 
+  const renamed = project.getByRole("button", {
+    name: "Edit project name: Browser project",
+  });
+
+  await expect(renamed).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+z");
+
   await expect(
-    project.getByRole("button", { name: "Edit project name: Browser project" }),
+    project.getByRole("button", { name: "Edit project name: repository" }),
   ).toBeVisible();
 
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(renamed).toBeVisible();
   await page.reload();
 
   await expect(
@@ -79,6 +88,16 @@ test("rename a project and remove its approval while retaining task history and 
     .click();
 
   await expect(confirmation).toBeHidden();
+  await expect(project).toHaveCount(0);
+
+  // Undo approves the project again with its name, after the panel left it.
+  await page
+    .getByRole("dialog", { name: "Removed project “Browser project”" })
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
+
+  await expect(renamed).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(project).toHaveCount(0);
   await page.reload();
   await expect(project).toHaveCount(0);

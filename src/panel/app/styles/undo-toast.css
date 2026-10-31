@@ -1,0 +1,69 @@
+.undo-toast {
+  max-width: 480px;
+  padding: 6px 6px 6px 12px;
+}
+/* A failure takes the warning accent that notices use. */
+.undo-toast[data-failed] {
+  border-left: 2px solid var(--warn);
+  background: var(--notice-bg);
+}
+.undo-copy {
+  flex: 1;
+  min-width: 0;
+}
+.undo-text {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* Long summaries wrap to two lines. A failure's reason shows in full. */
+.undo-toast:not([data-failed]) .undo-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.undo-items {
+  margin: 2px 0 0;
+  padding: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+/* Each item takes one line, and its tooltip holds the full text. */
+.undo-items li {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+}
+.undo-items li::before {
+  content: "•" / "";
+  flex: none;
+}
+.undo-items .undo-rest::before {
+  visibility: hidden;
+}
+.undo-item-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* With a list, the buttons stay beside the summary line, centered on it. */
+.undo-toast:has(.undo-items) {
+  align-items: flex-start;
+}
+.undo-toast:has(.undo-items) .undo-copy {
+  padding-top: 7px;
+}
+.undo-toast button {
+  flex: none;
+}
+.undo-close {
+  color: var(--muted);
+}
+.undo-close:hover,
+.undo-close:focus-visible {
+  color: var(--text);
+}

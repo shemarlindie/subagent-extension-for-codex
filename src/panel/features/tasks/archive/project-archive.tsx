@@ -57,7 +57,8 @@ export function ProjectArchive({
     );
   }, [controller, repository]);
 
-  useEffect(() => controller.run(load), [controller, load]);
+  // Undo can change the archive from outside this page, so it reads again.
+  useEffect(() => controller.run(load), [controller, load, state.undoRevision]);
 
   const listed = tasks ?? [],
     targets = checked.size

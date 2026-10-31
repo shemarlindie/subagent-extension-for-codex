@@ -34,10 +34,15 @@ test("review several changed files across scopes, viewed marks and previews", as
   await expect(first).toBeVisible();
 
   // Viewed collapses a file, and Preview all starts at the next unviewed one.
-  await changes
-    .getByRole("checkbox", { name: /^Viewed .*turn-1\.md$/ })
-    .check();
+  const viewed = changes.getByRole("checkbox", {
+    name: /^Viewed .*turn-1\.md$/,
+  });
 
+  await viewed.check();
+  await expect(changes).toContainText("1 of 2 viewed");
+  await viewed.press("ControlOrMeta+z");
+  await expect(changes).toContainText("0 of 2 viewed");
+  await viewed.press("ControlOrMeta+Shift+z");
   await expect(changes).toContainText("1 of 2 viewed");
 
   // The picker remains reachable while reading below the Changes header.
@@ -131,7 +136,11 @@ test("review several changed files across scopes, viewed marks and previews", as
     .getByRole("button", { name: "Preview all changes", exact: true })
     .click();
 
-  const preview = page.getByRole("dialog");
+  // The undo toast is a dialog too, so match the preview by its controls.
+  const preview = page.getByRole("dialog").filter({
+    has: page.getByRole("button", { name: "File preview options" }),
+  });
+
   await expect(preview).toContainText(/turn-2\.md/);
   await expect(preview).toContainText("turn 2.");
 

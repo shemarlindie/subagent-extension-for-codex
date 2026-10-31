@@ -50,6 +50,10 @@ test("unread replies persist until read, and manual read marks survive reload", 
     .click();
 
   await expect(open).toContainText("Unread");
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(open).not.toContainText("Unread");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(open).toContainText("Unread");
 
   // The service keeps the mark on the task that isn't open. The open task
   // shows its latest message after reload, which reads it.
@@ -84,6 +88,19 @@ test("unread replies persist until read, and manual read marks survive reload", 
     .getByRole("button", { name: "Mark all read", exact: true })
     .click();
 
+  await expect(page).not.toHaveTitle(/^\(\d+\)/);
+
+  // Undo marks both unread again, with the open task's divider back.
+  const marked = page.getByRole("dialog", { name: "Marked 2 tasks read" });
+  await expect(marked.getByRole("listitem")).toHaveCount(2);
+  await marked.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page).toHaveTitle(/^\(2\)/);
+
+  await expect(
+    history.getByRole("separator", { name: "New messages" }),
+  ).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(page).not.toHaveTitle(/^\(\d+\)/);
   await page.getByRole("radio", { name: /^All,/ }).click();
   await expect(background).not.toContainText("Unread");

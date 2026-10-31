@@ -147,3 +147,50 @@ test("announce new tasks without moving the reader, then open one with View", as
     )
     .toBeLessThanOrEqual(2);
 });
+
+test("a new task toast and an undo toast stack at the top without overlapping", async ({
+  consolePage: page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 640 });
+  await startTask(page, "Draft the release notes");
+
+  const other = await page.context().newPage();
+  await other.goto(page.url());
+  await startTask(other, "Arriving task");
+
+  await expect(
+    other.getByRole("region", { name: "Chat history" }),
+  ).toContainText("Fixture session turn: 1.");
+
+  await other.close();
+  await page.bringToFront();
+
+  const arrival = page.getByRole("dialog", { name: "New task", exact: true });
+  await expect(arrival).toBeVisible();
+
+  // Renaming is quiet. Undoing it shows the undo toast below the arrival.
+  await page
+    .getByRole("button", { name: "Edit task title: Draft the release notes" })
+    .click();
+
+  const title = page.getByRole("textbox", { name: "Task title", exact: true });
+  await title.fill("Write the release notes");
+  await title.press("Enter");
+  // Saving leaves the text field, so the shortcut undoes the rename.
+  await expect(title).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+z");
+
+  const undo = page.getByRole("dialog", { name: /^Undid: Renamed/ });
+  await expect(undo).toBeVisible();
+
+  for (const width of [1280, 360]) {
+    await page.setViewportSize({ width, height: 640 });
+
+    const [top, below] = await Promise.all(
+      [arrival, undo].map(async (toast) => (await toast.boundingBox())!),
+    );
+
+    expect(below!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+    await expect(undo).toBeInViewport({ ratio: 1 });
+  }
+});

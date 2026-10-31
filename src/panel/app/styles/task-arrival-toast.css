@@ -1,26 +1,8 @@
-/* Overlay arrivals so announcing a task cannot move the reader's content. */
-.task-arrival-region {
-  position: fixed;
-  z-index: 10;
-  top: 8px;
-  left: 8px;
-  right: 8px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-}
 .task-arrival-toast {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   max-width: 560px;
-  min-width: 0;
+  /* Short titles still get a toast wide enough to read as a notice. */
+  min-width: min(320px, 100%);
   padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  pointer-events: auto;
 }
 .task-arrival-copy {
   flex: 1;

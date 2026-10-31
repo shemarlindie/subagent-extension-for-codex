@@ -333,10 +333,26 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await page.getByRole("button", { name: "Task actions" }).click();
   await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
   const taskList = page.getByRole("complementary", { name: "Delegated tasks" });
+  const row = taskList.getByRole("button", { name: new RegExp(title) });
+  await expect(row).toHaveCount(0);
+
+  // Archiving offers Undo, which reopens the task it closed.
+  const toast = page.getByRole("dialog", { name: `Archived “${title}”` });
+  await toast.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(row).toBeVisible();
 
   await expect(
-    taskList.getByRole("button", { name: new RegExp(title) }),
-  ).toHaveCount(0);
+    page.getByRole("button", { name: `Edit task title: ${title}` }),
+  ).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(row).toHaveCount(0);
+
+  // Settings keeps its own undo, so the shortcut leaves the archive alone.
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  await expect(row).toHaveCount(0);
 
   await page.reload();
 
@@ -449,4 +465,22 @@ test("save task defaults and reload the settings from the service", async ({
   await expect(page.getByRole("textbox", { name: "Task message" })).toHaveValue(
     "Keep a task draft while changing settings",
   );
+
+  // A reasoning choice saves the profile's default, which undo puts back.
+  await page.getByRole("button", { name: /^Edit / }).click();
+  const reasoning = page.getByRole("combobox", { name: /^Reasoning effort/ });
+  const saved = (await reasoning.textContent())!;
+  await reasoning.click();
+  await page.getByRole("option", { name: "High", exact: true }).click();
+  await expect(reasoning).toContainText("High");
+  await page.keyboard.press("ControlOrMeta+z");
+
+  await expect(
+    page.getByRole("dialog", { name: /^Undid: Set the General profile/ }),
+  ).toBeVisible();
+
+  await expect(reasoning).toHaveText(saved);
+  await page.reload();
+  await page.getByRole("button", { name: /^Edit / }).click();
+  await expect(reasoning).toHaveText(saved);
 });

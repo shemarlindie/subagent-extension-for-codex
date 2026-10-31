@@ -24,6 +24,7 @@ export function initialState(): Snapshot {
     loginRequired: false,
     formError: "",
     scopeVersion: 0,
+    undoRevision: 0,
     host: {
       canSend: false,
       canShare: false,

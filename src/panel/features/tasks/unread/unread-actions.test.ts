@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { task as taskFixture } from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task } from "../../../app/state/types";
+import type { UndoEntry } from "../../../app/state/undo-history";
+import { undoRecorder } from "../../../app/state/undo-test-harness";
 import { UnreadActions } from "./unread-actions";
 
 const task = ({ id, ...patch }: Partial<Task> & { id: string }): Task => ({
@@ -19,6 +21,8 @@ function setup(tasks: Task[], selected?: string) {
       ({ unread: false, through: 9 }) as never,
   );
 
+  const { recorder, entries } = undoRecorder();
+
   const actions = new UnreadActions({
     snapshot: () => snapshot,
     closed: () => false,
@@ -27,12 +31,13 @@ function setup(tasks: Task[], selected?: string) {
     },
     tool,
     report: () => {},
+    undo: recorder,
   });
 
   const unread = () =>
     snapshot.tasks.filter((task) => task.unread).map((task) => task.id);
 
-  return { actions, tool, unread, snapshot: () => snapshot };
+  return { actions, tool, unread, entries, snapshot: () => snapshot };
 }
 
 test("reading sends each Chat cursor once, and only for an unread task", async () => {
@@ -223,5 +228,63 @@ test("marking unread from a message moves the divider at once, and back if the s
   assert.deepEqual(tool.mock.calls.at(-1), [
     "app_set_task_read",
     { task_id: "a", read: true, through: 6 },
+  ]);
+});
+
+test("undoing mark read puts the task back unread from its read point, with the open task's divider", async () => {
+  const open = task({
+    id: "a",
+    title: "Parser",
+    unread: true,
+    read_through: 4,
+  });
+
+  const { actions, tool, entries, snapshot } = setup([open], "a");
+
+  await actions.markRead(open);
+  const [entry] = entries;
+
+  expect(entry!.label).toBe("Marked “Parser” read");
+  tool.mockResolvedValueOnce({ unread: true, through: 4 } as never);
+  await entry!.undo();
+
+  expect(tool).toHaveBeenLastCalledWith("app_mark_task_unread_from", {
+    task_id: "a",
+    event_id: 5,
+  });
+
+  expect(snapshot().newMark).toMatchObject({ task: "a", through: 4 });
+  // Reading the open task doesn't mark it read again at once.
+  await actions.readThrough(snapshot().tasks[0]!, 9);
+  expect(tool).toHaveBeenCalledTimes(2);
+});
+
+test("undoing mark unread on a task without newer replies marks it read again, and mark all read undoes each task", async () => {
+  const quiet = task({ id: "q", title: "Quiet" });
+  const a = task({ id: "a", unread: true, read_through: 2 });
+  const b = task({ id: "b", unread: true, read_through: 7 });
+  const { actions, tool, entries } = setup([quiet, a, b]);
+
+  await actions.markUnread(quiet);
+  await actions.markAllRead([a, b]);
+
+  const [unmark, all] = entries as [UndoEntry, UndoEntry];
+
+  expect(all).toMatchObject({ label: "Marked 2 tasks read", toast: true });
+  tool.mockClear();
+  // The service reports them unread again from each read point.
+  tool.mockResolvedValue({ unread: true, through: 0 } as never);
+  await all.undo();
+
+  expect(tool.mock.calls.map(([, args]) => args.event_id)).toEqual(
+    expect.arrayContaining([3, 8]),
+  );
+
+  tool.mockClear();
+  tool.mockResolvedValue({ unread: false, through: 9 } as never);
+  await unmark.undo();
+
+  expect(tool.mock.calls).toEqual([
+    ["app_set_task_read", { task_id: "q", read: true }],
   ]);
 });
