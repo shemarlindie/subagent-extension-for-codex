@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { test, type TestContext } from "vitest";
@@ -89,8 +89,9 @@ async function run(directory: string, args: string[]): Promise<Run> {
   }
 }
 
-// The CLI smoke checks below cover process dispatch. Behavioral cases reuse the
-// generator so each assertion does not reload TypeScript and ESLint in Node.
+// The CLI smoke check below covers --check dispatch and its failure exit.
+// Behavioral cases reuse the generator and import its validators in this worker
+// so each assertion does not reload TypeScript and ESLint in Node.
 const { generateSchemas } = await import(
   new URL("../../../scripts/generate-schemas.mjs", import.meta.url).href
 );
@@ -128,23 +129,15 @@ test.concurrent(
       'import { settingRowSchema } from "./document-contract.generated.js";\n',
     );
 
-    const generated = await cli(directory);
-
-    assert.equal(generated.status, 0, generated.stderr);
+    await generate(directory);
 
     const before = snapshot(directory);
 
-    const imported = await run(directory, [
-      "--import",
-      "tsx",
-      "--input-type=module",
-      "--eval",
-      `import { settingRowSchema } from "./src/shared/settings/document-contract.generated.ts";
-settingRowSchema.safeParse({});
-`,
-    ]);
+    const { settingRowSchema } = await import(
+      pathToFileURL(join(directory, `${contracts[0]}.generated.ts`)).href
+    );
 
-    assert.equal(imported.status, 0, imported.stderr);
+    settingRowSchema.safeParse({});
 
     await generate(directory, true);
     assert.deepEqual(snapshot(directory), before);

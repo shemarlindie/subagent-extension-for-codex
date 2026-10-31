@@ -1,22 +1,34 @@
 import { execFileSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterAll } from "vitest";
 
-let seed: Promise<string> | undefined;
+const seeds = new Map<string, Promise<string>>();
 
 afterAll(async () => {
-  if (seed) await rm(await seed, { recursive: true, force: true });
+  await Promise.all(
+    [...seeds.values()].map(async (seed) =>
+      rm(await seed, { recursive: true, force: true }),
+    ),
+  );
 });
 
-async function committedRepository() {
+async function committedRepository(files: Record<string, string>) {
   const directory = await mkdtemp(join(tmpdir(), "test-repository-template-"));
 
   try {
     execFileSync("git", ["init", "-q", directory]);
-    await writeFile(join(directory, "README.md"), "hello\n");
+
+    await Promise.all(
+      Object.entries(files).map(async ([name, content]) => {
+        const path = join(directory, name);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, content);
+      }),
+    );
+
     execFileSync("git", ["-C", directory, "add", "."]);
 
     execFileSync("git", [
@@ -39,8 +51,21 @@ async function committedRepository() {
 }
 
 /** Copy a committed seed into a fresh repository with independent files and Git objects. */
-export async function copyCommittedRepository(destination: string) {
-  seed ??= committedRepository();
+export async function copyCommittedRepository(
+  destination: string,
+  files: Record<string, string> = { "README.md": "hello\n" },
+) {
+  const key = JSON.stringify(
+    Object.entries(files).sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+  let seed = seeds.get(key);
+
+  if (!seed) {
+    seed = committedRepository(files);
+    seeds.set(key, seed);
+  }
+
   const source = await seed;
   await mkdir(destination, { recursive: true });
 

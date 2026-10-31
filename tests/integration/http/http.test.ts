@@ -94,7 +94,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
   });
 
   test("MCP tools and UI resource metadata", async () => {
-    const { client, tools, opener, ui, base, post } = fixture;
+    const { client, tools, opener, readUi, base, post } = fixture;
+    const ui = await readUi();
     assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
     assert.equal(client.getInstructions(), SERVER_INSTRUCTIONS);
 
@@ -487,13 +488,15 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       base,
       tools,
       opener,
-      ui,
+      readUi,
       globalOpener,
       ambientMeta,
       checkSelectedTaskContext,
       checkGlobalCreation,
       dir,
     } = fixture;
+
+    const ui = await readUi();
 
     const stdio = new Client({ name: "stdio-test", version: "1.0.0" });
 

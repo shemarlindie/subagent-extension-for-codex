@@ -1,12 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,6 +17,7 @@ import type {
   ChangedFileContent,
   Changes,
 } from "../../../src/shared/changes/changes.js";
+import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
 async function until(done: () => boolean) {
   for (let i = 0; i < 300; i++) {
@@ -37,17 +31,11 @@ async function until(done: () => boolean) {
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "agent-changes-")));
   const repo = join(dir, "repo");
-  await mkdir(repo);
+  await copyCommittedRepository(repo, { "existing.txt": "before\n" });
 
   const git = (cwd: string, ...args: string[]) =>
     execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
 
-  git(repo, "init", "-q");
-  git(repo, "config", "user.name", "Test");
-  git(repo, "config", "user.email", "test@example.invalid");
-  await writeFile(join(repo, "existing.txt"), "before\n");
-  git(repo, "add", ".");
-  git(repo, "commit", "-qm", "initial");
   const provider = new FixtureProvider();
 
   const c = new Control(
@@ -276,7 +264,17 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
     );
 
     s.git(t.workspace!, "add", "existing.txt");
-    s.git(t.workspace!, "commit", "-qm", "task edits");
+
+    s.git(
+      t.workspace!,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-qm",
+      "task edits",
+    );
 
     expect(s.git(s.repo, "log", "-1", "--format=%s", t.branch!).trim()).toBe(
       "task edits",

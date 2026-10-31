@@ -132,9 +132,8 @@ export async function httpFixture(t: TestContext) {
     (t) => t.name === "open_codex_subagent_extension",
   )!;
 
-  const ui = await client.readResource({
-    uri: (opener._meta as any).ui.resourceUri,
-  });
+  const readUi = () =>
+    client.readResource({ uri: (opener._meta as any).ui.resourceUri });
 
   const globalOpener = tools.tools.find(
     (tool) => tool.name === "app_open_codex_subagent_extension_global",
@@ -239,7 +238,7 @@ export async function httpFixture(t: TestContext) {
     client,
     tools,
     opener,
-    ui,
+    readUi,
     globalOpener,
     ambientMeta,
     checkSelectedTaskContext,
