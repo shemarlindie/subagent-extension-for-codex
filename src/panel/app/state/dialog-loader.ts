@@ -1,5 +1,3 @@
-import { delegationDialog } from "../../features/delegation/delegation";
-import { errorMessage } from "../../shared/utils/error-message";
 import {
   applyDelegateRead,
   type DelegateReadContext,
@@ -8,7 +6,9 @@ import {
   initialDelegateStatuses,
   retryDelegateStatuses,
   startDelegateReads,
-} from "./delegate-reads";
+} from "../../features/delegation/delegate-reads";
+import { delegationDialog } from "../../features/delegation/delegation";
+import { errorMessage } from "../../shared/utils/error-message";
 import type {
   Defaults,
   DelegateDialogRead,
@@ -155,7 +155,7 @@ export class DialogLoader {
       const settings =
         await this.context.tool<SettingsDocument>("get_settings");
 
-      if (!this.isSettingsRequest(dialog.request)) return;
+      if (!this.settingsRequest(dialog.request)) return;
 
       if (!Array.isArray(settings.sections)) {
         throw new Error(
@@ -172,12 +172,12 @@ export class DialogLoader {
         formError: "",
       });
     } catch (error) {
-      const current = this.context.snapshot().dialog;
-      if (!this.isSettingsRequest(dialog.request)) return;
+      const current = this.settingsRequest(dialog.request);
+      if (!current) return;
 
       this.context.patch({
         dialog: {
-          ...(current as SettingsLoading),
+          ...current,
           scope: this.context.snapshot().scopeVersion,
           status: "error",
           error: errorMessage(error),
@@ -186,14 +186,14 @@ export class DialogLoader {
     }
   }
 
-  private isSettingsRequest(request: number) {
+  private settingsRequest(request: number) {
     const dialog = this.context.snapshot().dialog;
 
-    return (
-      !this.context.closed() &&
+    return !this.context.closed() &&
       dialog?.kind === "settings-loading" &&
       dialog.request === request
-    );
+      ? dialog
+      : undefined;
   }
 
   /** Starts the New Task dialog's reads that are still loading. */

@@ -159,3 +159,79 @@ test("malformed handoff targets are rejected instead of becoming whole-task hand
     );
   }
 });
+
+test("malformed worktree actions or file lists invalidate the confirmation", () => {
+  const saved = { kind: "worktree", taskId: "task-1", action: "remove" };
+
+  for (const invalid of [
+    { action: undefined },
+    { action: "delete" },
+    { files: null },
+    { files: "src/auth.ts" },
+    { files: ["src/auth.ts", 42] },
+  ]) {
+    assert.equal(parsePersistedDialog({ ...saved, ...invalid }), undefined);
+  }
+
+  assert.deepEqual(parsePersistedDialog({ ...saved, files: ["src/auth.ts"] }), {
+    ...saved,
+    files: ["src/auth.ts"],
+  });
+});
+
+test("malformed optional fields are omitted while the dialog draft survives", () => {
+  const draft = { message: "Keep my unsent answer" };
+
+  assert.deepEqual(
+    parsePersistedDialog({
+      kind: "respond",
+      taskId: "task-1",
+      requestId: 42,
+      draft,
+    }),
+    { kind: "respond", taskId: "task-1", draft },
+  );
+
+  assert.deepEqual(
+    parsePersistedDialog({
+      kind: "delegate",
+      preferredWorker: ["claude"],
+      repository: null,
+      revision: 42,
+      draft: { description: "Keep my unsent task" },
+    }),
+    { kind: "delegate", draft: { description: "Keep my unsent task" } },
+  );
+});
+
+test("non-record drafts are ignored without losing the dialog reference", () => {
+  for (const draft of [null, ["Unsent message"], "Unsent message", 42]) {
+    assert.deepEqual(
+      parsePersistedDialog({ kind: "respond", taskId: "task-1", draft }),
+      { kind: "respond", taskId: "task-1" },
+    );
+  }
+});
+
+test("project removal restores only its target even when storage supplies a draft", () => {
+  assert.deepEqual(
+    parsePersistedDialog({
+      kind: "remove-project",
+      repository: "/repo/a",
+      draft: { delete_tasks: true },
+    }),
+    { kind: "remove-project", repository: "/repo/a" },
+  );
+});
+
+test("file previews require a string path while preserving an empty stored path", () => {
+  const saved = { kind: "file", taskId: "task-1" };
+
+  assert.equal(parsePersistedDialog(saved), undefined);
+  assert.equal(parsePersistedDialog({ ...saved, path: [] }), undefined);
+
+  assert.deepEqual(parsePersistedDialog({ ...saved, path: "" }), {
+    ...saved,
+    path: "",
+  });
+});

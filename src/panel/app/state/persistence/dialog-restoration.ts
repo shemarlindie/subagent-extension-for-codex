@@ -1,137 +1,65 @@
 import { pendingInputKind } from "../../../../shared/tasks/model";
-import { delegationDialog } from "../../../features/delegation/delegation";
-import type {
-  Defaults,
-  DialogState,
+import type { DialogState, PersistedDialog, Snapshot, Task } from "../types";
+
+// Settings and delegation restore through their loaders, which own async reads.
+type RestorableDialog = Exclude<
   PersistedDialog,
-  SettingsDocument,
-  Snapshot,
-  Task,
-} from "../types";
+  { kind: "settings" | "delegate" }
+>;
 
-interface RestorationContext {
-  snapshot(): Snapshot;
-  active(): boolean;
-  explicitSelection: boolean;
-  tool<T>(name: string): Promise<T>;
-}
-
-/** Reads fresh server data before recreating a persisted dialog descriptor. */
+/** Recreates a saved dialog from the panel's freshly loaded projects and tasks. */
 export function restoreDialog(
-  saved: PersistedDialog,
+  saved: RestorableDialog,
   tasks: Task[],
   scope: number,
-  context: RestorationContext,
-): DialogState | undefined | Promise<DialogState | undefined> {
-  const task =
-    "taskId" in saved
-      ? tasks.find((item) => item.id === saved.taskId)
-      : undefined;
+  state: Snapshot,
+): DialogState | undefined {
+  if (saved.kind === "remove-project") {
+    const project = state.projects.find(
+      (item) => item.repository === saved.repository,
+    );
 
-  let dialog: DialogState | undefined;
+    if (state.conversation || state.page !== "projects" || !project) return;
+
+    return { kind: saved.kind, project, scope };
+  }
+
+  if (saved.kind === "project") {
+    return {
+      kind: saved.kind,
+      repository: saved.repository,
+      ...(saved.forNewTask ? { forNewTask: true } : {}),
+      scope,
+    };
+  }
+
+  const task = tasks.find((item) => item.id === saved.taskId);
+  if (!task) return;
 
   switch (saved.kind) {
-    case "remove-project": {
-      const state = context.snapshot();
-
-      const project = state.projects.find(
-        (item) => item.repository === saved.repository,
-      );
-
-      if (state.conversation || state.page !== "projects" || !project) return;
-
-      return { kind: saved.kind, project, scope };
-    }
-
-    case "project":
-      dialog = {
-        kind: "project",
-        repository: saved.repository,
-        ...(saved.forNewTask ? { forNewTask: true } : {}),
-        scope,
-      };
-
-      break;
-
-    case "settings": {
-      return (async () => {
-        const settings = await context.tool<SettingsDocument>("get_settings");
-
-        if (!context.active()) return;
-
-        if (!Array.isArray(settings.sections)) {
-          return;
-        }
-
-        dialog = { kind: "settings", settings, scope };
-
-        return dialog;
-      })();
-    }
-
-    case "delegate": {
-      return (async () => {
-        const { values: defaults } = await context.tool<{ values: Defaults }>(
-          "get_settings",
-        );
-
-        if (!context.active()) return;
-
-        const base = delegationDialog(
-          { ...context.snapshot(), tasks },
-          context.snapshot().projects,
-          defaults,
-          context.explicitSelection,
-          saved.preferredWorker,
-        );
-
-        dialog = {
-          ...base,
-          repository: saved.repository ?? base.repository,
-          revision: saved.revision ?? base.revision,
-        };
-
-        return dialog;
-      })();
-    }
-
     case "respond":
       if (
-        !task!.pending_input ||
-        pendingInputKind(task!.pending_input) === "question" ||
-        (saved.requestId && task!.pending_input.id !== saved.requestId)
+        !task.pending_input ||
+        pendingInputKind(task.pending_input) === "question" ||
+        (saved.requestId && task.pending_input.id !== saved.requestId)
       ) {
         return;
       }
 
-      dialog = { kind: saved.kind, task: task!, scope };
-      break;
+      return { kind: saved.kind, task, scope };
     case "handoff":
-      dialog = { kind: saved.kind, task: task!, target: saved.target, scope };
-      break;
+      return { kind: saved.kind, task, target: saved.target, scope };
     case "delete":
-      dialog = { kind: saved.kind, task: task!, scope };
-      break;
+      return { kind: saved.kind, task, scope };
     case "file":
-      dialog = {
-        kind: saved.kind,
-        task: task!,
-        path: saved.path,
-        scope,
-      };
-
-      break;
+      return { kind: saved.kind, task, path: saved.path, scope };
     case "worktree":
-      dialog = {
+      return {
         kind: saved.kind,
         action: saved.action,
-        task: task!,
+        task,
         files: saved.files,
         scope,
       };
-
-      break;
   }
-
-  return dialog;
 }

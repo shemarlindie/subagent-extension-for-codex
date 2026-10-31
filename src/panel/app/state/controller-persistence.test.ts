@@ -4,7 +4,10 @@ import { test } from "vitest";
 
 import { Controller } from "./controller";
 import {
+  defaults,
+  deferred,
   FakeTransport,
+  flush,
   setupWithViewState,
   task,
 } from "./controller-test-harness";
@@ -146,6 +149,119 @@ test("restores saved dialogs in order and removes each deliberate close", async 
   assert.equal(controller.getSnapshot().dialog, undefined);
   assert.equal(saved.at(-1)?.dialogs, undefined);
 });
+
+test("closing a restored preview immediately skips unavailable and stale dialogs beneath it", async (t) => {
+  const transport = new FakeTransport();
+  const current = task("task-1");
+
+  current.pending_input = {
+    id: "current-request",
+    tool: "Bash",
+    kind: "permission",
+    input: {},
+  };
+
+  transport.tasks = [current];
+
+  const project = {
+    kind: "project" as const,
+    repository: "/repo/draft",
+    draft: { repository: "/repo/draft" },
+  };
+
+  const { controller, saved } = setupWithViewState(
+    {
+      view: { selected: current.id, page: "projects" },
+      dialogs: [
+        project,
+        { kind: "respond", taskId: current.id, requestId: "old-request" },
+        { kind: "remove-project", repository: "/repo/missing" },
+        { kind: "handoff", taskId: "missing-task" },
+        { kind: "file", taskId: current.id, path: "src/auth.ts" },
+      ],
+    },
+    transport,
+  );
+
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+  assert.equal(controller.getSnapshot().dialog?.kind, "file");
+
+  controller.dismiss();
+
+  assert.equal(controller.getSnapshot().dialog?.kind, "project");
+  assert.deepEqual(controller.getDialogDraft("project"), project.draft);
+  assert.deepEqual(saved.at(-1)?.dialogs, [project]);
+});
+
+for (const kind of ["settings", "delegate"] as const) {
+  test(`restored ${kind} drafts survive a failed read, editing and retry`, async (t) => {
+    const transport = new FakeTransport();
+    const firstRead = deferred<unknown>();
+    const retryRead = deferred<unknown>();
+    let reads = 0;
+
+    transport.handler = (name) => {
+      if (name === "get_settings") {
+        return reads++ === 0 ? firstRead.promise : retryRead.promise;
+      }
+
+      return undefined;
+    };
+
+    const field =
+      kind === "settings" ? "task-worktree_branch_prefix" : "description";
+
+    const draft = {
+      [field]: "Saved unsent draft",
+      ...(kind === "settings"
+        ? { "task-workspace_strategy": "worktree" }
+        : { revision: "feature/draft" }),
+    };
+
+    const { controller, saved } = setupWithViewState(
+      { view: {}, dialogs: [{ kind, draft }] },
+      transport,
+    );
+
+    t.onTestFinished(() => controller.dispose());
+    const starting = controller.start();
+    await flush();
+
+    assert.equal(controller.getSnapshot().dialog?.kind, `${kind}-loading`);
+    assert.deepEqual(controller.getDialogDraft(kind), draft);
+    firstRead.reject(new Error("Settings unavailable"));
+    await starting;
+    await flush();
+
+    const failed = controller.getSnapshot().dialog;
+
+    if (failed?.kind === "settings-loading") {
+      assert.equal(failed.status, "error");
+    } else {
+      assert.ok(failed?.kind === "delegate-loading");
+      assert.equal(failed.statuses.settings, "error");
+    }
+
+    controller.saveDialogField(kind, field, "Edited while unavailable");
+    controller.retryDialogLoad();
+    assert.equal(controller.getSnapshot().dialog?.kind, `${kind}-loading`);
+    retryRead.resolve({ sections: [], values: defaults });
+    await flush();
+
+    assert.equal(controller.getSnapshot().dialog?.kind, kind);
+
+    assert.deepEqual(controller.getDialogDraft(kind), {
+      ...draft,
+      [field]: "Edited while unavailable",
+    });
+
+    assert.deepEqual(saved.at(-1)?.dialogs?.at(-1)?.draft, {
+      ...draft,
+      [field]: "Edited while unavailable",
+    });
+  });
+}
 
 test("a restored filter with no matches falls back to precedence and is removed from the URL", async (t) => {
   const transport = new FakeTransport();

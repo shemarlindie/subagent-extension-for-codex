@@ -53,7 +53,10 @@ Some features have boundaries worth knowing:
 ## State ownership and component patterns
 
 `Controller` (`app/state/controller.ts`) owns scope, selection and async
-coordination, and delegates feature work to loaders and actions. Components
+coordination, and delegates feature work to loaders and actions.
+`TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) reads Chat and
+Activity, including turn history. The controller retains selection generations
+and scope invalidation, which make outdated detail reads obsolete. Components
 use these entry points:
 
 - `controller.taskActions` runs task mutations.
@@ -84,6 +87,7 @@ parent.
 
 The composer (`features/delegation/new-task/`) and the Advanced task dialog
 share settings reads, task defaults, submission policy and task-start arguments.
+Their read progress and retry logic live in `features/delegation/delegate-reads.ts`.
 Keep their intentional profile difference. The composer starts with General, and
 Advanced task starts with the default worker profile from settings.
 
@@ -272,7 +276,9 @@ installs them for the standalone console and the development host. The
 development host mirrors view choices into its outer URL. The production
 embedded panel has no adapter, so its view choices and dialog drafts last only
 while its controller stays mounted. `app/state/persistence/` validates and
-restores saved dialogs.
+restores saved dialogs from the freshly loaded projects and tasks. Settings and
+Advanced task restore through `DialogLoader`, which owns their reads, errors and
+retries.
 
 - Conversation IDs and authentication tokens are never saved as view state or
   drafts.

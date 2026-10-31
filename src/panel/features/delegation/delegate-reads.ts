@@ -1,4 +1,3 @@
-import { errorMessage } from "../../shared/utils/error-message";
 import type {
   Defaults,
   DelegateDialogRead,
@@ -6,7 +5,8 @@ import type {
   Project,
   Snapshot,
   Worker,
-} from "./types";
+} from "../../app/state/types";
+import { errorMessage } from "../../shared/utils/error-message";
 
 /** What one finished read supplies: settings defaults or snapshot fields. */
 export interface DelegateReadResult {

@@ -38,6 +38,69 @@ test("project management discards a stale registry read and reconciles selected 
   assert.equal(transport.tasks.length, 1);
 });
 
+test("a task-list read predating project removal never publishes its deleted tasks", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  transport.projects = [
+    { repository: "/repo/a", kind: "repository" },
+    { repository: "/repo/b", kind: "repository" },
+  ];
+
+  const survivor = task("survivor", "/repo/b");
+  transport.tasks = [task("existing", "/repo/a"), survivor];
+  await controller.start();
+  await controller.select(survivor.id);
+  controller.manageProjects();
+  const tasksRead = deferred<unknown>();
+  let reads = 0;
+
+  transport.handler = (name) => {
+    if (name === "list_tasks" && reads++ === 0) return tasksRead.promise;
+
+    if (name === "app_remove_project") {
+      transport.projects = [{ repository: "/repo/b", kind: "repository" }];
+      transport.tasks = [survivor];
+
+      return { repository: "/repo/a" };
+    }
+
+    return undefined;
+  };
+
+  const staleTasks: string[] = [];
+
+  const unsubscribe = controller.subscribe(() => {
+    if (controller.getSnapshot().tasks.some((item) => item.id === "deleted")) {
+      staleTasks.push("deleted");
+    }
+  });
+
+  t.onTestFinished(() => {
+    unsubscribe();
+  });
+
+  const refresh = controller.refresh();
+  await flush();
+  assert.equal(reads, 1);
+
+  assert.equal(
+    await controller.manageProject("/repo/a", undefined, true),
+    true,
+  );
+
+  tasksRead.resolve([task("deleted", "/repo/a"), survivor]);
+  await refresh;
+  await flush();
+
+  assert.deepEqual(staleTasks, []);
+
+  assert.deepEqual(
+    controller.getSnapshot().tasks.map((item) => item.id),
+    [survivor.id],
+  );
+});
+
 test("other-panel removal clears selected project while renaming preserves scope", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());

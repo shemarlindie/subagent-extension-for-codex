@@ -1,5 +1,37 @@
 import { projectApproved } from "../../features/projects/selectors";
-import type { Project, Snapshot } from "./types";
+import type { PanelData, Project, Snapshot, Task } from "./types";
+
+/** Validates host scope fields and supplies the panel's default revision. */
+export function parsePanelScope(scope: PanelData["panel_scope"]) {
+  if (
+    !scope ||
+    !(
+      typeof scope.conversation_id === "string" ||
+      scope.conversation_id === null
+    ) ||
+    (scope.repository !== undefined && typeof scope.repository !== "string")
+  ) {
+    return undefined;
+  }
+
+  return {
+    conversation: scope.conversation_id ?? undefined,
+    repository: scope.repository,
+    revision: scope.revision ?? "HEAD",
+  };
+}
+
+/** Applies the same scope restriction to opening data and refreshed task lists. */
+export function tasksInScope(
+  tasks: Task[],
+  { conversation, repository }: Pick<Snapshot, "conversation" | "repository">,
+) {
+  return tasks.filter(
+    (task) =>
+      (!conversation || task.conversation_id === conversation) &&
+      (!repository || task.repository === repository),
+  );
+}
 
 /**
  * How a fresh project list invalidates the panel scope: "repository" when the

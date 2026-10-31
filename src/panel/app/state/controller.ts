@@ -1,7 +1,3 @@
-import type {
-  ActivityPage,
-  TurnActivityPage,
-} from "../../../shared/tasks/activity/activity-tail";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
   ChangeScope,
@@ -17,12 +13,6 @@ import {
   withoutProject,
 } from "../../features/projects/project-list";
 import { projectUndoSteps } from "../../features/projects/project-undo";
-import {
-  activityCursor,
-  mergeActivity,
-  turnStart,
-} from "../../features/tasks/activity/event-history";
-import { type ChatRead, mergeChat } from "../../features/tasks/chat/chat-state";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
 import {
   handoffMessage,
@@ -30,6 +20,7 @@ import {
 } from "../../features/tasks/controls/handoff-message";
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
+import { TaskDetailLoader } from "../../features/tasks/task-detail-loader";
 import { errorMessage } from "../../shared/utils/error-message";
 import { sharedRequest } from "../../shared/utils/shared-request";
 import {
@@ -45,7 +36,11 @@ import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
 import { persistView } from "./persistence/persisted-view";
 import { RevisionTrigger } from "./revision-trigger";
-import { projectRemovalReset } from "./scope-reconciliation";
+import {
+  parsePanelScope,
+  projectRemovalReset,
+  tasksInScope,
+} from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
 import { filterCounts, selectedTask } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
@@ -91,20 +86,33 @@ const WORKERS_FRESH_MS = 60 * 60_000;
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {
   private state: Snapshot;
-  private draftFollower = new DraftFollower({
+  private stateContext = {
     snapshot: () => this.state,
+    closed: () => this.disposed,
+    patch: (patch: Partial<Snapshot>) => this.patch(patch),
+    tool: <T>(name: string, args?: Record<string, unknown>) =>
+      this.tool<T>(name, args),
+  };
+
+  private draftFollower = new DraftFollower({
+    ...this.stateContext,
     hidden: () => this.environment.hidden(),
     streamsDrafts: () => this.transport.streamsDrafts,
-    patch: (patch) => this.patch(patch),
-    tool: (name, args) => this.tool(name, args),
     run: (action) => this.run(action),
     refresh: () => this.refresh(),
   });
 
   private parentRelay: ParentMessageRelay;
 
+  private detailLoader = new TaskDetailLoader({
+    ...this.stateContext,
+    generation: () => this.generation,
+    setTab: (tab) => this.setTab(tab),
+    drafts: this.draftFollower,
+  });
+
   private revisions = new RevisionTrigger({
-    closed: () => this.disposed,
+    ...this.stateContext,
     hidden: () => this.environment.hidden(),
     busy: () => this.state.busy,
     refresh: () => this.run(() => this.refresh()),
@@ -112,8 +120,7 @@ export class Controller {
   });
 
   private updates = new UpdateFollower({
-    closed: () => this.disposed,
-    tool: (name, args) => this.tool(name, args),
+    ...this.stateContext,
     status: (text) => this.showConnection(text),
     revision: (value) => this.revisions.report(value),
     draftTarget: () => this.draftFollower.target(),
@@ -153,15 +160,9 @@ export class Controller {
     this.tool<Worker[]>("list_workers"),
   );
 
-  /**
-   * State access and the reads the new-task forms need. Undo history and
-   * project undo steps use its state access and tool calls too.
-   */
+  /** Shared reads for the new-task composer and Advanced task dialog. */
   private formContext = {
-    snapshot: () => this.state,
-    closed: () => this.disposed,
-    patch: (patch: Partial<Snapshot>) => this.patch(patch),
-    tool: this.tool.bind(this),
+    ...this.stateContext,
     readProjects: () => this.readProjects(),
     readWorkers: async () => {
       const workers = await this.readWorkers();
@@ -194,14 +195,11 @@ export class Controller {
   });
 
   /** The user's reversible changes, for undo and redo. */
-  readonly undo = new UndoHistory(this.formContext);
-  private projectUndo = projectUndoSteps(this.formContext);
+  readonly undo = new UndoHistory(this.stateContext);
+  private projectUndo = projectUndoSteps(this.stateContext);
 
   readonly taskActions = new TaskActions({
-    snapshot: () => this.state,
-    closed: () => this.disposed,
-    patch: (patch) => this.patch(patch),
-    tool: (name, args) => this.tool(name, args),
+    ...this.stateContext,
     refresh: () => this.refresh(),
     report: (error) => this.report(error),
     forgetQuestion: (requestId) => this.session.remove("question", requestId),
@@ -210,12 +208,7 @@ export class Controller {
     undo: this.undo,
   });
 
-  private changeLoader = new ChangeLoader({
-    snapshot: () => this.state,
-    closed: () => this.disposed,
-    patch: (patch) => this.patch(patch),
-    tool: (name, args) => this.tool(name, args),
-  });
+  private changeLoader = new ChangeLoader(this.stateContext);
 
   constructor(
     readonly transport: Transport,
@@ -233,8 +226,7 @@ export class Controller {
 
     this.dialogs = new PersistedDialogs(
       {
-        snapshot: () => this.state,
-        closed: () => this.disposed,
+        ...this.stateContext,
         changed: () => {
           if (this.viewStateReady) this.saveViewState();
         },
@@ -242,8 +234,6 @@ export class Controller {
         show: (dialog) => this.patch({ dialog, formError: "" }),
         openSettings: () => this.dialogLoader.openSettings(),
         openDelegate: (...args) => this.dialogLoader.openDelegate(...args),
-        explicitSelection: () => this.explicitSelection,
-        tool: (name) => this.tool(name),
       },
       viewState?.initial,
     );
@@ -328,7 +318,7 @@ export class Controller {
   private closeDialog() {
     this.dialogs.pop();
     this.patch({ dialog: undefined, formError: "" });
-    void this.dialogs.restore(this.state.tasks, this.state.scopeVersion);
+    this.dialogs.restore(this.state.tasks, this.state.scopeVersion);
   }
 
   private defaultSelection = (tasks: Task[]) =>
@@ -481,10 +471,6 @@ export class Controller {
     return this.disposed;
   }
 
-  private hasDialog() {
-    return this.state.dialog !== undefined;
-  }
-
   /** Whether disposal or a scope change made an in-flight read obsolete. */
   private stale(version: number) {
     return this.disposed || version !== this.state.scopeVersion;
@@ -505,12 +491,8 @@ export class Controller {
     this.transport.watch();
   }
 
-  private assertOpen() {
-    if (this.disposed) throw new Error("The console has closed.");
-  }
-
   async tool<T>(name: string, args: Record<string, unknown> = {}) {
-    this.assertOpen();
+    if (this.disposed) throw new Error("The console has closed.");
 
     return this.transport.tool<T>(name, args);
   }
@@ -540,8 +522,7 @@ export class Controller {
     this.forwardParentMessage();
 
     this.refreshing = true;
-    const tabIntentRevisionAtReadStart = this.tabIntentRevision;
-    const selectionAtReadStart = this.generation;
+    const intent = { tab: this.tabIntentRevision, selection: this.generation };
     let version = this.state.scopeVersion;
 
     try {
@@ -561,80 +542,24 @@ export class Controller {
 
       const projectGeneration = this.projectGeneration;
       const projects = await this.readProjects();
-      if (this.stale(version)) return;
+      if (this.staleProjectRead(version, projectGeneration)) return;
 
-      if (projectGeneration !== this.projectGeneration) {
-        this.rerun = true;
+      const projectUpdate = this.reconcileProjects(projects);
+      if (projectUpdate.reset) version = this.state.scopeVersion;
 
-        return;
-      }
-
-      const removedProjects = this.state.projects.filter(
-        (old) =>
-          !projects.some((project) => project.repository === old.repository),
-      );
-
-      this.patch({ projects, projectsLoaded: true });
-
-      const reset = projectRemovalReset(
-        this.state,
-        projects,
-        removedProjects,
-        this.dialogs.draft("delegate")?.repository,
-      );
-
-      if (reset) {
-        if (reset === "repository") this.restoredView = undefined;
-
-        this.invalidateScope(
-          reset === "repository"
-            ? { repository: undefined, revision: "HEAD" }
-            : {},
-        );
-
-        version = this.state.scopeVersion;
-        this.reconcileShare = true;
-      }
-
-      if (this.state.conversation && removedProjects.length) {
+      if (this.state.conversation && projectUpdate.removed) {
         const context = await this.tool<PanelData>("get_panel_context", {
           conversation_id: this.state.conversation,
         });
 
         if (this.stale(version)) return;
 
-        this.patch({
-          projectCandidate: context.panel_project_candidate?.repository,
-          projectCandidateAuto:
-            context.panel_project_candidate?.auto_register === true,
-        });
+        this.applyProjectCandidate(context.panel_project_candidate);
       }
 
-      const preferredRepository = this.restoredView?.repository;
+      if (this.restoreProject(projects)) version = this.state.scopeVersion;
 
-      if (
-        preferredRepository &&
-        preferredRepository !== this.state.repository &&
-        projects.some((project) => project.repository === preferredRepository)
-      ) {
-        this.invalidateScope({
-          repository: preferredRepository,
-          revision: "HEAD",
-        });
-
-        version = this.state.scopeVersion;
-      }
-
-      // Workers are read again on every refresh while one can't start tasks,
-      // so its notice clears once fixed, and otherwise once an hour, so a
-      // runtime that breaks mid-session shows.
-      if (
-        !this.state.workers.length ||
-        this.state.workers.some(
-          (worker) => worker.readiness?.ready === false,
-        ) ||
-        Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
-      ) {
+      if (this.workersStale()) {
         const workers = await this.readWorkers();
         if (this.stale(version)) return;
         this.workersReadAt = Date.now();
@@ -648,75 +573,10 @@ export class Controller {
         ...(repository ? { repository } : {}),
       });
 
-      if (this.stale(version)) return;
+      if (this.staleProjectRead(version, projectGeneration)) return;
 
-      if (projectGeneration !== this.projectGeneration) {
-        this.rerun = true;
-
-        return;
-      }
-
-      const tasks = next.filter(
-        (task) =>
-          (!conversation || task.conversation_id === conversation) &&
-          (!repository || task.repository === repository),
-      );
-
-      const taskDialog = this.state.dialog;
-
-      // A busy dialog survives invalidation; only invalidate its original scope.
-      if (
-        taskDialog &&
-        taskDialog.scope === version &&
-        "task" in taskDialog &&
-        !tasks.some((task) => task.id === taskDialog.task.id)
-      ) {
-        this.invalidateScope({});
-        this.reconcileShare = true;
-
-        return;
-      }
-
-      const taskArrival = this.arrivals.update(tasks, this.state, {
-        browsing: this.browsing || Boolean(this.restoredView),
-        changedSelection: selectionAtReadStart !== this.generation,
-      });
-
-      const previousSelected = this.state.selected;
-
-      const { selected, tab, filter, search } = this.reconcileSelection(
-        tasks,
-        tabIntentRevisionAtReadStart,
-      );
-
-      // Don't replace URL choices with defaults until their project and task resolve.
-      const composing = this.restoredView?.composing;
-      this.restoredView = undefined;
-      this.viewStateReady = Boolean(this.viewState);
-
-      this.patch({
-        taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
-        tasks: this.taskActions.unread.settle(tasks),
-        draft: this.draftFollower.retainListed(
-          tasks.find((task) => task.id === selected),
-        ),
-        taskListLoading: false,
-        selected,
-        // Keep each first history read pending across polls until it succeeds.
-        chatHistoryLoading:
-          selected === previousSelected
-            ? this.state.chatHistoryLoading
-            : selected,
-        activityHistoryLoading:
-          selected === previousSelected
-            ? this.state.activityHistoryLoading
-            : selected,
-        filter,
-        search,
-        tab,
-      });
-
-      this.newTasks.restore(composing);
+      const tasks = tasksInScope(next, { conversation, repository });
+      if (!this.acceptTaskList(tasks, intent)) return;
 
       // Share after fallback selection so the host sees the same task as the panel.
       if (this.reconcileShare) {
@@ -724,15 +584,15 @@ export class Controller {
         this.reconcileShare = false;
       }
 
-      await this.dialogs.restore(tasks, version);
+      this.dialogs.restore(tasks, version);
       if (this.stale(version)) return;
 
       await this.loadDetail();
       if (this.stale(version)) return;
       // Prefetch the selected task's change totals for the tab count. Do not hold
       // up the task list while Git reads in the background.
-      this.run(() => this.loadCountsIfStale());
-      this.run(() => this.loadChangesIfStale());
+      this.run(() => this.changeLoader.loadCountsIfStale());
+      this.run(() => this.changeLoader.loadChangesIfStale());
       if (this.stale(version)) return;
 
       this.patch({
@@ -749,17 +609,147 @@ export class Controller {
 
       throw error;
     } finally {
-      this.refreshing = false;
-      if (this.started) this.schedule();
-
-      if (
-        !this.isDisposed() &&
-        (this.rerun || version !== this.state.scopeVersion)
-      ) {
-        this.rerun = false;
-        this.run(() => this.refresh());
-      }
+      this.finishRefresh(version);
     }
+  }
+
+  /** Every refresh outcome restarts the fallback wait and runs coalesced requests. */
+  private finishRefresh(scope: number) {
+    this.refreshing = false;
+    if (this.started) this.schedule();
+
+    if (
+      !this.isDisposed() &&
+      (this.rerun || scope !== this.state.scopeVersion)
+    ) {
+      this.rerun = false;
+      this.run(() => this.refresh());
+    }
+  }
+
+  /** A project write invalidates list reads even when the panel keeps its scope. */
+  private staleProjectRead(scope: number, generation: number) {
+    if (this.stale(scope)) return true;
+    if (generation === this.projectGeneration) return false;
+    this.rerun = true;
+
+    return true;
+  }
+
+  /** Reconciles removed approvals before reading tasks in the resulting scope. */
+  private reconcileProjects(projects: Project[]) {
+    const removed = this.state.projects.filter(
+      (old) =>
+        !projects.some((project) => project.repository === old.repository),
+    );
+
+    this.patch({ projects, projectsLoaded: true });
+
+    const reset = projectRemovalReset(
+      this.state,
+      projects,
+      removed,
+      this.dialogs.draft("delegate")?.repository,
+    );
+
+    if (reset === "repository") {
+      this.clearProjectScope();
+    } else if (reset === "scope") {
+      this.invalidateScope({});
+      this.reconcileShare = true;
+    }
+
+    return { removed: removed.length > 0, reset: Boolean(reset) };
+  }
+
+  /** Restores the URL's project only after confirming it is still approved. */
+  private restoreProject(projects: Project[]) {
+    const repository = this.restoredView?.repository;
+
+    if (
+      !repository ||
+      repository === this.state.repository ||
+      !projects.some((project) => project.repository === repository)
+    ) {
+      return false;
+    }
+
+    this.invalidateScope({ repository, revision: "HEAD" });
+
+    return true;
+  }
+
+  /** Retries unready workers each refresh and checks ready workers once an hour. */
+  private workersStale() {
+    return (
+      !this.state.workers.length ||
+      this.state.workers.some((worker) => worker.readiness?.ready === false) ||
+      Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
+    );
+  }
+
+  /** Publishes a task list with the user's selection intent and restored view. */
+  private acceptTaskList(
+    tasks: Task[],
+    intent: { tab: number; selection: number },
+  ) {
+    const taskDialog = this.state.dialog;
+
+    // A busy dialog survives invalidation; only invalidate its original scope.
+    if (
+      taskDialog &&
+      taskDialog.scope === this.state.scopeVersion &&
+      "task" in taskDialog &&
+      !tasks.some((task) => task.id === taskDialog.task.id)
+    ) {
+      this.invalidateScope({});
+      this.reconcileShare = true;
+
+      return false;
+    }
+
+    const taskArrival = this.arrivals.update(tasks, this.state, {
+      browsing: this.browsing || Boolean(this.restoredView),
+      changedSelection: intent.selection !== this.generation,
+    });
+
+    const previousSelected = this.state.selected;
+
+    const { selected, tab, filter, search } = this.reconcileSelection(
+      tasks,
+      intent.tab,
+    );
+
+    // Don't persist defaults until the restored project and task resolve.
+    const composing = this.restoredView?.composing;
+    this.restoredView = undefined;
+    this.viewStateReady = Boolean(this.viewState);
+
+    this.patch({
+      taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
+      tasks: this.taskActions.unread.settle(tasks),
+      draft: this.draftFollower.retainListed(
+        tasks.find((task) => task.id === selected),
+      ),
+      taskListLoading: false,
+      selected,
+      // Keep each first history read pending across polls until it succeeds.
+      chatHistoryLoading:
+        selected === previousSelected
+          ? this.state.chatHistoryLoading
+          : selected,
+      activityHistoryLoading:
+        selected === previousSelected
+          ? this.state.activityHistoryLoading
+          : selected,
+      filter,
+      search,
+      tab,
+    });
+
+    this.newTasks.restore(composing);
+
+    return true;
   }
 
   /**
@@ -833,60 +823,7 @@ export class Controller {
   }
 
   async loadDetail() {
-    const id = this.state.selected,
-      generation = this.generation;
-
-    if (!id || this.disposed) return;
-
-    const previousChat = this.state.chat;
-
-    const isCurrentRead = () =>
-      !this.disposed &&
-      id === this.state.selected &&
-      generation === this.generation;
-
-    const activityRead = this.tool<ActivityPage>("app_get_activity", {
-      task_id: id,
-      after: activityCursor(this.state.events, id),
-    }).then((activity) => {
-      if (!isCurrentRead()) return;
-
-      const view = mergeActivity(
-        { events: this.state.events, dropped: this.state.droppedEvents },
-        id,
-        activity,
-      );
-
-      this.patch({
-        events: view.events,
-        droppedEvents: view.dropped,
-        activityHistoryLoading:
-          this.state.activityHistoryLoading === id
-            ? undefined
-            : this.state.activityHistoryLoading,
-      });
-    });
-
-    const read = this.draftFollower.reading();
-
-    const chatRead = this.tool<ChatRead>("app_get_chat", {
-      task_id: id,
-      after: previousChat?.task === id ? previousChat.cursor : 0,
-    }).then((chat) => {
-      if (!isCurrentRead()) return;
-
-      this.patch({
-        chat: mergeChat(this.state.chat, id, chat),
-        chatHistoryLoading:
-          this.state.chatHistoryLoading === id
-            ? undefined
-            : this.state.chatHistoryLoading,
-      });
-
-      this.draftFollower.show(read);
-    });
-
-    await Promise.all([activityRead, chatRead]);
+    await this.detailLoader.load();
   }
 
   async select(id: string) {
@@ -895,8 +832,8 @@ export class Controller {
     this.patch(selectionPatch(id, this.tabOf(id)));
 
     await this.loadDetail();
-    this.run(() => this.loadCountsIfStale());
-    this.run(() => this.loadChangesIfStale());
+    this.run(() => this.changeLoader.loadCountsIfStale());
+    this.run(() => this.changeLoader.loadChangesIfStale());
     await this.share();
   }
 
@@ -951,7 +888,7 @@ export class Controller {
     if (tab !== this.state.tab) this.tabIntentRevision++;
     this.patch({ tab });
     this.draftFollower.show();
-    this.run(() => this.loadChangesIfStale());
+    this.run(() => this.changeLoader.loadChangesIfStale());
   }
 
   /**
@@ -960,67 +897,12 @@ export class Controller {
    * `showLatestActivity`.
    */
   async viewTurnActivity(turn: number) {
-    const task = this.state.selected;
-    if (!task) return;
-
-    const request = (this.state.activityFocus?.request ?? 0) + 1,
-      shown =
-        turnStart(
-          { events: this.state.events, dropped: this.state.droppedEvents },
-          turn,
-        ) !== undefined;
-
-    this.patch({
-      activityFocus: {
-        task,
-        turn,
-        request,
-        ...(shown ? {} : { range: "loading" as const }),
-      },
-    });
-
-    this.setTab("activity");
-    if (shown) return;
-
-    // A newer request, another task or disposal makes this read stale.
-    const current = () =>
-      !this.disposed &&
-      this.state.selected === task &&
-      this.state.activityFocus?.request === request;
-
-    try {
-      const page = await this.tool<TurnActivityPage>("app_get_turn_activity", {
-        task_id: task,
-        turn,
-      });
-
-      if (current()) {
-        this.patch({
-          activityFocus: {
-            task,
-            turn,
-            request,
-            range: { events: page.events, dropped: page.dropped },
-          },
-        });
-      }
-    } catch (error) {
-      if (current()) this.patch({ activityFocus: undefined });
-      throw error;
-    }
+    await this.detailLoader.viewTurn(turn);
   }
 
   /** Returns Activity from a turn's own events to the latest activity. */
   showLatestActivity() {
-    this.patch({ activityFocus: undefined });
-  }
-
-  private async loadCountsIfStale() {
-    await this.changeLoader.loadCountsIfStale();
-  }
-
-  private async loadChangesIfStale() {
-    await this.changeLoader.loadChangesIfStale();
+    this.detailLoader.showLatest();
   }
 
   /** Reads the selected task's change totals, for its tab count and Details. */
@@ -1122,24 +1004,20 @@ export class Controller {
     });
   }
 
+  /** Forgets a removed project in the current and reload-restored view. */
+  private clearProjectScope() {
+    this.restoredView = undefined;
+    this.invalidateScope({ repository: undefined, revision: "HEAD" });
+    this.reconcileShare = true;
+  }
+
   /** Applies host or service scope data; returns false when it carries no valid scope. */
   applyScope(data?: PanelData, refresh = true) {
-    const scope = data?.panel_scope;
+    if (!data) return false;
+    const scope = parsePanelScope(data.panel_scope);
+    if (!scope) return false;
 
-    if (
-      !scope ||
-      !(
-        typeof scope.conversation_id === "string" ||
-        scope.conversation_id === null
-      ) ||
-      (scope.repository !== undefined && typeof scope.repository !== "string")
-    ) {
-      return false;
-    }
-
-    const conversation = scope.conversation_id ?? undefined,
-      repository = scope.repository,
-      revision = scope.revision ?? "HEAD";
+    const { conversation, repository, revision } = scope;
 
     if (
       !this.state.scopeKnown ||
@@ -1158,15 +1036,32 @@ export class Controller {
       });
     }
 
+    this.applyProjectCandidate(data.panel_project_candidate);
+    this.applyOpeningTasks(data, scope);
+
+    this.contextRead("ready");
+    if (refresh) this.run(() => this.refresh());
+
+    return true;
+  }
+
+  private applyProjectCandidate(
+    candidate: PanelData["panel_project_candidate"],
+  ) {
     this.patch({
       projectCandidate:
-        typeof data.panel_project_candidate?.repository === "string"
-          ? data.panel_project_candidate.repository
+        typeof candidate?.repository === "string"
+          ? candidate.repository
           : undefined,
-      projectCandidateAuto:
-        data.panel_project_candidate?.auto_register === true,
+      projectCandidateAuto: candidate?.auto_register === true,
     });
+  }
 
+  /** Opening data can show tasks before refresh while respecting a restored view. */
+  private applyOpeningTasks(
+    data: PanelData,
+    scope: Pick<Snapshot, "conversation" | "repository">,
+  ) {
     const restoredTaskView =
       this.restoredView?.selected || this.restoredView?.browsing;
 
@@ -1176,11 +1071,7 @@ export class Controller {
         : undefined;
 
     if (Array.isArray(data.tasks)) {
-      const tasks = data.tasks.filter(
-        (task) =>
-          (!conversation || task.conversation_id === conversation) &&
-          (!repository || task.repository === repository),
-      );
+      const tasks = tasksInScope(data.tasks, scope);
 
       // Opening data carries the full list, so select now as the refresh would
       // rather than showing the empty inspector until that read returns.
@@ -1192,39 +1083,39 @@ export class Controller {
     }
 
     if (hostTaskId) {
-      const taskId = hostTaskId,
-        hostTab = data.panel_selection?.tab as Tab;
+      this.selectFromHost(hostTaskId, data.panel_selection?.tab);
+    }
+  }
 
-      const preserveCurrentTab =
-        taskId === this.state.selected &&
-        this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
+  /** Host links respect a tab the user chose after selecting this task. */
+  private selectFromHost(taskId: string, requestedTab?: string) {
+    const preserveCurrentTab =
+      taskId === this.state.selected &&
+      this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
 
-      let tab: Tab;
+    let tab: Tab;
 
-      if (preserveCurrentTab) {
-        tab = this.state.tab;
-      } else if (
-        (["chat", "changes", "activity", "details"] as const).includes(hostTab)
-      ) {
-        tab = hostTab;
-      } else {
-        tab = this.tabOf(taskId);
-      }
-
-      this.choose(!preserveCurrentTab);
-
-      this.patch({
-        ...selectionPatch(taskId),
-        tab,
-        filter: this.restoredView?.filter ?? null,
-        search: this.restoredView?.search ?? "",
-      });
+    if (preserveCurrentTab) {
+      tab = this.state.tab;
+    } else if (
+      requestedTab === "chat" ||
+      requestedTab === "changes" ||
+      requestedTab === "activity" ||
+      requestedTab === "details"
+    ) {
+      tab = requestedTab;
+    } else {
+      tab = this.tabOf(taskId);
     }
 
-    this.contextRead("ready");
-    if (refresh) this.run(() => this.refresh());
+    this.choose(!preserveCurrentTab);
 
-    return true;
+    this.patch({
+      ...selectionPatch(taskId),
+      tab,
+      filter: this.restoredView?.filter ?? null,
+      search: this.restoredView?.search ?? "",
+    });
   }
 
   /** Records the panel context read for the forms waiting on it. */
@@ -1325,6 +1216,25 @@ export class Controller {
     }
   }
 
+  /** Project writes are available globally, including their own removal dialog. */
+  private canManageProject(repository: string, name?: string) {
+    const { dialog, scopeVersion } = this.state;
+
+    const removalDialog =
+      dialog?.kind === "remove-project" &&
+      name === undefined &&
+      dialog.project.repository === repository &&
+      dialog.scope === scopeVersion;
+
+    return (
+      this.state.page === "projects" &&
+      (!dialog || removalDialog) &&
+      !this.state.conversation &&
+      !this.state.busy &&
+      !this.disposed
+    );
+  }
+
   async manageProject(
     repository: string,
     name?: string,
@@ -1333,21 +1243,7 @@ export class Controller {
     const scope = this.state.scopeVersion;
     const dialog = this.state.dialog;
 
-    const removalDialog =
-      dialog?.kind === "remove-project" &&
-      name === undefined &&
-      dialog.project.repository === repository &&
-      dialog.scope === scope;
-
-    if (
-      this.state.page !== "projects" ||
-      (dialog && !removalDialog) ||
-      this.state.conversation ||
-      this.state.busy ||
-      this.disposed
-    ) {
-      return false;
-    }
+    if (!this.canManageProject(repository, name)) return false;
 
     const active = () =>
       !this.disposed &&
@@ -1384,19 +1280,12 @@ export class Controller {
       });
 
       succeeded = true;
-      if (removalDialog) this.closeDialog();
+      if (dialog) this.closeDialog();
       const change = this.projectUndo.change(before, name, deleteTasks);
       if (change) this.undo.record(change);
 
-      if (
-        name === undefined &&
-        (this.state.repository === repository ||
-          (deleteTasks && selectedTask(this.state)?.repository === repository))
-      ) {
-        this.restoredView = undefined;
-        this.patch({ busy: false });
-        this.invalidateScope({ repository: undefined, revision: "HEAD" });
-        this.reconcileShare = true;
+      if (name === undefined) {
+        this.reconcileProjectRemoval(repository, deleteTasks);
       }
     } catch (error) {
       if (active()) {
@@ -1420,6 +1309,17 @@ export class Controller {
     await this.refresh().catch(this.report);
 
     return succeeded;
+  }
+
+  /** A removed approval or its deleted selected task returns to the global list. */
+  private reconcileProjectRemoval(repository: string, deleteTasks: boolean) {
+    if (
+      this.state.repository === repository ||
+      (deleteTasks && selectedTask(this.state)?.repository === repository)
+    ) {
+      this.patch({ busy: false });
+      this.clearProjectScope();
+    }
   }
 
   async browseProject() {

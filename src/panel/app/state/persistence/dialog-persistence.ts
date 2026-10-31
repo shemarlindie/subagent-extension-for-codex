@@ -102,14 +102,10 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
   }
 }
 
-/** Parse and narrow local-storage data so stale or edited values are harmless. */
-export function parsePersistedDialog(
-  value: unknown,
+/** Validates dialog identity separately from its editable draft. */
+function dialogReference(
+  value: Record<string, unknown>,
 ): PersistedDialog | undefined {
-  if (!isRecord(value) || !isString(value.kind)) return;
-
-  const draft = draftOf(value);
-
   switch (value.kind) {
     case "remove-project":
       if (!isString(value.repository) || !value.repository) return;
@@ -120,10 +116,9 @@ export function parsePersistedDialog(
         kind: value.kind,
         ...(isString(value.repository) ? { repository: value.repository } : {}),
         ...(value.forNewTask === true ? { forNewTask: true } : {}),
-        ...(draft ? { draft } : {}),
       };
     case "settings":
-      return { kind: value.kind, ...(draft ? { draft } : {}) };
+      return { kind: value.kind };
     case "delegate":
       return {
         kind: value.kind,
@@ -132,54 +127,53 @@ export function parsePersistedDialog(
           : {}),
         ...(isString(value.repository) ? { repository: value.repository } : {}),
         ...(isString(value.revision) ? { revision: value.revision } : {}),
-        ...(draft ? { draft } : {}),
       };
-    case "respond":
-      if (!isString(value.taskId) || !value.taskId) return;
 
+    default: {
+      const taskId = value.taskId;
+      if (!isString(taskId) || !taskId) return;
+
+      return taskDialogReference(value, taskId);
+    }
+  }
+}
+
+/** Task-backed dialogs share one required, nonempty task identity. */
+function taskDialogReference(
+  value: Record<string, unknown>,
+  taskId: string,
+): PersistedDialog | undefined {
+  switch (value.kind) {
+    case "respond":
       return {
         kind: value.kind,
-        taskId: value.taskId,
+        taskId,
         ...(isString(value.requestId) ? { requestId: value.requestId } : {}),
-        ...(draft ? { draft } : {}),
       };
 
     case "handoff": {
-      if (!isString(value.taskId) || !value.taskId) return;
       const target = handoffTargetOf(value.target);
       if (value.target !== undefined && !target) return;
 
       return {
         kind: value.kind,
-        taskId: value.taskId,
+        taskId,
         ...(target ? { target } : {}),
-        ...(draft ? { draft } : {}),
       };
     }
 
     case "delete":
-      if (!isString(value.taskId) || !value.taskId) return;
-
-      return {
-        kind: value.kind,
-        taskId: value.taskId,
-        ...(draft ? { draft } : {}),
-      };
+      return { kind: value.kind, taskId };
     case "file":
-      if (!isString(value.taskId) || !value.taskId || !isString(value.path)) {
-        return;
-      }
+      if (!isString(value.path)) return;
 
       return {
         kind: value.kind,
-        taskId: value.taskId,
+        taskId,
         path: value.path,
-        ...(draft ? { draft } : {}),
       };
     case "worktree":
       if (
-        !isString(value.taskId) ||
-        !value.taskId ||
         (value.action !== "remove" && value.action !== "delete-branch") ||
         (value.files !== undefined &&
           (!Array.isArray(value.files) || !value.files.every(isString)))
@@ -189,14 +183,25 @@ export function parsePersistedDialog(
 
       return {
         kind: value.kind,
-        taskId: value.taskId,
+        taskId,
         action: value.action,
         ...(Array.isArray(value.files) ? { files: value.files } : {}),
-        ...(draft ? { draft } : {}),
       };
     default:
       return;
   }
+}
+
+/** Parse and narrow local-storage data so stale or edited values are harmless. */
+export function parsePersistedDialog(
+  value: unknown,
+): PersistedDialog | undefined {
+  if (!isRecord(value)) return;
+  const dialog = dialogReference(value);
+  if (!dialog || dialog.kind === "remove-project") return dialog;
+  const draft = draftOf(value);
+
+  return draft ? { ...dialog, draft } : dialog;
 }
 
 /** Keeps the saved dialog stack oldest-to-newest and rejects malformed entries. */

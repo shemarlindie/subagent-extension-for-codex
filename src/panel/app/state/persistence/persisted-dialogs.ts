@@ -22,8 +22,6 @@ interface PersistedDialogsContext {
     repository?: string,
     revision?: string,
   ): void;
-  explicitSelection(): boolean;
-  tool<T>(name: string): Promise<T>;
 }
 
 interface SavedDialogs {
@@ -140,80 +138,51 @@ export class PersistedDialogs {
   }
 
   saveField(kind: PersistedDialog["kind"], name: string, value: unknown) {
-    this.saveDraft(kind, { ...this.draft(kind), [name]: value });
+    this.saveDraft(kind, { [name]: value });
   }
 
   /** Reopens the latest saved dialog when none is open. */
-  async restore(tasks: Task[], scope: number) {
-    const saved = this.latest();
-    if (!saved || this.context.snapshot().dialog) return;
+  restore(tasks: Task[], scope: number) {
+    let saved = this.latest();
 
-    if (saved.kind === "settings") {
-      if (this.canRestore(saved, scope)) this.context.openSettings();
+    while (
+      saved &&
+      !this.context.closed() &&
+      scope === this.context.snapshot().scopeVersion &&
+      !this.context.snapshot().dialog
+    ) {
+      if (saved.kind === "settings") {
+        this.context.openSettings();
 
-      return;
-    }
+        return;
+      }
 
-    if (saved.kind === "delegate") {
-      if (this.canRestore(saved, scope)) {
+      if (saved.kind === "delegate") {
         this.context.openDelegate(
           saved.preferredWorker,
           saved.repository,
           saved.revision,
         );
-      }
-
-      return;
-    }
-
-    if ("taskId" in saved && !tasks.some((task) => task.id === saved.taskId)) {
-      await this.discard(saved, tasks, scope);
-
-      return;
-    }
-
-    try {
-      const active = () =>
-        this.canRestore(saved, scope) && !this.context.snapshot().dialog;
-
-      const restored = restoreDialog(saved, tasks, scope, {
-        snapshot: () => this.context.snapshot(),
-        active,
-        explicitSelection: this.context.explicitSelection(),
-        tool: (name) => this.context.tool(name),
-      });
-
-      // A dialog that needs no reads is shown without waiting a tick.
-      const dialog = restored instanceof Promise ? await restored : restored;
-
-      if (!dialog) {
-        if (!this.context.snapshot().dialog) {
-          await this.discard(saved, tasks, scope);
-        }
 
         return;
       }
 
-      if (active()) this.context.show(dialog);
-    } catch {
-      // Keep the saved descriptor so a later refresh can retry transient reads.
+      const dialog = restoreDialog(
+        saved,
+        tasks,
+        scope,
+        this.context.snapshot(),
+      );
+
+      if (dialog) {
+        this.context.show(dialog);
+
+        return;
+      }
+
+      this.dialogs.pop();
+      this.context.save();
+      saved = this.latest();
     }
-  }
-
-  /** Whether `saved` is still the latest dialog in the scope it was read for. */
-  private canRestore(saved: PersistedDialog, scope: number) {
-    return (
-      !this.context.closed() &&
-      scope === this.context.snapshot().scopeVersion &&
-      sameDialogReference(this.latest(), saved)
-    );
-  }
-
-  /** Drops a dialog that can't be restored and tries the one below it. */
-  private async discard(saved: PersistedDialog, tasks: Task[], scope: number) {
-    if (!this.canRestore(saved, scope)) return;
-    this.dialogs.pop();
-    this.context.save();
-    await this.restore(tasks, scope);
   }
 }
