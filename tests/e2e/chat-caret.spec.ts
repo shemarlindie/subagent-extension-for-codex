@@ -65,15 +65,32 @@ const conversationGeometry = (history: Locator) =>
     };
   });
 
-/** Waits for a slow runner to finish laying out Chat after a reload. */
+/** Waits for Chat to finish laying out and animating after a reload. */
 async function settledGeometry(history: Locator) {
-  let previous = await conversationGeometry(history);
+  // A pending entrance, such as the narrow task slide, holds its first
+  // keyframe until the next rendered frame, which a busy runner can delay.
+  await history.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().endTime !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+
+  // The first poll runs at once, so compare only samples an interval apart.
+  let previous: Awaited<ReturnType<typeof conversationGeometry>> | undefined;
 
   await expect
     .poll(
       async () => {
         const current = await conversationGeometry(history),
-          same = JSON.stringify(current) === JSON.stringify(previous);
+          same =
+            previous !== undefined &&
+            JSON.stringify(current) === JSON.stringify(previous);
 
         previous = current;
 
@@ -83,7 +100,7 @@ async function settledGeometry(history: Locator) {
     )
     .toBe(true);
 
-  return previous;
+  return previous!;
 }
 
 test.use({ reducedMotion: "no-preference" });

@@ -25,6 +25,10 @@ covers when to add one.
 - Functional flows use reduced motion. The streaming, caret, conversation-cycle,
   arrival and Changes navigator suites explicitly enable animations to verify
   their geometry and transitions.
+- Geometry baselines wait for finite animations to finish and compare samples
+  taken an interval apart. Reduced motion shortens entrances such as the narrow
+  task slide, but each one holds its first keyframe until the browser renders a
+  frame, which a busy runner can delay.
 
 ## Performance
 
