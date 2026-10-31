@@ -43,11 +43,13 @@ import {
   editQueuedMessage,
   leaveOver,
   moveQueuedMessage,
+  type QueuePlacement,
   queueSnapshot,
   recordMessage,
   recordQueueChange,
   removeQueuedMessage,
   requeue,
+  restoreQueuedMessages,
   steerQueuedMessage,
 } from "./queue.js";
 import { type QueueCause, QueueWaits } from "./queue-wait.js";
@@ -1161,10 +1163,26 @@ export class Control {
     return t;
   }
 
-  /** Removes every queued message. */
-  clearQueue(owner: string, id: string) {
+  /** Removes the listed queued messages, or every one without a list. */
+  clearQueue(owner: string, id: string, messageIds?: readonly string[]) {
     const t = this.queueTask(owner, id);
-    clearQueuedMessages(this.store, t);
+    clearQueuedMessages(this.store, t, messageIds);
+
+    return t;
+  }
+
+  /**
+   * Puts removed queued messages back, for the user's undo. A task that isn't
+   * busy keeps them paused, and an archived task returns to the lists.
+   */
+  restoreQueued(owner: string, id: string, placements: QueuePlacement[]) {
+    const t = this.queueTask(owner, id),
+      busy = this.active.has(id) || BUSY.includes(t.status);
+
+    // A task with messages queued again is back in the user's lists.
+    restoreQueuedMessages(this.store, t, placements, busy, () =>
+      this.archive.unarchive(t),
+    );
 
     return t;
   }

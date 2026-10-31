@@ -1,3 +1,4 @@
+import { eventPayload } from "../../../../shared/events/payload.js";
 import type {
   QueuedMessage,
   Sender,
@@ -202,16 +203,126 @@ export function removeQueuedMessage(
   );
 }
 
-/** Removes every queued message. */
-export function clearQueuedMessages(store: Store, t: Task) {
+/** Removes the listed queued messages, or every one without a list. */
+export function clearQueuedMessages(
+  store: Store,
+  t: Task,
+  messageIds?: readonly string[],
+) {
   const before = queueSnapshot(t);
-  const removed = t.queue;
-  t.queue = [];
-  delete t.queue_paused;
+
+  const removed = messageIds
+    ? t.queue.filter((m) => messageIds.includes(m.id))
+    : t.queue;
+
+  t.queue = t.queue.filter((m) => !removed.includes(m));
+  if (!t.queue.length) delete t.queue_paused;
 
   commitQueue(store, t, before, () => {
     for (const m of removed) {
       store.event(t, "task.message_removed", { message_id: m.id });
     }
   });
+}
+
+/** Where a removed queued message goes back. */
+export type QueuePlacement = { message_id: string; index: number };
+
+/**
+ * The listed messages the task's queue lost to removal, as they last stood.
+ * The task's events supply each one's text and sender, and whether the worker
+ * already has it as a steer, so the caller can't change them.
+ */
+function removedMessages(store: Store, t: Task, ids: Set<string>) {
+  const found = new Map<string, QueuedMessage>(),
+    removed = new Set<string>(),
+    recorded = new Set<string>();
+
+  const events = store.eventsOfTypes(t.id, [
+    "task.queue_changed",
+    "task.message_removed",
+    "task.instruction",
+  ]);
+
+  for (const e of events) {
+    const removal = eventPayload(e, "task.message_removed"),
+      instruction = eventPayload(e, "task.instruction"),
+      queue = eventPayload(e, "task.queue_changed")?.queue ?? [];
+
+    if (removal) removed.add(removal.message_id);
+    if (instruction) recorded.add(instruction.message_id);
+
+    // A later snapshot holds the message's latest text.
+    for (const m of queue) {
+      if (!ids.has(m.message_id)) continue;
+
+      found.set(m.message_id, {
+        id: m.message_id,
+        message: m.message,
+        from: m.from,
+        delivery: "queue",
+      });
+    }
+  }
+
+  return new Map<string, QueuedMessage>(
+    [...found]
+      .filter(([id]) => removed.has(id))
+      .map(([id, m]) => [
+        id,
+        recorded.has(id)
+          ? { ...m, delivery: "steer" as const, recorded: true }
+          : m,
+      ]),
+  );
+}
+
+/**
+ * Puts removed queued messages back at their places, with their identity and
+ * sender. A message sent, queued or unknown since stays as it is. Restoring
+ * never starts a turn: a task that isn't busy keeps its queue paused. Writes
+ * `record` adds commit with the queue. Returns whether the queue changed.
+ */
+export function restoreQueuedMessages(
+  store: Store,
+  t: Task,
+  placements: readonly QueuePlacement[],
+  busy: boolean,
+  record?: () => void,
+) {
+  const present = new Set(
+    [...t.queue, ...t.pending_steers, ...t.instructions].map((m) => m.id),
+  );
+
+  const messages = removedMessages(
+    store,
+    t,
+    new Set(
+      placements.map((p) => p.message_id).filter((id) => !present.has(id)),
+    ),
+  );
+
+  const restoring = placements
+    .filter((p) => messages.has(p.message_id))
+    .toSorted((a, b) => a.index - b.index);
+
+  if (!restoring.length) return false;
+
+  const before = queueSnapshot(t);
+
+  for (const { message_id: id, index } of restoring) {
+    const m = messages.get(id)!,
+      first = t.queue.filter((q) => q.recorded).length,
+      // Steers the worker already has lead the queue.
+      at = m.recorded
+        ? Math.min(index, first)
+        : Math.min(Math.max(index, first), t.queue.length);
+
+    t.queue.splice(at, 0, m);
+  }
+
+  if (!busy) t.queue_paused = true;
+  commitQueue(store, t, before, record);
+
+  return true;
 }

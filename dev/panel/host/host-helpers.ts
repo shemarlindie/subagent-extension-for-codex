@@ -170,12 +170,15 @@ export async function fixtureServiceCall(
       content: [
         {
           type: "text",
-          text: error instanceof Error ? error.message : String(error),
+          text: errorText(error),
         },
       ],
     };
   }
 }
+
+const errorText = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 /** A fixture result shaped like the service's MCP tool result. */
 export function fixtureCall(
@@ -201,7 +204,8 @@ export function fixtureCall(
   } catch (error) {
     return {
       isError: true,
-      content: [{ type: "text", text: String(error) }],
+      // Matches the service, which reports the message alone.
+      content: [{ type: "text", text: errorText(error) }],
     } satisfies CallToolResult;
   }
 }

@@ -246,9 +246,28 @@ export function userTools(
       run: (a) => c.resumeQueue(owner, a.task_id),
     }),
     app_clear_queue: tool({
-      description: "User interface only: remove every queued message.",
-      schema: taskId,
-      run: (a) => c.clearQueue(owner, a.task_id),
+      description:
+        "User interface only: remove the listed queued messages, or every queued message without message_ids.",
+      schema: taskId.extend({
+        message_ids: z.array(z.string().max(200)).min(1).max(1000).optional(),
+      }),
+      run: (a) => c.clearQueue(owner, a.task_id, a.message_ids),
+    }),
+    app_restore_queued_messages: tool({
+      description:
+        "User interface only: undo the removal of queued messages, putting each back at a zero-based queue position with its original text, sender and identity. Messages sent or queued since are left as they are. Restoring never starts a turn: a task that isn't busy keeps its queue paused. An archived task is unarchived.",
+      schema: taskId.extend({
+        messages: z
+          .array(
+            z.strictObject({
+              message_id: z.string().max(200),
+              index: z.number().int().nonnegative(),
+            }),
+          )
+          .min(1)
+          .max(1000),
+      }),
+      run: (a) => c.restoreQueued(owner, a.task_id, a.messages),
     }),
     app_submit_input: tool({
       ...tools.submit_input,

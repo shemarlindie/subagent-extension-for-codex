@@ -397,6 +397,95 @@ test("delivery, sender and queue ownership follow the calling tool", async () =>
   }
 });
 
+test("undo restores removed queued messages with their identity, and never starts a turn", async () => {
+  const { c, store, parent, user, start } = await setup();
+
+  try {
+    const t = await start("[input]");
+    await until(() => !!store.get(t.id, "alice").pending_input);
+
+    const queue = async (send: typeof user, tool: string, message: string) =>
+      (
+        await send<{ message_id: string }>(tool, {
+          task_id: t.id,
+          message,
+          delivery: "queue",
+        })
+      ).message_id;
+
+    const first = await queue(parent, "send_message", "From parent");
+    const second = await queue(user, "app_send_message", "From user");
+    const third = await queue(user, "app_send_message", "Last");
+
+    await user("app_edit_queued_message", {
+      task_id: t.id,
+      message_id: first,
+      message: "Edited parent note",
+    });
+
+    const queued = () =>
+      store.get(t.id, "alice").queue.map((m) => [m.id, m.message, m.from]);
+
+    const before = queued();
+
+    await user("app_remove_queued_message", {
+      task_id: t.id,
+      message_id: first,
+    });
+
+    // A message the user never removed can't be made up.
+    await user("app_restore_queued_messages", {
+      task_id: t.id,
+      messages: [
+        { message_id: first, index: 0 },
+        { message_id: "msg_made_up", index: 0 },
+        { message_id: second, index: 0 },
+      ],
+    });
+
+    expect(queued()).toEqual(before);
+    expect(store.get(t.id, "alice").queue_paused).toBeUndefined();
+
+    await user("app_clear_queue", {
+      task_id: t.id,
+      message_ids: [first, third],
+    });
+
+    expect(queued()).toEqual([before[1]]);
+    await user("app_clear_queue", { task_id: t.id });
+
+    await user("app_submit_input", {
+      task_id: t.id,
+      request_id: store.get(t.id, "alice").pending_input!.id,
+      approved: true,
+      input: { answers: {} },
+    });
+
+    await until(() => store.get(t.id, "alice").status === "completed");
+    const turn = store.get(t.id, "alice").turn;
+
+    // Messages queued again bring an archived task back to the lists.
+    await user("app_set_tasks_archived", { task_ids: [t.id], archived: true });
+    const archived = () => c.archive.times("alice").has(t.id);
+    expect(archived()).toBe(true);
+
+    await user("app_restore_queued_messages", {
+      task_id: t.id,
+      messages: before.map(([id], index) => ({ message_id: id, index })),
+    });
+
+    const idle = store.get(t.id, "alice");
+
+    expect(queued()).toEqual(before);
+    expect(idle.queue_paused).toBe(true);
+    expect(idle.status).toBe("completed");
+    expect(idle.turn).toBe(turn);
+    expect(archived()).toBe(false);
+  } finally {
+    await c.close();
+  }
+});
+
 test("a reply streams as a draft the panel and parent can read, and only the finished message is stored", async () => {
   let finish!: () => void;
   const finished = new Promise<void>((resolve) => (finish = resolve));

@@ -149,6 +149,14 @@ points belong to the user and drive unread status and Chat's **New** divider.
 must have no pending input request. If the turn can no longer accept the steer,
 the message stays at the front of the queue.
 
+`app_restore_queued_messages` undoes queued message removals. The panel names
+each message and the position to restore. The service takes the text, sender
+and steer state from the task's recorded events, so it restores only messages
+that were removed and haven't been sent or queued again. A task that isn't busy
+gets a paused queue, so restoring never starts a turn, and an archived task
+returns to the task lists. `app_clear_queue` takes
+optional `message_ids` so redo removes only the restored messages.
+
 `app_wait_for_updates` returns when the owner's revision or a targeted reply
 draft changes, or after at most 25 seconds. Revision tokens are opaque and change
 after a service restart, so compare them only for equality. See
