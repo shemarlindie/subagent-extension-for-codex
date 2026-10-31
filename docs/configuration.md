@@ -276,14 +276,10 @@ requests that native checks leave unresolved. It accepts `user` or
 `parent_agent` and defaults to the `approvals.decider` setting. An agent
 can choose `parent_agent` only when that setting already allows it.
 
-- It never makes every action prompt.
 - User decisions require **Approve** or **Deny** in the panel.
 - The parent can answer through `submit_input` only when it is the approver.
 - Stale request IDs and answers from another owner are rejected.
 - `dontAsk` may deny questions without asking anyone.
-
-The extension has no auto-approval policy of its own for Claude. Repository
-approval and session restrictions stay separate from the permission mode.
 
 ## Claude session restrictions
 

@@ -141,14 +141,11 @@ the stored conversation. See [Task continuation](task-continuation.md).
 
 For both strategies, the changes feature stores provider-reported edits as task
 and latest-turn diffs. See [Recorded changes](mcp-reference.md#recorded-changes).
-Worktrees isolate files only. Execution permissions and sandbox policy apply
-separately.
 
 Approved projects are canonical roots, with explicit parent grants where
 configured. Task arguments never grant access. The server validates
 repositories, task ownership and dependencies whatever the UI shows or tool
-annotations say. Conversation IDs decide which tasks a chat displays, and the
-service checks authentication and task ownership separately.
+annotations say.
 
 The service distinguishes user actions from parent and model calls. Model calls
 can't raise approval authority or relax configured provider restrictions.
