@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -26,6 +19,7 @@ import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 import { readyClaudeCli } from "../../support/claude-cli.js";
+import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
 async function setup() {
   const dir = await realpath(
@@ -33,24 +27,10 @@ async function setup() {
   );
 
   const repo = join(dir, "repo");
-  await mkdir(repo);
+  await copyCommittedRepository(repo, { "tracked.txt": "committed content\n" });
 
   const git = (...args: string[]) =>
     execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" });
-
-  git("init", "-q");
-  await writeFile(join(repo, "tracked.txt"), "committed content\n");
-  git("add", ".");
-
-  git(
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@example.invalid",
-    "commit",
-    "-qm",
-    "initial",
-  );
 
   const workspaces = new Workspaces(join(dir, "worktrees"), [repo]);
   const provider = fixtureProvider();

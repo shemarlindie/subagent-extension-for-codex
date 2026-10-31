@@ -10,18 +10,21 @@ import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 import { expandedJsonText } from "../../../shared/components/json-tree/json-tree-test-harness";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
-import {
-  activityMessages,
-  assertAbsent,
-  event,
-  parseHtml,
-} from "./activity-ui-test-harness";
+import { assertAbsent, event, parseHtml } from "./activity-ui-test-harness";
 import { EVENT_TAIL_SIZE } from "./event-history";
 import { EventList as GroupedEventList } from "./event-list";
 
+/** Fill the event window with progress that renders as one compact row. */
+function thinkingWindow(prefix: string) {
+  return Array.from({ length: EVENT_TAIL_SIZE }, (_, index) => ({
+    ...event("thinking_tokens", { tokens: index + 1 }, `${prefix}-${index}`),
+    id: index + 1,
+  }));
+}
+
 test("the trimmed note summarizes dropped events only for the task being shown", (t) => {
   t.onTestFinished(cleanup);
-  const events = activityMessages("dropped-note", EVENT_TAIL_SIZE);
+  const events = thinkingWindow("dropped-note");
 
   const dropped = {
     task_id: "task",
@@ -234,10 +237,7 @@ test("Activity includes the task's initial request at the start, including befor
     view.container.querySelector(".activity-request .chat-bubble")?.textContent,
   ).toBe(task.description);
 
-  const events = Array.from({ length: EVENT_TAIL_SIZE }, (_, index) => ({
-    ...event("task.started", { turn: 1 }, `initial-capacity-${index}`),
-    id: index + 1,
-  }));
+  const events = thinkingWindow("initial-capacity");
 
   view.rerender(createElement(GroupedEventList, { task, events }));
   expect(view.container.querySelector(".activity-request")).not.toBeNull();

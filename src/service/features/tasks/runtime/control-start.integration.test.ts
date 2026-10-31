@@ -189,24 +189,22 @@ test("known model effort metadata rejects invalid work before queueing while unk
       assert.equal(store.all().length, 0);
     }
 
-    for (const model of ["unknown-effort", "custom-model"]) {
-      const task = await c.start("alice", {
-        ...input(repo),
-        model,
-        reasoning_effort: "high",
-      });
+    await Promise.all(
+      [
+        { model: "unknown-effort", reasoning_effort: "high" },
+        { model: "custom-model", reasoning_effort: "high" },
+        { model: "limited-effort", reasoning_effort: "low" },
+      ].map(async ({ model, reasoning_effort }) => {
+        const task = await c.start("alice", {
+          ...input(repo),
+          model,
+          reasoning_effort,
+        });
 
-      await until(() => store.get(task.id, "alice").status === "completed");
-      assert.equal(task.model, model);
-    }
-
-    const supported = await c.start("alice", {
-      ...input(repo),
-      model: "limited-effort",
-      reasoning_effort: "low",
-    });
-
-    await until(() => store.get(supported.id, "alice").status === "completed");
+        await until(() => store.get(task.id, "alice").status === "completed");
+        assert.equal(task.model, model);
+      }),
+    );
 
     provider.models = async () => {
       throw new Error("Discovery unavailable");
