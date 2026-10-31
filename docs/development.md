@@ -185,7 +185,8 @@ cannot start provider tasks, but supported Chat interactions update simulated
 state. Fixtures live in `dev/panel/scenarios/` and stay out of the production
 bundle. Most tool calls use browser fixtures. Changes and worktree calls listed
 in `FIXTURE_SERVICE_TOOLS` run real service code on Vite against disposable
-repositories, which source edits rebuild on the next call.
+repositories. The fixture service creates each task's repository and recorded
+edits on its first call for that task. Source edits reset this state.
 
 **Data: live** connects to the service's `/mcp` endpoint through the Vite proxy
 at `/service`. The proxy adds the admin token server-side and drops the browser
@@ -731,6 +732,10 @@ fixtures and assertions. Real socket and child-process tests belong in
 integration coverage even with fake services or executables. A temporary
 directory alone does not make a test an integration test.
 
+Process tests should launch built `dist/` service entrypoints unless the source
+loader is itself under test. Keep real process, socket and Git boundaries when
+optimizing these tests.
+
 Add unit tests only for parser boundaries, permission rules, async races, stale
 responses, Unicode handling, state reconciliation and similar rules. Use jsdom
 tests for deterministic failures, concurrent edits, keyboard behavior and host
@@ -752,6 +757,7 @@ past a rendering block, unless the test checks scale itself.
 Keep fixture replay and preview simulation tests when production flows cannot
 exercise their behavior.
 
+Wait for readiness signals or explicit checkpoints instead of fixed sleeps.
 Use worker checkpoints for queue and steer assertions, reserving elapsed-time
 waits for timing behavior. Held checkpoints must remain interruptible during
 cleanup. Paste incidental fixture text, and keep actual typing for keyboard
