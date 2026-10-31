@@ -187,24 +187,23 @@ export function ChatTimeline({
           streaming
         />
       )}
-      {task && (
-        <div
-          className="chat-working"
-          role={workingLabel ? "status" : undefined}
-          aria-atomic="true"
-        >
-          {workingLabel && presentation && (
-            <>
-              <TaskStatusIcon
-                kind={presentation.kind}
-                label={workingLabel}
-                decorative
-              />
-              <span title={workingLabel}>{workingLabel}</span>
-            </>
-          )}
-        </div>
-      )}
+      {/* Reserved before the task loads so the latest-edge skeleton holds still. */}
+      <div
+        className="chat-working"
+        role={workingLabel ? "status" : undefined}
+        aria-atomic="true"
+      >
+        {workingLabel && presentation && (
+          <>
+            <TaskStatusIcon
+              kind={presentation.kind}
+              label={workingLabel}
+              decorative
+            />
+            <span title={workingLabel}>{workingLabel}</span>
+          </>
+        )}
+      </div>
       {task && spent && (
         <BudgetLimitNotice
           taskId={task.id}

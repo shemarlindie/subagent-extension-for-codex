@@ -50,10 +50,12 @@ body[data-expanded-panel="true"]
   flex-shrink: 0;
   min-height: 150px;
 }
+.chat-loading-swap[data-loading="true"],
 .chat-loading-swap-has-history {
-  /* Keep a short conversation at the latest edge as the skeleton leaves. */
+  /* Hold the skeleton and a short conversation at the latest edge, where history loads. */
   margin-block-start: auto;
 }
+.chat-loading-swap > .loading-swap-skeleton,
 .chat-loading-swap-has-history > .loading-swap-content {
   display: flex;
   flex-direction: column;
