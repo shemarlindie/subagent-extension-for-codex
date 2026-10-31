@@ -357,7 +357,10 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
     .click();
 
   await expect(
-    page.getByText("No archived tasks in this project.", { exact: true }),
+    page.getByText(
+      "Tasks you archive in any chat in this project appear here.",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Projects", exact: true }).click();

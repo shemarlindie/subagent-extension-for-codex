@@ -72,14 +72,20 @@ test("bulk delete a project's archived tasks", async ({
   await confirm.getByRole("button", { name: /^Delete/ }).click();
 
   await expect(
-    page.getByText("No archived tasks in this project.", { exact: true }),
+    page.getByText(
+      "Tasks you archive in any chat in this project appear here.",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   await page.reload();
   await project.getByRole("button", { name: /View archived tasks/ }).click();
 
   await expect(
-    page.getByText("No archived tasks in this project.", { exact: true }),
+    page.getByText(
+      "Tasks you archive in any chat in this project appear here.",
+      { exact: true },
+    ),
   ).toBeVisible();
 });
 

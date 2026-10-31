@@ -143,7 +143,7 @@ Archiving hides a stopped task with nothing waiting from the task list.
   either action.
 
 **View archived tasks** beside a project on the Projects page lists that
-project's archived tasks from every chat, newest first. Select tasks to act on
+project's archived tasks from any chat, newest first. Select tasks to act on
 them, or select none to act on all.
 
 - **Unarchive** returns the tasks to the task list.

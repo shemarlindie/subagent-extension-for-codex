@@ -110,9 +110,11 @@ export function ProjectArchive({
       back={<BackButton label="Projects" disabled={pending} onClick={onBack} />}
     >
       <div className="project-archive">
-        <p className="form-note">
-          Archived tasks from every chat in this project.
-        </p>
+        {listed.length > 0 && (
+          <p className="form-note">
+            Includes tasks archived from any chat in this project.
+          </p>
+        )}
         <LoadingSwap loading={!tasks} skeleton={<LoadingSpinner />}>
           {listed.length ? (
             <>
@@ -173,7 +175,9 @@ export function ProjectArchive({
               </ul>
             </>
           ) : (
-            <p className="muted">No archived tasks in this project.</p>
+            <p className="help empty-state">
+              Tasks you archive in any chat in this project appear here.
+            </p>
           )}
         </LoadingSwap>
       </div>
