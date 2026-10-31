@@ -72,4 +72,5 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 - Prefer named prop and state types. Use existing types or `satisfies` when they simplify code or replace repeated assertions.
 - Name components for their actual scope. Use a generic name only when the component and its styling are genuinely reusable. Use a domain-specific name when behavior or styling is domain-specific.
 - Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
+- Put repository skills in `.agents/skills`, which Codex reads. Claude Code reads `.claude/skills`, so add a stub there with the same frontmatter that links to the shared skill.
 - Categorize changes into coherent, independently understandable commit groups, and make dependencies/order clear so a requested group can be applied first. Do not auto-commit unless implementing a plan already divided into commits or the user explicitly asks.
