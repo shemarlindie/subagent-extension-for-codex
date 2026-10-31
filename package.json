@@ -120,6 +120,8 @@
   "overrides": {
     "@openai/mcp-extensions": {
       "zod": "$zod"
-    }
+    },
+    "katex": "^0.19.1",
+    "minimatch": "^11.0.3"
   }
 }
