@@ -24,14 +24,3 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-.task-arrival-toast button {
-  flex: none;
-}
-
-.task-arrival-close {
-  color: var(--muted);
-}
-.task-arrival-close:hover,
-.task-arrival-close:focus-visible {
-  color: var(--text);
-}

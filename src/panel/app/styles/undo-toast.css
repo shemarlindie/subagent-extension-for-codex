@@ -57,13 +57,7 @@
 .undo-toast:has(.undo-items) .undo-copy {
   padding-top: 7px;
 }
-.undo-toast button {
-  flex: none;
-}
-.undo-close {
-  color: var(--muted);
-}
-.undo-close:hover,
-.undo-close:focus-visible {
-  color: var(--text);
+/* Centers the smaller dismiss button on the Undo or Redo button. */
+.undo-toast:has(.undo-items) .toast-close {
+  margin-top: 5px;
 }

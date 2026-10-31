@@ -78,11 +78,9 @@ export function UndoNotification({ notice, timeout }: UndoNotificationProps) {
           )}
           <Toast.Close
             aria-label="Dismiss"
-            className={buttonClass("ghost", {
-              className: "toolbar-icon-button undo-close",
-            })}
+            className={buttonClass("ghost", { className: "toast-close" })}
           >
-            <Icon name="close" size={10} />
+            <Icon name="close" size={8} />
           </Toast.Close>
         </Toast.Root>
       ))}

@@ -29,3 +29,19 @@
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
 }
+.toast-card button {
+  flex: none;
+}
+/* The compact dismiss button every toast shares. */
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--muted);
+}
+.toast-close:hover,
+.toast-close:focus-visible {
+  color: var(--text);
+}
