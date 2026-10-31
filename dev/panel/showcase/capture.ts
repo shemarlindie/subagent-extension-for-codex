@@ -1,8 +1,8 @@
-// Captures every showcase step in both themes as PNGs, or with --video, one
-// playback loop per theme as WebM:
-// npm run showcase:capture [-- --out dir --scale 2 --video --fps 60]
+// Captures every showcase step in both themes as PNGs, or one playback loop per
+// theme as WebM with --video or as lossless PNG frames with --frames:
+// npm run showcase:capture [-- --out dir --scale 2 --video --fps 60 --frames]
 // Reuses a running panel-dev server, or starts one for the capture.
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
@@ -21,6 +21,7 @@ const { values } = parseArgs({
     out: { type: "string", default: "showcase-captures" },
     scale: { type: "string", default: "2" },
     video: { type: "boolean", default: false },
+    frames: { type: "boolean", default: false },
     fps: { type: "string", default: "60" },
     zoom: { type: "string", default: "1.4" },
   },
@@ -46,7 +47,7 @@ const fps = positive("fps", true);
 const pageZoom = positive("zoom");
 
 // Chromium's screencast frames use CSS viewport pixels, whatever the device
-// scale. Both captures open a viewport at the export size and zoom the page
+// scale. Every capture opens a viewport at the export size and zooms the page
 // back to the showcase layout, so stills match video frames.
 const size = {
   width: Math.round(VIEWPORT.width * scale),
@@ -100,25 +101,40 @@ async function captureSteps(browser: Browser) {
   }
 }
 
+// Starts playback on a prepared page so neither startup nor resizing is
+// recorded.
+async function startPlayback(browser: Browser, theme: string) {
+  const page = await browser.newPage({ viewport: size });
+  await openShowcase(page, `step=0&theme=${theme}`);
+  await page.addStyleTag({ content: ".controls { display: none; }" });
+
+  const started = await page
+    .getByText("Play", { exact: true })
+    .evaluate((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error("Play button not found");
+      }
+
+      button.click();
+
+      return performance.now();
+    });
+
+  return { page, started };
+}
+
+async function remainingPlaybackMs(page: Page, started: number) {
+  const elapsed = await page.evaluate(
+    (start) => performance.now() - start,
+    started,
+  );
+
+  return Math.max(0, PLAYBACK_MS - elapsed);
+}
+
 async function captureVideo(browser: Browser) {
   for (const theme of THEMES) {
-    const page = await browser.newPage({ viewport: size });
-    await openShowcase(page, `step=0&theme=${theme}`);
-    await page.addStyleTag({ content: ".controls { display: none; }" });
-
-    // Start from the prepared page so neither startup nor resizing is recorded.
-    const started = await page
-      .getByText("Play", { exact: true })
-      .evaluate((button) => {
-        if (!(button instanceof HTMLButtonElement)) {
-          throw new Error("Play button not found");
-        }
-
-        button.click();
-
-        return performance.now();
-      });
-
+    const { page, started } = await startPlayback(browser, theme);
     const name = `showcase-${theme}.webm`;
     let frames = 0;
     const frameBuckets = new Map<number, number>();
@@ -135,12 +151,7 @@ async function captureVideo(browser: Browser) {
       },
     });
 
-    const elapsed = await page.evaluate(
-      (start) => performance.now() - start,
-      started,
-    );
-
-    await page.waitForTimeout(Math.max(0, PLAYBACK_MS - elapsed));
+    await page.waitForTimeout(await remainingPlaybackMs(page, started));
     await page.screencast.stop();
     await page.close();
 
@@ -150,11 +161,81 @@ async function captureVideo(browser: Browser) {
   }
 }
 
+// Playwright's screencast only delivers JPEG frames, so this asks Chromium for
+// PNG frames directly. Chromium sends a frame when the page changes, so the
+// ffconcat list keeps each frame on screen until the next one.
+async function captureFrames(browser: Browser) {
+  for (const theme of THEMES) {
+    const dir = join(out, `showcase-${theme}-frames`);
+    await rm(dir, { recursive: true, force: true });
+    await mkdir(dir);
+
+    const { page, started } = await startPlayback(browser, theme);
+    const cdp = await page.context().newCDPSession(page);
+    const frames: { file: string; time: number }[] = [];
+    const pending: Promise<unknown>[] = [];
+    let recording = true;
+
+    cdp.on("Page.screencastFrame", ({ data, metadata, sessionId }) => {
+      // Ignores frames that arrive while stopping, so the list stays final.
+      if (!recording) {
+        return;
+      }
+
+      const file = `${String(frames.length).padStart(5, "0")}.png`;
+      frames.push({ file, time: metadata.timestamp ?? Date.now() / 1000 });
+
+      pending.push(
+        writeFile(join(dir, file), data, "base64"),
+        cdp.send("Page.screencastFrameAck", { sessionId }),
+      );
+    });
+
+    await cdp.send("Page.startScreencast", {
+      format: "png",
+      maxWidth: size.width,
+      maxHeight: size.height,
+    });
+
+    await page.waitForTimeout(await remainingPlaybackMs(page, started));
+    recording = false;
+    const end = Date.now() / 1000;
+    await cdp.send("Page.stopScreencast");
+    await Promise.all(pending);
+    await page.close();
+
+    // Each image otherwise gets a 1/25 s time base, which rounds frame times
+    // and caps motion at 25 fps. The option gives millisecond timing.
+    const list = frames.map(
+      ({ file, time }, index) =>
+        `file ${file}\noption framerate 1000\nduration ${((frames[index + 1]?.time ?? end) - time).toFixed(4)}`,
+    );
+
+    // The concat demuxer ignores the last duration unless the file repeats.
+    list.push(`file ${frames.at(-1)?.file}\noption framerate 1000`);
+
+    await writeFile(
+      join(dir, "frames.ffconcat"),
+      `ffconcat version 1.0\n${list.join("\n")}\n`,
+    );
+
+    console.log(
+      `${join(values.out, `showcase-${theme}-frames`)} (${frames.length} frames)`,
+    );
+  }
+}
+
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch();
 
 try {
-  await (values.video ? captureVideo(browser) : captureSteps(browser));
+  if (values.frames) {
+    await captureFrames(browser);
+  } else if (values.video) {
+    await captureVideo(browser);
+  } else {
+    await captureSteps(browser);
+  }
 } finally {
   await browser.close();
   await server?.close();
