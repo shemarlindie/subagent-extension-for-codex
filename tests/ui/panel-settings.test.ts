@@ -478,7 +478,9 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
         query === "(prefers-reduced-motion: reduce)" && prefersReducedMotion,
       media: query,
       onchange: null,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still requires this legacy member.
       addListener() {},
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still requires this legacy member.
       removeListener() {},
       addEventListener() {},
       removeEventListener() {},
