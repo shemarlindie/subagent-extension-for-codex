@@ -23,6 +23,7 @@ import { ActivityTime } from "./activity-time";
 import {
   rateLimitStats,
   streamContent,
+  summaryIsParentMessage,
   summaryIsResponse,
   thinkingOnly,
   turnStats,
@@ -134,7 +135,8 @@ export function ActivityGroupCard({
 
   const markdownSummary =
     group.summary !== undefined &&
-    summaryIsResponse(group.events, group.summary);
+    (summaryIsResponse(group.events, group.summary) ||
+      summaryIsParentMessage(group.events, group.summary));
 
   const contentEvents = group.events.filter(
     (event) => event.type === "agent.message" || event.type === "agent.content",
@@ -272,7 +274,7 @@ export function ActivityGroupCard({
       {group.summary &&
         userMessages.length === 0 &&
         (markdownSummary ? (
-          // A provider result's summary is the worker's response, written in Markdown.
+          // The worker's response and the parent agent's messages are written in Markdown.
           <div className="activity-group-summary activity-markdown">
             <MarkdownView content={group.summary} />
           </div>

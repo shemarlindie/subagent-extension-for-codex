@@ -298,6 +298,8 @@ work, streamed responses and routine updates, and keeps messages, failures and
 lifecycle changes separate. Progress moves an operation to the end. Stopped or
 cancelled work never appears successful.
 
+- Worker and parent-agent text renders as Markdown, as in Chat. Your messages
+  and tool output show as written.
 - Thinking shows elapsed time.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.

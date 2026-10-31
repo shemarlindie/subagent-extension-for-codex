@@ -243,6 +243,15 @@ export function summaryIsResponse(events: Event[], summary: string) {
   );
 }
 
+/** The parent agent writes Markdown briefs, rendered as in its Chat bubble. */
+export function summaryIsParentMessage(events: Event[], summary: string) {
+  return events.some((event) => {
+    const instruction = eventPayload(event, "task.instruction");
+
+    return instruction?.from === "parent" && instruction.message === summary;
+  });
+}
+
 const RESPONSE_PREVIEW_LENGTH = 100;
 
 /** The opening characters of a reply; More expands the full text in its row. */

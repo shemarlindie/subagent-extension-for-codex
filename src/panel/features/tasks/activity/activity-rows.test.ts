@@ -263,7 +263,7 @@ test("Activity includes the task's initial request at the start, including befor
   expect(view.container.querySelector(".activity-request")).toBeNull();
 });
 
-test("Activity user messages use Chat bubbles with literal text outside Debug", (t) => {
+test("Activity user messages use literal Chat bubbles and parent messages render Markdown", (t) => {
   t.onTestFinished(cleanup);
   const text = "**Keep this literal**\n```text\nuser input\n```";
 
@@ -276,7 +276,7 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
           {
             message_id: "follow-up",
             from: "user",
-            message: "Follow up",
+            message: "Follow `up`",
             delivery: "queue",
           },
           "bubble-instruction",
@@ -286,7 +286,7 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
           {
             message_id: "parent-brief",
             from: "parent",
-            message: "Parent brief",
+            message: "Check `saveUpload` callers",
             delivery: "queue",
           },
           "bubble-parent",
@@ -301,7 +301,14 @@ test("Activity user messages use Chat bubbles with literal text outside Debug", 
         '.chat-message[data-from="user"] .chat-bubble',
       ),
     ].map((bubble) => bubble.textContent),
-  ).toEqual([text, "Follow up"]);
+  ).toEqual([text, "Follow `up`"]);
+
+  const parent = view.container.querySelector(
+    ".activity-group-summary.activity-markdown",
+  )!;
+
+  expect(parent.querySelector("code")?.textContent).toBe("saveUpload");
+  expect(parent.textContent).toBe("Check saveUpload callers");
 
   expect(view.container.querySelector(".chat-bubble strong")).toBeNull();
   expect(view.container.querySelector(".chat-bubble pre")).toBeNull();
