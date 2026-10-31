@@ -111,9 +111,7 @@
     "plugin.json",
     "mcp.json",
     "assets",
-    "skills",
-    "README.md",
-    "LICENSE"
+    "skills"
   ],
   "allowScripts": {
     "esbuild@0.28.2": true,
