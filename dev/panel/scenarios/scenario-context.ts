@@ -15,8 +15,20 @@ const demoWebsite = {
   kind: "repository",
 };
 
-/** Registered projects. Thread "dev-thread" has tasks in both. */
-export const previewProjects = [demoProject, demoWebsite];
+export const mobileApp = {
+  repository: "/demo/mobile",
+  name: "Mobile app",
+  kind: "repository",
+};
+
+export const docsSite = {
+  repository: "/demo/docs",
+  name: "Docs site",
+  kind: "repository",
+};
+
+/** Registered projects. Thread "dev-thread" has tasks in the first two. */
+export const previewProjects = [demoProject, demoWebsite, mobileApp, docsSite];
 
 /** The dev host's default Thread ID; most tasks belong to it. */
 export const PREVIEW_THREAD = "dev-thread";

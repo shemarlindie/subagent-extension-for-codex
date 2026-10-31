@@ -20,6 +20,7 @@ import {
   liveConversationTask,
 } from "./live-conversation";
 import { liveTasks, liveTimelines, statusTasks } from "./live-scenarios";
+import { projectTasks } from "./project-scenarios";
 
 export { previewLiveStatus, previewStreamingDraft } from "./live-scenarios";
 export { PREVIEW_THREAD, previewProjects } from "./scenario-context";
@@ -79,6 +80,7 @@ export const previewTasks: Task[] = [
     liveConversationTask,
     statusTasks,
     recordedFixtures.map((recorded) => recorded.task),
+    projectTasks,
   );
 
 const timelinesById = new Map(
