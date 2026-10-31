@@ -9,6 +9,7 @@ import {
   pasteText,
   screen,
   setup,
+  setupInspector,
   task,
   test,
   waitFor,
@@ -16,7 +17,7 @@ import {
 } from "./panel-test-support";
 
 test("the Changes tab reads every page and shows the worktree branch and its commands", async (t) => {
-  const { user } = await setup(t, (transport) => {
+  const { user } = await setupInspector(t, (transport) => {
     transport.tasks = [
       {
         ...task(),
@@ -57,9 +58,12 @@ test("the Changes tab reads every page and shows the worktree branch and its com
 });
 
 test("the Changes tab offers This turn after a second turn and explains empty states", async (t) => {
-  const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), turn: 2, branch: "agent/one" }];
-  });
+  const { controller, transport, user } = await setupInspector(
+    t,
+    (transport) => {
+      transport.tasks = [{ ...task(), turn: 2, branch: "agent/one" }];
+    },
+  );
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
   // Empty states say no edits were recorded for the scope.
@@ -105,7 +109,10 @@ test("the Changes tab offers This turn after a second turn and explains empty st
 });
 
 test("previews say when a file was deleted, is binary, or can't be read", async (t) => {
-  const { controller, transport } = await setup(t);
+  const { controller, transport } = await setup(t, undefined, {
+    view: "dialogs",
+  });
+
   const [task] = controller.getSnapshot().tasks;
 
   assert.ok(task);
@@ -146,9 +153,12 @@ test("previews say when a file was deleted, is binary, or can't be read", async 
 });
 
 test("worktree removal stays disabled until the task stops", async (t) => {
-  const { controller, transport, user } = await setup(t, (transport) => {
-    transport.tasks = [{ ...task(), status: "running", branch: "agent/one" }];
-  });
+  const { controller, transport, user } = await setupInspector(
+    t,
+    (transport) => {
+      transport.tasks = [{ ...task(), status: "running", branch: "agent/one" }];
+    },
+  );
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
   const remove = await screen.findByRole("button", { name: "Remove worktree" });
@@ -266,19 +276,23 @@ test("Ask Codex about a previewed file prepares its context and restores the pre
 });
 
 test("global mode hides Ask Codex about a previewed file even when the host can send", async (t) => {
-  const { controller } = await setup(t, (transport) => {
-    transport.host.canSend = true;
+  const { controller } = await setup(
+    t,
+    (transport) => {
+      transport.host.canSend = true;
 
-    transport.changedFiles = {
-      "src/a.ts": {
-        path: "src/a.ts",
-        state: "present",
-        size: 9,
-        encoding: "utf8",
-        content: "new line\n",
-      },
-    };
-  });
+      transport.changedFiles = {
+        "src/a.ts": {
+          path: "src/a.ts",
+          state: "present",
+          size: 9,
+          encoding: "utf8",
+          content: "new line\n",
+        },
+      };
+    },
+    { view: "dialogs" },
+  );
 
   const [task] = controller.getSnapshot().tasks;
 

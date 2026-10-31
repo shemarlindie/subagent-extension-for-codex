@@ -15,6 +15,7 @@ import {
   screen,
   selectOption,
   setup,
+  setupDelegate,
   task,
   test,
   waitFor,
@@ -95,12 +96,11 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
 });
 
 test("changing projects clears revision and dependencies while retaining the task draft", async (t) => {
-  const { user } = await setup(t, (transport) => {
+  const { user } = await setupDelegate(t, (transport) => {
     transport.projects.push({ repository: "/repo/b", kind: "repository" });
     transport.tasks.push(task("two", "/repo/b"));
   });
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await selectOption(user, "Project", /repo\/a$/);
   await enterTask(user, "Persistent task");
@@ -153,8 +153,7 @@ test("changing projects clears revision and dependencies while retaining the tas
 });
 
 test("delegation selects support keyboard choice and Escape preserves the draft dialog", async (t) => {
-  const { user, transport } = await setup(t);
-  await openAdvancedTask(user);
+  const { user, transport } = await setupDelegate(t);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keyboard worker selection");
   const worker = screen.getByRole("combobox", { name: "Worker" });
@@ -226,7 +225,14 @@ for (const input of ["mouse", "keyboard"] as const) {
     } else {
       await act(async () => trigger.focus());
       await user.keyboard("{Enter}");
-      await screen.findByRole("menu");
+      const menu = await screen.findByRole("menu");
+
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          within(menu).getByRole("menuitem", { name: "Refresh" }),
+        ),
+      );
+
       await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
 
       expect(document.activeElement).toBe(

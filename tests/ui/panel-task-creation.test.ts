@@ -10,6 +10,7 @@ import {
   selectedProjectPath,
   selectOption,
   setup,
+  setupDelegate,
   startedTask,
   task,
   test,
@@ -60,8 +61,7 @@ test("delegation submits the full request without a title and search matches des
 });
 
 test("task form keeps fractional runtime defaults and rejects cost budgets for unsupported workers", async (t) => {
-  const { transport, user } = await setup(t);
-  await openAdvancedTask(user);
+  const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
 
   await waitFor(() =>
@@ -106,13 +106,12 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
 });
 
 test("dependency multiselect retains multiple choices until explicit submission", async (t) => {
-  const { user, transport } = await setup(t, (transport) => {
+  const { user, transport } = await setupDelegate(t, (transport) => {
     const second = task("two");
     second.title = "Review database";
     transport.tasks.push(second);
   });
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Wait for both reviews");
 
@@ -147,8 +146,7 @@ test("dependency multiselect retains multiple choices until explicit submission"
 });
 
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
-  const { transport, user } = await setup(t);
-  await openAdvancedTask(user);
+  const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
   await enterTask(user, "Budget validation");
   const runtime = screen.getByLabelText("Runtime limit (mins)");
@@ -202,8 +200,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
 });
 
 test("current repository selection locks revision to HEAD and submits the checkout strategy", async (t) => {
-  const { transport, user } = await setup(t);
-  await openAdvancedTask(user);
+  const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
   const revision = screen.getByLabelText<HTMLInputElement>("Revision");
   assert.equal(revision.value, "HEAD");
@@ -238,8 +235,7 @@ test("current repository selection locks revision to HEAD and submits the checko
 });
 
 test("delegation starts from the saved permission setting and separately selects the approval decision maker", async (t) => {
-  const { user, transport } = await setup(t);
-  await openAdvancedTask(user);
+  const { user, transport } = await setupDelegate(t);
   await screen.findByRole("dialog");
 
   // The fake service saves Claude's initial Default permission mode.

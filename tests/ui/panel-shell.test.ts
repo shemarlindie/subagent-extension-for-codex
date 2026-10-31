@@ -12,6 +12,7 @@ import {
   pasteText,
   screen,
   setup,
+  setupInspector,
   task,
   test,
   vi,
@@ -22,18 +23,21 @@ test("the inspector omits task descriptions across refresh and task selection", 
   const literal =
     '<img src=x onerror="window.injected=true">\nFull worker instructions.';
 
-  const { controller, transport, user } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
+  const { controller, transport, user } = await setupInspector(
+    t,
+    (transport) => {
+      const [current] = transport.tasks;
 
-    assert.ok(current);
-    current.description = literal;
+      assert.ok(current);
+      current.description = literal;
 
-    transport.tasks.push({
-      ...task("two"),
-      title: "Second task",
-      description: "Second instructions",
-    });
-  });
+      transport.tasks.push({
+        ...task("two"),
+        title: "Second task",
+        description: "Second instructions",
+      });
+    },
+  );
 
   const header = () => document.querySelector(".task-header")!;
 
@@ -332,7 +336,7 @@ test("long notices clamp behind Show more and expand on demand", async (t) => {
     },
   );
 
-  const { user } = await setup(t, (transport) => {
+  const { user } = await setupInspector(t, (transport) => {
     const [current] = transport.tasks;
 
     assert.ok(current);
@@ -390,7 +394,7 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
     },
   );
 
-  await setup(t);
+  await setupInspector(t);
   const detail = screen.getByRole("region", { name: "Selected task" });
   assert.equal(detail.hasAttribute("data-stacked"), false, "300px is enough");
   height = 560;

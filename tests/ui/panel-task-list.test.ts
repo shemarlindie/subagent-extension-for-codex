@@ -8,13 +8,14 @@ import {
   openAdvancedTask,
   screen,
   setup,
+  setupInspector,
   test,
   vi,
   waitFor,
 } from "./panel-test-support";
 
 test("task filters show counts and an empty state with a way out", async (t) => {
-  const { user } = await setup(t);
+  const { user } = await setup(t, undefined, { view: "task-list" });
   assert.ok(screen.getByRole("radio", { name: "All, 1" }));
   assert.ok(screen.getByRole("radio", { name: "Active, 1" }));
   assertAbsent(screen.queryByRole("button", { name: "Clear filter" }));
@@ -51,7 +52,7 @@ test("task filters show counts and an empty state with a way out", async (t) => 
 });
 
 test("a chosen filter stays visible after it empties", async (t) => {
-  const { user } = await setup(t);
+  const { user } = await setup(t, undefined, { view: "task-list" });
   await user.click(screen.getByRole("radio", { name: /^Active/ }));
   await user.click(screen.getByRole("radio", { name: /^Active/ }));
 
@@ -90,7 +91,7 @@ test("Escape clears search before blurring it, and slashes typed elsewhere stay 
 });
 
 test("selecting a tab scrolls it into view in an overflowing tab list", async (t) => {
-  const { user } = await setup(t);
+  const { user } = await setupInspector(t);
   const list = screen.getByRole("tablist");
   const scrollTo = vi.fn();
 
@@ -139,7 +140,7 @@ test("selecting a tab scrolls it into view in an overflowing tab list", async (t
 });
 
 test("evidence tabs support keyboard arrows and keep tab focus through refresh", async (t) => {
-  const { controller, user } = await setup(t, (transport) => {
+  const { controller, user } = await setupInspector(t, (transport) => {
     transport.taskEvents = [
       {
         id: 1,

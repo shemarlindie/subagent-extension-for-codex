@@ -343,18 +343,21 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
         }),
       );
 
-    // Turn 1 is longer than the window, so only turn 2 is in the latest view.
+    // Cross the event window with grouped progress updates. This checks turn
+    // navigation without rendering hundreds of unrelated message cards.
     const turns: [turn: number, count: number][] = [
-      [1, 250],
-      [2, 5],
+      [1, 197],
+      [2, 1],
     ];
 
     for (const [turn, count] of turns) {
       add("task.started", { turn });
 
       for (let i = 0; i < count; i++) {
-        add("agent.message", { role: "assistant", text: `turn ${turn}` });
+        add("agent.thinking_tokens", { tokens: i + 1 });
       }
+
+      add("agent.message", { role: "assistant", text: `turn ${turn}` });
 
       add("task.turn_ended", {
         turn,
@@ -371,7 +374,7 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
     transport.chat = [1, 2].map((turn) => ({
       kind: "outcome",
       id: `turn-${turn}`,
-      event_id: turn === 1 ? 253 : 261,
+      event_id: turn === 1 ? 201 : 206,
       timestamp: "2026-10-08T18:30:00.000Z",
       turn,
       outcome: "completed",

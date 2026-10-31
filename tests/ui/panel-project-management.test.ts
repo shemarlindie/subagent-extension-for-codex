@@ -6,13 +6,14 @@ import {
   pasteText,
   screen,
   setup,
+  setupProjects,
   test,
   waitFor,
   within,
 } from "./panel-test-support";
 
-test("Manage renames projects, preserves failed drafts, and confirms task-data removal", async (t) => {
-  const { controller, transport, user } = await setup(t);
+test("project rename drafts survive refresh and failure until a retry succeeds", async (t) => {
+  const { controller, transport, user } = await setupProjects(t);
   const original = transport.tool.bind(transport);
   let failRename = true;
 
@@ -32,18 +33,8 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
       return { name: String(args.name).trim() } as T;
     }
 
-    if (name === "app_remove_project") {
-      transport.calls.push({ name, args });
-      transport.projects = [];
-      transport.tasks = [];
-
-      return { repository: args.repository } as T;
-    }
-
     return original<T>(name, args);
   };
-
-  await user.click(screen.getByRole("button", { name: "Manage" }));
 
   await user.click(
     screen.getByRole("button", { name: "Edit project name: a" }),
@@ -60,33 +51,6 @@ test("Manage renames projects, preserves failed drafts, and confirms task-data r
   failRename = false;
   await user.keyboard("{Enter}");
   await screen.findByRole("button", { name: "Remove New name" });
-  await user.click(screen.getByRole("button", { name: "Remove New name" }));
-
-  expect(
-    screen
-      .getByRole("switch", { name: "Also remove extension task data" })
-      .getAttribute("aria-checked"),
-  ).toBe("false");
-
-  expect(
-    transport.calls.filter((call) => call.name === "app_remove_project"),
-  ).toHaveLength(0);
-
-  await user.click(
-    screen.getByRole("switch", { name: "Also remove extension task data" }),
-  );
-
-  await user.click(
-    screen.getByRole("button", { name: "Remove project and task data" }),
-  );
-
-  await waitFor(() =>
-    expect(controller.getSnapshot().projects).toHaveLength(0),
-  );
-
-  expect(
-    transport.calls.find((call) => call.name === "app_remove_project")?.args,
-  ).toEqual({ repository: "/repo/a", delete_tasks: true });
 });
 
 test("Manage cancels edit errors and restores focus when returning from Add", async (t) => {
@@ -138,7 +102,7 @@ test("Manage cancels edit errors and restores focus when returning from Add", as
 });
 
 test("a picker finishing after leaving Add cannot replace a new draft", async (t) => {
-  const { transport, user } = await setup(t);
+  const { transport, user } = await setupProjects(t);
   let resolve!: (value: { repository: string }) => void;
 
   const picked = new Promise<{ repository: string }>((done) => {
@@ -155,7 +119,6 @@ test("a picker finishing after leaving Add cannot replace a new draft", async (t
       ? ((await picked) as T)
       : original<T>(name, args);
 
-  await user.click(screen.getByRole("button", { name: "Manage" }));
   await user.click(screen.getByRole("button", { name: "Add project" }));
   await user.click(screen.getByRole("button", { name: "Browse…" }));
   await user.click(screen.getByRole("button", { name: "Close" }));
@@ -236,14 +199,13 @@ test("removal uses a focused modal, explains folder retention, and resets the op
 });
 
 test("removal explains remaining parent registration only when it covers the project", async (t) => {
-  const { user } = await setup(t, (transport) => {
+  const { user } = await setupProjects(t, (transport) => {
     transport.projects.push(
       { repository: "/repo", kind: "parent", name: "Repositories" },
       { repository: "/repo-other", kind: "parent", name: "Other" },
     );
   });
 
-  await user.click(screen.getByRole("button", { name: "Manage" }));
   await user.click(screen.getByRole("button", { name: "Remove a" }));
 
   expect(screen.getByRole("dialog").textContent).toContain(

@@ -97,13 +97,18 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 
 import { AppShell } from "../../src/panel/app/app-shell";
 import { Controller } from "../../src/panel/app/state/controller";
 import { ControllerContext } from "../../src/panel/app/state/controller-context";
+import { ProjectsPage } from "../../src/panel/features/projects/projects-page";
 import { SettingsPage } from "../../src/panel/features/settings/settings-page";
 import { SKIPPED_ANSWER } from "../../src/panel/features/tasks/controls/question-answers";
+import { TaskInspector } from "../../src/panel/features/tasks/inspector/task-inspector";
+import { TaskFilters } from "../../src/panel/features/tasks/list/task-filters";
+import { TaskList } from "../../src/panel/features/tasks/list/task-list";
+import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.
@@ -304,7 +309,13 @@ export async function setup(
     conversation?: string;
     displayMode?: HostState["displayMode"];
     start?: boolean;
-    view?: "settings";
+    view?:
+      | "settings"
+      | "delegate"
+      | "dialogs"
+      | "projects"
+      | "inspector"
+      | "task-list";
   } = {},
 ) {
   const transport = new FakeTransport();
@@ -346,12 +357,23 @@ export async function setup(
 
   if (options.start !== false) await controller.start();
   if (options.view === "settings") await controller.settings();
+  if (options.view === "delegate") await controller.delegate();
+  if (options.view === "projects") controller.manageProjects();
+
+  const views = {
+    settings: SettingsPage,
+    delegate: DialogHost,
+    dialogs: DialogHost,
+    projects: ProjectsHarness,
+    inspector: InspectorHarness,
+    "task-list": TaskListHarness,
+  };
 
   function Harness() {
     return createElement(
       ControllerContext.Provider,
       { value: controller },
-      createElement(options.view === "settings" ? SettingsPage : AppShell),
+      createElement(options.view ? views[options.view] : AppShell),
     );
   }
 
@@ -369,6 +391,33 @@ export async function setup(
   }
 
   return { controller, transport, user };
+}
+
+function ProjectsHarness() {
+  return createElement(
+    Fragment,
+    null,
+    createElement(ProjectsPage),
+    createElement(DialogHost),
+  );
+}
+
+function InspectorHarness() {
+  return createElement(
+    Fragment,
+    null,
+    createElement(TaskInspector),
+    createElement(DialogHost),
+  );
+}
+
+function TaskListHarness() {
+  return createElement(
+    Fragment,
+    null,
+    createElement(TaskFilters),
+    createElement(TaskList),
+  );
 }
 
 function mockPanelGeometry() {
@@ -478,6 +527,30 @@ export function setupSettings(
   configure: (transport: FakeTransport) => void,
 ) {
   return setup(t, configure, { view: "settings" });
+}
+
+/** Form-local cases keep the real modal without the unrelated Tasks page. */
+export function setupDelegate(
+  t: TestContext,
+  configure?: (transport: FakeTransport) => void,
+) {
+  return setup(t, configure, { view: "delegate" });
+}
+
+/** Project-local cases keep their real dialogs without the retained Tasks page. */
+export function setupProjects(
+  t: TestContext,
+  configure?: (transport: FakeTransport) => void,
+) {
+  return setup(t, configure, { view: "projects" });
+}
+
+/** Inspector-local cases retain evidence tabs, chat controls and real dialogs. */
+export function setupInspector(
+  t: TestContext,
+  configure?: (transport: FakeTransport) => void,
+) {
+  return setup(t, configure, { view: "inspector" });
 }
 
 /** Serves saved settings with the given values, keyed by dotted path. */

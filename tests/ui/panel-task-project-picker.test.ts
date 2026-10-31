@@ -12,6 +12,7 @@ import {
   selectedProjectPath,
   selectOption,
   setup,
+  setupDelegate,
   startedTask,
   test,
   waitFor,
@@ -19,11 +20,10 @@ import {
 } from "./panel-test-support";
 
 test("approved parent project suggestions allow an unlisted nested repository path", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { transport, user } = await setupDelegate(t, (transport) => {
     transport.projects.push({ repository: "/approved", kind: "parent" });
   });
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   const project = screen.getByRole("combobox", {
@@ -47,7 +47,7 @@ test("approved parent project suggestions allow an unlisted nested repository pa
 });
 
 test("approved parent project suggestions find saved names and submit the selected repository path", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { transport, user } = await setupDelegate(t, (transport) => {
     transport.projects.push(
       { repository: "/approved", kind: "parent" },
       {
@@ -58,7 +58,6 @@ test("approved parent project suggestions find saved names and submit the select
     );
   });
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
 
   const project = screen.getByRole("combobox", { name: "Project" });
@@ -156,14 +155,13 @@ test("browsing a project inside delegation preserves the draft and starts only a
 });
 
 test("task project registration failure preserves the selected project and draft", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupDelegate(t, (transport) =>
     configureProjectRegistration(transport, {
       picked: "/repo/new/src",
       registerError: "Use repository root",
     }),
   );
 
-  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Keep this description after registration failure");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -183,11 +181,10 @@ test("task project registration failure preserves the selected project and draft
 });
 
 test("cancelling the task project picker preserves selection and task draft without registering", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupDelegate(t, (transport) =>
     configureProjectRegistration(transport),
   );
 
-  await openAdvancedTask(user);
   const dialog = await screen.findByRole("dialog");
   await enterTask(user, "Preserve task while browsing");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));

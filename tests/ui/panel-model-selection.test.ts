@@ -3,16 +3,15 @@ import {
   assert,
   configureModelDefaults,
   enterTask,
-  openAdvancedTask,
   pasteText,
   screen,
   selectOption,
-  setup,
+  setupDelegate,
   startedTask,
   test,
 } from "./panel-test-support";
 
-type Panel = Awaited<ReturnType<typeof setup>>;
+type Panel = Awaited<ReturnType<typeof setupDelegate>>;
 
 const startCalls = ({ transport }: Panel) =>
   transport.calls.filter((call) => call.name === "start_task");
@@ -36,7 +35,7 @@ async function startAfterChoosingEffort(
 }
 
 test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
-  const panel = await setup(t, (transport) =>
+  const panel = await setupDelegate(t, (transport) =>
     configureModelDefaults(
       transport,
       {
@@ -56,7 +55,6 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
 
   const { user } = panel;
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const model = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(model.placeholder, "limited-model");
@@ -81,7 +79,7 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
 });
 
 test("runtime default model metadata blocks unsupported effort and permits native default reasoning", async (t) => {
-  const panel = await setup(t, (transport) =>
+  const panel = await setupDelegate(t, (transport) =>
     configureModelDefaults(transport, {}, [
       {
         value: "default",
@@ -94,7 +92,6 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
 
   const { user } = panel;
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Check native default metadata");
   assert.equal(screen.getByLabelText<HTMLInputElement>("Model").value, "");
@@ -111,7 +108,7 @@ test("runtime default model metadata blocks unsupported effort and permits nativ
 });
 
 test("unknown model metadata keeps generic reasoning choices and accepts custom model IDs", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupDelegate(t, (transport) =>
     configureModelDefaults(transport, {}, [
       {
         value: "no-effort",
@@ -122,7 +119,6 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
     ]),
   );
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Use custom model ID");
   await pasteText(user, screen.getByLabelText("Model"), "custom-model");
@@ -137,9 +133,8 @@ test("unknown model metadata keeps generic reasoning choices and accepts custom 
 });
 
 test("model selection retains unsupported effort on Claude and blocks submission until corrected", async (t) => {
-  const panel = await setup(t);
+  const panel = await setupDelegate(t);
   const { user } = panel;
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   await enterTask(user, "Investigate effort selection");
   await selectOption(user, "Worker", "fixture · reviewer");
@@ -162,7 +157,7 @@ test("model selection retains unsupported effort on Claude and blocks submission
 });
 
 test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {
-  const { transport, user } = await setup(t, (transport) =>
+  const { transport, user } = await setupDelegate(t, (transport) =>
     configureModelDefaults(transport, {
       "models.global.model": "global-model",
       "models.global.reasoning_effort": "low",
@@ -173,7 +168,6 @@ test("model selection updates role and provider defaults while preserving explic
     }),
   );
 
-  await openAdvancedTask(user);
   await screen.findByRole("dialog");
   const field = screen.getByLabelText<HTMLInputElement>("Model");
   assert.equal(field.placeholder, "review-model");

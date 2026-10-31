@@ -62,7 +62,7 @@ function MultipleLookup() {
 }
 
 test("lookup finds labels, descriptions and values with trimmed case-insensitive queries", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
 
   render(<SingleLookup />);
   await user.click(screen.getByRole("combobox", { name: "Project" }));
@@ -71,17 +71,18 @@ test("lookup finds labels, descriptions and values with trimmed case-insensitive
     name: "Search project",
   });
 
-  await user.type(search, "  BETA PROJECT  ");
+  await user.click(search);
+  await user.paste("  BETA PROJECT  ");
   expect(screen.getAllByRole("option")).toHaveLength(1);
   expect(screen.getByRole("option").textContent).toContain("Beta project");
 
   await user.clear(search);
-  await user.type(search, "documentation");
+  await user.paste("documentation");
   expect(screen.getAllByRole("option")).toHaveLength(1);
   expect(screen.getByRole("option").textContent).toContain("Gamma project");
 
   await user.clear(search);
-  await user.type(search, "beta-service");
+  await user.paste("beta-service");
   await user.click(screen.getByRole("option"));
 
   expect(
@@ -92,15 +93,16 @@ test("lookup finds labels, descriptions and values with trimmed case-insensitive
 });
 
 test("lookup shows no matches and clears the query after dismissal", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
 
   render(<SingleLookup />);
   await user.click(screen.getByRole("combobox", { name: "Project" }));
 
-  await user.type(
+  await user.click(
     await screen.findByRole("combobox", { name: "Search project" }),
-    "missing project",
   );
+
+  await user.paste("missing project");
 
   expect(screen.queryByRole("option")).toBeNull();
   expect(screen.getByText("No matching options")).toBeTruthy();
@@ -127,7 +129,7 @@ test("lookup shows no matches and clears the query after dismissal", async () =>
 });
 
 test("keyboard search selects an option and returns focus to the trigger", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
 
   render(<SingleLookup />);
 
@@ -149,7 +151,7 @@ test("keyboard search selects an option and returns focus to the trigger", async
 });
 
 test("multiple lookup preserves selected dependencies across searches and supports removal", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
 
   render(<MultipleLookup />);
   await user.click(screen.getByRole("combobox", { name: "Dependencies" }));
@@ -158,7 +160,8 @@ test("multiple lookup preserves selected dependencies across searches and suppor
     name: "Search dependencies",
   });
 
-  await user.type(search, "Beta");
+  await user.click(search);
+  await user.paste("Beta");
   await user.click(screen.getByRole("option"));
 
   expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
@@ -166,7 +169,7 @@ test("multiple lookup preserves selected dependencies across searches and suppor
   );
 
   await user.clear(search);
-  await user.type(search, "Gamma");
+  await user.paste("Gamma");
   await user.click(screen.getByRole("option"));
 
   expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
@@ -174,7 +177,7 @@ test("multiple lookup preserves selected dependencies across searches and suppor
   );
 
   await user.clear(search);
-  await user.type(search, "Alpha");
+  await user.paste("Alpha");
   expect(screen.getByRole("option").getAttribute("aria-selected")).toBe("true");
   await user.click(screen.getByRole("option"));
 
@@ -184,7 +187,7 @@ test("multiple lookup preserves selected dependencies across searches and suppor
 });
 
 test("refreshing lookup options preserves the search and selected value", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
 
   const props = {
     id: "project",
@@ -202,7 +205,8 @@ test("refreshing lookup options preserves the search and selected value", async 
     name: "Search project",
   });
 
-  await user.type(search, "Beta");
+  await user.click(search);
+  await user.paste("Beta");
 
   view.rerender(
     <SelectField

@@ -71,7 +71,7 @@ test("browsing a folder fills the project draft without granting access", async 
     t,
     (transport) =>
       configureProjectRegistration(transport, { picked: "/repo/picked" }),
-    {},
+    { view: "dialogs" },
   );
 
   act(() => {
@@ -108,7 +108,7 @@ test("cancelling the native picker preserves the manual project path", async (t)
   const { controller, transport, user } = await setup(
     t,
     (transport) => configureProjectRegistration(transport),
-    {},
+    { view: "dialogs" },
   );
 
   act(() => {
@@ -145,7 +145,7 @@ test("project registration errors preserve the draft and do not change the selec
       configureProjectRegistration(transport, {
         registerError: "Use repository root",
       }),
-    {},
+    { view: "dialogs" },
   );
 
   act(() => {
@@ -212,7 +212,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
       configureProjectRegistration(transport, {
         browseError: "Native folder picker unavailable",
       }),
-    {},
+    { view: "dialogs" },
   );
 
   act(() => {

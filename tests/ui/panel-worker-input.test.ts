@@ -8,13 +8,14 @@ import {
   pasteText,
   screen,
   setup,
+  setupInspector,
   SKIPPED_ANSWER,
   test,
   waitFor,
 } from "./panel-test-support";
 
 test("worker question accepts a custom answer with no preset selection", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { transport, user } = await setupInspector(t, (transport) => {
     const [current] = transport.tasks;
 
     assert.ok(current);
@@ -98,7 +99,7 @@ test("worker question accepts a custom answer with no preset selection", async (
 });
 
 test("a question without options answers in a text box and shows send failures inline", async (t) => {
-  const { transport, user } = await setup(t, (transport) => {
+  const { transport, user } = await setupInspector(t, (transport) => {
     const [current] = transport.tasks;
 
     assert.ok(current);
@@ -272,7 +273,7 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
 });
 
 test("keyboard focus follows the stacked question cards", async (t) => {
-  const { user } = await setup(t, (transport) => {
+  const { user } = await setupInspector(t, (transport) => {
     const [current] = transport.tasks;
 
     assert.ok(current);
