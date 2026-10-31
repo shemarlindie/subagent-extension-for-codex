@@ -629,9 +629,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* Code stays at full contrast inside muted text, such as progress messages,
+   and matches the fixed syntax colors. */
 .code-block > pre {
   margin: 0;
   border: 0;
   border-radius: 0;
   background: none;
+  color: var(--text);
 }
