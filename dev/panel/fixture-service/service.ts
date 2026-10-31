@@ -36,6 +36,7 @@ type FixtureStore = {
   store: Store;
   control: Control;
   directory: string;
+  initialized: Set<string>;
 };
 
 // One store per module instance. Vite re-runs this module after a source edit,
@@ -48,7 +49,7 @@ if (previous) {
   rmSync(previous.directory, { recursive: true, force: true });
 }
 
-let current: Promise<FixtureStore> | undefined;
+let current: FixtureStore | undefined;
 
 const git = (cwd: string, ...args: string[]) =>
   execFileSync(
@@ -154,7 +155,7 @@ function recordFixtureTurn(
  * Builds a task's repository from its change fixture: a base commit, then
  * each turn. The task's workspace, branch become real ones. Each turn reports incremental edit hunks.
  */
-async function seedChanges(
+function seedChanges(
   task: Task,
   fixture: ChangeFixture,
   root: string,
@@ -215,35 +216,37 @@ async function seedChanges(
   }
 }
 
-/** Seeds the fixture tasks on first use. */
+/** Seed task metadata first, leaving repositories and edit replay until requested. */
 function fixtureStore() {
-  current ??= (async () => {
-    const directory = mkdtempSync(join(tmpdir(), "panel-fixture-service-"));
-    const store = new Store(join(directory, "fixtures.sqlite"));
-    const workspaces = new Workspaces(join(directory, "snapshots"), []);
-    // No providers: served tools read changes and manage worktrees, and
-    // never run a task.
-    const control = new Control(store, workspaces, new Map());
-    const fixture = { store, control, directory };
-    (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = fixture;
+  if (current) return current;
+  const directory = mkdtempSync(join(tmpdir(), "panel-fixture-service-"));
+  const store = new Store(join(directory, "fixtures.sqlite"));
+  const workspaces = new Workspaces(join(directory, "snapshots"), []);
+  // No providers: served tools read changes and manage worktrees, and
+  // never run a task.
+  const control = new Control(store, workspaces, new Map());
+  current = { store, control, directory, initialized: new Set() };
+  (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = current;
 
-    for (const task of previewTasks) {
-      const saved = structuredClone(task);
-
-      const changes = previewChanges[task.id];
-
-      if (changes) {
-        await seedChanges(saved, changes(), directory, control);
-      }
-
-      store.save(saved);
-      if (!changes) replayRecordedEdits(control, saved, previewEvents);
-    }
-
-    return fixture;
-  })();
+  for (const task of previewTasks) store.save(structuredClone(task));
 
   return current;
+}
+
+/** Build a task once so later reads preserve worktree and branch actions. */
+function initializeTask(fixture: FixtureStore, task: Task) {
+  if (fixture.initialized.has(task.id)) return;
+  const saved = fixture.store.get(task.id, task.owner);
+  const changes = previewChanges[task.id];
+
+  if (changes) {
+    seedChanges(saved, changes(), fixture.directory, fixture.control);
+  } else {
+    replayRecordedEdits(fixture.control, saved, previewEvents);
+  }
+
+  fixture.store.save(saved);
+  fixture.initialized.add(task.id);
 }
 
 // Registered once across reloads; it removes whichever store is current.
@@ -268,16 +271,23 @@ export async function fixtureServiceTool(
     throw new Error(`The fixture service does not serve ${name}`);
   }
 
-  const { control } = await fixtureStore();
+  const fixture = fixtureStore();
   const task = previewTasks.find((task) => task.id === args.task_id);
+  if (task) initializeTask(fixture, task);
 
-  return callTool(control, task?.owner ?? "preview", name, args, "user");
+  return callTool(
+    fixture.control,
+    task?.owner ?? "preview",
+    name,
+    args,
+    "user",
+  );
 }
 
 /** Closes and removes the store; for tests. */
-export async function closeFixtureService() {
+export function closeFixtureService() {
   if (!current) return;
-  const { store, directory } = await current;
+  const { store, directory } = current;
   store.close();
   rmSync(directory, { recursive: true, force: true });
   current = undefined;

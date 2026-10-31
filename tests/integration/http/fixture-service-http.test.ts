@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 
 import { createServer } from "vite";
-import { afterAll, test } from "vitest";
+import { afterAll, test, vi } from "vitest";
 
 import { fixtureServicePlugin } from "../../../dev/panel/fixture-service/plugin.js";
 import { largeFiles } from "../../../dev/panel/scenarios/large-files.js";
@@ -24,10 +24,10 @@ let origin: string;
 afterAll(async () => {
   if (server) {
     const service = (await server.ssrLoadModule(serviceModule)) as {
-      closeFixtureService: () => Promise<void>;
+      closeFixtureService: () => void;
     };
 
-    await service.closeFixtureService();
+    service.closeFixtureService();
     await server.close();
   }
 });
@@ -88,6 +88,8 @@ test("the Vite fixture-service route parses requests and returns tool results", 
   )) as { FIXTURE_SERVICE_TOOLS: string[] };
 
   helpers.FIXTURE_SERVICE_TOOLS.push("list_tasks");
+  // Metadata listing must not need Git to seed unrelated repositories.
+  vi.stubEnv("PATH", "");
 
   try {
     const { response, body } = await call("list_tasks", {
@@ -107,6 +109,7 @@ test("the Vite fixture-service route parses requests and returns tool results", 
       ),
     );
   } finally {
+    vi.unstubAllEnvs();
     helpers.FIXTURE_SERVICE_TOOLS.pop();
   }
 });
@@ -128,7 +131,15 @@ test("fixture changes come from recorded edits built per task", async () => {
   assert.equal(build.diff.match(/^diff --git /gm)?.length, 61);
 
   // Commits preserve whole-task and latest-turn records.
-  assert.deepEqual(paths(await changes("preview-interrupted")), [
+  // Simultaneous first reads share the initialized repository and edit records.
+  const [interrupted, simultaneous] = await Promise.all([
+    changes("preview-interrupted"),
+    changes("preview-interrupted"),
+  ]);
+
+  assert.deepEqual(simultaneous, interrupted);
+
+  assert.deepEqual(paths(interrupted), [
     "src/panel/inspector.css",
     "src/panel/inspector.tsx",
     "src/panel/task-facts.tsx",
