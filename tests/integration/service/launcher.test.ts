@@ -19,6 +19,7 @@ import {
   challengeHeader,
   healthProof,
 } from "../../../src/service/platform/service/health-proof.js";
+import { connectService } from "../../../src/service/platform/service/launcher.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort, stopService } from "../../support/service.js";
 
@@ -32,7 +33,7 @@ const launcher = new URL(
 
 const tsx = import.meta.resolve("tsx");
 
-async function connect(env: NodeJS.ProcessEnv) {
+async function connectProcess(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
 
   for (const key of Object.keys(clean)) {
@@ -52,6 +53,19 @@ async function connect(env: NodeJS.ProcessEnv) {
     ],
     { env: { ...clean, ...env }, timeout: 20000 },
   );
+}
+
+/** Exercise launcher policy without starting a TypeScript loader for each call. */
+function connect(env: NodeJS.ProcessEnv) {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
+      vi.stubEnv(key, undefined);
+    }
+  }
+
+  for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+
+  return connectService();
 }
 
 /** A health body proving `token` for the request's challenge, as a real service's does. */
@@ -120,7 +134,7 @@ if (process.argv[1]?.endsWith("main.js") && process.env.PORT) {
     } catch {}
   });
 
-  const connection = connect({
+  const connection = connectProcess({
     CODEX_SUBAGENT_EXTENSION_DATA: dir,
     NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(preload).href}`,
   });
@@ -223,7 +237,7 @@ test("launcher uses a service it didn't start whatever its version, and never dr
   const dir = await serviceData(t, origin, "/removed/install");
   const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
 
-  assert.deepEqual(JSON.parse(result.stdout), {
+  assert.deepEqual(result, {
     origin,
     token: "handoff-token",
   });
@@ -259,7 +273,7 @@ test("launcher drains an older plugin service and keeps using it while it speaks
   const dir = await serviceData(t, origin, resolve("."));
   const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
 
-  assert.deepEqual(JSON.parse(result.stdout), {
+  assert.deepEqual(result, {
     origin,
     token: "handoff-token",
   });
@@ -284,7 +298,7 @@ test(
     const dir = await serviceData(t, origin, join(tmpdir(), "removed-install"));
     stopOnFinish(t, dir);
     const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
-    assert.equal(JSON.parse(result.stdout).origin, origin);
+    assert.equal(result.origin, origin);
     assert.deepEqual(drains, ["Bearer handoff-token"]);
 
     const health = await (await fetch(`${origin}/health`)).json();
@@ -331,7 +345,7 @@ test(
     );
 
     stopping.kill();
-    const result = JSON.parse((await connecting).stdout);
+    const result = await connecting;
     assert.equal(result.origin, `http://127.0.0.1:${port}`);
 
     const health = await (await fetch(`${result.origin}/health`)).json();
@@ -356,16 +370,12 @@ test(
       JSON.stringify({ origin: unrelated }),
     );
 
-    const moved = JSON.parse(
-      (await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout,
-    );
+    const moved = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
 
     assert.notEqual(moved.origin, unrelated);
 
     assert.deepEqual(
-      JSON.parse(
-        (await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout,
-      ),
+      await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
       moved,
     );
   },
@@ -410,10 +420,10 @@ test("launcher follows newly published metadata when a relocating service holds 
 
   await writeFile(join(dir, "service.pid"), String(process.pid));
 
-  assert.deepEqual(
-    JSON.parse((await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout),
-    { origin, token: "handoff-token" },
-  );
+  assert.deepEqual(await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }), {
+    origin,
+    token: "handoff-token",
+  });
 
   await assert.rejects(access(join(dir, "service.log")));
 });
@@ -539,10 +549,10 @@ test("launcher waits for an existing service to finish recovery without spawning
   // A trailing newline in the token file is not part of the token.
   await writeFile(join(dir, "admin-token"), "recovery-token\n");
 
-  assert.deepEqual(
-    JSON.parse((await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir })).stdout),
-    { origin, token: "recovery-token" },
-  );
+  assert.deepEqual(await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }), {
+    origin,
+    token: "recovery-token",
+  });
 
   assert.equal(probes, 3);
   assert.equal(authenticated, true);
@@ -578,14 +588,10 @@ test("launcher waits through dropped connections without spawning", async (t) =>
   await writeFile(join(dir, "admin-token"), "dropped-token");
 
   assert.deepEqual(
-    JSON.parse(
-      (
-        await connect({
-          CODEX_SUBAGENT_EXTENSION_DATA: dir,
-          PORT: new URL(origin).port,
-        })
-      ).stdout,
-    ),
+    await connect({
+      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      PORT: new URL(origin).port,
+    }),
     { origin, token: "dropped-token" },
   );
 
@@ -632,9 +638,9 @@ test(
     };
 
     const results = await Promise.all([
-      connect(env),
-      connect(env),
-      connect(env),
+      connectProcess(env),
+      connectProcess(env),
+      connectProcess(env),
     ]);
 
     const connections = results.map((r) => JSON.parse(r.stdout));
@@ -648,7 +654,7 @@ test(
     const pid = Number(await readFile(join(dir, "service.pid"), "utf8"));
     assert.equal(metadata.pid, pid);
     assert.equal(metadata.origin, connections[0].origin);
-    const repeated = JSON.parse((await connect(env)).stdout);
+    const repeated = JSON.parse((await connectProcess(env)).stdout);
     assert.deepEqual(repeated, connections[0]);
 
     assert.equal(

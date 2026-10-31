@@ -52,7 +52,7 @@ async function fixture(t: TestContext) {
 
   await writeFile(
     join(directory, "worker.mjs"),
-    `import { readFile, writeFile } from "node:fs/promises";
+    `import { readFile, rename, writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 const [name, peer] = process.argv.slice(2);
 async function untilFile(file) {
@@ -71,12 +71,25 @@ await writeFile(name + ".started", "");
 // Neither script can finish unless its sibling has started.
 await untilFile(peer + ".started");
 if (name === "failure") {
-  await writeFile("failure.failed", "");
+  await writeFile("failure.pid", String(process.pid));
+  await rename("failure.pid", "failure.failed");
   process.exitCode = 7;
 } else {
   if (name === "waiting") {
     await untilFile("failure.failed");
-    await setTimeout(100);
+    const pid = Number(await readFile("failure.failed", "utf8"));
+    const deadline = Date.now() + 5000;
+    // Finish only after the failing worker has actually exited.
+    for (;;) {
+      try {
+        process.kill(pid, 0);
+      } catch (error) {
+        if (error.code === "ESRCH") break;
+        throw error;
+      }
+      if (Date.now() >= deadline) throw new Error("Failing worker did not exit");
+      await setTimeout(10);
+    }
   }
   await writeFile(name + ".finished", "finished");
 }

@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import {
+  type ChildProcess,
+  execFile,
+  type ExecFileOptions,
+  execFileSync,
+} from "node:child_process";
+import { once } from "node:events";
 import {
   mkdir,
   mkdtemp,
@@ -16,13 +22,56 @@ import { afterEach, beforeEach, test, vi } from "vitest";
 import { gitRepositoryRoot } from "./git.js";
 import { Workspaces } from "./workspace.js";
 
+const deadline = vi.hoisted(() => ({
+  expireWhenReady: false,
+  child: undefined as ChildProcess | undefined,
+}));
+
+vi.mock("node:util", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:util")>();
+
+  return {
+    ...actual,
+    promisify: (fn: Parameters<typeof actual.promisify>[0]) => {
+      if (fn !== execFile) return actual.promisify(fn);
+
+      const exec = actual.promisify(execFile);
+
+      return (
+        file: string,
+        args: readonly string[],
+        options: ExecFileOptions,
+      ) => {
+        if (!deadline.expireWhenReady) return exec(file, args, options);
+
+        assert.equal(options.timeout, 5000);
+        assert.equal(options.killSignal, "SIGKILL");
+
+        // Simulate expiration only after the stub installs its SIGTERM handler
+        // and announces readiness. Node still runs and kills the real child,
+        // while scheduler contention cannot consume the fixture's startup time.
+        const run = exec(file, args, { ...options, timeout: 0 });
+        deadline.child = run.child;
+
+        run.child.stdout!.once("data", () =>
+          run.child.kill(options.killSignal),
+        );
+
+        return run;
+      };
+    },
+  };
+});
+
 let directory: string;
 
 beforeEach(async () => {
+  deadline.child = undefined;
   directory = await realpath(await mkdtemp(join(tmpdir(), "git-validation-")));
 });
 
 afterEach(async () => {
+  deadline.expireWhenReady = false;
   vi.unstubAllEnvs();
   await rm(directory, { recursive: true, force: true });
 });
@@ -34,7 +83,7 @@ async function stalledGit() {
 
   await writeFile(
     join(bin, "git"),
-    `#!${process.execPath}\nrequire("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));\nprocess.on("SIGTERM", () => {});\nsetInterval(() => {}, 1000);\n`,
+    `#!${process.execPath}\nrequire("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));\nprocess.on("SIGTERM", () => {});\nprocess.stdout.write("ready\\n");\nsetInterval(() => {}, 1000);\n`,
     { mode: 0o700 },
   );
 
@@ -43,8 +92,18 @@ async function stalledGit() {
   return pidFile;
 }
 
-test("repository validation bounds and kills Git even if it ignores graceful shutdown", async () => {
+test("repository validation configures a deadline and force-kills ready Git on simulated expiration", async (t) => {
   const pidFile = await stalledGit();
+
+  t.onTestFinished(async () => {
+    const child = deadline.child;
+    if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+    child.kill("SIGKILL");
+    await once(child, "close");
+  });
+
+  deadline.expireWhenReady = true;
   const workspaces = new Workspaces(join(directory, "workspaces"), [directory]);
 
   await assert.rejects(

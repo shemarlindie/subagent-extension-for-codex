@@ -42,13 +42,16 @@ async function proxy(t: import("vitest").TestContext, port: number) {
 }
 
 test("the proxy completes the MCP handshake while the service is still starting", async (t) => {
-  const readyAt = Date.now() + 3000;
+  let ready = false;
+  const starting = Promise.withResolvers<void>();
+  const stillStarting = Promise.withResolvers<void>();
+  let observeCall = false;
+  let prematureRequests = 0;
 
   const server = createServer((req, res) => {
     res.setHeader("Content-Type", "application/json");
 
     if (req.url === "/health") {
-      const ready = Date.now() >= readyAt;
       res.statusCode = ready ? 200 : 503;
 
       res.end(
@@ -61,6 +64,19 @@ test("the proxy completes the MCP handshake while the service is still starting"
           ),
         }),
       );
+
+      if (!ready) {
+        starting.resolve();
+        if (observeCall) stillStarting.resolve();
+      }
+
+      return;
+    }
+
+    if (!ready) {
+      prematureRequests++;
+      res.statusCode = 503;
+      res.end(JSON.stringify({ error: "service is still starting" }));
 
       return;
     }
@@ -83,23 +99,33 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
   const { port } = server.address() as import("node:net").AddressInfo;
 
-  const started = Date.now();
   const client = await proxy(t, port);
+  await starting.promise;
   const { tools } = await client.listTools();
 
   assert.ok(tools.some((tool) => tool.name === "start_task"));
 
-  assert.ok(
-    Date.now() < readyAt,
-    `the handshake waited ${Date.now() - started} ms for the service`,
-  );
-
   // The first call waits for the service to become ready.
-  const result = await client.callTool({
-    name: "list_projects",
-    arguments: {},
-  });
+  let settled = false;
+
+  const call = client
+    .callTool({ name: "list_projects", arguments: {} })
+    .finally(() => {
+      settled = true;
+    });
+
+  // Cleanup can reject the call if an earlier assertion fails.
+  void call.catch(() => {});
+
+  // A later MCP request completes while the earlier tool call is still held.
+  await client.ping();
+  // The call must remain pending through another failed readiness probe.
+  observeCall = true;
+  await Promise.race([stillStarting.promise, call]);
+  assert.equal(settled, false);
+  ready = true;
+  const result = await call;
 
   assert.ok(!result.isError, JSON.stringify(result.content));
-  assert.ok(Date.now() >= readyAt);
+  assert.equal(prematureRequests, 0);
 });

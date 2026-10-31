@@ -442,83 +442,6 @@ describe("packed artifact", () => {
     }
   });
 
-  test("a newer package hands over from the older package's service", async () => {
-    // A copy reporting an older version stands in for the previous release.
-    const older = join(root, "package-older");
-    await cp(pkg, older, { recursive: true });
-
-    const manifest = JSON.parse(
-      await readFile(join(older, "package.json"), "utf8"),
-    );
-
-    await writeFile(
-      join(older, "package.json"),
-      JSON.stringify({ ...manifest, version: "0.0.1" }),
-    );
-
-    const service = await extraService("data-handoff");
-
-    const status = () =>
-      fetch(`http://127.0.0.1:${service.port}/health`).then((response) =>
-        response.json(),
-      );
-
-    const previous = await connectStdio(service, {}, older);
-
-    try {
-      await callJson(previous, "list_projects");
-      assert.equal((await status()).version, "0.0.1");
-    } finally {
-      await previous.close();
-    }
-
-    const oldPid = await readFile(join(service.data, "service.pid"), "utf8");
-    const client = await connectStdio(service);
-
-    try {
-      // The idle older service drains at once. The next call starts this version.
-      await callJson(client, "list_projects");
-      const current = await status();
-      assert.equal(current.version, manifest.version);
-      assert.equal(current.launcher, "stdio");
-
-      assert.notEqual(
-        await readFile(join(service.data, "service.pid"), "utf8"),
-        oldPid,
-      );
-    } finally {
-      await client.close();
-    }
-  });
-
-  test("the panel keeps working after an update removes the running installation", async () => {
-    const removed = join(root, "package-removed");
-    await cp(pkg, removed, { recursive: true });
-    const service = await extraService("data-removed");
-    const client = await connectStdio(service, {}, removed);
-
-    try {
-      await callJson(client, "list_projects");
-      await rm(removed, { recursive: true, force: true });
-
-      const page = await fetch(`http://127.0.0.1:${service.port}/`);
-      assert.equal(page.status, 200);
-      assert.match(await page.text(), /<html/i);
-
-      const { resources } = await client.listResources();
-
-      const panel = resources.find((resource) =>
-        resource.uri.startsWith("ui://"),
-      );
-
-      const html = (await client.readResource({ uri: panel!.uri })).contents[0];
-
-      assert.match(String((html as { text?: string }).text), /<html/i);
-    } finally {
-      await client.close();
-    }
-  });
-
   test("the packaged service runs the host's Claude Code for model discovery", async (context: TestContext) => {
     const client = await connectStdio();
 
@@ -538,91 +461,178 @@ describe("packed artifact", () => {
     }
   });
 
-  // Fake CLIs are shell scripts.
-  test.skipIf(process.platform === "win32")(
-    "an unsupported or missing Claude Code blocks Claude tasks and nothing else",
+  // These update and executable scenarios each own their service and data.
+  test.concurrent(
+    "a newer package hands over from the older package's service",
     async () => {
-      const bin = join(root, "claude-versions");
-      const supported = await fakeClaude(join(bin, "supported"), "2.1.293");
-      const old = await fakeClaude(join(bin, "old"), "2.0.0");
-      const newer = await fakeClaude(join(bin, "newer"), "9.0.0");
-      // The override is a symlink, as installers make, retargeted between checks.
-      const link = join(root, "claude-link");
-      await symlink(supported, link);
-      const overridden = await extraService("data-override");
+      // A copy reporting an older version stands in for the previous release.
+      const older = join(root, "package-older");
+      await cp(pkg, older, { recursive: true });
 
-      const client = await connectStdio(overridden, {
-        CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH: link,
-      });
+      const manifest = JSON.parse(
+        await readFile(join(older, "package.json"), "utf8"),
+      );
 
-      const retarget = async (target: string) => {
-        await unlink(link);
-        await symlink(target, link);
-      };
+      await writeFile(
+        join(older, "package.json"),
+        JSON.stringify({ ...manifest, version: "0.0.1" }),
+      );
+
+      const service = await extraService("data-handoff");
+
+      const status = () =>
+        fetch(`http://127.0.0.1:${service.port}/health`).then((response) =>
+          response.json(),
+        );
+
+      const previous = await connectStdio(service, {}, older);
 
       try {
-        let worker = await claudeWorker(client);
-        assert.equal(worker.readiness.ready, true);
+        await callJson(previous, "list_projects");
+        assert.equal((await status()).version, "0.0.1");
+      } finally {
+        await previous.close();
+      }
 
-        assert.deepEqual(worker.readiness.details, {
-          executable: supported,
-          version: "2.1.293",
-          supported_versions: worker.readiness.details.supported_versions,
-        });
+      const oldPid = await readFile(join(service.data, "service.pid"), "utf8");
+      const client = await connectStdio(service);
 
-        await retarget(old);
-        worker = await claudeWorker(client);
-        assert.equal(worker.readiness.ready, false);
-        assert.match(worker.readiness.message!, /2\.0\.0 .* older than/);
-        assert.equal(worker.models, undefined);
-
-        const refused = await callError(client, "start_task", {
-          provider: "claude",
-          description: "Review the README",
-          worker_profile: "reviewer",
-          repository,
-        });
-
-        assert.match(refused, /older than the supported/);
-        // Projects and task history stay available.
+      try {
+        // The idle older service drains at once. The next call starts this version.
         await callJson(client, "list_projects");
-        await callJson(client, "list_tasks");
+        const current = await status();
+        assert.equal(current.version, manifest.version);
+        assert.equal(current.launcher, "stdio");
 
-        await retarget(newer);
-        worker = await claudeWorker(client);
-        assert.equal(worker.readiness.ready, true);
-        assert.equal(worker.readiness.details.version, "9.0.0");
-        assert.equal(worker.readiness.details.supported_versions, "2.1.285+");
-
-        // A configured path that stops resolving is an error, not a PATH fallback.
-        await unlink(link);
-        worker = await claudeWorker(client);
-
-        assert.match(
-          worker.readiness.message!,
-          /CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH points to/,
+        assert.notEqual(
+          await readFile(join(service.data, "service.pid"), "utf8"),
+          oldPid,
         );
       } finally {
         await client.close();
       }
+    },
+  );
 
-      // Without an override or a claude on PATH, the service reports it missing.
-      const empty = join(root, "empty-bin");
-      await mkdir(empty);
-      const missing = await extraService("data-missing");
-      const bare = await connectStdio(missing, { PATH: empty });
+  test.concurrent(
+    "the panel keeps working after an update removes the running installation",
+    async () => {
+      const removed = join(root, "package-removed");
+      await cp(pkg, removed, { recursive: true });
+      const service = await extraService("data-removed");
+      const client = await connectStdio(service, {}, removed);
 
       try {
-        const worker = await claudeWorker(bare);
-        assert.equal(worker.readiness.ready, false);
+        await callJson(client, "list_projects");
+        await rm(removed, { recursive: true, force: true });
 
-        assert.match(
-          worker.readiness.message!,
-          /not found on the service's PATH/,
+        const page = await fetch(`http://127.0.0.1:${service.port}/`);
+        assert.equal(page.status, 200);
+        assert.match(await page.text(), /<html/i);
+
+        const { resources } = await client.listResources();
+
+        const panel = resources.find((resource) =>
+          resource.uri.startsWith("ui://"),
         );
+
+        const html = (await client.readResource({ uri: panel!.uri }))
+          .contents[0];
+
+        assert.match(String((html as { text?: string }).text), /<html/i);
       } finally {
-        await bare.close();
+        await client.close();
       }
     },
   );
+
+  // Fake CLIs are shell scripts.
+  test
+    .skipIf(process.platform === "win32")
+    .concurrent(
+      "an unsupported or missing Claude Code blocks Claude tasks and nothing else",
+      async () => {
+        const bin = join(root, "claude-versions");
+        const supported = await fakeClaude(join(bin, "supported"), "2.1.293");
+        const old = await fakeClaude(join(bin, "old"), "2.0.0");
+        const newer = await fakeClaude(join(bin, "newer"), "9.0.0");
+        // The override is a symlink, as installers make, retargeted between checks.
+        const link = join(root, "claude-link");
+        await symlink(supported, link);
+        const overridden = await extraService("data-override");
+
+        const client = await connectStdio(overridden, {
+          CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH: link,
+        });
+
+        const retarget = async (target: string) => {
+          await unlink(link);
+          await symlink(target, link);
+        };
+
+        try {
+          let worker = await claudeWorker(client);
+          assert.equal(worker.readiness.ready, true);
+
+          assert.deepEqual(worker.readiness.details, {
+            executable: supported,
+            version: "2.1.293",
+            supported_versions: worker.readiness.details.supported_versions,
+          });
+
+          await retarget(old);
+          worker = await claudeWorker(client);
+          assert.equal(worker.readiness.ready, false);
+          assert.match(worker.readiness.message!, /2\.0\.0 .* older than/);
+          assert.equal(worker.models, undefined);
+
+          const refused = await callError(client, "start_task", {
+            provider: "claude",
+            description: "Review the README",
+            worker_profile: "reviewer",
+            repository,
+          });
+
+          assert.match(refused, /older than the supported/);
+          // Projects and task history stay available.
+          await callJson(client, "list_projects");
+          await callJson(client, "list_tasks");
+
+          await retarget(newer);
+          worker = await claudeWorker(client);
+          assert.equal(worker.readiness.ready, true);
+          assert.equal(worker.readiness.details.version, "9.0.0");
+          assert.equal(worker.readiness.details.supported_versions, "2.1.285+");
+
+          // A configured path that stops resolving is an error, not a PATH fallback.
+          await unlink(link);
+          worker = await claudeWorker(client);
+
+          assert.match(
+            worker.readiness.message!,
+            /CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH points to/,
+          );
+        } finally {
+          await client.close();
+        }
+
+        // Without an override or a claude on PATH, the service reports it missing.
+        const empty = join(root, "empty-bin");
+        await mkdir(empty);
+        const missing = await extraService("data-missing");
+        const bare = await connectStdio(missing, { PATH: empty });
+
+        try {
+          const worker = await claudeWorker(bare);
+          assert.equal(worker.readiness.ready, false);
+
+          assert.match(
+            worker.readiness.message!,
+            /not found on the service's PATH/,
+          );
+        } finally {
+          await bare.close();
+        }
+      },
+    );
 });

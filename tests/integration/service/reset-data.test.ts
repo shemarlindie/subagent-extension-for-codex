@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { expect, test, type TestContext } from "vitest";
 
@@ -69,14 +69,10 @@ test.skipIf(process.platform === "win32")(
     const data = mkdtempSync(join(tmpdir(), "reset-running-service-"));
     const service = { data, port: await freePort() };
 
-    const child = spawn(
-      process.execPath,
-      ["--import", "tsx", "src/service/main.ts"],
-      {
-        env: serviceEnv(service),
-        stdio: "ignore",
-      },
-    );
+    const child = spawn(process.execPath, [resolve("dist/main.js")], {
+      env: serviceEnv(service),
+      stdio: "ignore",
+    });
 
     t.onTestFinished(async () => {
       try {

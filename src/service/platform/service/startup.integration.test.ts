@@ -45,18 +45,14 @@ test("unverified service owner output separates details and never stops it", asy
 
   await writeFile(join(directory, "service.pid"), String(owner.pid));
 
-  const startup = spawn(
-    process.execPath,
-    ["--import", "tsx", "src/service/main.ts"],
-    {
-      cwd: resolve("."),
-      env: {
-        ...process.env,
-        CODEX_SUBAGENT_EXTENSION_DATA: directory,
-      },
-      stdio: ["ignore", "ignore", "pipe"],
+  const startup = spawn(process.execPath, [resolve("dist/main.js")], {
+    cwd: resolve("."),
+    env: {
+      ...process.env,
+      CODEX_SUBAGENT_EXTENSION_DATA: directory,
     },
-  );
+    stdio: ["ignore", "ignore", "pipe"],
+  });
 
   const stderr = startup.stderr;
   assert.ok(stderr);

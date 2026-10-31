@@ -73,7 +73,7 @@ function seedParentReport(store: Store, created: Task, text = "Worker update") {
 
 type StreamingOptions = {
   finished: Promise<void>;
-  growDraft?: boolean;
+  growDraft?: Promise<void>;
 };
 
 class Streaming extends FixtureProvider {
@@ -85,7 +85,7 @@ class Streaming extends FixtureProvider {
     c.delta("msg_live", "Half ");
 
     if (this.options.growDraft) {
-      await new Promise((r) => setTimeout(r, 20));
+      await this.options.growDraft;
       c.delta("msg_live", "a reply");
     }
 
@@ -401,8 +401,10 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
   let finish!: () => void;
   const finished = new Promise<void>((resolve) => (finish = resolve));
 
+  const growDraft = Promise.withResolvers<void>();
+
   const { c, store, parent, user, start } = await setup(
-    new Streaming({ finished, growDraft: true }),
+    new Streaming({ finished, growDraft: growDraft.promise }),
   );
 
   try {
@@ -410,7 +412,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
     await until(() => c.drafts.get(t.id)?.text === "Half ");
 
     // Waits for the draft to grow past what the panel has.
-    const read = await user<{ draft: unknown; running: boolean }>(
+    const pending = user<{ draft: unknown; running: boolean }>(
       "app_wait_for_updates",
       {
         after: store.revision("alice"),
@@ -418,6 +420,9 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
         wait_ms: 5000,
       },
     );
+
+    growDraft.resolve();
+    const read = await pending;
 
     assert.deepEqual(read, {
       revision: store.revision("alice"),
@@ -474,6 +479,7 @@ test("a reply streams as a draft the panel and parent can read, and only the fin
       !store.events(t.id, "alice").some((e) => e.type.includes("delta")),
     );
   } finally {
+    growDraft.resolve();
     finish();
     await c.close();
   }
@@ -504,10 +510,10 @@ test("an update wait returns once the owner's revision changes, and a change end
 
     // Another owner's change doesn't wake it.
     const started = Date.now();
-    const quiet = wait({ after: revision, wait_ms: 200 });
+    const quiet = wait({ after: revision, wait_ms: 20 });
     store.save({ ...store.get(t.id, "alice"), id: "other", owner: "bob" });
     assert.deepEqual(await quiet, { revision });
-    assert.ok(Date.now() - started >= 150);
+    assert.ok(Date.now() - started >= 15);
 
     // The owner's change ends a draft wait, with the draft unchanged.
     const waiting = wait({
@@ -533,11 +539,11 @@ test("an update wait returns once the owner's revision changes, and a change end
     const idleStart = Date.now();
 
     assert.deepEqual(
-      await wait({ after: ended, draft: { task_id: t.id }, wait_ms: 200 }),
+      await wait({ after: ended, draft: { task_id: t.id }, wait_ms: 20 }),
       { revision: ended, draft: null, running: false },
     );
 
-    assert.ok(Date.now() - idleStart >= 150);
+    assert.ok(Date.now() - idleStart >= 15);
 
     // Another owner's task has no draft to show.
     assert.deepEqual(

@@ -203,26 +203,21 @@ test("parents can restrict approval authority but cannot escalate any saved mode
         "user",
       );
 
-      for (
-        let requestedIndex = 0;
-        requestedIndex < ordered.length;
-        requestedIndex++
-      ) {
-        const approval_mode = ordered[requestedIndex];
+      // Rejections must leave the task count unchanged. Check them before
+      // accepted requests run together against this saved mode.
+      for (const approval_mode of ordered.slice(defaultIndex + 1)) {
+        const count = store.all().length;
 
-        if (requestedIndex > defaultIndex) {
-          const count = store.all().length;
+        await assert.rejects(
+          callTool(c, "alice", "start_task", { ...request, approval_mode }),
+          /exceeds/,
+        );
 
-          await assert.rejects(
-            callTool(c, "alice", "start_task", {
-              ...request,
-              approval_mode,
-            }),
-            /exceeds/,
-          );
+        assert.equal(store.all().length, count);
+      }
 
-          assert.equal(store.all().length, count);
-        } else {
+      await Promise.all(
+        ordered.slice(0, defaultIndex + 1).map(async (approval_mode) => {
           const task = (await callTool(c, "alice", "start_task", {
             ...request,
             approval_mode,
@@ -230,11 +225,7 @@ test("parents can restrict approval authority but cannot escalate any saved mode
 
           assert.equal(task.approval_mode, approval_mode);
 
-          if (approval_mode === "deny" || approval_mode === "auto_approve") {
-            await until(
-              () => store.get(task.id, "alice").status === "completed",
-            );
-          } else {
+          if (approval_mode !== "deny" && approval_mode !== "auto_approve") {
             await until(() => !!store.get(task.id, "alice").pending_input);
 
             c.input(
@@ -246,13 +237,11 @@ test("parents can restrict approval authority but cannot escalate any saved mode
               undefined,
               approval_mode === "parent_agent" ? "parent" : "user",
             );
-
-            await until(
-              () => store.get(task.id, "alice").status === "completed",
-            );
           }
-        }
-      }
+
+          await until(() => store.get(task.id, "alice").status === "completed");
+        }),
+      );
     }
   } finally {
     await cleanup();

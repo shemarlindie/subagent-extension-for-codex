@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { structuredPatch } from "diff";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import type { RunContext } from "../../providers/types.js";
 import {
@@ -589,6 +589,8 @@ test("runtime budget expiry retains recorded edits and discards the completion r
   const { c, store, repo } = await setup(provider);
 
   try {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
     const task = await c.start("alice", {
       ...input(repo),
       conversation_id: "parent-chat",
@@ -596,7 +598,11 @@ test("runtime budget expiry retains recorded edits and discards the completion r
     });
 
     const context = await started.promise;
-    await until(() => context.signal.aborted);
+    await vi.advanceTimersByTimeAsync(599);
+    assert.equal(context.signal.aborted, false);
+    await vi.advanceTimersByTimeAsync(1);
+    assert.equal(context.signal.aborted, true);
+    vi.useRealTimers();
     finish.resolve();
     await until(() => !c.active.has(task.id));
     const stopped = store.get(task.id, "alice");
@@ -610,6 +616,7 @@ test("runtime budget expiry retains recorded edits and discards the completion r
       ["before-budget.txt"],
     );
   } finally {
+    vi.useRealTimers();
     finish.resolve();
     await c.close();
   }
