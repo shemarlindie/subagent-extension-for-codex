@@ -10,6 +10,8 @@ Claude runs through the Claude Agent SDK and the Claude Code harness.
 
 And yes, some of us still use Codex.
 
+https://github.com/user-attachments/assets/47cf7d00-261d-4e3b-8f2d-14c941476925
+
 **Is this allowed?** Yes, when you run it on your own computer for your own
 work. It uses your local copy of Claude Code and your own sign-in, and it never
 collects or stores your Claude credentials. Anthropic's
