@@ -66,8 +66,8 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
 test("The extension sandbox denies reads of a data directory outside home by its real path", async (t) => {
   const data = await mkdtemp(join(tmpdir(), "codex-subagent-extension-data-"));
   t.onTestFinished(() => rm(data, { recursive: true, force: true }));
-  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_DATA", data);
   const { c } = await context();
+  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_DATA", data);
 
   assert.ok(
     (await claudeSandbox(c.task)).filesystem!.denyRead!.includes(

@@ -44,6 +44,10 @@ export function preToolUseHook(options: Options | undefined) {
 export async function context() {
   const workspace = await mkdtemp(join(tmpdir(), "claude-contract-"));
   onTestFinished(() => rm(workspace, { recursive: true, force: true }));
+  // The extension sandbox resolves the data directory, which the service creates at startup.
+  const data = await mkdtemp(join(tmpdir(), "claude-contract-data-"));
+  onTestFinished(() => rm(data, { recursive: true, force: true }));
+  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_DATA", data);
   execFileSync("git", ["init", "-q", workspace]);
   await writeFile(join(workspace, "a.ts"), "test");
 

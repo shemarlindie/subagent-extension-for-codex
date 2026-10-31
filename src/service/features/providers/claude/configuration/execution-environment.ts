@@ -28,8 +28,7 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   if (!task.workspace) throw new Error("Task workspace unavailable");
   const workspace = await realpath(task.workspace);
   const repository = await realpath(task.repository);
-  // The service creates the data directory at startup. Tests may not.
-  const data = await realpath(dataDirectory()).catch(() => dataDirectory());
+  const data = await realpath(dataDirectory());
 
   const gitDirectory = await realpath(
     resolve(
