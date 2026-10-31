@@ -1,8 +1,10 @@
 import { startTask } from "./console-actions";
-import { expect, test } from "./fixtures";
+import { firstReplyTest as test } from "./first-reply-fixtures";
+import { expect } from "./fixtures";
 
 test("unread replies persist until read, and manual read marks survive reload", async ({
   consolePage: page,
+  firstReply,
 }) => {
   const tasks = page.getByRole("complementary", { name: "Delegated tasks" });
   const history = page.getByRole("region", { name: "Chat history" });
@@ -11,9 +13,12 @@ test("unread replies persist until read, and manual read marks survive reload", 
   const open = row(/Keep this task open/);
 
   // A reply that arrives while another task is open stays unread.
-  await startTask(page, "Finish in the background [fixture:wait ms=1500]");
+  await startTask(page, "Finish in the background");
+  await firstReply.held;
   await startTask(page, "Keep this task open");
   await expect(history).toContainText("Fixture session turn: 1.");
+  firstReply.release();
+  await expect(background).toContainText("Completed");
   await expect(background).toContainText("Unread");
   await expect(open).not.toContainText("Unread");
   await page.reload();

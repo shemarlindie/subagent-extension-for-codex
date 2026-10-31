@@ -81,13 +81,12 @@ export const test = base.extend<ConsoleFixtures>({
     );
 
     await expect(registration).toBeOK();
-    await page.goto("/");
+    await page.goto(`/?${new URLSearchParams({ dw_project: repository })}`);
 
-    await page
-      .getByRole("combobox", { name: "Project scope", exact: true })
-      .click();
+    await expect(
+      page.getByRole("combobox", { name: "Project scope", exact: true }),
+    ).toContainText("repository");
 
-    await page.getByRole("option").filter({ hasText: repository }).click();
     await use(page);
   },
 });
