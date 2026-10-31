@@ -62,33 +62,38 @@ body[data-expanded-panel="true"]
 .chat-skeleton {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 20px;
   min-height: 150px;
 }
 .chat-skeleton-message {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
 }
 .chat-skeleton-message[data-side="user"] {
   align-items: flex-end;
 }
+/* Matches the user's chat bubble, with lines strong enough to show on it. */
 .chat-skeleton-bubble {
   display: grid;
-  gap: 7px;
-  width: min(85%, 560px);
-  padding: 8px 12px;
+  gap: 8px;
+  width: min(70%, 460px);
+  padding: 12px;
   border-radius: 14px;
-  background: var(--surface);
+  background: var(--user-bubble-bg);
+}
+.chat-skeleton-bubble[data-size="narrow"] {
+  width: min(40%, 260px);
+}
+.chat-skeleton-bubble .skeleton-shape {
+  background-color: color-mix(in oklab, var(--text) 10%, transparent);
 }
 .chat-skeleton-worker-text {
   display: grid;
   justify-items: start;
-  gap: 9px;
-  width: 100%;
+  gap: 10px;
+  width: min(100%, 640px);
   min-width: 0;
-  padding: 0;
 }
 .chat-skeleton-line {
   height: 8px;
@@ -97,75 +102,33 @@ body[data-expanded-panel="true"]
   width: 100%;
 }
 .chat-skeleton-line-medium {
-  width: 80%;
+  width: 75%;
 }
 .chat-skeleton-line-short {
-  width: 56%;
-}
-.chat-skeleton-rich-response {
-  gap: 12px;
-}
-.chat-skeleton-rich-heading-row {
-  width: 100%;
-  padding-bottom: 7px;
-  border-bottom: 1px solid var(--line);
+  width: 45%;
 }
 .chat-skeleton-rich-heading {
-  width: min(56%, 340px);
-  height: 15px;
-}
-.chat-skeleton-rich-paragraph,
-.chat-skeleton-rich-list-lines {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-.chat-skeleton-rich-intro-long {
-  width: 94%;
-}
-.chat-skeleton-rich-intro-medium {
-  width: 72%;
-}
-.chat-skeleton-rich-intro-short {
-  width: 43%;
-}
-.chat-skeleton-rich-subheading {
-  width: min(36%, 220px);
-  height: 11px;
+  width: min(40%, 240px);
+  height: 12px;
+  margin-bottom: 2px;
 }
 .chat-skeleton-rich-list {
   display: grid;
-  gap: 11px;
+  gap: 10px;
   width: 100%;
-  min-width: 0;
-  padding-left: 1.5em;
+  margin: 2px 0 0;
+  padding: 0 0 0 4px;
+  list-style: none;
 }
 .chat-skeleton-rich-list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-.chat-skeleton-rich-list-lines {
-  flex: 1;
-  width: auto;
-}
-.chat-skeleton-rich-list-lines .chat-skeleton-line-long {
-  width: 78%;
-}
-.chat-skeleton-rich-list-lines .chat-skeleton-line-medium {
-  width: 58%;
-}
-.chat-skeleton-rich-list-lines .chat-skeleton-line-short {
-  width: 40%;
 }
 .chat-skeleton-rich-bullet {
   flex: none;
   width: 5px;
   height: 5px;
-  margin-top: 2px;
   border-radius: 50%;
 }
 .chat-timeline:focus-visible {
@@ -193,7 +156,7 @@ body[data-expanded-panel="true"]
   overflow-wrap: anywhere;
 }
 .chat-message[data-from="user"] .chat-bubble {
-  background: color-mix(in oklab, var(--text) 5%, transparent);
+  background: var(--user-bubble-bg);
 }
 .chat-message[data-from="parent"] .chat-bubble {
   border: 1px dashed var(--line);

@@ -100,6 +100,12 @@
   /* Panel tokens: aliases of the host variables, so a host override reaches every surface. */
   --bg: var(--color-background-primary);
   --surface: var(--color-background-tertiary);
+  /* The user's chat bubble, which the chat skeleton matches. */
+  --user-bubble-bg: color-mix(
+    in oklab,
+    var(--color-text-primary) 5%,
+    transparent
+  );
   --notice-bg: color-mix(
     in srgb,
     var(--color-text-primary) 5%,
