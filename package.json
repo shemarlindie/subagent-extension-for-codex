@@ -53,7 +53,8 @@
     "typecheck:source": "tsc --noEmit && tsc -p tsconfig.panel.json && tsc -p tsconfig.test.json",
     "check": "npm run schemas:check && node scripts/run-parallel.mjs check:source build:bundles",
     "check:source": "node scripts/run-parallel.mjs format:check lint knip typecheck:source",
-    "test:built": "npm run build:bundles && playwright test && vitest run"
+    "test:built": "npm run build:bundles && playwright test && vitest run",
+    "dev:plugin": "node scripts/dev-plugin.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.300",

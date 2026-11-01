@@ -628,12 +628,7 @@ package.
 the release publishes to npm. It holds the packed files, a manifest with no
 scripts or dependencies, and an `.agents/plugins/marketplace.json` that lists
 the plugin with source `./`. The directory is both a Codex marketplace and the
-plugin. Install it locally with:
-
-```sh
-codex plugin marketplace add ./release
-codex plugin add subagent-extension-for-codex@shemarlindie
-```
+plugin. [Install a local build](#install-a-local-build) installs it.
 
 Adding the checkout itself (`codex plugin marketplace add ./`) adds `main`'s
 marketplace, which installs the version it lists from npm, so test local builds
@@ -664,6 +659,34 @@ npx vitest run tests/integration/package/marketplace-install.test.ts
 Set `MARKETPLACE_SOURCE` to a published marketplace, such as
 `owner/repo@v1.2.3`, to install that instead. Its version must match the
 checkout's `package.json`. The release workflow does this after publishing.
+
+### Install a local build
+
+Run from the repo root (macOS or Linux):
+
+```sh
+npm run dev:plugin -- install
+npm run dev:plugin -- update
+npm run dev:plugin -- uninstall
+```
+
+Install and update build and assemble `./release` before replacing the plugin
+and its `shemarlindie` marketplace. This also switches a published installation
+to the local build. Uninstall is safe to repeat and keeps task data.
+
+A terminal prompt offers to stop the running plugin service, defaulting to No.
+Noninteractive runs leave it alone. Add `--stop-service` to any command to stop
+without asking. This uses the existing [service handoff](task-continuation.md#updates-and-service-handoff):
+running turns get up to 10 minutes to finish before the rest are interrupted.
+Development services are left alone. A failed requested stop returns exit 1
+even if installation or removal succeeded.
+
+Reopen the panel and restart Codex for the new proxy and skills. Same-version
+backend changes take effect after the service exits and the next proxy call
+starts it again. Close existing Codex connections after uninstalling.
+
+The script honors `CODEX_BIN`, `CODEX_HOME` and the shell's
+`SUBAGENT_EXTENSION_FOR_CODEX_DATA`. It ignores the checkout's `.env`.
 
 ## Releasing
 
