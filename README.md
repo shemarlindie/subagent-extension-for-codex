@@ -1,12 +1,28 @@
-# Subagent Extension for Codex
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-banner-dark.svg">
+    <img src="docs/assets/readme-banner-light.svg" width="400" alt="Subagent Extension for Codex">
+  </picture>
+</p>
 
-[![CI](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml)
+<p align="center">Delegate to Claude without leaving Codex.</p>
+
+<p align="center">
+  <a href="#install">Install</a> &ensp;·&ensp;
+  <a href="#working-with-tasks">Working with tasks</a> &ensp;·&ensp;
+  <a href="#documentation">Documentation</a> &ensp;·&ensp;
+  <a href="https://github.com/user-attachments/assets/94f0c927-e352-460e-bda1-da6856e45371">Demo video</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml"><img src="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
 
 > _Prompt: Chat, build something that lets Claude keep you in line._
 
 Delegate Claude coding tasks from Codex through a local MCP service, then
-follow, steer and review them in the Delegated Work panel without leaving Codex.
-Claude runs through the Claude Agent SDK and the Claude Code harness.
+follow, steer and review them in the Delegated Work panel. Claude runs through
+the Claude Agent SDK and the Claude Code harness.
 
 And yes, some of us still use Codex.
 
@@ -14,8 +30,6 @@ And yes, some of us still use Codex.
   <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/35edbfc0-bd57-425b-a30a-c95d55ee8aca">
   <img width="1440" alt="Codex delegates a task to Claude and follows it in the Delegated Work panel" src="https://github.com/user-attachments/assets/f6178243-d96c-4e40-9fe5-105e1a1a1ef4">
 </picture>
-
-Watch in [full quality](https://github.com/user-attachments/assets/94f0c927-e352-460e-bda1-da6856e45371)
 
 **Is this allowed?** Yes, when you run it on your own computer for your own
 work. It uses your local copy of Claude Code and your own sign-in, and it never
@@ -186,3 +200,7 @@ Before working on the codebase, read in this order:
 | Implement provider execution and task policy     | [Provider contract](docs/provider-contract.md) |
 | Change MCP tools, user authority or panel inputs | [MCP reference](docs/mcp-reference.md)         |
 | Integrate project/chat context and host delivery | [Host capabilities](docs/host-capabilities.md) |
+
+## License
+
+MIT. See [LICENSE](LICENSE).
