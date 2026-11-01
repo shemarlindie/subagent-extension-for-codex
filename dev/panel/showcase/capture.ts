@@ -9,6 +9,7 @@ import { parseArgs } from "node:util";
 import { type Browser, chromium, type Page } from "@playwright/test";
 import { createServer } from "vite";
 
+import { describeFrameCheck, startFrameCheck } from "./frame-check";
 import { PLAYBACK_MS } from "./playback";
 import { story, storyAt } from "./story";
 
@@ -132,12 +133,20 @@ async function remainingPlaybackMs(page: Page, started: number) {
   return Math.max(0, PLAYBACK_MS - elapsed);
 }
 
+// Plays the story once unrecorded, since a fresh browser's first-run work
+// drops frames in the first capture.
+async function warmUp(browser: Browser) {
+  const { page, started } = await startPlayback(browser, THEMES[0]!);
+  await page.waitForTimeout(await remainingPlaybackMs(page, started));
+  await page.close();
+}
+
 async function captureVideo(browser: Browser) {
   for (const theme of THEMES) {
     const { page, started } = await startPlayback(browser, theme);
     const name = `showcase-${theme}.webm`;
-    let frames = 0;
-    const frameBuckets = new Map<number, number>();
+    const shots: number[] = [];
+    const check = await startFrameCheck(page);
 
     await page.screencast.start({
       path: join(out, name),
@@ -145,19 +154,16 @@ async function captureVideo(browser: Browser) {
       fps,
       quality: 100,
       onFrame: ({ timestamp }) => {
-        frames++;
-        const second = Math.floor(timestamp / 1000);
-        frameBuckets.set(second, (frameBuckets.get(second) ?? 0) + 1);
+        shots.push(timestamp);
       },
     });
 
     await page.waitForTimeout(await remainingPlaybackMs(page, started));
     await page.screencast.stop();
+    const result = await check(shots);
     await page.close();
 
-    console.log(
-      `${join(values.out, name)} (${frames} captured frames, peak ${Math.max(...frameBuckets.values())} frames/s)`,
-    );
+    console.log(`${join(values.out, name)} (${describeFrameCheck(result)})`);
   }
 }
 
@@ -171,6 +177,7 @@ async function captureFrames(browser: Browser) {
     await mkdir(dir);
 
     const { page, started } = await startPlayback(browser, theme);
+    const check = await startFrameCheck(page);
     const cdp = await page.context().newCDPSession(page);
     const frames: { file: string; time: number }[] = [];
     const pending: Promise<unknown>[] = [];
@@ -202,6 +209,7 @@ async function captureFrames(browser: Browser) {
     const end = Date.now() / 1000;
     await cdp.send("Page.stopScreencast");
     await Promise.all(pending);
+    const result = await check(frames.map(({ time }) => time * 1000));
     await page.close();
 
     // Each image otherwise gets a 1/25 s time base, which rounds frame times
@@ -220,18 +228,25 @@ async function captureFrames(browser: Browser) {
     );
 
     console.log(
-      `${join(values.out, `showcase-${theme}-frames`)} (${frames.length} frames)`,
+      `${join(values.out, `showcase-${theme}-frames`)} (${describeFrameCheck(result)})`,
     );
   }
 }
 
 await mkdir(out, { recursive: true });
-const browser = await chromium.launch();
+
+// Metal GPU rendering on macOS. Headless Chromium otherwise renders on the
+// CPU, which drops frames at 2x.
+const browser = await chromium.launch({
+  args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
+});
 
 try {
   if (values.frames) {
+    await warmUp(browser);
     await captureFrames(browser);
   } else if (values.video) {
+    await warmUp(browser);
     await captureVideo(browser);
   } else {
     await captureSteps(browser);

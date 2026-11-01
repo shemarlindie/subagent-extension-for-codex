@@ -189,8 +189,11 @@ export default defineConfig(
       "dev/panel/host/**/*.{ts,tsx}",
       "dev/panel/showcase/**/*.{ts,tsx}",
     ],
-    // A Node script beside the showcase it captures.
-    ignores: ["dev/panel/showcase/capture.ts"],
+    // Node scripts beside the showcase they capture.
+    ignores: [
+      "dev/panel/showcase/capture.ts",
+      "dev/panel/showcase/frame-check.ts",
+    ],
     languageOptions: { globals: { ...globals.browser } },
     // Classic hook rules only: the React Compiler rules misread
     // react-hook-form's field objects as refs, and the compiler is not used.

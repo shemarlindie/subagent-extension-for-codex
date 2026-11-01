@@ -308,14 +308,47 @@ CSS `zoom` of scale × zoom. Stills then match video frames. Panel animations
 that measure elements must divide by `currentCSSZoom`, as `autoListEffects`
 does.
 
-Add `--video` to record one playback loop per theme as WebM instead. Video
-defaults to 60 fps at 3200×2000. Use `--fps <n>` for another frame rate and
-`--scale 1` for a 1600×1000 export. Higher scales and frame rates take more
+### Video and frame captures
+
+Add `--video` to record one playback loop per theme as WebM in place of stills.
+Video defaults to 60 fps at 3200×2000. Use `--fps <n>` for another frame rate
+and `--scale 1` for a 1600×1000 export. Higher scales and frame rates take more
 resources and produce larger files. The command reuses a running dev server or
 starts one.
 
-For an MP4, convert each WebM with ffmpeg. These settings keep text sharp,
-within about 60 dB PSNR of the WebM, at about 10 MB per theme:
+Add `--frames` to capture one playback loop per theme as lossless PNG frames,
+for the GIF or the MP4. Playwright's screencast only delivers JPEG frames, so
+this mode asks Chromium for PNG frames directly. Chromium sends a frame only
+when the page changes, so each `showcase-<theme>-frames/` folder includes a
+`frames.ffconcat` list that holds each frame until the next one. The list sets
+each frame's time base to 1 ms, since ffmpeg's default of 1/25 s would cap
+motion at 25 fps. That option needs `-safe 0`.
+
+Video and frame captures record in real time, so frames can be lost two ways.
+The screencast can skip frames when encoding falls behind, and the page can miss
+frames when rendering is slow. Each capture traces the frames Chromium presents
+and prints how many the screencast `missed`, with their playback times. It also
+prints rendering counts. `partial` and `dropped` frames were late to the
+screen, and `brief` frames were replaced within half a refresh, so a 60 Hz
+display rarely shows them and they don't count as missed.
+
+Captures launch Chromium with Metal GPU rendering, since headless Chromium
+otherwise draws on the CPU. Metal exists only on macOS, and captures on other
+platforms are untested. Captures also play the story once unrecorded so a fresh
+browser's first-run work doesn't land in the first theme. Counts still vary
+between runs. Close busy apps, capture a few times into separate `--out`
+folders and keep the run with the fewest missed and dropped frames for each
+theme. On an Apple M5 Pro at 2x, the best of a few runs has 0 missed and 2 to 4
+dropped frames.
+
+### MP4
+
+Each MP4 and GIF in the README has a 10 MB budget, GitHub's attachment limit on
+free plans. Build the MP4 from a WebM or from PNG frames captured at the
+default 2x. PNG frames skip the screencast's JPEG and VP8 steps, so the MP4 is
+smaller at the same CRF. Text looks the same up close.
+
+To convert each WebM, use these settings, which keep text sharp:
 
 ```sh
 for t in dark light; do
@@ -325,12 +358,25 @@ for t in dark light; do
 done
 ```
 
+To encode PNG frames, use the same settings with the frame list. The `fps=60`
+filter turns the list's variable frame times into a constant 60 fps:
+
+```sh
+npm run showcase:capture -- --frames
+for t in dark light; do
+  ffmpeg -safe 0 -f concat \
+    -i showcase-captures/showcase-$t-frames/frames.ffconcat \
+    -vf "fps=60,format=yuv420p" -c:v libx264 -preset slow -tune animation \
+    -crf 12 -movflags +faststart -an showcase-captures/showcase-$t.mp4
+done
+```
+
 To add background music, mix a track into an MP4 without re-encoding its video.
-GitHub limits attached videos to 10 MB on free plans, and the CRF 12 MP4 is
-about 10.2 MB before audio, so make the MP4 with `-crf 13` first. That keeps
-text sharper than scaling the video down, and lands at about 9.9 MB with
-128 kbps audio. The mix takes the track from its start, cuts it to the video's
-length, sets it to 35% volume and fades it out over the last second:
+Make the MP4 with the lowest CRF that fits the budget with 128 kbps audio. That
+is usually `-crf 11` from PNG frames and `-crf 13` to `-crf 15` from a WebM,
+and keeps text sharper than scaling the video down. The mix takes the track
+from its start, cuts it to the video's length, sets it to 35% volume and fades
+it out over the last second:
 
 ```sh
 for t in dark light; do
@@ -343,44 +389,46 @@ for t in dark light; do
 done
 ```
 
-For a GIF, add `--frames` to capture one playback loop per theme as lossless
-PNG frames. Playwright's screencast only delivers JPEG frames, so this mode asks
-Chromium for PNG frames directly. Chromium sends a frame only when the page
-changes, so each `showcase-<theme>-frames/` folder includes a `frames.ffconcat`
-list that holds each frame until the next one. The list sets each frame's time
-base to 1 ms, since ffmpeg's default of 1/25 s would cap motion at 25 fps. That
-option needs `-safe 0`. Capture at `--scale 1`, since the GIF is narrower than
-1600 px and smaller frames are faster to encode.
+### GIF
 
-Build the GIF with ffmpeg and [gifsicle](https://www.lcdf.org/gifsicle/)
-(`brew install gifsicle`). These settings give a GIF of about 9 MB per theme:
+Capture PNG frames at the GIF's width, 1440 px with `--scale 0.9`. Scaling
+frames down to the GIF's width softens text, and the resampled colors make the
+GIF larger. Use a separate `--out` folder to keep 2x frames for the MP4. Build
+the GIF with ffmpeg and [gifsicle](https://www.lcdf.org/gifsicle/)
+(`brew install gifsicle`):
 
 ```sh
-npm run showcase:capture -- --frames --scale 1
+npm run showcase:capture -- --frames --scale 0.9
 for t in dark light; do
   ffmpeg -safe 0 -f concat \
     -i showcase-captures/showcase-$t-frames/frames.ffconcat \
-    -filter_complex "fps=100/3,scale=1088:-1:flags=lanczos,split[a][b];\
+    -filter_complex "fps=100/3,split[a][b];\
 [a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
     /tmp/showcase-$t.gif
-  gifsicle -O3 --lossy=10 /tmp/showcase-$t.gif -o showcase-captures/showcase-$t.gif
+  gifsicle -O3 /tmp/showcase-$t.gif -o showcase-captures/showcase-$t.gif
 done
 ```
 
 The palette comes from the frames themselves, and `dither=none` keeps flat UI
 and text crisp. `diff_mode=rectangle` redraws only the changed area of each
-frame. Light lossy compression saves about a quarter of the size. Stronger
-values leave streaks in dark backgrounds. GIF frame delays use whole hundredths
-of a second, so 50, 33⅓, 25 and 20 fps keep even timing. These settings favor
-smooth motion over width: 33⅓ fps at 1088 px stays under GitHub's 10 MB limit
-for attached images and GIFs. 50 fps needs a much narrower GIF, and some
-renderers slow 20 ms frames to 100 ms.
+frame. Both themes use the same settings, and neither needs lossy compression
+to fit the budget.
+
+GIF frame delays use whole hundredths of a second, so 50, 33⅓, 25 and 20 fps
+keep even timing. The GIF uses 33⅓ fps because 50 fps makes it much larger,
+which would cut the width that fits the budget to about 1136 px. The GIF
+favors readable text, and the linked MP4 shows smooth 60 fps motion. Some
+renderers also slow 20 ms frames to 100 ms.
+
+### README media
 
 The README shows both GIFs and links to the dark MP4 with music. They are
 GitHub attachments, so no media is committed. To replace one, drag the new file
 into an issue, pull request or discussion comment in a browser, copy the
 `user-attachments` URL it inserts without submitting the comment, and update
-the URL in `README.md`. The GitHub mobile app rejects video uploads.
+the URL in `README.md`. Keep the image's `width` at the GIF's width. The GitHub mobile app rejects video uploads.
+
+### Story and playback
 
 Playback opens with a 400 ms blank hold, then a 400 ms fade in with the first
 prompt in the composer. One second after the blank hold, the composer clears
