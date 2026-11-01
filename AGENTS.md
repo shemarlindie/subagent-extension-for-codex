@@ -74,3 +74,4 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 - Keep large collapsed sections lightweight: unmount expensive child rows while closed, and show a loader when asynchronous or deferred rendering needs feedback.
 - Put repository skills in `.agents/skills`, which Codex reads. Claude Code reads `.claude/skills`, so add a stub there with the same frontmatter that links to the shared skill.
 - Categorize changes into coherent, independently understandable commit groups, and make dependencies/order clear so a requested group can be applied first. Do not auto-commit unless implementing a plan already divided into commits or the user explicitly asks.
+- Follow [Commits, pull requests and branches](CONTRIBUTING.md#commits-pull-requests-and-branches) for commit subjects, pull request titles and branch names.
