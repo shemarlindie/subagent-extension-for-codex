@@ -249,5 +249,14 @@ export default defineConfig(
     plugins: { markdown },
     language: "markdown/gfm",
     extends: ["markdown/recommended"],
+    rules: {
+      // GitHub alerts such as `> [!NOTE]` look like missing label references.
+      "markdown/no-missing-label-refs": [
+        "error",
+        {
+          allowLabels: ["!NOTE", "!TIP", "!IMPORTANT", "!WARNING", "!CAUTION"],
+        },
+      ],
+    },
   },
 );
