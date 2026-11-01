@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml"><img src="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/status-early%20release-orange" alt="Status: early release">
 </p>
 
 > _Prompt: Chat, build something that lets Claude keep you in line._
@@ -36,6 +37,11 @@ work. It uses your local copy of Claude Code and your own sign-in, and it never
 collects or stores your Claude credentials. Anthropic's
 [usage policy for Claude Code and the Agent SDK](https://code.claude.com/docs/en/legal-and-compliance#usage-policy)
 covers this kind of individual use.
+
+> [!NOTE]
+> This is an early release. Expect rough edges, and settings or behavior may
+> change between versions. Please report problems in
+> [Issues](https://github.com/shemarlindie/codex-subagent-extension/issues).
 
 ## Install
 
