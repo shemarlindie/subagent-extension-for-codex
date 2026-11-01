@@ -49,7 +49,7 @@ test("unverified service owner output separates details and never stops it", asy
     cwd: resolve("."),
     env: {
       ...process.env,
-      CODEX_SUBAGENT_EXTENSION_DATA: directory,
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: directory,
     },
     stdio: ["ignore", "ignore", "pipe"],
   });

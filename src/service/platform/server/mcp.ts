@@ -39,7 +39,7 @@ export function mcp(
 ) {
   const server = new McpServer(
     {
-      name: "codex-subagent-extension",
+      name: "subagent-extension-for-codex",
       version: packageVersion,
       icons: productGlyphIcons,
     },

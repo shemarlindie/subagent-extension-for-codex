@@ -47,7 +47,7 @@ type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 type InspectorTab = "bridge-log" | "host-settings" | "icon-catalog";
 
 type DevHostWindow = Window & {
-  __CODEX_SUBAGENT_DEV_UI_STATE__?: UiStatePersistence;
+  __SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__?: UiStatePersistence;
 };
 
 const inspectorTabs: { id: InspectorTab; label: string }[] = [
@@ -226,11 +226,13 @@ export function Host() {
 
   useEffect(() => {
     const hostWindow = window as DevHostWindow;
-    hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ = viewState;
+    hostWindow.__SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__ = viewState;
 
     return () => {
-      if (hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ === viewState) {
-        delete hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__;
+      if (
+        hostWindow.__SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__ === viewState
+      ) {
+        delete hostWindow.__SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__;
       }
     };
   }, [viewState]);
@@ -422,8 +424,8 @@ export function Host() {
       launch: () =>
         call(
           launch === "global"
-            ? "app_open_codex_subagent_extension_global"
-            : "open_codex_subagent_extension",
+            ? "app_open_subagent_extension_for_codex_global"
+            : "open_subagent_extension_for_codex",
           source === "live" ? {} : fixtureLaunchArgs(current),
         ),
       record,

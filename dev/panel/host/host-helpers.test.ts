@@ -56,7 +56,7 @@ test("saved current settings override defaults", () => {
 
 test("slow fixture reads leave launch task rows to the delayed list read", () => {
   const opened = fixtureCall(
-    "open_codex_subagent_extension",
+    "open_subagent_extension_for_codex",
     { conversation_id: PREVIEW_THREAD },
     { deferTaskList: true },
   );

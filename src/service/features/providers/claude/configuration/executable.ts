@@ -15,7 +15,7 @@ export const claudeCliSupport = {
 } as const;
 
 /** Names an explicit Claude Code executable, which replaces the PATH lookup. */
-export const claudePathVariable = "CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH";
+export const claudePathVariable = "SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH";
 
 const supportedRange = `${claudeCliSupport.minimum}+`;
 const setupDocs = "https://code.claude.com/docs/en/setup";

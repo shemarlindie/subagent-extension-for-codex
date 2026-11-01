@@ -7,4 +7,4 @@ without one. Write for users: what changed, and anything to do by hand.
 
 First release, installed as a Codex plugin from this repository's marketplace.
 
-- Install with `codex plugin marketplace add shemarlindie/codex-subagent-extension@release`, then `codex plugin add codex-subagent-extension@shemarlindie`.
+- Install with `codex plugin marketplace add shemarlindie/subagent-extension-for-codex@release`, then `codex plugin add subagent-extension-for-codex@shemarlindie`.

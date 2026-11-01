@@ -132,14 +132,18 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
       published ?? join(root, "release"),
     );
 
-    await runCodex("plugin", "add", "codex-subagent-extension@shemarlindie");
+    await runCodex(
+      "plugin",
+      "add",
+      "subagent-extension-for-codex@shemarlindie",
+    );
 
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
 
     // Codex's own cache layout: plugins/cache/<marketplace>/<plugin>/<version>.
     const plugin = join(
       codexHome,
-      "plugins/cache/shemarlindie/codex-subagent-extension",
+      "plugins/cache/shemarlindie/subagent-extension-for-codex",
     );
 
     // A published source must be the checkout's version, which the checks below expect.
@@ -160,7 +164,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     );
 
     const server = servers.find(
-      (entry) => entry.name === "codex-subagent-extension",
+      (entry) => entry.name === "subagent-extension-for-codex",
     );
 
     assert.ok(server, JSON.stringify(servers));

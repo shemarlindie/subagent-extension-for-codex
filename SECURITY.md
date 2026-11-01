@@ -3,13 +3,13 @@
 ## Report a vulnerability
 
 Security reports and fixes are welcome through
-[issues](https://github.com/shemarlindie/codex-subagent-extension/issues) and
-[pull requests](https://github.com/shemarlindie/codex-subagent-extension/pulls).
+[issues](https://github.com/shemarlindie/subagent-extension-for-codex/issues) and
+[pull requests](https://github.com/shemarlindie/subagent-extension-for-codex/pulls).
 Include the extension version, the impact and steps to reproduce the problem.
 Don't include your admin token or other credentials.
 
 For sensitive details, use GitHub's
-[private vulnerability reporting](https://github.com/shemarlindie/codex-subagent-extension/security/advisories/new)
+[private vulnerability reporting](https://github.com/shemarlindie/subagent-extension-for-codex/security/advisories/new)
 when available. Keep those details out of public issues and pull requests.
 
 ## Scope

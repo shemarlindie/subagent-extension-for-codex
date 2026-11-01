@@ -1,6 +1,6 @@
 import type { ComposerDraftPersistence } from "../session/session-state";
 
-const PREFIX = "codex-subagent-extension.composer.v1.";
+const PREFIX = "subagent-extension-for-codex.composer.v1.";
 const SAVE_DELAY_MS = 250;
 
 /** Keeps message text private to this browser, with a flush before page teardown. */

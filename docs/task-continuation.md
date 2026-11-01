@@ -46,7 +46,7 @@ Uncommitted changes discarded during removal do not return.
 
 ## Reconnect after a restart
 
-Start the service with the same `CODEX_SUBAGENT_EXTENSION_DATA` value, then
+Start the service with the same `SUBAGENT_EXTENSION_FOR_CODEX_DATA` value, then
 check the task list. The data directory holds the database, worktrees and admin
 token.
 
@@ -82,7 +82,7 @@ queued, and the new service starts them. Proxies keep using a draining service
 that speaks the same API, and their next call after it exits starts the new
 version. Proxies on another API wait for the new service.
 
-Give development services their own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`
+Give development services their own `SUBAGENT_EXTENSION_FOR_CODEX_DATA` and `PORT`
 so an installed plugin never finds them.
 
 ## Raise a task budget
@@ -133,7 +133,7 @@ git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-r
 | MCP proxy cannot authenticate                | Use the same absolute data directory for the service and MCP client, or matching token and URL overrides.                                  |
 | Claude tasks cannot start                    | Read the worker's readiness message. [Claude Code CLI](claude-cli.md) explains executable selection and fixes.                             |
 | A turn starts a new session                  | Confirm the original service host and Claude state are available. See [Continue a task](#continue-a-task).                                 |
-| "A different extension service … is running" | Stop the named service, or give development its own `CODEX_SUBAGENT_EXTENSION_DATA` and `PORT`.                                            |
+| "A different extension service … is running" | Stop the named service, or give development its own `SUBAGENT_EXTENSION_FOR_CODEX_DATA` and `PORT`.                                        |
 | Startup refuses the database                 | See [Migration application](database.md#migration-application). If the database has a migration this build lacks, use a build that has it. |
 
 [Host capabilities](host-capabilities.md) covers host integration limits.

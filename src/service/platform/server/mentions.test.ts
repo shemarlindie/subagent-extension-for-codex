@@ -19,14 +19,14 @@ test("stdio mention settings use package-relative .env paths and keep MCP overri
   const packageRoot = "/checkout";
 
   const localEnvironment = {
-    CODEX_SUBAGENT_EXTENSION_DATA: ".codex-subagent-extension/live",
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: ".subagent-extension-for-codex/live",
     [mentionTestModeEnv]: "1",
   };
 
   assert.deepEqual(resolveMentionSearchEnv({}, localEnvironment, packageRoot), {
-    CODEX_SUBAGENT_EXTENSION_DATA: resolve(
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: resolve(
       packageRoot,
-      localEnvironment.CODEX_SUBAGENT_EXTENSION_DATA,
+      localEnvironment.SUBAGENT_EXTENSION_FOR_CODEX_DATA,
     ),
     [mentionTestModeEnv]: "1",
   });
@@ -34,14 +34,14 @@ test("stdio mention settings use package-relative .env paths and keep MCP overri
   assert.deepEqual(
     resolveMentionSearchEnv(
       {
-        CODEX_SUBAGENT_EXTENSION_DATA: "relative-from-cwd",
+        SUBAGENT_EXTENSION_FOR_CODEX_DATA: "relative-from-cwd",
         [mentionTestModeEnv]: "0",
       },
       localEnvironment,
       packageRoot,
     ),
     {
-      CODEX_SUBAGENT_EXTENSION_DATA: "relative-from-cwd",
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: "relative-from-cwd",
       [mentionTestModeEnv]: "0",
     },
   );
@@ -54,8 +54,8 @@ test("composer mention search returns Claude for the server name and provider qu
     "review",
     "Delegate to Claude",
     "worker",
-    "codex-subagent-extension",
-    "codex-subagent-extension Claude",
+    "subagent-extension-for-codex",
+    "subagent-extension-for-codex Claude",
   ]) {
     assert.equal(
       (
@@ -92,7 +92,7 @@ test("mention test mode always returns a sample and logs the query as JSONL", as
   const directory = await mkdtemp(join(tmpdir(), "codex-mention-test-"));
 
   const env = {
-    CODEX_SUBAGENT_EXTENSION_DATA: directory,
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: directory,
     [mentionTestModeEnv]: "1",
   };
 

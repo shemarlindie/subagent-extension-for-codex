@@ -110,7 +110,7 @@ const open = (name: string, args: Record<string, unknown> = {}) =>
 
 test("a thread launch scopes the panel to the thread and one project", () => {
   // The latest task in the thread picks the project when the cwd is unregistered.
-  const opened = open("open_codex_subagent_extension", {
+  const opened = open("open_subagent_extension_for_codex", {
     conversation_id: PREVIEW_THREAD,
     host_directory: "file:///elsewhere/repo/src",
   });
@@ -135,7 +135,7 @@ test("a thread launch scopes the panel to the thread and one project", () => {
 });
 
 test("a registered thread cwd picks its project over the latest task", () => {
-  const opened = open("open_codex_subagent_extension", {
+  const opened = open("open_subagent_extension_for_codex", {
     conversation_id: PREVIEW_THREAD,
     host_directory: "file:///demo/website/assets",
   });
@@ -147,7 +147,7 @@ test("a registered thread cwd picks its project over the latest task", () => {
 
   // Plain paths are not file URIs, so the service ignores them.
   assert.equal(
-    open("open_codex_subagent_extension", {
+    open("open_subagent_extension_for_codex", {
       conversation_id: PREVIEW_THREAD,
       host_directory: "/demo/website",
     }).panel_scope.repository,
@@ -156,7 +156,7 @@ test("a registered thread cwd picks its project over the latest task", () => {
 });
 
 test("a global launch shows every conversation and project", () => {
-  const opened = open("app_open_codex_subagent_extension_global");
+  const opened = open("app_open_subagent_extension_for_codex_global");
   assert.deepEqual(opened.panel_scope, { conversation_id: null });
   assert.equal(opened.tasks.length, previewTasks.length);
 
@@ -177,7 +177,7 @@ test("the chat project candidate follows the auto-add setting", () => {
     const options = { autoRegisterChatProject };
 
     const opened = previewTool(
-      "open_codex_subagent_extension",
+      "open_subagent_extension_for_codex",
       launch,
       options,
     ) as Opened;
@@ -199,7 +199,7 @@ test("the chat project candidate follows the auto-add setting", () => {
 
   // The service defaults to adding chat projects.
   assert.equal(
-    open("open_codex_subagent_extension", launch).panel_project_candidate
+    open("open_subagent_extension_for_codex", launch).panel_project_candidate
       ?.auto_register,
     true,
   );
@@ -210,7 +210,7 @@ test("a cwd's Git root is offered and a cwd with whitespace has none", () => {
     ["file:///repo", "/repo"],
     ["file:///demo/project%20/demo/project", undefined],
   ] as const) {
-    const opened = open("open_codex_subagent_extension", {
+    const opened = open("open_subagent_extension_for_codex", {
       conversation_id: PREVIEW_THREAD,
       host_directory,
     });
@@ -254,7 +254,7 @@ test("fixture registration validates the root and the caller keeps it", () => {
 
   // An added chat project is registered, so the thread scopes to it.
   const opened = previewTool(
-    "open_codex_subagent_extension",
+    "open_subagent_extension_for_codex",
     { conversation_id: PREVIEW_THREAD, host_directory: "file:///new/repo/src" },
     options,
   ) as Opened;

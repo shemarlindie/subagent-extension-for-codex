@@ -170,7 +170,7 @@ beforeAll(async () => {
   // Mention test mode must not re-enable composer mentions in the packaged proxy.
   await writeFile(
     join(pkg, ".env"),
-    "CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE=1\n",
+    "SUBAGENT_EXTENSION_FOR_CODEX_MENTION_TEST_MODE=1\n",
   );
 
   for (const directory of [repository, serviceRepository]) {
@@ -325,7 +325,7 @@ describe("packed artifact", () => {
 
     try {
       const server = client.getServerVersion();
-      assert.equal(server?.name, "codex-subagent-extension");
+      assert.equal(server?.name, "subagent-extension-for-codex");
       assert.equal(server?.version, version);
       assert.equal(server?.icons?.length, 2);
 
@@ -365,7 +365,7 @@ describe("packed artifact", () => {
       assert.equal(
         resources.some(
           (resource) =>
-            resource.uri === "codex-subagent-extension://providers/claude",
+            resource.uri === "subagent-extension-for-codex://providers/claude",
         ),
         false,
       );
@@ -382,7 +382,7 @@ describe("packed artifact", () => {
     }
 
     const status = await health();
-    assert.equal(status.service, "codex-subagent-extension");
+    assert.equal(status.service, "subagent-extension-for-codex");
     assert.equal(status.version, version);
 
     assert.equal(
@@ -562,7 +562,7 @@ describe("packed artifact", () => {
         const overridden = await extraService("data-override");
 
         const client = await connectStdio(overridden, {
-          CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH: link,
+          SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH: link,
         });
 
         const retarget = async (target: string) => {
@@ -610,7 +610,7 @@ describe("packed artifact", () => {
 
           assert.match(
             worker.readiness.message!,
-            /CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH points to/,
+            /SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH points to/,
           );
         } finally {
           await client.close();

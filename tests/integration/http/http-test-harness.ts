@@ -129,14 +129,14 @@ export async function httpFixture(t: TestContext) {
   const tools = await client.listTools();
 
   const opener = tools.tools.find(
-    (t) => t.name === "open_codex_subagent_extension",
+    (t) => t.name === "open_subagent_extension_for_codex",
   )!;
 
   const readUi = () =>
     client.readResource({ uri: (opener._meta as any).ui.resourceUri });
 
   const globalOpener = tools.tools.find(
-    (tool) => tool.name === "app_open_codex_subagent_extension_global",
+    (tool) => tool.name === "app_open_subagent_extension_for_codex_global",
   )!;
 
   const ambientMeta = {
@@ -150,7 +150,7 @@ export async function httpFixture(t: TestContext) {
       const task = c.store.get(task_id, "local");
 
       for (const name of [
-        "open_codex_subagent_extension",
+        "open_subagent_extension_for_codex",
         "get_panel_context",
       ]) {
         const selected = await transportClient.callTool({

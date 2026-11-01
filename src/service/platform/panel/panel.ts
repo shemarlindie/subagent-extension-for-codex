@@ -13,8 +13,8 @@ import { preloadPanelHtml, readPanelHtml } from "./panel-html.js";
 
 // Bump the URI when resource metadata or the panel's tool calls change, to
 // invalidate host caches.
-export const panelUri = "ui://codex-subagent-extension/app-v7";
-const globalPanelToolName = "app_open_codex_subagent_extension_global";
+export const panelUri = "ui://subagent-extension-for-codex/app-v7";
+const globalPanelToolName = "app_open_subagent_extension_for_codex_global";
 
 const entrypoints = {
   entrypoints: [{ type: "thread" }],
@@ -46,7 +46,7 @@ export function delegationPanel(
   preloadPanelHtml(htmlPath);
 
   const panel = {
-    name: "open_codex_subagent_extension",
+    name: "open_subagent_extension_for_codex",
     uri: panelUri,
     tool: {
       description:

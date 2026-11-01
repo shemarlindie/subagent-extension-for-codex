@@ -64,10 +64,13 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
 });
 
 test("The extension sandbox denies reads of a data directory outside home by its real path", async (t) => {
-  const data = await mkdtemp(join(tmpdir(), "codex-subagent-extension-data-"));
+  const data = await mkdtemp(
+    join(tmpdir(), "subagent-extension-for-codex-data-"),
+  );
+
   t.onTestFinished(() => rm(data, { recursive: true, force: true }));
   const { c } = await context();
-  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_DATA", data);
+  vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_DATA", data);
 
   assert.ok(
     (await claudeSandbox(c.task)).filesystem!.denyRead!.includes(
@@ -78,7 +81,7 @@ test("The extension sandbox denies reads of a data directory outside home by its
 
 test("Claude parity policy leaves sandbox, tools and paths to the user's configuration and routes prompts to the approver", async () => {
   vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
-  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
+  vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "synthetic-service-token");
   vi.stubEnv("OPENAI_API_KEY", "synthetic-app-key");
   const { options, check, decide, asked } = await runWithPolicy(parity);
   assert.equal(options.sandbox, undefined);
@@ -87,7 +90,7 @@ test("Claude parity policy leaves sandbox, tools and paths to the user's configu
   assert.deepEqual(options.disallowedTools, []);
   assert.equal(options.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
-  for (const name of ["CODEX_SUBAGENT_EXTENSION_TOKEN", "OPENAI_API_KEY"]) {
+  for (const name of ["SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "OPENAI_API_KEY"]) {
     assert.equal(options.env![name], undefined, name);
   }
 

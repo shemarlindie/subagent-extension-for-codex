@@ -1,7 +1,7 @@
 export type Environment =
   { kind: "host" } | { kind: "http"; origin: string } | { kind: "unsupported" };
 
-type PageGlobals = Window & { CODEX_SUBAGENT_EXTENSION_ORIGIN?: string };
+type PageGlobals = Window & { SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN?: string };
 
 /** The server replaces this placeholder when it serves the page; the stdio resource keeps it. */
 const PLACEHOLDER = "__API_ORIGIN__";
@@ -13,7 +13,7 @@ const PLACEHOLDER = "__API_ORIGIN__";
 export function detectEnvironment(win: PageGlobals = window): Environment {
   if (win.parent !== win) return { kind: "host" };
 
-  const origin = win.CODEX_SUBAGENT_EXTENSION_ORIGIN;
+  const origin = win.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN;
   if (origin && origin !== PLACEHOLDER) return { kind: "http", origin };
 
   return { kind: "unsupported" };

@@ -20,9 +20,9 @@ import { runIsolatedScenario } from "./live-claude-isolated.mjs";
 const latestReply = (store, id) =>
   String(store.latestEvent(id, "agent.reply")?.data.text ?? "");
 
-if (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY !== "1") {
+if (process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY !== "1") {
   console.error(
-    "Set CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity, or $1.50 for edits. The edits scenario runs four tasks. A response can exceed the budget before work stops.",
+    "Set SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity, or $1.50 for edits. The edits scenario runs four tasks. A response can exceed the budget before work stops.",
   );
 
   process.exit(1);
@@ -47,9 +47,10 @@ assert.ok(
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
 const modelChoice = {
-  model: process.env.CODEX_SUBAGENT_EXTENSION_LIVE_MODEL ?? "haiku",
+  model: process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_MODEL ?? "haiku",
   reasoning_effort:
-    (process.env.CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT ?? "medium") || "default",
+    (process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT ?? "medium") ||
+    "default",
 };
 
 // Every scenario runs the installed CLI the service would pick, passed to the SDK as pathToClaudeCodeExecutable.
@@ -75,7 +76,7 @@ const provider = () =>
   edits?.provider ?? new ClaudeAgentProvider(undefined, undefined, cli);
 
 const root = await realpath(
-  await mkdtemp(join(tmpdir(), "codex-subagent-extension-native-proof-")),
+  await mkdtemp(join(tmpdir(), "subagent-extension-for-codex-native-proof-")),
 );
 
 const repo = join(root, "repo");
@@ -449,8 +450,8 @@ if (scenario === "isolated") {
     command: process.execPath,
     args: [fileURLToPath(new URL("../dist/stdio.js", import.meta.url))],
     env: {
-      CODEX_SUBAGENT_EXTENSION_URL: `http://127.0.0.1:${server.address().port}`,
-      CODEX_SUBAGENT_EXTENSION_TOKEN: token,
+      SUBAGENT_EXTENSION_FOR_CODEX_URL: `http://127.0.0.1:${server.address().port}`,
+      SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token,
     },
     stderr: "pipe",
   });

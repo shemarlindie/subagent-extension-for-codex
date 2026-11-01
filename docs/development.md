@@ -22,12 +22,12 @@ cp -n .env.example .env
 `npm run dev`, `npm start`, `npm run projects`, `npm run dev:reset` and
 `npm run dev:ui` load `.env`
 when present. Shell variables take precedence. `.env` is gitignored, and the
-example keeps data in `.codex-subagent-extension/live`. See the
+example keeps data in `.subagent-extension-for-codex/live`. See the
 [configuration table](configuration.md#environment-variables) for every
 variable.
 
 The service and panel dev host must use the same
-`CODEX_SUBAGENT_EXTENSION_DATA`, which holds the database and admin token. How
+`SUBAGENT_EXTENSION_FOR_CODEX_DATA`, which holds the database and admin token. How
 Codex finds that directory depends on the
 [transport](#connect-codex-from-a-checkout):
 
@@ -35,13 +35,13 @@ Codex finds that directory depends on the
   MCP environment for service discovery:
 
   ```toml
-  [mcp_servers.codex_subagent_extension.env]
-  CODEX_SUBAGENT_EXTENSION_DATA = "<checkout-root>/.codex-subagent-extension/live"
+  [mcp_servers.subagent_extension_for_codex.env]
+  SUBAGENT_EXTENSION_FOR_CODEX_DATA = "<checkout-root>/.subagent-extension-for-codex/live"
   ```
 
 - **HTTP.** Configure the [Streamable HTTP](#streamable-http) URL and an
   Authorization header with the token from
-  `<checkout-root>/.codex-subagent-extension/live/admin-token`, or the service's
+  `<checkout-root>/.subagent-extension-for-codex/live/admin-token`, or the service's
   token override. Codex needs no data directory setting.
 
 If the plugin is installed too, give the checkout its own `PORT`, such as
@@ -144,7 +144,7 @@ npm run projects -- list
 
 Open the standalone console at `http://127.0.0.1:17317` and sign in with the
 contents of `<data-directory>/admin-token`. On macOS,
-`pbcopy < .codex-subagent-extension/live/admin-token` copies it. Use the
+`pbcopy < .subagent-extension-for-codex/live/admin-token` copies it. Use the
 configured origin. `localhost` and `127.0.0.1` are different browser origins,
 and the service's origin checks can reject the substitute.
 
@@ -192,11 +192,11 @@ edits on its first call for that task. Source edits reset this state.
 at `/service`. The proxy adds the admin token server-side and drops the browser
 `Origin` header, so the token never reaches the page.
 
-- The proxy finds the service from `CODEX_SUBAGENT_EXTENSION_URL`, then
-  `CODEX_SUBAGENT_EXTENSION_ORIGIN`, then the data directory's `service.json`,
+- The proxy finds the service from `SUBAGENT_EXTENSION_FOR_CODEX_URL`, then
+  `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN`, then the data directory's `service.json`,
   then port 17317. It ignores `PORT`, which sets the dev host's own port in this
   process.
-- It reads the token from `CODEX_SUBAGENT_EXTENSION_TOKEN` or the data
+- It reads the token from `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN` or the data
   directory's `admin-token`.
 - Start the service first, and restart Vite after the service changes ports.
 
@@ -204,8 +204,8 @@ For Claude execution against throwaway data, give both processes the same data
 directory. The dev host reads the service's port from `service.json`:
 
 ```sh
-CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev PORT=4399 npm run dev
-CODEX_SUBAGENT_EXTENSION_DATA=/tmp/panel-dev npm run dev:ui
+SUBAGENT_EXTENSION_FOR_CODEX_DATA=/tmp/panel-dev PORT=4399 npm run dev
+SUBAGENT_EXTENSION_FOR_CODEX_DATA=/tmp/panel-dev npm run dev:ui
 ```
 
 ### Access from your local network
@@ -456,7 +456,7 @@ the same task tools and MCP App.
 - Remove the plugin first, or Codex runs both servers.
 - Replace the existing server entry when switching transports. Do not combine
   stdio and HTTP settings.
-- To return to the plugin, delete `[mcp_servers.codex_subagent_extension]` and
+- To return to the plugin, delete `[mcp_servers.subagent_extension_for_codex]` and
   its `env` or `http_headers` tables, and stop the checkout's service. The
   plugin never stops a service it didn't start.
 
@@ -470,15 +470,15 @@ Run `npm run build`, then point Codex at the built launcher with an absolute
 checkout path:
 
 ```toml
-[mcp_servers.codex_subagent_extension]
+[mcp_servers.subagent_extension_for_codex]
 command = "node"
 args = ["<checkout-root>/dist/stdio.js"]
 ```
 
 The launcher reads the admin token and connects to the local service, starting
-it when needed. If you override `CODEX_SUBAGENT_EXTENSION_DATA`, give the
+it when needed. If you override `SUBAGENT_EXTENSION_FOR_CODEX_DATA`, give the
 service and launcher the same absolute path through
-`[mcp_servers.codex_subagent_extension.env]`. See
+`[mcp_servers.subagent_extension_for_codex.env]`. See
 [Task continuation](task-continuation.md) for recovery and state, and
 [Admin token](configuration.md#admin-token) for token overrides.
 
@@ -496,20 +496,20 @@ Use `npm run build && npm run dev` for development instead, and follow
 Configure the authenticated `/mcp` endpoint:
 
 ```toml
-[mcp_servers.codex_subagent_extension]
+[mcp_servers.subagent_extension_for_codex]
 url = "http://127.0.0.1:17317/mcp"
 
-[mcp_servers.codex_subagent_extension.http_headers]
+[mcp_servers.subagent_extension_for_codex.http_headers]
 Authorization = "Bearer <admin-token>"
 ```
 
 Replace `<admin-token>` with the contents of `<data-directory>/admin-token`, or
-with `CODEX_SUBAGENT_EXTENSION_TOKEN` if the service uses that override. The
-default data directory is `~/.local/share/codex-subagent-extension`. On macOS,
+with `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN` if the service uses that override. The
+default data directory is `~/.local/share/subagent-extension-for-codex`. On macOS,
 copy the token without printing it:
 
 ```sh
-pbcopy < ~/.local/share/codex-subagent-extension/admin-token
+pbcopy < ~/.local/share/subagent-extension-for-codex/admin-token
 ```
 
 Update the URL if you changed the service port. Keep the token and configuration
@@ -533,9 +533,9 @@ npm run demo
 ```
 
 The demo builds the project, registers a disposable repository at
-`.codex-subagent-extension/demo-repository` and starts the service with only the
+`.subagent-extension-for-codex/demo-repository` and starts the service with only the
 fixture worker, so it makes no model calls. Data lives in
-`.codex-subagent-extension/demo`. Stop any other service on port 17317 first,
+`.subagent-extension-for-codex/demo`. Stop any other service on port 17317 first,
 then sign in at `http://127.0.0.1:17317` with
 `local-demo-only-not-a-real-token`.
 
@@ -545,9 +545,9 @@ To pair fake-worker tasks with UI hot reload:
 2. Start Vite in another terminal with the demo connection:
 
    ```sh
-   CODEX_SUBAGENT_EXTENSION_DATA="$PWD/.codex-subagent-extension/demo" \
-   CODEX_SUBAGENT_EXTENSION_TOKEN=local-demo-only-not-a-real-token \
-   CODEX_SUBAGENT_EXTENSION_URL=http://127.0.0.1:17317 npm run dev:ui
+   SUBAGENT_EXTENSION_FOR_CODEX_DATA="$PWD/.subagent-extension-for-codex/demo" \
+   SUBAGENT_EXTENSION_FOR_CODEX_TOKEN=local-demo-only-not-a-real-token \
+   SUBAGENT_EXTENSION_FOR_CODEX_URL=http://127.0.0.1:17317 npm run dev:ui
    ```
 
 3. Open `http://127.0.0.1:5317`, choose **Data: live** and **Launch: global**,
@@ -574,14 +574,14 @@ await page.request.post("http://127.0.0.1:17317/api/login", {
 ```
 
 To call a tool with agent authority, post its arguments with the token as a
-bearer credential and the `X-Codex-Subagent-Extension` header. Console
+bearer credential and the `X-Subagent-Extension-For-Codex` header. Console
 sessions and `/api/user-tools/` calls carry
 [user authority](mcp-reference.md#app-and-user-authority).
 
 ```sh
 curl -s http://127.0.0.1:17317/api/tools/update_settings \
   -H "Authorization: Bearer local-demo-only-not-a-real-token" \
-  -H "X-Codex-Subagent-Extension: 1" -H "Content-Type: application/json" \
+  -H "X-Subagent-Extension-For-Codex: 1" -H "Content-Type: application/json" \
   -d '{"set":{"approvals":{"execution_mode":"deny"}}}'
 ```
 
@@ -631,7 +631,7 @@ directory is both a Codex marketplace and the plugin. Install it locally with:
 
 ```sh
 codex plugin marketplace add ./release
-codex plugin add codex-subagent-extension@shemarlindie
+codex plugin add subagent-extension-for-codex@shemarlindie
 ```
 
 The marketplace name `shemarlindie` is part of the plugin ID and its
@@ -905,7 +905,7 @@ message latency and scheduler work before changing performance behavior.
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Dev host live mode logs 502                   | The service is not running, or not on the port Vite resolved at startup                       |
 | Dev host live mode logs 401                   | Vite and the service use different data directories, so the token does not match              |
-| Codex shows different tasks than the dev host | Codex's `CODEX_SUBAGENT_EXTENSION_DATA` differs from `.env`                                   |
+| Codex shows different tasks than the dev host | Codex's `SUBAGENT_EXTENSION_FOR_CODEX_DATA` differs from `.env`                               |
 | Service exits on start                        | Another service owns the data directory, or the port is taken, for example by the demo        |
 | `npm test` reports a check failure            | Run the schema, formatting, lint, unused code, type or build check individually to isolate it |
 | Missing or stale generated schema             | Run `npm run schemas:generate`, then `npm run schemas:check`                                  |

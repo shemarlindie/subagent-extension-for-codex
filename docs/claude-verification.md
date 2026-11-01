@@ -20,7 +20,7 @@ these checks. Run them when you update the SDK or change the minimum:
    when the SDK adds a message type, system subtype or assistant error. Check
    how `src/service/features/providers/claude/events/activity.ts` presents it,
    then list it in `sdk-message-coverage.ts` beside that file.
-2. Select the version through `PATH` or `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`
+2. Select the version through `PATH` or `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`
    and run the [live Claude checks](#live-claude-checks).
 3. In a live task from the panel, steer, interrupt and answer a question.
 
@@ -37,7 +37,7 @@ runs service source through `tsx`, and the `mcp` scenario also reads
 scenario:
 
 ```sh
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs <scenario>
+SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs <scenario>
 ```
 
 | Scenario   | Checks                                                                                                                                                                                                                                       |
@@ -56,13 +56,13 @@ Each scenario uses a temporary Git fixture and a small native cost limit. Claude
 checks cost after each response, so a response can exceed the limit.
 
 Tasks run on `haiku` at `medium` effort to keep costs low. Set
-`CODEX_SUBAGENT_EXTENSION_LIVE_MODEL` to a model ID or alias, or
-`CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT` to `default` or a reasoning level, to
+`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_MODEL` to a model ID or alias, or
+`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT` to `default` or a reasoning level, to
 override them. An empty value inherits the Claude Code default:
 
 ```sh
-CODEX_SUBAGENT_EXTENSION_LIVE_VERIFY=1 CODEX_SUBAGENT_EXTENSION_LIVE_MODEL=sonnet \
-  CODEX_SUBAGENT_EXTENSION_LIVE_EFFORT=high npx tsx scripts/verify-live-claude.mjs read
+SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 SUBAGENT_EXTENSION_FOR_CODEX_LIVE_MODEL=sonnet \
+  SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT=high npx tsx scripts/verify-live-claude.mjs read
 ```
 
 Run `parity` and `isolated` together before releasing settings-loading or MCP

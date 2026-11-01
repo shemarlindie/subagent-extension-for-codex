@@ -6,12 +6,12 @@ import { join } from "node:path";
 const minimumTokenLength = 32;
 
 export function adminToken(data: string, env = process.env) {
-  const override = env.CODEX_SUBAGENT_EXTENSION_TOKEN;
+  const override = env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN;
 
   if (override !== undefined) {
     if (override.length < minimumTokenLength) {
       throw new Error(
-        `CODEX_SUBAGENT_EXTENSION_TOKEN must be at least ${minimumTokenLength} characters`,
+        `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN must be at least ${minimumTokenLength} characters`,
       );
     }
 

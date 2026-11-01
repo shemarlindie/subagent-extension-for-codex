@@ -35,7 +35,7 @@ export default defineConfig(
     ignores: [
       "dist/",
       "release/",
-      ".codex-subagent-extension/",
+      ".subagent-extension-for-codex/",
       "node_modules/",
       "test-results/",
       "playwright-report/",

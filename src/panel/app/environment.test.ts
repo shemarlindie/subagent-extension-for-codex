@@ -6,8 +6,8 @@ import { detectEnvironment } from "./environment";
 
 function page(options: { embedded?: boolean; origin?: string }) {
   const win = {
-    CODEX_SUBAGENT_EXTENSION_ORIGIN: options.origin,
-  } as unknown as Window & { CODEX_SUBAGENT_EXTENSION_ORIGIN?: string };
+    SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN: options.origin,
+  } as unknown as Window & { SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN?: string };
 
   (win as { parent: unknown }).parent = options.embedded ? {} : win;
 

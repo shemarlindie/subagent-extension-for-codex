@@ -14,11 +14,11 @@ establish compatibility with every desktop release.
 The panel advertises `inline` and `fullscreen` display modes and prefers
 `inline`. Display modes are hints, and the host owns placement.
 
-| Entrypoint                                 | Opens                                     |
-| ------------------------------------------ | ----------------------------------------- |
-| `open_codex_subagent_extension`            | The thread panel                          |
-| `app_open_codex_subagent_extension_global` | The global panel. App-only.               |
-| `start_task`                               | The thread panel with the new task's Chat |
+| Entrypoint                                     | Opens                                     |
+| ---------------------------------------------- | ----------------------------------------- |
+| `open_subagent_extension_for_codex`            | The thread panel                          |
+| `app_open_subagent_extension_for_codex_global` | The global panel. App-only.               |
+| `start_task`                                   | The thread panel with the new task's Chat |
 
 ### Sidebar icon
 

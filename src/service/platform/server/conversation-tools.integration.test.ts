@@ -119,7 +119,7 @@ test("tool names mark app-only tools and fit the host name budget", async () => 
   for (const name of names) {
     assert.equal(isUserTool(name), name.startsWith("app_"), name);
 
-    // Hosts qualify names as mcp__codex-subagent-extension__<tool> (31
+    // Hosts qualify names as mcp__subagent-extension-for-codex__<tool> (31
     // characters) within a 64-character function-name limit.
     if (!isUserTool(name)) assert.ok(name.length <= 33, name);
   }

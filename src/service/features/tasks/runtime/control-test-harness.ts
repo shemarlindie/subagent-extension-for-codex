@@ -30,7 +30,10 @@ export async function setup(
   provider: Provider = new TestProvider(),
   concurrency = 2,
 ) {
-  const dir = await mkdtemp(join(tmpdir(), "codex-subagent-extension-test-"));
+  const dir = await mkdtemp(
+    join(tmpdir(), "subagent-extension-for-codex-test-"),
+  );
+
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
   const repo = join(dir, "repo");
   await copyCommittedRepository(repo);

@@ -95,20 +95,20 @@ permission and sandbox behavior.
 Readiness and model discovery happen before a task runs. Configure them, and
 provider failures, with environment variables when you start the demo:
 
-| Variable                                              | Values                                       |
-| ----------------------------------------------------- | -------------------------------------------- |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS`          | `ready` (default), `unavailable`, `error`    |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS_DELAY_MS` | Delay from 0 to 60000 ms                     |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS`             | `default`, `empty`, `error`, `error-once`    |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS_DELAY_MS`    | Delay from 0 to 60000 ms                     |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_DELETE_SESSION`     | `error` fails provider-side session deletion |
-| `CODEX_SUBAGENT_EXTENSION_FIXTURE_CLOSE`              | `error` fails provider shutdown              |
+| Variable                                                  | Values                                       |
+| --------------------------------------------------------- | -------------------------------------------- |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_READINESS`          | `ready` (default), `unavailable`, `error`    |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_READINESS_DELAY_MS` | Delay from 0 to 60000 ms                     |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_MODELS`             | `default`, `empty`, `error`, `error-once`    |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_MODELS_DELAY_MS`    | Delay from 0 to 60000 ms                     |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_DELETE_SESSION`     | `error` fails provider-side session deletion |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_CLOSE`              | `error` fails provider shutdown              |
 
 For example:
 
 ```sh
-CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS_DELAY_MS=1500 \
-CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS=error-once npm run demo
+SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_READINESS_DELAY_MS=1500 \
+SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_MODELS=error-once npm run demo
 ```
 
 The fixture keeps sessions and costs in memory. After a demo restart, old
@@ -121,7 +121,7 @@ These scenarios exercise real task controls with the fake worker. See
 
 | Check              | Procedure and expected result                                                                                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Scheduler capacity | Start the demo with `CODEX_SUBAGENT_EXTENSION_CONCURRENCY=1`, then start two tasks with `[fixture:wait ms=15000]`. The second remains queued until capacity opens.                         |
+| Scheduler capacity | Start the demo with `SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY=1`, then start two tasks with `[fixture:wait ms=15000]`. The second remains queued until capacity opens.                     |
 | Dependencies       | Start B with `depends_on: [A.task_id]` while A waits. A successful turn releases B. `[fixture:fail]` on A fails B. An interrupted A can complete a later turn to release B.                |
 | Queue and steer    | Send messages during a wait. `[fixture:slow]` takes steers at checkpoints. `[fixture:late]` leaves them for the next turn. Unconsumed steers precede queued messages.                      |
 | Pause and resume   | Queue messages, then interrupt. A plain interrupt pauses the queue. **Interrupt and send now** starts the next turn. **Resume**, **Clear**, and a new idle-task message exercise recovery. |

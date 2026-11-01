@@ -3,7 +3,7 @@ playwright-report/
 test-results/
 dist/
 *.tsbuildinfo
-.codex-subagent-extension/
+.subagent-extension-for-codex/
 .env
 .env.*
 !.env.example

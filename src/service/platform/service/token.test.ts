@@ -46,11 +46,16 @@ test("rejects short overrides without touching the file", async (t) => {
   const dir = await data(t);
 
   assert.throws(
-    () => adminToken(dir, { CODEX_SUBAGENT_EXTENSION_TOKEN: "short" }),
+    () => adminToken(dir, { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "short" }),
     /at least 32 characters/,
   );
 
   const long = "x".repeat(32);
-  assert.equal(adminToken(dir, { CODEX_SUBAGENT_EXTENSION_TOKEN: long }), long);
+
+  assert.equal(
+    adminToken(dir, { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: long }),
+    long,
+  );
+
   await assert.rejects(stat(join(dir, "admin-token")));
 });

@@ -184,7 +184,7 @@ test("cookie-authenticated user tasks use the extension permission setting", asy
     { ...request, worker_profile: "reviewer" },
     {
       Cookie: cookie,
-      "X-Codex-Subagent-Extension": "1",
+      "X-Subagent-Extension-For-Codex": "1",
       "X-Codex-Parent-Permissions": JSON.stringify({
         provider: "claude",
         permission_mode: "bypassPermissions",

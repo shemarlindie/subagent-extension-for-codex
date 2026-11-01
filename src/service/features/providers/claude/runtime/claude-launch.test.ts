@@ -162,7 +162,7 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
     PATH: process.env.PATH,
     USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
     OPENAI_API_KEY: "synthetic-app-key",
-    CODEX_SUBAGENT_EXTENSION_TOKEN: "synthetic-service-token",
+    SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "synthetic-service-token",
   });
 
   assert.deepEqual(Object.keys(env).sort(), ["PATH", "USER_TOOLCHAIN_HOME"]);
@@ -194,7 +194,7 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
   assert.equal(spawned.PATH, process.env.PATH);
   assert.equal(spawned.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
-  for (const name of ["CODEX_SUBAGENT_EXTENSION_TOKEN", "OPENAI_API_KEY"]) {
+  for (const name of ["SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "OPENAI_API_KEY"]) {
     assert.equal(
       spawned[name],
       undefined,

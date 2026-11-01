@@ -135,7 +135,7 @@ test.each([
           headers: {
             Origin: lanOrigin,
             Cookie: session,
-            "X-Codex-Subagent-Extension": "1",
+            "X-Subagent-Extension-For-Codex": "1",
             "Content-Type": "application/json",
           },
           body: "{}",

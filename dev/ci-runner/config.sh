@@ -1,5 +1,5 @@
 # Settings shared by the CI runner scripts.
-REPO=shemarlindie/codex-subagent-extension
+REPO=shemarlindie/subagent-extension-for-codex
 IMAGE=ghcr.io/cirruslabs/macos-tahoe-base:latest
 # ci.yml routes the macOS checks to this label through the MACOS_RUNNER variable.
 LABEL=self-hosted-macos

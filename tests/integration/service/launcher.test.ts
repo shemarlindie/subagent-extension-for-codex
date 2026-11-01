@@ -37,7 +37,7 @@ async function connectProcess(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
 
   for (const key of Object.keys(clean)) {
-    if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
+    if (key.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") || key === "PORT") {
       delete clean[key];
     }
   }
@@ -58,7 +58,7 @@ async function connectProcess(env: NodeJS.ProcessEnv) {
 /** Exercise launcher policy without starting a TypeScript loader for each call. */
 function connect(env: NodeJS.ProcessEnv) {
   for (const key of Object.keys(process.env)) {
-    if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
+    if (key.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") || key === "PORT") {
       vi.stubEnv(key, undefined);
     }
   }
@@ -135,7 +135,7 @@ if (process.argv[1]?.endsWith("main.js") && process.env.PORT) {
   });
 
   const connection = connectProcess({
-    CODEX_SUBAGENT_EXTENSION_DATA: dir,
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
     NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(preload).href}`,
   });
 
@@ -173,7 +173,7 @@ async function identified(
     if (req.url === "/health") {
       res.end(
         health(req, "handoff-token", {
-          service: "codex-subagent-extension",
+          service: "subagent-extension-for-codex",
           status: "ok",
           ...identity,
         }),
@@ -235,7 +235,7 @@ test("launcher uses a service it didn't start whatever its version, and never dr
   });
 
   const dir = await serviceData(t, origin, "/removed/install");
-  const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+  const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
 
   assert.deepEqual(result, {
     origin,
@@ -255,7 +255,7 @@ test("launcher refuses an incompatible service it didn't start", async (t) => {
   const dir = await serviceData(t, origin, resolve("."));
 
   await assert.rejects(
-    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
     /different extension service \(version 9\.0\.0, not started by the plugin\)/,
   );
 
@@ -271,7 +271,7 @@ test("launcher drains an older plugin service and keeps using it while it speaks
   });
 
   const dir = await serviceData(t, origin, resolve("."));
-  const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+  const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
 
   assert.deepEqual(result, {
     origin,
@@ -297,7 +297,7 @@ test(
 
     const dir = await serviceData(t, origin, join(tmpdir(), "removed-install"));
     stopOnFinish(t, dir);
-    const result = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+    const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
     assert.equal(result.origin, origin);
     assert.deepEqual(drains, ["Bearer handoff-token"]);
 
@@ -331,7 +331,7 @@ test(
     await writeFile(join(dir, "service.pid"), String(stopping.pid));
 
     const connecting = connect({
-      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
       PORT: String(port),
     });
 
@@ -370,12 +370,12 @@ test(
       JSON.stringify({ origin: unrelated }),
     );
 
-    const moved = await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir });
+    const moved = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
 
     assert.notEqual(moved.origin, unrelated);
 
     assert.deepEqual(
-      await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+      await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
       moved,
     );
   },
@@ -390,7 +390,7 @@ test("a chosen port another program holds fails with a clear message", async (t)
 
   await assert.rejects(
     connect({
-      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
       PORT: new URL(unrelated).port,
     }),
     /Port \d+ is already in use by another program/,
@@ -420,7 +420,7 @@ test("launcher follows newly published metadata when a relocating service holds 
 
   await writeFile(join(dir, "service.pid"), String(process.pid));
 
-  assert.deepEqual(await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }), {
+  assert.deepEqual(await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }), {
     origin,
     token: "handoff-token",
   });
@@ -450,7 +450,7 @@ test("launcher never relocates or spawns when the health response body times out
   await writeFile(join(dir, "service.json"), JSON.stringify({ origin }));
 
   await assert.rejects(
-    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
     /TimeoutError/,
   );
 
@@ -463,7 +463,9 @@ test("authentication failure never authorizes auto-start", async (t) => {
   // A service that proves the token but rejects it speaks another protocol.
   const denied = await fake(t, (req, res) => {
     if (req.url === "/health") {
-      res.end(health(req, "wrong", { service: "codex-subagent-extension" }));
+      res.end(
+        health(req, "wrong", { service: "subagent-extension-for-codex" }),
+      );
     } else {
       res.statusCode = 401;
       res.end("{}");
@@ -478,7 +480,7 @@ test("authentication failure never authorizes auto-start", async (t) => {
   await writeFile(join(dir, "admin-token"), "wrong");
 
   await assert.rejects(
-    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
     /token or protocol mismatch/,
   );
 
@@ -496,7 +498,7 @@ test("launcher never sends the token to a listener that can't prove it holds it"
     res.end(
       req.url === "/health"
         ? health(req, "guessed-token", {
-            service: "codex-subagent-extension",
+            service: "subagent-extension-for-codex",
             status: "ok",
             apiVersion: 1,
           })
@@ -512,7 +514,7 @@ test("launcher never sends the token to a listener that can't prove it holds it"
   await writeFile(join(dir, "admin-token"), "secret-token");
 
   await assert.rejects(
-    connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }),
+    connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
     /did not prove it holds this data directory's admin token/,
   );
 
@@ -534,7 +536,7 @@ test("launcher waits for an existing service to finish recovery without spawning
 
       res.end(
         health(req, "recovery-token", {
-          service: "codex-subagent-extension",
+          service: "subagent-extension-for-codex",
           status: probes < 3 ? "starting" : "ready",
           apiVersion: 1,
         }),
@@ -549,7 +551,7 @@ test("launcher waits for an existing service to finish recovery without spawning
   // A trailing newline in the token file is not part of the token.
   await writeFile(join(dir, "admin-token"), "recovery-token\n");
 
-  assert.deepEqual(await connect({ CODEX_SUBAGENT_EXTENSION_DATA: dir }), {
+  assert.deepEqual(await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }), {
     origin,
     token: "recovery-token",
   });
@@ -576,7 +578,7 @@ test("launcher waits through dropped connections without spawning", async (t) =>
     res.end(
       req.url === "/health"
         ? health(req, "dropped-token", {
-            service: "codex-subagent-extension",
+            service: "subagent-extension-for-codex",
             status: "ok",
             apiVersion: 1,
           })
@@ -589,7 +591,7 @@ test("launcher waits through dropped connections without spawning", async (t) =>
 
   assert.deepEqual(
     await connect({
-      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
       PORT: new URL(origin).port,
     }),
     { origin, token: "dropped-token" },
@@ -610,8 +612,8 @@ test("launcher rejects remote and credential-bearing service URLs", async (t) =>
   ]) {
     await assert.rejects(
       connect({
-        CODEX_SUBAGENT_EXTENSION_DATA: dir,
-        CODEX_SUBAGENT_EXTENSION_URL: url,
+        SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
+        SUBAGENT_EXTENSION_FOR_CODEX_URL: url,
       }),
       /plain loopback/,
     );
@@ -633,7 +635,7 @@ test(
     stopOnFinish(t, dir);
 
     const env = {
-      CODEX_SUBAGENT_EXTENSION_DATA: dir,
+      SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
       PORT: String(port),
     };
 

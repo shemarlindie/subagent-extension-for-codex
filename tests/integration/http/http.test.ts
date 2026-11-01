@@ -67,7 +67,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         await post(
           "/api/tools/list_tasks",
           {},
-          { Cookie: cookie, "X-Codex-Subagent-Extension": "1" },
+          { Cookie: cookie, "X-Subagent-Extension-For-Codex": "1" },
         )
       ).status,
       200,
@@ -96,7 +96,12 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
   test("MCP tools and UI resource metadata", async () => {
     const { client, tools, opener, readUi, base, post } = fixture;
     const ui = await readUi();
-    assert.equal(client.getServerVersion()?.name, "codex-subagent-extension");
+
+    assert.equal(
+      client.getServerVersion()?.name,
+      "subagent-extension-for-codex",
+    );
+
     assert.equal(client.getInstructions(), SERVER_INSTRUCTIONS);
 
     assert.deepEqual(
@@ -138,7 +143,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       { query: "claude" },
       {
         Authorization: "Bearer private-token",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
       },
     );
 
@@ -157,7 +162,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     assert.ok(
-      tools.tools.some((t) => t.name === "open_codex_subagent_extension"),
+      tools.tools.some((t) => t.name === "open_subagent_extension_for_codex"),
     );
 
     const workers = await client.callTool({
@@ -170,7 +175,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.equal(opener.title, "Delegated Work");
 
     for (const name of [
-      "open_codex_subagent_extension",
+      "open_subagent_extension_for_codex",
       "app_wait_for_updates",
     ]) {
       assert.equal(
@@ -191,7 +196,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.equal(
       (opener._meta as any).ui.resourceUri,
-      "ui://codex-subagent-extension/app-v7",
+      "ui://subagent-extension-for-codex/app-v7",
     );
 
     const resources = await client.listResources();
@@ -200,21 +205,21 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       resources.resources.some(
         (resource) =>
           resource.name === "Delegated Work" &&
-          resource.uri === "ui://codex-subagent-extension/app-v7",
+          resource.uri === "ui://subagent-extension-for-codex/app-v7",
       ),
     );
 
     assert.equal(
       resources.resources.some(
         (resource) =>
-          resource.uri === "codex-subagent-extension://providers/claude",
+          resource.uri === "subagent-extension-for-codex://providers/claude",
       ),
       false,
     );
 
     await assert.rejects(
       client.readResource({
-        uri: "codex-subagent-extension://providers/claude",
+        uri: "subagent-extension-for-codex://providers/claude",
       }),
     );
 
@@ -250,7 +255,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.ok(uiContent);
 
-    assert.equal(uiContent.uri, "ui://codex-subagent-extension/app-v7");
+    assert.equal(uiContent.uri, "ui://subagent-extension-for-codex/app-v7");
     assert.equal(uiContent.mimeType, "text/html;profile=mcp-app");
     assert.ok("text" in uiContent);
 
@@ -284,7 +289,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.ok(
       standaloneHtml.includes(
-        'window.CODEX_SUBAGENT_EXTENSION_ORIGIN = "http://127.0.0.1:17317"',
+        'window.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN = "http://127.0.0.1:17317"',
       ),
     );
 
@@ -320,7 +325,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     } = fixture;
 
     const open = await client.callTool({
-      name: "open_codex_subagent_extension",
+      name: "open_subagent_extension_for_codex",
       arguments: {},
     });
 
@@ -383,7 +388,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     await checkSelectedTaskContext(client);
 
     const scopedOpen = await client.callTool({
-      name: "open_codex_subagent_extension",
+      name: "open_subagent_extension_for_codex",
       arguments: { conversation_id: "conversation-a" },
     });
 
@@ -403,7 +408,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     assert.equal(open._meta?.origin, undefined);
 
     const nativeOpen = await client.callTool({
-      name: "open_codex_subagent_extension",
+      name: "open_subagent_extension_for_codex",
       arguments: {},
       _meta: { "openai/session": "conversation-a" },
     });
@@ -437,7 +442,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     const fromDirectory = await client.callTool({
-      name: "open_codex_subagent_extension",
+      name: "open_subagent_extension_for_codex",
       arguments: { conversation_id: "first-use" },
       _meta: {
         "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(dir).href },
@@ -511,9 +516,9 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
                 (e): e is [string, string] => typeof e[1] === "string",
               ),
             ),
-            CODEX_SUBAGENT_EXTENSION_URL: base,
-            CODEX_SUBAGENT_EXTENSION_TOKEN: "private-token",
-            CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE: "0",
+            SUBAGENT_EXTENSION_FOR_CODEX_URL: base,
+            SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "private-token",
+            SUBAGENT_EXTENSION_FOR_CODEX_MENTION_TEST_MODE: "0",
           },
           stderr: "pipe",
         }),
@@ -624,14 +629,14 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.equal(
         (await stdio.listResources()).resources.some(
           (resource) =>
-            resource.uri === "codex-subagent-extension://providers/claude",
+            resource.uri === "subagent-extension-for-codex://providers/claude",
         ),
         false,
       );
 
       await assert.rejects(
         stdio.readResource({
-          uri: "codex-subagent-extension://providers/claude",
+          uri: "subagent-extension-for-codex://providers/claude",
         }),
       );
 
@@ -642,7 +647,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.deepEqual(proxyUi.contents, ui.contents);
 
       const unscopedProxyOpen = await stdio.callTool({
-        name: "open_codex_subagent_extension",
+        name: "open_subagent_extension_for_codex",
         arguments: {},
       });
 
@@ -679,7 +684,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       await checkSelectedTaskContext(stdio);
 
       const nativeProxyOpen = await stdio.callTool({
-        name: "open_codex_subagent_extension",
+        name: "open_subagent_extension_for_codex",
         arguments: {},
         _meta: { "openai/session": "conversation-a" },
       });
@@ -704,7 +709,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       );
 
       const proxyOpen = await stdio.callTool({
-        name: "open_codex_subagent_extension",
+        name: "open_subagent_extension_for_codex",
         arguments: { conversation_id: "conversation-a" },
       });
 
@@ -722,7 +727,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       const proxyFromDirectory = await stdio.callTool({
-        name: "open_codex_subagent_extension",
+        name: "open_subagent_extension_for_codex",
         arguments: { conversation_id: "proxy-first-use" },
         _meta: {
           "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(dir).href },
@@ -828,7 +833,7 @@ async function changeService(prefix: string) {
       headers: {
         Cookie: `ac_session=${auth.session(owner)}`,
         "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
       },
       body: JSON.stringify(args),
     });
@@ -1172,7 +1177,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
     );
 
     const opener = tools.json.result.tools.find(
-      (t: any) => t.name === "open_codex_subagent_extension",
+      (t: any) => t.name === "open_subagent_extension_for_codex",
     );
 
     assert.ok(opener?._meta?.ui?.resourceUri);

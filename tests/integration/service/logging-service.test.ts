@@ -30,8 +30,8 @@ test("isolated built service flushes correlated requests, auth failures, timing 
     env: serviceEnv(
       { data, port },
       {
-        CODEX_SUBAGENT_EXTENSION_TOKEN: token,
-        CODEX_SUBAGENT_EXTENSION_LOG_LEVEL: "debug",
+        SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token,
+        SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL: "debug",
       },
     ),
     stdio: "ignore",
@@ -77,7 +77,7 @@ test("isolated built service flushes correlated requests, auth failures, timing 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
         ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
       },
       body: JSON.stringify(body),

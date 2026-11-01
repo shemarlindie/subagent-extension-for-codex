@@ -218,7 +218,7 @@ export function TaskList() {
       return (
         <p className="help">
           {state.connection === CONNECTION.hostRequired
-            ? "Ask Codex to call open_codex_subagent_extension. To preview the panel during development, run npm run dev:ui."
+            ? "Ask Codex to call open_subagent_extension_for_codex. To preview the panel during development, run npm run dev:ui."
             : "Waiting for the host connection."}
         </p>
       );

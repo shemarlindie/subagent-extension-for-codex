@@ -2,7 +2,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const repo = resolve(".codex-subagent-extension/demo-repository");
+const repo = resolve(".subagent-extension-for-codex/demo-repository");
 await mkdir(repo, { recursive: true });
 
 try {
@@ -41,8 +41,10 @@ const token = "local-demo-only-not-a-real-token";
 
 const env = {
   ...process.env,
-  CODEX_SUBAGENT_EXTENSION_DATA: resolve(".codex-subagent-extension/demo"),
-  CODEX_SUBAGENT_EXTENSION_TOKEN: token,
+  SUBAGENT_EXTENSION_FOR_CODEX_DATA: resolve(
+    ".subagent-extension-for-codex/demo",
+  ),
+  SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token,
 };
 
 execFileSync(process.execPath, ["dist/projects-cli.js", "register", repo], {

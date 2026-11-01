@@ -30,7 +30,7 @@ export function serviceEnv(
   for (const [key, value] of Object.entries(process.env)) {
     if (
       value !== undefined &&
-      !key.startsWith("CODEX_SUBAGENT_EXTENSION_") &&
+      !key.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") &&
       key !== "PORT"
     ) {
       env[key] = value;
@@ -39,7 +39,7 @@ export function serviceEnv(
 
   return {
     ...env,
-    CODEX_SUBAGENT_EXTENSION_DATA: service.data,
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: service.data,
     PORT: String(service.port),
     ...overrides,
   };

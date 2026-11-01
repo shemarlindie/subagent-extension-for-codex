@@ -111,7 +111,7 @@ test(
     const env = { ...process.env };
 
     for (const key of Object.keys(env)) {
-      if (key.startsWith("CODEX_SUBAGENT_EXTENSION_") || key === "PORT") {
+      if (key.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") || key === "PORT") {
         delete env[key];
       }
     }
@@ -123,7 +123,7 @@ test(
         {
           env: {
             ...env,
-            CODEX_SUBAGENT_EXTENSION_DATA: data,
+            SUBAGENT_EXTENSION_FOR_CODEX_DATA: data,
             PORT: String(port),
           },
           timeout: 15000,

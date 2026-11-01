@@ -8,7 +8,7 @@ import { installRoot, packageVersion } from "./runtime.js";
 const serviceApiVersion = 1;
 
 /** Set by the stdio launcher on the services it starts. */
-export const launcherEnv = "CODEX_SUBAGENT_EXTENSION_LAUNCHER";
+export const launcherEnv = "SUBAGENT_EXTENSION_FOR_CODEX_LAUNCHER";
 
 /**
  * Who started a service. Only `stdio` services are replaced after an
@@ -111,7 +111,7 @@ export function handoff(
       ? { action: "use" }
       : {
           action: "refuse",
-          message: `A different extension service (${described}, not started by the plugin) is running at ${origin}. Stop it, or give development its own CODEX_SUBAGENT_EXTENSION_DATA and PORT.`,
+          message: `A different extension service (${described}, not started by the plugin) is running at ${origin}. Stop it, or give development its own SUBAGENT_EXTENSION_FOR_CODEX_DATA and PORT.`,
         };
   }
 

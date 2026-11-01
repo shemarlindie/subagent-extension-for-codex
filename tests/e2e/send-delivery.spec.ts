@@ -69,7 +69,7 @@ firstReplyTest(
           data: {},
           headers: {
             Origin: inProcessService.origin,
-            "X-Codex-Subagent-Extension": "1",
+            "X-Subagent-Extension-For-Codex": "1",
           },
         });
 

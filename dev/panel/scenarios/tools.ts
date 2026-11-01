@@ -91,7 +91,7 @@ const previewClaudeReady = {
 const previewClaudeUnavailable = {
   ready: false,
   message:
-    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.285+. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH to a supported copy.",
+    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.285+. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH to a supported copy.",
   details: {
     executable: "/opt/homebrew/Caskroom/claude-code/2.1.200/claude",
     version: "2.1.200",
@@ -438,8 +438,8 @@ export function previewTool(
     options.data ?? livePreview();
 
   const fixtures: Record<string, unknown> = {
-    open_codex_subagent_extension: openPanel(args, options),
-    app_open_codex_subagent_extension_global: openPanel(
+    open_subagent_extension_for_codex: openPanel(args, options),
+    app_open_subagent_extension_for_codex_global: openPanel(
       { conversation_id: null },
       options,
     ),

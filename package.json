@@ -1,18 +1,18 @@
 {
-  "name": "codex-subagent-extension",
+  "name": "subagent-extension-for-codex",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Claude delegation for Codex",
   "license": "MIT",
   "author": "Shemar Lindie",
-  "homepage": "https://github.com/shemarlindie/codex-subagent-extension#readme",
+  "homepage": "https://github.com/shemarlindie/subagent-extension-for-codex#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shemarlindie/codex-subagent-extension.git"
+    "url": "git+https://github.com/shemarlindie/subagent-extension-for-codex.git"
   },
   "bugs": {
-    "url": "https://github.com/shemarlindie/codex-subagent-extension/issues"
+    "url": "https://github.com/shemarlindie/subagent-extension-for-codex/issues"
   },
   "engines": {
     "node": ">=24"

@@ -92,7 +92,7 @@ export class StoryFeed {
   launch() {
     const current = storyAt(this.moment);
 
-    return storyTool(this.moment, "open_codex_subagent_extension", {
+    return storyTool(this.moment, "open_subagent_extension_for_codex", {
       conversation_id: STORY_THREAD,
       ...(current ? { task_id: current.task.id } : {}),
     });

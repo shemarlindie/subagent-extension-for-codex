@@ -108,11 +108,11 @@ jobs:
       - name: Zip the release
         env:
           VERSION: ${{ steps.version.outputs.version }}
-        run: cd release && zip -qr "../codex-subagent-extension-${VERSION}.zip" .
+        run: cd release && zip -qr "../subagent-extension-for-codex-${VERSION}.zip" .
 
       - uses: actions/attest-build-provenance@v3
         with:
-          subject-path: codex-subagent-extension-${{ steps.version.outputs.version }}.zip
+          subject-path: subagent-extension-for-codex-${{ steps.version.outputs.version }}.zip
 
       - name: Create the GitHub release
         env:
@@ -120,7 +120,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          gh release create "v${VERSION}" "codex-subagent-extension-${VERSION}.zip" \
+          gh release create "v${VERSION}" "subagent-extension-for-codex-${VERSION}.zip" \
             --title "v${VERSION}" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag \
             --prerelease="${PRERELEASE}"
 

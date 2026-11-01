@@ -102,8 +102,8 @@ try {
 
     if (running) {
       // Restart locally even when the checkout normally connects through an explicit URL.
-      delete process.env.CODEX_SUBAGENT_EXTENSION_URL;
-      process.env.CODEX_SUBAGENT_EXTENSION_DATA = data;
+      delete process.env.SUBAGENT_EXTENSION_FOR_CODEX_URL;
+      process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA = data;
       await connectService();
     }
 

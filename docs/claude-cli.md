@@ -20,7 +20,7 @@ The version policy lives in
 
 ## Which `claude` runs
 
-1. When `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` is set, it names the executable
+1. When `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` is set, it names the executable
    as an absolute path. A relative path or a missing file blocks Claude tasks.
    The service does not fall back to `PATH` while the variable is set.
 2. Otherwise, the service runs the first executable `claude` in an absolute
@@ -48,13 +48,13 @@ and the panel stay usable. The panel shows the readiness error, and
 `list_workers` reports the selected executable, its version and the supported
 range.
 
-| Message                                    | Fix                                                                                                            |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| not found on the service's PATH            | Install Claude Code, add its directory to the service's `PATH`, or set `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`. |
-| older than the supported range             | Update it with the step the message names.                                                                     |
-| could not be run                           | Reinstall Claude Code, or point the override at a working copy.                                                |
-| not a Claude Code release version          | Install a release. Prereleases aren't supported.                                                               |
-| `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH` ... | Fix or unset the override.                                                                                     |
+| Message                                        | Fix                                                                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| not found on the service's PATH                | Install Claude Code, add its directory to the service's `PATH`, or set `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`. |
+| older than the supported range                 | Update it with the step the message names.                                                                         |
+| could not be run                               | Reinstall Claude Code, or point the override at a working copy.                                                    |
+| not a Claude Code release version              | Install a release. Prereleases aren't supported.                                                                   |
+| `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` ... | Fix or unset the override.                                                                                         |
 
 After a fix, refresh the panel or call `list_workers` again. The service
 caches a failed check for about 30 seconds. Restart the service after changing

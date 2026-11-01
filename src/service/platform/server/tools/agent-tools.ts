@@ -81,7 +81,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       panel: true,
       conversation: "chat",
       description:
-        "Start asynchronous work on the full request in description. The service generates the title. Work runs in the current checkout by default, including uncommitted changes. Reopen existing work with open_codex_subagent_extension(task_id), never another start_task.",
+        "Start asynchronous work on the full request in description. The service generates the title. Work runs in the current checkout by default, including uncommitted changes. Reopen existing work with open_subagent_extension_for_codex(task_id), never another start_task.",
       schema: startSchema.extend({
         conversation_id: startSchema.shape.conversation_id.nullable(),
         provider: startSchema.shape.provider.unwrap().optional(),

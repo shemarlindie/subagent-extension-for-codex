@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml"><img src="https://github.com/shemarlindie/codex-subagent-extension/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/shemarlindie/subagent-extension-for-codex/actions/workflows/ci.yml"><img src="https://github.com/shemarlindie/subagent-extension-for-codex/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-early%20release-orange" alt="Status: early release">
 </p>
 
@@ -41,7 +41,7 @@ covers this kind of individual use.
 > [!NOTE]
 > This is an early release. Expect rough edges, and settings or behavior may
 > change between versions. Please report problems in
-> [Issues](https://github.com/shemarlindie/codex-subagent-extension/issues).
+> [Issues](https://github.com/shemarlindie/subagent-extension-for-codex/issues).
 
 ## Install
 
@@ -62,14 +62,14 @@ settings file exports.
 Add the marketplace, then install the plugin:
 
 ```sh
-codex plugin marketplace add shemarlindie/codex-subagent-extension@release
-codex plugin add codex-subagent-extension@shemarlindie
+codex plugin marketplace add shemarlindie/subagent-extension-for-codex@release
+codex plugin add subagent-extension-for-codex@shemarlindie
 ```
 
 After the first command, the plugin also appears in the Plugins directory of the
 Codex desktop app. You can also ask Codex to install it: _"Install the Codex
-plugin codex-subagent-extension from the release branch of
-github.com/shemarlindie/codex-subagent-extension."_
+plugin subagent-extension-for-codex from the release branch of
+github.com/shemarlindie/subagent-extension-for-codex."_
 
 Then approve a Git repository root with at least one commit. Use **Add chat
 project** in a chat's Delegated Work panel, or **Manage → Add project** in the
@@ -80,7 +80,7 @@ While the service runs, you can also use the standalone console at
 `http://127.0.0.1:17317`. If that port is taken, see
 [Service address](docs/configuration.md#service-address) to find the console.
 Sign in with the token in
-`~/.local/share/codex-subagent-extension/admin-token`. Treat the token as a
+`~/.local/share/subagent-extension-for-codex/admin-token`. Treat the token as a
 credential and keep it out of chats and commits.
 
 Claude uses the host's Claude Code credentials. By default, it also loads user,
@@ -129,7 +129,7 @@ Startup backs up the database before applying migrations. See
 [Restore a backup](docs/database.md#restore-a-backup).
 
 To pin a version, add the marketplace at a release tag, for example
-`codex plugin marketplace add shemarlindie/codex-subagent-extension@v0.1.0`.
+`codex plugin marketplace add shemarlindie/subagent-extension-for-codex@v0.1.0`.
 Remove the marketplace first if you already added it.
 
 Prereleases such as `v0.2.0-beta.1` exist only as tags and are marked as
@@ -141,15 +141,15 @@ releases, remove the marketplace and add it again at the new tag or at
 ## Uninstall
 
 ```sh
-codex plugin remove codex-subagent-extension@shemarlindie
+codex plugin remove subagent-extension-for-codex@shemarlindie
 codex plugin marketplace remove shemarlindie
 ```
 
 The service keeps running after you remove the plugin. Stop it with
-`kill "$(cat ~/.local/share/codex-subagent-extension/service.pid)"`, which
+`kill "$(cat ~/.local/share/subagent-extension-for-codex/service.pid)"`, which
 interrupts running turns.
 
-Tasks, settings and worktrees stay in `~/.local/share/codex-subagent-extension`.
+Tasks, settings and worktrees stay in `~/.local/share/subagent-extension-for-codex`.
 Delete that directory to remove them. Branches that tasks created stay in their
 repositories.
 

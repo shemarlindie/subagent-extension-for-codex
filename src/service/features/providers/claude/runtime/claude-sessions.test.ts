@@ -108,7 +108,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   let time = 1000;
   vi.spyOn(Date, "now").mockImplementation(() => time);
   vi.stubEnv("USER_TOOLCHAIN_HOME", "/synthetic/toolchain");
-  vi.stubEnv("CODEX_SUBAGENT_EXTENSION_TOKEN", "synthetic-service-token");
+  vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "synthetic-service-token");
   let launches = 0;
   let closes = 0;
   let resolve!: (models: any[]) => void;
@@ -159,7 +159,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.equal(options!.strictMcpConfig, true);
   // Discovery uses the same environment as tasks.
   assert.equal(options!.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
-  assert.equal(options!.env!.CODEX_SUBAGENT_EXTENSION_TOKEN, undefined);
+  assert.equal(options!.env!.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, undefined);
   const next = discoveryPrompt![Symbol.asyncIterator]().next();
   let emitted = false;
 

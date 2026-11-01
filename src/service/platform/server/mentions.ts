@@ -32,7 +32,8 @@ export const mentionSearchToolConfig = {
   },
 };
 
-export const claudeMentionUri = "codex-subagent-extension://providers/claude";
+export const claudeMentionUri =
+  "subagent-extension-for-codex://providers/claude";
 
 export const mentionSearchSchema = z.strictObject({
   query: z.string().max(128),
@@ -44,7 +45,8 @@ export const claudeMentionResource = {
   mimeType: "text/plain",
 };
 
-export const mentionTestModeEnv = "CODEX_SUBAGENT_EXTENSION_MENTION_TEST_MODE";
+export const mentionTestModeEnv =
+  "SUBAGENT_EXTENSION_FOR_CODEX_MENTION_TEST_MODE";
 
 export const mentionSearchLogFilename = "mention-search.jsonl";
 
@@ -64,12 +66,12 @@ export function resolveMentionSearchEnv(
   }
 
   if (
-    result.CODEX_SUBAGENT_EXTENSION_DATA === undefined &&
-    localEnvironment.CODEX_SUBAGENT_EXTENSION_DATA
+    result.SUBAGENT_EXTENSION_FOR_CODEX_DATA === undefined &&
+    localEnvironment.SUBAGENT_EXTENSION_FOR_CODEX_DATA
   ) {
-    result.CODEX_SUBAGENT_EXTENSION_DATA = resolve(
+    result.SUBAGENT_EXTENSION_FOR_CODEX_DATA = resolve(
       packageRoot,
-      localEnvironment.CODEX_SUBAGENT_EXTENSION_DATA,
+      localEnvironment.SUBAGENT_EXTENSION_FOR_CODEX_DATA,
     );
   }
 
@@ -88,7 +90,7 @@ const mentionSearchTerms = [
   "delegate to claude",
   "work",
   "worker",
-  "codex-subagent-extension",
+  "subagent-extension-for-codex",
 ];
 
 function searchWords(value: string) {

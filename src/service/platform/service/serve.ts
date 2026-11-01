@@ -52,7 +52,8 @@ export async function serve({
   const port = Number(process.env.PORT ?? defaultPort);
 
   const origin =
-    process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ?? `http://127.0.0.1:${port}`;
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN ??
+    `http://127.0.0.1:${port}`;
 
   const lanOrigins = network ? networkOrigins(port) : [];
 
@@ -65,7 +66,7 @@ export async function serve({
 
   configureLogging(
     join(data, "service.jsonl"),
-    process.env.CODEX_SUBAGENT_EXTENSION_LOG_LEVEL,
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL,
   );
 
   configureTimingLog(join(data, "timing.jsonl"));
@@ -115,7 +116,7 @@ export async function serve({
   const providers = makeProviders(store, data);
 
   const concurrency = Number(
-    process.env.CODEX_SUBAGENT_EXTENSION_CONCURRENCY ?? 3,
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY ?? 3,
   );
 
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 20) {
@@ -134,7 +135,7 @@ export async function serve({
   );
 
   for (const root of JSON.parse(
-    process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS ?? "[]",
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS ?? "[]",
   )) {
     await c.projects.register(resolve(root), "parent");
   }
@@ -185,9 +186,9 @@ export async function serve({
   }
 
   const tokenSource =
-    process.env.CODEX_SUBAGENT_EXTENSION_TOKEN === undefined
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN === undefined
       ? `file: ${join(data, "admin-token")}`
-      : "from CODEX_SUBAGENT_EXTENSION_TOKEN";
+      : "from SUBAGENT_EXTENSION_FOR_CODEX_TOKEN";
 
   console.error(
     `Subagent Extension for Codex service: ${origin}\nLogin token ${tokenSource}`,

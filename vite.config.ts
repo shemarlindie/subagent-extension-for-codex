@@ -18,17 +18,17 @@ if (existsSync(join(root, ".env"))) process.loadEnvFile(join(root, ".env"));
 // it is the dev host's own port, which launchers set. The origin is read at
 // startup (restart Vite if the service moves); the token is read per request.
 function dataDirectory() {
-  if (process.env.CODEX_SUBAGENT_EXTENSION_DATA) {
-    return resolve(process.env.CODEX_SUBAGENT_EXTENSION_DATA);
+  if (process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA) {
+    return resolve(process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA);
   }
 
-  return join(homedir(), ".local", "share", "codex-subagent-extension");
+  return join(homedir(), ".local", "share", "subagent-extension-for-codex");
 }
 
 function serviceOrigin() {
   const configured =
-    process.env.CODEX_SUBAGENT_EXTENSION_URL ??
-    process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN;
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_URL ??
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN;
 
   if (configured) return configured;
 
@@ -44,7 +44,7 @@ function serviceOrigin() {
 function serviceToken() {
   try {
     return (
-      process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
+      process.env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN ??
       readFileSync(join(dataDirectory(), "admin-token"), "utf8").trim()
     );
   } catch {

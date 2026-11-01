@@ -20,26 +20,26 @@ function delay(value: string | undefined) {
 }
 
 const options: FixtureProviderOptions = {
-  readiness: choice(process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS, [
-    "ready",
-    "unavailable",
-    "error",
-  ]),
-  readinessDelayMs: delay(
-    process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_READINESS_DELAY_MS,
+  readiness: choice(
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_READINESS,
+    ["ready", "unavailable", "error"],
   ),
-  models: choice(process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS, [
+  readinessDelayMs: delay(
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_READINESS_DELAY_MS,
+  ),
+  models: choice(process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_MODELS, [
     "default",
     "empty",
     "error",
     "error-once",
   ]),
   modelsDelayMs: delay(
-    process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_MODELS_DELAY_MS,
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_MODELS_DELAY_MS,
   ),
   deleteSessionError:
-    process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_DELETE_SESSION === "error",
-  closeError: process.env.CODEX_SUBAGENT_EXTENSION_FIXTURE_CLOSE === "error",
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_DELETE_SESSION === "error",
+  closeError:
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_FIXTURE_CLOSE === "error",
 };
 
 await serve({

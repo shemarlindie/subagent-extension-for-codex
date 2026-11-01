@@ -25,10 +25,10 @@ const keys = {
   tab: "dw_tab",
 } as const;
 
-const DIALOG_STORAGE_KEY = "codex-subagent-extension.dialog.v1";
+const DIALOG_STORAGE_KEY = "subagent-extension-for-codex.dialog.v1";
 
 const SETTINGS_SECTION_STORAGE_KEY =
-  "codex-subagent-extension.settings-section.v1";
+  "subagent-extension-for-codex.settings-section.v1";
 
 const INPUT_PERSISTENCE_DEBOUNCE_MS = 250;
 
@@ -46,7 +46,7 @@ const tabs: Tab[] = ["chat", "changes", "activity", "details"];
 const dialogKey = (id: PersistedDialogId) => `dw_dlg_${id}`;
 
 type DevHostWindow = Window & {
-  __CODEX_SUBAGENT_DEV_UI_STATE__?: UiStatePersistence;
+  __SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__?: UiStatePersistence;
 };
 
 function read(url: URL): PersistedViewState {
@@ -327,7 +327,8 @@ export function embeddedDevHostUiState(
   try {
     if (win.parent === win) return undefined;
 
-    return (win.parent as DevHostWindow).__CODEX_SUBAGENT_DEV_UI_STATE__;
+    return (win.parent as DevHostWindow)
+      .__SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__;
   } catch {
     // Real MCP hosts are commonly cross-origin and do not expose this bridge.
     return undefined;

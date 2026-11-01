@@ -68,7 +68,7 @@ export function application(
 
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-Codex-Subagent-Extension, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name",
+        "Content-Type, Authorization, X-Subagent-Extension-For-Codex, MCP-Protocol-Version, MCP-Session-Id, Mcp-Method, Mcp-Name",
       );
 
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -132,7 +132,7 @@ export function application(
     res
       .status(app.locals.ready === false || app.locals.stopping ? 503 : 200)
       .json({
-        service: "codex-subagent-extension",
+        service: "subagent-extension-for-codex",
         status,
         version,
         apiVersion,
@@ -235,7 +235,7 @@ export function application(
 
     if (
       req.method === "POST" &&
-      req.headers["x-codex-subagent-extension"] !== "1"
+      req.headers["x-subagent-extension-for-codex"] !== "1"
     ) {
       logAuthRejection(req, "csrf_header_missing");
       res.status(403).json({ error: "CSRF header required" });

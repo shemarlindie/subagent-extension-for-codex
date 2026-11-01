@@ -7,8 +7,8 @@ machine. The extension sends no telemetry. For startup settings, see
 
 ## Files and retention
 
-Logs live in `CODEX_SUBAGENT_EXTENSION_DATA`, which defaults to
-`~/.local/share/codex-subagent-extension`.
+Logs live in `SUBAGENT_EXTENSION_FOR_CODEX_DATA`, which defaults to
+`~/.local/share/subagent-extension-for-codex`.
 
 | File            | Purpose                                                                       | Rotation                                |
 | --------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
@@ -110,7 +110,7 @@ and provider turn count. Use them to separate provider latency from service
 overhead. They record no generated text. A missing result event can mean
 execution ended before the provider returned a result.
 
-`CODEX_SUBAGENT_EXTENSION_LOG_LEVEL` sets the threshold at service startup:
+`SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL` sets the threshold at service startup:
 
 - `info`, the default, includes ordinary service and resource events.
 - `debug` adds health requests, successful read-only tool dispatches and

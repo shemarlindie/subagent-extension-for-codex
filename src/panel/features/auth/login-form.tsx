@@ -46,7 +46,7 @@ export function LoginForm() {
           <Dialog.Title>Connect your console</Dialog.Title>
           <Dialog.Description id="login-note">
             Enter the local console token from{" "}
-            <code>.codex-subagent-extension/admin-token</code>. Your browser
+            <code>.subagent-extension-for-codex/admin-token</code>. Your browser
             receives a short-lived session.
           </Dialog.Description>
           <form

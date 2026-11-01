@@ -10,7 +10,8 @@ import { git } from "../../../workspaces/git.js";
 
 /** Delegated sessions never receive the extension's own variables or the OpenAI variables Codex may pass. */
 const privateVariable = (name: string) =>
-  name.startsWith("CODEX_SUBAGENT_EXTENSION_") || name.startsWith("OPENAI_");
+  name.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") ||
+  name.startsWith("OPENAI_");
 
 /** The service environment for Claude Code, without private variables. */
 export function claudeEnvironment(

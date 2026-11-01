@@ -25,7 +25,7 @@ import {
 function hints(name: string) {
   const tools: Record<string, AnyTool> = definitions({} as Control, "alice");
 
-  return name === "open_codex_subagent_extension"
+  return name === "open_subagent_extension_for_codex"
     ? "panel"
     : tools[name]?.conversation;
 }
@@ -364,7 +364,7 @@ test("host correlation honors explicit values and isolates supported tools", () 
     "start_task",
     "app_start_task",
     "list_tasks",
-    "open_codex_subagent_extension",
+    "open_subagent_extension_for_codex",
     "get_panel_context",
   ]) {
     assert.equal(
@@ -404,7 +404,10 @@ test("host correlation honors explicit values and isolates supported tools", () 
     undefined,
   );
 
-  for (const name of ["open_codex_subagent_extension", "get_panel_context"]) {
+  for (const name of [
+    "open_subagent_extension_for_codex",
+    "get_panel_context",
+  ]) {
     assert.deepEqual(
       withConversation(hints(name), { conversation_id: null }, meta),
       {
@@ -464,7 +467,10 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
     f.seed("task-owner-without-conversation-id", repository),
     f.seed("another-chat", repository, { conversation_id: "task-chat" }),
   ]) {
-    for (const name of ["open_codex_subagent_extension", "get_panel_context"]) {
+    for (const name of [
+      "open_subagent_extension_for_codex",
+      "get_panel_context",
+    ]) {
       const args = withConversation(
         hints(name),
         { task_id: selected.id },

@@ -53,7 +53,7 @@ async function fixture(t: TestContext) {
 
   const bearer = {
     Authorization: "Bearer project-test-token",
-    "X-Codex-Subagent-Extension": "1",
+    "X-Subagent-Extension-For-Codex": "1",
   };
 
   const post = (
@@ -73,7 +73,7 @@ async function fixture(t: TestContext) {
 
   assert.ok(session);
 
-  const cookie = { Cookie: session, "X-Codex-Subagent-Extension": "1" };
+  const cookie = { Cookie: session, "X-Subagent-Extension-For-Codex": "1" };
 
   async function repo(name: string) {
     const repository = join(dir, name);
@@ -225,7 +225,7 @@ test("MCP get_current_project reports the thread root without registering it", a
   assert.match(String(current.next_step), /Add project/);
 
   await client.callTool({
-    name: "open_codex_subagent_extension",
+    name: "open_subagent_extension_for_codex",
     arguments: {},
     _meta,
   });

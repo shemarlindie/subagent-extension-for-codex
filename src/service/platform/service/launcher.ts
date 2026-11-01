@@ -72,17 +72,19 @@ function loopbackUrl(origin: string) {
 
 export async function connectService() {
   const data = dataDirectory();
-  const explicit = process.env.CODEX_SUBAGENT_EXTENSION_URL;
+  const explicit = process.env.SUBAGENT_EXTENSION_FOR_CODEX_URL;
 
   // A chosen address is never moved. The discovered or default one moves
   // off a port another program holds.
   const pinned = Boolean(
-    explicit || process.env.PORT || process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN,
+    explicit ||
+    process.env.PORT ||
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN,
   );
 
   let origin =
     explicit ??
-    process.env.CODEX_SUBAGENT_EXTENSION_ORIGIN ??
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN ??
     `http://127.0.0.1:${process.env.PORT ?? defaultPort}`;
 
   if (!pinned) {
@@ -99,7 +101,7 @@ export async function connectService() {
   origin = url.origin;
 
   const token = () =>
-    process.env.CODEX_SUBAGENT_EXTENSION_TOKEN ??
+    process.env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN ??
     readFileSync(join(data, "admin-token"), "utf8").trim();
 
   /** Something other than an extension service answers on the port. */
@@ -136,7 +138,7 @@ export async function connectService() {
       throw foreign(error);
     });
 
-    if (health?.service !== "codex-subagent-extension") throw foreign();
+    if (health?.service !== "subagent-extension-for-codex") throw foreign();
 
     if (
       ["starting", "stopping"].includes(health.status) &&
@@ -162,7 +164,7 @@ export async function connectService() {
       headers: {
         Authorization: `Bearer ${token()}`,
         "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
       },
       body: "{}",
       signal: AbortSignal.timeout(1000),
@@ -270,7 +272,7 @@ export async function connectService() {
       headers: {
         Authorization: `Bearer ${found.token}`,
         "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
       },
       body: "{}",
       signal: AbortSignal.timeout(5000),
@@ -327,18 +329,18 @@ export async function connectService() {
         stdio: ["ignore", log, log],
         env: {
           ...process.env,
-          CODEX_SUBAGENT_EXTENSION_DATA: data,
-          ...(process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS
+          SUBAGENT_EXTENSION_FOR_CODEX_DATA: data,
+          ...(process.env.SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS
             ? {
-                CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS: JSON.stringify(
+                SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS: JSON.stringify(
                   JSON.parse(
-                    process.env.CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS,
+                    process.env.SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS,
                   ).map((root: string) => resolve(root)),
                 ),
               }
             : {}),
           PORT: url.port || "80",
-          CODEX_SUBAGENT_EXTENSION_ORIGIN: origin,
+          SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN: origin,
           [launcherEnv]: "stdio",
         },
       },

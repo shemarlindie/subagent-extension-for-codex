@@ -83,7 +83,7 @@ test("group tasks by project, keeping collapsed groups across reload, and narrow
       data: { repository: other },
       headers: {
         Origin: consoleService.origin,
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
       },
     },
   );

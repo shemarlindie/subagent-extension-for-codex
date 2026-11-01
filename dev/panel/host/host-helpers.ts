@@ -191,7 +191,7 @@ export function fixtureCall(
 
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =
-      name.includes("open_codex_subagent_extension") ||
+      name.includes("open_subagent_extension_for_codex") ||
       name.endsWith("_settings");
 
     return {

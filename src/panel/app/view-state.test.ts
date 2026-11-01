@@ -159,7 +159,7 @@ test("debounces dialog draft writes, flushes pending drafts, and closes immediat
   };
 
   const updated = { ...initial, draft: { description: "updated" } };
-  const storageKey = "codex-subagent-extension.dialog.v1";
+  const storageKey = "subagent-extension-for-codex.dialog.v1";
 
   uiState.save({ view: {}, dialogs: [initial] });
   uiState.save({ view: {}, dialogs: [updated] });
@@ -262,10 +262,12 @@ test("an embedded dev panel shares its host's URL and local dialog storage", () 
   const host = page("http://localhost:5317/?keep=host");
 
   const hostWindow = host.win as Window & {
-    __CODEX_SUBAGENT_DEV_UI_STATE__?: UiStatePersistence;
+    __SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__?: UiStatePersistence;
   };
 
-  hostWindow.__CODEX_SUBAGENT_DEV_UI_STATE__ = browserUiState(host.win);
+  hostWindow.__SUBAGENT_EXTENSION_FOR_CODEX_DEV_UI_STATE__ = browserUiState(
+    host.win,
+  );
 
   const frame = page("http://localhost:5317/panel.html");
 

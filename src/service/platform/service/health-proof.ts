@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /** The header that carries a client's challenge to `/health`. */
-export const challengeHeader = "x-codex-subagent-extension-challenge";
+export const challengeHeader = "x-subagent-extension-for-codex-challenge";
 
 const challengePattern = /^[A-Za-z0-9_-]{32,128}$/;
 
@@ -18,7 +18,7 @@ export function validChallenge(value: unknown): value is string {
  */
 export function healthProof(token: string, challenge: string) {
   return createHmac("sha256", token)
-    .update(`codex-subagent-extension health\0${challenge}`)
+    .update(`subagent-extension-for-codex health\0${challenge}`)
     .digest("base64url");
 }
 

@@ -32,7 +32,7 @@ async function proxy(t: import("vitest").TestContext, port: number) {
       args: [resolve("dist/stdio.js")],
       env: serviceEnv(
         { data, port },
-        { CODEX_SUBAGENT_EXTENSION_TOKEN: "test-token" },
+        { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
       ),
       stderr: "pipe",
     }),
@@ -56,7 +56,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
       res.end(
         JSON.stringify({
-          service: "codex-subagent-extension",
+          service: "subagent-extension-for-codex",
           status: ready ? "ok" : "starting",
           proof: healthProof(
             "test-token",

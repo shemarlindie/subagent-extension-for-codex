@@ -25,7 +25,7 @@ const moduleAt = (...segments: string[]) =>
 
 test("package root resolves from source, built entries and bundle chunks", async (t) => {
   const root = await tree(t);
-  await manifest(root, "codex-subagent-extension");
+  await manifest(root, "subagent-extension-for-codex");
 
   for (const location of [
     ["src", "service", "platform", "service"],
@@ -38,7 +38,7 @@ test("package root resolves from source, built entries and bundle chunks", async
 
 test("package root skips other packages' manifests and malformed ones", async (t) => {
   const root = await tree(t);
-  await manifest(root, "codex-subagent-extension");
+  await manifest(root, "subagent-extension-for-codex");
   await manifest(join(root, "dist", "vendor"), "some-dependency");
   await writeFile(join(root, "dist", "package.json"), "{ not json");
 
@@ -50,7 +50,7 @@ test("a module outside the package reports the incomplete installation", async (
 
   assert.throws(
     () => findPackageRoot(moduleAt(root, "dist")),
-    /No codex-subagent-extension package\.json found above .*the installation is incomplete/,
+    /No subagent-extension-for-codex package\.json found above .*the installation is incomplete/,
   );
 });
 

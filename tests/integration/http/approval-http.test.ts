@@ -65,7 +65,7 @@ async function setup() {
 
   const bearer = {
     Authorization: "Bearer test-token",
-    "X-Codex-Subagent-Extension": "1",
+    "X-Subagent-Extension-For-Codex": "1",
   };
 
   const post = (
@@ -85,7 +85,7 @@ async function setup() {
 
   assert.ok(session);
 
-  const cookie = { Cookie: session, "X-Codex-Subagent-Extension": "1" };
+  const cookie = { Cookie: session, "X-Subagent-Extension-For-Codex": "1" };
 
   const start = {
     provider: "fixture",

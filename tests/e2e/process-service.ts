@@ -37,8 +37,8 @@ export async function startProcessService() {
         env: serviceEnv(
           { data: join(directory, "data"), port },
           {
-            CODEX_SUBAGENT_EXTENSION_TOKEN: CONSOLE_TOKEN,
-            CODEX_SUBAGENT_EXTENSION_CONCURRENCY: "1",
+            SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: CONSOLE_TOKEN,
+            SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY: "1",
           },
         ),
         stdio: ["ignore", "pipe", "pipe"],

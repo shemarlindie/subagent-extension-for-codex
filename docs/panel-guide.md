@@ -49,7 +49,7 @@ By default, removal deletes only the saved registration. Files, task history and
 worktrees remain. Running turns may finish, and later turns need approval again.
 Parent approvals still apply, and starting a task from the repository's chat can
 register it again. Parent approvals set in
-`CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` return when the service restarts unless
+`SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` return when the service restarts unless
 you remove them from that setting.
 
 **Also remove extension task data**, off by default, stops and removes every

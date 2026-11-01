@@ -9,8 +9,8 @@ source "$SOURCE/config.sh"
 DIR="$STATE_DIR/bin"
 AGENTS=$HOME/Library/LaunchAgents
 LOGS=$HOME/Library/Logs/ci-runner
-RUNNER=dev.codex-subagent-extension.ci-runner
-WATCHER=dev.codex-subagent-extension.ci-runner-power
+RUNNER=dev.subagent-extension-for-codex.ci-runner
+WATCHER=dev.subagent-extension-for-codex.ci-runner-power
 SLEEPWATCHER=$(brew --prefix)/opt/sleepwatcher/sbin/sleepwatcher
 PATH_VALUE="$(brew --prefix)/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 

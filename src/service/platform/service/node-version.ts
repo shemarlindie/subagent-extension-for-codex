@@ -12,7 +12,7 @@ export function nodeVersionError(
   if (Number(version.split(".")[0]) >= minimum) return;
 
   return (
-    `codex-subagent-extension needs Node.js ${minimum} or later, but ${executable} is Node.js ${version}.\n` +
+    `subagent-extension-for-codex needs Node.js ${minimum} or later, but ${executable} is Node.js ${version}.\n` +
     `Install Node.js ${minimum} or later from https://nodejs.org and make sure it is first on the PATH Codex uses.`
   );
 }

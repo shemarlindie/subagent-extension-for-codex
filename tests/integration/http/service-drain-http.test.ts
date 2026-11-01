@@ -45,7 +45,7 @@ async function service(t: import("vitest").TestContext) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Codex-Subagent-Extension": "1",
+        "X-Subagent-Extension-For-Codex": "1",
         ...headers,
       },
       body: "{}",

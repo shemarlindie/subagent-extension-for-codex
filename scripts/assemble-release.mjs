@@ -15,7 +15,7 @@ import { parseArgs } from "node:util";
 
 /**
  * The marketplace name becomes the plugin ID's suffix
- * (codex-subagent-extension@shemarlindie) and part of Codex's PLUGIN_DATA
+ * (subagent-extension-for-codex@shemarlindie) and part of Codex's PLUGIN_DATA
  * path, so it must never change after the first release.
  */
 const marketplace = { name: "shemarlindie", displayName: "Shemar Lindie" };

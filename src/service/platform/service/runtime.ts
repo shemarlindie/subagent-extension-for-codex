@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const packageName = "codex-subagent-extension";
+const packageName = "subagent-extension-for-codex";
 
 /** Default service port. */
 export const defaultPort = 17317;
@@ -63,9 +63,9 @@ export const packageVersion: string = JSON.parse(
 ).version;
 
 export function dataDirectory(env = process.env) {
-  if (env.CODEX_SUBAGENT_EXTENSION_DATA) {
-    return resolve(env.CODEX_SUBAGENT_EXTENSION_DATA);
+  if (env.SUBAGENT_EXTENSION_FOR_CODEX_DATA) {
+    return resolve(env.SUBAGENT_EXTENSION_FOR_CODEX_DATA);
   }
 
-  return join(homedir(), ".local", "share", "codex-subagent-extension");
+  return join(homedir(), ".local", "share", "subagent-extension-for-codex");
 }

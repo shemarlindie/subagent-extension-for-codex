@@ -18,17 +18,17 @@ Checkout commands load an optional `.env`, and shell variables take precedence.
 The packaged stdio launcher uses its MCP environment. To share one service,
 give every client the same absolute data directory.
 
-| Variable                                 | Default                                   | Meaning                                                                                                                                   |
-| ---------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `CODEX_SUBAGENT_EXTENSION_DATA`          | `~/.local/share/codex-subagent-extension` | Database, approved roots, worktrees, logs, service lease and token. A relative path resolves from the command's working directory.        |
-| `CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS` | `[]`                                      | JSON array of parent directories to approve at startup. See [Repository access](#repository-access) for revoking them.                    |
-| `CODEX_SUBAGENT_EXTENSION_URL`           | Discovered service or port 17317          | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                               |
-| `CODEX_SUBAGENT_EXTENSION_CONCURRENCY`   | `3`                                       | Maximum active tasks, 1 to 20.                                                                                                            |
-| `CODEX_SUBAGENT_EXTENSION_TOKEN`         | Generated locally                         | Admin token override, at least 32 characters.                                                                                             |
-| `CODEX_SUBAGENT_EXTENSION_LOG_LEVEL`     | `info`                                    | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
-| `CODEX_SUBAGENT_EXTENSION_CLAUDE_PATH`   | First `claude` on the service's `PATH`    | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
-| `PORT`                                   | `17317`                                   | Service listener port, on loopback by default.                                                                                            |
-| `CODEX_SUBAGENT_EXTENSION_ORIGIN`        | `http://127.0.0.1:<PORT>`                 | Standalone origin and CORS allowlist.                                                                                                     |
+| Variable                                     | Default                                       | Meaning                                                                                                                                   |
+| -------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUBAGENT_EXTENSION_FOR_CODEX_DATA`          | `~/.local/share/subagent-extension-for-codex` | Database, approved roots, worktrees, logs, service lease and token. A relative path resolves from the command's working directory.        |
+| `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` | `[]`                                          | JSON array of parent directories to approve at startup. See [Repository access](#repository-access) for revoking them.                    |
+| `SUBAGENT_EXTENSION_FOR_CODEX_URL`           | Discovered service or port 17317              | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                               |
+| `SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY`   | `3`                                           | Maximum active tasks, 1 to 20.                                                                                                            |
+| `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN`         | Generated locally                             | Admin token override, at least 32 characters.                                                                                             |
+| `SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL`     | `info`                                        | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
+| `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`   | First `claude` on the service's `PATH`        | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
+| `PORT`                                       | `17317`                                       | Service listener port, on loopback by default.                                                                                            |
+| `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN`        | `http://127.0.0.1:<PORT>`                     | Standalone origin and CORS allowlist.                                                                                                     |
 
 The installed plugin uses the same default data directory as every other way of
 running the service. It avoids the `PLUGIN_DATA` directory Codex gives plugins
@@ -45,8 +45,8 @@ owns the data directory, the proxy chooses a free port. The service saves its
 address as `origin` in `<data-directory>/service.json`, where proxies and console
 users can find it.
 
-Setting `PORT`, `CODEX_SUBAGENT_EXTENSION_ORIGIN` or
-`CODEX_SUBAGENT_EXTENSION_URL` fixes the address and disables port recovery.
+Setting `PORT`, `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN` or
+`SUBAGENT_EXTENSION_FOR_CODEX_URL` fixes the address and disables port recovery.
 If it is taken, choose a free port or remove the override.
 
 ## Admin token
@@ -54,7 +54,7 @@ If it is taken, choose a free port or remove the override.
 Every API request needs the admin token, because loopback clients can start
 workers that edit files and run commands.
 
-Without `CODEX_SUBAGENT_EXTENSION_TOKEN`, the service creates
+Without `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN`, the service creates
 `<data-directory>/admin-token` when needed and keeps it across restarts. An
 environment override replaces the file's token without writing to the file.
 Give clients the same override. The service applies owner-only permissions to
@@ -95,7 +95,7 @@ repositories nested inside it. Canonical path and symlink containment checks
 apply. Approvals persist in SQLite and take effect without a restart.
 
 The service also saves parent approvals from
-`CODEX_SUBAGENT_EXTENSION_ALLOWED_ROOTS`. To revoke one, remove it from the
+`SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS`. To revoke one, remove it from the
 variable and from **Manage**. While the variable still lists it, the next
 service start approves it again. See
 [Manage projects](panel-guide.md#manage-projects) for renaming, removal and
@@ -289,7 +289,7 @@ deny rules, MCP servers, connectors, sandbox settings and environment settings.
 A native allow or deny rule may decide a call before the extension sees it.
 
 Delegated sessions receive the service's environment variables, except
-`CODEX_SUBAGENT_EXTENSION_*` and `OPENAI_*`.
+`SUBAGENT_EXTENSION_FOR_CODEX_*` and `OPENAI_*`.
 
 These user-only settings under `providers.claude` restrict delegated sessions.
 Each task stores its resolved restrictions, so later changes never broaden an

@@ -125,7 +125,7 @@ test("records console and MCP authentication rejection reasons without credentia
     expired = await post(
       "/api/tools/list_tasks",
       {},
-      { Cookie: cookie, "X-Codex-Subagent-Extension": "1" },
+      { Cookie: cookie, "X-Subagent-Extension-For-Codex": "1" },
     );
 
     await expired.text();
@@ -164,7 +164,7 @@ test("correlates HTTP and tool results while excluding request payloads and URL 
     { task_id: "missing-body-secret" },
     {
       Authorization: "Bearer private-token",
-      "X-Codex-Subagent-Extension": "1",
+      "X-Subagent-Extension-For-Codex": "1",
       "X-Request-Id": "untrusted-client-request-secret",
     },
   );
@@ -305,7 +305,7 @@ test("keeps successful read-only console tool polling at debug level", async (t)
 
   const headers = {
     Authorization: "Bearer private-token",
-    "X-Codex-Subagent-Extension": "1",
+    "X-Subagent-Extension-For-Codex": "1",
   };
 
   const info = await post(

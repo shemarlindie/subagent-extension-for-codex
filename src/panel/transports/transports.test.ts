@@ -128,7 +128,7 @@ test("console requests use browser credentials and required headers for tools an
 
     assert.deepEqual(options.headers, {
       "Content-Type": "application/json",
-      "X-Codex-Subagent-Extension": "1",
+      "X-Subagent-Extension-For-Codex": "1",
     });
   }
 
