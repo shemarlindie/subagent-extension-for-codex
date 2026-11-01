@@ -14,11 +14,14 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 /**
- * The marketplace name becomes the plugin ID's suffix
+ * main's marketplace. Its name becomes the plugin ID's suffix
  * (subagent-extension-for-codex@shemarlindie) and part of Codex's PLUGIN_DATA
- * path, so it must never change after the first release.
+ * path, so it must never change. The release reuses it, so an install from the
+ * release keeps the same ID and data.
  */
-const marketplace = { name: "shemarlindie", displayName: "Shemar Lindie" };
+const marketplace = JSON.parse(
+  readFileSync(".agents/plugins/marketplace.json", "utf8"),
+);
 
 const { values } = parseArgs({
   options: { out: { type: "string", default: "release" } },
@@ -83,7 +86,7 @@ writeFileSync(
   `${JSON.stringify(
     {
       name: marketplace.name,
-      interface: { displayName: marketplace.displayName },
+      interface: marketplace.interface,
       plugins: [
         {
           name: manifest.name,

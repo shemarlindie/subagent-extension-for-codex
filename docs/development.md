@@ -634,8 +634,13 @@ codex plugin marketplace add ./release
 codex plugin add subagent-extension-for-codex@shemarlindie
 ```
 
-The marketplace name `shemarlindie` is part of the plugin ID and its
-`PLUGIN_DATA` path, so it must not change.
+Adding the checkout itself (`codex plugin marketplace add ./`) adds `main`'s
+marketplace, which installs the version it lists from npm, so test local builds
+with `./release`.
+
+The assembled marketplace takes its name and display name from `main`'s. The
+name `shemarlindie` is part of the plugin ID and its `PLUGIN_DATA` path, so it
+must not change.
 
 Two package suites in `npm test` cover the result:
 

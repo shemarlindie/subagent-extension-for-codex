@@ -1,0 +1,15 @@
+{
+  "name": "shemarlindie",
+  "interface": { "displayName": "Shemar Lindie" },
+  "plugins": [
+    {
+      "name": "subagent-extension-for-codex",
+      "source": {
+        "source": "npm",
+        "package": "subagent-extension-for-codex",
+        "version": "0.1.0"
+      },
+      "category": "Coding"
+    }
+  ]
+}
