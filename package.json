@@ -44,6 +44,7 @@
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "predev": "npm run schemas:generate",
     "release:assemble": "node scripts/assemble-release.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs",
     "test:e2e": "playwright test",
     "pretest:e2e": "npm run build",
     "test:unit": "vitest run --project unit --project unit-dom",

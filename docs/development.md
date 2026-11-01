@@ -672,16 +672,26 @@ installs the plugin from npm at the exact version it lists. Codex refreshes it
 on startup, so a version reaches users when `main` lists it. Each release has
 its own branch:
 
-1. Branch `chore/release-v<version>` from `main`. In one commit, set `version`
-   in `package.json`, `package-lock.json`, `plugin.json` and the marketplace,
-   and add a `## <version>` section to `CHANGELOG.md` that tells users what
-   changed and anything they must do by hand. It becomes the GitHub release
-   notes.
-2. Open a pull request to `main`.
+1. On an up-to-date `main`, run `npm run release:prepare` and confirm the
+   version it picks. Pass a version to choose it yourself, which a prerelease
+   needs: `npm run release:prepare -- 1.2.0-beta.1`.
+2. Review the drafted notes, which become the GitHub release notes. Rewrite them
+   for users on the branch where needed: what changed, and anything they must do
+   by hand. Then mark the pull request ready for review.
 3. Run the **Release** workflow on the branch in GitHub Actions.
 4. Once the workflow passes, re-run the pull request's **Listed version
    published** check, then merge with a merge commit. A squash or rebase merge
    would leave the tagged commit outside `main`'s history.
+
+The script picks the next version from the conventional commits since the last
+release: major for a breaking change, minor for a `feat` and patch otherwise.
+Before 1.0, a breaking change bumps the minor version. It creates
+`chore/release-v<version>` and sets the version in `package.json`,
+`package-lock.json`, `plugin.json` and the marketplace. Unless `CHANGELOG.md`
+already has a `## <version>` section, it drafts one with Features and Fixes
+sections from the `feat` and `fix` commits. It commits, pushes and opens a draft
+pull request to `main` that links to the notes. It needs the `gh` CLI, signed
+in.
 
 When `main` already lists an unreleased version, as with the first release,
 run the **Release** workflow on `main`, with no branch or pull request.
