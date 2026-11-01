@@ -65,6 +65,22 @@ parent approval leaves descendant repositories' tasks in place.
 
 Removing the selected project returns the task list to **All projects**.
 
+## How tasks run
+
+- **Workspace.** Tasks work in the approved checkout by default, including its
+  uncommitted changes. Choose `worktree` to work from a committed revision in a
+  separate checkout. The service never merges changes. Worktrees separate
+  checkouts but don't restrict commands, so they aren't security sandboxes. See
+  [Worktree actions](#worktree-actions).
+- **Permissions.** The researcher, reviewer and security reviewer profiles only
+  inspect by default. Writing profiles follow your saved
+  [Claude permissions](configuration.md#claude-permissions) and
+  [session restrictions](configuration.md#claude-session-restrictions).
+- **Budgets.** Runtime and cost budgets span turns. Claude checks cost after
+  each response, so a response can exceed the limit, and cost budgets aren't a
+  hard billing cap. See
+  [Steering, queues and budgets](#steering-queues-and-budgets).
+
 ## Tasks and settings
 
 ### Find and inspect tasks

@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#install">Install</a> &ensp;·&ensp;
-  <a href="#working-with-tasks">Working with tasks</a> &ensp;·&ensp;
+  <a href="#start-a-task">Start a task</a> &ensp;·&ensp;
   <a href="#documentation">Documentation</a> &ensp;·&ensp;
   <a href="https://github.com/user-attachments/assets/94f0c927-e352-460e-bda1-da6856e45371">Demo video</a>
 </p>
@@ -65,8 +65,9 @@ Codex desktop app. You can also ask Codex to install it: _"Install the Codex
 plugin codex-subagent-extension from the release branch of
 github.com/shemarlindie/codex-subagent-extension."_
 
-Then open **Delegated Work** from a Codex chat and use **Manage → Add project**
-to approve a Git repository root with at least one commit. The plugin starts its
+Then approve a Git repository root with at least one commit. Use **Add chat
+project** in a chat's Delegated Work panel, or **Manage → Add project** in the
+global panel. The plugin starts its
 local service the first time Codex connects.
 
 While the service runs, you can also use the standalone console at
@@ -81,6 +82,30 @@ project and local settings, including instructions, skills, hooks and MCP
 servers. The extension doesn't manage provider credentials. Read
 [Configuration and permissions](docs/configuration.md) before changing execution
 authority or session restrictions.
+
+## Start a task
+
+Start a task in any of these ways:
+
+1. **Ask Codex.** Describe the work in a chat, for example _"Have Claude review
+   my uncommitted changes."_ Codex starts the task and, when the host supports
+   it, opens Delegated Work on the task's Chat.
+2. **Open the chat's panel.** Ask Codex to open Delegated Work. The panel lists
+   the chat's tasks and offers **Add chat project** when the chat's repository
+   isn't approved yet.
+3. **Use the sidebar.** In the Codex desktop app, select **Delegated Work** in
+   the sidebar to see tasks from every chat. **New task** starts one there.
+
+Before you start:
+
+- Tasks work in your checkout by default, including uncommitted changes. A
+  worktree keeps a task's changes separate but isn't a security sandbox. The
+  service never merges changes.
+- The researcher, reviewer and security reviewer profiles only inspect by
+  default.
+- Cost budgets aren't a hard billing cap.
+
+See [How tasks run](docs/panel-guide.md#how-tasks-run) for details.
 
 ## Update
 
@@ -135,28 +160,6 @@ repositories.
 To connect a checkout over stdio or Streamable HTTP instead of installing the
 plugin, see
 [Connect Codex from a checkout](docs/development.md#connect-codex-from-a-checkout).
-
-## Working with tasks
-
-- **Workspace.** Tasks work in the approved checkout by default, including its
-  uncommitted changes. Choose `worktree` to work from a committed revision in a
-  separate checkout. The service never merges changes, and worktrees aren't
-  security sandboxes.
-- **Permissions.** The researcher, reviewer and security reviewer profiles only
-  inspect by default. Writing profiles follow your saved permissions and
-  restrictions.
-- **Conversation.** Replies stream into Chat, and Changes shows the task's
-  recorded tool edits. Tasks accept follow-ups after they complete, fail or are
-  interrupted. During a turn, a message can steer the worker, queue another
-  turn, or interrupt and start a new one.
-- **Budgets.** Runtime and cost budgets span turns. Cost budgets aren't a hard
-  billing cap.
-
-See the [Panel guide](docs/panel-guide.md) for delegation and review,
-[Configuration](docs/configuration.md) for permissions and limits, and
-[Task continuation](docs/task-continuation.md) for recovery and backups. For
-access from other devices during development, see
-[Access from your local network](docs/development.md#access-from-your-local-network).
 
 ## Documentation
 
