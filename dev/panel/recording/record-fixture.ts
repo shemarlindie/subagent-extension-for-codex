@@ -79,6 +79,7 @@ const fixture = recordFixture(task, events, {
   conversationId: "dev-thread",
   home: homedir(),
   host: hostname(),
+  username: userInfo().username,
   // The temporary directory, under both of its names on macOS.
   replace: [...replace, [temp, "/demo/tmp"], [tmpdir(), "/demo/tmp"]],
 });

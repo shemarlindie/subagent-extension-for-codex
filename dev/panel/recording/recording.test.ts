@@ -99,6 +99,7 @@ const recorded = recordFixture(task, events, {
   conversationId: "dev-thread",
   home,
   host: "Someones-Mac.local",
+  username: "someone",
 });
 
 test("a recording keeps nothing from the machine or account it ran on", () => {
@@ -193,6 +194,7 @@ test("a current_repo recording maps its workspace to the fixture repository, and
       firstId: 1,
       home,
       host: "Someones-Mac.local",
+      username: "someone",
     },
   );
 
@@ -219,6 +221,104 @@ test("leftovers finds values as they are and dash-encoded", () => {
   );
 });
 
+test("local usernames are replaced in URLs, plugin names and encoded paths", () => {
+  const result = recordFixture(
+    {
+      ...task,
+      description:
+        "https://github.com/some.one/repo plugin@some.one /Users/some.one/config",
+    },
+    [
+      {
+        ...startedEvent,
+        data: { "plugin@some.one": ["-Users-some-one-config"] },
+      },
+    ],
+    {
+      id: "preview-recorded-username",
+      start: "2026-10-02T11:00:00.000Z",
+      firstId: 1,
+      home: "/Users/some.one",
+      host: "Someones-Mac.local",
+      username: "some.one",
+    },
+  );
+
+  assert.equal(
+    result.task.description,
+    "https://github.com/demo-user/repo plugin@demo-user /demo/home/config",
+  );
+
+  assert.deepEqual(result.events[0]?.data, {
+    "plugin@demo-user": ["-demo-home-config"],
+  });
+
+  assert.deepEqual(leftovers(JSON.stringify(result), ["some.one"]), []);
+});
+
+test("thinking signatures are scrubbed in nested SDK blocks and stream deltas", () => {
+  const data = {
+    raw_response: {
+      message: {
+        content: [
+          {
+            type: "thinking",
+            thinking: "Keep the reasoning text",
+            signature: "opaque-thinking-signature",
+          },
+        ],
+      },
+      event: {
+        delta: {
+          type: "signature_delta",
+          signature: "opaque-stream-signature",
+        },
+      },
+    },
+    tool_input: { signature: "ordinary tool input" },
+  };
+
+  const result = recordFixture(task, [{ ...startedEvent, data }], {
+    id: "preview-recorded-signatures",
+    start: "2026-10-02T11:00:00.000Z",
+    firstId: 1,
+    home,
+    host: "Someones-Mac.local",
+    username: "someone",
+  });
+
+  const text = JSON.stringify(result);
+  assert.ok(!text.includes("opaque-thinking-signature"));
+  assert.ok(!text.includes("opaque-stream-signature"));
+
+  assert.deepEqual(result.events[0]?.data.raw_response, {
+    message: {
+      content: [
+        {
+          type: "thinking",
+          thinking: "Keep the reasoning text",
+          signature: "preview-signature",
+        },
+      ],
+    },
+    event: {
+      delta: { type: "signature_delta", signature: "preview-signature" },
+    },
+  });
+
+  assert.deepEqual(result.events[0]?.data.tool_input, data.tool_input);
+
+  assert.equal(
+    data.raw_response.message.content[0]?.signature,
+    "opaque-thinking-signature",
+  );
+
+  assert.equal(
+    data.raw_response.event.delta.signature,
+    "opaque-stream-signature",
+  );
+});
+
 test("replacements redact decoded strings and preserve literal replacement values", () => {
   const secret = 'secret "token"\nwith\\backslash';
   const replacement = 'safe "value"\nwith\\backslash';
@@ -232,6 +332,7 @@ test("replacements redact decoded strings and preserve literal replacement value
       firstId: 1,
       home,
       host: "Someones-Mac.local",
+      username: "someone",
       replace: [
         [secret, replacement],
         ["marker", "/demo/label"],

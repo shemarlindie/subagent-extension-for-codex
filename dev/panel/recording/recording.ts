@@ -66,11 +66,12 @@ const PROVIDER_EVENTS = new Set([
  * Sanitizes a recorded task and its events into a fixture:
  *
  * - paths (the repository, the workspace and its parent, the home
- *   directory), the host name, the task and session ids and API request ids
+ *   directory), the host and user names, the task and session ids and API request ids
  *   become fixture values, including Claude's dash-encoded project paths;
  * - system/init messages lose the user's skills, plugins, MCP servers and
  *   commands, and their local paths; rate-limit events keep only their
  *   status and window, without the account's usage or overage policy;
+ * - thinking blocks and streamed signature deltas use a placeholder signature;
  * - events are renumbered from `firstId` and moved to `start`;
  * - the task belongs to the preview owner, has no workspace (its Changes tab
  *   is empty), and is renamed when `title` is given.
@@ -81,7 +82,7 @@ const PROVIDER_EVENTS = new Set([
 export function recordFixture(
   task: Task,
   events: EventEnvelope[],
-  options: RecordingOptions & { home: string; host: string },
+  options: RecordingOptions & { home: string; host: string; username: string },
 ): RecordedFixture {
   const replacements: [string, string][] = [
     ...(options.replace ?? []),
@@ -106,6 +107,7 @@ export function recordFixture(
       : []),
     [options.home, FIXTURE_HOME],
     [options.host, FIXTURE_HOST],
+    [options.username, "demo-user"],
   ];
 
   // Encoded project directories first, since they contain no slashes.
@@ -149,10 +151,19 @@ export function recordFixture(
     if (Array.isArray(value)) return value.map(sanitizeValue);
 
     if (value && typeof value === "object") {
+      const block = value as Record<string, unknown>;
+
+      const hasThinkingSignature =
+        block.type === "thinking" || block.type === "signature_delta";
+
       return Object.fromEntries(
         Object.entries(value).map(([key, child]) => [
           sanitizeText(key),
-          sanitizeValue(child),
+          hasThinkingSignature &&
+          key === "signature" &&
+          typeof child === "string"
+            ? "preview-signature"
+            : sanitizeValue(child),
         ]),
       );
     }
