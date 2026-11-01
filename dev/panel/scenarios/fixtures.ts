@@ -2,6 +2,7 @@
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
 import type { Task } from "../../../src/shared/tasks/model";
+import recordedDevPlugin from "../recorded/dev-plugin.json";
 import recordedMcp from "../recorded/mcp.json";
 import recordedResume from "../recorded/resume.json";
 import recordedSteer from "../recorded/steer.json";
@@ -35,6 +36,7 @@ const recordedFixtures = [
   recordedStream,
   recordedResume,
   recordedMcp,
+  recordedDevPlugin,
 ] as unknown as RecordedFixture[];
 
 const tasksById = new Map(
