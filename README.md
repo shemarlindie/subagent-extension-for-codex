@@ -50,7 +50,8 @@ You need:
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.285 or later, signed
   in. Run `claude` once and complete sign-in. See
   [Claude Code CLI](docs/claude-cli.md) for how the extension finds it.
-- Node.js 24 or later as the `node` on the `PATH` Codex starts with.
+- Node.js 24 or later, with npm, on the `PATH` Codex starts with. Codex
+  downloads the plugin with npm.
 - Git.
 - Codex CLI 0.162.1 or later, or a Codex desktop app with plugin marketplaces.
   CI installs the plugin with 0.162.1, and older builds are untested.
@@ -62,13 +63,13 @@ settings file exports.
 Add the marketplace, then install the plugin:
 
 ```sh
-codex plugin marketplace add shemarlindie/subagent-extension-for-codex@release
+codex plugin marketplace add shemarlindie/subagent-extension-for-codex
 codex plugin add subagent-extension-for-codex@shemarlindie
 ```
 
 After the first command, the plugin also appears in the Plugins directory of the
 Codex desktop app. You can also ask Codex to install it: _"Install the Codex
-plugin subagent-extension-for-codex from the release branch of
+plugin subagent-extension-for-codex from the marketplace at
 github.com/shemarlindie/subagent-extension-for-codex."_
 
 Then approve a Git repository root with at least one commit. Use **Add chat
@@ -128,15 +129,20 @@ finish, and queued tasks carry over. See
 Startup backs up the database before applying migrations. See
 [Restore a backup](docs/database.md#restore-a-backup).
 
-To pin a version, add the marketplace at a release tag, for example
-`codex plugin marketplace add shemarlindie/subagent-extension-for-codex@v0.1.0`.
-Remove the marketplace first if you already added it.
+To pin a version, add the marketplace at its release tag. A tag never moves, so
+Codex keeps that version:
 
-Prereleases such as `v0.2.0-beta.1` exist only as tags and are marked as
-prereleases on GitHub. The `release` branch never receives them. To try one, add
-the marketplace at its tag. To switch to another prerelease or back to stable
-releases, remove the marketplace and add it again at the new tag or at
-`@release`.
+```sh
+codex plugin marketplace remove shemarlindie
+codex plugin marketplace add shemarlindie/subagent-extension-for-codex@v0.1.0
+codex plugin add subagent-extension-for-codex@shemarlindie
+```
+
+To follow new releases again, remove the marketplace and add it without a tag.
+
+Prereleases such as `v0.2.0-beta.1` are marked as prereleases on GitHub, and the
+repository's marketplace never lists them. To try one, add the marketplace at
+its tag.
 
 ## Uninstall
 

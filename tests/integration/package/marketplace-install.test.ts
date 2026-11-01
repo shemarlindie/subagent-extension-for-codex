@@ -18,6 +18,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterAll, beforeAll, describe, test } from "vitest";
 
+import { npmCommand } from "../../support/npm.js";
 import {
   freePort,
   type Service,
@@ -65,8 +66,8 @@ function findCodex(): [string, string[]] | undefined {
 const codex = findCodex();
 
 /**
- * A published marketplace to install in place of the assembled build, such
- * as owner/repo@v1.2.3. The release workflow sets it after publishing.
+ * A published marketplace to install in place of the packed release, such as
+ * owner/repo@v1.2.3. The release workflow sets it after publishing.
  */
 const published = process.env.MARKETPLACE_SOURCE;
 
@@ -99,7 +100,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     await mkdir(codexHome);
     service = { data: join(root, "data"), port: await freePort() };
 
-    // Codex fetches a published marketplace, so there is nothing to assemble.
+    // Codex fetches a published marketplace, so there is nothing to pack.
     if (published) return;
 
     // Assemble from the existing build (pretest builds it).
@@ -110,6 +111,21 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
       "--out",
       join(root, "release"),
     ]);
+
+    // Install what npm publishes: the release packed and extracted.
+    const { stdout } = await exec(
+      ...npmCommand([
+        "pack",
+        join(root, "release"),
+        "--json",
+        "--pack-destination",
+        root,
+      ]),
+    );
+
+    const [{ filename }] = JSON.parse(stdout);
+    // A relative archive path, since GNU tar reads "C:" in a path as a remote host.
+    await exec("tar", ["-xzf", filename], { cwd: root });
   }, 120_000);
 
   afterAll(async () => {
@@ -129,7 +145,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
       "plugin",
       "marketplace",
       "add",
-      published ?? join(root, "release"),
+      published ?? join(root, "package"),
     );
 
     await runCodex(

@@ -624,10 +624,11 @@ what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
 GitHub, so the README's links to `docs/` don't resolve inside an extracted
 package.
 
-`npm run release:assemble`, run after a build, writes `release/`. It holds the
-packed files, a manifest with no scripts or dependencies, and an
-`.agents/plugins/marketplace.json` that lists the plugin with source `./`. The
-directory is both a Codex marketplace and the plugin. Install it locally with:
+`npm run release:assemble`, run after a build, writes `release/`, the package
+the release publishes to npm. It holds the packed files, a manifest with no
+scripts or dependencies, and an `.agents/plugins/marketplace.json` that lists
+the plugin with source `./`. The directory is both a Codex marketplace and the
+plugin. Install it locally with:
 
 ```sh
 codex plugin marketplace add ./release
@@ -648,11 +649,11 @@ Two package suites in `npm test` cover the result:
   transports, CLI readiness and restarts from an extracted package outside the
   checkout. It fails if the package's top-level file list changes.
 - `tests/integration/package/marketplace-install.test.ts` assembles a release
-  from `dist/`, installs it with the Codex CLI into a temporary `CODEX_HOME` and
-  runs the MCP command Codex reports against an isolated data directory and
-  port. It checks the reported version, tool listing and calls, and service
-  startup. It needs the Codex CLI (`CODEX_BIN` or `codex` on `PATH`) and skips
-  without it.
+  from `dist/`, packs it with npm and installs the extracted package with the
+  Codex CLI into a temporary `CODEX_HOME`. It runs the MCP command Codex reports
+  against an isolated data directory and port. It checks the reported version,
+  tool listing and calls, and service startup. It needs the Codex CLI
+  (`CODEX_BIN` or `codex` on `PATH`) and skips without it.
 
 To run the marketplace test alone after a build:
 
@@ -666,53 +667,109 @@ checkout's `package.json`. The release workflow does this after publishing.
 
 ## Releasing
 
-Users install from the `release` branch, which holds only assembled releases
-tagged `v<version>`. Codex refreshes Git marketplaces on startup and reinstalls
-the plugin when the branch moves, so every push to `release` reaches users.
+Users add `main`'s marketplace, `.agents/plugins/marketplace.json`, which
+installs the plugin from npm at the exact version it lists. Codex refreshes it
+on startup, so a version reaches users when `main` lists it. Each release has
+its own branch:
 
-1. Bump `version` in `package.json` and `plugin.json`. The build fails when they
-   differ, and Codex keys installed versions by it, so every release needs a new
-   one.
-2. Add a `## <version>` section to `CHANGELOG.md` that tells users what changed
-   and anything they must do by hand. It becomes the GitHub release notes.
-3. Merge to `main`, then run the **Release** workflow from `main` in GitHub
-   Actions.
+1. Branch `chore/release-v<version>` from `main`. In one commit, set `version`
+   in `package.json`, `package-lock.json`, `plugin.json` and the marketplace,
+   and add a `## <version>` section to `CHANGELOG.md` that tells users what
+   changed and anything they must do by hand. It becomes the GitHub release
+   notes.
+2. Open a pull request to `main`.
+3. Run the **Release** workflow on the branch in GitHub Actions.
+4. Once the workflow passes, re-run the pull request's **Listed version
+   published** check, then merge with a merge commit. A squash or rebase merge
+   would leave the tagged commit outside `main`'s history.
 
-A version with a prerelease suffix, such as `1.2.0-beta.1`, makes a prerelease
-and needs its own `CHANGELOG.md` section. The workflow builds its commit on top
-of `release` but pushes only the tag, so users on the branch don't receive it.
-Testers install it at its tag, and a later release replaces its running service
-through [updates and service handoff](task-continuation.md#updates-and-service-handoff).
+When `main` already lists an unreleased version, as with the first release,
+run the **Release** workflow on `main`, with no branch or pull request.
+
+The merge must follow the publish. If `main` lists an unpublished version,
+Codex's refresh fails and keeps the installed version, and it doesn't retry once
+the version is published, so users stay behind until `main`'s marketplace
+changes again. The **Listed version published** check guards this. When a pull
+request raises the listed version, the check fails until `v<version>` points at
+the pull request's head commit. When it lowers the version, as a rollback does,
+the tag only has to exist. The check blocks the merge once `main`'s ruleset
+requires it.
+
+A version with a prerelease suffix, such as `1.2.0-beta.1`, makes a prerelease.
+It follows the same steps, publishes under the npm `next` tag, and its pull
+request is closed without merging. Testers add the marketplace at its tag, and a
+later release replaces its running service through
+[updates and service handoff](task-continuation.md#updates-and-service-handoff).
+
+To roll back, open a pull request that sets only the marketplace `version` to an
+earlier release. That version is already on npm, so it can merge at once.
+
+If the workflow fails before its npm publish step, fix the problem on the branch
+and run it again. After that step, the version is spent, because npm versions
+can't be republished. If only the GitHub release and its tag are missing, create
+the release by hand on the branch's head, which also creates the tag. Otherwise,
+close the pull request without merging and release the next version.
+A push to the branch after publishing moves its head past the tag, so the check
+fails until you drop the push or release a new version.
 
 The workflow (`.github/workflows/release.yml`):
 
-1. Runs the CI checks and the marketplace install test.
-2. Assembles the release and commits it to `release`, naming the source commit
-   in the message.
-3. Tags the commit and attaches an attested zip to a GitHub release, marked as a
-   prerelease when the version has a suffix.
-4. Installs `<owner>/<repo>@v<version>` from GitHub with Codex on Linux, macOS
-   and Windows.
+1. Runs the CI checks and installs the packed release with Codex. It fails if
+   the marketplace and `package.json` versions differ or the tag exists.
+2. Publishes `release/` to npm with provenance, under `next` for a prerelease.
+3. Tags the published commit, the branch's head, as `v<version>` and creates its
+   GitHub release with an attested zip, marked as a prerelease when the version
+   has a suffix. npm's provenance, the tag and the merge then name one commit.
+4. Installs `<owner>/<repo>@v<version>` with Codex on Linux, macOS and Windows,
+   once npm serves the version.
 
-The source commit on `main` stays untagged, because user-facing tags name
-release commits. The workflows pin the Codex CLI to the version the README lists
-as tested, so change them together.
+The workflows pin the Codex CLI to the version the README lists as tested, so
+change them together.
 
-The workflow relies on repository settings made by hand:
+### npm publishing
 
-- A ruleset on `release` that lets only GitHub Actions push and blocks force
-  pushes and deletion.
-- A ruleset on `v*` tags that lets only GitHub Actions create them and blocks
-  updates and deletion.
-- A public repository, because `codex plugin marketplace add owner/repo` fetches
-  without credentials.
+The publish job runs on `ubuntu-latest`, since npm trusted publishing doesn't
+support self-hosted runners. It installs npm 11.21.0, because Node 24's bundled
+npm can't set dist-tags through OIDC. The publish step always passes
+`NPM_TOKEN`. While the secret exists, npm publishes with it. Once it's deleted,
+npm uses trusted publishing, so switching needs no workflow change.
+
+### Repository and npm setup
+
+The workflow relies on settings made by hand before the first release:
+
+1. Make the repository public. npm generates provenance only for public
+   repositories, and `codex plugin marketplace add owner/repo` fetches without
+   credentials. First uninstall the self-hosted runner and delete the
+   `MACOS_RUNNER` variable, as [CI runner](#ci-runner) describes.
+2. Create the npm account with 2FA.
+3. Create a granular token with publish access, bypass 2FA and an expiry of a
+   few days, and save it as the `NPM_TOKEN` repository secret. The first release
+   publishes with it, because a trusted publisher can only be configured for a
+   package that already exists on npm.
+4. After the first version is published, and no more than 2 days before the
+   next release, configure the trusted publisher on npmjs.com: owner
+   `shemarlindie`, repository `subagent-extension-for-codex`, workflow
+   `release.yml`, with direct `npm publish` allowed. New configurations allow
+   only `npm stage publish` by default, and a new configuration expires unless
+   it publishes within 2 days. Then delete the `NPM_TOKEN` secret and revoke the
+   token. If the first prerelease fails to set the `next` tag, also allow
+   `npm dist-tag`.
+5. Select **Enable release immutability** under **Settings → General →
+   Releases**. Each published release then locks its tag and assets.
+6. Add a tag ruleset for `v*` with **Restrict updates** and **Restrict
+   deletions** and an empty bypass list. It covers tags without a published
+   release. Leave creations unrestricted, because GitHub Actions can't be a
+   bypass actor and the workflow creates the tags.
+7. Add a branch ruleset on `main` that requires the **Listed version published**
+   check, so a release pull request can't merge before its publish.
+
+## CI runner
 
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
 `main` and pull requests. Windows runs the build, package tests and focused
 settings file tests, including its native Downloads lookup. Other parts of
 the suite use POSIX shell fakes.
-
-## CI runner
 
 The macOS checks run on a self-hosted runner when the `MACOS_RUNNER` repository
 variable names its label, and on `macos-latest` when the variable is unset.
@@ -720,8 +777,9 @@ Release runs reuse these checks, so they follow the same routing. The release
 `publish` and `install` jobs always use GitHub-hosted runners.
 
 Use the runner only while the repository is private. In a public repository,
-anyone could open a fork pull request that runs code on the host Mac. Run
-`install.sh --uninstall` before making the repository public.
+anyone could open a fork pull request that runs code on the host Mac. Before
+making the repository public, run `install.sh --uninstall` and delete the
+`MACOS_RUNNER` variable, so the macOS checks return to `macos-latest`.
 
 The scripts in `dev/ci-runner` host the runner on a Mac. Each job runs in a
 fresh [Tart](https://tart.run) VM cloned from the `macos-tahoe-base` image,

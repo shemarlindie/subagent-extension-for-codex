@@ -55,3 +55,41 @@ jobs:
       - run: npm run build
       - run: npx vitest run tests/integration/package
       - run: npx vitest run src/service/features/settings/downloads-directory.test.ts src/service/features/settings/downloads-directory.integration.test.ts src/service/features/settings/settings-file.integration.test.ts
+
+  # A pull request that changes the listed version may merge only once that
+  # version is published. A release must be published from its head commit,
+  # which the Release workflow tags v<version>. A rollback lists an earlier
+  # version, whose tag only has to exist. Re-run this check after publishing.
+  listed-version:
+    name: Listed version published
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          listed() {
+            git show "$1:.agents/plugins/marketplace.json" |
+              node -p "JSON.parse(require('fs').readFileSync(0)).plugins[0].source.version"
+          }
+          git fetch -q --depth=1 origin "$BASE"
+          version=$(listed "$HEAD")
+          base=$(listed "$BASE" 2>/dev/null || true)
+          if [ "$version" = "$base" ]; then
+            echo "This pull request doesn't change the listed version"
+            exit 0
+          fi
+          if ! git fetch -q --depth=1 origin "refs/tags/v${version}:refs/tags/v${version}"; then
+            echo "v${version} isn't published yet" >&2
+            exit 1
+          fi
+          newest=$(printf '%s\n' "$base" "$version" | sort -V | tail -n 1)
+          if [ "$newest" = "$version" ] && [ "$(git rev-parse "v${version}^{commit}")" != "$HEAD" ]; then
+            echo "v${version} isn't published from this commit. Run the Release workflow on this branch, then re-run this check." >&2
+            exit 1
+          fi
+          echo "v${version} is published"

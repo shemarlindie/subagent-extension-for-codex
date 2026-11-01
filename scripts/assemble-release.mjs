@@ -1,5 +1,5 @@
 // Assembles the built package as a Codex marketplace that is also the plugin,
-// the layout the release branch holds. Run after `npm run build`:
+// the package the release publishes to npm. Run after `npm run build`:
 //   node scripts/assemble-release.mjs [--out release]
 import { execFileSync } from "node:child_process";
 import {

@@ -1,9 +1,11 @@
 name: Release
 
-# Run by hand from main after bumping the version in package.json and
-# plugin.json and adding its CHANGELOG.md section. User-facing v* tags point at
-# release-branch commits, so the source commit isn't tagged. A prerelease
-# version such as 1.2.0-beta.1 is tagged without moving the release branch.
+# Run by hand on a release branch that sets the version in package.json,
+# plugin.json and .agents/plugins/marketplace.json and holds its CHANGELOG.md
+# section. The workflow publishes the branch's head to npm and tags it
+# v<version>. Merging the branch's pull request then releases the version to
+# users. A prerelease such as 1.2.0-beta.1 publishes under the npm next tag, and
+# its pull request is closed without merging.
 on:
   workflow_dispatch:
 
@@ -29,24 +31,23 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - name: Require main
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "Releases are made from main, not ${GITHUB_REF}" >&2
-          exit 1
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
+          registry-url: https://registry.npmjs.org
       - run: npm ci
 
       - name: Read the version
         id: version
         run: |
           version=$(node -p "require('./package.json').version")
+          listed=$(node -p "require('./.agents/plugins/marketplace.json').plugins[0].source.version")
+          if [ "$listed" != "$version" ]; then
+            echo "The marketplace lists ${listed}, but package.json is ${version}" >&2
+            exit 1
+          fi
           if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null; then
             echo "v${version} already exists; bump the version first" >&2
             exit 1
@@ -72,38 +73,23 @@ jobs:
       - run: npm run build
       - run: npm run release:assemble
       - run: npm install --global @openai/codex@0.162.1
-      - name: Install the assembled marketplace with Codex
+      - name: Install the packed release with Codex
         run: npx vitest run tests/integration/package/marketplace-install.test.ts
 
-      - name: Commit to the release branch and tag it
+      # Node 24's bundled npm is too old to set dist-tags through OIDC.
+      - run: npm install --global npm@11.21.0
+
+      # NPM_TOKEN is only for the first publish. It will be removed and revoked
+      # after, in favor of npm trusted publishing (OIDC), which can only be set
+      # up once the package exists.
+      - name: Publish to npm
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          branch="$RUNNER_TEMP/release-branch"
-          if git ls-remote --exit-code --heads origin release >/dev/null; then
-            git fetch origin release
-            git worktree add -B release "$branch" origin/release
-          else
-            # The first release starts an orphan branch holding only releases.
-            git worktree add --detach "$branch"
-            git -C "$branch" checkout --orphan release
-            git -C "$branch" rm -rfq .
-          fi
-          find "$branch" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -R release/. "$branch/"
-          git -C "$branch" add -A
-          git -C "$branch" commit -qm "Release v${VERSION}" -m "Source: ${GITHUB_SHA}"
-          git -C "$branch" tag -a "v${VERSION}" -m "v${VERSION}"
-          # A prerelease's commit builds on release but only its tag is pushed,
-          # so users following the branch don't receive it.
-          if [ "$PRERELEASE" = true ]; then
-            git -C "$branch" push origin "v${VERSION}"
-          else
-            git -C "$branch" push origin release "v${VERSION}"
-          fi
+          tag=()
+          if [ "$PRERELEASE" = true ]; then tag=(--tag next); fi
+          npm publish ./release --access public --provenance "${tag[@]}"
 
       - name: Zip the release
         env:
@@ -114,6 +100,8 @@ jobs:
         with:
           subject-path: subagent-extension-for-codex-${{ steps.version.outputs.version }}.zip
 
+      # Tags the published commit, which marks the release pull request ready
+      # to merge.
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -121,10 +109,11 @@ jobs:
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
           gh release create "v${VERSION}" "subagent-extension-for-codex-${VERSION}.zip" \
-            --title "v${VERSION}" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag \
+            --target "$GITHUB_SHA" --title "v${VERSION}" --notes-file "$RUNNER_TEMP/notes.md" \
             --prerelease="${PRERELEASE}"
 
-  # Installs what users get: the published tag, fetched by Codex from GitHub.
+  # Installs what users get from the tag: the pinned version and, once the pull
+  # request merges, what main lists.
   install:
     needs: publish
     name: Install v${{ needs.publish.outputs.version }} (${{ matrix.os }})
@@ -133,6 +122,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.publish.outputs.version }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -141,7 +135,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm install --global @openai/codex@0.162.1
-      - name: Install from GitHub with Codex
+
+      # A new version can take a moment to reach every registry mirror.
+      - name: Wait for npm to serve the version
+        run: |
+          for attempt in {1..10}; do
+            npm view "subagent-extension-for-codex@${VERSION}" version && exit 0
+            sleep 30
+          done
+          exit 1
+
+      - name: Install the tag from GitHub with Codex
         env:
           MARKETPLACE_SOURCE: ${{ github.repository }}@v${{ needs.publish.outputs.version }}
         run: npx vitest run tests/integration/package/marketplace-install.test.ts
