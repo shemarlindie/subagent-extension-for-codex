@@ -191,6 +191,27 @@ test("a reply shows its Markdown preview outside Debug with More and Less contro
   );
 });
 
+test("a message for Codex collapses to a Markdown preview like a reply", (t) => {
+  t.onTestFinished(cleanup);
+  const text = `**Report.** ${"Step done. ".repeat(12)}`;
+
+  const view = render(
+    createElement(GroupedEventList, {
+      events: [event("parent.message", { text }, "for-parent")],
+    }),
+  );
+
+  const group = view.container.querySelector(".activity-group")!;
+  const body = () => group.querySelector(".activity-body .activity-markdown")!;
+
+  expect(group.querySelector(".activity-group-summary")).toBeNull();
+  expect(body().querySelector("strong")?.textContent).toBe("Report.");
+  expect(body().textContent).toMatch(/\.\.\.$/);
+
+  fireEvent.click(group.querySelector(".activity-reply-toggle")!);
+  expect(body().textContent).toContain("Step done. ".repeat(12).trimEnd());
+});
+
 test("Activity includes the task's initial request at the start, including before events exist", (t) => {
   t.onTestFinished(cleanup);
 

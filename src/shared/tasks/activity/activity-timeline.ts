@@ -11,6 +11,7 @@ import {
   eventRowTitle,
   failureSummary,
   isQuiet,
+  replyText,
   sentence,
   serviceSummary,
   statusTitle,
@@ -310,8 +311,6 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       (activityFailed(e) ? failureSummary(e) : undefined) ??
       serviceSummary(e) ??
       eventPayload(e, "agent.completed")?.result ??
-      reply?.text ??
-      eventPayload(e, "parent.message")?.text ??
       eventPayload(e, "task.instruction")?.message ??
       eventPayload(e, "task.waiting")?.reason ??
       eventPayload(e, "parent.message_delivery")?.error ??
@@ -326,7 +325,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    if (reply || thinkingSignal(e)) {
+    // Replies and reports for Codex carry their own text, so no summary repeats it.
+    if (replyText(e) !== undefined || thinkingSignal(e)) {
       group.summary = undefined;
     }
 

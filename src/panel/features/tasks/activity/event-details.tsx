@@ -2,7 +2,10 @@ import { useState } from "react";
 
 import { eventPayload } from "../../../../shared/events/payload";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
-import { activityFailed } from "../../../../shared/tasks/activity/activity-events";
+import {
+  activityFailed,
+  replyText,
+} from "../../../../shared/tasks/activity/activity-events";
 import { scalarText } from "../../../../shared/text";
 import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
@@ -81,10 +84,10 @@ export function EventBody({ event }: { event: Event }) {
     );
   }
 
-  const reply = eventPayload(event, "agent.reply");
+  const reply = replyText(event);
 
-  if (reply) {
-    return <ReplyResult text={reply.text} />;
+  if (reply !== undefined) {
+    return <ReplyResult text={reply} />;
   }
 
   const toolStarted = eventPayload(event, "tool.started");

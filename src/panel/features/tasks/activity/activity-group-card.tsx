@@ -8,7 +8,10 @@ import {
 } from "react";
 
 import { eventPayload } from "../../../../shared/events/payload";
-import type { ActivityGroup } from "../../../../shared/tasks/activity/activity-events";
+import {
+  type ActivityGroup,
+  replyText,
+} from "../../../../shared/tasks/activity/activity-events";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
@@ -116,7 +119,7 @@ export function ActivityGroupCard({
 
   useEffect(() => () => cancelReveal.current?.(), []);
 
-  const reply = group.events.find((event) => event.type === "agent.reply");
+  const reply = group.events.find((event) => replyText(event) !== undefined);
 
   const userMessages = group.events.flatMap((event) => {
     const text = userMessageText(event);

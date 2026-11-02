@@ -381,7 +381,10 @@ for (let turn = 1; turn <= longChatTurns; turn++) {
 }
 
 // Parent delivery events remain inspectable in Activity alongside the SDK tool call.
-longChat.add("parent.message", { text: "The screen migration is complete." });
+longChat.add("parent.message", {
+  text: "The screen migration is **complete**.\n\n- Moved every settings screen to the grid\n- Kept `SettingsLayout` for the old routes",
+});
+
 const parentMessageId = longChat.events.at(-1)!.id;
 longChat.add("parent.message_attempted", { message_id: parentMessageId });
 const parentAttemptId = longChat.events.at(-1)!.id;

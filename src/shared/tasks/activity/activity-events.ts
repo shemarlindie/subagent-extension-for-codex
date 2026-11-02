@@ -32,6 +32,14 @@ export const string = (v: unknown) => (typeof v === "string" ? v : undefined);
 export const activityKind = (e: Event) =>
   activityPresentation(e).kind ?? e.type;
 
+/**
+ * The text of a worker reply or of a worker report for Codex. Activity shows
+ * either as a collapsible preview in place of a summary.
+ */
+export const replyText = (e: Event) =>
+  eventPayload(e, "agent.reply")?.text ??
+  eventPayload(e, "parent.message")?.text;
+
 export function activityFailed(e: Event) {
   const failed = activityPresentation(e).failed;
   if (failed !== undefined) return failed;
