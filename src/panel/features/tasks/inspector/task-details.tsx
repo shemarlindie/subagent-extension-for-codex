@@ -14,6 +14,10 @@ import { changesSummary } from "../../changes/read-changes";
 import type { ChangeCountsState } from "../../changes/types";
 import { WorktreeActions } from "../../changes/worktree-actions";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
+import {
+  ESTIMATED_COST_LABEL,
+  EstimatedCostLabel,
+} from "./estimated-cost-label";
 import { TaskDetailsSkeleton } from "./task-details-skeleton";
 
 type TaskDetailsProps = {
@@ -111,7 +115,7 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         Dependencies: task.depends_on.join(", ") || "None",
         Turns: task.turn,
         "Runtime used": formatDuration(taskRuntimeMs(task, now)),
-        "Reported cost":
+        [ESTIMATED_COST_LABEL]:
           task.cost_usd === undefined
             ? "Unavailable"
             : `$${task.cost_usd.toFixed(3)}`,
@@ -161,7 +165,13 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
           <dl className="facts">
             {Object.entries(facts).map(([label, value]) => (
               <div className="fact" key={label}>
-                <dt>{label}</dt>
+                <dt>
+                  {label === ESTIMATED_COST_LABEL ? (
+                    <EstimatedCostLabel />
+                  ) : (
+                    label
+                  )}
+                </dt>
                 <dd
                   className={
                     multilineFacts.has(label)

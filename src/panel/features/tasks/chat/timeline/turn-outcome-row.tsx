@@ -10,6 +10,7 @@ import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { formatUserDateTime } from "../../../../shared/utils/user-date-time.js";
 import { CopyButton } from "../../../file-preview/copy-button";
 import { formatDuration } from "../../list/duration";
+import { estimatedCostNote } from "../../shared/estimated-cost";
 import { formatCost } from "../chat-model";
 import { formatOutcomeTimestamp } from "./outcome-timestamp";
 
@@ -107,13 +108,12 @@ export function TurnOutcomeRow({
           {typeof outcome.cost_usd === "number" && (
             <span className="chat-outcome-detail">
               <span aria-hidden="true">·</span>
-              <TooltipWrapper label="Reported cost">
-                {/* The label names the cost, so the value must stay in the accessible name. */}
-                <span
-                  aria-label={`Reported cost ${formatCost(outcome.cost_usd)}`}
-                >
-                  {formatCost(outcome.cost_usd)}
-                </span>
+              {/* The tooltip explains the figure, so the trigger names it with its value. */}
+              <TooltipWrapper
+                label={estimatedCostNote("turn")}
+                triggerLabel={`Estimated turn cost ${formatCost(outcome.cost_usd)}`}
+              >
+                <span>{formatCost(outcome.cost_usd)}</span>
               </TooltipWrapper>
             </span>
           )}

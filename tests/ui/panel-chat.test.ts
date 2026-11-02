@@ -306,9 +306,11 @@ test("completed chat turns show a quiet summary with a completion time on hover"
 
   assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 11:30:00 AM");
 
-  assert.equal(
-    await hoverTooltip(user, within(row as HTMLElement).getByText("$0.00")),
-    "Reported cost",
+  const cost = within(row as HTMLElement).getByText("$0.00");
+  assert.equal(cost.getAttribute("aria-label"), "Estimated turn cost $0.00");
+
+  expect(await hoverTooltip(user, cost)).toMatch(
+    /this turn at API list prices/,
   );
 
   await act(async () =>
@@ -465,7 +467,7 @@ for (const outcome of ["failed", "interrupted"] as const) {
 
     assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);
     assertAbsent(row.querySelector("script"));
-    assertAbsent(row.querySelector('[aria-label^="Reported cost"]'));
+    assertAbsent(row.querySelector('[aria-label^="Estimated turn cost"]'));
     assert.ok(within(row).getByRole("button", { name: "View activity" }));
   });
 }

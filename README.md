@@ -110,7 +110,11 @@ Before you start:
   service never merges changes.
 - The researcher, reviewer and security reviewer profiles only inspect by
   default.
-- Cost budgets aren't a hard billing cap.
+- Usage and billing follow your Claude Code sign-in. A set `ANTHROPIC_API_KEY`
+  takes priority over a subscription login. Shown costs are estimates at API
+  list prices, and cost limits apply to these estimates. See
+  [authentication](https://code.claude.com/docs/en/authentication) and
+  [costs](https://code.claude.com/docs/en/costs).
 
 See [How tasks run](docs/panel-guide.md#how-tasks-run) for details.
 

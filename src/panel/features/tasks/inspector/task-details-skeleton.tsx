@@ -31,7 +31,7 @@ const FACTS = [
   { label: "Dependencies", labelSize: "small", valueKind: "medium" },
   { label: "Turns", labelSize: "small", valueKind: "short" },
   { label: "Runtime used", labelSize: "medium", valueKind: "short" },
-  { label: "Reported cost", labelSize: "medium", valueKind: "short" },
+  { label: "Estimated cost", labelSize: "medium", valueKind: "short" },
 ] as const;
 
 type FactKind = (typeof FACTS)[number]["valueKind"];

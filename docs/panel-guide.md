@@ -77,8 +77,8 @@ Removing the selected project returns the task list to **All projects**.
   [Claude permissions](configuration.md#claude-permissions) and
   [session restrictions](configuration.md#claude-session-restrictions).
 - **Budgets.** Runtime and cost budgets span turns. Claude checks cost after
-  each response, so a response can exceed the limit, and cost budgets aren't a
-  hard billing cap. See
+  each response, so a response can exceed the limit. Costs are estimates at API
+  list prices, and cost limits apply to these estimates. See
   [Steering, queues and budgets](#steering-queues-and-budgets).
 
 ## Tasks and settings
@@ -295,10 +295,10 @@ to Codex appear in Activity only. Worker and parent-agent text renders as
 shows as typed. Draft replies stream until the stored message replaces them.
 Code blocks in Chat and Activity have a copy action in their header.
 
-Turn outcomes show duration, cost and time. Their actions copy the response, ask
-Codex about it or open that turn's activity. Hover a timestamp for its full date
-and time. Failures keep their error. Notes mark compaction, new sessions and
-recreated worktrees.
+Turn outcomes show duration, estimated cost and time. Their actions copy the
+response, ask Codex about it or open that turn's activity. Hover a timestamp for
+its full date and time. Failures keep their error. Notes mark compaction, new
+sessions and recreated worktrees.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
