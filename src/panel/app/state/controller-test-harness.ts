@@ -112,6 +112,7 @@ export class FakeTransport implements Transport {
       ],
       list_tasks: this.tasks,
       app_get_activity: { events: [] },
+      app_record_timing: {},
       app_get_change_counts: {
         scope: "task",
         files: 0,

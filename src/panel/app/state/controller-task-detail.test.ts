@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { decodedEvent } from "../../../shared/events/decode";
 import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
@@ -84,6 +84,7 @@ test("returning to a task rejects chat and activity from its previous selection"
     return undefined;
   };
 
+  const timing = vi.spyOn(controller.timing, "observe");
   const first = controller.select("a");
   firstSelection = false;
   await controller.select("b");
@@ -103,6 +104,16 @@ test("returning to a task rejects chat and activity from its previous selection"
     controller.getSnapshot().events.map((item) => item.id),
     [2],
   );
+
+  expect(timing).toHaveBeenCalledWith("activity_latest", "merge", 0, {
+    stale_count: 1,
+  });
+
+  expect(timing).toHaveBeenCalledWith("chat", "merge", 0, { stale_count: 1 });
+
+  expect(
+    timing.mock.calls.filter((call) => call[3]?.stale_count === 1),
+  ).toHaveLength(2);
 });
 
 for (const transition of [

@@ -15,9 +15,10 @@ import { errorMessage } from "../../../shared/utils/error-message";
 import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
-import { TimingReporter } from "./timing-reporter";
+import type { TimingReporter } from "./timing-reporter";
 
 interface TaskActionContext {
+  timing: Pick<TimingReporter, "record">;
   snapshot(): Snapshot;
   closed(): boolean;
   patch(patch: Partial<Snapshot>): void;
@@ -70,13 +71,10 @@ export class TaskActions {
   /** Archives and unarchives tasks, without making the panel busy. */
   readonly archive: ArchiveActions;
   private readonly sendRequests = new Map<string, PendingMessageRequest>();
-  /** Sends bounded calls' durations to the service timing log. */
-  private readonly timing: TimingReporter;
 
   constructor(private context: TaskActionContext) {
     this.unread = new UnreadActions(context);
     this.archive = new ArchiveActions(context);
-    this.timing = new TimingReporter(context);
   }
 
   /** Answers a worker's pending question from the task inspector. */
@@ -418,7 +416,7 @@ export class TaskActions {
             (durationMs, settled) => {
               if (!isTimedPanelOperation(name)) return;
 
-              this.timing.record({
+              this.context.timing.record({
                 operation: name,
                 duration_ms: durationMs,
                 ...panelTimingCorrelation(args),

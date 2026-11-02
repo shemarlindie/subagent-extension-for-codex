@@ -20,6 +20,7 @@ import {
 } from "../../features/tasks/controls/handoff-message";
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
+import { TimingReporter } from "../../features/tasks/controls/timing-reporter";
 import { TaskDetailLoader } from "../../features/tasks/task-detail-loader";
 import { errorMessage } from "../../shared/utils/error-message";
 import { sharedRequest } from "../../shared/utils/shared-request";
@@ -94,6 +95,8 @@ export class Controller {
       this.tool<T>(name, args),
   };
 
+  readonly timing: TimingReporter = new TimingReporter(this.stateContext);
+
   private draftFollower = new DraftFollower({
     ...this.stateContext,
     hidden: () => this.environment.hidden(),
@@ -109,6 +112,7 @@ export class Controller {
     generation: () => this.generation,
     setTab: (tab) => this.setTab(tab),
     drafts: this.draftFollower,
+    timing: this.timing,
   });
 
   private revisions = new RevisionTrigger({
@@ -199,6 +203,7 @@ export class Controller {
   private projectUndo = projectUndoSteps(this.stateContext);
 
   readonly taskActions = new TaskActions({
+    timing: this.timing,
     ...this.stateContext,
     refresh: () => this.refresh(),
     report: (error) => this.report(error),
@@ -381,6 +386,7 @@ export class Controller {
         login: () => this.patch({ loginRequired: true, ...READS_STOPPED }),
         host: (host) => this.patch({ host }),
         teardown: () => this.dispose(),
+        timing: (...args) => this.timing.observe(...args),
         draft: (update) => this.draftFollower.apply(update),
         revision: (value) => this.revisions.report(value),
       });
@@ -461,6 +467,7 @@ export class Controller {
     clearTimeout(this.timer);
     this.revisions.dispose();
     this.stopVisibility?.();
+    this.timing.dispose();
     this.transport.dispose();
     this.listeners.clear();
   }
@@ -494,7 +501,7 @@ export class Controller {
   async tool<T>(name: string, args: Record<string, unknown> = {}) {
     if (this.disposed) throw new Error("The console has closed.");
 
-    return this.transport.tool<T>(name, args);
+    return this.timing.fetch(name, () => this.transport.tool<T>(name, args));
   }
 
   private forwardParentMessage() {
@@ -573,10 +580,19 @@ export class Controller {
         ...(repository ? { repository } : {}),
       });
 
-      if (this.staleProjectRead(version, projectGeneration)) return;
+      if (this.staleProjectRead(version, projectGeneration)) {
+        this.timing.observe("task_list", "merge", 0, { stale_count: 1 });
+
+        return;
+      }
 
       const tasks = tasksInScope(next, { conversation, repository });
-      if (!this.acceptTaskList(tasks, intent)) return;
+
+      const accepted = this.timing.merge("task_list", next.length, () =>
+        this.acceptTaskList(tasks, intent),
+      );
+
+      if (!accepted) return;
 
       // Share after fallback selection so the host sees the same task as the panel.
       if (this.reconcileShare) {

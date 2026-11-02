@@ -1005,16 +1005,39 @@ test("the panel appends its call durations to the timing log", async () => {
   const requestId = "0123456789abcdef0123456789abcdef";
   const taskId = "task_01234567-89ab-cdef-0123-456789abcdef";
 
+  const aggregate = {
+    operation: "activity_latest",
+    phase: "decode",
+    count: 3,
+    total_ms: 12,
+    max_ms: 7,
+    rows: 205,
+    groups: 0,
+    stale_count: 0,
+    error_count: 1,
+  };
+
   try {
     for (const record of [
       { operation: "Send the secret plan", duration_ms: 12 },
       { operation: "app_send_message", duration_ms: 1, request_id: "My plan" },
       { operation: "app_send_message", duration_ms: 1, task_id: "My plan" },
+      { ...aggregate, phase: "arbitrary prompt" },
+      { ...aggregate, rows: -1 },
+      { ...aggregate, count: 1.5 },
+      { ...aggregate, total_ms: Infinity },
+      { ...aggregate, max_ms: 1_000_000_000_001 },
+      { ...aggregate, stale_count: 1_000_000_001 },
+      { ...aggregate, metadata: "secret input" },
     ]) {
       await expect(
         user("app_record_timing", { records: [record] }),
       ).rejects.toThrow();
     }
+
+    await expect(
+      user("app_record_timing", { records: [aggregate], dropped_count: -1 }),
+    ).rejects.toThrow();
 
     // Correlation fields are optional, since some operations have none.
     const recorded = await withLogContext({ request_id: "upload" }, () =>
@@ -1030,11 +1053,13 @@ test("the panel appends its call durations to the timing log", async () => {
             ui_timed_out: true,
           },
           { operation: "interrupt_task", duration_ms: 3, outcome: "error" },
+          aggregate,
         ],
+        dropped_count: 4,
       }),
     );
 
-    assert.deepEqual(recorded, { recorded: 3 });
+    assert.deepEqual(recorded, { recorded: 4 });
 
     expect(await timing.records("transport")).toEqual([
       expect.objectContaining({
@@ -1054,6 +1079,17 @@ test("the panel appends its call durations to the timing log", async () => {
     const text = await readFile(timing.path, "utf8");
     expect(text).not.toContain(requestId);
     expect(text).not.toContain("upload");
+
+    const records = text
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+
+    expect(records).toContainEqual(expect.objectContaining(aggregate));
+
+    expect(records).toContainEqual(
+      expect.objectContaining({ phase: "panel_reporting", dropped_count: 4 }),
+    );
   } finally {
     await c.close();
   }

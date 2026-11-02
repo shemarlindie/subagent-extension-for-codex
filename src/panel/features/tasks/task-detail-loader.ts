@@ -10,8 +10,10 @@ import {
 } from "./activity/event-history";
 import { type ChatRead, mergeChat } from "./chat/chat-state";
 import type { DraftFollower } from "./chat/drafts/draft-follower";
+import type { TimingReporter } from "./controls/timing-reporter";
 
 interface TaskDetailContext {
+  timing: Pick<TimingReporter, "observe" | "merge">;
   snapshot(): Snapshot;
   closed(): boolean;
   /** The controller advances this whenever selection or scope changes. */
@@ -49,24 +51,36 @@ export class TaskDetailLoader {
         after: activityCursor(state.events, id),
       })
       .then((activity) => {
-        if (!isCurrentRead()) return;
+        if (!isCurrentRead()) {
+          this.context.timing.observe("activity_latest", "merge", 0, {
+            stale_count: 1,
+          });
 
-        const current = this.context.snapshot();
+          return;
+        }
 
-        const view = mergeActivity(
-          { events: current.events, dropped: current.droppedEvents },
-          id,
-          activity,
+        return this.context.timing.merge(
+          "activity_latest",
+          activity.events.length,
+          () => {
+            const current = this.context.snapshot();
+
+            const view = mergeActivity(
+              { events: current.events, dropped: current.droppedEvents },
+              id,
+              activity,
+            );
+
+            this.context.patch({
+              events: view.events,
+              droppedEvents: view.dropped,
+              activityHistoryLoading:
+                current.activityHistoryLoading === id
+                  ? undefined
+                  : current.activityHistoryLoading,
+            });
+          },
         );
-
-        this.context.patch({
-          events: view.events,
-          droppedEvents: view.dropped,
-          activityHistoryLoading:
-            current.activityHistoryLoading === id
-              ? undefined
-              : current.activityHistoryLoading,
-        });
       });
 
     const read = this.context.drafts.reading();
@@ -77,19 +91,25 @@ export class TaskDetailLoader {
         after: state.chat?.task === id ? state.chat.cursor : 0,
       })
       .then((chat) => {
-        if (!isCurrentRead()) return;
+        if (!isCurrentRead()) {
+          this.context.timing.observe("chat", "merge", 0, { stale_count: 1 });
 
-        const current = this.context.snapshot();
+          return;
+        }
 
-        this.context.patch({
-          chat: mergeChat(current.chat, id, chat),
-          chatHistoryLoading:
-            current.chatHistoryLoading === id
-              ? undefined
-              : current.chatHistoryLoading,
+        return this.context.timing.merge("chat", chat.items.length, () => {
+          const current = this.context.snapshot();
+
+          this.context.patch({
+            chat: mergeChat(current.chat, id, chat),
+            chatHistoryLoading:
+              current.chatHistoryLoading === id
+                ? undefined
+                : current.chatHistoryLoading,
+          });
+
+          this.context.drafts.show(read);
         });
-
-        this.context.drafts.show(read);
       });
 
     await Promise.all([activityRead, chatRead]);
@@ -131,11 +151,17 @@ export class TaskDetailLoader {
       );
 
       if (current()) {
-        this.context.patch({
-          activityFocus: {
-            ...focus,
-            range: { events: page.events, dropped: page.dropped },
-          },
+        this.context.timing.merge("activity_turn", page.events.length, () => {
+          this.context.patch({
+            activityFocus: {
+              ...focus,
+              range: { events: page.events, dropped: page.dropped },
+            },
+          });
+        });
+      } else {
+        this.context.timing.observe("activity_turn", "merge", 0, {
+          stale_count: 1,
         });
       }
     } catch (error) {

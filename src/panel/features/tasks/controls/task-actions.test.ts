@@ -9,6 +9,7 @@ import {
 import type { Snapshot, Task } from "../../../app/state/types";
 import { undoRecorder } from "../../../app/state/undo-test-harness";
 import { TaskActions } from "./task-actions";
+import { TimingReporter } from "./timing-reporter";
 
 function setup(
   tool: (
@@ -41,8 +42,11 @@ function setup(
     undo: undo.recorder,
   };
 
+  const timing = new TimingReporter(context);
+  onTestFinished(() => timing.dispose());
+
   return {
-    actions: new TaskActions(context),
+    actions: new TaskActions({ ...context, timing }),
     context: { ...context, tool: toolCall },
     entries: undo.entries,
     busyChanges,

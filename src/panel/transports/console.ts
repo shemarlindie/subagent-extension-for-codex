@@ -56,6 +56,7 @@ export class ConsoleTransport implements Transport {
     return decodePanelToolResult<T>(
       name,
       (await this.api("/api/tools/" + name, args)).result,
+      this.events?.timing,
     );
   }
 

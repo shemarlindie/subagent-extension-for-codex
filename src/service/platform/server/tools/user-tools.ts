@@ -6,7 +6,6 @@ import {
 } from "../../../../shared/tasks/conversation/chat.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
-import { panelTimingRecordSchema } from "../../../../shared/tasks/panel-timing.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { browseProject } from "../../../features/projects/project-picker.js";
 import {
@@ -15,10 +14,6 @@ import {
 } from "../../../features/tasks/conversation/parent-messages.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
 import {
-  recordTaskTiming,
-  sendRef,
-} from "../../../features/tasks/runtime/timing.js";
-import {
   composerMentionsEnabled,
   mentionSearchSchema,
   mentionSearchToolName,
@@ -26,6 +21,7 @@ import {
 } from "../mentions.js";
 import type { agentTools } from "./agent-tools.js";
 import { queuedMessage, taskId, tool, type ToolContext } from "./definition.js";
+import { panelTimingTool } from "./panel-timing-tool.js";
 import { settingsTransferTools } from "./settings-transfer-tools.js";
 
 /**
@@ -322,26 +318,7 @@ export function userTools(
         return c.activity.turn(a.task_id, a.turn);
       },
     }),
-    app_record_timing: tool({
-      description:
-        "User interface only: append the panel's measured tool call durations to the service timing log.",
-      schema: z.strictObject({
-        records: z.array(panelTimingRecordSchema).min(1).max(50),
-      }),
-      run: ({ records }) => {
-        for (const { request_id: requestId, ...record } of records) {
-          recordTaskTiming({
-            phase: "transport",
-            ...record,
-            send_ref: sendRef(requestId),
-            // This batch's HTTP request isn't the measured call's.
-            request_id: undefined,
-          });
-        }
-
-        return { recorded: records.length };
-      },
-    }),
+    app_record_timing: panelTimingTool(),
     app_remove_worktree: tool({
       destructive: true,
       description:

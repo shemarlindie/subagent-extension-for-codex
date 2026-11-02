@@ -14,7 +14,7 @@ const panelRequestIdPattern = /^[0-9a-f]{32}$/;
  * message text or other arbitrary input. The service stores only a hash of
  * the request ID.
  */
-export const panelTimingRecordSchema = z.strictObject({
+const panelCallTimingRecordSchema = z.strictObject({
   operation: z.enum(timedOperations),
   duration_ms: z.number().nonnegative().max(3_600_000),
   task_id: z.string().regex(taskIdPattern).optional(),
@@ -25,11 +25,72 @@ export const panelTimingRecordSchema = z.strictObject({
   ui_timed_out: z.boolean().optional(),
 });
 
-export type PanelTimingRecord = z.infer<typeof panelTimingRecordSchema>;
+export const PANEL_TIMING_MAX_COUNT = 1_000_000_000;
+export const PANEL_TIMING_MAX_DURATION_MS = 1_000_000_000_000;
+const workCount = z.number().int().nonnegative().max(PANEL_TIMING_MAX_COUNT);
+const elapsed = z.number().nonnegative().max(PANEL_TIMING_MAX_DURATION_MS);
+
+const panelLoadTimingRecordSchema = z.strictObject({
+  operation: z.enum(["task_list", "chat", "activity_latest", "activity_turn"]),
+  phase: z.enum(["fetch", "decode", "merge", "group"]),
+  count: workCount.positive(),
+  total_ms: elapsed,
+  max_ms: elapsed,
+  rows: workCount,
+  groups: workCount,
+  stale_count: workCount,
+  error_count: workCount,
+});
+
+const panelTimingRecordSchema = z.union([
+  panelCallTimingRecordSchema,
+  panelLoadTimingRecordSchema,
+]);
+
+export const panelTimingBatchSchema = z.strictObject({
+  records: z.array(panelTimingRecordSchema).min(1).max(50),
+  dropped_count: workCount.optional(),
+});
+
+export type PanelCallTimingRecord = z.infer<typeof panelCallTimingRecordSchema>;
+export type PanelLoadTimingRecord = z.infer<typeof panelLoadTimingRecordSchema>;
+export type PanelLoadOperation = PanelLoadTimingRecord["operation"];
+export type PanelLoadPhase = PanelLoadTimingRecord["phase"];
+
+export interface PanelTimingWork {
+  rows?: number;
+  groups?: number;
+  stale_count?: number;
+  outcome?: "success" | "error";
+}
+
+export type ObservePanelTiming = (
+  operation: PanelLoadOperation,
+  phase: PanelLoadPhase,
+  duration: number,
+  work?: PanelTimingWork,
+) => void;
+
+export function panelLoadOperation(
+  name: string,
+): PanelLoadOperation | undefined {
+  switch (name) {
+    case "list_tasks":
+      return "task_list";
+    case "app_get_chat":
+      return "chat";
+    case "app_get_activity":
+      return "activity_latest";
+    case "app_get_turn_activity":
+      return "activity_turn";
+    default:
+      return undefined;
+  }
+}
 
 export function isTimedPanelOperation(
   name: string,
-): name is PanelTimingRecord["operation"] {
+): name is PanelCallTimingRecord["operation"] {
   return (timedOperations as readonly string[]).includes(name);
 }
 

@@ -62,10 +62,14 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   await controller.start();
   let hidden = true;
   environment.hidden = () => hidden;
-  const initial = transport.calls.length;
+
+  const reads = () =>
+    transport.calls.filter((call) => call.name !== "app_record_timing").length;
+
+  const initial = reads();
   vi.advanceTimersByTime(30000);
   await flush();
-  assert.equal(transport.calls.length, initial);
+  assert.equal(reads(), initial);
   hidden = false;
   const gate = deferred<Task[]>();
 
@@ -74,17 +78,17 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
 
   vi.advanceTimersByTime(30000);
   await flush();
-  const pending = transport.calls.length;
+  const pending = reads();
   // Each refresh reads the project list, then the tasks.
   assert.equal(pending, initial + 2);
   vi.advanceTimersByTime(60000);
   await flush();
-  assert.equal(transport.calls.length, pending);
+  assert.equal(reads(), pending);
   gate.resolve([]);
   await flush();
   vi.advanceTimersByTime(30000);
   await flush();
-  assert.equal(transport.calls.length, pending + 2);
+  assert.equal(reads(), pending + 2);
 });
 
 test("the fallback refresh reports tool failures then retries successfully", async (t) => {

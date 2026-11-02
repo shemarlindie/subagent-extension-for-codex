@@ -1,9 +1,10 @@
-import { memo } from "react";
+import { memo, useContext } from "react";
 
 import {
   groupActivity,
   thinkingSpan,
 } from "../../../../shared/tasks/activity/activity-timeline";
+import { ControllerContext } from "../../../app/state/controller-context";
 import type { Event, Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
@@ -65,9 +66,19 @@ export const EventList = memo(function EventList({
   turn,
   focus,
 }: EventListProps) {
+  const controller = useContext(ControllerContext);
+  const started = performance.now();
+
   // Oldest first, like Chat; progress moves an operation to the end.
   const groups = groupActivity(events).sort(
     (a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id,
+  );
+
+  controller?.timing.observe(
+    turn === undefined ? "activity_latest" : "activity_turn",
+    "group",
+    performance.now() - started,
+    { rows: events.length, groups: groups.length },
   );
 
   const trimmed = events.length === EVENT_TAIL_SIZE;

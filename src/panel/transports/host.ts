@@ -134,7 +134,7 @@ export class HostTransport implements Transport {
 
     return name.endsWith("_settings")
       ? (body as T)
-      : decodePanelToolResult<T>(name, body.result);
+      : decodePanelToolResult<T>(name, body.result, this.events?.timing);
   }
 
   watch() {}

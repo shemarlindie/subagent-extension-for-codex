@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import type { TransportEvents } from "../app/state/types";
@@ -701,3 +701,71 @@ test("worker messages use explicit submission metadata and require host support"
 
   assert.deepEqual(unsupported.calls, []);
 });
+
+for (const channel of ["console", "host"] as const) {
+  test(`${channel} measures event decoding once and leaves other results outside that phase`, async () => {
+    const timing = vi.fn();
+    const observed = callbacks();
+    const fake = hostApp();
+    let result: unknown;
+
+    const transport =
+      channel === "console"
+        ? new ConsoleTransport("", async () => Response.json({ result }))
+        : new HostTransport(fake.app as any);
+
+    await transport.connect({ ...observed.events, timing });
+
+    const respond = (value: unknown) => {
+      result = value;
+      fake.respond({ structuredContent: { result: value } });
+    };
+
+    const event = {
+      id: 1,
+      task_id: "a",
+      type: "fixture.activity",
+      timestamp: "",
+      data: { marker: true },
+    };
+
+    respond({ events: [event] });
+
+    const clock = vi
+      .spyOn(performance, "now")
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(17);
+
+    await transport.tool("app_get_activity");
+
+    expect(timing).toHaveBeenCalledExactlyOnceWith(
+      "activity_latest",
+      "decode",
+      7,
+      { rows: 1, outcome: "success" },
+    );
+
+    clock.mockRestore();
+
+    respond({ items: [], next_cursor: 0 });
+    await transport.tool("app_get_chat");
+    respond({ recorded: 1 });
+    await transport.tool("app_record_timing");
+    expect(timing).toHaveBeenCalledOnce();
+
+    respond({ events: [{ id: "invalid" }] });
+
+    await expect(transport.tool("app_get_turn_activity")).rejects.toThrow(
+      "invalid event envelope",
+    );
+
+    expect(timing).toHaveBeenLastCalledWith(
+      "activity_turn",
+      "decode",
+      expect.any(Number),
+      { rows: 0, outcome: "error" },
+    );
+
+    transport.dispose();
+  });
+}

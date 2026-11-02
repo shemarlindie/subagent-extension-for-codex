@@ -1,4 +1,5 @@
 import type { DraftUpdate } from "../../shared/tasks/conversation/drafts.js";
+import type { ObservePanelTiming } from "../../shared/tasks/panel-timing.js";
 import type { ConnectionLabel } from "../app/state/connection.js";
 import type { PanelData } from "../app/state/types.js";
 
@@ -14,6 +15,7 @@ export type HostState = {
 };
 
 export type TransportEvents = {
+  timing?: ObservePanelTiming;
   scope(data: PanelData): void;
   status(text: ConnectionLabel): void;
   login(): void;

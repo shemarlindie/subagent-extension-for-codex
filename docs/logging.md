@@ -165,12 +165,14 @@ separate capture storage exists.
 
 ### Task timing
 
-`timing.jsonl` holds `task.timing` records. Each has `timestamp`, `phase` and
-`duration_ms`, measured with a monotonic clock.
+`timing.jsonl` holds `task.timing` records. Each has `timestamp` and `phase`.
+Individual spans have `duration_ms`, measured with a monotonic clock. Panel load
+aggregates have `total_ms` and `max_ms` instead.
 
 - `instance_id` matches `service.jsonl` records from the same service process.
 - `request_id` appears when the record was written during an HTTP request.
 - `outcome` is `success`, `error`, `timeout` or `aborted` for measured steps.
+  Panel load aggregates report `error_count` instead.
 - Turn phases carry `task_id` and `turn`.
 
 Records exclude message text and repository paths.
@@ -236,11 +238,12 @@ not measure active compute.
 
 #### Panel calls
 
-The panel measures message sends and interrupts and reports them through the
-app-only `app_record_timing` tool.
+The panel reports message sends, interrupts and load diagnostics through the
+app-only `app_record_timing` tool. Its own reporting calls are never timed.
 
-- The panel batches records for up to five seconds, so `timestamp` marks when
-  the service received them. A failed batch or a closed panel loses its records.
+- The panel batches active records on a five-second cadence, or sooner for a
+  full batch of send and interrupt records. `timestamp` marks when the service
+  received them.
 - The duration runs until the call settles, even after the panel stops waiting.
   `ui_timed_out` marks calls the panel stopped waiting for.
 - A `transport` record includes `task_id` when the call names a task, and
@@ -252,6 +255,35 @@ app-only `app_record_timing` tool.
 Transport duration includes service processing and bridge or HTTP overhead.
 Compare it with service phases. Do not add it to them. The panel and service use
 separate clocks, so compare durations across them and ignore timestamps.
+
+Load diagnostics aggregate by fixed `operation` (`task_list`, `chat`,
+`activity_latest` or `activity_turn`) and `phase`:
+
+| Phase    | Measured boundary                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `fetch`  | The controller's tool call through transport completion, including service processing, response parsing and any event decoding |
+| `decode` | Activity event-envelope validation in the HTTP or embedded MCP transport                                                       |
+| `merge`  | Accepting a current task list, Chat or Activity result into panel state                                                        |
+| `group`  | Activity grouping and sorting when the list actually runs them                                                                 |
+
+Each aggregate includes `count`, `total_ms`, `max_ms`, `rows`, `groups`,
+`stale_count` and `error_count`. Counts describe work in that phase.
+`stale_count` counts responses discarded after selection or scope changed.
+Unused work fields are zero.
+
+`fetch` includes `decode`, and grouping can repeat as the Activity list renders.
+These elapsed spans do not measure isolated CPU work, rendering completion or
+paint. Do not sum overlapping phases as independent costs. Chat arrives as
+conversation data and has no separate Activity event-decoding span.
+
+The reporter keeps at most one request in flight, 20 pending send or interrupt
+records and one pending aggregate per operation and phase, at most 16. While a
+request is stalled, load observations coalesce and excess individual records
+drop. A rejected batch also drops its records. A later successful batch reports
+lost records as `panel_reporting.dropped_count`. Counts and durations saturate
+at the contract's numeric bounds. Closing the panel clears pending diagnostics
+and stops further reporting. No task or owner identifiers partition load
+aggregates.
 
 The panel does not measure time to the first visible reply. It polls the
 selected task for drafts, a later draft can't be matched reliably to a steer or

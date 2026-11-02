@@ -125,6 +125,12 @@ schema. App-only tools carry user authority:
 
 Other `app_` tools serve panel reads and controls.
 
+`app_record_timing` accepts best-effort panel diagnostics in strict batches of
+1 to 50 records, with an optional bounded `dropped_count`. It rejects unknown
+fields and arbitrary metadata, and stores only the hash of a send request ID.
+See [Panel calls](logging.md#panel-calls) for accepted operations, fields,
+timing boundaries and delivery limits.
+
 `app_export_settings` returns a JSON string in `document`. The export contains
 a `format` number, currently `2`, the extension `version` and the user's saved
 nested `settings`. `app_import_settings` accepts this document with user

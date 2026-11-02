@@ -11,6 +11,8 @@ import {
 import { createElement } from "react";
 import { expect, test, vi } from "vitest";
 
+import { ControllerContext } from "../../../app/state/controller-context";
+import { setup } from "../../../app/state/controller-test-harness";
 import { expandedJson } from "../../../shared/components/json-tree/json-tree-test-harness";
 import {
   activityMessages,
@@ -353,5 +355,61 @@ test("new groups animate in and movement animations respect reduced motion", (t)
     calls.length,
     callCount,
     "Reduced motion suppresses entrance and movement animations",
+  );
+});
+
+test("group timings count actual grouping and unchanged props skip the work", (t) => {
+  t.onTestFinished(cleanup);
+  const { controller } = setup();
+  t.onTestFinished(() => controller.dispose());
+  const timing = vi.spyOn(controller.timing, "observe");
+
+  const events = [
+    event(
+      "workspace.indexed",
+      { message: "Indexed a file" },
+      "timing-index-one",
+    ),
+    event(
+      "workspace.indexed",
+      { message: "Indexed a file" },
+      "timing-index-two",
+    ),
+  ];
+
+  const list = (items: typeof events, turn?: number) =>
+    createElement(
+      ControllerContext.Provider,
+      { value: controller },
+      createElement(GroupedEventList, { events: items, turn }),
+    );
+
+  const view = render(list(events));
+  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
+
+  expect(timing).toHaveBeenCalledExactlyOnceWith(
+    "activity_latest",
+    "group",
+    expect.any(Number),
+    { rows: 2, groups: 1 },
+  );
+
+  view.rerender(list(events));
+  expect(timing).toHaveBeenCalledOnce();
+
+  const next = [
+    ...events,
+    event("agent.message", { text: "Read complete" }, "timing-message"),
+  ];
+
+  view.rerender(list(next, 1));
+  expect(view.container.querySelectorAll(".activity-group")).toHaveLength(2);
+  expect(timing).toHaveBeenCalledTimes(2);
+
+  expect(timing).toHaveBeenLastCalledWith(
+    "activity_turn",
+    "group",
+    expect.any(Number),
+    { rows: 3, groups: 2 },
   );
 });

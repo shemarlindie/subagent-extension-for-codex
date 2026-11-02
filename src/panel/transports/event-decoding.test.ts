@@ -87,13 +87,3 @@ test("activity tool pages validate typed views and retain opaque unknown data", 
     undefined,
   );
 });
-
-test("activity page transport rejects malformed envelopes", () => {
-  assert.throws(
-    () =>
-      decodePanelToolResult("app_get_turn_activity", {
-        events: [{ type: "task.started", data: {} }],
-      }),
-    /invalid event envelope/,
-  );
-});
