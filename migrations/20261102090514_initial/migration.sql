@@ -28,6 +28,8 @@ CREATE TABLE `events` (
 	`type` text NOT NULL,
 	`timestamp` text NOT NULL,
 	`data` text NOT NULL,
+	`response_ref` text,
+	`original_response` text,
 	CONSTRAINT `fk_events_task_id_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON DELETE CASCADE
 );
 --> statement-breakpoint
@@ -62,4 +64,5 @@ CREATE TABLE `tasks` (
 	`body` text NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `events_task` ON `events` (`task_id`,`id`);
+CREATE INDEX `events_task` ON `events` (`task_id`,`id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `events_response` ON `events` (`response_ref`);

@@ -113,11 +113,6 @@ another machine does not ensure native session continuation.
 
 ## Earlier development data
 
-Tasks created before edit recording have no recorded diffs, so their Changes tab
-may be empty or unavailable. If you no longer need that data, stop the service
-and start with a fresh data directory, after saving any worktrees and history
-you need.
-
 Older builds may have left Git snapshot refs that current builds don't use. Once
 no such build is running, remove them from a repository:
 

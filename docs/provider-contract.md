@@ -168,9 +168,7 @@ NotebookEdit calls keep their paths and options in `tool.started.input`, without
 `tool.completed.content` reads "File content isn't stored." and a failed result
 keeps its error text. Approval prompts and the Changes tab read their own
 copies, so they keep full file contents. Full-event recording keeps file
-contents in the events. Upgrading removes inline originals and file contents
-from earlier normal-mode events, and the
-[pre-migration backup](database.md#migration-application) keeps them.
+contents in the events.
 
 ## Stored provider state
 
