@@ -158,7 +158,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
   );
 });
 
-test("Chat orders explicit parent reports before the matching final reply's updated SDK message", () => {
+test("Chat leaves out worker reports to the parent and keeps the matching final reply", () => {
   const items = chatItems(task, [
     event(1, "agent.message", {
       role: "assistant",
@@ -180,23 +180,9 @@ test("Chat orders explicit parent reports before the matching final reply's upda
     items.map((item) => [item.id, item.event_id, item.kind]),
     [
       ["request", 0, "message"],
-      ["parent_2", 2, "message"],
       ["sdk_final", 3, "message"],
       ["turn_1_4", 4, "outcome"],
     ],
-  );
-
-  const report = items[1];
-  assert.ok(report);
-
-  assert.equal(
-    report.kind === "message" && report.message.parent_message,
-    true,
-  );
-
-  assert.equal(
-    report.kind === "message" && report.message.text,
-    "Worker report",
   );
 });
 

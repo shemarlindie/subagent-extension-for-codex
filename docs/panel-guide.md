@@ -291,8 +291,8 @@ each host keeps.
 ## Chat tab
 
 The inspector offers Chat, Activity, Changes and Details. Chat shows requests,
-follow-ups, worker messages, replies and turn outcomes. Worker and parent-agent
-text renders as
+follow-ups, worker messages, replies and turn outcomes. Reports the worker sends
+to Codex appear in Activity only. Worker and parent-agent text renders as
 [Markdown](../src/panel/features/file-preview/README.md#markdown), and your text
 shows as typed. Draft replies stream until the stored message replaces them.
 Code blocks in Chat and Activity have a copy action in their header.
