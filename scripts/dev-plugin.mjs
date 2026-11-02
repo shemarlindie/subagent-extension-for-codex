@@ -52,10 +52,11 @@ function uninstall() {
 
   if (error) throw error;
 
-  // Only the exact absent-marketplace error is harmless.
+  // Only the exact absent-marketplace error is harmless. Codex can print
+  // warnings before it, such as for a CODEX_HOME under /tmp on Linux.
   const absent =
     status === 1 &&
-    stderr.trim() ===
+    stderr.trim().split("\n").at(-1) ===
       `Error: marketplace \`${marketplace}\` is not configured or installed`;
 
   if (status !== 0 && !absent) {
