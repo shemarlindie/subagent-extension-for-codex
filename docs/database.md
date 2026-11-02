@@ -6,7 +6,7 @@ continuation in general, see [Task continuation](task-continuation.md).
 
 ## Connection and ownership
 
-The service and the projects CLI share `<data directory>/console.sqlite`. The
+The service and the projects CLI share `<data directory>/service.sqlite`. The
 shared connection enables WAL and foreign keys and applies pending migrations
 before any feature reads it.
 
@@ -48,7 +48,7 @@ committed migration.
   use the same files.
 - Before migrating a database that already has migrations,
   `src/service/platform/database/backup.ts` copies it with `VACUUM INTO` to
-  `<data>/backups/console-<last-applied-migration>-<timestamp>.sqlite`. It
+  `<data>/backups/service-<last-applied-migration>-<timestamp>.sqlite`. It
   keeps the newest three. Plugin updates arrive automatically, so these backups
   are the way back from a bad migration.
 
@@ -64,9 +64,9 @@ longer on a large database. The projects CLI never converts it.
 ## Restore a backup
 
 1. Stop the service.
-2. Move `console.sqlite` and its `-wal` and `-shm` files out of the data
+2. Move `service.sqlite` and its `-wal` and `-shm` files out of the data
    directory.
-3. Copy the backup to `console.sqlite`.
+3. Copy the backup to `service.sqlite`.
 4. Run the version that matches the backup. A newer build migrates it again,
    and an older build refuses a database with migrations it lacks. To pin a
    plugin version, reinstall it from that release's tag (`@vX.Y.Z`).

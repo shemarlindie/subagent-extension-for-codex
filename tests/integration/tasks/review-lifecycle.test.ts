@@ -46,7 +46,7 @@ test(
       "initial",
     ]);
 
-    const store = new Store(join(data, "console.sqlite"));
+    const store = new Store(join(data, "service.sqlite"));
 
     new Control(
       store,
@@ -142,7 +142,7 @@ test(
       },
     );
 
-    const reopened = new Store(join(data, "console.sqlite"));
+    const reopened = new Store(join(data, "service.sqlite"));
 
     try {
       assert.deepEqual(reopened.all(), before);

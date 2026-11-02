@@ -25,7 +25,7 @@ export async function startConsoleService(
   const directory = await realpath(await mkdtemp(join(tmpdir(), "panel-e2e-")));
 
   const control = new Control(
-    new Store(join(directory, "console.sqlite")),
+    new Store(join(directory, "service.sqlite")),
     new Workspaces(join(directory, "worktrees"), []),
     new Map([["fixture", new FixtureProvider(provider)]]),
   );

@@ -69,3 +69,8 @@ export function dataDirectory(env = process.env) {
 
   return join(homedir(), ".local", "share", "subagent-extension-for-codex");
 }
+
+/** The service database, shared with the projects CLI. */
+export function databasePath(data: string) {
+  return join(data, "service.sqlite");
+}

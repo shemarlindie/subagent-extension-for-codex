@@ -4,11 +4,11 @@ import { join, resolve } from "node:path";
 import { Projects } from "./features/projects/projects.js";
 import { Store } from "./features/tasks/storage/store.js";
 import { Workspaces } from "./features/workspaces/workspace.js";
-import { dataDirectory } from "./platform/service/runtime.js";
+import { databasePath, dataDirectory } from "./platform/service/runtime.js";
 
 const data = dataDirectory();
 mkdirSync(data, { recursive: true, mode: 0o700 });
-const store = new Store(join(data, "console.sqlite"));
+const store = new Store(databasePath(data));
 
 try {
   const projects = new Projects(

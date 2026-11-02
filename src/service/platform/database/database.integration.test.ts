@@ -46,7 +46,7 @@ const ledger = (client: DatabaseSync) =>
     .map((row) => String(row.name));
 
 test("a fresh database gets every active table and the connection settings", (t) => {
-  const path = join(scratch(t), "data", "console.sqlite");
+  const path = join(scratch(t), "data", "service.sqlite");
   const db = openDatabase(path);
   t.onTestFinished(() => db.close());
 
@@ -79,7 +79,7 @@ test("a fresh database gets every active table and the connection settings", (t)
 });
 
 test("reopening applies nothing twice and keeps existing rows", (t) => {
-  const path = join(scratch(t), "console.sqlite");
+  const path = join(scratch(t), "service.sqlite");
   const first = openDatabase(path);
 
   first.client
@@ -100,7 +100,7 @@ test("reopening applies nothing twice and keeps existing rows", (t) => {
 });
 
 test("an unversioned database is refused and left untouched", (t) => {
-  const path = join(scratch(t), "console.sqlite");
+  const path = join(scratch(t), "service.sqlite");
   const unversioned = new DatabaseSync(path);
 
   unversioned.exec(
@@ -120,7 +120,7 @@ test("an unversioned database is refused and left untouched", (t) => {
 });
 
 test("a database with an unrecognized migration is refused", (t) => {
-  const path = join(scratch(t), "console.sqlite");
+  const path = join(scratch(t), "service.sqlite");
   const db = openDatabase(path);
 
   db.client
@@ -139,7 +139,7 @@ test("a database with an unrecognized migration is refused", (t) => {
 
 test("a failing migration rolls back with its ledger entry, and applies once fixed", (t) => {
   const dir = scratch(t);
-  const path = join(dir, "console.sqlite");
+  const path = join(dir, "service.sqlite");
   const folder = join(dir, "migrations");
   cpSync(migrationsFolder, folder, { recursive: true });
   openDatabase(path, folder).close();
@@ -171,7 +171,7 @@ test("a failing migration rolls back with its ledger entry, and applies once fix
 /** A database migrated from a copy of the package's migrations, which a test can extend. */
 function migratedCopy(t: { onTestFinished(fn: () => void): void }) {
   const dir = scratch(t);
-  const path = join(dir, "console.sqlite");
+  const path = join(dir, "service.sqlite");
   const folder = join(dir, "migrations");
   cpSync(migrationsFolder, folder, { recursive: true });
   openDatabase(path, folder).close();
@@ -218,7 +218,7 @@ test("pending migrations back up the database as it was first", (t) => {
   const [backup, ...rest] = backups();
   assert.deepEqual(rest, []);
   assert.ok(backup);
-  assert.match(backup, new RegExp(`^console-${previous.at(-1)}-.*\\.sqlite$`));
+  assert.match(backup, new RegExp(`^service-${previous.at(-1)}-.*\\.sqlite$`));
 
   const copy = new DatabaseSync(join(dir, "backups", backup));
   t.onTestFinished(() => copy.close());
@@ -236,7 +236,7 @@ test("backups are pruned by the time in their names, whatever their file times",
   for (const year of ["2003", "2002", "2001"]) {
     const file = join(
       older,
-      `console-0_init-${year}-01-01T00-00-00-000Z.sqlite`,
+      `service-0_init-${year}-01-01T00-00-00-000Z.sqlite`,
     );
 
     writeFileSync(file, "");
@@ -253,7 +253,7 @@ test("backups are pruned by the time in their names, whatever their file times",
 });
 
 test("processes opening a new database together migrate it once", async (t) => {
-  const path = join(scratch(t), "console.sqlite");
+  const path = join(scratch(t), "service.sqlite");
   const module = pathToFileURL(join(import.meta.dirname, "database.ts")).href;
   const script = `const { openDatabase } = await import(${JSON.stringify(module)}); openDatabase(${JSON.stringify(path)}).close();`;
 
@@ -278,7 +278,7 @@ test("processes opening a new database together migrate it once", async (t) => {
 });
 
 test("the service converts a database to incremental vacuum once, reclaiming free pages", (t) => {
-  const db = openDatabase(join(scratch(t), "console.sqlite"));
+  const db = openDatabase(join(scratch(t), "service.sqlite"));
   t.onTestFinished(() => db.close());
   const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
   t.onTestFinished(() => log.mockRestore());
@@ -305,7 +305,7 @@ test("the service converts a database to incremental vacuum once, reclaiming fre
 });
 
 test("a failed Drizzle query throws SQLite's error, without the query's values", (t) => {
-  const db = openDatabase(join(scratch(t), "console.sqlite"));
+  const db = openDatabase(join(scratch(t), "service.sqlite"));
   t.onTestFinished(() => db.close());
 
   assert.throws(

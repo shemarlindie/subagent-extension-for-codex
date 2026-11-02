@@ -26,7 +26,12 @@ import { lease } from "./lease.js";
 import { networkOrigins } from "./network.js";
 import { PortInUseError } from "./port.js";
 import { inspectProcessIdentity } from "./process-info.js";
-import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
+import {
+  databasePath,
+  dataDirectory,
+  defaultPort,
+  packagePath,
+} from "./runtime.js";
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
@@ -113,7 +118,7 @@ export async function serve({
     process.env.CLAUDE_CODE_OAUTH_TOKEN,
   ]);
 
-  const store = new Store(join(data, "console.sqlite"));
+  const store = new Store(databasePath(data));
   useIncrementalVacuum(store.database);
 
   const providers = makeProviders

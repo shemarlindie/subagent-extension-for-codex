@@ -13,7 +13,7 @@ function storedEvent(
   data = '{"turn":1,"future":{"nested":[1,null]}}',
 ) {
   const dir = mkdtempSync(join(tmpdir(), "stored-event-"));
-  const db = openDatabase(join(dir, "console.sqlite"));
+  const db = openDatabase(join(dir, "service.sqlite"));
 
   t.onTestFinished(() => {
     db.close();
