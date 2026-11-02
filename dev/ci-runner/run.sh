@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Runs GitHub Actions jobs for this repository in throwaway Tart VMs, one job
 # per VM. While it runs, the MACOS_RUNNER repository variable routes the macOS
-# CI checks here. See docs/development.md#ci-runner.
+# CI checks here. See docs/releasing.md#ci-runner.
 set -euo pipefail
 
 source "${0:A:h}/config.sh"

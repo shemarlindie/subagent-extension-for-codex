@@ -4,7 +4,7 @@
 // the last release and asks to confirm it. Without a CHANGELOG.md section for
 // the version, it drafts one from the feat and fix commits. The pull request
 // starts as a draft while the notes are reviewed. See
-// docs/development.md#releasing.
+// docs/releasing.md.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";

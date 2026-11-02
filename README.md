@@ -201,12 +201,14 @@ Before working on the codebase, read in this order:
 | Report a security problem                                     | [Security policy](SECURITY.md)                               |
 | Follow contribution and documentation conventions             | [Agent instructions](AGENTS.md)                              |
 | Understand runtime ownership and system boundaries            | [Architecture](docs/architecture.md)                         |
-| Build, test, connect, preview or release the extension        | [Local development](docs/development.md)                     |
+| Build, test, connect or preview the extension                 | [Local development](docs/development.md)                     |
 | Change React components, styling and client state             | [Panel architecture](docs/panel-architecture.md)             |
 | Check UI layouts and behavior in the browser                  | [UI verification](docs/ui-verification.md)                   |
-| Exercise fake-worker task behavior without model calls        | [Fixture scenarios](docs/fixture-scenarios.md)               |
+| Exercise fixture worker task behavior without model calls     | [Fixture scenarios](docs/fixture-scenarios.md)               |
 | Change storage, migrations or transactions                    | [Database and migrations](docs/database.md)                  |
 | Qualify Claude CLI/SDK updates or run authenticated scenarios | [Claude execution verification](docs/claude-verification.md) |
+| Capture the README's showcase images and video                | [Showcase captures](docs/showcase.md)                        |
+| Publish a release or maintain the CI runner                   | [Releasing and CI](docs/releasing.md)                        |
 
 ### Integrate providers and hosts
 
