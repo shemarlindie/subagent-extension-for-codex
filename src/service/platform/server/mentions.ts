@@ -41,7 +41,7 @@ export const mentionSearchSchema = z.strictObject({
 
 export const claudeMentionResource = {
   description:
-    "Selected Claude provider hint for delegated coding work. Use an available profile that matches the request; code reviews use reviewer. This does not select a repository or change permission settings.",
+    "Selected Claude provider hint for delegated work. Use an available profile that matches the request; code reviews use reviewer. This does not select a repository or change permission settings.",
   mimeType: "text/plain",
 };
 
@@ -128,7 +128,7 @@ export async function searchAgentMentions(
               title: testMode ? "Claude (sample)" : "Claude",
               description: testMode
                 ? sampleDescription
-                : "Delegate coding, investigation, or review work to Claude.",
+                : "Delegate investigation, review, or implementation work to Claude.",
               icons: productGlyphIcons,
               mimeType: claudeMentionResource.mimeType,
             },

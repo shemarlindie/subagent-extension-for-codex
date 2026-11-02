@@ -1,5 +1,5 @@
 /** The delegation workflow, shared by the HTTP and stdio MCP entrypoints. */
-export const SERVER_INSTRUCTIONS = `Delegate coding work to background workers.
+export const SERVER_INSTRUCTIONS = `Delegate work to background workers.
 1. Resolve the repository with get_current_project or list_projects and pass it to start_task as an explicit absolute path. Never guess a path. Tool arguments never grant access. For an unregistered project, follow next_step.
 2. Call list_workers. If a provider is not ready, report readiness.message to the user instead of retrying. Use the reviewer profile for review requests.
 3. Call start_task with the user's full request in description. Tasks use the current checkout by default, including uncommitted changes. Use workspace_strategy worktree for isolated or parallel edits from a committed revision.

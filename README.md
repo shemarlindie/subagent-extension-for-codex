@@ -21,9 +21,9 @@
 
 > _Prompt: Chat, build something that lets Claude keep you in line._
 
-Delegate Claude coding tasks from Codex through a local MCP service, then
-follow, steer and review them in the Delegated Work panel. Claude runs through
-the Claude Agent SDK and the Claude Code harness.
+Delegate tasks to Claude from Codex through a local MCP service, then follow,
+steer and review them in the Delegated Work panel. Claude runs through the
+Claude Agent SDK and the Claude Code harness.
 
 And yes, some of us still use Codex.
 

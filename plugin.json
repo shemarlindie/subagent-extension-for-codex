@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "subagent-extension-for-codex",
   "version": "0.1.0",
-  "description": "Delegate coding tasks to Claude, inspect progress, and collect results.",
+  "description": "Delegate tasks to Claude, inspect progress, and collect results.",
   "author": {
     "name": "Shemar Lindie",
     "url": "https://github.com/shemarlindie"
@@ -14,7 +14,7 @@
     "com.openai": {
       "interface": {
         "displayName": "Subagent Extension for Codex",
-        "shortDescription": "Delegate, inspect, and control Claude coding tasks.",
+        "shortDescription": "Delegate, inspect, and control Claude tasks.",
         "websiteURL": "https://github.com/shemarlindie/subagent-extension-for-codex",
         "brandColor": "#3a7ca5",
         "composerIcon": "./assets/brand/brand-glyph-black.svg",

@@ -1,6 +1,6 @@
 ---
 name: delegation
-description: Delegate coding investigations, reviews and implementation to background workers through the MCP tools of Subagent Extension for Codex. Use when the user asks to delegate work, asks Claude or another worker to review, research or change code.
+description: Delegate investigations, reviews and implementation to background workers through the MCP tools of Subagent Extension for Codex. Use when the user asks to delegate work, asks Claude or another worker to review, research or change code.
 ---
 
 The MCP server instructions give the workflow, and each tool description gives
