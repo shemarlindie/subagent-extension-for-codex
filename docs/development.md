@@ -244,8 +244,9 @@ The dev host has two kinds of task fixtures:
 and replay tests use. `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays
 both through the provider.
 
-Record a task from any service database, such as the service's, the demo's or a
-temporary one from `scripts/verify-live-claude.mjs`:
+Start the service with `SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS=1` before
+running a task you want to record. The live verification scripts enable this
+automatically. Export the task from its service database:
 
 ```bash
 npm run fixture:record -- --db <tasks.sqlite> --task <task id> --name <name> --title "Recorded: <what it shows>" --start 2026-10-02T11:40:00.000Z --first-id 3400

@@ -114,6 +114,7 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
       },
     } as unknown as RunContext,
     message,
+    true,
   );
 
   assert.equal(rawResponse, message);

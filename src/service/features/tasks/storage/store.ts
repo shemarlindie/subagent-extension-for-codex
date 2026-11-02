@@ -3,7 +3,6 @@ import { EventEmitter } from "node:events";
 
 import { and, desc, eq, gt, inArray, lt, lte, max, sql } from "drizzle-orm";
 
-import { decodedEvent } from "../../../../shared/events/decode.js";
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import type {
   EventType,
@@ -22,6 +21,11 @@ import {
   openDatabase,
 } from "../../../platform/database/database.js";
 import { chatEvents } from "./chat-events.js";
+import {
+  eventColumns,
+  insertEvent,
+  readOriginalResponse,
+} from "./event-records.js";
 import { EventStorageMetrics } from "./event-storage-metrics.js";
 import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
@@ -233,24 +237,14 @@ export class Store {
     type: string,
     data: Record<string, unknown>,
   ): Event {
-    const timestamp = now();
-
-    const serialized = JSON.stringify(data);
-
-    const { id } = this.orm
-      .insert(events)
-      .values({ task_id: t.id, type, timestamp, data: serialized })
-      .returning({ id: events.id })
-      .get();
-
-    this.eventStorage.committed(
+    const event = insertEvent(
       this.database,
+      this.eventStorage,
       t.id,
-      serialized,
-      Object.hasOwn(data, "raw_response") && data.raw_response !== undefined,
+      type,
+      data,
     );
 
-    const event = decodedEvent({ id, task_id: t.id, type, timestamp, data });
     this.database.afterCommit(() => this.publish("event", event, t.owner));
     this.markChanged(t.owner);
 
@@ -266,13 +260,20 @@ export class Store {
     this.get(id, owner);
 
     return this.orm
-      .select()
+      .select(eventColumns)
       .from(events)
       .where(and(eq(events.task_id, id), gt(events.id, after)))
       .orderBy(events.id)
       .limit(PAGE)
       .all()
       .map(decodeEvent);
+  }
+
+  /** Resolves an original response after checking task ownership. */
+  originalResponse(id: string, owner: string, responseRef: string) {
+    this.get(id, owner);
+
+    return readOriginalResponse(this.database, id, responseRef);
   }
 
   /**
@@ -431,7 +432,7 @@ export class Store {
    */
   taskEvents(id: string, after: number, before?: number): Event[] {
     return this.orm
-      .select()
+      .select(eventColumns)
       .from(events)
       .where(
         and(
@@ -450,7 +451,7 @@ export class Store {
     this.get(id, owner);
 
     return this.orm
-      .select()
+      .select(eventColumns)
       .from(events)
       .where(eq(events.task_id, id))
       .orderBy(desc(events.id))
@@ -504,7 +505,7 @@ export class Store {
   /** A task's latest event of a type, such as its latest `agent.reply`. */
   latestEvent(id: string, type: string): Event | undefined {
     const row = this.orm
-      .select()
+      .select(eventColumns)
       .from(events)
       .where(and(eq(events.task_id, id), eq(events.type, type)))
       .orderBy(desc(events.id))
@@ -517,7 +518,7 @@ export class Store {
   /** Every event of the given types for a task, in order, with no page limit. */
   eventsOfTypes(id: string, types: string[]): Event[] {
     return this.orm
-      .select()
+      .select(eventColumns)
       .from(events)
       .where(and(eq(events.task_id, id), inArray(events.type, types)))
       .orderBy(events.id)

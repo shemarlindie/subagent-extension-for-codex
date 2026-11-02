@@ -22,6 +22,10 @@ import {
 } from "./archive-tools";
 import { previewProjects, previewTasks } from "./fixtures";
 import { livePreview, type PreviewData } from "./live-preview";
+import {
+  originalResponseResult,
+  withoutOriginalResponses,
+} from "./original-response-tools";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -437,6 +441,9 @@ export function previewTool(
   const { taskFor, eventsFor, draftFor, revision } =
     options.data ?? livePreview();
 
+  const lightEventsFor = (id: unknown) =>
+    withoutOriginalResponses(eventsFor(id));
+
   const fixtures: Record<string, unknown> = {
     open_subagent_extension_for_codex: openPanel(args, options),
     app_open_subagent_extension_for_codex_global: openPanel(
@@ -449,7 +456,7 @@ export function previewTool(
     list_tasks: newestFirst(tasks)
       .filter((task) => inScope(task, args))
       .map((task) => {
-        const events = eventsFor(task.id);
+        const events = lightEventsFor(task.id);
 
         return listedTask(
           taskFor(task),
@@ -464,7 +471,7 @@ export function previewTool(
       const task = tasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };
       const after = Number(args.after ?? 0);
-      const events = eventsFor(task.id);
+      const events = lightEventsFor(task.id);
 
       return {
         items: chatItems(taskFor(task), events).filter(
@@ -493,12 +500,16 @@ export function previewTool(
       };
     })(),
     app_record_timing: {},
-    app_get_activity: windowActivity(
+    app_get_original_response: originalResponseResult(
       eventsFor(args.task_id),
+      args,
+    ),
+    app_get_activity: windowActivity(
+      lightEventsFor(args.task_id),
       Number(args.after ?? 0),
     ),
     app_get_turn_activity: windowTurnActivity(
-      eventsFor(args.task_id),
+      lightEventsFor(args.task_id),
       Number(args.turn),
     ),
     list_workers: [

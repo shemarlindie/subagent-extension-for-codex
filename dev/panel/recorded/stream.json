@@ -74,6 +74,7 @@
       "data": {
         "model": "claude-sonnet-5-5",
         "tools": ["AskUserQuestion", "Glob", "Grep", "Read", "Skill"],
+        "response_ref": "response-3102",
         "raw_response": {
           "type": "system",
           "subtype": "init",
@@ -133,6 +134,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "fd7845ac-d554-4bc6-8938-48b4f376d924",
+        "response_ref": "response-3103",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -161,10 +163,9 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "estimated_tokens": 50,
-        "estimated_tokens_delta": 50,
         "session_id": "preview-session",
         "uuid": "b0ac539e-9ac1-43bd-b939-dca0b64efc6d",
+        "response_ref": "response-3104",
         "raw_response": {
           "type": "system",
           "subtype": "thinking_tokens",
@@ -194,10 +195,9 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "estimated_tokens": 224,
-        "estimated_tokens_delta": 174,
         "session_id": "preview-session",
         "uuid": "99eae3c1-af81-4833-b7f3-67c8894115a2",
+        "response_ref": "response-3105",
         "raw_response": {
           "type": "system",
           "subtype": "thinking_tokens",
@@ -230,6 +230,9 @@
           "type": "thinking",
           "thinking": ""
         },
+        "message_id": "msg_011CfoVNcruwuXS4AQruP8iH",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3106",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -241,7 +244,7 @@
               {
                 "type": "thinking",
                 "thinking": "",
-                "signature": "CAQS9QYKEAgSGAI4AUIIdGhpbmtpbmcSDBX8IaHsyGJhPYCj/hoMTq5kM+3bEuXrhLxdIjCRqkwZDnTe3T6PQC0bqn46yi4j7oXx4VWAJm2xvdalh/5QCohqvHk1SmmHXkr7ZhEqkgbg/loLfWVUf2xF5te8WKVYS7F46Iec7wRgWuQkpqUlHG+6FiKq5qBuJBFlt73B+mHVDh1K90vH70uV8zW7jmZrxD3Rn8wmmgHDL5wEOtaWyv82i98TPker7tjyJeQM+7X4XaOn0nXsTZNyOtHrjtjDZnfHcMGRd0zB8z+qRp3TdtPWfiAxd9NcWTRl/2grVepZsI+JLPVLEaZ2PRgKxL6BZMII/hRsTZZggKPlb9LXeqx3wveEDBhdBEj+JGeO+w6qRFdb5DJ/Uf6wMAKXVoLxppiSfjuRgr5FZuN/Ym9Iv6aV8DcCTQrF0m3fM5TdVS0wCOoaynAYV/E6yQPjmWRqwOALXRUG4iV6dbwoaKIPQJ4IEZHSQjRv9enWeGIvWv6FKCCstEwnsQgHTFjdVSKXOhZDqWDf1dlFjg38M8us3Ec4ScmrTWj8xOFJS5rVoJ0v4paK2jZDQrzqPmvDUNaFwTw83WDjKdKpX0G2EZBHqcxZasXJDfnRIU6AFywoGP0L7gPJwVNH/27N/RTJyeZcWc0QnDXuV27akCGl60RHJ6nBZJU6vAzq1AwGr3487P0qUgcI5FdulOtbtFXtI+8DKQeADDxkmV/SIWZgAyo3V2Q6ra9hBhNsfLwhJrV7PedbOM1tpmKe7esTiWwWwhmj0RB3WT+qBp+HqnJXvtUnKTuZl9n8uPJszMyLw09gZOAIhZzzUQxnwVB9jdyEaJWI3x0dWGDZdWLMZuD3avJwTMLDyP3rGm48OurlqgGdO1D8Ztzd0mQOmPCnMIJMKt89nhGVcJQr9Y6oqmmOHeqTc7bOQhp108iughYUpscyS092AhgJhbUk19FnKPB10N0qDkf6s1Vbyz2jRZcv3vX8UBAfSvouU4xYUjeAfg9ucmo6X/CmSjMYwlv2jfk8MY1kfeBmgWy0a5TGcvfmsIvqHxs5OhxwntukqZfF3Ma43CG5j7ComjvWeNp8031t1DcMFxpfWQp8QxB5fs/dMkZ+SEkhI/qwjQwoMgeCrnZQ0eAUZSior5GiHMYX90v7SzO74/gYAQ=="
+                "signature": "preview-signature"
               }
             ],
             "container": null,
@@ -280,9 +283,7 @@
           "title": "Claude content",
           "messageId": "msg_011CfoVNcruwuXS4AQruP8iH",
           "hasThinking": true
-        },
-        "message_id": "msg_011CfoVNcruwuXS4AQruP8iH",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -297,6 +298,9 @@
           "type": "text",
           "text": "1. Start with a short summary line of about 50 characters that states what the change does.\n2. Write the subject in the imperative mood, such as \"Fix login redirect\", so it reads as a command.\n3. Leave a blank line between the subject and the body so tools can parse them correctly.\n4. Explain why the change was made, since the diff already shows what changed.\n5. Wrap body lines at around 72 characters to keep them readable in terminals and logs.\n6. Keep each commit to one logical change so the message can describe it accurately.\n7. Be specific, and avoid vague messages like \"fix stuff\" or \"updates\".\n8. Reference related issues or tickets so readers can find the wider context.\n9. Mention side effects, trade-offs, or known limitations that a future maintainer should know.\n10. Skip the trailing period on the subject line and capitalize its first word.\n11. Follow your team's conventions, such as Conventional Commits prefixes, consistently.\n12. Reread the message before committing and ask whether someone could understand the change from it six months from now."
         },
+        "message_id": "msg_011CfoVNcruwuXS4AQruP8iH",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3107",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -345,9 +349,7 @@
           "liveStatus": false,
           "messageId": "msg_011CfoVNcruwuXS4AQruP8iH",
           "hasThinking": false
-        },
-        "message_id": "msg_011CfoVNcruwuXS4AQruP8iH",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -364,6 +366,7 @@
         },
         "uuid": "d24e30ca-0ce7-4cc4-8b1a-522be450287a",
         "session_id": "preview-session",
+        "response_ref": "response-3108",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -395,12 +398,9 @@
       "data": {
         "type": "system",
         "subtype": "post_turn_summary",
-        "summarizes_uuid": "eaf02963-8189-451b-98fc-d599401f4e84",
-        "status_category": "completed",
-        "status_detail": "12 commit message tips listed",
-        "needs_action": "",
         "uuid": "7b0883dc-068a-4000-9c3a-ae91d82d0f08",
         "session_id": "preview-session",
+        "response_ref": "response-3109",
         "raw_response": {
           "type": "system",
           "subtype": "post_turn_summary",
@@ -429,8 +429,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:10:06.200Z",
       "data": {
-        "duration_api_ms": 4188,
-        "stop_reason": "end_turn",
         "session_id": "preview-session",
         "total_cost_usd": 0.06776,
         "usage": {
@@ -467,65 +465,14 @@
           "speed": "standard",
           "fallback_credit": null
         },
-        "modelUsage": {
-          "claude-sonnet-5-5": {
-            "inputTokens": 2,
-            "outputTokens": 426,
-            "cacheReadInputTokens": 0,
-            "cacheCreationInputTokens": 15874,
-            "webSearchRequests": 0,
-            "costUSD": 0.06776,
-            "contextWindow": 1000000,
-            "maxOutputTokens": 128000,
-            "thinkingTokens": 89,
-            "canonicalModel": "claude-sonnet-5-5",
-            "provider": "firstParty",
-            "costBasis": "list"
-          }
-        },
-        "permission_denials": [],
-        "terminal_reason": "completed",
-        "fast_mode_state": "off",
-        "fast_mode_disabled_reason": "sdk_opt_in_required",
-        "subagent_stats": {
-          "spawned": 0,
-          "requested": {
-            "background": 0,
-            "foreground": 0,
-            "unset": 0
-          },
-          "started_in_background": 0,
-          "max_depth": 0,
-          "spawned_by_subagents": 0,
-          "completed": 0,
-          "failed": 0,
-          "killed": {
-            "parent": 0,
-            "user": 0,
-            "system": 0
-          },
-          "refused": {
-            "depth_limit": 0,
-            "concurrency_limit": 0,
-            "budget": 0
-          },
-          "by_type": {}
-        },
         "is_error": false,
-        "num_turns": 1,
         "subtype": "success",
-        "api_error_status": null,
         "result": "1. Start with a short summary line of about 50 characters that states what the change does.\n2. Write the subject in the imperative mood, such as \"Fix login redirect\", so it reads as a command.\n3. Leave a blank line between the subject and the body so tools can parse them correctly.\n4. Explain why the change was made, since the diff already shows what changed.\n5. Wrap body lines at around 72 characters to keep them readable in terminals and logs.\n6. Keep each commit to one logical change so the message can describe it accurately.\n7. Be specific, and avoid vague messages like \"fix stuff\" or \"updates\".\n8. Reference related issues or tickets so readers can find the wider context.\n9. Mention side effects, trade-offs, or known limitations that a future maintainer should know.\n10. Skip the trailing period on the subject line and capitalize its first word.\n11. Follow your team's conventions, such as Conventional Commits prefixes, consistently.\n12. Reread the message before committing and ask whether someone could understand the change from it six months from now.",
-        "ttft_ms": 1661,
         "type": "result",
         "duration_ms": 5369,
         "uuid": "be336c7f-5113-4f63-bb73-c2e8cbec7aba",
-        "ttft_stream_ms": 1059,
-        "time_to_request_ms": 77,
-        "first_content_frame_ms": 1059,
-        "queued_turn_count": 0,
-        "result_index": 0,
         "cost_usd": 0.06776,
+        "response_ref": "response-3110",
         "raw_response": {
           "duration_api_ms": 4188,
           "stop_reason": "end_turn",

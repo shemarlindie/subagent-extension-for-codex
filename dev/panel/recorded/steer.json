@@ -121,6 +121,7 @@
           "WebSearch",
           "Write"
         ],
+        "response_ref": "response-3002",
         "raw_response": {
           "type": "system",
           "subtype": "init",
@@ -211,6 +212,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "bd5a97a7-b8a4-47ee-9f84-c25c2f314b6f",
+        "response_ref": "response-3003",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -243,6 +245,7 @@
           "command": "sleep 5; echo one",
           "description": "Sleep then echo one"
         },
+        "response_ref": "response-3004",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -333,6 +336,7 @@
         },
         "uuid": "f261ac6e-5f10-4ed9-9a4d-8393cf070c39",
         "session_id": "preview-session",
+        "response_ref": "response-3006",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -364,9 +368,9 @@
       "data": {
         "type": "system",
         "subtype": "task_summary",
-        "detail": "Sleeping then echo one",
         "uuid": "f73a9cee-8022-4f4a-a99a-3c41082136e7",
         "session_id": "preview-session",
+        "response_ref": "response-3007",
         "raw_response": {
           "type": "system",
           "subtype": "task_summary",
@@ -397,10 +401,9 @@
         "task_id": "b7s1m2ph1",
         "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
         "description": "Sleep then echo one",
-        "is_backgrounded": false,
-        "task_type": "local_bash",
         "uuid": "4743e2e0-2915-4d20-be5c-d7ba4d4920ce",
         "session_id": "preview-session",
+        "response_ref": "response-3008",
         "raw_response": {
           "type": "system",
           "subtype": "task_started",
@@ -445,10 +448,10 @@
         "task_id": "b7s1m2ph1",
         "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
         "status": "completed",
-        "output_file": "",
         "summary": "Sleep then echo one",
         "uuid": "fbc09579-68dd-4c75-b811-5b2d124776a3",
         "session_id": "preview-session",
+        "response_ref": "response-3009",
         "raw_response": {
           "type": "system",
           "subtype": "task_notification",
@@ -491,6 +494,7 @@
         "id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
         "error": false,
         "content": "one",
+        "response_ref": "response-3010",
         "raw_response": {
           "type": "user",
           "message": {
@@ -547,6 +551,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "3a7f9046-0e77-4c9d-8806-2808cd62974d",
+        "response_ref": "response-3012",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -579,6 +584,7 @@
           "command": "sleep 5; echo two",
           "description": "Sleep then echo two"
         },
+        "response_ref": "response-3013",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -659,6 +665,7 @@
         },
         "uuid": "6f56db74-322e-49fc-bac8-bf1ba3603ecf",
         "session_id": "preview-session",
+        "response_ref": "response-3014",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -693,10 +700,9 @@
         "task_id": "b71ll9grd",
         "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
         "description": "Sleep then echo two",
-        "is_backgrounded": false,
-        "task_type": "local_bash",
         "uuid": "09ad387e-e86e-44dd-b889-a2a860d7c25b",
         "session_id": "preview-session",
+        "response_ref": "response-3015",
         "raw_response": {
           "type": "system",
           "subtype": "task_started",
@@ -741,10 +747,10 @@
         "task_id": "b71ll9grd",
         "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
         "status": "completed",
-        "output_file": "",
         "summary": "Sleep then echo two",
         "uuid": "294f5dcc-6d18-473a-a2c3-c21aecf0d5fc",
         "session_id": "preview-session",
+        "response_ref": "response-3016",
         "raw_response": {
           "type": "system",
           "subtype": "task_notification",
@@ -787,6 +793,7 @@
         "id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
         "error": false,
         "content": "two",
+        "response_ref": "response-3017",
         "raw_response": {
           "type": "user",
           "message": {
@@ -834,6 +841,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "0bedc457-4f63-4776-a233-2be2b851fd28",
+        "response_ref": "response-3018",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -866,6 +874,9 @@
           "type": "text",
           "text": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA"
         },
+        "message_id": "msg_011CfoHwtARm95CPM56TXQ6m",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3019",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -914,9 +925,7 @@
           "liveStatus": false,
           "messageId": "msg_011CfoHwtARm95CPM56TXQ6m",
           "hasThinking": false
-        },
-        "message_id": "msg_011CfoHwtARm95CPM56TXQ6m",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -927,12 +936,9 @@
       "data": {
         "type": "system",
         "subtype": "post_turn_summary",
-        "summarizes_uuid": "98e2e423-e9e5-42a1-9477-4a7348deac49",
-        "status_category": "completed",
-        "status_detail": "both sleep commands ran; outputs: one, two",
-        "needs_action": "",
         "uuid": "5041b696-5c90-40ab-8c00-af6530b8d45c",
         "session_id": "preview-session",
+        "response_ref": "response-3020",
         "raw_response": {
           "type": "system",
           "subtype": "post_turn_summary",
@@ -961,8 +967,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:17.499Z",
       "data": {
-        "duration_api_ms": 5348,
-        "stop_reason": "end_turn",
         "session_id": "preview-session",
         "total_cost_usd": 0.15088759999999998,
         "usage": {
@@ -999,67 +1003,14 @@
           "speed": "standard",
           "fallback_credit": null
         },
-        "modelUsage": {
-          "claude-sonnet-5-5": {
-            "inputTokens": 6,
-            "outputTokens": 197,
-            "cacheReadInputTokens": 65588,
-            "cacheCreationInputTokens": 33947,
-            "webSearchRequests": 0,
-            "costUSD": 0.15088759999999998,
-            "contextWindow": 1000000,
-            "maxOutputTokens": 128000,
-            "thinkingTokens": 0,
-            "canonicalModel": "claude-sonnet-5-5",
-            "provider": "firstParty",
-            "costBasis": "list"
-          }
-        },
-        "permission_denials": [],
-        "terminal_reason": "completed",
-        "fast_mode_state": "off",
-        "fast_mode_disabled_reason": "sdk_opt_in_required",
-        "subagent_stats": {
-          "spawned": 0,
-          "requested": {
-            "background": 0,
-            "foreground": 0,
-            "unset": 0
-          },
-          "started_in_background": 0,
-          "max_depth": 0,
-          "spawned_by_subagents": 0,
-          "completed": 0,
-          "failed": 0,
-          "killed": {
-            "parent": 0,
-            "user": 0,
-            "system": 0
-          },
-          "refused": {
-            "depth_limit": 0,
-            "concurrency_limit": 0,
-            "budget": 0
-          },
-          "by_type": {}
-        },
         "is_error": false,
-        "num_turns": 3,
         "subtype": "success",
-        "api_error_status": null,
         "result": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
-        "ttft_ms": 2169,
         "type": "result",
         "duration_ms": 16644,
         "uuid": "db1417e1-7f77-4732-896d-fb536aeed5af",
-        "ttft_stream_ms": 1435,
-        "time_to_request_ms": 53,
-        "first_content_frame_ms": 1436,
-        "user_message_uuid": "66eb93b8-b2e9-4e0a-b7a8-76f8df0dbc49",
-        "user_message_uuids": ["66eb93b8-b2e9-4e0a-b7a8-76f8df0dbc49"],
-        "queued_turn_count": 0,
-        "result_index": 0,
         "cost_usd": 0.15088759999999998,
+        "response_ref": "response-3021",
         "raw_response": {
           "duration_api_ms": 5348,
           "stop_reason": "end_turn",
@@ -1270,6 +1221,7 @@
           "WebSearch",
           "Write"
         ],
+        "response_ref": "response-3028",
         "raw_response": {
           "type": "system",
           "subtype": "init",
@@ -1360,6 +1312,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "6c7f5daf-4c2d-43e1-aaa2-e77737b08c9c",
+        "response_ref": "response-3029",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -1392,6 +1345,7 @@
           "command": "sleep 30; echo slow",
           "description": "Sleep 30s then echo slow"
         },
+        "response_ref": "response-3030",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -1465,6 +1419,7 @@
         "id": "toolu_01WRC1gJFU6NfaSezQ5rxHW6",
         "error": true,
         "content": "<tool_use_error>Blocked: sleep 30 followed by: echo slow. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_background: true. Do not chain shorter sleeps to work around this block.</tool_use_error>",
+        "response_ref": "response-3031",
         "raw_response": {
           "type": "user",
           "message": {
@@ -1510,6 +1465,7 @@
         },
         "uuid": "631017f9-cd7f-400e-9229-f132a46957da",
         "session_id": "preview-session",
+        "response_ref": "response-3032",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -1544,6 +1500,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "044725ea-5383-4183-aa7e-0334deff7270",
+        "response_ref": "response-3033",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -1572,9 +1529,9 @@
       "data": {
         "type": "system",
         "subtype": "task_summary",
-        "detail": "Sleeping 30s then echo slow",
         "uuid": "aede29f9-554a-41e3-ad85-efffff63c9ba",
         "session_id": "preview-session",
+        "response_ref": "response-3034",
         "raw_response": {
           "type": "system",
           "subtype": "task_summary",
@@ -1627,6 +1584,9 @@
           "type": "text",
           "text": "[Request interrupted by user]"
         },
+        "message_id": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3037",
         "raw_response": {
           "type": "user",
           "message": {
@@ -1653,9 +1613,7 @@
           "title": "User content",
           "messageId": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
           "hasThinking": false
-        },
-        "message_id": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -1664,8 +1622,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:20.254Z",
       "data": {
-        "duration_api_ms": 6807,
-        "stop_reason": "tool_use",
         "session_id": "preview-session",
         "total_cost_usd": 0.16163299999999997,
         "usage": {
@@ -1702,52 +1658,7 @@
           "speed": "standard",
           "fallback_credit": null
         },
-        "modelUsage": {
-          "claude-sonnet-5-5": {
-            "inputTokens": 8,
-            "outputTokens": 285,
-            "thinkingTokens": 0,
-            "cacheReadInputTokens": 99535,
-            "cacheCreationInputTokens": 34715,
-            "webSearchRequests": 0,
-            "costUSD": 0.16163299999999997,
-            "contextWindow": 1000000,
-            "maxOutputTokens": 128000,
-            "canonicalModel": "claude-sonnet-5-5",
-            "provider": "firstParty",
-            "costBasis": "list"
-          }
-        },
-        "permission_denials": [],
-        "terminal_reason": "aborted_streaming",
-        "fast_mode_state": "off",
-        "fast_mode_disabled_reason": "sdk_opt_in_required",
-        "subagent_stats": {
-          "spawned": 0,
-          "requested": {
-            "background": 0,
-            "foreground": 0,
-            "unset": 0
-          },
-          "started_in_background": 0,
-          "max_depth": 0,
-          "spawned_by_subagents": 0,
-          "completed": 0,
-          "failed": 0,
-          "killed": {
-            "parent": 0,
-            "user": 0,
-            "system": 0
-          },
-          "refused": {
-            "depth_limit": 0,
-            "concurrency_limit": 0,
-            "budget": 0
-          },
-          "by_type": {}
-        },
         "is_error": true,
-        "num_turns": 3,
         "subtype": "error_during_execution",
         "errors": [
           "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use"
@@ -1755,9 +1666,8 @@
         "type": "result",
         "duration_ms": 1645,
         "uuid": "5f1f68f2-ca9a-48d1-ab64-2a9178c73b40",
-        "queued_turn_count": 0,
-        "result_index": 0,
         "cost_usd": 0.16163299999999997,
+        "response_ref": "response-3038",
         "raw_response": {
           "duration_api_ms": 6807,
           "stop_reason": "tool_use",
@@ -1932,6 +1842,7 @@
           "WebSearch",
           "Write"
         ],
+        "response_ref": "response-3042",
         "raw_response": {
           "type": "system",
           "subtype": "init",
@@ -2022,6 +1933,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "47494aae-fbb9-4a6b-93ff-fe510d21fa74",
+        "response_ref": "response-3043",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -2054,6 +1966,9 @@
           "type": "text",
           "text": "PEAR"
         },
+        "message_id": "msg_011CfoHxQnvW62fTe8TqF1P4",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3044",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -2102,9 +2017,7 @@
           "liveStatus": false,
           "messageId": "msg_011CfoHxQnvW62fTe8TqF1P4",
           "hasThinking": false
-        },
-        "message_id": "msg_011CfoHxQnvW62fTe8TqF1P4",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -2121,6 +2034,7 @@
         },
         "uuid": "b6ea71b7-ffe1-471f-9240-bdc771300628",
         "session_id": "preview-session",
+        "response_ref": "response-3045",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -2152,12 +2066,9 @@
       "data": {
         "type": "system",
         "subtype": "post_turn_summary",
-        "summarizes_uuid": "217b2673-953a-414f-aefe-d753a0315cbf",
-        "status_category": "completed",
-        "status_detail": "replied with PEAR per request",
-        "needs_action": "",
         "uuid": "e48ded88-bd5c-4866-9269-e07ca0429b08",
         "session_id": "preview-session",
+        "response_ref": "response-3046",
         "raw_response": {
           "type": "system",
           "subtype": "post_turn_summary",
@@ -2186,8 +2097,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:23.581Z",
       "data": {
-        "duration_api_ms": 7988,
-        "stop_reason": "end_turn",
         "session_id": "preview-session",
         "total_cost_usd": 0.17891999999999997,
         "usage": {
@@ -2224,65 +2133,14 @@
           "speed": "standard",
           "fallback_credit": null
         },
-        "modelUsage": {
-          "claude-sonnet-5-5": {
-            "inputTokens": 10,
-            "outputTokens": 291,
-            "thinkingTokens": 0,
-            "cacheReadInputTokens": 134250,
-            "cacheCreationInputTokens": 37285,
-            "webSearchRequests": 0,
-            "costUSD": 0.17891999999999997,
-            "contextWindow": 1000000,
-            "maxOutputTokens": 128000,
-            "canonicalModel": "claude-sonnet-5-5",
-            "provider": "firstParty",
-            "costBasis": "list"
-          }
-        },
-        "permission_denials": [],
-        "terminal_reason": "completed",
-        "fast_mode_state": "off",
-        "fast_mode_disabled_reason": "sdk_opt_in_required",
-        "subagent_stats": {
-          "spawned": 0,
-          "requested": {
-            "background": 0,
-            "foreground": 0,
-            "unset": 0
-          },
-          "started_in_background": 0,
-          "max_depth": 0,
-          "spawned_by_subagents": 0,
-          "completed": 0,
-          "failed": 0,
-          "killed": {
-            "parent": 0,
-            "user": 0,
-            "system": 0
-          },
-          "refused": {
-            "depth_limit": 0,
-            "concurrency_limit": 0,
-            "budget": 0
-          },
-          "by_type": {}
-        },
         "is_error": false,
-        "num_turns": 1,
         "subtype": "success",
-        "api_error_status": null,
         "result": "PEAR",
-        "ttft_ms": 1209,
         "type": "result",
         "duration_ms": 1967,
         "uuid": "45b67efa-bd9b-4009-9680-4f9dabae8901",
-        "ttft_stream_ms": 1207,
-        "time_to_request_ms": 46,
-        "first_content_frame_ms": 1207,
-        "queued_turn_count": 0,
-        "result_index": 0,
         "cost_usd": 0.17891999999999997,
+        "response_ref": "response-3047",
         "raw_response": {
           "duration_api_ms": 7988,
           "stop_reason": "end_turn",

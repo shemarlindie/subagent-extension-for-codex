@@ -39,7 +39,11 @@ function storedEvent(
 }
 
 test("decodes event rows without changing metadata or arbitrary JSON fields", (t) => {
-  const row = storedEvent(t);
+  const {
+    original_response: _capture,
+    response_ref: _id,
+    ...row
+  } = storedEvent(t);
 
   expect(decodeEvent(row)).toEqual({
     ...row,

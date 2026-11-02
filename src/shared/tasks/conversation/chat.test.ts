@@ -48,6 +48,7 @@ test("stored Chat events include compaction failures and exclude ordinary status
   const failure = store.eventOpaque(task, "claude.activity", {
     type: "system",
     subtype: "status",
+    compact_result: "failed",
     raw_response: {
       type: "system",
       subtype: "status",

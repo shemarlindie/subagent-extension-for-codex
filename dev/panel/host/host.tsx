@@ -68,6 +68,7 @@ const fixtureReadTools = new Set([
   "get_panel_context",
   "get_settings",
   "app_get_activity",
+  "app_get_original_response",
   "app_get_change_counts",
   "app_get_chat",
   "app_get_turn_activity",

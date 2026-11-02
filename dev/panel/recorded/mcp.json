@@ -87,6 +87,7 @@
           "mcp__claude_ai_Claude_Docs__read",
           "mcp__claude_ai_Claude_Docs__update"
         ],
+        "response_ref": "response-3302",
         "raw_response": {
           "type": "system",
           "subtype": "init",
@@ -160,6 +161,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "85d71d1c-8b8f-4bec-9a45-95f92914e39f",
+        "response_ref": "response-3303",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -188,10 +190,9 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "estimated_tokens": 50,
-        "estimated_tokens_delta": 50,
         "session_id": "preview-session",
         "uuid": "0a716bbb-3040-4fb8-ac89-bbf1f00e6dd8",
+        "response_ref": "response-3304",
         "raw_response": {
           "type": "system",
           "subtype": "thinking_tokens",
@@ -221,10 +222,9 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "estimated_tokens": 194,
-        "estimated_tokens_delta": 144,
         "session_id": "preview-session",
         "uuid": "f41a6c30-fec1-4767-8f94-025fe60b6e62",
+        "response_ref": "response-3305",
         "raw_response": {
           "type": "system",
           "subtype": "thinking_tokens",
@@ -257,6 +257,9 @@
           "type": "thinking",
           "thinking": ""
         },
+        "message_id": "msg_011CfoJMkvXozN1cdRxH11ms",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3306",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -268,7 +271,7 @@
               {
                 "type": "thinking",
                 "thinking": "",
-                "signature": "CAQS/gUKEAgSGAI4AUIIdGhpbmtpbmcSDCpOPwXmH7BK3ha6yhoMnJZzONZpnRaXoVAAIjBK43o/N26NudTxNfffWdgwFlVvmmuWwree7YCEA+bhNGjRSRt8wbEq6/i9ynj+FPAqmwUL2WTnGVHzutC2N8vJhlRdQxS52j9NbHwCucRLsDV4CYFmut2rKXdUOf4A+pnNnKL2Pr0lbnLi+9Yy7eqHUf4Cgw2Fcg0Yv0EaFDe7VH97MsVwM8C799vTZ6IVCUwSx4sOYR8Haj8N/Tv69NfwitSbFwSg6l5CwFOoVoudL/6WWRoBX+RL/spmnlAhWq3h9Ij1Lr4lmR1r/jsdQ9IJW3PWsJIBYfoD5LCWKo3QXWOmMG2CXItfTWa8DgBOYrkvHUadM0UFuXsovqEarFraS0rerWIHf5jjZChJx98Vp3kwIjRXwiDGJgSahRhSZiuZ0aXGylM+wd9hRBCozu3BljnUDmDRJIsx+llsMwoz+/+dUsioPuaYkyHzsXBoXEw8rvlEHfgll+Gokhm2xiRfAidc8T8FGc9NPk/VsKu6isoXVXGtltEv3v9BMZFMmVRRDG1eG9w3Ank0gU8ws11a9O/4N6Fnvg52NI/AbZMwogH1EjCYujFbfZbZnCRZx+HTO3slTRYA+HKh3MdAbBsCpOzV9KwxvoKutD6H2BZKzYX2MSuJKqyHOpz+6MKhCGWDuY8dnB1I7daXZgzCXQiY4+sQeRGw0tsgu5dF7wxqoJRpOAbKzaiyqs/W2P9VJjdUCVEaPCVAtS8090UOvmR+Dwnf8QAEwg5tgxuW8uz2FZkGY+7EVbZkkADFkAb2myEDnTJAH5VQVzmoLQvSOrnlMGkC4oZ2dIAnUf1QdhvfirZ8dAm348Q0f1XNtqVUS94xans354fmvs+q9JDjsWFmOETTqIQSrIqujQ1u4GhDQqvizlPiUbqxT2dcvoVuyPdrD/GxQNzxm6jy49vBBGcbi+BuIII1UzD8k/nmqP+nWjYJgwpcXElXz5LdLV07GAE="
+                "signature": "preview-signature"
               }
             ],
             "container": null,
@@ -307,9 +310,7 @@
           "title": "Claude content",
           "messageId": "msg_011CfoJMkvXozN1cdRxH11ms",
           "hasThinking": true
-        },
-        "message_id": "msg_011CfoJMkvXozN1cdRxH11ms",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -323,6 +324,7 @@
         "input": {
           "file_path": "/demo/project/README.md"
         },
+        "response_ref": "response-3307",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -399,6 +401,7 @@
         },
         "uuid": "2978b8bb-b385-4e25-9493-dfe2844f6a80",
         "session_id": "preview-session",
+        "response_ref": "response-3308",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
@@ -430,9 +433,9 @@
       "data": {
         "type": "system",
         "subtype": "task_summary",
-        "detail": "Reading README.md",
         "uuid": "0237b95d-fc4f-4601-8747-8510785ca0c0",
         "session_id": "preview-session",
+        "response_ref": "response-3309",
         "raw_response": {
           "type": "system",
           "subtype": "task_summary",
@@ -460,6 +463,7 @@
       "data": {
         "id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
         "content": "1\t# Native verification\n2\t\n3\tThe verification marker is COBALT-27.\n4\t",
+        "response_ref": "response-3310",
         "raw_response": {
           "type": "user",
           "message": {
@@ -509,6 +513,7 @@
         "status": "requesting",
         "session_id": "preview-session",
         "uuid": "80467446-def6-4d92-bb7a-993596778600",
+        "response_ref": "response-3311",
         "raw_response": {
           "type": "system",
           "subtype": "status",
@@ -541,6 +546,9 @@
           "type": "text",
           "text": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do."
         },
+        "message_id": "msg_011CfoJMtkaEsj3eKNxMCvXY",
+        "parent_tool_use_id": null,
+        "response_ref": "response-3312",
         "raw_response": {
           "type": "assistant",
           "message": {
@@ -589,9 +597,7 @@
           "liveStatus": false,
           "messageId": "msg_011CfoJMtkaEsj3eKNxMCvXY",
           "hasThinking": false
-        },
-        "message_id": "msg_011CfoJMtkaEsj3eKNxMCvXY",
-        "parent_tool_use_id": null
+        }
       }
     },
     {
@@ -602,12 +608,9 @@
       "data": {
         "type": "system",
         "subtype": "post_turn_summary",
-        "summarizes_uuid": "df1cece5-97ee-40d1-80d9-2be0d3528fa1",
-        "status_category": "completed",
-        "status_detail": "README.md read; verification marker COBALT-27",
-        "needs_action": "",
         "uuid": "b5748a46-b4c3-4dba-827a-95b98f103edb",
         "session_id": "preview-session",
+        "response_ref": "response-3313",
         "raw_response": {
           "type": "system",
           "subtype": "post_turn_summary",
@@ -636,8 +639,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:30:06.081Z",
       "data": {
-        "duration_api_ms": 3980,
-        "stop_reason": "end_turn",
         "session_id": "preview-session",
         "total_cost_usd": 0.1050726,
         "usage": {
@@ -674,65 +675,14 @@
           "speed": "standard",
           "fallback_credit": null
         },
-        "modelUsage": {
-          "claude-opus-5-5": {
-            "inputTokens": 4,
-            "outputTokens": 312,
-            "cacheReadInputTokens": 26243,
-            "cacheCreationInputTokens": 11696,
-            "webSearchRequests": 0,
-            "costUSD": 0.1050726,
-            "contextWindow": 1000000,
-            "maxOutputTokens": 128000,
-            "thinkingTokens": 55,
-            "canonicalModel": "claude-opus-5-5",
-            "provider": "firstParty",
-            "costBasis": "list"
-          }
-        },
-        "permission_denials": [],
-        "terminal_reason": "completed",
-        "fast_mode_state": "off",
-        "fast_mode_disabled_reason": "sdk_opt_in_required",
-        "subagent_stats": {
-          "spawned": 0,
-          "requested": {
-            "background": 0,
-            "foreground": 0,
-            "unset": 0
-          },
-          "started_in_background": 0,
-          "max_depth": 0,
-          "spawned_by_subagents": 0,
-          "completed": 0,
-          "failed": 0,
-          "killed": {
-            "parent": 0,
-            "user": 0,
-            "system": 0
-          },
-          "refused": {
-            "depth_limit": 0,
-            "concurrency_limit": 0,
-            "budget": 0
-          },
-          "by_type": {}
-        },
         "is_error": false,
-        "num_turns": 2,
         "subtype": "success",
-        "api_error_status": null,
         "result": "I read `README.md` with the native Read tool. The exact verification marker is **COBALT-27**.\n\nThe file has only a heading (\"Native verification\") and the sentence \"The verification marker is COBALT-27.\" There was nothing else to review. The working tree was clean when this turn started.\n\nI made no edits, ran no commands and asked no questions. Plan mode was on, but I didn't write a plan file because nothing needs implementing, so nothing is left to do.",
-        "ttft_ms": 1276,
         "type": "result",
         "duration_ms": 4844,
         "uuid": "b2fe3631-286e-4e12-9963-68c15cb2d216",
-        "ttft_stream_ms": 660,
-        "time_to_request_ms": 60,
-        "first_content_frame_ms": 661,
-        "queued_turn_count": 0,
-        "result_index": 0,
         "cost_usd": 0.1050726,
+        "response_ref": "response-3314",
         "raw_response": {
           "duration_api_ms": 3980,
           "stop_reason": "end_turn",

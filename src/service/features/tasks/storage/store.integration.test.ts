@@ -401,6 +401,7 @@ test("execution storage counts committed UTF-8 JSON once and releases its counte
 
   store.transaction(() => {
     store.eventOpaque(task, "fixture.activity", {
+      response_ref: "fixture-response",
       raw_response: { fixture: true },
       content: {
         toJSON() {
@@ -432,11 +433,18 @@ test("execution storage counts committed UTF-8 JSON once and releases its counte
 
   // Read the persisted strings independently of the production byte counter.
   const committed = store.database.client
-    .prepare("SELECT data FROM events WHERE task_id = ? AND id > ? ORDER BY id")
-    .all(task.id, before) as { data: string }[];
+    .prepare(
+      "SELECT data, original_response FROM events WHERE task_id = ? AND id > ? ORDER BY id",
+    )
+    .all(task.id, before) as {
+    data: string;
+    original_response: string | null;
+  }[];
 
   const bytes = committed.reduce(
-    (total, row) => total + new TextEncoder().encode(row.data).length,
+    (total, row) =>
+      total +
+      new TextEncoder().encode(row.data + (row.original_response ?? "")).length,
     0,
   );
 
@@ -449,7 +457,7 @@ test("execution storage counts committed UTF-8 JSON once and releases its counte
     status: "completed",
     event_count: 2,
     json_bytes: bytes,
-    raw_response_event_count: 1,
+    original_response_event_count: 1,
   });
 
   store.event(task, "task.completed");
@@ -469,7 +477,7 @@ test("execution storage counts committed UTF-8 JSON once and releases its counte
     status: "interrupted",
     event_count: 1,
     json_bytes: 2,
-    raw_response_event_count: 0,
+    original_response_event_count: 0,
   });
 });
 
@@ -496,6 +504,126 @@ test("a failed storage summary cannot change settlement or leave its counters ac
     status: "completed",
     event_count: 0,
     json_bytes: 0,
-    raw_response_event_count: 0,
+    original_response_event_count: 0,
   });
+});
+
+test("original responses resolve across pages by indexed task-authorized lookup", async (t) => {
+  const { normalizeClaudeMessage } =
+    await import("../../providers/claude/events/normalize.js");
+
+  const { store, task } = deletionFixture();
+  t.onTestFinished(() => store.close());
+  let serializations = 0;
+
+  const context = {
+    emit: (type: string, data: Record<string, unknown>) =>
+      store.eventOpaque(task, type, data),
+    emitOpaque: (type: string, data: Record<string, unknown>) =>
+      store.eventOpaque(task, type, data),
+  } as unknown as import("../../providers/types.js").RunContext;
+
+  const delivery = (marker: string) => ({
+    type: "assistant",
+    uuid: "same-uuid",
+    parent_tool_use_id: null,
+    message: {
+      id: "same-assistant-id",
+      content: [
+        { type: "text", text: "one" },
+        { type: "text", text: "two" },
+        {
+          type: "tool_use",
+          id: "read",
+          name: "Read",
+          input: { file_path: "a" },
+        },
+      ],
+    },
+    unique: marker,
+    toJSON() {
+      serializations++;
+      const { toJSON: _, ...value } = this;
+
+      return value;
+    },
+  });
+
+  const first = delivery("first");
+
+  normalizeClaudeMessage(
+    context,
+    first as unknown as import("@anthropic-ai/claude-agent-sdk").SDKMessage,
+    true,
+  );
+
+  const siblings = store.events(task.id, task.owner).slice(-3);
+  const responseRef = String(siblings[0]?.data.response_ref);
+  assert.equal(serializations, 1);
+
+  assert.ok(
+    siblings.every(
+      (event) =>
+        event.data.response_ref === responseRef && !event.data.raw_response,
+    ),
+  );
+
+  for (let i = 0; i < 1001; i++) store.event(task, "task.started", { turn: 1 });
+
+  normalizeClaudeMessage(
+    context,
+    delivery(
+      "second",
+    ) as unknown as import("@anthropic-ai/claude-agent-sdk").SDKMessage,
+    true,
+  );
+
+  assert.equal(serializations, 2);
+
+  assert.ok(
+    !store
+      .recentEvents(task.id, task.owner)
+      .some((event) => event.data.response_ref === responseRef),
+  );
+
+  assert.equal(
+    (
+      store.originalResponse(task.id, task.owner, responseRef) as {
+        unique: string;
+      }
+    ).unique,
+    "first",
+  );
+
+  assert.throws(
+    () => store.originalResponse(task.id, "bob", responseRef),
+    /Task not found/,
+  );
+
+  assert.equal(
+    store.originalResponse("unrelated", task.owner, responseRef),
+    undefined,
+  );
+
+  assert.equal(
+    store.originalResponse(task.id, task.owner, "missing"),
+    undefined,
+  );
+
+  const captures = store.database.client
+    .prepare(
+      "SELECT response_ref FROM events WHERE original_response IS NOT NULL",
+    )
+    .all();
+
+  assert.equal(captures.length, 2);
+  assert.notEqual(captures[0]?.response_ref, captures[1]?.response_ref);
+
+  const plan = store.database.client
+    .prepare(
+      "EXPLAIN QUERY PLAN SELECT original_response FROM events WHERE response_ref=? AND task_id=?",
+    )
+    .all(responseRef, task.id);
+
+  assert.match(String(plan[0]?.detail), /USING INDEX events_response/);
 });

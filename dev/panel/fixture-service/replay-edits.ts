@@ -11,6 +11,7 @@ import type {
 } from "../../../src/service/features/providers/types";
 import type { Control } from "../../../src/service/features/tasks/runtime/control";
 import type { Event } from "../../../src/shared/events/types";
+import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
 import type { Task } from "../../../src/shared/tasks/model";
 
 /** Populate previews only when a recorded response supplies a complete preimage. */
@@ -73,6 +74,8 @@ export function replayRecordedEdits(
 
   const tools = new Map<string, string>();
 
+  const lookup = originalResponseLookup(events);
+
   for (const event of events.filter((event) => event.task_id === task.id)) {
     if (event.type === "tool.started") {
       tools.set(String(event.data.id), String(event.data.name));
@@ -81,7 +84,7 @@ export function replayRecordedEdits(
     if (event.type === "task.started") control.changes.clearTurn(task);
     if (event.type !== "tool.completed" || event.data.error) continue;
 
-    const raw = event.data.raw_response as
+    const raw = lookup(event) as
       { tool_use_result?: Record<string, unknown> } | undefined;
 
     const response = raw?.tool_use_result;

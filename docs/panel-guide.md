@@ -368,7 +368,9 @@ cancelled work never appears successful.
 - Thinking shows elapsed time.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
-- **Debug details** shows an event's readable content, metadata and raw JSON.
+- **Debug details** shows an event's readable content, metadata and event data
+  JSON. Tasks run with [full events](configuration.md#environment-variables)
+  also show the original Claude response.
   Objects and arrays below the second level start folded.
 
 **View activity** on a Chat outcome opens that turn. Recent turns scroll into

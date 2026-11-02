@@ -4,6 +4,7 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 /** Tasks keep their state as a JSON body; `owner` scopes every lookup. */
@@ -23,8 +24,13 @@ export const events = sqliteTable(
     type: text().notNull(),
     timestamp: text().notNull(),
     data: text().notNull(),
+    response_ref: text(),
+    original_response: text(),
   },
-  (t) => [index("events_task").on(t.task_id, t.id)],
+  (t) => [
+    index("events_task").on(t.task_id, t.id),
+    uniqueIndex("events_response").on(t.response_ref),
+  ],
 );
 
 /**

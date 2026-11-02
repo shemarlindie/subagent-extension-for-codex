@@ -231,6 +231,7 @@ test("local usernames are replaced in URLs, plugin names and encoded paths", () 
     [
       {
         ...startedEvent,
+        type: "task.started",
         data: { "plugin@some.one": ["-Users-some-one-config"] },
       },
     ],
@@ -325,7 +326,13 @@ test("replacements redact decoded strings and preserve literal replacement value
 
   const result = recordFixture(
     { ...task, description: secret },
-    [{ ...startedEvent, data: { [secret]: [secret, "marker", "x"] } }],
+    [
+      {
+        ...startedEvent,
+        type: "task.started",
+        data: { [secret]: [secret, "marker", "x"] },
+      },
+    ],
     {
       id: "preview-recorded-escaped",
       start: "2026-10-02T11:00:00.000Z",
@@ -352,4 +359,74 @@ test("replacements redact decoded strings and preserve literal replacement value
 
   assert.equal(task.description, "Review");
   assert.deepEqual(startedEvent.data.raw_response, init);
+});
+
+test("recording sanitizes each original response once and rewrites sibling references", async () => {
+  const { originalResponseLookup } =
+    await import("../../../src/shared/providers/claude/responses");
+
+  const original = {
+    type: "assistant",
+    message: {
+      id: "shared",
+      content: [
+        { type: "text", text: home },
+        { type: "text", text: "second" },
+      ],
+    },
+    future_metadata: { path: home },
+  };
+
+  const siblings = [
+    {
+      ...startedEvent,
+      type: "agent.message",
+      data: {
+        role: "assistant",
+        text: home,
+        response_ref: "delivery",
+        raw_response: original,
+      },
+    },
+    {
+      ...startedEvent,
+      id: 42,
+      type: "agent.message",
+      data: { role: "assistant", text: "second", response_ref: "delivery" },
+    },
+  ];
+
+  const options = {
+    id: "preview-captures",
+    firstId: 5000,
+    start: task.created_at,
+    home,
+    host: "Someones-Mac.local",
+    username: "someone",
+  };
+
+  const result = recordFixture(task, siblings, options);
+
+  assert.equal(
+    result.events.filter((event) => event.data.raw_response).length,
+    1,
+  );
+
+  assert.deepEqual(
+    result.events.map((event) => event.data.response_ref),
+    ["response-5000", "response-5000"],
+  );
+
+  const lookup = originalResponseLookup(result.events);
+  assert.equal(lookup(result.events[0]!), lookup(result.events[1]!));
+  assert.equal(JSON.stringify(lookup(result.events[1]!)).includes(home), false);
+
+  assert.ok(
+    JSON.stringify(lookup(result.events[1]!)).includes("future_metadata"),
+  );
+
+  assert.throws(
+    () => recordFixture(task, [siblings[1]!], options),
+    /FULL_EVENTS=1 before recording/,
+  );
 });

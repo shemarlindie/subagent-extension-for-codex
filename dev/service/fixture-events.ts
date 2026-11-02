@@ -406,6 +406,10 @@ function presentFixtureActivity(
 ) {
   return {
     ...data,
-    activity: claudeActivityPresentation({ type: "claude.activity", data }),
+    activity: claudeActivityPresentation({
+      type: "claude.activity",
+      data,
+      rawResponse: data.raw_response as unknown as SDKMessage,
+    }),
   };
 }

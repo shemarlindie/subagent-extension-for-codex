@@ -11,6 +11,10 @@ import { normalizeClaudeMessage } from "../../../src/service/features/providers/
 import type { RunContext } from "../../../src/service/features/providers/types.js";
 import { decodeEventView } from "../../../src/shared/events/decode.js";
 import { eventPayloadMapSchema } from "../../../src/shared/events/event-contract.generated.js";
+import {
+  normalizedClaudeFields,
+  originalResponseLookup,
+} from "../../../src/shared/providers/claude/responses.js";
 import { previewEvents } from "./fixtures";
 
 type Kind<T> = T extends { type: "system"; subtype: infer S extends string }
@@ -84,13 +88,12 @@ const serviceTypes = new Set(
   ),
 );
 
-const kindOf = (message: Record<string, unknown>) =>
+const kindOf = (message: SDKMessage) =>
   message.type === "system"
     ? `system:${String(message.subtype)}`
     : String(message.type);
 
-const raw = (event: { data: Record<string, unknown> }) =>
-  event.data.raw_response as Record<string, unknown> | undefined;
+const raw = originalResponseLookup(previewEvents);
 
 test("preview project events match the current payload contracts", () => {
   const knownTypes = new Set(Object.keys(eventPayloadMapSchema.shape));
@@ -123,10 +126,21 @@ test("fixture SDK messages cover every kind the SDK defines", () => {
 test("fixture events match what the provider derives from their SDK message", () => {
   let checked = 0;
 
+  const responses = new Map<string, typeof previewEvents>();
+
   for (const event of previewEvents.filter((e) => providerTypes.has(e.type))) {
+    const ref = event.data.response_ref;
+    const identity = `${event.task_id}/${typeof ref === "string" ? ref : event.id}`;
+    const siblings = responses.get(identity) ?? [];
+    siblings.push(event);
+    responses.set(identity, siblings);
+  }
+
+  for (const siblings of responses.values()) {
+    const event = siblings[0]!;
     const message = raw(event);
     assert.ok(message, `${event.task_id}#${event.id} has no raw_response`);
-    const sdkMessage = message as unknown as SDKMessage;
+    const sdkMessage = message;
     const derived: { type: string; data: Record<string, unknown> }[] = [];
 
     normalizeClaudeMessage(
@@ -139,29 +153,35 @@ test("fixture events match what the provider derives from their SDK message", ()
       sdkMessage,
     );
 
-    const matched = derived.some((candidate) => {
-      try {
-        // As the service stores it: JSON drops undefined fields, which
-        // recorded fixtures (dev/panel/scenarios/recorded) don't have.
-        assert.deepEqual(
-          JSON.parse(
-            JSON.stringify({ type: candidate.type, data: candidate.data }),
-          ),
-          JSON.parse(JSON.stringify({ type: event.type, data: event.data })),
-        );
-
-        return true;
-      } catch {
-        return false;
-      }
-    });
-
-    assert.ok(
-      matched,
-      `${event.task_id}#${event.id} (${event.type}) differs from the provider's output`,
+    assert.equal(
+      derived.length,
+      siblings.length,
+      `${event.task_id}#${event.id} derived event count`,
     );
 
-    checked++;
+    for (const [index, sibling] of siblings.entries()) {
+      const clean = (type: string, data: Record<string, unknown>) => {
+        const { raw_response: _raw, response_ref: _ref, ...fields } = data;
+
+        return {
+          type,
+          data:
+            type === "claude.activity" || type === "agent.completed"
+              ? normalizedClaudeFields(fields)
+              : fields,
+        };
+      };
+
+      const candidate = derived[index]!;
+
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(clean(candidate.type, candidate.data))),
+        JSON.parse(JSON.stringify(clean(sibling.type, sibling.data))),
+        `${sibling.task_id}#${sibling.id} (${sibling.type}) differs from the provider's output`,
+      );
+
+      checked++;
+    }
   }
 
   assert.ok(checked > 50, `only ${checked} fixture events were compared`);

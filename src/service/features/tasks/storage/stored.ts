@@ -17,7 +17,11 @@ import {
 } from "../../../platform/database/decode.js";
 import { events } from "./schema.js";
 
-const eventRowSchema = createSelectSchema(events);
+const eventRowSchema = createSelectSchema(events).omit({
+  response_ref: true,
+  original_response: true,
+});
+
 const eventDataSchema = z.record(z.string(), z.unknown());
 
 // Stored records are checked for the fields that ownership, scheduling and
@@ -90,7 +94,12 @@ export function decodeTask(id: string, body: string): Task {
 }
 
 /** A stored event row with a validated view of the fields this build knows. */
-export function decodeEvent(row: typeof events.$inferSelect) {
+export function decodeEvent(
+  row: Pick<
+    typeof events.$inferSelect,
+    "id" | "task_id" | "type" | "timestamp" | "data"
+  >,
+) {
   const stored = checkStored(eventRowSchema, row, `event ${row.id}`);
 
   const event = {

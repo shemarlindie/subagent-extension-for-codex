@@ -7,12 +7,12 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import {
-  claudeActivityContent,
-  claudeActivityPresentation,
-} from "../../../src/service/features/providers/claude/events/activity";
+import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
+import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize";
+import type { RunContext } from "../../../src/service/features/providers/types";
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
+import { normalizedClaudeFields } from "../../../src/shared/providers/claude/responses";
 import { at } from "./scenario-context";
 
 export type Data = Record<string, unknown>;
@@ -104,10 +104,33 @@ export class Timeline {
     return `00000000-0000-4000-8000-${String(this.firstId * 1000 + ++this.uuids).padStart(12, "0")}`;
   }
 
+  private responseRefs = new WeakMap<object, string>();
+
   private messageId = () => `msg_${this.taskId}_${++this.messages}`;
   /** An event the service records itself (task lifecycle, input). */
   add(type: string, data: Data = {}, gapMs = 1500) {
     this.clock += gapMs;
+    const raw = data.raw_response as SDKMessage | undefined;
+    let recorded = data;
+
+    if (raw) {
+      const { raw_response: _raw, ...fields } = data;
+      const first = !this.responseRefs.has(raw);
+
+      if (first) {
+        this.responseRefs.set(raw, `response-${this.firstId + this.count}`);
+      }
+
+      recorded = {
+        ...fields,
+        response_ref: this.responseRefs.get(raw),
+        ...(first ? { raw_response: raw } : {}),
+      };
+
+      if (type === "claude.activity" || type === "agent.completed") {
+        recorded = normalizedClaudeFields(recorded);
+      }
+    }
 
     this.events.push(
       decodedEvent({
@@ -115,12 +138,13 @@ export class Timeline {
         task_id: this.taskId,
         type,
         timestamp: new Date(this.clock).toISOString(),
-        data: data.raw_response
+        data: raw
           ? {
-              ...data,
+              ...recorded,
               activity: claudeActivityPresentation({
                 type,
-                data,
+                data: recorded,
+                rawResponse: raw,
               }),
             }
           : data,
@@ -138,11 +162,7 @@ export class Timeline {
       session_id: SESSION,
     };
 
-    return this.add(
-      "claude.activity",
-      { ...message, raw_response: message },
-      gapMs,
-    );
+    return this.response(message, gapMs);
   }
 
   init(tools: string[]) {
@@ -164,11 +184,7 @@ export class Timeline {
       session_id: SESSION,
     };
 
-    return this.add("agent.started", {
-      model: message.model,
-      tools: message.tools,
-      raw_response: message,
-    });
+    return this.response(message);
   }
 
   /** One assistant message; each content block becomes its own event. */
@@ -197,35 +213,7 @@ export class Timeline {
       session_id: SESSION,
     };
 
-    for (const block of content) {
-      if (block.type === "text") {
-        this.add("agent.message", {
-          role: "assistant",
-          message_id: message.message.id,
-          parent_tool_use_id: message.parent_tool_use_id,
-          text: block.text,
-          content: claudeActivityContent(block),
-          raw_response: message,
-        });
-      } else if (block.type === "tool_use") {
-        this.add("tool.started", {
-          id: block.id,
-          name: block.name,
-          input: block.input,
-          raw_response: message,
-        });
-      } else {
-        this.add("agent.content", {
-          role: "assistant",
-          message_id: message.message.id,
-          parent_tool_use_id: message.parent_tool_use_id,
-          content: claudeActivityContent(block),
-          raw_response: message,
-        });
-      }
-    }
-
-    return this;
+    return this.response(message);
   }
 
   /** One user message; tool results become `tool.completed` events. */
@@ -239,37 +227,7 @@ export class Timeline {
       session_id: SESSION,
     };
 
-    for (const block of content) {
-      if (block.type === "text") {
-        this.add("agent.content", {
-          role: "user",
-          message_id: message.uuid,
-          parent_tool_use_id: message.parent_tool_use_id,
-          text: block.text,
-          content: claudeActivityContent(block),
-          raw_response: message,
-        });
-      } else if (block.type === "tool_result") {
-        this.add("tool.completed", {
-          id: block.tool_use_id,
-          error: block.is_error,
-          content: Array.isArray(block.content)
-            ? block.content.map(claudeActivityContent)
-            : block.content,
-          raw_response: message,
-        });
-      } else {
-        this.add("agent.content", {
-          role: "user",
-          message_id: message.uuid,
-          parent_tool_use_id: message.parent_tool_use_id,
-          content: claudeActivityContent(block),
-          raw_response: message,
-        });
-      }
-    }
-
-    return this;
+    return this.response(message);
   }
 
   say(value: string, id?: string) {
@@ -470,12 +428,19 @@ export class Timeline {
   }
 
   result(message: SDKResultMessage) {
-    return this.add("agent.completed", {
-      ...message,
-      cost_usd: message.total_cost_usd,
-      usage: message.usage,
-      raw_response: message,
-    });
+    return this.response(message);
+  }
+
+  private response(message: SDKMessage, gapMs?: number) {
+    const emit = (type: string, data: Data) =>
+      this.add(type, { ...data, raw_response: message }, gapMs);
+
+    normalizeClaudeMessage(
+      { emit, emitOpaque: emit } as unknown as RunContext,
+      message,
+    );
+
+    return this;
   }
 }
 

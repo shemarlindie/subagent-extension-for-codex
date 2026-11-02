@@ -44,6 +44,7 @@ export function observedEditsProvider(cli) {
     },
     undefined,
     cli,
+    true,
   );
 
   return { provider, observed };
@@ -190,7 +191,13 @@ function assertHookEvidence(hooks, store, id) {
 
   for (const event of store.events(id, "verification")) {
     if (event.type !== "tool.completed") continue;
-    const raw = event.data.raw_response;
+
+    const raw = store.originalResponse(
+      id,
+      "verification",
+      event.data.response_ref,
+    );
+
     if (!raw || raw.type !== "user") continue;
     const content = raw.message.content;
     if (!Array.isArray(content)) continue;

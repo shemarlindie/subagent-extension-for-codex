@@ -34,7 +34,8 @@ These checks make authenticated model calls with your Claude Code credentials,
 so the ordinary test suite excludes them. Run `npm run build` first. The script
 runs service source through `tsx`, and the `mcp` scenario also reads
 `dist/stdio.js` and `dist/app.html`. Each run opts in explicitly and runs one
-scenario:
+scenario. They enable full-event recording so original responses are available
+for inspection and fixture recording:
 
 ```sh
 SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs <scenario>

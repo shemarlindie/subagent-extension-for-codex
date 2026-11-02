@@ -27,7 +27,11 @@ test.each([
     let firstEvent = 0;
     let summary:
       Record<string, string | number | boolean | undefined> | undefined;
-    let persisted: { data: string; type: string }[] = [];
+    let persisted: {
+      data: string;
+      type: string;
+      original_response: string | null;
+    }[] = [];
 
     const log = vi
       .spyOn(logging, "logEvent")
@@ -41,12 +45,9 @@ test.each([
 
         persisted = store.database.client
           .prepare(
-            "SELECT data,type FROM events WHERE task_id = ? AND id > ? ORDER BY id",
+            "SELECT data,type,original_response FROM events WHERE task_id = ? AND id > ? ORDER BY id",
           )
-          .all(String(fields?.task_id), firstEvent) as {
-          data: string;
-          type: string;
-        }[];
+          .all(String(fields?.task_id), firstEvent) as typeof persisted;
       });
 
     const task = await c.start("alice", input(repo, description));
@@ -63,8 +64,8 @@ test.each([
       0,
     );
 
-    const rawResponses = persisted.filter((row) =>
-      Object.hasOwn(JSON.parse(row.data), "raw_response"),
+    const originals = persisted.filter(
+      (row) => row.original_response !== null,
     ).length;
 
     expect(persisted.at(-1)?.type).toBe(`task.${status}`);
@@ -76,7 +77,7 @@ test.each([
       status,
       event_count: persisted.length,
       json_bytes: bytes,
-      raw_response_event_count: rawResponses,
+      original_response_event_count: originals,
     });
 
     await c.close();

@@ -1,11 +1,9 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ActivityPresentation } from "../activity/presentation-contract.js";
-
 type RateLimitMessage = Extract<SDKMessage, { type: "rate_limit_event" }>;
 
 /** The native diagnostic frame retained by Claude-derived project events. */
-type ClaudeRawResponse = SDKMessage;
+export type ClaudeRawResponse = SDKMessage;
 
 export type ClaudeRateLimitInfo = RateLimitMessage["rate_limit_info"];
 
@@ -60,9 +58,3 @@ export function decodeClaudeRateLimitWindowInfo(
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-
-/** Live payload details kept typed at the Claude adapter boundary. */
-export type ClaudeEventPayload = SDKMessage & {
-  raw_response: ClaudeRawResponse;
-  activity?: ActivityPresentation;
-};

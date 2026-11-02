@@ -1,3 +1,5 @@
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
 import { claudeActivityPresentation } from "../../../service/features/providers/claude/events/activity.js";
 import { decodedEvent } from "../../events/decode.js";
 import { type Event } from "../../events/types.js";
@@ -13,7 +15,14 @@ export function event(
     type,
     data:
       type === "claude.activity" || data.raw_response
-        ? { ...data, activity: claudeActivityPresentation({ type, data }) }
+        ? {
+            ...data,
+            activity: claudeActivityPresentation({
+              type,
+              data,
+              rawResponse: data.raw_response as SDKMessage | undefined,
+            }),
+          }
         : data,
     task_id: "host-task",
     timestamp: new Date(id * 1000).toISOString(),

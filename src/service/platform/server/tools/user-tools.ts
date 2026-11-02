@@ -294,6 +294,23 @@ export function userTools(
       schema: taskId,
       run: (a) => c.changes.counts(c.store.get(a.task_id, owner)),
     }),
+    app_get_original_response: tool({
+      readOnly: true,
+      description:
+        "User interface only: resolve one original response belonging to this task. Missing originals return unavailable.",
+      schema: taskId.extend({ response_ref: z.string().min(1) }),
+      run: (a) => {
+        const original = c.store.originalResponse(
+          a.task_id,
+          owner,
+          a.response_ref,
+        );
+
+        return original === undefined
+          ? { available: false }
+          : { available: true, original };
+      },
+    }),
     app_get_activity: tool({
       readOnly: true,
       description:

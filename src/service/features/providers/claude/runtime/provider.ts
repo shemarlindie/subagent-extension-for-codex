@@ -80,6 +80,7 @@ export class ClaudeAgentProvider implements Provider {
     private launch: typeof query = query,
     private removeSession: typeof deleteSession = deleteSession,
     private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
+    private fullEvents = false,
   ) {}
 
   async readiness(): Promise<ProviderReadiness> {
@@ -289,7 +290,7 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        normalizeClaudeMessage(c, m);
+        normalizeClaudeMessage(c, m, this.fullEvents);
         if (m.type !== "result") continue;
 
         logEvent("info", "provider.result", {

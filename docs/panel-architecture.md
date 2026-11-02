@@ -307,7 +307,8 @@ retries.
   keeps it in place. Synonyms come from each setting schema's `keywords`
   metadata.
 - **Activity:** grouping keeps the original events for debug inspection. Render
-  expensive raw responses only when their inspector opens.
+  event data only when its inspector opens. Original responses load from the
+  service while that inspector is open and are released when it closes.
 - **File preview:** `features/file-preview/` owns format detection and reusable
   viewers. See the [file-preview guide](../src/panel/features/file-preview/README.md)
   for rendering policy and limits.

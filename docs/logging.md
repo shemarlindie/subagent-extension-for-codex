@@ -154,14 +154,14 @@ identifies `task_id`, `turn` and execution outcome `status`, even when another
 turn is queued:
 
 - `event_count` counts committed event inserts, including final outcome events.
-- `json_bytes` counts UTF-8 bytes in their persisted event-data JSON. It excludes
-  SQLite page overhead and the other event columns.
-- `raw_response_event_count` counts events carrying an inline `raw_response`.
-  Repeated deliveries count separately.
+- `json_bytes` counts UTF-8 bytes in their persisted event data and original
+  response JSON. It excludes SQLite page overhead and the other event columns.
+- `original_response_event_count` counts events that store an original response.
+  It stays 0 unless [full events](configuration.md#environment-variables) are
+  enabled.
 
 Summaries exclude rolled-back inserts and historical events. A crash can lose
-the current summary. Raw-capture counts and bytes remain unavailable until
-separate capture storage exists.
+the current summary.
 
 ### Task timing
 

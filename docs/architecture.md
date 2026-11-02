@@ -103,7 +103,7 @@ environment boundaries. See
 
 ### Event payloads
 
-Event contracts keep the original payload alongside a validated typed view.
+Event contracts keep the recorded payload alongside a validated typed view.
 Unknown or invalid payloads stay available for inspection. The panel treats a
 payload as known activity only after it passes validation at the storage and
 transport boundaries.

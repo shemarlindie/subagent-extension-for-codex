@@ -1,9 +1,17 @@
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
 // Turns a task recorded from a real run into a preview fixture: its task
 // record and events, with everything specific to the machine and account it
 // ran on replaced, so the file can be committed. See
 // docs/development.md#recorded-fixtures.
 import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
+import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize";
+import type { RunContext } from "../../../src/service/features/providers/types";
 import type { EventEnvelope } from "../../../src/shared/events/event-contract";
+import {
+  normalizedClaudeFields,
+  originalResponseLookup,
+} from "../../../src/shared/providers/claude/responses";
 import type { Task } from "../../../src/shared/tasks/model";
 
 /** A recorded run, as `dev/panel/recorded/*.json` stores it. */
@@ -181,20 +189,61 @@ export function recordFixture(
   const moved = (time?: string) =>
     time && new Date(Date.parse(time) + shift).toISOString();
 
+  const lookup = originalResponseLookup(sorted);
+  const responseRefs = new Map<string, string>();
+  const sanitizedResponses = new Map<string, SDKMessage>();
+  const identityFor = recordingResponseRefs();
+
   const recorded = sorted.map((event, index) => {
-    const data = sanitize(event.data);
-    const raw = data.raw_response as Record<string, unknown> | undefined;
+    const { raw_response: _raw, response_ref: _ref, ...fields } = event.data;
+    const data = sanitize(fields);
+    const original = lookup(event);
+    const identity = identityFor(event, original);
+
+    if (PROVIDER_EVENTS.has(event.type) && !original) {
+      throw new Error(
+        `Original response unavailable for ${event.task_id}#${event.id}. Run the task with SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS=1 before recording.`,
+      );
+    }
+
+    const first = identity !== undefined && !responseRefs.has(identity);
+
+    if (identity && first) {
+      responseRefs.set(identity, `response-${options.firstId + index}`);
+      sanitizedResponses.set(identity, sanitize(original!));
+    }
+
+    const raw = identity ? sanitizedResponses.get(identity) : undefined;
+    if (identity) data.response_ref = responseRefs.get(identity);
+    if (first) data.raw_response = raw;
 
     if (raw?.type === "system" && raw.subtype === "init") {
       Object.assign(raw, INIT_SCRUB);
-      for (const key of INIT_DROP) delete raw[key];
+
+      for (const key of INIT_DROP) {
+        delete (raw as unknown as Record<string, unknown>)[key];
+      }
     }
 
     scrubRateLimits(data, options.start);
 
     if (PROVIDER_EVENTS.has(event.type) && raw) {
       delete data.activity;
-      data.activity = claudeActivityPresentation({ type: event.type, data });
+
+      if (
+        event.type === "claude.activity" ||
+        event.type === "agent.completed"
+      ) {
+        const normalized = normalizedClaudeFields(data);
+        for (const key of Object.keys(data)) delete data[key];
+        Object.assign(data, normalized);
+      }
+
+      data.activity = claudeActivityPresentation({
+        type: event.type,
+        data,
+        rawResponse: raw,
+      });
     }
 
     return {
@@ -266,4 +315,44 @@ function scrubRateLimits(value: unknown, start: string) {
       scrubRateLimits(child, start);
     }
   }
+}
+
+/** Old recordings encode siblings as consecutive copies of one response. */
+function recordingResponseRefs() {
+  let remaining = 0;
+  let identity = "";
+
+  return (event: EventEnvelope, original?: SDKMessage) => {
+    if (typeof event.data.response_ref === "string") {
+      remaining = 0;
+
+      return event.data.response_ref;
+    }
+
+    if (!original) {
+      remaining = 0;
+
+      return undefined;
+    }
+
+    if (!remaining) {
+      identity = `legacy-${event.id}`;
+
+      normalizeClaudeMessage(
+        {
+          emit: () => {
+            remaining++;
+          },
+          emitOpaque: () => {
+            remaining++;
+          },
+        } as unknown as RunContext,
+        original,
+      );
+    }
+
+    remaining--;
+
+    return identity;
+  };
 }

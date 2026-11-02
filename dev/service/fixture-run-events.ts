@@ -1,3 +1,5 @@
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
 import {
   claudeActivityPresentation,
   decodeClaudeActivityContent,
@@ -135,7 +137,11 @@ export function createFixtureRunEvents(
     const provided = data.activity;
 
     const activity = {
-      ...claudeActivityPresentation({ type, data: normalized }),
+      ...claudeActivityPresentation({
+        type,
+        data: normalized,
+        rawResponse: data.raw_response as SDKMessage,
+      }),
       ...(provided && typeof provided === "object" && !Array.isArray(provided)
         ? provided
         : {}),

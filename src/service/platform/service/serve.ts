@@ -46,7 +46,7 @@ const callDrainLimit = 10000;
 
 /** Starts the HTTP service and runs it until SIGINT or SIGTERM. */
 export async function serve({
-  providers: makeProviders = configuredProviders,
+  providers: makeProviders,
   network = false,
 }: ServeOptions = {}) {
   const port = Number(process.env.PORT ?? defaultPort);
@@ -113,7 +113,12 @@ export async function serve({
   ]);
 
   const store = new Store(join(data, "console.sqlite"));
-  const providers = makeProviders(store, data);
+
+  const providers = makeProviders
+    ? makeProviders(store, data)
+    : configuredProviders(
+        process.env.SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS === "1",
+      );
 
   const concurrency = Number(
     process.env.SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY ?? 3,

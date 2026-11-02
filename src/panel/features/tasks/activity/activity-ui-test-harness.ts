@@ -1,3 +1,4 @@
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -90,6 +91,7 @@ function event(
             activity: claudeActivityPresentation({
               type,
               data: normalizedData,
+              rawResponse: data.raw_response as SDKMessage | undefined,
             }),
           }
         : normalizedData,

@@ -2,7 +2,7 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../../shared/events/event-types.js";
-import type { ClaudeEventPayload } from "../../../../../shared/providers/claude/events.js";
+import { normalizedClaudeFields } from "../../../../../shared/providers/claude/responses.js";
 import type { RunContext } from "../../types.js";
 import {
   claudeActivityContent,
@@ -14,9 +14,27 @@ import {
  * blocks become messages and tool calls, init and result become the turn's
  * start and completion, and anything else is kept as opaque Claude activity.
  */
-export function normalizeClaudeMessage(c: RunContext, m: SDKMessage) {
-  // Keep the complete wire response on every derived activity, including
-  // unknown SDK variants, so normalization never discards diagnostic context.
+export function normalizeClaudeMessage(
+  c: RunContext,
+  m: SDKMessage,
+  fullEvents = false,
+) {
+  const responseRef = fullEvents ? globalThis.crypto.randomUUID() : undefined;
+  let recorded = false;
+
+  const originalResponseFields = () => {
+    if (!responseRef) return {};
+
+    const fields = {
+      response_ref: responseRef,
+      ...(!recorded ? { raw_response: m } : {}),
+    };
+
+    recorded = true;
+
+    return fields;
+  };
+
   const emit = <K extends EventType, D extends EventPayloadMap[K]>(
     type: K,
     data: D,
@@ -30,7 +48,7 @@ export function normalizeClaudeMessage(c: RunContext, m: SDKMessage) {
           }
         : {};
 
-    const payload = { ...messageFields, ...data, raw_response: m };
+    const payload = { ...messageFields, ...data, ...originalResponseFields() };
 
     const activity = claudeActivityPresentation({
       type,
@@ -43,9 +61,9 @@ export function normalizeClaudeMessage(c: RunContext, m: SDKMessage) {
 
   const emitActivity = (message: SDKMessage) => {
     const payload = {
-      ...message,
-      raw_response: message,
-    } satisfies ClaudeEventPayload;
+      ...normalizedClaudeFields(message),
+      ...originalResponseFields(),
+    };
 
     const activity = claudeActivityPresentation({
       type: "claude.activity",
@@ -105,7 +123,7 @@ export function normalizeClaudeMessage(c: RunContext, m: SDKMessage) {
     emit("agent.started", { model: m.model, tools: m.tools });
   } else if (m.type === "result") {
     emit("agent.completed", {
-      ...m,
+      ...normalizedClaudeFields(m),
       cost_usd: m.total_cost_usd,
       usage: m.usage,
     });

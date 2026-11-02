@@ -67,7 +67,11 @@ export async function runIsolatedScenario({
       assert.ok(init, "Native startup metadata missing");
 
       // Deferred tools may be absent from tools even when their server loaded.
-      const native = init.data.raw_response;
+      const native = store.originalResponse(
+        task.id,
+        "verification",
+        init.data.response_ref,
+      );
 
       assert.deepEqual(
         native.mcp_servers.map(({ name, status }) => ({ name, status })),

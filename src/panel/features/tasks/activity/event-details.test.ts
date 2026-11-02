@@ -26,7 +26,7 @@ import {
   EventList as GroupedEventList,
 } from "./event-list";
 
-test("opening raw response shows the original full JSON and preserves disclosure through refresh", async (t) => {
+test("opening event data shows the recorded JSON and preserves disclosure through refresh", async (t) => {
   t.onTestFinished(cleanup);
 
   const raw = {
@@ -52,7 +52,12 @@ test("opening raw response shows the original full JSON and preserves disclosure
     details.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() => assert.deepEqual(expandedJson(details), raw));
+  await waitFor(() =>
+    assert.deepEqual(
+      expandedJson(details),
+      JSON.parse(JSON.stringify(activity.data)),
+    ),
+  );
 
   const message = view.getByRole("button", { name: "message" });
   fireEvent.click(message);
@@ -164,7 +169,12 @@ test("grouped tool activity retains individual raw inspections while progress re
     raw.dispatchEvent(new Event("toggle"));
   });
 
-  await waitFor(() => assert.deepEqual(expandedJson(raw), rawStart));
+  await waitFor(() =>
+    assert.deepEqual(
+      expandedJson(raw),
+      JSON.parse(JSON.stringify(started.data)),
+    ),
+  );
 
   const completed = event(
     "tool.completed",
@@ -191,7 +201,7 @@ test("grouped tool activity retains individual raw inspections while progress re
   assert.equal(raw.open, true);
   assert.equal(debug.getAttribute("aria-expanded"), "true");
 
-  assert.deepEqual(expandedJson(raw), rawStart);
+  assert.deepEqual(expandedJson(raw), JSON.parse(JSON.stringify(started.data)));
 
   assert.equal(
     view.container.querySelectorAll("details.activity-raw").length,
@@ -369,7 +379,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   assert.equal(await tooltipText(toggle), "Inspect 1 raw response");
   const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
   assert.equal(panel.hidden, true);
-  assertAbsent(view.queryByText("Raw response", { selector: "summary" }));
+  assertAbsent(view.queryByText("Event data", { selector: "summary" }));
   const message = view.container.querySelector(".activity-message")!;
 
   assert.equal(
@@ -408,7 +418,10 @@ test("a compact accessible debug toggle hides inspection until opened and preser
   // The newest raw response opens automatically with the debug panel.
   assert.equal(raw.open, true);
 
-  assert.deepEqual(expandedJson(raw), activity.data.raw_response);
+  assert.deepEqual(
+    expandedJson(raw),
+    JSON.parse(JSON.stringify(activity.data)),
+  );
 
   view.rerender(createElement(GroupedEventList, { events: [{ ...activity }] }));
 
@@ -431,7 +444,10 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     "Closing the debug panel preserves individual raw disclosures",
   );
 
-  assert.deepEqual(expandedJson(raw), activity.data.raw_response);
+  assert.deepEqual(
+    expandedJson(raw),
+    JSON.parse(JSON.stringify(activity.data)),
+  );
 
   await act(async () => {
     raw.open = false;
@@ -696,4 +712,76 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   assert.equal(group.hasAttribute("data-debug-open"), false);
   expect(document.activeElement).toBe(toggle);
   await waitFor(() => assert.deepEqual(scrolled, ["activity-group-heading"]));
+});
+
+test("original response details release results on close and ignore replies for a previous task", async (t) => {
+  t.onTestFinished(cleanup);
+
+  const { ControllerContext } =
+    await import("../../../app/state/controller-context");
+
+  type Result = { available: boolean; original?: unknown };
+
+  const pending: ((value: Result) => void)[] = [];
+
+  const controller = {
+    transport: {
+      tool: () => new Promise<Result>((resolve) => pending.push(resolve)),
+    },
+  } as unknown as import("../../../app/state/controller").Controller;
+
+  const activity = event("agent.message", {
+    text: "Hello",
+    response_ref: "first",
+  });
+
+  const element = (taskId: string) =>
+    createElement(
+      ControllerContext.Provider,
+      { value: controller },
+      createElement(EventList, { events: [{ ...activity, task_id: taskId }] }),
+    );
+
+  const view = render(element("a"));
+
+  const toggle = async (open: boolean) =>
+    act(async () => {
+      const details = view.container.querySelector(
+        "details.activity-raw",
+      ) as HTMLDetailsElement;
+
+      details.open = open;
+      details.dispatchEvent(new Event("toggle"));
+    });
+
+  await toggle(true);
+  await waitFor(() => expect(pending).toHaveLength(1));
+  expect(view.getByText("Loading original response…")).toBeTruthy();
+  await toggle(false);
+
+  await act(async () =>
+    pending[0]!({ available: true, original: { secret: "stale-close" } }),
+  );
+
+  expect(
+    view.container.querySelector('[aria-label="Original response"]'),
+  ).toBeNull();
+
+  await toggle(true);
+  await waitFor(() => expect(pending).toHaveLength(2));
+  view.rerender(element("b"));
+  await waitFor(() => expect(pending).toHaveLength(3));
+
+  await act(async () =>
+    pending[1]!({ available: true, original: { secret: "stale-task" } }),
+  );
+
+  expect(view.container.textContent).not.toContain("stale-task");
+  await act(async () => pending[2]!({ available: false }));
+  expect(view.getByText("Original response unavailable.")).toBeTruthy();
+  await toggle(false);
+
+  expect(
+    view.container.querySelector('[aria-label="Original response"]'),
+  ).toBeNull();
 });

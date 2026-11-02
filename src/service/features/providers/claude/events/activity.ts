@@ -142,11 +142,8 @@ function hasThinkingContent(e: ActivityEvent) {
   };
 
   const nativeMessage = object(e.rawResponse);
-  const storedMessage = object(object(e.data).raw_response);
 
-  const rawMessage = object(
-    nativeMessage.message ?? storedMessage.message ?? object(e.data).message,
-  );
+  const rawMessage = object(nativeMessage.message ?? object(e.data).message);
 
   return (
     hasThinkingBlock(object(e.data).content) ||
@@ -319,8 +316,8 @@ export function claudeActivityPresentation(
       (e.rawResponse?.type === "assistant"
         ? e.rawResponse.message.id
         : undefined) ??
-        object(object(d.raw_response).message).id ??
-        object(d.raw_response).uuid,
+        e.rawResponse?.uuid ??
+        d.message_id,
     ),
     hasThinking: hasThinkingContent(e),
   };

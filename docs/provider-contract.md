@@ -66,7 +66,7 @@ Report each successful text edit through `RunContext.fileChanged(edit)`. A
 - `source`, either `"tool"` or `"command"`.
 
 Call `editUnrecorded(path, source)` when you know the changed file but not its
-hunks. Pass `"tool"` for an edit tool so the incomplete capture keeps its
+hunks. Pass `"tool"` for an edit tool so the incomplete diff keeps its
 source. The source defaults to `"command"`. Omit the path when a command
 changed files it could not name.
 
@@ -149,10 +149,18 @@ names the block's permission mode by path in
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and
-normalize activity and rate-limit windows for consumers. Preserve raw payloads
-for inspection, including unfamiliar or incomplete events. See
+normalize activity and rate-limit windows for consumers. Preserve unfamiliar or
+incomplete event data for inspection. See
 [Architecture](architecture.md#code-ownership) for the shared event validation
 boundary.
+
+Claude omits original responses by default. Enable
+[full-event recording](configuration.md#environment-variables) to retain them
+for diagnostics and fixture recording. In that mode, every event derived from
+one received response carries the same unique `response_ref`, and only the first
+also carries the response as `raw_response`. The store keeps that original
+outside the event data and drops `raw_response` from any event without a
+`response_ref`.
 
 ## Stored provider state
 

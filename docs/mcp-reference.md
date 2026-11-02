@@ -125,6 +125,11 @@ schema. App-only tools carry user authority:
 
 Other `app_` tools serve panel reads and controls.
 
+`app_get_original_response` reads an original response saved with
+[full-event recording](configuration.md#environment-variables). Pass `task_id`
+and the event's `response_ref`. It returns `{ available: true, original }`, or
+`{ available: false }` if the response is unavailable.
+
 `app_record_timing` accepts best-effort panel diagnostics in strict batches of
 1 to 50 records, with an optional bounded `dropped_count`. It rejects unknown
 fields and arbitrary metadata, and stores only the hash of a send request ID.

@@ -28,6 +28,7 @@ if (process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY !== "1") {
   process.exit(1);
 }
 
+process.env.SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS = "1";
 const scenario = process.argv[2] ?? "read";
 
 assert.ok(
@@ -73,7 +74,7 @@ console.log(
 const edits = scenario === "edits" ? observedEditsProvider(cli) : undefined;
 
 const provider = () =>
-  edits?.provider ?? new ClaudeAgentProvider(undefined, undefined, cli);
+  edits?.provider ?? new ClaudeAgentProvider(undefined, undefined, cli, true);
 
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "subagent-extension-for-codex-native-proof-")),

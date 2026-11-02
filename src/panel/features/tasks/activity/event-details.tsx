@@ -14,9 +14,11 @@ import { ActivityContent } from "./activity-content";
 import { eventTitle, label, responsePreview } from "./activity-utils";
 import { ActivityValue } from "./activity-value";
 import { EVENT_TAIL_SIZE } from "./event-history";
+import { OriginalResponseDetails } from "./original-response-details";
 
 const envelope = new Set([
   "raw_response",
+  "response_ref",
   "activity",
   "type",
   "subtype",
@@ -25,12 +27,12 @@ const envelope = new Set([
   "parent_tool_use_id",
 ]);
 
-interface RawResponseProps {
+interface EventDataProps {
   event: Event;
   defaultOpen?: boolean;
 }
 
-function RawResponse({ event, defaultOpen }: RawResponseProps) {
+function EventData({ event, defaultOpen }: EventDataProps) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
   return (
@@ -39,8 +41,14 @@ function RawResponse({ event, defaultOpen }: RawResponseProps) {
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary>Raw response</summary>
-      {open && <JsonTree value={event.data.raw_response ?? event.data} />}
+      <summary>Event data</summary>
+      {open && <JsonTree value={event.data} />}
+      {open && typeof event.data.response_ref === "string" && (
+        <OriginalResponseDetails
+          key={`${event.task_id}/${event.id}`}
+          event={event}
+        />
+      )}
     </details>
   );
 }
@@ -184,7 +192,7 @@ function EventCard({ event, toolName, rawOnly, expandRaw }: EventCardProps) {
       <div className="activity-body">
         {!rawOnly && <strong>{eventTitle(event, failed, toolName)}</strong>}
         {!rawOnly && <EventBody event={event} />}
-        <RawResponse event={event} defaultOpen={expandRaw} />
+        <EventData event={event} defaultOpen={expandRaw} />
       </div>
     </article>
   );

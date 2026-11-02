@@ -205,7 +205,7 @@ test("Claude rate-limit activity uses the current typed SDK metadata", () => {
   ]);
 });
 
-test("Claude preserves an unrecognized message kind and its raw fields", () => {
+test("Claude preserves the activity kind and normalized fields of an unknown message", () => {
   const message = {
     type: "future_sdk_message",
     event: { type: "future_delta", value: 0 },
@@ -213,11 +213,14 @@ test("Claude preserves an unrecognized message kind and its raw fields", () => {
   };
 
   assert.deepEqual(recorder().normalizeUnrecognized(message), [
-    { type: "claude.activity", data: { ...message, raw_response: message } },
+    {
+      type: "claude.activity",
+      data: { type: message.type, event: message.event },
+    },
   ]);
 });
 
-test("Claude preserves familiar event contracts and their full SDK envelope", () => {
+test("Claude preserves familiar event contracts and their normalized fields", () => {
   const { events, normalize } = recorder();
 
   const init = {
@@ -274,7 +277,7 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
   assert.deepEqual(events, [
     {
       type: "agent.started",
-      data: { model: init.model, tools: init.tools, raw_response: init },
+      data: { model: init.model, tools: init.tools },
     },
     {
       type: "agent.message",
@@ -284,7 +287,6 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
         parent_tool_use_id: assistant.parent_tool_use_id,
         text: "Checking",
         content: { type: "text", text: "Checking" },
-        raw_response: assistant,
       },
     },
     {
@@ -293,7 +295,6 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
         id: "tool",
         name: "Read",
         input: { file_path: "a.ts", count: 0, enabled: false },
-        raw_response: assistant,
       },
     },
     {
@@ -302,7 +303,6 @@ test("Claude preserves familiar event contracts and their full SDK envelope", ()
         id: "tool",
         error: false,
         content: [{ type: "text", text: "file output" }],
-        raw_response: user,
       },
     },
   ]);
@@ -341,7 +341,8 @@ test("assistant thinking blocks retain their typed content and source message", 
   );
 
   for (const event of events) {
-    assert.deepEqual(event.data.raw_response, message);
+    assert.equal(event.data.raw_response, undefined);
+    assert.equal(event.data.response_ref, undefined);
   }
 });
 
@@ -397,7 +398,13 @@ test("user image, document and tool-result blocks stay inspectable in order", ()
     { type: "text", text: "file output" },
   ]);
 
-  assert.ok(events.every((event) => event.data.raw_response === message));
+  assert.ok(
+    events.every(
+      (event) =>
+        event.data.raw_response === undefined &&
+        event.data.response_ref === undefined,
+    ),
+  );
 });
 
 test("unrecognized content remains opaque through the runtime fallback", () => {
@@ -432,7 +439,8 @@ test("empty or error assistant messages and user string messages remain inspecta
     assert.ok(first, JSON.stringify(message));
 
     for (const event of events) {
-      assert.deepEqual(event.data.raw_response, message);
+      assert.equal(event.data.raw_response, undefined);
+      assert.equal(event.data.response_ref, undefined);
     }
 
     if (text !== undefined) {
@@ -539,6 +547,21 @@ test("run emits result accounting exactly once for success and failure", async (
     assert.equal(completed.length, 1);
     assert.ok(done);
     assert.equal(done.data.cost_usd, 0.25);
-    assert.deepEqual(done.data.raw_response, message);
+    assert.equal(done.data.raw_response, undefined);
+  }
+});
+
+test("full-event mode retains exact unknown and error originals without copying native fields into activity", () => {
+  for (const message of [
+    { type: "future_sdk_message", unique: { signature: "opaque" } },
+    assistantMessage([], "shared", { error: "rate_limit" }),
+  ]) {
+    const { context, events } = recorder();
+    normalizeClaudeMessage(context, message as SDKMessage, true);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.data.raw_response, message);
+    assert.equal(typeof events[0]?.data.response_ref, "string");
+    assert.equal(events[0]?.data.message, undefined);
+    assert.equal(events[0]?.data.unique, undefined);
   }
 });
