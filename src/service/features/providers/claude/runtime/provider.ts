@@ -27,7 +27,7 @@ import {
 } from "../../types.js";
 import { ClaudeCli } from "../configuration/executable.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
-import { normalizeClaudeMessage } from "../events/normalize.js";
+import { claudeMessageNormalizer } from "../events/normalize.js";
 import { Inbox } from "./inbox.js";
 import { ModelCatalog } from "./models.js";
 import { claudeTurnOptions } from "./turn-options.js";
@@ -154,6 +154,7 @@ export class ClaudeAgentProvider implements Provider {
       session_id: "",
     });
 
+    const normalize = claudeMessageNormalizer(this.fullEvents);
     const launched = performance.now();
     let firstEvent = true;
     let firstText = true;
@@ -290,7 +291,7 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        normalizeClaudeMessage(c, m, this.fullEvents);
+        normalize(c, m);
         if (m.type !== "result") continue;
 
         logEvent("info", "provider.result", {

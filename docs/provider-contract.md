@@ -162,6 +162,14 @@ also carries the response as `raw_response`. The store keeps that original
 outside the event data and drops `raw_response` from any event without a
 `response_ref`.
 
+Claude events also omit file contents by default. Read, Write, Edit and
+NotebookEdit calls keep their paths and options in `tool.started.input`, without
+`content`, `old_string`, `new_string` or `new_source`. A successful result's
+`tool.completed.content` reads "File content isn't stored." and a failed result
+keeps its error text. Approval prompts and the Changes tab read their own
+copies, so they keep full file contents. Full-event recording keeps file
+contents in the events.
+
 ## Stored provider state
 
 Store and validate provider-specific options under

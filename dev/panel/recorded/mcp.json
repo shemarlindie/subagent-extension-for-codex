@@ -457,7 +457,7 @@
       "timestamp": "2026-10-02T11:30:03.125Z",
       "data": {
         "id": "toolu_01CbH8PdS1B4W2nbZkAAtWEp",
-        "content": "1\t# Native verification\n2\t\n3\tThe verification marker is COBALT-27.\n4\t",
+        "content": "File content isn't stored.",
         "activity": {
           "kind": "tool.completed",
           "quiet": false,

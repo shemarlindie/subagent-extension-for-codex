@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { normalizeClaudeMessage } from "../../../service/features/providers/claude/events/normalize.js";
+import { claudeMessageNormalizer } from "../../../service/features/providers/claude/events/normalize.js";
 import type { RunContext } from "../../../service/features/providers/types.js";
 import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
@@ -105,7 +105,7 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
     session_id: "session",
   } as const;
 
-  normalizeClaudeMessage(
+  claudeMessageNormalizer(true)(
     {
       emit: () => {},
       emitOpaque: (_type: string, data: Record<string, unknown>) => {
@@ -114,7 +114,6 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
       },
     } as unknown as RunContext,
     message,
-    true,
   );
 
   assert.equal(rawResponse, message);

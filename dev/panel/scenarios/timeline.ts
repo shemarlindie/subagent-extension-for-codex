@@ -8,7 +8,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
-import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize";
+import { claudeMessageNormalizer } from "../../../src/service/features/providers/claude/events/normalize";
 import type { RunContext } from "../../../src/service/features/providers/types";
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
@@ -105,6 +105,7 @@ export class Timeline {
   }
 
   private responseRefs = new WeakMap<object, string>();
+  private normalize = claudeMessageNormalizer();
 
   private messageId = () => `msg_${this.taskId}_${++this.messages}`;
   /** An event the service records itself (task lifecycle, input). */
@@ -435,7 +436,7 @@ export class Timeline {
     const emit = (type: string, data: Data) =>
       this.add(type, { ...data, raw_response: message }, gapMs);
 
-    normalizeClaudeMessage(
+    this.normalize(
       { emit, emitOpaque: emit } as unknown as RunContext,
       message,
     );

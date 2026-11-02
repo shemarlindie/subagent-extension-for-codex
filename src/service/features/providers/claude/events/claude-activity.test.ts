@@ -20,7 +20,7 @@ import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
 import { ClaudeAgentProvider } from "../runtime/provider.js";
 import { claudeActivityPresentation } from "./activity.js";
-import { normalizeClaudeMessage } from "./normalize.js";
+import { claudeMessageNormalizer, fileContentOmitted } from "./normalize.js";
 
 function recorder() {
   const events: { type: string; data: Record<string, unknown> }[] = [];
@@ -36,8 +36,10 @@ function recorder() {
     },
   } as unknown as RunContext;
 
+  const normalizeMessage = claudeMessageNormalizer();
+
   const normalize = (message: SDKMessage) => {
-    normalizeClaudeMessage(context, message);
+    normalizeMessage(context, message);
 
     return events;
   };
@@ -45,7 +47,7 @@ function recorder() {
   const normalizeUnrecognized = (message: Record<string, unknown>) => {
     // Deliberately malformed runtime fixture: exercise preservation of a value
     // that the installed SDK's static union cannot express.
-    normalizeClaudeMessage(context, message as unknown as SDKMessage);
+    normalizeMessage(context, message as unknown as SDKMessage);
 
     return events;
   };
@@ -225,7 +227,7 @@ test("Claude preserves the activity kind and normalized fields of an unknown mes
 test("Activity reads a summary from the payload when the presentation would repeat it", () => {
   const data: Record<string, unknown>[] = [];
 
-  normalizeClaudeMessage(
+  claudeMessageNormalizer()(
     {
       emitOpaque: (_: string, d: Record<string, unknown>) => data.push(d),
     } as unknown as RunContext,
@@ -280,8 +282,8 @@ test("Claude preserves familiar event contracts and their normalized fields", ()
       {
         type: "tool_use",
         id: "tool",
-        name: "Read",
-        input: { file_path: "a.ts", count: 0, enabled: false },
+        name: "Grep",
+        input: { pattern: "a", head_limit: 0, multiline: false },
       },
     ],
     "message",
@@ -325,8 +327,8 @@ test("Claude preserves familiar event contracts and their normalized fields", ()
       type: "tool.started",
       data: {
         id: "tool",
-        name: "Read",
-        input: { file_path: "a.ts", count: 0, enabled: false },
+        name: "Grep",
+        input: { pattern: "a", head_limit: 0, multiline: false },
       },
     },
     {
@@ -337,6 +339,69 @@ test("Claude preserves familiar event contracts and their normalized fields", ()
         content: [{ type: "text", text: "file output" }],
       },
     },
+  ]);
+});
+
+test("file tool events keep paths and errors without file contents outside full events", () => {
+  const calls = assistantMessage([
+    {
+      type: "tool_use",
+      id: "read",
+      name: "Read",
+      input: { file_path: "a.ts", offset: 2 },
+    },
+    {
+      type: "tool_use",
+      id: "edit",
+      name: "Edit",
+      input: { file_path: "a.ts", old_string: "a", new_string: "b" },
+    },
+    {
+      type: "tool_use",
+      id: "notebook",
+      name: "NotebookEdit",
+      input: { notebook_path: "a.ipynb", new_source: "x = 1" },
+    },
+  ]);
+
+  const results = userMessage([
+    { type: "tool_result", tool_use_id: "read", content: "1\tconst a" },
+    {
+      type: "tool_result",
+      tool_use_id: "edit",
+      is_error: true,
+      content: "String not found",
+    },
+    { type: "tool_result", tool_use_id: "notebook", content: "Updated" },
+  ]);
+
+  const stored = (fullEvents: boolean) => {
+    const { context, events } = recorder();
+    const normalize = claudeMessageNormalizer(fullEvents);
+    normalize(context, calls);
+    normalize(context, results);
+
+    return events.map((event) =>
+      event.type === "tool.started" ? event.data.input : event.data.content,
+    );
+  };
+
+  assert.deepEqual(stored(false), [
+    { file_path: "a.ts", offset: 2 },
+    { file_path: "a.ts" },
+    { notebook_path: "a.ipynb" },
+    fileContentOmitted,
+    "String not found",
+    fileContentOmitted,
+  ]);
+
+  assert.deepEqual(stored(true), [
+    { file_path: "a.ts", offset: 2 },
+    { file_path: "a.ts", old_string: "a", new_string: "b" },
+    { notebook_path: "a.ipynb", new_source: "x = 1" },
+    "1\tconst a",
+    "String not found",
+    "Updated",
   ]);
 });
 
@@ -591,7 +656,7 @@ test("full-event mode retains exact unknown and error originals without copying 
     assistantMessage([], "shared", { error: "rate_limit" }),
   ]) {
     const { context, events } = recorder();
-    normalizeClaudeMessage(context, message as SDKMessage, true);
+    claudeMessageNormalizer(true)(context, message as SDKMessage);
     assert.equal(events.length, 1);
     assert.equal(events[0]?.data.raw_response, message);
     assert.equal(typeof events[0]?.data.response_ref, "string");

@@ -4,7 +4,7 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 // record and events, with everything specific to the machine and account it
 // ran on replaced, so the file can be committed. See
 // docs/development.md#recorded-fixtures.
-import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize";
+import { claudeMessageNormalizer } from "../../../src/service/features/providers/claude/events/normalize";
 import type { RunContext } from "../../../src/service/features/providers/types";
 import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
@@ -188,6 +188,7 @@ export function recordFixture(
   const lookup = originalResponseLookup(sorted);
   const responseRefs = new Map<string, string>();
   const derivedEvents = new Map<string, DerivedEvent[]>();
+  const normalize = claudeMessageNormalizer();
   const identityFor = recordingResponseRefs();
 
   const recorded = sorted.map((event, index) => {
@@ -219,7 +220,7 @@ export function recordFixture(
 
         scrubRateLimits(raw, options.start);
         responseRefs.set(identity, `response-${options.firstId + index}`);
-        derivedEvents.set(identity, derivedFrom(raw));
+        derivedEvents.set(identity, derivedFrom(raw, normalize));
       }
 
       const derived = derivedEvents.get(identity)!.shift();
@@ -277,16 +278,16 @@ export function recordFixture(
 type DerivedEvent = { type: string; data: Record<string, unknown> };
 
 /** The events the provider derives from an original response today. */
-function derivedFrom(original: SDKMessage) {
+function derivedFrom(
+  original: SDKMessage,
+  normalize: ReturnType<typeof claudeMessageNormalizer>,
+) {
   const events: DerivedEvent[] = [];
 
   const emit = (type: string, data: Record<string, unknown>) =>
     events.push({ type, data });
 
-  normalizeClaudeMessage(
-    { emit, emitOpaque: emit } as unknown as RunContext,
-    original,
-  );
+  normalize({ emit, emitOpaque: emit } as unknown as RunContext, original);
 
   return events;
 }
@@ -348,7 +349,8 @@ function recordingResponseRefs() {
 
     if (!remaining) {
       identity = `legacy-${event.id}`;
-      remaining = derivedFrom(original).length;
+      // Only the count matters, which needs no earlier tool calls.
+      remaining = derivedFrom(original, claudeMessageNormalizer()).length;
     }
 
     remaining--;

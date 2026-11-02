@@ -509,8 +509,10 @@ test("a failed storage summary cannot change settlement or leave its counters ac
 });
 
 test("original responses resolve across pages by indexed task-authorized lookup", async (t) => {
-  const { normalizeClaudeMessage } =
+  const { claudeMessageNormalizer } =
     await import("../../providers/claude/events/normalize.js");
+
+  const normalize = claudeMessageNormalizer(true);
 
   const { store, task } = deletionFixture();
   t.onTestFinished(() => store.close());
@@ -551,10 +553,9 @@ test("original responses resolve across pages by indexed task-authorized lookup"
 
   const first = delivery("first");
 
-  normalizeClaudeMessage(
+  normalize(
     context,
     first as unknown as import("@anthropic-ai/claude-agent-sdk").SDKMessage,
-    true,
   );
 
   const siblings = store.events(task.id, task.owner).slice(-3);
@@ -570,12 +571,11 @@ test("original responses resolve across pages by indexed task-authorized lookup"
 
   for (let i = 0; i < 1001; i++) store.event(task, "task.started", { turn: 1 });
 
-  normalizeClaudeMessage(
+  normalize(
     context,
     delivery(
       "second",
     ) as unknown as import("@anthropic-ai/claude-agent-sdk").SDKMessage,
-    true,
   );
 
   assert.equal(serializations, 2);

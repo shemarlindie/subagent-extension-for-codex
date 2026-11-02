@@ -10,15 +10,38 @@ import {
   claudeActivityPresentation,
 } from "./activity.js";
 
+const fileTools = new Set(["Read", "Write", "Edit", "NotebookEdit"]);
+
+const fileContentFields = new Set([
+  "content",
+  "old_string",
+  "new_string",
+  "new_source",
+]);
+
+export const fileContentOmitted = "File content isn't stored.";
+
+/**
+ * Creates the normalizer for one run. Outside full events it leaves out file
+ * contents, so it remembers file tool calls to recognize their results.
+ */
+export function claudeMessageNormalizer(fullEvents = false) {
+  const fileToolIds = fullEvents ? undefined : new Set<string>();
+
+  return (c: RunContext, m: SDKMessage) =>
+    normalizeClaudeMessage(c, m, fullEvents, fileToolIds);
+}
+
 /**
  * Translates an SDK message into task events: assistant and user content
  * blocks become messages and tool calls, init and result become the turn's
  * start and completion, and anything else is kept as opaque Claude activity.
  */
-export function normalizeClaudeMessage(
+function normalizeClaudeMessage(
   c: RunContext,
   m: SDKMessage,
-  fullEvents = false,
+  fullEvents: boolean,
+  fileToolIds: Set<string> | undefined,
 ) {
   const responseRef = fullEvents ? globalThis.crypto.randomUUID() : undefined;
   let recorded = false;
@@ -95,17 +118,20 @@ export function normalizeClaudeMessage(
           emit("tool.started", {
             id: b.id,
             name: b.name,
-            input: isRecord(b.input) ? b.input : {},
+            input: storedToolInput(b.id, b.name, b.input, fileToolIds),
           });
         } else if (b.type === "tool_result") {
           const content = Array.isArray(b.content)
             ? b.content.map(claudeActivityContent)
             : b.content;
 
+          // A failed file tool keeps its error text.
+          const fileResult = fileToolIds?.delete(b.tool_use_id) && !b.is_error;
+
           emit("tool.completed", {
             id: b.tool_use_id,
             error: b.is_error,
-            content,
+            content: fileResult ? fileContentOmitted : content,
           });
         } else {
           emit("agent.content", {
@@ -134,6 +160,23 @@ export function normalizeClaudeMessage(
   } else {
     emitActivity(m);
   }
+}
+
+/** File tool input keeps its paths and options, without file contents. */
+function storedToolInput(
+  id: string,
+  name: string,
+  value: unknown,
+  fileToolIds: Set<string> | undefined,
+) {
+  const input = isRecord(value) ? value : {};
+  if (!fileToolIds || !fileTools.has(name)) return input;
+
+  fileToolIds.add(id);
+
+  return Object.fromEntries(
+    Object.entries(input).filter(([key]) => !fileContentFields.has(key)),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

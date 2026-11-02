@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
-import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize.js";
+import { claudeMessageNormalizer } from "../../../src/service/features/providers/claude/events/normalize.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
 import { decodeEventView } from "../../../src/shared/events/decode.js";
 import { eventPayloadMapSchema } from "../../../src/shared/events/event-contract.generated.js";
@@ -136,14 +136,26 @@ test("fixture events match what the provider derives from their SDK message", ()
     responses.set(identity, siblings);
   }
 
+  const normalizers = new Map<
+    string,
+    ReturnType<typeof claudeMessageNormalizer>
+  >();
+
   for (const siblings of responses.values()) {
     const event = siblings[0]!;
+    let normalize = normalizers.get(event.task_id);
+
+    if (!normalize) {
+      normalize = claudeMessageNormalizer();
+      normalizers.set(event.task_id, normalize);
+    }
+
     const message = raw(event);
     assert.ok(message, `${event.task_id}#${event.id} has no raw_response`);
     const sdkMessage = message;
     const derived: { type: string; data: Record<string, unknown> }[] = [];
 
-    normalizeClaudeMessage(
+    normalize(
       {
         emit: (type: string, data: Record<string, unknown>) =>
           derived.push({ type, data }),

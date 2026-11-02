@@ -368,6 +368,9 @@ cancelled work never appears successful.
 - Thinking shows elapsed time.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
+- File tool rows show the path and options. Successful results show "File
+  content isn't stored." The **Changes** tab shows the edits, and tasks run
+  with full events also show file contents.
 - **Debug details** shows an event's readable content, metadata and event data
   JSON. Tasks run with [full events](configuration.md#environment-variables)
   also show the original Claude response.
