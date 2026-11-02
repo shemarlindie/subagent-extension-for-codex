@@ -71,7 +71,7 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 ## Documentation style
 
 - Update documentation when the user asks, or when the change makes guidance inaccurate or leaves a question readers need answered. Make the smallest sufficient edit in the canonical home.
-- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details and verification results only when they help that audience, and skip obvious or expected behavior.
+- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details, safeguards and verification results only when readers need them to use, operate or change the feature. Skip obvious or expected behavior.
 - Keep one canonical home for each explanation and link to it elsewhere, repeating only a brief summary needed locally. Update explanations in place and remove superseded material after retaining useful details. Check affected links and headings.
 - Describe current behavior. Keep history only when it explains a current decision or constraint. Check commands, examples, defaults and capability claims against code and tests. State the scope of evidence. Local tests do not establish live-host support.
 
