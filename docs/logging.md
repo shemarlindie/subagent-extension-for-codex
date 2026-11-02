@@ -96,12 +96,13 @@ and session lifetime. Never paste token values into a diagnostic report.
 
 - RSS, used heap and external memory in bytes.
 - User and system CPU time in milliseconds since the previous sample.
+- `interval_ms`, the monotonic elapsed interval used for those CPU deltas.
 - Event loop utilization and p99/max delay in milliseconds for the sample.
 - The number of active tasks.
 
-The samples cover the Node service process only. Worker subprocesses use
-their own CPU and memory. A delayed event loop also delays the sample, so
-intervals can exceed 60 seconds.
+Samples cover only the Node service process. CPU fields report milliseconds,
+not percentages, and cannot attribute work to individual concurrent operations.
+An event-loop stall can extend the sample interval beyond 60 seconds.
 
 `provider.first_event` and `provider.first_text` measure time from SDK session
 launch to the first SDK event and text delta. `provider.result` records result
@@ -119,6 +120,31 @@ execution ended before the provider returned a result.
 
 An invalid level stops the service from starting. Task timing ignores the
 threshold.
+
+### Storage reads
+
+`storage.read` records individual reads at debug level. `operation` is
+`task_list`, `chat`, `activity_latest` or `activity_turn`. `duration_ms` covers
+SQL retrieval and JSON decoding together. Task-list reads also include sorting.
+Activity reads include finding the window, reading its events and tallying older
+events. Chat measures retrieval of its source events, excluding conversation
+assembly. These boundaries sit inside tool and HTTP durations.
+
+Each record has `outcome` (`success` or `error`) and `rows`, the number of
+returned tasks or events. Activity also reports `tally_rows`, the older events
+traversed to build its dropped-event tally, and `cache`:
+
+- `hit` reuses a latest-Activity tally and can still traverse new older rows.
+- `miss` creates or rebuilds a tally, including after cache eviction.
+- `none` identifies turn Activity, which recounts its earlier range on each read.
+
+At info level, `storage.read_summary` combines active reads per operation in a
+60-second window. It includes `count`, `total_ms`, `max_ms`, total `rows` and
+`tally_rows`, `error_count` and `slow_count`. A slow read takes at least
+`slow_threshold_ms`, initially 50 ms. `window_ms` reports the actual elapsed
+window, which can be longer if the event loop stalls or shorter at shutdown.
+Empty windows produce no record. Aggregates never split by task or owner.
+Shutdown flushes available summaries through the best-effort writer.
 
 ### Task timing
 

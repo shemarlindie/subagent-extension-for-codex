@@ -7,6 +7,7 @@ import {
   TURN_CLOSING_EVENTS,
   type TurnActivityPage,
 } from "../../../../shared/tasks/activity/activity-tail.js";
+import type { ReadWork } from "./read-metrics.js";
 import type { Store } from "./store.js";
 
 /** How many tasks keep a tally. Each is a few counts, so this stays small. */
@@ -28,14 +29,20 @@ export class ActivityPages {
 
   /** A task's page. The caller has checked that the task belongs to its owner. */
   page(taskId: string, after: number): ActivityPage {
-    const start = this.store.eventWindowStart(taskId, EVENT_TAIL_SIZE),
-      dropped = this.tally(taskId, start);
+    return this.store.reads.measure("activity_latest", (work) => {
+      const start = this.store.eventWindowStart(taskId, EVENT_TAIL_SIZE),
+        dropped = this.tally(taskId, start, work);
 
-    return {
-      // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
-      events: this.store.taskEvents(taskId, Math.max(after, start - 1)),
-      ...(dropped ? { dropped } : {}),
-    };
+      const page = {
+        // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
+        events: this.store.taskEvents(taskId, Math.max(after, start - 1)),
+        ...(dropped ? { dropped } : {}),
+      };
+
+      work.rows = page.events.length;
+
+      return page;
+    });
   }
 
   /**
@@ -44,31 +51,40 @@ export class ActivityPages {
    * rest. A turn that has not ended runs to the newest event.
    */
   turn(taskId: string, turn: number): TurnActivityPage {
-    const after = this.turnClose(taskId, turn - 1) ?? 0,
-      through = this.turnClose(taskId, turn) ?? Number.MAX_SAFE_INTEGER,
-      start = this.store.rangeWindowStart(
-        taskId,
-        after,
-        through,
-        EVENT_TAIL_SIZE,
-      );
+    return this.store.reads.measure("activity_turn", (work) => {
+      work.cache = "none";
 
-    let dropped: DroppedSummary | undefined;
+      const after = this.turnClose(taskId, turn - 1) ?? 0,
+        through = this.turnClose(taskId, turn) ?? Number.MAX_SAFE_INTEGER,
+        start = this.store.rangeWindowStart(
+          taskId,
+          after,
+          through,
+          EVENT_TAIL_SIZE,
+        );
 
-    for (let cursor = after; ;) {
-      const older = this.store.taskEvents(taskId, cursor, start);
-      if (!older.length) break;
+      let dropped: DroppedSummary | undefined;
 
-      dropped = addDropped(dropped, older);
-      cursor = older.at(-1)!.id;
-    }
+      for (let cursor = after; ;) {
+        const older = this.store.taskEvents(taskId, cursor, start);
+        if (!older.length) break;
 
-    return {
-      turn,
-      // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
-      events: this.store.taskEvents(taskId, start - 1, through + 1),
-      ...(dropped ? { dropped } : {}),
-    };
+        work.tally_rows += older.length;
+        dropped = addDropped(dropped, older);
+        cursor = older.at(-1)!.id;
+      }
+
+      const page = {
+        turn,
+        // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
+        events: this.store.taskEvents(taskId, start - 1, through + 1),
+        ...(dropped ? { dropped } : {}),
+      };
+
+      work.rows = page.events.length;
+
+      return page;
+    });
   }
 
   /**
@@ -88,13 +104,15 @@ export class ActivityPages {
   }
 
   /** Counts the events between the last tallied one and the window's start. */
-  private tally(taskId: string, start: number) {
+  private tally(taskId: string, start: number, work: ReadWork) {
+    work.cache = this.tallies.has(taskId) ? "hit" : "miss";
     let { through, summary } = this.tallies.get(taskId) ?? { through: 0 };
 
     for (;;) {
       const older = this.store.taskEvents(taskId, through, start);
       if (!older.length) break;
 
+      work.tally_rows += older.length;
       summary = addDropped(summary, older);
       through = older.at(-1)!.id;
     }

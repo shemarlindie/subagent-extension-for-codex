@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
-import { and, desc, eq, gt, inArray, lt, lte, max, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, lte, max, sql } from "drizzle-orm";
 
 import { decodedEvent } from "../../../../shared/events/decode.js";
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
@@ -21,7 +21,9 @@ import {
   type Database,
   openDatabase,
 } from "../../../platform/database/database.js";
+import { chatEvents } from "./chat-events.js";
 import { publishListeners } from "./publish-listeners.js";
+import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
@@ -41,6 +43,8 @@ const toTask = (row: { id: string; body: string }) =>
 export class Store {
   /** The shared connection, which other features' storage also uses. */
   readonly database: Database;
+  readonly reads = new ReadMetrics();
+
   /** The tasks saved in the open transaction, with the `updated_at` to restore on rollback. */
   private saved?: [Task, string][];
   /** The owners whose tasks the open transaction changed. */
@@ -168,13 +172,15 @@ export class Store {
 
   /** An owner's tasks, or every task without one, newest first. */
   all(owner?: string): Task[] {
-    return this.orm
-      .select({ id: tasks.id, body: tasks.body })
-      .from(tasks)
-      .where(owner ? eq(tasks.owner, owner) : undefined)
-      .all()
-      .map(toTask)
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return this.reads.rows("task_list", () =>
+      this.orm
+        .select({ id: tasks.id, body: tasks.body })
+        .from(tasks)
+        .where(owner ? eq(tasks.owner, owner) : undefined)
+        .all()
+        .map(toTask)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    );
   }
 
   get(id: string, owner: string): Task {
@@ -509,28 +515,11 @@ export class Store {
    * compactions, which Claude reports among its other system messages.
    */
   chatEvents(id: string, types: string[]): Event[] {
-    const compaction = and(
-      eq(events.type, "claude.activity"),
-      // A plain text match first, so most activity skips parsing its JSON.
-      sql`instr(${events.data}, 'compact') > 0`,
-      sql`(json_extract(${events.data},'$.raw_response.subtype')='compact_boundary' OR json_extract(${events.data},'$.raw_response.compact_result')='failed')`,
-    );
-
-    return this.orm
-      .select()
-      .from(events)
-      .where(
-        and(
-          eq(events.task_id, id),
-          or(inArray(events.type, types), compaction),
-        ),
-      )
-      .orderBy(events.id)
-      .all()
-      .map(decodeEvent);
+    return this.reads.rows("chat", () => chatEvents(this.orm, id, types));
   }
 
   close() {
+    this.reads.flush();
     this.database.close();
   }
 }

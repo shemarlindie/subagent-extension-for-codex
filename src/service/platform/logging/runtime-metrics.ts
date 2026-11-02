@@ -8,15 +8,26 @@ export function startRuntimeMetrics(activeTasks: () => number) {
   delay.enable();
   let previous = performance.eventLoopUtilization();
   let previousCpu = process.cpuUsage();
+  let previousTime = performance.now();
 
   const timer = setInterval(() => {
     const utilization = performance.eventLoopUtilization(previous);
     previous = performance.eventLoopUtilization();
-    const cpu = process.cpuUsage(previousCpu);
-    previousCpu = process.cpuUsage();
+    const currentCpu = process.cpuUsage();
+    const currentTime = performance.now();
+
+    const cpu = {
+      user: currentCpu.user - previousCpu.user,
+      system: currentCpu.system - previousCpu.system,
+    };
+
+    const interval = currentTime - previousTime;
+    previousCpu = currentCpu;
+    previousTime = currentTime;
     const memory = process.memoryUsage();
 
     logEvent("info", "service.resources", {
+      interval_ms: interval,
       active_tasks: activeTasks(),
       rss_bytes: memory.rss,
       heap_used_bytes: memory.heapUsed,

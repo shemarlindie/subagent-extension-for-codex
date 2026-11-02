@@ -1,9 +1,11 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { performance } from "node:perf_hooks";
 
 import { expect, test, vi } from "vitest";
 
+import * as logging from "./logger.js";
 import { configureLogging, flushLogs } from "./logger.js";
 import { startRuntimeMetrics } from "./runtime-metrics.js";
 
@@ -37,6 +39,7 @@ test("samples bounded resource metrics and stops sampling on cleanup", async (t)
     "event_loop_max_ms",
     "cpu_user_ms",
     "cpu_system_ms",
+    "interval_ms",
   ]) {
     expect(record[field]).toEqual(expect.any(Number));
     expect(record[field]).toBeGreaterThanOrEqual(0);
@@ -49,4 +52,26 @@ test("samples bounded resource metrics and stops sampling on cleanup", async (t)
   await flushLogs();
   expect(activeTasks).toHaveBeenCalledTimes(1);
   expect(await readFile(path, "utf8")).toBe(text);
+});
+
+test("resource intervals follow the monotonic sample clock when sampling is delayed", (t) => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  let clock = 100;
+  vi.spyOn(performance, "now").mockImplementation(() => clock);
+  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
+  const stop = startRuntimeMetrics(() => 0);
+
+  t.onTestFinished(() => {
+    stop();
+    vi.useRealTimers();
+  });
+
+  clock += 60_000;
+  vi.advanceTimersByTime(60_000);
+  clock += 95_000;
+  vi.advanceTimersByTime(60_000);
+
+  expect(log.mock.calls.map(([, , fields]) => fields?.interval_ms)).toEqual([
+    60_000, 95_000,
+  ]);
 });
