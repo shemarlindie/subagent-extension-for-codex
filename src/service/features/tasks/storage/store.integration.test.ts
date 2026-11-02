@@ -389,3 +389,113 @@ test("stored events whose data isn't a JSON object fail with their id", (t) => {
     new RegExp(`Stored event ${lastInsertRowid} is malformed`),
   );
 });
+
+test("execution storage counts committed UTF-8 JSON once and releases its counters after settlement", (t) => {
+  const { store, task } = transactionFixture(t);
+  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
+  const before = store.event(task, "task.started").id;
+  const other = { ...task, id: "unrelated" };
+  store.save(other);
+  const finish = store.beginEventStorage(task.id, 1);
+  let serializations = 0;
+
+  store.transaction(() => {
+    store.eventOpaque(task, "fixture.activity", {
+      raw_response: { fixture: true },
+      content: {
+        toJSON() {
+          serializations++;
+
+          return "é🧪";
+        },
+      },
+    });
+
+    store.eventOpaque(task, "agent.message", {
+      role: "assistant",
+      text: "日本語",
+      raw_response: undefined,
+    });
+
+    store.event(other, "task.started");
+  });
+
+  expect(() =>
+    store.transaction(() => {
+      store.eventOpaque(task, "fixture.activity", {
+        raw_response: { rolled_back: true },
+      });
+
+      throw new Error("rollback");
+    }),
+  ).toThrow("rollback");
+
+  // Read the persisted strings independently of the production byte counter.
+  const committed = store.database.client
+    .prepare("SELECT data FROM events WHERE task_id = ? AND id > ? ORDER BY id")
+    .all(task.id, before) as { data: string }[];
+
+  const bytes = committed.reduce(
+    (total, row) => total + new TextEncoder().encode(row.data).length,
+    0,
+  );
+
+  finish("completed");
+  expect(serializations).toBe(1);
+
+  expect(log).toHaveBeenLastCalledWith("info", "task.event_storage", {
+    task_id: task.id,
+    turn: 1,
+    status: "completed",
+    event_count: 2,
+    json_bytes: bytes,
+    raw_response_event_count: 1,
+  });
+
+  store.event(task, "task.completed");
+  finish("completed");
+
+  expect(
+    log.mock.calls.filter(([, event]) => event === "task.event_storage"),
+  ).toHaveLength(1);
+
+  const next = store.beginEventStorage(task.id, 2);
+  store.event(task, "task.started");
+  next("interrupted");
+
+  expect(log).toHaveBeenLastCalledWith("info", "task.event_storage", {
+    task_id: task.id,
+    turn: 2,
+    status: "interrupted",
+    event_count: 1,
+    json_bytes: 2,
+    raw_response_event_count: 0,
+  });
+});
+
+test("a failed storage summary cannot change settlement or leave its counters active", (t) => {
+  const { store, task } = transactionFixture(t);
+
+  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {
+    throw new Error("diagnostics unavailable");
+  });
+
+  const finish = store.beginEventStorage(task.id, 1);
+  store.event(task, "task.started");
+  expect(() => finish("failed")).not.toThrow();
+  log.mockReset();
+  store.event(task, "task.completed");
+  finish("failed");
+  expect(log).not.toHaveBeenCalled();
+
+  store.beginEventStorage(task.id, 2)("completed");
+
+  expect(log).toHaveBeenCalledExactlyOnceWith("info", "task.event_storage", {
+    task_id: task.id,
+    turn: 2,
+    status: "completed",
+    event_count: 0,
+    json_bytes: 0,
+    raw_response_event_count: 0,
+  });
+});

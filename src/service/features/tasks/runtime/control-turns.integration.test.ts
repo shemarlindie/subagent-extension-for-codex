@@ -3,8 +3,9 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { structuredPatch } from "diff";
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
+import * as logging from "../../../platform/logging/logger.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,
@@ -14,6 +15,77 @@ import {
   TestProvider,
   until,
 } from "./control-test-harness.js";
+
+test.each([
+  ["completed", "A fixture reply"],
+  ["failed", "[fixture:fail stage=before-reply]"],
+  ["interrupted", "[input]"],
+] as const)(
+  "%s execution summarizes storage after its final outcome is committed",
+  async (status, description) => {
+    const { c, store, repo } = await setup();
+    let firstEvent = 0;
+    let summary:
+      Record<string, string | number | boolean | undefined> | undefined;
+    let persisted: { data: string; type: string }[] = [];
+
+    const log = vi
+      .spyOn(logging, "logEvent")
+      .mockImplementation((_level, event, fields) => {
+        if (event === "task.execution_started") {
+          firstEvent = store.lastEventId();
+        }
+
+        if (event !== "task.event_storage") return;
+        summary = fields;
+
+        persisted = store.database.client
+          .prepare(
+            "SELECT data,type FROM events WHERE task_id = ? AND id > ? ORDER BY id",
+          )
+          .all(String(fields?.task_id), firstEvent) as {
+          data: string;
+          type: string;
+        }[];
+      });
+
+    const task = await c.start("alice", input(repo, description));
+
+    if (status === "interrupted") {
+      await until(() => !!store.get(task.id, "alice").pending_input);
+      await c.interrupt("alice", task.id);
+    }
+
+    await until(() => !!summary);
+
+    const bytes = persisted.reduce(
+      (total, row) => total + new TextEncoder().encode(row.data).length,
+      0,
+    );
+
+    const rawResponses = persisted.filter((row) =>
+      Object.hasOwn(JSON.parse(row.data), "raw_response"),
+    ).length;
+
+    expect(persisted.at(-1)?.type).toBe(`task.${status}`);
+    expect(persisted.some((row) => row.type === "task.turn_ended")).toBe(true);
+
+    expect(summary).toEqual({
+      task_id: task.id,
+      turn: 1,
+      status,
+      event_count: persisted.length,
+      json_bytes: bytes,
+      raw_response_event_count: rawResponses,
+    });
+
+    await c.close();
+
+    expect(
+      log.mock.calls.filter(([, event]) => event === "task.event_storage"),
+    ).toHaveLength(1);
+  },
+);
 
 test("fixture invalid-session marker triggers the normal continuation recovery path", async () => {
   const { c, store, repo } = await setup();

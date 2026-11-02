@@ -22,6 +22,7 @@ import {
   openDatabase,
 } from "../../../platform/database/database.js";
 import { chatEvents } from "./chat-events.js";
+import { EventStorageMetrics } from "./event-storage-metrics.js";
 import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
@@ -44,6 +45,7 @@ export class Store {
   /** The shared connection, which other features' storage also uses. */
   readonly database: Database;
   readonly reads = new ReadMetrics();
+  private readonly eventStorage = new EventStorageMetrics();
 
   /** The tasks saved in the open transaction, with the `updated_at` to restore on rollback. */
   private saved?: [Task, string][];
@@ -57,6 +59,10 @@ export class Store {
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
     this.database = openDatabase(path);
+  }
+
+  beginEventStorage(taskId: string, turn: number) {
+    return this.eventStorage.begin(taskId, turn);
   }
 
   private get orm() {
@@ -229,11 +235,20 @@ export class Store {
   ): Event {
     const timestamp = now();
 
+    const serialized = JSON.stringify(data);
+
     const { id } = this.orm
       .insert(events)
-      .values({ task_id: t.id, type, timestamp, data: JSON.stringify(data) })
+      .values({ task_id: t.id, type, timestamp, data: serialized })
       .returning({ id: events.id })
       .get();
+
+    this.eventStorage.committed(
+      this.database,
+      t.id,
+      serialized,
+      Object.hasOwn(data, "raw_response") && data.raw_response !== undefined,
+    );
 
     const event = decodedEvent({ id, task_id: t.id, type, timestamp, data });
     this.database.afterCommit(() => this.publish("event", event, t.owner));

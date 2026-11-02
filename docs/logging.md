@@ -146,6 +146,23 @@ window, which can be longer if the event loop stalls or shorter at shutdown.
 Empty windows produce no record. Aggregates never split by task or owner.
 Shutdown flushes available summaries through the best-effort writer.
 
+### Event storage per turn
+
+`task.event_storage` summarizes events committed while one service execution is
+active, including failed and interrupted executions that settle normally. It
+identifies `task_id`, `turn` and execution outcome `status`, even when another
+turn is queued:
+
+- `event_count` counts committed event inserts, including final outcome events.
+- `json_bytes` counts UTF-8 bytes in their persisted event-data JSON. It excludes
+  SQLite page overhead and the other event columns.
+- `raw_response_event_count` counts events carrying an inline `raw_response`.
+  Repeated deliveries count separately.
+
+Summaries exclude rolled-back inserts and historical events. A crash can lose
+the current summary. Raw-capture counts and bytes remain unavailable until
+separate capture storage exists.
+
 ### Task timing
 
 `timing.jsonl` holds `task.timing` records. Each has `timestamp`, `phase` and

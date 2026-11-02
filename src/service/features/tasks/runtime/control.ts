@@ -353,6 +353,7 @@ export class Control {
   }
 
   private async executeTurn(t: Task, a: Active) {
+    const finishStorage = this.store.beginEventStorage(t.id, t.turn);
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
     let reply: string | undefined;
@@ -414,6 +415,7 @@ export class Control {
         runtime: Date.now() - begin,
         reply,
         costBefore,
+        finishStorage,
       });
     }
   }
@@ -553,6 +555,7 @@ export class Control {
       runtime: number;
       reply: string | undefined;
       costBefore: number;
+      finishStorage: (status: string) => void;
     },
   ) {
     t.runtime_ms += turn.runtime;
@@ -568,8 +571,9 @@ export class Control {
     delete t.waiting_reason;
     t.completed_at = now();
 
+    const outcome = t.status as "completed" | "failed" | "interrupted";
+
     try {
-      const outcome = t.status as "completed" | "failed" | "interrupted";
       this.drafts.clear(t.id);
 
       // The turn's end, what follows it and the task's new status commit together.
@@ -590,6 +594,8 @@ export class Control {
         }
       });
     } finally {
+      // Settle diagnostics before queued work can start and replace its counters.
+      turn.finishStorage(outcome);
       // A failed write must not leave the task held as running.
       this.active.delete(t.id);
       this.queueWaits.capacity(this.active.size >= this.concurrency);
