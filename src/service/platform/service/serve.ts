@@ -11,6 +11,7 @@ import {
 } from "../../features/tasks/runtime/timing.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
+import { useIncrementalVacuum } from "../database/database.js";
 import {
   configureLogging,
   flushLogs,
@@ -113,6 +114,7 @@ export async function serve({
   ]);
 
   const store = new Store(join(data, "console.sqlite"));
+  useIncrementalVacuum(store.database);
 
   const providers = makeProviders
     ? makeProviders(store, data)

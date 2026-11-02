@@ -125,7 +125,8 @@ export class Store {
 
   /**
    * Deletes a task. Its events and pending forms
-   * reference it and are deleted with it.
+   * reference it and are deleted with it, and the service's database returns
+   * their space to the file system.
    */
   delete(id: string, owner: string) {
     this.get(id, owner);
@@ -134,6 +135,8 @@ export class Store {
       .delete(tasks)
       .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
       .run();
+
+    this.database.client.exec("PRAGMA incremental_vacuum");
 
     this.markChanged(owner);
   }

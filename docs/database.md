@@ -52,6 +52,15 @@ committed migration.
   keeps the newest three. Plugin updates arrive automatically, so these backups
   are the way back from a bad migration.
 
+## Free space
+
+The service opens the database with `auto_vacuum=INCREMENTAL` and runs
+`PRAGMA incremental_vacuum` after deleting a task, so deleted history returns
+its space to the file system. A database created in another mode is converted
+on the service's first open with one `VACUUM`, logged as
+`database.vacuum_started` and `database.vacuum_completed`. That open takes
+longer on a large database. The projects CLI never converts it.
+
 ## Restore a backup
 
 1. Stop the service.

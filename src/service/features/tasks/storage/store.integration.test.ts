@@ -7,6 +7,7 @@ import { expect, test, vi } from "vitest";
 
 import { type Event } from "../../../../shared/events/types.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { useIncrementalVacuum } from "../../../platform/database/database.js";
 import * as logging from "../../../platform/logging/logger.js";
 import { Store } from "./store.js";
 
@@ -68,6 +69,27 @@ test("task deletion removes events and preserves other tasks, including matching
 
   assert.equal(store.get(`${task.id}_1`, task.owner).id, `${task.id}_1`);
   assert.equal(store.events(`${task.id}_1`, task.owner).length, 1);
+});
+
+test("task deletion returns its pages once the database uses incremental vacuum", (t) => {
+  const { store, task } = deletionFixture();
+  t.onTestFinished(() => store.close());
+  useIncrementalVacuum(store.database);
+  store.eventOpaque(task, "claude.activity", { text: "x".repeat(500_000) });
+
+  const pages = () =>
+    store.database.client.prepare("PRAGMA page_count").get()!.page_count;
+
+  const before = pages();
+
+  store.delete(task.id, task.owner);
+  assert.ok(Number(pages()) < Number(before));
+
+  assert.equal(
+    store.database.client.prepare("PRAGMA freelist_count").get()!
+      .freelist_count,
+    0,
+  );
 });
 
 test("task deletion leaves every record in place if deleting the task fails", (t) => {

@@ -14,10 +14,15 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { events } from "../../features/tasks/storage/schema.js";
-import { migrationsFolder, openDatabase } from "./database.js";
+import * as logging from "../logging/logger.js";
+import {
+  migrationsFolder,
+  openDatabase,
+  useIncrementalVacuum,
+} from "./database.js";
 
 function scratch(t: { onTestFinished(fn: () => void): void }) {
   const dir = mkdtempSync(join(tmpdir(), "database-"));
@@ -270,6 +275,148 @@ test("processes opening a new database together migrate it once", async (t) => {
     ledger(db),
     readdirSync(migrationsFolder).filter((name) => /^\d{14}_/.test(name)),
   );
+});
+
+test("stored copies are stripped from earlier events, keeping their IDs, errors and full-event contents", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "console.sqlite");
+  const folder = join(dir, "migrations");
+  const strip = "20261102081307_strip_stored_copies";
+  cpSync(migrationsFolder, folder, { recursive: true });
+  rmSync(join(folder, strip), { recursive: true });
+  const before = openDatabase(path, folder);
+
+  const insert = before.client.prepare(
+    "INSERT INTO events(task_id, type, timestamp, data, response_ref, original_response) VALUES(?,?,'now',?,?,?)",
+  );
+
+  const rows: [string, string, object, string?][] = [
+    ["a", "claude.activity", { type: "user", raw_response: { type: "user" } }],
+    [
+      "a",
+      "tool.started",
+      {
+        id: "edit",
+        name: "Edit",
+        input: {
+          file_path: "f",
+          old_string: "x",
+          new_string: "y",
+          replace_all: false,
+        },
+      },
+    ],
+    ["a", "tool.completed", { id: "edit", error: false, content: "Updated f" }],
+    [
+      "a",
+      "tool.started",
+      { id: "read", name: "Read", input: { file_path: "f" } },
+    ],
+    [
+      "a",
+      "tool.completed",
+      { id: "read", error: true, content: "No such file" },
+    ],
+    [
+      "a",
+      "tool.started",
+      { id: "bash", name: "Bash", input: { command: "ls" } },
+    ],
+    ["a", "tool.completed", { id: "bash", content: "f" }],
+    [
+      "a",
+      "agent.permission_decided",
+      { tool: "Write", input: { file_path: "f", content: "x" } },
+    ],
+    [
+      "a",
+      "tool.started",
+      {
+        id: "write",
+        name: "Write",
+        input: { file_path: "f", content: "x" },
+        response_ref: "full",
+      },
+      "full",
+    ],
+    [
+      "a",
+      "tool.completed",
+      { id: "write", content: "Wrote f", response_ref: "full-result" },
+    ],
+    ["b", "tool.completed", { id: "edit", content: "Updated g" }],
+  ];
+
+  for (const task of ["a", "b"]) {
+    before.client.prepare("INSERT INTO tasks VALUES(?,'alice','{}')").run(task);
+  }
+
+  for (const [task, type, data, original] of rows) {
+    insert.run(
+      task,
+      type,
+      JSON.stringify(data),
+      original ?? null,
+      original ? "{}" : null,
+    );
+  }
+
+  before.close();
+
+  cpSync(join(migrationsFolder, strip), join(folder, strip), {
+    recursive: true,
+  });
+
+  const after = openDatabase(path, folder);
+  t.onTestFinished(() => after.close());
+
+  const stored = after.client
+    .prepare("SELECT id, data, original_response FROM events ORDER BY id")
+    .all();
+
+  assert.deepEqual(
+    stored.map((row) => Number(row.id)),
+    rows.map((_, index) => index + 1),
+  );
+
+  const data = stored.map((row) => JSON.parse(String(row.data)));
+  assert.deepEqual(data[0], { type: "user" });
+  assert.deepEqual(data[1].input, { file_path: "f", replace_all: false });
+  assert.equal(data[2].content, "File content isn't stored.");
+  assert.equal(data[4].content, "No such file");
+  assert.equal(data[6].content, "f");
+  assert.deepEqual(data[7].input, { file_path: "f" });
+  assert.deepEqual(data[8].input, { file_path: "f", content: "x" });
+  assert.equal(data[9].content, "Wrote f");
+  assert.equal(data[10].content, "Updated g");
+  assert.equal(stored[8]?.original_response, "{}");
+});
+
+test("the service converts a database to incremental vacuum once, reclaiming free pages", (t) => {
+  const db = openDatabase(join(scratch(t), "console.sqlite"));
+  t.onTestFinished(() => db.close());
+  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
+  t.onTestFinished(() => log.mockRestore());
+
+  const pragma = (name: string) =>
+    Number(Object.values(db.client.prepare(`PRAGMA ${name}`).get()!)[0]);
+
+  db.client.exec(
+    "INSERT INTO tasks VALUES('a','alice',''); UPDATE tasks SET body = printf('%.*c', 500000, 'x'); DELETE FROM tasks",
+  );
+
+  assert.ok(pragma("freelist_count") > 0);
+  useIncrementalVacuum(db);
+  assert.equal(pragma("auto_vacuum"), 2);
+  assert.equal(pragma("freelist_count"), 0);
+
+  assert.deepEqual(
+    log.mock.calls.map(([, event]) => event),
+    ["database.vacuum_started", "database.vacuum_completed"],
+  );
+
+  useIncrementalVacuum(db);
+  assert.equal(log.mock.calls.length, 2);
 });
 
 test("a failed Drizzle query throws SQLite's error, without the query's values", (t) => {

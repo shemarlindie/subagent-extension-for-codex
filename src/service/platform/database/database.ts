@@ -6,6 +6,7 @@ import { DrizzleQueryError } from "drizzle-orm/errors";
 import { drizzle, type NodeSQLiteDatabase } from "drizzle-orm/node-sqlite";
 import { SQLiteAsyncPreparedQuery } from "drizzle-orm/sqlite-core/async/session";
 
+import { logEvent } from "../logging/logger.js";
 import { packagePath } from "../service/runtime.js";
 import { migrate } from "./migrate.js";
 
@@ -170,4 +171,26 @@ export function openDatabase(
     ...transactions(client),
     close: () => client.close(),
   };
+}
+
+const INCREMENTAL = 2;
+
+/**
+ * Lets `PRAGMA incremental_vacuum` return free pages to the file system.
+ * Converting an existing database rewrites it with one `VACUUM`, which also
+ * reclaims space freed earlier. The mode persists, so later opens skip it.
+ */
+export function useIncrementalVacuum(database: Database) {
+  const { client } = database;
+  const mode = client.prepare("PRAGMA auto_vacuum").get()?.auto_vacuum;
+  if (mode === INCREMENTAL) return;
+
+  const started = performance.now();
+  logEvent("info", "database.vacuum_started");
+  client.exec("PRAGMA auto_vacuum=INCREMENTAL");
+  client.exec("VACUUM");
+
+  logEvent("info", "database.vacuum_completed", {
+    duration_ms: Math.round(performance.now() - started),
+  });
 }
