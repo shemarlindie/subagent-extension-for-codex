@@ -4,14 +4,10 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 // record and events, with everything specific to the machine and account it
 // ran on replaced, so the file can be committed. See
 // docs/development.md#recorded-fixtures.
-import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
 import { normalizeClaudeMessage } from "../../../src/service/features/providers/claude/events/normalize";
 import type { RunContext } from "../../../src/service/features/providers/types";
 import type { EventEnvelope } from "../../../src/shared/events/event-contract";
-import {
-  normalizedClaudeFields,
-  originalResponseLookup,
-} from "../../../src/shared/providers/claude/responses";
+import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
 import type { Task } from "../../../src/shared/tasks/model";
 
 /** A recorded run, as `dev/panel/recorded/*.json` stores it. */
@@ -84,8 +80,8 @@ const PROVIDER_EVENTS = new Set([
  * - the task belongs to the preview owner, has no workspace (its Changes tab
  *   is empty), and is renamed when `title` is given.
  *
- * Provider events get their `activity` presentation again from the
- * sanitized SDK message, so they still match what the provider derives.
+ * Provider events are derived again from the sanitized original response,
+ * so they match what the provider records today.
  */
 export function recordFixture(
   task: Task,
@@ -191,14 +187,14 @@ export function recordFixture(
 
   const lookup = originalResponseLookup(sorted);
   const responseRefs = new Map<string, string>();
-  const sanitizedResponses = new Map<string, SDKMessage>();
+  const derivedEvents = new Map<string, DerivedEvent[]>();
   const identityFor = recordingResponseRefs();
 
   const recorded = sorted.map((event, index) => {
     const { raw_response: _raw, response_ref: _ref, ...fields } = event.data;
-    const data = sanitize(fields);
     const original = lookup(event);
     const identity = identityFor(event, original);
+    let data: Record<string, unknown>;
 
     if (PROVIDER_EVENTS.has(event.type) && !original) {
       throw new Error(
@@ -206,44 +202,42 @@ export function recordFixture(
       );
     }
 
-    const first = identity !== undefined && !responseRefs.has(identity);
+    if (identity) {
+      const first = !responseRefs.has(identity);
+      let raw: SDKMessage | undefined;
 
-    if (identity && first) {
-      responseRefs.set(identity, `response-${options.firstId + index}`);
-      sanitizedResponses.set(identity, sanitize(original!));
-    }
+      if (first) {
+        raw = sanitize(original!);
 
-    const raw = identity ? sanitizedResponses.get(identity) : undefined;
-    if (identity) data.response_ref = responseRefs.get(identity);
-    if (first) data.raw_response = raw;
+        if (raw.type === "system" && raw.subtype === "init") {
+          Object.assign(raw, INIT_SCRUB);
 
-    if (raw?.type === "system" && raw.subtype === "init") {
-      Object.assign(raw, INIT_SCRUB);
+          for (const key of INIT_DROP) {
+            delete (raw as unknown as Record<string, unknown>)[key];
+          }
+        }
 
-      for (const key of INIT_DROP) {
-        delete (raw as unknown as Record<string, unknown>)[key];
-      }
-    }
-
-    scrubRateLimits(data, options.start);
-
-    if (PROVIDER_EVENTS.has(event.type) && raw) {
-      delete data.activity;
-
-      if (
-        event.type === "claude.activity" ||
-        event.type === "agent.completed"
-      ) {
-        const normalized = normalizedClaudeFields(data);
-        for (const key of Object.keys(data)) delete data[key];
-        Object.assign(data, normalized);
+        scrubRateLimits(raw, options.start);
+        responseRefs.set(identity, `response-${options.firstId + index}`);
+        derivedEvents.set(identity, derivedFrom(raw));
       }
 
-      data.activity = claudeActivityPresentation({
-        type: event.type,
-        data,
-        rawResponse: raw,
-      });
+      const derived = derivedEvents.get(identity)!.shift();
+
+      if (derived?.type !== event.type) {
+        throw new Error(
+          `${event.task_id}#${event.id} differs from what the provider derives from its original response`,
+        );
+      }
+
+      data = {
+        ...derived.data,
+        response_ref: responseRefs.get(identity),
+        ...(raw ? { raw_response: raw } : {}),
+      };
+    } else {
+      data = sanitize(fields);
+      scrubRateLimits(data, options.start);
     }
 
     return {
@@ -278,6 +272,23 @@ export function recordFixture(
     },
     events: recorded,
   };
+}
+
+type DerivedEvent = { type: string; data: Record<string, unknown> };
+
+/** The events the provider derives from an original response today. */
+function derivedFrom(original: SDKMessage) {
+  const events: DerivedEvent[] = [];
+
+  const emit = (type: string, data: Record<string, unknown>) =>
+    events.push({ type, data });
+
+  normalizeClaudeMessage(
+    { emit, emitOpaque: emit } as unknown as RunContext,
+    original,
+  );
+
+  return events;
 }
 
 const parent = (path: string) => path.replace(/\/[^/]+\/?$/, "");
@@ -337,18 +348,7 @@ function recordingResponseRefs() {
 
     if (!remaining) {
       identity = `legacy-${event.id}`;
-
-      normalizeClaudeMessage(
-        {
-          emit: () => {
-            remaining++;
-          },
-          emitOpaque: () => {
-            remaining++;
-          },
-        } as unknown as RunContext,
-        original,
-      );
+      remaining = derivedFrom(original).length;
     }
 
     remaining--;

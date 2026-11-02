@@ -356,7 +356,6 @@ export class Control {
     const finishStorage = this.store.beginEventStorage(t.id, t.turn);
     const begin = Date.now();
     let timer: NodeJS.Timeout | undefined;
-    let reply: string | undefined;
     const costBefore = t.cost_usd ?? 0;
 
     const { signal } = a.abort;
@@ -389,8 +388,7 @@ export class Control {
       );
 
       signal.throwIfAborted();
-      reply = output.reply;
-      this.recordReply(t, reply, signal);
+      this.recordReply(t, output.reply, signal);
       t.status = "completed";
     } catch (error) {
       if (!a.stopStatus && !signal.aborted) {
@@ -413,7 +411,6 @@ export class Control {
 
       await this.finishTurn(t, a, {
         runtime: Date.now() - begin,
-        reply,
         costBefore,
         finishStorage,
       });
@@ -553,7 +550,6 @@ export class Control {
     a: Active,
     turn: {
       runtime: number;
-      reply: string | undefined;
       costBefore: number;
       finishStorage: (status: string) => void;
     },
@@ -587,7 +583,7 @@ export class Control {
 
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
-        recordStatusEvent(this.store, t, turn.reply);
+        recordStatusEvent(this.store, t);
 
         if (outcome === "completed" && a.parentMessage) {
           this.store.event(t, "parent.message", { text: a.parentMessage });

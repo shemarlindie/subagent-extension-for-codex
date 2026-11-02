@@ -374,7 +374,7 @@ export class Timeline {
     return this.turnResult(text, fields)
       .reply(text, turn)
       .turnEnded(turn, "completed", fields.duration_ms, fields.total_cost_usd)
-      .add("task.completed", { reply: text }, 200);
+      .add("task.completed", {}, 200);
   }
 
   /** The service's record of how a turn ended, for its outcome row. */

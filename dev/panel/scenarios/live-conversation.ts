@@ -139,7 +139,7 @@ function conversationTurn(cycle: number) {
     timeline
       .reply(finalReply, turn)
       .turnEnded(turn, "completed", 28_000, 0)
-      .add("task.completed", { reply: finalReply });
+      .add("task.completed");
   });
 
   return scheduled;

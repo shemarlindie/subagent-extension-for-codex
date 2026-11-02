@@ -85,7 +85,6 @@ const taskMessageRemovedPayloadSchema = z.object({
 });
 
 const taskStatusPayloadSchema = z.object({
-  reply: z.string().optional(),
   error: z.string().optional(),
 });
 

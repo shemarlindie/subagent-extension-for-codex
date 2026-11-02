@@ -287,13 +287,7 @@ const build = lifecycle(
     "task.turn_ended",
     { turn: 1, outcome: "completed", runtime_ms: 210000, cost_usd: 1.04 },
   ],
-  [
-    "task.completed",
-    {
-      reply:
-        "Cached module compilation in 60 files: every build module now uses the cached compiler.",
-    },
-  ],
+  ["task.completed"],
 );
 
 // --- Changes: every file in large-files.ts, for the file previews ----------
@@ -313,13 +307,7 @@ const profile = lifecycle(
     "task.turn_ended",
     { turn: 1, outcome: "completed", runtime_ms: 260000, cost_usd: 1.31 },
   ],
-  [
-    "task.completed",
-    {
-      reply:
-        "Wrote the build profile and its reports: the build log, size reports and a dependency graph.",
-    },
-  ],
+  ["task.completed"],
 );
 
 // --- A follow-up after its worktree was removed: the worktree comes back from
@@ -345,7 +333,7 @@ const resumed = lifecycle(
     "task.turn_ended",
     { turn: 1, outcome: "completed", runtime_ms: 98000, cost_usd: 0.41 },
   ],
-  ["task.completed", { reply: resumedReplies[0] }],
+  ["task.completed"],
   [
     "task.worktree_removed",
     {
@@ -378,7 +366,7 @@ const resumed = lifecycle(
     "task.turn_ended",
     { turn: 2, outcome: "completed", runtime_ms: 88000, cost_usd: 0.47 },
   ],
-  ["task.completed", { reply: resumedReplies[1] }],
+  ["task.completed"],
 );
 
 const dependent = lifecycle(

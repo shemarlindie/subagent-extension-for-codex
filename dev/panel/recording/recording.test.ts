@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
 import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import { startSchema, type Task } from "../../../src/shared/tasks/model";
 import { leftovers, recordFixture } from "./recording";
@@ -166,14 +165,21 @@ test("a recording is renumbered, moved to its start and owned by the preview", (
   );
 });
 
-test("provider events get their presentation again", () => {
-  const [started] = recorded.events;
-  assert.ok(started);
-  const { activity, ...data } = started.data;
+test("provider events are derived again from their original response", () => {
+  const [, rateLimited] = recorded.events;
+  assert.ok(rateLimited);
 
-  assert.deepEqual(
-    activity,
-    claudeActivityPresentation({ type: started.type, data }),
+  // The stored copy of the session ID goes, and the original keeps it.
+  assert.equal(rateLimited.data.session_id, undefined);
+
+  assert.equal(
+    (rateLimited.data.raw_response as Record<string, unknown>).session_id,
+    "preview-session",
+  );
+
+  assert.equal(
+    (rateLimited.data.activity as Record<string, unknown>).kind,
+    "rate_limit_event",
   );
 });
 
@@ -183,6 +189,7 @@ test("a current_repo recording maps its workspace to the fixture repository, and
     [
       {
         ...startedEvent,
+        type: "claude.activity",
         data: {
           raw_response: { cwd: "/scratch/repo/x", note: "/scratch/other" },
         },
@@ -275,18 +282,22 @@ test("thinking signatures are scrubbed in nested SDK blocks and stream deltas", 
           signature: "opaque-stream-signature",
         },
       },
+      tool_input: { signature: "ordinary tool input" },
     },
-    tool_input: { signature: "ordinary tool input" },
   };
 
-  const result = recordFixture(task, [{ ...startedEvent, data }], {
-    id: "preview-recorded-signatures",
-    start: "2026-10-02T11:00:00.000Z",
-    firstId: 1,
-    home,
-    host: "Someones-Mac.local",
-    username: "someone",
-  });
+  const result = recordFixture(
+    task,
+    [{ ...startedEvent, type: "claude.activity", data }],
+    {
+      id: "preview-recorded-signatures",
+      start: "2026-10-02T11:00:00.000Z",
+      firstId: 1,
+      home,
+      host: "Someones-Mac.local",
+      username: "someone",
+    },
+  );
 
   const text = JSON.stringify(result);
   assert.ok(!text.includes("opaque-thinking-signature"));
@@ -305,9 +316,8 @@ test("thinking signatures are scrubbed in nested SDK blocks and stream deltas", 
     event: {
       delta: { type: "signature_delta", signature: "preview-signature" },
     },
+    tool_input: data.raw_response.tool_input,
   });
-
-  assert.deepEqual(result.events[0]?.data.tool_input, data.tool_input);
 
   assert.equal(
     data.raw_response.message.content[0]?.signature,

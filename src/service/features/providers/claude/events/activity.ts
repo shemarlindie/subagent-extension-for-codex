@@ -282,25 +282,28 @@ export function claudeActivityPresentation(
       ? e.rawResponse.rate_limit_info
       : decodeClaudeRateLimitWindowInfo(d.rate_limit_info);
 
+  const failed = activityFailed(e);
+  const summaryIsResponse = e.type === "claude.activity" && d.type === "result";
+
+  const payloadSummary = string(
+    d.text ?? d.summary ?? d.description ?? d.message ?? d.error ?? d.result,
+  );
+
+  const summary =
+    (failed ? failureSummary(e) : undefined) ??
+    string(d.compact_error) ??
+    payloadSummary ??
+    (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
+
   const presentation: ActivityPresentation = {
     kind: key,
     quiet: quiet.has(key),
-    failed: activityFailed(e),
-    summary:
-      (activityFailed(e) ? failureSummary(e) : undefined) ??
-      string(
-        d.compact_error ??
-          d.text ??
-          d.summary ??
-          d.description ??
-          d.message ??
-          d.error ??
-          d.result,
-      ) ??
-      (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined),
-    ...(e.type === "claude.activity" && d.type === "result"
-      ? { summaryIsResponse: true }
+    failed,
+    // Activity falls back to the payload, so a summary that repeats it is left out.
+    ...(failed || summaryIsResponse || summary !== payloadSummary
+      ? { summary }
       : {}),
+    ...(summaryIsResponse ? { summaryIsResponse: true } : {}),
     thinking: thinking.has(key),
     liveStatus:
       [

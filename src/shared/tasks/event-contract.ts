@@ -72,7 +72,6 @@ interface TaskMessageRemovedPayload {
 }
 
 interface TaskStatusPayload {
-  reply?: string;
   error?: string;
 }
 

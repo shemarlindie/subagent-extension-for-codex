@@ -2,6 +2,7 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../../shared/events/event-types.js";
+import type { ActivityContent } from "../../../../../shared/providers/activity/types.js";
 import { normalizedClaudeFields } from "../../../../../shared/providers/claude/responses.js";
 import type { RunContext } from "../../types.js";
 import {
@@ -74,23 +75,22 @@ export function normalizeClaudeMessage(
     c.emitOpaque("claude.activity", { ...payload, activity });
   };
 
+  // An assistant message's text block repeats its text, so only user content
+  // keeps one.
+  const emitText = (text: string, content: ActivityContent) => {
+    if (m.type === "assistant") emit("agent.message", { role: m.type, text });
+    else emit("agent.content", { role: "user", text, content });
+  };
+
   if (m.type === "assistant" || m.type === "user") {
     const content = m.message.content;
 
     if (typeof content === "string") {
-      emit(m.type === "assistant" ? "agent.message" : "agent.content", {
-        role: m.type,
-        content,
-        text: content,
-      });
+      emitText(content, content);
     } else {
       for (const b of content) {
         if (b.type === "text") {
-          emit(m.type === "assistant" ? "agent.message" : "agent.content", {
-            role: m.type,
-            text: b.text,
-            content: claudeActivityContent(b),
-          });
+          emitText(b.text, claudeActivityContent(b));
         } else if (b.type === "tool_use") {
           emit("tool.started", {
             id: b.id,
@@ -122,8 +122,12 @@ export function normalizeClaudeMessage(
   } else if (m.type === "system" && m.subtype === "init") {
     emit("agent.started", { model: m.model, tools: m.tools });
   } else if (m.type === "result") {
+    const fields = normalizedClaudeFields(m);
+    // The service records a successful result as the turn's reply.
+    if (!m.is_error) delete fields.result;
+
     emit("agent.completed", {
-      ...normalizedClaudeFields(m),
+      ...fields,
       cost_usd: m.total_cost_usd,
       usage: m.usage,
     });

@@ -264,7 +264,9 @@ in the `dev-thread` thread and `/demo/project` project. Import the file in
 The recorder replaces machine paths and identifiers, including the local
 username in URLs and plugin names. It replaces SDK thinking signatures and
 streamed signature deltas with placeholders, removes local Claude configuration
-and private usage details, and shifts event IDs and times.
+and private usage details, and shifts event IDs and times. It derives provider
+events again from each sanitized original response, so their event data matches
+the current provider and can differ from the database.
 Replay maps recorded `tool_use_result` payloads through `claudeFileEdits`, so
 captured edits populate Changes. File previews still need a fixture workspace or
 prepared content.

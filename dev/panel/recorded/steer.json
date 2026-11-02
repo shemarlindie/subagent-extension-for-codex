@@ -121,6 +121,16 @@
           "WebSearch",
           "Write"
         ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "79074201-6f90-44c2-9665-562b5e9f234d",
+          "hasThinking": false
+        },
         "response_ref": "response-3002",
         "raw_response": {
           "type": "system",
@@ -188,16 +198,6 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "per_turn_effort_active": true,
           "view_mode": "default"
-        },
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "79074201-6f90-44c2-9665-562b5e9f234d",
-          "hasThinking": false
         }
       }
     },
@@ -210,16 +210,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "bd5a97a7-b8a4-47ee-9f84-c25c2f314b6f",
-        "response_ref": "response-3003",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "bd5a97a7-b8a4-47ee-9f84-c25c2f314b6f"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -230,6 +221,14 @@
           "title": "Claude status",
           "messageId": "bd5a97a7-b8a4-47ee-9f84-c25c2f314b6f",
           "hasThinking": false
+        },
+        "response_ref": "response-3003",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "bd5a97a7-b8a4-47ee-9f84-c25c2f314b6f"
         }
       }
     },
@@ -244,6 +243,15 @@
         "input": {
           "command": "sleep 5; echo one",
           "description": "Sleep then echo one"
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoHvtFcq8FNJvTanfstc",
+          "hasThinking": false
         },
         "response_ref": "response-3004",
         "raw_response": {
@@ -298,15 +306,6 @@
               "description": "Sleep then echo one"
             }
           }
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoHvtFcq8FNJvTanfstc",
-          "hasThinking": false
         }
       }
     },
@@ -335,18 +334,6 @@
           "resetsAt": 1790956800
         },
         "uuid": "f261ac6e-5f10-4ed9-9a4d-8393cf070c39",
-        "session_id": "preview-session",
-        "response_ref": "response-3006",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790956800
-          },
-          "uuid": "f261ac6e-5f10-4ed9-9a4d-8393cf070c39",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -357,6 +344,17 @@
           "title": "Rate limit update",
           "messageId": "f261ac6e-5f10-4ed9-9a4d-8393cf070c39",
           "hasThinking": false
+        },
+        "response_ref": "response-3006",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790956800
+          },
+          "uuid": "f261ac6e-5f10-4ed9-9a4d-8393cf070c39",
+          "session_id": "preview-session"
         }
       }
     },
@@ -369,15 +367,6 @@
         "type": "system",
         "subtype": "task_summary",
         "uuid": "f73a9cee-8022-4f4a-a99a-3c41082136e7",
-        "session_id": "preview-session",
-        "response_ref": "response-3007",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_summary",
-          "detail": "Sleeping then echo one",
-          "uuid": "f73a9cee-8022-4f4a-a99a-3c41082136e7",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_summary",
           "quiet": false,
@@ -387,6 +376,14 @@
           "title": "Task summary",
           "messageId": "f73a9cee-8022-4f4a-a99a-3c41082136e7",
           "hasThinking": false
+        },
+        "response_ref": "response-3007",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_summary",
+          "detail": "Sleeping then echo one",
+          "uuid": "f73a9cee-8022-4f4a-a99a-3c41082136e7",
+          "session_id": "preview-session"
         }
       }
     },
@@ -402,24 +399,10 @@
         "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
         "description": "Sleep then echo one",
         "uuid": "4743e2e0-2915-4d20-be5c-d7ba4d4920ce",
-        "session_id": "preview-session",
-        "response_ref": "response-3008",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_started",
-          "task_id": "b7s1m2ph1",
-          "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
-          "description": "Sleep then echo one",
-          "is_backgrounded": false,
-          "task_type": "local_bash",
-          "uuid": "4743e2e0-2915-4d20-be5c-d7ba4d4920ce",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_started",
           "quiet": false,
           "failed": false,
-          "summary": "Sleep then echo one",
           "thinking": false,
           "liveStatus": false,
           "title": "Background task started",
@@ -434,6 +417,18 @@
             "completed": false,
             "stopped": false
           }
+        },
+        "response_ref": "response-3008",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "b7s1m2ph1",
+          "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
+          "description": "Sleep then echo one",
+          "is_backgrounded": false,
+          "task_type": "local_bash",
+          "uuid": "4743e2e0-2915-4d20-be5c-d7ba4d4920ce",
+          "session_id": "preview-session"
         }
       }
     },
@@ -450,24 +445,10 @@
         "status": "completed",
         "summary": "Sleep then echo one",
         "uuid": "fbc09579-68dd-4c75-b811-5b2d124776a3",
-        "session_id": "preview-session",
-        "response_ref": "response-3009",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_notification",
-          "task_id": "b7s1m2ph1",
-          "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
-          "status": "completed",
-          "output_file": "",
-          "summary": "Sleep then echo one",
-          "uuid": "fbc09579-68dd-4c75-b811-5b2d124776a3",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_notification",
           "quiet": false,
           "failed": false,
-          "summary": "Sleep then echo one",
           "thinking": false,
           "liveStatus": false,
           "title": "Background task finished",
@@ -482,6 +463,18 @@
             "completed": true,
             "stopped": false
           }
+        },
+        "response_ref": "response-3009",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "b7s1m2ph1",
+          "tool_use_id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
+          "status": "completed",
+          "output_file": "",
+          "summary": "Sleep then echo one",
+          "uuid": "fbc09579-68dd-4c75-b811-5b2d124776a3",
+          "session_id": "preview-session"
         }
       }
     },
@@ -494,6 +487,15 @@
         "id": "toolu_019dKNR9GBmbLVaCBUcXJy4L",
         "error": false,
         "content": "one",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "f9802530-6cf6-48c8-b4b6-afa54545207a",
+          "hasThinking": false
+        },
         "response_ref": "response-3010",
         "raw_response": {
           "type": "user",
@@ -519,15 +521,6 @@
             "isImage": false,
             "noOutputExpected": false
           }
-        },
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "f9802530-6cf6-48c8-b4b6-afa54545207a",
-          "hasThinking": false
         }
       }
     },
@@ -549,16 +542,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "3a7f9046-0e77-4c9d-8806-2808cd62974d",
-        "response_ref": "response-3012",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "3a7f9046-0e77-4c9d-8806-2808cd62974d"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -569,6 +553,14 @@
           "title": "Claude status",
           "messageId": "3a7f9046-0e77-4c9d-8806-2808cd62974d",
           "hasThinking": false
+        },
+        "response_ref": "response-3012",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "3a7f9046-0e77-4c9d-8806-2808cd62974d"
         }
       }
     },
@@ -583,6 +575,15 @@
         "input": {
           "command": "sleep 5; echo two",
           "description": "Sleep then echo two"
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoHwS2a1Gik6RcvJx93H",
+          "hasThinking": false
         },
         "response_ref": "response-3013",
         "raw_response": {
@@ -639,15 +640,6 @@
           },
           "user_message_uuid": "66eb93b8-b2e9-4e0a-b7a8-76f8df0dbc49",
           "user_message_uuids": ["66eb93b8-b2e9-4e0a-b7a8-76f8df0dbc49"]
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoHwS2a1Gik6RcvJx93H",
-          "hasThinking": false
         }
       }
     },
@@ -664,18 +656,6 @@
           "resetsAt": 1790956800
         },
         "uuid": "6f56db74-322e-49fc-bac8-bf1ba3603ecf",
-        "session_id": "preview-session",
-        "response_ref": "response-3014",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790956800
-          },
-          "uuid": "6f56db74-322e-49fc-bac8-bf1ba3603ecf",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -686,6 +666,17 @@
           "title": "Rate limit update",
           "messageId": "6f56db74-322e-49fc-bac8-bf1ba3603ecf",
           "hasThinking": false
+        },
+        "response_ref": "response-3014",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790956800
+          },
+          "uuid": "6f56db74-322e-49fc-bac8-bf1ba3603ecf",
+          "session_id": "preview-session"
         }
       }
     },
@@ -701,24 +692,10 @@
         "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
         "description": "Sleep then echo two",
         "uuid": "09ad387e-e86e-44dd-b889-a2a860d7c25b",
-        "session_id": "preview-session",
-        "response_ref": "response-3015",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_started",
-          "task_id": "b71ll9grd",
-          "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
-          "description": "Sleep then echo two",
-          "is_backgrounded": false,
-          "task_type": "local_bash",
-          "uuid": "09ad387e-e86e-44dd-b889-a2a860d7c25b",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_started",
           "quiet": false,
           "failed": false,
-          "summary": "Sleep then echo two",
           "thinking": false,
           "liveStatus": false,
           "title": "Background task started",
@@ -733,6 +710,18 @@
             "completed": false,
             "stopped": false
           }
+        },
+        "response_ref": "response-3015",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_started",
+          "task_id": "b71ll9grd",
+          "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
+          "description": "Sleep then echo two",
+          "is_backgrounded": false,
+          "task_type": "local_bash",
+          "uuid": "09ad387e-e86e-44dd-b889-a2a860d7c25b",
+          "session_id": "preview-session"
         }
       }
     },
@@ -749,24 +738,10 @@
         "status": "completed",
         "summary": "Sleep then echo two",
         "uuid": "294f5dcc-6d18-473a-a2c3-c21aecf0d5fc",
-        "session_id": "preview-session",
-        "response_ref": "response-3016",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_notification",
-          "task_id": "b71ll9grd",
-          "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
-          "status": "completed",
-          "output_file": "",
-          "summary": "Sleep then echo two",
-          "uuid": "294f5dcc-6d18-473a-a2c3-c21aecf0d5fc",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_notification",
           "quiet": false,
           "failed": false,
-          "summary": "Sleep then echo two",
           "thinking": false,
           "liveStatus": false,
           "title": "Background task finished",
@@ -781,6 +756,18 @@
             "completed": true,
             "stopped": false
           }
+        },
+        "response_ref": "response-3016",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_notification",
+          "task_id": "b71ll9grd",
+          "tool_use_id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
+          "status": "completed",
+          "output_file": "",
+          "summary": "Sleep then echo two",
+          "uuid": "294f5dcc-6d18-473a-a2c3-c21aecf0d5fc",
+          "session_id": "preview-session"
         }
       }
     },
@@ -793,6 +780,15 @@
         "id": "toolu_01PLhBErZuVErEKKcLuti1uJ",
         "error": false,
         "content": "two",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "d1d286c1-e272-4d22-9c49-5042e17f10d3",
+          "hasThinking": false
+        },
         "response_ref": "response-3017",
         "raw_response": {
           "type": "user",
@@ -818,15 +814,6 @@
             "isImage": false,
             "noOutputExpected": false
           }
-        },
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "d1d286c1-e272-4d22-9c49-5042e17f10d3",
-          "hasThinking": false
         }
       }
     },
@@ -839,16 +826,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "0bedc457-4f63-4776-a233-2be2b851fd28",
-        "response_ref": "response-3018",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "0bedc457-4f63-4776-a233-2be2b851fd28"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -859,6 +837,14 @@
           "title": "Claude status",
           "messageId": "0bedc457-4f63-4776-a233-2be2b851fd28",
           "hasThinking": false
+        },
+        "response_ref": "response-3018",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "0bedc457-4f63-4776-a233-2be2b851fd28"
         }
       }
     },
@@ -868,14 +854,19 @@
       "type": "agent.message",
       "timestamp": "2026-10-02T11:00:16.639Z",
       "data": {
-        "role": "assistant",
-        "text": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
-        "content": {
-          "type": "text",
-          "text": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA"
-        },
         "message_id": "msg_011CfoHwtARm95CPM56TXQ6m",
         "parent_tool_use_id": null,
+        "role": "assistant",
+        "text": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoHwtARm95CPM56TXQ6m",
+          "hasThinking": false
+        },
         "response_ref": "response-3019",
         "raw_response": {
           "type": "assistant",
@@ -915,16 +906,6 @@
           "uuid": "98e2e423-e9e5-42a1-9477-4a7348deac49",
           "timestamp": "2026-10-07T17:45:00.878Z",
           "request_id": "req_preview_0003"
-        },
-        "activity": {
-          "kind": "agent.message",
-          "quiet": false,
-          "failed": false,
-          "summary": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoHwtARm95CPM56TXQ6m",
-          "hasThinking": false
         }
       }
     },
@@ -937,7 +918,16 @@
         "type": "system",
         "subtype": "post_turn_summary",
         "uuid": "5041b696-5c90-40ab-8c00-af6530b8d45c",
-        "session_id": "preview-session",
+        "activity": {
+          "kind": "post_turn_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Post turn summary",
+          "messageId": "5041b696-5c90-40ab-8c00-af6530b8d45c",
+          "hasThinking": false
+        },
         "response_ref": "response-3020",
         "raw_response": {
           "type": "system",
@@ -948,16 +938,6 @@
           "needs_action": "",
           "uuid": "5041b696-5c90-40ab-8c00-af6530b8d45c",
           "session_id": "preview-session"
-        },
-        "activity": {
-          "kind": "post_turn_summary",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "Post turn summary",
-          "messageId": "5041b696-5c90-40ab-8c00-af6530b8d45c",
-          "hasThinking": false
         }
       }
     },
@@ -967,7 +947,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:17.499Z",
       "data": {
-        "session_id": "preview-session",
         "total_cost_usd": 0.15088759999999998,
         "usage": {
           "input_tokens": 6,
@@ -1005,11 +984,19 @@
         },
         "is_error": false,
         "subtype": "success",
-        "result": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
         "type": "result",
         "duration_ms": 16644,
         "uuid": "db1417e1-7f77-4732-896d-fb536aeed5af",
         "cost_usd": 0.15088759999999998,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "db1417e1-7f77-4732-896d-fb536aeed5af",
+          "hasThinking": false
+        },
         "response_ref": "response-3021",
         "raw_response": {
           "duration_api_ms": 5348,
@@ -1110,16 +1097,6 @@
           "user_message_uuids": ["66eb93b8-b2e9-4e0a-b7a8-76f8df0dbc49"],
           "queued_turn_count": 0,
           "result_index": 0
-        },
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": false,
-          "summary": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "db1417e1-7f77-4732-896d-fb536aeed5af",
-          "hasThinking": false
         }
       }
     },
@@ -1150,9 +1127,7 @@
       "task_id": "preview-recorded-steer",
       "type": "task.completed",
       "timestamp": "2026-10-02T11:00:17.874Z",
-      "data": {
-        "reply": "Both commands ran in order:\n\n- First: `one`\n- Second: `two`\n\nBANANA"
-      }
+      "data": {}
     },
     {
       "id": 3025,
@@ -1221,6 +1196,16 @@
           "WebSearch",
           "Write"
         ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "fec156e4-5f27-4ae0-aca3-c72542a574d4",
+          "hasThinking": false
+        },
         "response_ref": "response-3028",
         "raw_response": {
           "type": "system",
@@ -1288,16 +1273,6 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "per_turn_effort_active": true,
           "view_mode": "default"
-        },
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "fec156e4-5f27-4ae0-aca3-c72542a574d4",
-          "hasThinking": false
         }
       }
     },
@@ -1310,16 +1285,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "6c7f5daf-4c2d-43e1-aaa2-e77737b08c9c",
-        "response_ref": "response-3029",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "6c7f5daf-4c2d-43e1-aaa2-e77737b08c9c"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -1330,6 +1296,14 @@
           "title": "Claude status",
           "messageId": "6c7f5daf-4c2d-43e1-aaa2-e77737b08c9c",
           "hasThinking": false
+        },
+        "response_ref": "response-3029",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "6c7f5daf-4c2d-43e1-aaa2-e77737b08c9c"
         }
       }
     },
@@ -1344,6 +1318,15 @@
         "input": {
           "command": "sleep 30; echo slow",
           "description": "Sleep 30s then echo slow"
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoHxBw2QCf4QDSLYLEHL",
+          "hasThinking": false
         },
         "response_ref": "response-3030",
         "raw_response": {
@@ -1398,15 +1381,6 @@
               "description": "Sleep 30s then echo slow"
             }
           }
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoHxBw2QCf4QDSLYLEHL",
-          "hasThinking": false
         }
       }
     },
@@ -1419,6 +1393,16 @@
         "id": "toolu_01WRC1gJFU6NfaSezQ5rxHW6",
         "error": true,
         "content": "<tool_use_error>Blocked: sleep 30 followed by: echo slow. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_background: true. Do not chain shorter sleeps to work around this block.</tool_use_error>",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": true,
+          "summary": "<tool_use_error>Blocked: sleep 30 followed by: echo slow. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_background: true. Do not chain shorter sleeps to work around this block.</tool_use_error>",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "b8495bdf-fdd2-4c0b-9d0b-91a6792922e2",
+          "hasThinking": false
+        },
         "response_ref": "response-3031",
         "raw_response": {
           "type": "user",
@@ -1438,16 +1422,6 @@
           "uuid": "b8495bdf-fdd2-4c0b-9d0b-91a6792922e2",
           "timestamp": "2026-10-07T17:45:04.349Z",
           "tool_use_result": "Error: Blocked: sleep 30 followed by: echo slow. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_background: true. Do not chain shorter sleeps to work around this block."
-        },
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": true,
-          "summary": "<tool_use_error>Blocked: sleep 30 followed by: echo slow. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_background: true. Do not chain shorter sleeps to work around this block.</tool_use_error>",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "b8495bdf-fdd2-4c0b-9d0b-91a6792922e2",
-          "hasThinking": false
         }
       }
     },
@@ -1464,18 +1438,6 @@
           "resetsAt": 1790956800
         },
         "uuid": "631017f9-cd7f-400e-9229-f132a46957da",
-        "session_id": "preview-session",
-        "response_ref": "response-3032",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790956800
-          },
-          "uuid": "631017f9-cd7f-400e-9229-f132a46957da",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -1486,6 +1448,17 @@
           "title": "Rate limit update",
           "messageId": "631017f9-cd7f-400e-9229-f132a46957da",
           "hasThinking": false
+        },
+        "response_ref": "response-3032",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790956800
+          },
+          "uuid": "631017f9-cd7f-400e-9229-f132a46957da",
+          "session_id": "preview-session"
         }
       }
     },
@@ -1498,16 +1471,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "044725ea-5383-4183-aa7e-0334deff7270",
-        "response_ref": "response-3033",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "044725ea-5383-4183-aa7e-0334deff7270"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -1518,6 +1482,14 @@
           "title": "Claude status",
           "messageId": "044725ea-5383-4183-aa7e-0334deff7270",
           "hasThinking": false
+        },
+        "response_ref": "response-3033",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "044725ea-5383-4183-aa7e-0334deff7270"
         }
       }
     },
@@ -1530,15 +1502,6 @@
         "type": "system",
         "subtype": "task_summary",
         "uuid": "aede29f9-554a-41e3-ad85-efffff63c9ba",
-        "session_id": "preview-session",
-        "response_ref": "response-3034",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_summary",
-          "detail": "Sleeping 30s then echo slow",
-          "uuid": "aede29f9-554a-41e3-ad85-efffff63c9ba",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_summary",
           "quiet": false,
@@ -1548,6 +1511,14 @@
           "title": "Task summary",
           "messageId": "aede29f9-554a-41e3-ad85-efffff63c9ba",
           "hasThinking": false
+        },
+        "response_ref": "response-3034",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_summary",
+          "detail": "Sleeping 30s then echo slow",
+          "uuid": "aede29f9-554a-41e3-ad85-efffff63c9ba",
+          "session_id": "preview-session"
         }
       }
     },
@@ -1578,14 +1549,24 @@
       "type": "agent.content",
       "timestamp": "2026-10-02T11:00:20.252Z",
       "data": {
+        "message_id": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
+        "parent_tool_use_id": null,
         "role": "user",
         "text": "[Request interrupted by user]",
         "content": {
           "type": "text",
           "text": "[Request interrupted by user]"
         },
-        "message_id": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
-        "parent_tool_use_id": null,
+        "activity": {
+          "kind": "agent.content",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "User content",
+          "messageId": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
+          "hasThinking": false
+        },
         "response_ref": "response-3037",
         "raw_response": {
           "type": "user",
@@ -1602,17 +1583,6 @@
           "session_id": "preview-session",
           "uuid": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
           "timestamp": "2026-10-07T17:45:04.504Z"
-        },
-        "activity": {
-          "kind": "agent.content",
-          "quiet": false,
-          "failed": false,
-          "summary": "[Request interrupted by user]",
-          "thinking": false,
-          "liveStatus": false,
-          "title": "User content",
-          "messageId": "a9ec7a53-54a0-4cac-a2ec-0ea2986ffd4e",
-          "hasThinking": false
         }
       }
     },
@@ -1622,7 +1592,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:20.254Z",
       "data": {
-        "session_id": "preview-session",
         "total_cost_usd": 0.16163299999999997,
         "usage": {
           "input_tokens": 2,
@@ -1667,6 +1636,16 @@
         "duration_ms": 1645,
         "uuid": "5f1f68f2-ca9a-48d1-ab64-2a9178c73b40",
         "cost_usd": 0.16163299999999997,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": true,
+          "summary": "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "5f1f68f2-ca9a-48d1-ab64-2a9178c73b40",
+          "hasThinking": false
+        },
         "response_ref": "response-3038",
         "raw_response": {
           "duration_api_ms": 6807,
@@ -1762,16 +1741,6 @@
           "uuid": "5f1f68f2-ca9a-48d1-ab64-2a9178c73b40",
           "queued_turn_count": 0,
           "result_index": 0
-        },
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": true,
-          "summary": "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=tool_use",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "5f1f68f2-ca9a-48d1-ab64-2a9178c73b40",
-          "hasThinking": false
         }
       }
     },
@@ -1842,6 +1811,16 @@
           "WebSearch",
           "Write"
         ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "e9c17dd9-accb-4b1f-9433-4b5010e76152",
+          "hasThinking": false
+        },
         "response_ref": "response-3042",
         "raw_response": {
           "type": "system",
@@ -1909,16 +1888,6 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "per_turn_effort_active": true,
           "view_mode": "default"
-        },
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "e9c17dd9-accb-4b1f-9433-4b5010e76152",
-          "hasThinking": false
         }
       }
     },
@@ -1931,16 +1900,7 @@
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "session_id": "preview-session",
         "uuid": "47494aae-fbb9-4a6b-93ff-fe510d21fa74",
-        "response_ref": "response-3043",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "requesting",
-          "session_id": "preview-session",
-          "uuid": "47494aae-fbb9-4a6b-93ff-fe510d21fa74"
-        },
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -1951,6 +1911,14 @@
           "title": "Claude status",
           "messageId": "47494aae-fbb9-4a6b-93ff-fe510d21fa74",
           "hasThinking": false
+        },
+        "response_ref": "response-3043",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "47494aae-fbb9-4a6b-93ff-fe510d21fa74"
         }
       }
     },
@@ -1960,14 +1928,19 @@
       "type": "agent.message",
       "timestamp": "2026-10-02T11:00:22.824Z",
       "data": {
-        "role": "assistant",
-        "text": "PEAR",
-        "content": {
-          "type": "text",
-          "text": "PEAR"
-        },
         "message_id": "msg_011CfoHxQnvW62fTe8TqF1P4",
         "parent_tool_use_id": null,
+        "role": "assistant",
+        "text": "PEAR",
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoHxQnvW62fTe8TqF1P4",
+          "hasThinking": false
+        },
         "response_ref": "response-3044",
         "raw_response": {
           "type": "assistant",
@@ -2007,16 +1980,6 @@
           "uuid": "217b2673-953a-414f-aefe-d753a0315cbf",
           "timestamp": "2026-10-07T17:45:07.072Z",
           "request_id": "req_preview_0005"
-        },
-        "activity": {
-          "kind": "agent.message",
-          "quiet": false,
-          "failed": false,
-          "summary": "PEAR",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoHxQnvW62fTe8TqF1P4",
-          "hasThinking": false
         }
       }
     },
@@ -2033,18 +1996,6 @@
           "resetsAt": 1790956800
         },
         "uuid": "b6ea71b7-ffe1-471f-9240-bdc771300628",
-        "session_id": "preview-session",
-        "response_ref": "response-3045",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790956800
-          },
-          "uuid": "b6ea71b7-ffe1-471f-9240-bdc771300628",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -2055,6 +2006,17 @@
           "title": "Rate limit update",
           "messageId": "b6ea71b7-ffe1-471f-9240-bdc771300628",
           "hasThinking": false
+        },
+        "response_ref": "response-3045",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790956800
+          },
+          "uuid": "b6ea71b7-ffe1-471f-9240-bdc771300628",
+          "session_id": "preview-session"
         }
       }
     },
@@ -2067,7 +2029,16 @@
         "type": "system",
         "subtype": "post_turn_summary",
         "uuid": "e48ded88-bd5c-4866-9269-e07ca0429b08",
-        "session_id": "preview-session",
+        "activity": {
+          "kind": "post_turn_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Post turn summary",
+          "messageId": "e48ded88-bd5c-4866-9269-e07ca0429b08",
+          "hasThinking": false
+        },
         "response_ref": "response-3046",
         "raw_response": {
           "type": "system",
@@ -2078,16 +2049,6 @@
           "needs_action": "",
           "uuid": "e48ded88-bd5c-4866-9269-e07ca0429b08",
           "session_id": "preview-session"
-        },
-        "activity": {
-          "kind": "post_turn_summary",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "Post turn summary",
-          "messageId": "e48ded88-bd5c-4866-9269-e07ca0429b08",
-          "hasThinking": false
         }
       }
     },
@@ -2097,7 +2058,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:00:23.581Z",
       "data": {
-        "session_id": "preview-session",
         "total_cost_usd": 0.17891999999999997,
         "usage": {
           "input_tokens": 2,
@@ -2135,11 +2095,19 @@
         },
         "is_error": false,
         "subtype": "success",
-        "result": "PEAR",
         "type": "result",
         "duration_ms": 1967,
         "uuid": "45b67efa-bd9b-4009-9680-4f9dabae8901",
         "cost_usd": 0.17891999999999997,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "45b67efa-bd9b-4009-9680-4f9dabae8901",
+          "hasThinking": false
+        },
         "response_ref": "response-3047",
         "raw_response": {
           "duration_api_ms": 7988,
@@ -2238,16 +2206,6 @@
           "first_content_frame_ms": 1207,
           "queued_turn_count": 0,
           "result_index": 0
-        },
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": false,
-          "summary": "PEAR",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "45b67efa-bd9b-4009-9680-4f9dabae8901",
-          "hasThinking": false
         }
       }
     },
@@ -2278,9 +2236,7 @@
       "task_id": "preview-recorded-steer",
       "type": "task.completed",
       "timestamp": "2026-10-02T11:00:24.371Z",
-      "data": {
-        "reply": "PEAR"
-      }
+      "data": {}
     }
   ]
 }

@@ -1,21 +1,14 @@
-import { replyExcerpt } from "../../../../shared/tasks/conversation/reply.js";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Steer } from "../../providers/types.js";
 import type { PendingInput } from "../input/pending-input.js";
 import type { Store } from "../storage/store.js";
 
 /** The payload of a task's status event once its turn has ended. */
-export function recordStatusEvent(
-  store: Store,
-  t: Task,
-  reply: string | undefined,
-) {
+export function recordStatusEvent(store: Store, t: Task) {
   if (t.status === "queued") return store.event(t, "task.queued");
 
   if (t.status === "completed") {
-    return store.event(t, "task.completed", {
-      ...(reply !== undefined ? { reply: replyExcerpt(reply) } : {}),
-    });
+    return store.event(t, "task.completed");
   }
 
   if (t.status === "failed") {

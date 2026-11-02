@@ -79,6 +79,16 @@
       "data": {
         "model": "claude-opus-5-5",
         "tools": ["AskUserQuestion", "Glob", "Grep", "Read", "Skill"],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "887b6126-5d77-4eca-9ee8-af0c1f8e63fa",
+          "hasThinking": false
+        },
         "response_ref": "response-3202",
         "raw_response": {
           "type": "system",
@@ -115,16 +125,6 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "per_turn_effort_active": true,
           "view_mode": "default"
-        },
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "887b6126-5d77-4eca-9ee8-af0c1f8e63fa",
-          "hasThinking": false
         }
       }
     },
@@ -154,6 +154,15 @@
               "multiSelect": false
             }
           ]
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoGxMNvvfm2XNwWE2Cxg",
+          "hasThinking": false
         },
         "response_ref": "response-3203",
         "raw_response": {
@@ -238,15 +247,6 @@
               ]
             }
           }
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoGxMNvvfm2XNwWE2Cxg",
-          "hasThinking": false
         }
       }
     },
@@ -300,6 +300,16 @@
         "id": "toolu_013vk75ryikB9xQ1WqQZ8ZVy",
         "error": true,
         "content": "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": true,
+          "summary": "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "bc90019a-4c8a-4342-92f6-bbb51d5d5015",
+          "hasThinking": false
+        },
         "response_ref": "response-3206",
         "raw_response": {
           "type": "user",
@@ -325,16 +335,6 @@
               "non_execution_kind": "user-rejected"
             }
           ]
-        },
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": true,
-          "summary": "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "bc90019a-4c8a-4342-92f6-bbb51d5d5015",
-          "hasThinking": false
         }
       }
     },
@@ -344,14 +344,24 @@
       "type": "agent.content",
       "timestamp": "2026-10-02T11:20:05.066Z",
       "data": {
+        "message_id": "021cbc20-81a0-472c-ad68-ff01bee79e13",
+        "parent_tool_use_id": null,
         "role": "user",
         "text": "[Request interrupted by user]",
         "content": {
           "type": "text",
           "text": "[Request interrupted by user]"
         },
-        "message_id": "021cbc20-81a0-472c-ad68-ff01bee79e13",
-        "parent_tool_use_id": null,
+        "activity": {
+          "kind": "agent.content",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "User content",
+          "messageId": "021cbc20-81a0-472c-ad68-ff01bee79e13",
+          "hasThinking": false
+        },
         "response_ref": "response-3207",
         "raw_response": {
           "type": "user",
@@ -368,17 +378,6 @@
           "session_id": "preview-session",
           "uuid": "021cbc20-81a0-472c-ad68-ff01bee79e13",
           "timestamp": "2026-10-07T17:32:02.496Z"
-        },
-        "activity": {
-          "kind": "agent.content",
-          "quiet": false,
-          "failed": false,
-          "summary": "[Request interrupted by user]",
-          "thinking": false,
-          "liveStatus": false,
-          "title": "User content",
-          "messageId": "021cbc20-81a0-472c-ad68-ff01bee79e13",
-          "hasThinking": false
         }
       }
     },
@@ -388,7 +387,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:20:05.069Z",
       "data": {
-        "session_id": "preview-session",
         "total_cost_usd": 0,
         "usage": {
           "output_tokens_details": {
@@ -421,6 +419,16 @@
         "duration_ms": 4274,
         "uuid": "e3d6f689-b32c-4fbd-857b-fdbbe2a784bf",
         "cost_usd": 0,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": true,
+          "summary": "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null",
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "e3d6f689-b32c-4fbd-857b-fdbbe2a784bf",
+          "hasThinking": false
+        },
         "response_ref": "response-3208",
         "raw_response": {
           "duration_api_ms": 0,
@@ -489,16 +497,6 @@
           "uuid": "e3d6f689-b32c-4fbd-857b-fdbbe2a784bf",
           "queued_turn_count": 0,
           "result_index": 0
-        },
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": true,
-          "summary": "[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "e3d6f689-b32c-4fbd-857b-fdbbe2a784bf",
-          "hasThinking": false
         }
       }
     },
@@ -559,6 +557,16 @@
           "mcp__claude_ai_Claude_Docs__read",
           "mcp__claude_ai_Claude_Docs__update"
         ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "4475d782-9d4b-4002-b2ba-2600901661f2",
+          "hasThinking": false
+        },
         "response_ref": "response-3213",
         "raw_response": {
           "type": "system",
@@ -609,16 +617,6 @@
           "fast_mode_disabled_reason": "sdk_opt_in_required",
           "per_turn_effort_active": true,
           "view_mode": "default"
-        },
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "4475d782-9d4b-4002-b2ba-2600901661f2",
-          "hasThinking": false
         }
       }
     },
@@ -632,6 +630,15 @@
         "name": "Read",
         "input": {
           "file_path": "/demo/project/README.md"
+        },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoGxnxZsfRQwnykMyyKn",
+          "hasThinking": false
         },
         "response_ref": "response-3214",
         "raw_response": {
@@ -689,15 +696,6 @@
               "file_path": "/demo/project/README.md"
             }
           }
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoGxnxZsfRQwnykMyyKn",
-          "hasThinking": false
         }
       }
     },
@@ -714,18 +712,6 @@
           "resetsAt": 1790958000
         },
         "uuid": "2984bdc8-b908-40e2-9b11-79fa6da19337",
-        "session_id": "preview-session",
-        "response_ref": "response-3215",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790958000
-          },
-          "uuid": "2984bdc8-b908-40e2-9b11-79fa6da19337",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -736,6 +722,17 @@
           "title": "Rate limit update",
           "messageId": "2984bdc8-b908-40e2-9b11-79fa6da19337",
           "hasThinking": false
+        },
+        "response_ref": "response-3215",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790958000
+          },
+          "uuid": "2984bdc8-b908-40e2-9b11-79fa6da19337",
+          "session_id": "preview-session"
         }
       }
     },
@@ -748,15 +745,6 @@
         "type": "system",
         "subtype": "task_summary",
         "uuid": "d137ecfb-8986-4e90-8db1-860607d56d71",
-        "session_id": "preview-session",
-        "response_ref": "response-3216",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_summary",
-          "detail": "Reading README.md",
-          "uuid": "d137ecfb-8986-4e90-8db1-860607d56d71",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_summary",
           "quiet": false,
@@ -766,6 +754,14 @@
           "title": "Task summary",
           "messageId": "d137ecfb-8986-4e90-8db1-860607d56d71",
           "hasThinking": false
+        },
+        "response_ref": "response-3216",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_summary",
+          "detail": "Reading README.md",
+          "uuid": "d137ecfb-8986-4e90-8db1-860607d56d71",
+          "session_id": "preview-session"
         }
       }
     },
@@ -777,6 +773,15 @@
       "data": {
         "id": "toolu_01TtL3VqLYbVvrFeoW1419N6",
         "content": "1\t# Native verification\n2\t\n3\tThe verification marker is COBALT-27.\n4\t",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "12ec0925-6342-4dc5-97ab-ca5f1d75edc6",
+          "hasThinking": false
+        },
         "response_ref": "response-3217",
         "raw_response": {
           "type": "user",
@@ -804,15 +809,6 @@
               "totalLines": 4
             }
           }
-        },
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "12ec0925-6342-4dc5-97ab-ca5f1d75edc6",
-          "hasThinking": false
         }
       }
     },
@@ -824,17 +820,7 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "session_id": "preview-session",
         "uuid": "e9ae2446-4dd4-45fe-9862-3b09bfc4438f",
-        "response_ref": "response-3218",
-        "raw_response": {
-          "type": "system",
-          "subtype": "thinking_tokens",
-          "estimated_tokens": 50,
-          "estimated_tokens_delta": 50,
-          "session_id": "preview-session",
-          "uuid": "e9ae2446-4dd4-45fe-9862-3b09bfc4438f"
-        },
         "activity": {
           "kind": "thinking_tokens",
           "quiet": false,
@@ -845,6 +831,15 @@
           "title": "Thinking tokens",
           "messageId": "e9ae2446-4dd4-45fe-9862-3b09bfc4438f",
           "hasThinking": false
+        },
+        "response_ref": "response-3218",
+        "raw_response": {
+          "type": "system",
+          "subtype": "thinking_tokens",
+          "estimated_tokens": 50,
+          "estimated_tokens_delta": 50,
+          "session_id": "preview-session",
+          "uuid": "e9ae2446-4dd4-45fe-9862-3b09bfc4438f"
         }
       }
     },
@@ -856,17 +851,7 @@
       "data": {
         "type": "system",
         "subtype": "thinking_tokens",
-        "session_id": "preview-session",
         "uuid": "247561d8-d8b6-411b-bf54-b72e5b6a1df6",
-        "response_ref": "response-3219",
-        "raw_response": {
-          "type": "system",
-          "subtype": "thinking_tokens",
-          "estimated_tokens": 166,
-          "estimated_tokens_delta": 116,
-          "session_id": "preview-session",
-          "uuid": "247561d8-d8b6-411b-bf54-b72e5b6a1df6"
-        },
         "activity": {
           "kind": "thinking_tokens",
           "quiet": false,
@@ -877,6 +862,15 @@
           "title": "Thinking tokens",
           "messageId": "247561d8-d8b6-411b-bf54-b72e5b6a1df6",
           "hasThinking": false
+        },
+        "response_ref": "response-3219",
+        "raw_response": {
+          "type": "system",
+          "subtype": "thinking_tokens",
+          "estimated_tokens": 166,
+          "estimated_tokens_delta": 116,
+          "session_id": "preview-session",
+          "uuid": "247561d8-d8b6-411b-bf54-b72e5b6a1df6"
         }
       }
     },
@@ -886,13 +880,23 @@
       "type": "agent.content",
       "timestamp": "2026-10-02T11:20:16.665Z",
       "data": {
+        "message_id": "msg_011CfoGy5kc2GDUdfHvjGdGV",
+        "parent_tool_use_id": null,
         "role": "assistant",
         "content": {
           "type": "thinking",
           "thinking": ""
         },
-        "message_id": "msg_011CfoGy5kc2GDUdfHvjGdGV",
-        "parent_tool_use_id": null,
+        "activity": {
+          "kind": "agent.content",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Claude content",
+          "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
+          "hasThinking": true
+        },
         "response_ref": "response-3220",
         "raw_response": {
           "type": "assistant",
@@ -934,16 +938,6 @@
           "timestamp": "2026-10-07T17:32:14.094Z",
           "request_id": "req_preview_0003",
           "thinking_duration_ms": 1768
-        },
-        "activity": {
-          "kind": "agent.content",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "Claude content",
-          "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
-          "hasThinking": true
         }
       }
     },
@@ -953,14 +947,19 @@
       "type": "agent.message",
       "timestamp": "2026-10-02T11:20:16.669Z",
       "data": {
-        "role": "assistant",
-        "text": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request.",
-        "content": {
-          "type": "text",
-          "text": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request."
-        },
         "message_id": "msg_011CfoGy5kc2GDUdfHvjGdGV",
         "parent_tool_use_id": null,
+        "role": "assistant",
+        "text": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request.",
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
+          "hasThinking": false
+        },
         "response_ref": "response-3221",
         "raw_response": {
           "type": "assistant",
@@ -1000,16 +999,6 @@
           "uuid": "27690f48-37f6-4726-8bf2-f6ced2d683b5",
           "timestamp": "2026-10-07T17:32:14.100Z",
           "request_id": "req_preview_0003"
-        },
-        "activity": {
-          "kind": "agent.message",
-          "quiet": false,
-          "failed": false,
-          "summary": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request.",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CfoGy5kc2GDUdfHvjGdGV",
-          "hasThinking": false
         }
       }
     },
@@ -1022,7 +1011,16 @@
         "type": "system",
         "subtype": "post_turn_summary",
         "uuid": "52cc1207-84ed-4ff2-8a4a-7fef0eff99b7",
-        "session_id": "preview-session",
+        "activity": {
+          "kind": "post_turn_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Post turn summary",
+          "messageId": "52cc1207-84ed-4ff2-8a4a-7fef0eff99b7",
+          "hasThinking": false
+        },
         "response_ref": "response-3222",
         "raw_response": {
           "type": "system",
@@ -1033,16 +1031,6 @@
           "needs_action": "",
           "uuid": "52cc1207-84ed-4ff2-8a4a-7fef0eff99b7",
           "session_id": "preview-session"
-        },
-        "activity": {
-          "kind": "post_turn_summary",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "Post turn summary",
-          "messageId": "52cc1207-84ed-4ff2-8a4a-7fef0eff99b7",
-          "hasThinking": false
         }
       }
     },
@@ -1052,7 +1040,6 @@
       "type": "agent.completed",
       "timestamp": "2026-10-02T11:20:17.534Z",
       "data": {
-        "session_id": "preview-session",
         "total_cost_usd": 0.10738039999999999,
         "usage": {
           "input_tokens": 4,
@@ -1090,11 +1077,19 @@
         },
         "is_error": false,
         "subtype": "success",
-        "result": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request.",
         "type": "result",
         "duration_ms": 10746,
         "uuid": "c89ebbc2-0b2a-4195-b528-0442d2a3ee19",
         "cost_usd": 0.10738039999999999,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "c89ebbc2-0b2a-4195-b528-0442d2a3ee19",
+          "hasThinking": false
+        },
         "response_ref": "response-3223",
         "raw_response": {
           "duration_api_ms": 9795,
@@ -1193,16 +1188,6 @@
           "first_content_frame_ms": 2812,
           "queued_turn_count": 0,
           "result_index": 0
-        },
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": false,
-          "summary": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request.",
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "c89ebbc2-0b2a-4195-b528-0442d2a3ee19",
-          "hasThinking": false
         }
       }
     },
@@ -1215,15 +1200,6 @@
         "type": "system",
         "subtype": "task_summary",
         "uuid": "132010ec-e756-4d3a-839a-f2840b4d00a3",
-        "session_id": "preview-session",
-        "response_ref": "response-3224",
-        "raw_response": {
-          "type": "system",
-          "subtype": "task_summary",
-          "detail": null,
-          "uuid": "132010ec-e756-4d3a-839a-f2840b4d00a3",
-          "session_id": "preview-session"
-        },
         "activity": {
           "kind": "task_summary",
           "quiet": false,
@@ -1233,6 +1209,14 @@
           "title": "Task summary",
           "messageId": "132010ec-e756-4d3a-839a-f2840b4d00a3",
           "hasThinking": false
+        },
+        "response_ref": "response-3224",
+        "raw_response": {
+          "type": "system",
+          "subtype": "task_summary",
+          "detail": null,
+          "uuid": "132010ec-e756-4d3a-839a-f2840b4d00a3",
+          "session_id": "preview-session"
         }
       }
     },
@@ -1251,9 +1235,7 @@
       "task_id": "preview-recorded-resume",
       "type": "task.completed",
       "timestamp": "2026-10-02T11:20:18.140Z",
-      "data": {
-        "reply": "The README's exact verification marker is **COBALT-27**.\n\nYou turned down my earlier question, so I didn't ask it again. When you told me to proceed, I read `README.md` with the Read tool and nothing else. I didn't edit any files or run any commands. The README is three lines: a \"Native verification\" heading and the line \"The verification marker is COBALT-27.\"\n\nNothing is left to do for this request."
-      }
+      "data": {}
     }
   ]
 }

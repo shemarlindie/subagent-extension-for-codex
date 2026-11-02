@@ -14,6 +14,8 @@ import type {
 import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
+import { decodedEvent } from "../../../../../shared/events/decode.js";
+import { groupActivity } from "../../../../../shared/tasks/activity/activity-timeline.js";
 import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
 import { ClaudeAgentProvider } from "../runtime/provider.js";
@@ -220,6 +222,37 @@ test("Claude preserves the activity kind and normalized fields of an unknown mes
   ]);
 });
 
+test("Activity reads a summary from the payload when the presentation would repeat it", () => {
+  const data: Record<string, unknown>[] = [];
+
+  normalizeClaudeMessage(
+    {
+      emitOpaque: (_: string, d: Record<string, unknown>) => data.push(d),
+    } as unknown as RunContext,
+    {
+      type: "tool_use_summary",
+      summary: "Read 2 files",
+      preceding_tool_use_ids: [],
+      uuid: "00000000-0000-4000-8000-000000000008",
+      session_id: "sdk-session",
+    },
+  );
+
+  const [event] = data.map((d, id) =>
+    decodedEvent({
+      id,
+      task_id: "task",
+      type: "claude.activity",
+      timestamp: "",
+      data: d,
+    }),
+  );
+
+  assert.ok(event);
+  assert.equal(event.presentation?.summary, undefined);
+  assert.equal(groupActivity([event])[0]?.summary, "Read 2 files");
+});
+
 test("Claude preserves familiar event contracts and their normalized fields", () => {
   const { events, normalize } = recorder();
 
@@ -286,7 +319,6 @@ test("Claude preserves familiar event contracts and their normalized fields", ()
         message_id: assistant.message.id,
         parent_tool_use_id: assistant.parent_tool_use_id,
         text: "Checking",
-        content: { type: "text", text: "Checking" },
       },
     },
     {
@@ -548,6 +580,8 @@ test("run emits result accounting exactly once for success and failure", async (
     assert.ok(done);
     assert.equal(done.data.cost_usd, 0.25);
     assert.equal(done.data.raw_response, undefined);
+    // The service records a successful result as the turn's reply.
+    if (!failed) assert.equal(done.data.result, undefined);
   }
 });
 

@@ -6,7 +6,6 @@ const activityFields = new Set([
   "type",
   "subtype",
   "uuid",
-  "session_id",
   "parent_tool_use_id",
   "attempt",
   "compact_error",
