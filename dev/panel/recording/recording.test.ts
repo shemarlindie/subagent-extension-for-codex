@@ -63,7 +63,12 @@ const startedEvent: EventEnvelope = {
   task_id: "task_123",
   type: "agent.started",
   timestamp: "2026-10-07T17:00:00.000Z",
-  data: { model: init.model, tools: init.tools, raw_response: init },
+  data: {
+    model: init.model,
+    tools: init.tools,
+    response_ref: "init",
+    raw_response: init,
+  },
 };
 
 const events: EventEnvelope[] = [
@@ -73,7 +78,7 @@ const events: EventEnvelope[] = [
     task_id: "task_123",
     type: "claude.activity",
     timestamp: "2026-10-07T17:00:05.000Z",
-    data: { ...rateLimit, raw_response: rateLimit },
+    data: { ...rateLimit, response_ref: "rate", raw_response: rateLimit },
   },
   {
     id: 43,
@@ -191,6 +196,7 @@ test("a current_repo recording maps its workspace to the fixture repository, and
         ...startedEvent,
         type: "claude.activity",
         data: {
+          response_ref: "repo",
           raw_response: { cwd: "/scratch/repo/x", note: "/scratch/other" },
         },
       },
@@ -266,6 +272,7 @@ test("local usernames are replaced in URLs, plugin names and encoded paths", () 
 
 test("thinking signatures are scrubbed in nested SDK blocks and stream deltas", () => {
   const data = {
+    response_ref: "signatures",
     raw_response: {
       message: {
         content: [

@@ -61,11 +61,6 @@ const row = db.prepare("SELECT body FROM tasks WHERE id=?").get(values.task);
 if (!row) throw new Error(`No task ${values.task} in ${values.db}`);
 const task = JSON.parse(String(row.body)) as Task;
 
-const hasOriginals = db
-  .prepare("PRAGMA table_info(events)")
-  .all()
-  .some((column) => column.name === "original_response");
-
 const events = db
   .prepare("SELECT * FROM events WHERE task_id=? ORDER BY id")
   .all(values.task)
@@ -75,7 +70,7 @@ const events = db
         ...r,
         data: {
           ...JSON.parse(String(r.data)),
-          ...(hasOriginals && r.original_response
+          ...(r.original_response
             ? { raw_response: JSON.parse(String(r.original_response)) }
             : {}),
         },

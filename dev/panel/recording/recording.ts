@@ -189,12 +189,11 @@ export function recordFixture(
   const responseRefs = new Map<string, string>();
   const derivedEvents = new Map<string, DerivedEvent[]>();
   const normalize = claudeMessageNormalizer();
-  const identityFor = recordingResponseRefs();
 
   const recorded = sorted.map((event, index) => {
-    const { raw_response: _raw, response_ref: _ref, ...fields } = event.data;
-    const original = lookup(event);
-    const identity = identityFor(event, original);
+    const { raw_response: _raw, response_ref: ref, ...fields } = event.data;
+    const identity = typeof ref === "string" ? ref : undefined;
+    const original = identity ? lookup(event) : undefined;
     let data: Record<string, unknown>;
 
     if (PROVIDER_EVENTS.has(event.type) && !original) {
@@ -327,34 +326,4 @@ function scrubRateLimits(value: unknown, start: string) {
       scrubRateLimits(child, start);
     }
   }
-}
-
-/** Old recordings encode siblings as consecutive copies of one response. */
-function recordingResponseRefs() {
-  let remaining = 0;
-  let identity = "";
-
-  return (event: EventEnvelope, original?: SDKMessage) => {
-    if (typeof event.data.response_ref === "string") {
-      remaining = 0;
-
-      return event.data.response_ref;
-    }
-
-    if (!original) {
-      remaining = 0;
-
-      return undefined;
-    }
-
-    if (!remaining) {
-      identity = `legacy-${event.id}`;
-      // Only the count matters, which needs no earlier tool calls.
-      remaining = derivedFrom(original, claudeMessageNormalizer()).length;
-    }
-
-    remaining--;
-
-    return identity;
-  };
 }
