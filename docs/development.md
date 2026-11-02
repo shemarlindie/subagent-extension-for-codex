@@ -918,9 +918,13 @@ tests that make model calls.
 
 Before adding a test, name the behavior it protects and inspect existing
 coverage. Give each behavior one primary test layer, starting from the broadest
-that can reliably exercise it. Extend the test or suite that already owns it
-when possible. These rules apply to tests added in the same change as well as
+that can reliably exercise it. Go broader only when the behavior depends on
+what that layer adds. Extend the test or suite that already owns it when
+possible. These rules apply to tests added in the same change as well as
 existing ones.
+
+Add tests or cases only when existing coverage does not adequately protect
+changed behavior or a concrete, relevant failure.
 
 | Layer             | Location                                                                       | Covers                                                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -941,9 +945,10 @@ loader is itself under test. Keep real process, socket and Git boundaries when
 optimizing these tests.
 
 Add unit tests only for parser boundaries, permission rules, async races, stale
-responses, Unicode handling, state reconciliation and similar rules. Use jsdom
-tests for deterministic failures, concurrent edits, keyboard behavior and host
-bridge interactions that console browser tests cannot reproduce.
+responses, Unicode handling, state reconciliation and similar rules that the
+change can break.
+Use jsdom tests for deterministic failures, concurrent edits, keyboard behavior
+and host bridge interactions that console browser tests cannot reproduce.
 
 Remove happy-path unit and mocked UI tests once a browser or integration test
 owns the same behavior, including tests written to check work in progress. Trim
@@ -967,6 +972,19 @@ waits for timing behavior. Held checkpoints must remain interruptible during
 cleanup. Paste incidental fixture text, and keep actual typing for keyboard
 behavior. Mount the owning page for local form checks, and keep the full shell
 for navigation, focus restoration and scope changes.
+
+#### Test levels
+
+Apply the [shared level rules](../AGENTS.md#test-and-documentation-levels) at
+every level.
+
+| Level | Scope                                                                                                            |
+| ----- | ---------------------------------------------------------------------------------------------------------------- |
+| 1     | Add no new tests or cases. Report material coverage gaps.                                                        |
+| 2     | Cover the main changed or fixed behavior with the smallest useful test. Extend existing coverage where suitable. |
+| 3     | Also cover concrete failure cases of the changed behavior.                                                       |
+| 4     | Also cover distinct risks in directly affected behavior and boundaries.                                          |
+| 5     | Broad coverage for complex or high-impact behavior, including recovery and compatibility where relevant.         |
 
 ### Browser flows
 

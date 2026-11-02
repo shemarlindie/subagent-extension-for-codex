@@ -26,12 +26,23 @@ Read the matching guide's relevant sections before working in an area. Unrelated
 ## Validation
 
 - Validate the resulting behavior and relevant architectural boundaries. Match checks to the change and prefer focused checks during iteration. You may skip or defer expensive checks when their runtime outweighs the confidence they add. Report what was skipped and why.
-- Before adding, changing or removing tests, inspect existing coverage and follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
+- Running checks is separate from adding tests. Before adding, changing or removing tests, inspect existing coverage and follow [Choosing test coverage](docs/development.md#choosing-test-coverage).
 - Before committing, run the relevant formatting, lint, type, test, build and browser checks against the final changes being committed. Unrelated checks do not need to run.
 - Follow the repository's ESLint rules when editing code.
 - Format changed files with `npx eslint --fix <files> && npx prettier --write <files>`.
 - Before running HTTP integration suites, ensure the sandbox permits localhost TCP listeners (`127.0.0.1`). Request escalation up front if needed. CI runners need the same access. Do not skip these tests because listener binding is denied.
-- Update affected documentation and report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
+- Follow [Documentation style](#documentation-style) to decide whether documentation needs an update. Report meaningful design decisions, intentional differences from established patterns, and remaining concerns in proportion to the change.
+
+### Test and documentation levels
+
+Use the [test levels](docs/development.md#test-levels) and [documentation levels](#documentation-levels) when the user says, for example, "test at level 1" or "document at level 3". Both scales run from 1 to 5 and control the breadth of additions.
+
+- Default to test level 2 and documentation level 2. Without an explicit level, go higher only for a concrete changed contract, failure mode or reader task the default leaves unaddressed. Expand only as far as that need requires and briefly name the reason in the final report.
+- An explicit level is a ceiling, never a quota. Adding nothing is valid at every level when existing coverage or documentation suffices. Levels do not reduce required checks, fixes for broken behavior, accuracy or meaningful assertions.
+- Follow Choosing test coverage for test layers, placement and pruning, and Documentation style for each explanation's canonical home. Higher levels never justify duplicate coverage, repeated explanations or speculative cases.
+- Never weaken an assertion to hide a regression. When the implementation regresses, fix the code.
+- When an explicit ceiling leaves material risk, use existing tests or authorized manual verification where possible and report the precise gap. Ask only when completing the task requires scope beyond the level.
+- Before finishing, remove test and documentation additions in your changes that provide no distinct regression protection or needed reader guidance.
 
 ### Browser checks
 
@@ -44,7 +55,7 @@ Check in the browser when a change is large, when seeing it would help, or when 
 
 ### Large changes
 
-- Before building on an external behavior or an unproven approach, confirm it with a small probe or prototype. Keep it so tests can reuse it.
+- Before building on an external behavior or an unproven approach, confirm it with a small probe or prototype. Keep it only when later verification will reuse it.
 - Plan a verification checklist of expected behaviors with IDs, and list accepted limits separately. In the plan, have each planned commit name the IDs it verifies. Evidence can be a new or existing test or a browser check. Keep IDs in the plan, out of code and test names.
 
 ## Writing style
@@ -59,9 +70,22 @@ Avoid semicolons and dashes in sentences. Keep them where needed in code, comman
 
 ## Documentation style
 
-- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details only when they help that audience, and skip obvious or expected behavior.
+- Update documentation when the user asks, or when the change makes guidance inaccurate or leaves a question readers need answered. Make the smallest sufficient edit in the canonical home.
+- Give each guide a clear purpose and audience. Keep the README focused on orientation and setup. Place detailed procedures and contracts in their owning guides. Include implementation details and verification results only when they help that audience, and skip obvious or expected behavior.
 - Keep one canonical home for each explanation and link to it elsewhere, repeating only a brief summary needed locally. Update explanations in place and remove superseded material after retaining useful details. Check affected links and headings.
 - Describe current behavior. Keep history only when it explains a current decision or constraint. Check commands, examples, defaults and capability claims against code and tests. State the scope of evidence. Local tests do not establish live-host support.
+
+### Documentation levels
+
+Apply the [shared level rules](#test-and-documentation-levels) at every level.
+
+| Level | Scope                                                                                 |
+| ----- | ------------------------------------------------------------------------------------- |
+| 1     | Fix guidance the change made inaccurate. Add no new explanation.                      |
+| 2     | Make small edits covering what readers need.                                          |
+| 3     | Explain behavior, usage and necessary constraints.                                    |
+| 4     | Add detailed procedures or contracts, with examples and troubleshooting where useful. |
+| 5     | Write a comprehensive reference for the explicit scope.                               |
 
 ## Component and change conventions
 
