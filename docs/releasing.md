@@ -23,8 +23,8 @@ its own branch:
    published** check, then merge with a merge commit. A squash or rebase merge
    would leave the tagged commit outside `main`'s history.
 
-`release:prepare` picks the next version from the conventional commits since
-the last release: major for a breaking change, minor for a `feat` and patch
+`release:prepare` picks the next version from the conventional commits since the
+last release: major for a breaking change, minor for a `feat` and patch
 otherwise. Before 1.0, a breaking change bumps the minor version. It creates
 `chore/release-v<version>` and sets the version in `package.json`,
 `package-lock.json`, `plugin.json` and the marketplace. Unless `CHANGELOG.md`
@@ -33,8 +33,8 @@ sections from the `feat` and `fix` commits. It commits, pushes and opens a draft
 pull request to `main` that links to the notes. It needs the `gh` CLI, signed
 in.
 
-When `main` already lists an unreleased version, as with the first release,
-run the **Release** workflow on `main`, with no branch or pull request.
+When `main` already lists an unreleased version, as with the first release, run
+the **Release** workflow on `main`, with no branch or pull request.
 
 The merge must follow the publish. If `main` lists an unpublished version,
 Codex's refresh fails and keeps the installed version, and it doesn't retry once
@@ -99,12 +99,12 @@ The workflow relies on settings made by hand before the first release:
    few days, and save it as the `NPM_TOKEN` repository secret. The first release
    publishes with it, because a trusted publisher can only be configured for a
    package that already exists on npm.
-4. After the first version is published, and no more than 2 days before the
-   next release, configure the trusted publisher on npmjs.com: owner
-   `shemarlindie`, repository `subagent-extension-for-codex`, workflow
-   `release.yml`, with direct `npm publish` allowed. New configurations allow
-   only `npm stage publish` by default, and a new configuration expires unless
-   it publishes within 2 days. Then delete the `NPM_TOKEN` secret and revoke the
+4. After the first version is published, and no more than 2 days before the next
+   release, configure the trusted publisher on npmjs.com: owner `shemarlindie`,
+   repository `subagent-extension-for-codex`, workflow `release.yml`, with
+   direct `npm publish` allowed. New configurations allow only
+   `npm stage publish` by default, and a new configuration expires unless it
+   publishes within 2 days. Then delete the `NPM_TOKEN` secret and revoke the
    token. If the first prerelease fails to set the `next` tag, also allow
    `npm dist-tag`.
 5. Select **Enable release immutability** under **Settings → General →
@@ -120,8 +120,8 @@ The workflow relies on settings made by hand before the first release:
 
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
 `main` and pull requests. Windows runs the build, package tests and focused
-settings file tests, including its native Downloads lookup. Other parts of
-the suite use POSIX shell fakes.
+settings file tests, including its native Downloads lookup. Other parts of the
+suite use POSIX shell fakes.
 
 The macOS checks run on a self-hosted runner when the `MACOS_RUNNER` repository
 variable names its label, and on `macos-latest` when the variable is unset.
@@ -136,10 +136,9 @@ delete the `MACOS_RUNNER` variable, so the macOS checks return to
 
 The scripts in `dev/ci-runner` host the runner on a Mac. Each job runs in a
 fresh [Tart](https://tart.run) VM cloned from the `macos-tahoe-base` image,
-which includes the Actions runner and Node 24. `run.sh` deletes the VM after
-the job. The scripts use your `gh` login to register runners and set the
-variable. `dev/ci-runner/config.sh` holds the repository, image, label and VM
-size.
+which includes the Actions runner and Node 24. `run.sh` deletes the VM after the
+job. The scripts use your `gh` login to register runners and set the variable.
+`dev/ci-runner/config.sh` holds the repository, image, label and VM size.
 
 Install Tart and sleepwatcher, then the launchd agents:
 
@@ -149,17 +148,17 @@ brew install sleepwatcher
 dev/ci-runner/install.sh
 ```
 
-The agents run copies of the scripts, so rerun `install.sh` after changing
-them. `install.sh --uninstall` removes the agents. Logs are in
+The agents run copies of the scripts, so rerun `install.sh` after changing them.
+`install.sh --uninstall` removes the agents. Logs are in
 `~/Library/Logs/ci-runner`.
 
 The runner agent sets the variable when it starts and deletes it when it stops.
-A sleepwatcher agent deletes it when the Mac sleeps and sets it again on wake.
-A job that is running when the Mac sleeps fails.
+A sleepwatcher agent deletes it when the Mac sleeps and sets it again on wake. A
+job that is running when the Mac sleeps fails.
 
-If the variable stays set while the runner is offline, for example after a
-crash or power loss, macOS jobs wait in the queue. Delete it under
-**Settings → Secrets and variables → Actions → Variables** or with
+If the variable stays set while the runner is offline, for example after a crash
+or power loss, macOS jobs wait in the queue. Delete it under **Settings →
+Secrets and variables → Actions → Variables** or with
 `gh variable delete MACOS_RUNNER`, then cancel and re-run the waiting jobs.
 Changing the variable doesn't move jobs that are already queued.
 

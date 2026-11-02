@@ -15,7 +15,8 @@ Open an issue before starting a large change, so we can agree on the approach
 first. Small fixes and documentation corrections can go straight to a pull
 request.
 
-1. Read the guides in the [documentation reading order](README.md#documentation).
+1. Read the guides in the
+   [documentation reading order](README.md#documentation).
 2. Follow [Setup](docs/development.md#setup) and make your change on a
    [named branch](#commits-pull-requests-and-branches).
 3. Follow [Choosing test coverage](docs/development.md#choosing-test-coverage)
@@ -37,8 +38,8 @@ Commit subjects and pull request titles follow
 type(scope): description
 ```
 
-- **Type** is one of `feat`, `fix`, `perf`, `refactor`, `test`, `docs`,
-  `build`, `ci` or `chore`.
+- **Type** is one of `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`,
+  `ci` or `chore`.
 - **Scope** is optional and names the affected area in one word, such as
   `panel`, `settings`, `tasks`, `claude`, `mcp` or `dev`. Leave it out when a
   change spans several areas.
@@ -50,8 +51,8 @@ type(scope): description
 For example, `fix(panel): restore new task view after reload`. Explain the
 reason in the body when it isn't obvious.
 
-A squash merge can use the pull request title as the commit subject, so give
-the title the same form.
+A squash merge can use the pull request title as the commit subject, so give the
+title the same form.
 
 Name branches `type/short-description` in kebab case with the same types, such
 as `feat/undo-redo` or `fix/composer-reload-text`. Add the issue number when

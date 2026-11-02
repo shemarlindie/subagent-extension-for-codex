@@ -1,7 +1,7 @@
 # Configuration and permissions
 
-Use this guide to configure the service, approve repositories, set task
-defaults and control what delegated Claude sessions may do.
+Use this guide to configure the service, approve repositories, set task defaults
+and control what delegated Claude sessions may do.
 
 - Environment variables control startup and storage.
 - Per-user settings supply defaults for new tasks. Task arguments can override
@@ -15,8 +15,8 @@ continuing tasks and preserving state.
 ## Environment variables
 
 Checkout commands load an optional `.env`, and shell variables take precedence.
-The packaged stdio launcher uses its MCP environment. To share one service,
-give every client the same absolute data directory.
+The packaged stdio launcher uses its MCP environment. To share one service, give
+every client the same absolute data directory.
 
 | Variable                                     | Default                                       | Meaning                                                                                                                                   |
 | -------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,10 +41,10 @@ packaging.
 
 ### Service address
 
-The plugin uses port 17317 by default. If another program holds it and no service
-owns the data directory, the proxy chooses a free port. The service saves its
-address as `origin` in `<data-directory>/service.json`, where proxies and console
-users can find it.
+The plugin uses port 17317 by default. If another program holds it and no
+service owns the data directory, the proxy chooses a free port. The service
+saves its address as `origin` in `<data-directory>/service.json`, where proxies
+and console users can find it.
 
 Setting `PORT`, `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN` or
 `SUBAGENT_EXTENSION_FOR_CODEX_URL` fixes the address and disables port recovery.
@@ -57,9 +57,9 @@ workers that edit files and run commands.
 
 Without `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN`, the service creates
 `<data-directory>/admin-token` when needed and keeps it across restarts. An
-environment override replaces the file's token without writing to the file.
-Give clients the same override. The service applies owner-only permissions to
-the data directory and token file on each start.
+environment override replaces the file's token without writing to the file. Give
+clients the same override. The service applies owner-only permissions to the
+data directory and token file on each start.
 
 - Console login exchanges the token for an HttpOnly session cookie that lasts
   one hour. A service restart ends browser sessions.
@@ -99,12 +99,12 @@ The service also saves parent approvals from
 `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS`. To revoke one, remove it from the
 variable and from **Manage**. While the variable still lists it, the next
 service start approves it again. See
-[Manage projects](panel-guide.md#manage-projects) for renaming, removal and
-task data cleanup.
+[Manage projects](panel-guide.md#manage-projects) for renaming, removal and task
+data cleanup.
 
 **Automatically add chat projects** (`projects.auto_register_chat`, default
-`true`) is a user-only setting. When a task starts from a chat whose Git root
-is unapproved, it registers that root using the host's sandbox metadata.
+`true`) is a user-only setting. When a task starts from a chat whose Git root is
+unapproved, it registers that root using the host's sandbox metadata.
 
 - Explicit task paths and `host_directory` hints never grant access.
 - Listing projects, discovering context and opening panels never register
@@ -150,8 +150,8 @@ Settings are grouped by what they control:
 The worker profile setting applies to agent calls and the Advanced task dialog.
 The panel's **New task** composer starts with the General profile instead. Its
 model and reasoning choices save to the selected profile's
-`models.profiles.<profile>` settings.
-See [Create and rename tasks](panel-guide.md#create-and-rename-tasks).
+`models.profiles.<profile>` settings. See
+[Create and rename tasks](panel-guide.md#create-and-rename-tasks).
 
 Agents use `get_settings` to discover fields and `update_settings` to change
 `task` and `models` defaults. An update is a nested partial of the values:
@@ -161,10 +161,11 @@ console. See [App and user authority](mcp-reference.md#app-and-user-authority).
 
 Each budget limit has `enabled` and `amount`, so turning a limit off keeps its
 amount. Editing the amount leaves the limit off until you turn it on. New tasks
-get the amount as their limit when it's on, and no limit when it's off. The app sets no upper bound
-on runtime or cost, and a provider rejects limits it cannot support before the
-task runs. See [Raise a task budget](task-continuation.md#raise-a-task-budget)
-for existing tasks.
+get the amount as their limit when it's on, and no limit when it's off. The app
+sets no upper bound on runtime or cost, and a provider rejects limits it cannot
+support before the task runs. See
+[Raise a task budget](task-continuation.md#raise-a-task-budget) for existing
+tasks.
 
 Model defaults for a disabled provider stay saved but hidden. If the saved
 provider becomes unavailable, new tasks use the first enabled provider.
@@ -173,20 +174,26 @@ provider becomes unavailable, new tasks use the first enabled provider.
 
 Open **Settings** and choose **Import and export**.
 
-Exports include your saved defaults, including the amounts of budget limits
-that are off. Approved projects aren't included. Add them separately on each
+Exports include your saved defaults, including the amounts of budget limits that
+are off. Approved projects aren't included. Add them separately on each
 computer.
 
-**Export file** creates a new JSON file in Downloads on the computer
-running the service and shows the full path. If you use the panel from another
-device, the service still saves the file on its own computer. **Copy JSON**
-copies the same export for pasting elsewhere, including when saving a file fails.
+**Export file** creates a new JSON file in Downloads on the computer running the
+service and shows the full path. If you use the panel from another device, the
+service still saves the file on its own computer. **Copy JSON** copies the same
+export for pasting elsewhere, including when saving a file fails.
 
 The service resolves the Downloads location through the operating system:
 
-- macOS uses AppleScript's [Downloads folder lookup](https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/reference/ASLR_cmds.html).
-- Windows uses [the Downloads known folder](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid), including redirected locations.
-- Linux reads `XDG_DOWNLOAD_DIR` from [the user-directory configuration](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/) in `$XDG_CONFIG_HOME/user-dirs.dirs`, or `~/.config/user-dirs.dirs`. Without a configured location, it uses `~/Downloads`.
+- macOS uses AppleScript's
+  [Downloads folder lookup](https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/reference/ASLR_cmds.html).
+- Windows uses
+  [the Downloads known folder](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid),
+  including redirected locations.
+- Linux reads `XDG_DOWNLOAD_DIR` from
+  [the user-directory configuration](https://www.freedesktop.org/wiki/Software/xdg-user-dirs/)
+  in `$XDG_CONFIG_HOME/user-dirs.dirs`, or `~/.config/user-dirs.dirs`. Without a
+  configured location, it uses `~/Downloads`.
 
 The service uses these locations regardless of your browser's download
 preferences. To import a saved file, open it and paste its JSON into **Paste
@@ -216,8 +223,8 @@ the first value set in this order:
 
 A blank model and `default` reasoning inherit from the next scope. When every
 scope inherits, the provider runtime's default applies. Task values come from
-`start_task`, the New task composer or the Advanced task dialog. Permission
-mode and session restrictions follow their own rules below.
+`start_task`, the New task composer or the Advanced task dialog. Permission mode
+and session restrictions follow their own rules below.
 
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
@@ -225,25 +232,23 @@ accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
 service rejects unsupported choices before queuing. Otherwise the provider may
 fail the task when it runs.
 
-Claude model suggestions come from the installed CLI. Discovery submits no
-user turn and turns off tools, settings-file hooks and external MCP servers.
-It uses the same environment as tasks and follows your settings-file choice.
-Discovery runs in the service directory, so project-specific model
-configuration can differ from a task workspace.
-Custom model IDs work when discovery is unavailable, but effort support may
-then be unknown.
+Claude model suggestions come from the installed CLI. Discovery submits no user
+turn and turns off tools, settings-file hooks and external MCP servers. It uses
+the same environment as tasks and follows your settings-file choice. Discovery
+runs in the service directory, so project-specific model configuration can
+differ from a task workspace. Custom model IDs work when discovery is
+unavailable, but effort support may then be unknown.
 
 ## Custom instructions for worker profiles
 
 In **Settings > Worker profiles**, select a profile's name to edit its custom
-instructions, saved at `profiles.<profile>.instructions`. Each holds up to
-4,000 characters.
+instructions, saved at `profiles.<profile>.instructions`. Each holds up to 4,000
+characters.
 
 A new task keeps a copy of its profile's instructions and shows it in Details.
-Later edits apply only to new tasks. Claude receives the instructions at the
-end of its system prompt, after the extension's own rules. They can't lift
-permission, sandbox or read-only limits, which are enforced outside the
-prompt.
+Later edits apply only to new tasks. Claude receives the instructions at the end
+of its system prompt, after the extension's own rules. They can't lift
+permission, sandbox or read-only limits, which are enforced outside the prompt.
 
 ## Claude permissions
 
@@ -253,8 +258,8 @@ selects Auto whatever that setting says. The parent agent's mode is not
 inherited either.
 
 - `providers.claude.permission_mode` sets the default for new tasks.
-- `provider_options.claude.permission_mode` overrides it for one task.
-  `inherit` uses the saved setting.
+- `provider_options.claude.permission_mode` overrides it for one task. `inherit`
+  uses the saved setting.
 - Each task stores its resolved mode and whether it came from the task or the
   setting.
 
@@ -268,14 +273,14 @@ inherited either.
 | `auto`              | Let the native classifier decide permissions.           |
 | `bypassPermissions` | Skip ordinary native approval checks.                   |
 
-Enabled session restrictions apply in every mode. An agent cannot choose a
-mode with more authority than the saved setting. A task you submit from the
-panel can.
+Enabled session restrictions apply in every mode. An agent cannot choose a mode
+with more authority than the saved setting. A task you submit from the panel
+can.
 
 `provider_options.claude.approval_decider` chooses who answers permission
 requests that native checks leave unresolved. It accepts `user` or
-`parent_agent` and defaults to the `approvals.decider` setting. An agent
-can choose `parent_agent` only when that setting already allows it.
+`parent_agent` and defaults to the `approvals.decider` setting. An agent can
+choose `parent_agent` only when that setting already allows it.
 
 - User decisions require **Approve** or **Deny** in the panel.
 - The parent can answer through `submit_input` only when it is the approver.
@@ -312,10 +317,10 @@ platform is unsupported. Claude Code sandbox list settings, such as excluded
 commands and allowed domains, add to the extension sandbox. `extension_locked`
 blocks this for network domains only.
 
-On Linux, the sandbox uses bubblewrap, which needs unprivileged user
-namespaces. Ubuntu 24.04 blocks them by default. A sandboxed task then fails to
-start or every Bash command in it fails, and nothing runs unsandboxed. To use
-the extension sandbox there, install `bubblewrap` and `socat`, then allow user
+On Linux, the sandbox uses bubblewrap, which needs unprivileged user namespaces.
+Ubuntu 24.04 blocks them by default. A sandboxed task then fails to start or
+every Bash command in it fails, and nothing runs unsandboxed. To use the
+extension sandbox there, install `bubblewrap` and `socat`, then allow user
 namespaces, for example with an AppArmor profile for `bwrap` or by setting
 `kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
 every program on the computer.
@@ -323,6 +328,6 @@ every program on the computer.
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.
 The model and API harness run outside the Bash sandbox, and containment of the
-whole harness is unverified. The service is meant for local, single-user use
-and listens on loopback by default. For trusted LAN development, see
+whole harness is unverified. The service is meant for local, single-user use and
+listens on loopback by default. For trusted LAN development, see
 [Access from your local network](development.md#access-from-your-local-network).

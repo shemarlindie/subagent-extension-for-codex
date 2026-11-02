@@ -28,8 +28,8 @@ before any feature reads it.
 
 1. Edit the owning feature's Drizzle schema.
 2. Run `npm run db:generate -- --name <change>` and review the SQL. SQLite
-   rebuilds a table for many column changes. For a data backfill, write a
-   custom migration with `npx drizzle-kit generate --custom --name <change>`.
+   rebuilds a table for many column changes. For a data backfill, write a custom
+   migration with `npx drizzle-kit generate --custom --name <change>`.
 3. Run the focused database tests and the affected feature tests.
 
 Commit the new folder under `migrations/` with the change. Never edit a
@@ -48,18 +48,18 @@ committed migration.
   use the same files.
 - Before migrating a database that already has migrations,
   `src/service/platform/database/backup.ts` copies it with `VACUUM INTO` to
-  `<data>/backups/service-<last-applied-migration>-<timestamp>.sqlite`. It
-  keeps the newest three. Plugin updates arrive automatically, so these backups
-  are the way back from a bad migration.
+  `<data>/backups/service-<last-applied-migration>-<timestamp>.sqlite`. It keeps
+  the newest three. Plugin updates arrive automatically, so these backups are
+  the way back from a bad migration.
 
 ## Free space
 
 The service opens the database with `auto_vacuum=INCREMENTAL` and runs
 `PRAGMA incremental_vacuum` after deleting a task, so deleted history returns
-its space to the file system. A database created in another mode is converted
-on the service's first open with one `VACUUM`, logged as
-`database.vacuum_started` and `database.vacuum_completed`. That open takes
-longer on a large database. The projects CLI never converts it.
+its space to the file system. A database created in another mode is converted on
+the service's first open with one `VACUUM`, logged as `database.vacuum_started`
+and `database.vacuum_completed`. That open takes longer on a large database. The
+projects CLI never converts it.
 
 ## Restore a backup
 
@@ -67,16 +67,16 @@ longer on a large database. The projects CLI never converts it.
 2. Move `service.sqlite` and its `-wal` and `-shm` files out of the data
    directory.
 3. Copy the backup to `service.sqlite`.
-4. Run the version that matches the backup. A newer build migrates it again,
-   and an older build refuses a database with migrations it lacks. To pin a
-   plugin version, reinstall it from that release's tag (`@vX.Y.Z`).
+4. Run the version that matches the backup. A newer build migrates it again, and
+   an older build refuses a database with migrations it lacks. To pin a plugin
+   version, reinstall it from that release's tag (`@vX.Y.Z`).
 
 ## Transactions and notifications
 
 Write a task change and its events in one `store.transaction(() => …)` so they
 commit together. Transactions are synchronous and don't nest. Run Git, provider
-and network work before opening one, and have event-writing helpers use the
-open transaction.
+and network work before opening one, and have event-writing helpers use the open
+transaction.
 
 Listeners on `store.bus` hear an event only after its transaction commits, in
 order, and never hear one that rolled back. If a listener throws, the service

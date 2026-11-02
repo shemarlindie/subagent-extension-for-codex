@@ -5,8 +5,8 @@ short, curated collaboration with a Codex-like thread beside the real panel. The
 panel runs from the dev server through the same bridge as the dev host, so panel
 changes appear without extra work.
 
-With the [panel dev host](development.md#panel-dev-host) running, open `http://127.0.0.1:5317/showcase.html`. The
-URL picks the frame:
+With the [panel dev host](development.md#panel-dev-host) running, open
+`http://127.0.0.1:5317/showcase.html`. The URL picks the frame:
 
 - `step` is the 0-based story step. The default is the second-to-last.
 - `theme` is `dark` (default) or `light`.
@@ -48,22 +48,22 @@ Video and frame captures record in real time, so frames can be lost two ways.
 The screencast can skip frames when encoding falls behind, and the page can miss
 frames when rendering is slow. Each capture traces the frames Chromium presents
 and prints how many the screencast `missed`, with their playback times. It also
-prints rendering counts. `partial` and `dropped` frames were late to the
-screen, and `brief` frames were replaced within half a refresh, so a 60 Hz
-display rarely shows them and they don't count as missed.
+prints rendering counts. `partial` and `dropped` frames were late to the screen,
+and `brief` frames were replaced within half a refresh, so a 60 Hz display
+rarely shows them and they don't count as missed.
 
 Captures use Metal GPU rendering, which exists only on macOS. Captures on other
-platforms are untested. Counts vary between runs. Close busy apps, capture a
-few times into separate `--out` folders and keep the run with the fewest missed
-and dropped frames for each theme. On an Apple M5 Pro at 2x, the best of a few
-runs has 0 missed and 2 to 4 dropped frames.
+platforms are untested. Counts vary between runs. Close busy apps, capture a few
+times into separate `--out` folders and keep the run with the fewest missed and
+dropped frames for each theme. On an Apple M5 Pro at 2x, the best of a few runs
+has 0 missed and 2 to 4 dropped frames.
 
 ## MP4
 
 Each MP4 and GIF in the README has a 10 MB budget, GitHub's attachment limit on
-free plans. Build the MP4 from a WebM or from PNG frames captured at the
-default 2x. PNG frames skip the screencast's JPEG and VP8 steps, so the MP4 is
-smaller at the same CRF. Text looks the same up close.
+free plans. Build the MP4 from a WebM or from PNG frames captured at the default
+2x. PNG frames skip the screencast's JPEG and VP8 steps, so the MP4 is smaller
+at the same CRF. Text looks the same up close.
 
 To convert each WebM, use these settings, which keep text sharp:
 
@@ -90,10 +90,10 @@ done
 
 To add background music, mix a track into an MP4 without re-encoding its video.
 Make the MP4 with the lowest CRF that fits the budget with 128 kbps audio. That
-is usually `-crf 11` from PNG frames and `-crf 13` to `-crf 15` from a WebM,
-and keeps text sharper than scaling the video down. The mix takes the track
-from its start, cuts it to the video's length, sets it to 35% volume and fades
-it out over the last second:
+is usually `-crf 11` from PNG frames and `-crf 13` to `-crf 15` from a WebM, and
+keeps text sharper than scaling the video down. The mix takes the track from its
+start, cuts it to the video's length, sets it to 35% volume and fades it out
+over the last second:
 
 ```sh
 for t in dark light; do
@@ -128,22 +128,22 @@ done
 
 The palette comes from the frames themselves, and `dither=none` keeps flat UI
 and text crisp. `diff_mode=rectangle` redraws only the changed area of each
-frame. Both themes use the same settings, and neither needs lossy compression
-to fit the budget.
+frame. Both themes use the same settings, and neither needs lossy compression to
+fit the budget.
 
 GIF frame delays use whole hundredths of a second, so 50, 33⅓, 25 and 20 fps
 keep even timing. The GIF uses 33⅓ fps because 50 fps makes it much larger,
-which would cut the width that fits the budget to about 1136 px. The GIF
-favors readable text, and the linked MP4 shows smooth 60 fps motion. Some
-renderers also slow 20 ms frames to 100 ms.
+which would cut the width that fits the budget to about 1136 px. The GIF favors
+readable text, and the linked MP4 shows smooth 60 fps motion. Some renderers
+also slow 20 ms frames to 100 ms.
 
 ## README media
 
-The README shows both GIFs and links to the dark MP4 with music. They are
-GitHub attachments, so no media is committed. To replace one, drag the new file
-into an issue, pull request or discussion comment in a browser, copy the
-`user-attachments` URL it inserts without submitting the comment, and update
-the URL in `README.md`. Keep the image's `width` at the GIF's width. The GitHub
+The README shows both GIFs and links to the dark MP4 with music. They are GitHub
+attachments, so no media is committed. To replace one, drag the new file into an
+issue, pull request or discussion comment in a browser, copy the
+`user-attachments` URL it inserts without submitting the comment, and update the
+URL in `README.md`. Keep the image's `width` at the GIF's width. The GitHub
 mobile app rejects video uploads.
 
 ## Story and playback

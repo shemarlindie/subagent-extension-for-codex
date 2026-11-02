@@ -38,6 +38,7 @@ collects or stores your Claude credentials. Anthropic's
 [usage policy for Claude Code and the Agent SDK](https://code.claude.com/docs/en/legal-and-compliance#usage-policy)
 covers this kind of individual use.
 
+<!-- prettier-ignore -->
 > [!NOTE]
 > This is an early release. Expect rough edges, and settings or behavior may
 > change between versions. Please report problems in
@@ -74,8 +75,7 @@ github.com/shemarlindie/subagent-extension-for-codex."_
 
 Then approve a Git repository root with at least one commit. Use **Add chat
 project** in a chat's Delegated Work panel, or **Manage → Add project** in the
-global panel. The plugin starts its
-local service the first time Codex connects.
+global panel. The plugin starts its local service the first time Codex connects.
 
 While the service runs, you can also use the standalone console at
 `http://127.0.0.1:17317`. If that port is taken, see
@@ -155,9 +155,9 @@ The service keeps running after you remove the plugin. Stop it with
 `kill "$(cat ~/.local/share/subagent-extension-for-codex/service.pid)"`, which
 interrupts running turns.
 
-Tasks, settings and worktrees stay in `~/.local/share/subagent-extension-for-codex`.
-Delete that directory to remove them. Branches that tasks created stay in their
-repositories.
+Tasks, settings and worktrees stay in
+`~/.local/share/subagent-extension-for-codex`. Delete that directory to remove
+them. Branches that tasks created stay in their repositories.
 
 ## Troubleshooting
 

@@ -43,7 +43,8 @@ cold service start can't exceed the host's MCP startup timeout.
   `service.json`. See [Service address](configuration.md#service-address) for
   port selection and overrides.
 - After a plugin update, the proxy asks an older service it started to drain.
-  See [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
+  See
+  [Updates and service handoff](task-continuation.md#updates-and-service-handoff).
 
 [Task continuation](task-continuation.md) covers startup and recovery.
 
@@ -125,8 +126,8 @@ projects. Recorded changes store hunks without full file contents. Related
 writes commit in one transaction, and notifications run after commit. See
 [Transactions and notifications](database.md#transactions-and-notifications).
 
-On restart, in-flight turns become interrupted and need a follow-up. Queued tasks
-and dependency waits recover.
+On restart, in-flight turns become interrupted and need a follow-up. Queued
+tasks and dependency waits recover.
 
 Session continuation needs the original worker's local session state and a
 stable workspace. When native continuation is unavailable, a new session carries
@@ -140,7 +141,8 @@ the stored conversation. See [Task continuation](task-continuation.md).
 | `worktree`     | A separate checkout from the requested committed revision, without the user's uncommitted work. |
 
 For both strategies, the changes feature stores provider-reported edits as task
-and latest-turn diffs. See [Recorded changes](mcp-reference.md#recorded-changes).
+and latest-turn diffs. See
+[Recorded changes](mcp-reference.md#recorded-changes).
 
 Approved projects are canonical roots, with explicit parent grants where
 configured. Task arguments never grant access. The server validates

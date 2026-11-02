@@ -5,12 +5,11 @@ Use this guide to build, run, change and check the project from a checkout.
 - [Architecture](architecture.md) covers code ownership and runtime boundaries.
 - [UI verification](ui-verification.md) covers browser and Codex checks of the
   panel.
-- [Database and migrations](database.md) covers schema changes, transactions
-  and event notifications.
+- [Database and migrations](database.md) covers schema changes, transactions and
+  event notifications.
 - [Claude execution verification](claude-verification.md) covers CLI and SDK
   qualification and opt-in authenticated scenarios.
-- [Releasing and CI](releasing.md) covers publishing versions and the CI
-  runner.
+- [Releasing and CI](releasing.md) covers publishing versions and the CI runner.
 - [Showcase captures](showcase.md) covers the README's images and video.
 
 Run every command from the project root. You need Node.js 24 or later and Git.
@@ -41,9 +40,8 @@ the checkout's service on port 17317, and a plugin update can
 that a stdio proxy started.
 
 With **Automatically add chat projects** on (the default), starting a task from
-a chat registers its project. Use **Manage → Add project** or
-`npm run projects` to register others. See
-[Repository access](configuration.md#repository-access).
+a chat registers its project. Use **Manage → Add project** or `npm run projects`
+to register others. See [Repository access](configuration.md#repository-access).
 
 ## Choosing a development tool
 
@@ -157,8 +155,8 @@ host or `http://<service-computer-LAN-IP>:17317` for the standalone console.
 - The service binds all IPv4 interfaces and prints its network URLs at startup.
 - The console still requires the admin token. It accepts LAN origins from the
   interface addresses found at startup, so restart after those change.
-- Codex and the dev host proxy still connect through loopback. For dev host
-  live mode alone, only `dev:ui` needs `--host`.
+- Codex and the dev host proxy still connect through loopback. For dev host live
+  mode alone, only `dev:ui` needs `--host`.
 
 The dev host proxy adds the admin token, so anyone who can reach the dev host
 can control the service in live mode. Use these flags only on a trusted local
@@ -190,22 +188,22 @@ in the `dev-thread` thread and `/demo/project` project. Import the file in
 `fixtures.ts` and add it to `recordedFixtures`.
 
 - Choose a `--first-id` past the event IDs other fixtures use.
-- Choose a `--start` that places the task where you want it in the
-  newest-first list.
+- Choose a `--start` that places the task where you want it in the newest-first
+  list.
 
 The recorder replaces machine paths, identifiers and thinking signatures,
 removes local Claude configuration and private usage details, and shifts event
-IDs and times. It derives provider events again from the sanitized responses,
-so they match the current provider and can differ from the database.
+IDs and times. It derives provider events again from the sanitized responses, so
+they match the current provider and can differ from the database.
 
-Captured edits populate Changes. File previews still need a fixture workspace
-or prepared content.
+Captured edits populate Changes. File previews still need a fixture workspace or
+prepared content.
 
 Review the output before committing, because prompts and file contents can still
 hold private information. The recorder rejects common machine identifiers, but
-that check cannot prove the recording is safe to share. Add literal
-replacements with repeatable `--replace <from>=<to>` arguments, quoting values
-with spaces or shell characters, such as `--replace 'internal-name=/demo/name'`.
+that check cannot prove the recording is safe to share. Add literal replacements
+with repeatable `--replace <from>=<to>` arguments, quoting values with spaces or
+shell characters, such as `--replace 'internal-name=/demo/name'`.
 
 ## Connect Codex from a checkout
 
@@ -241,9 +239,8 @@ SUBAGENT_EXTENSION_FOR_CODEX_DATA = "<checkout-root>/.subagent-extension-for-cod
 ```
 
 The proxy reads the admin token and connects to the local service, starting it
-when needed. See
-[Task continuation](task-continuation.md) for recovery and state, and
-[Admin token](configuration.md#admin-token) for token overrides.
+when needed. See [Task continuation](task-continuation.md) for recovery and
+state, and [Admin token](configuration.md#admin-token) for token overrides.
 
 ### Streamable HTTP
 
@@ -410,11 +407,11 @@ To add a contract:
 
 Commit the source, generated file and tests together.
 
-A contract can import types only from other contracts. A type from anywhere
-else would generate a permissive `z.any()`, so the generator rejects it. Data
-built from handwritten schemas belongs in handwritten Zod, as Claude task
-options do in `src/shared/providers/claude/task-options.ts`. Do not feed Drizzle
-inferred types into this generator.
+A contract can import types only from other contracts. A type from anywhere else
+would generate a permissive `z.any()`, so the generator rejects it. Data built
+from handwritten schemas belongs in handwritten Zod, as Claude task options do
+in `src/shared/providers/claude/task-options.ts`. Do not feed Drizzle inferred
+types into this generator.
 
 ## Build
 
@@ -468,8 +465,8 @@ npx vitest run tests/integration/package/marketplace-install.test.ts
 ```
 
 Set `MARKETPLACE_SOURCE` to a published marketplace, such as
-`owner/repo@v1.2.3`, to install from it. Its version must match the
-checkout's `package.json`. The release workflow does this after publishing.
+`owner/repo@v1.2.3`, to install from it. Its version must match the checkout's
+`package.json`. The release workflow does this after publishing.
 
 ### Install a local build
 
@@ -488,10 +485,10 @@ to the local build. Uninstall is safe to repeat and keeps task data.
 A terminal prompt offers to stop the running plugin service, defaulting to No.
 Noninteractive runs leave it alone. Add `--stop-service` to any command to stop
 without asking. This uses the
-[service handoff](task-continuation.md#updates-and-service-handoff), so
-running turns get up to 10 minutes to finish before the rest are interrupted.
-Development services are left alone. A failed requested stop returns exit 1
-even if installation or removal succeeded.
+[service handoff](task-continuation.md#updates-and-service-handoff), so running
+turns get up to 10 minutes to finish before the rest are interrupted.
+Development services are left alone. A failed requested stop returns exit 1 even
+if installation or removal succeeded.
 
 Reopen the panel and restart Codex for the new proxy and skills. Same-version
 backend changes take effect after the service exits and the next proxy call
@@ -572,10 +569,9 @@ measurements and resource samples in
 
 Before adding a test, name the behavior it protects and inspect existing
 coverage. Give each behavior one primary test layer, starting from the broadest
-that can reliably exercise it. Go broader only when the behavior depends on
-what that layer adds. Extend the test or suite that already owns it when
-possible. These rules apply to tests added in the same change as well as
-existing ones.
+that can reliably exercise it. Go broader only when the behavior depends on what
+that layer adds. Extend the test or suite that already owns it when possible.
+These rules apply to tests added in the same change as well as existing ones.
 
 Add tests or cases only when existing coverage does not adequately protect
 changed behavior or a concrete, relevant failure.
@@ -587,8 +583,8 @@ changed behavior or a concrete, relevant failure.
 | Unit tests        | `*.test.ts` or `*.test.tsx` beside the module, and jsdom suites in `tests/ui/` | Complicated logic and cases broader tests cannot reliably exercise                                                          |
 
 Feature integration tests that combine task control with real SQLite, Git or
-worker execution sit beside their owning code. Cross-runtime, HTTP, MCP,
-package and process suites go in `tests/integration/`. Both run in Vitest's
+worker execution sit beside their owning code. Cross-runtime, HTTP, MCP, package
+and process suites go in `tests/integration/`. Both run in Vitest's
 `integration` project, which `test:unit` excludes. Classify a test by its
 fixtures and assertions. Real socket and child-process tests belong in
 integration coverage even with fake services or executables. A temporary
@@ -601,8 +597,8 @@ optimizing these tests.
 Add unit tests only for parser boundaries, permission rules, async races, stale
 responses, Unicode handling, state reconciliation and similar rules that the
 change can break. Use jsdom tests for deterministic failures, concurrent edits,
-keyboard behavior and host bridge interactions that console browser tests
-cannot reproduce.
+keyboard behavior and host bridge interactions that console browser tests cannot
+reproduce.
 
 Remove happy-path unit and mocked UI tests once a browser or integration test
 owns the same behavior, including tests written to check work in progress. Trim
@@ -621,12 +617,12 @@ itself.
 Keep fixture replay and preview simulation tests when production flows cannot
 exercise their behavior.
 
-Wait for readiness signals or explicit checkpoints instead of fixed sleeps.
-Use worker checkpoints for queue and steer assertions, reserving elapsed-time
-waits for timing behavior. Held checkpoints must remain interruptible during
-cleanup. Paste incidental fixture text, and keep actual typing for keyboard
-behavior. Mount the owning page for local form checks, and keep the full shell
-for navigation, focus restoration and scope changes.
+Wait for readiness signals or explicit checkpoints instead of fixed sleeps. Use
+worker checkpoints for queue and steer assertions, reserving elapsed-time waits
+for timing behavior. Held checkpoints must remain interruptible during cleanup.
+Paste incidental fixture text, and keep actual typing for keyboard behavior.
+Mount the owning page for local form checks, and keep the full shell for
+navigation, focus restoration and scope changes.
 
 #### Test levels
 
@@ -644,22 +640,22 @@ every level.
 ### Browser flows
 
 `npm run test:e2e` builds, then runs workers on half the CPU cores. Each test
-starts a disposable service on an OS-assigned loopback port, with its own
-SQLite database, settings, fixture worker and Git repository. Teardown closes
-the service and removes its files even when the test fails. In a sandbox, allow
+starts a disposable service on an OS-assigned loopback port, with its own SQLite
+database, settings, fixture worker and Git repository. Teardown closes the
+service and removes its files even when the test fails. In a sandbox, allow
 localhost TCP listeners and browser processes.
 
-Wait for mutations to finish before reloading. A modal hiding background
-content from role queries does not prove that the mutation succeeded.
+Wait for mutations to finish before reloading. A modal hiding background content
+from role queries does not prove that the mutation succeeded.
 
-Rerun against an existing build with `npx playwright test`. Failures keep
-traces and screenshots in `test-results/`, which CI uploads when a Linux or
-macOS run fails. A failed streamed reply flow in `chat-reading.spec.ts` also
-saves `chat-scroll.json`, which logs Chat's scroll position, scroll button and
-rows with each scroll event and reader input. Traces do not record scroll
-positions after each change. Inspect a trace with
-`npx playwright show-trace <trace.zip>`. Give concurrent Playwright commands
-distinct `--output` directories so one run cannot delete another's results.
+Rerun against an existing build with `npx playwright test`. Failures keep traces
+and screenshots in `test-results/`, which CI uploads when a Linux or macOS run
+fails. A failed streamed reply flow in `chat-reading.spec.ts` also saves
+`chat-scroll.json`, which logs Chat's scroll position, scroll button and rows
+with each scroll event and reader input. Traces do not record scroll positions
+after each change. Inspect a trace with `npx playwright show-trace <trace.zip>`.
+Give concurrent Playwright commands distinct `--output` directories so one run
+cannot delete another's results.
 
 [Browser flows](../tests/e2e/README.md) describes how the flows set up state,
 how to measure their performance and what they leave to other checks.

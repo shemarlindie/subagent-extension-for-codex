@@ -45,24 +45,24 @@ gets a new instance ID, so it separates restarts even when a PID is reused.
 Other fields add task, turn, provider or tool context when available.
 
 - Look for `service.starting`, `service.ready`, `service.draining`,
-  `service.stopping` and `service.stopped` to identify startup and handoff stages.
-  `service.recovered` and `service.drained` include durations. If startup
-  fails before structured logging starts, check the terminal or `service.log`.
-  A fatal exception also writes a `service.crashed` marker to stderr before
-  Node's normal crash handling.
-- Match a failed HTTP response's `X-Request-Id` to `request_id` in the logs.
-  The service generates this ID and carries it through asynchronous tool
-  handling. `http.request` records the method, a fixed route label, status,
-  `duration_ms` and whether the connection aborted. Event streams log their
-  full connection lifetime when they close.
-- Inspect `tool.completed` for dispatch durations and outcomes. Validation
-  and access rejections log at warning level with outcome `rejected`.
-  Unexpected failures log at error level with outcome `failed`. Successful
-  read-only tools log at debug level. These records describe the dispatch only.
-  A worker's later outcome appears in the task records.
+  `service.stopping` and `service.stopped` to identify startup and handoff
+  stages. `service.recovered` and `service.drained` include durations. If
+  startup fails before structured logging starts, check the terminal or
+  `service.log`. A fatal exception also writes a `service.crashed` marker to
+  stderr before Node's normal crash handling.
+- Match a failed HTTP response's `X-Request-Id` to `request_id` in the logs. The
+  service generates this ID and carries it through asynchronous tool handling.
+  `http.request` records the method, a fixed route label, status, `duration_ms`
+  and whether the connection aborted. Event streams log their full connection
+  lifetime when they close.
+- Inspect `tool.completed` for dispatch durations and outcomes. Validation and
+  access rejections log at warning level with outcome `rejected`. Unexpected
+  failures log at error level with outcome `failed`. Successful read-only tools
+  log at debug level. These records describe the dispatch only. A worker's later
+  outcome appears in the task records.
 - Filter by `task_id` for `task.execution_started`, `task.execution_failed` and
-  `task.execution_completed`. Completion includes the final status, duration
-  and turn cost when available. Execution errors, store listener errors and edit
+  `task.execution_completed`. Completion includes the final status, duration and
+  turn cost when available. Execution errors, store listener errors and edit
   capture failures include an error classification and stack frames.
 
 ### Missing or wrong credentials
@@ -78,8 +78,8 @@ Other fields add task, turn, provider or tool context when available.
 | `invalid_token`              | Console login supplied a rejected token. Check the service's token source.                                                                      |
 
 Other rejection reasons distinguish origin-policy failure (`origin_denied`),
-missing console mutation protection (`csrf_header_missing`) and an endpoint
-that requires an admin bearer credential (`admin_bearer_required`).
+missing console mutation protection (`csrf_header_missing`) and an endpoint that
+requires an admin bearer credential (`admin_bearer_required`).
 
 The reason reflects what the request supplied. A request with both an
 Authorization header and a cookie counts as `invalid_bearer`. The service logs
@@ -100,9 +100,9 @@ and session lifetime. Never paste token values into a diagnostic report.
 - Event loop utilization and p99/max delay in milliseconds for the sample.
 - The number of active tasks.
 
-Samples cover only the Node service process. CPU fields report milliseconds,
-not percentages, and cannot attribute work to individual concurrent operations.
-An event-loop stall can extend the sample interval beyond 60 seconds.
+Samples cover only the Node service process. CPU fields report milliseconds, not
+percentages, and cannot attribute work to individual concurrent operations. An
+event-loop stall can extend the sample interval beyond 60 seconds.
 
 `provider.first_event` and `provider.first_text` measure time from SDK session
 launch to the first SDK event and text delta. `provider.result` records result
@@ -136,7 +136,8 @@ traversed to build its dropped-event tally, and `cache`:
 
 - `hit` reuses a latest-Activity tally and can still traverse new older rows.
 - `miss` creates or rebuilds a tally, including after cache eviction.
-- `none` identifies turn Activity, which recounts its earlier range on each read.
+- `none` identifies turn Activity, which recounts its earlier range on each
+  read.
 
 At info level, `storage.read_summary` combines active reads per operation in a
 60-second window. It includes `count`, `total_ms`, `max_ms`, total `rows` and
@@ -207,10 +208,9 @@ and tool durations stay in `service.jsonl`.
 
 A queue wait starts when a task becomes ready for its next turn. `cause` is
 `start`, `followup`, `queued_message`, `interrupt_send`, `resume` or `recovery`.
-Messages queued behind a running turn and a paused queue are not timed until
-the task becomes ready. The wait ends with `success` when its turn starts,
-`error` when a dependency failed and `aborted` when the task was interrupted or
-deleted.
+Messages queued behind a running turn and a paused queue are not timed until the
+task becomes ready. The wait ends with `success` when its turn starts, `error`
+when a dependency failed and `aborted` when the task was interrupted or deleted.
 
 - `capacity_ms` is the part of the wait when every execution slot was in use.
 - `dependency_observation_span_ms` spans the first to the latest scheduler scan
@@ -219,8 +219,8 @@ deleted.
   wait.
 
 The scheduler stops scanning once every slot is in use, so a dependency can
-finish or change between scans. The dependency fields are observations. They
-can overlap `capacity_ms` and do not split the wait into causes.
+finish or change between scans. The dependency fields are observations. They can
+overlap `capacity_ms` and do not split the wait into causes.
 
 Waits are tracked in memory. A `recovery` wait starts when the service starts,
 and a wait still open at shutdown has no record.

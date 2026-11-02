@@ -1,9 +1,9 @@
 # UI verification
 
 Use this guide to check panel changes in a browser and in Codex, in both the
-inline widget and the expanded panel. [Local development](development.md#panel-dev-host)
-covers dev host setup, live service connections and
-[fixture recording](development.md#recorded-fixtures).
+inline widget and the expanded panel.
+[Local development](development.md#panel-dev-host) covers dev host setup, live
+service connections and [fixture recording](development.md#recorded-fixtures).
 
 ## Workflow
 
@@ -11,8 +11,8 @@ covers dev host setup, live service connections and
    `npm run dev:ui`. Start `service-dev` (port 17317) only for live data. Tell
    the user when you start or restart a server. Stop only the servers you
    started.
-2. Open `http://127.0.0.1:5317`, set **Data** to **Fixtures**, and
-   **Relaunch**. The iframe may stay blank briefly.
+2. Open `http://127.0.0.1:5317`, set **Data** to **Fixtures**, and **Relaunch**.
+   The iframe may stay blank briefly.
 3. Check the relevant scenarios at narrow and wide widths, and in both themes
    when layout or styling changes. Check keyboard navigation, focus, loading,
    error and empty states when the change involves them.
@@ -20,8 +20,8 @@ covers dev host setup, live service connections and
    you changed them.
 
 Fixture mode makes no model calls and sends nothing to a real parent chat. Its
-interactions still update fixture state and temporary Git repositories. Use
-live data only for behavior fixtures cannot show. During a read-only live check,
+interactions still update fixture state and temporary Git repositories. Use live
+data only for behavior fixtures cannot show. During a read-only live check,
 select **Launch: Global** and do not start tasks.
 
 To add fixtures, build events with the typed builder in
@@ -32,8 +32,8 @@ and recorded fixtures through the provider.
 
 ## Scope and host controls
 
-The dev host saves its settings in browser storage. Changing a setting relaunches
-the panel.
+The dev host saves its settings in browser storage. Changing a setting
+relaunches the panel.
 
 | Control                               | Use                                                                                                                                                                                                                                                                                 |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -6,9 +6,9 @@ Compare local instrumentation overhead with:
 node --import tsx dev/performance/logging.ts
 ```
 
-Append `recorded-dev-plugin` or `synthetic-tally` to select one workload.
-The probe prints measurements as JSON and removes its temporary logs and
-in-memory databases. It makes no model calls.
+Append `recorded-dev-plugin` or `synthetic-tally` to select one workload. The
+probe prints measurements as JSON and removes its temporary logs and in-memory
+databases. It makes no model calls.
 
 Each workload runs one warmup per mode, then seven alternating baseline and
 instrumented pairs:
@@ -31,10 +31,10 @@ writers and one panel report flushed at the end of the sample.
 | `records`             | Records submitted to the writers                                       |
 | `queue_peak_bytes`    | Largest pending queue in either writer, whose limit is 1,000,000 bytes |
 
-Both phases run sequentially in Node. Results exclude transport, React,
-browser paint and worker subprocesses. Compare repeated distributions and
-absolute differences. Do not use these measurements as CI thresholds or
-live-host latency estimates.
+Both phases run sequentially in Node. Results exclude transport, React, browser
+paint and worker subprocesses. Compare repeated distributions and absolute
+differences. Do not use these measurements as CI thresholds or live-host latency
+estimates.
 
 Query-plan inspection confirmed task-list scans and indexed event reads through
 `events_task`, including covering indexes for Activity window lookups. These
@@ -42,8 +42,8 @@ checks add no queries to production paths.
 
 ## Local results
 
-A macOS run with Node.js 24.21.0 on November 1, 2026 produced these medians
-from seven pairs. Times cover all 200 polls or processing passes.
+A macOS run with Node.js 24.21.0 on November 1, 2026 produced these medians from
+seven pairs. Times cover all 200 polls or processing passes.
 
 | Workload                 | Metric                   | Baseline ms | Instrumented ms |
 | ------------------------ | ------------------------ | ----------: | --------------: |
@@ -63,4 +63,5 @@ overlapped between modes in both workloads.
 
 Synthetic panel elapsed time ranged from 26.546 to 29.465 ms at baseline and
 26.674 to 64.741 ms with instrumentation, including one high sample. The medians
-show small local overhead, with enough variation to avoid broader latency claims.
+show small local overhead, with enough variation to avoid broader latency
+claims.

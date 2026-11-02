@@ -3,8 +3,8 @@
 Use this guide to choose a workspace, continue a task, and keep service state
 across restarts, updates and backups.
 
-- [Configuration](configuration.md) covers environment variables, task
-  defaults, repository approvals and permissions.
+- [Configuration](configuration.md) covers environment variables, task defaults,
+  repository approvals and permissions.
 - The [panel guide](panel-guide.md) covers task controls.
 
 ## Start a task
@@ -31,9 +31,9 @@ another turn on a completed, failed or interrupted task. A running turn also
 accepts queued messages and steers.
 
 A later turn resumes the provider session when the original service host and
-saved session state are available. Otherwise the service starts a new session
-in the same task, and Chat marks it **New session**. This happens when there is
-no session, its owner differs, or the provider rejects the saved state. The new
+saved session state are available. Otherwise the service starts a new session in
+the same task, and Chat marks it **New session**. This happens when there is no
+session, its owner differs, or the provider rejects the saved state. The new
 prompt carries the original request and the earlier messages and replies,
 omitting the oldest entries when the conversation is too long.
 
@@ -66,8 +66,8 @@ sending again.
 A plugin update installs the new version while the old version's service may
 still run. The next stdio proxy to start compares itself with that service. It
 reads `version`, `apiVersion` and `launcher` from `/health` and `installRoot`
-from `service.json`. Versions compare by semver precedence, so a prerelease
-such as `0.2.0-beta.1` is older than `0.2.0`.
+from `service.json`. Versions compare by semver precedence, so a prerelease such
+as `0.2.0-beta.1` is older than `0.2.0`.
 
 | Running service                                                | The proxy                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -82,8 +82,8 @@ queued, and the new service starts them. Proxies keep using a draining service
 that speaks the same API, and their next call after it exits starts the new
 version. Proxies on another API wait for the new service.
 
-Give development services their own `SUBAGENT_EXTENSION_FOR_CODEX_DATA` and `PORT`
-so an installed plugin never finds them.
+Give development services their own `SUBAGENT_EXTENSION_FOR_CODEX_DATA` and
+`PORT` so an installed plugin never finds them.
 
 ## Raise a task budget
 

@@ -3,7 +3,8 @@
 ## Report a vulnerability
 
 Security reports and fixes are welcome through
-[issues](https://github.com/shemarlindie/subagent-extension-for-codex/issues) and
+[issues](https://github.com/shemarlindie/subagent-extension-for-codex/issues)
+and
 [pull requests](https://github.com/shemarlindie/subagent-extension-for-codex/pulls).
 Include the extension version, the impact and steps to reproduce the problem.
 Don't include your admin token or other credentials.

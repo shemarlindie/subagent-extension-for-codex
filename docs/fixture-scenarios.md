@@ -43,8 +43,8 @@ Limits:
 
 ## SDK event and message scenarios
 
-Use `key=value` to override event fields, dots for nested fields and URL encoding
-for spaces. For example:
+Use `key=value` to override event fields, dots for nested fields and URL
+encoding for spaces. For example:
 
 ```text
 [fixture:activity type=rate_limit_event rate_limit_info.status=rejected]
@@ -86,9 +86,9 @@ ordinary task form, then use `[fixture:permission]`:
 | `acceptEdits`               | Allow edit tools. Use the execution approval mode for others. |
 | `auto`, `bypassPermissions` | Allow.                                                        |
 
-Set `providers.claude.subagents` to `false` to check the blocked subagent path. Select a
-read-only worker profile to check its policy. These checks cover routing and
-presentation only. Use the
+Set `providers.claude.subagents` to `false` to check the blocked subagent path.
+Select a read-only worker profile to check its policy. These checks cover
+routing and presentation only. Use the
 [live Claude checks](claude-verification.md#live-claude-checks) for native
 permission and sandbox behavior.
 
@@ -164,8 +164,8 @@ Use real tool calls to check the authority boundaries documented in
   remove a project or task with surviving dependants. Each must be rejected
   until you resolve the condition.
 - Complete `[fixture:change]` and remove the worktree without force. It must
-  report uncommitted files and preserve them. Use force only to check explicit discard
-  in the disposable demo repository.
+  report uncommitted files and preserve them. Use force only to check explicit
+  discard in the disposable demo repository.
 
 The demo has a single owner, so service tests check app-only tool access and
 cross-owner isolation. Task control and approval tests and

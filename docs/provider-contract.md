@@ -5,8 +5,8 @@ provider owns and how it behaves across a task's lifecycle.
 
 - [Configuration](configuration.md) covers user-facing permissions and session
   restrictions.
-- [Claude execution verification](claude-verification.md) covers live
-  execution checks.
+- [Claude execution verification](claude-verification.md) covers live execution
+  checks.
 
 Implement the `Provider` interface in `src/service/features/providers/types.ts`
 and register the provider in `src/service/features/providers/config.ts`.
@@ -66,9 +66,9 @@ Report each successful text edit through `RunContext.fileChanged(edit)`. A
 - `source`, either `"tool"` or `"command"`.
 
 Call `editUnrecorded(path, source)` when you know the changed file but not its
-hunks. Pass `"tool"` for an edit tool so the incomplete diff keeps its
-source. The source defaults to `"command"`. Omit the path when a command
-changed files it could not name.
+hunks. Pass `"tool"` for an edit tool so the incomplete diff keeps its source.
+The source defaults to `"command"`. Omit the path when a command changed files
+it could not name.
 
 The control plane resolves paths through `realpath`, including deleted files
 through their parent directory. It drops paths outside the task workspace or
@@ -79,13 +79,13 @@ diffs immediately.
 - Steers the CLI runs as extra turns stay attributed to the current service
   turn.
 - Failed and interrupted turns keep their edits.
-- Providers must close execution at turn end so background subagents cannot
-  keep editing between turns.
+- Providers must close execution at turn end so background subagents cannot keep
+  editing between turns.
 
-The changes feature owns composition and persistence. A contradictory or
-missing edit marks that file incomplete and clears its hunks, and later edits
-cannot restore that diff. See [Recorded changes](mcp-reference.md#recorded-changes)
-for reads and recording limits.
+The changes feature owns composition and persistence. A contradictory or missing
+edit marks that file incomplete and clears its hunks, and later edits cannot
+restore that diff. See [Recorded changes](mcp-reference.md#recorded-changes) for
+reads and recording limits.
 
 ### Claude edit recording
 
@@ -120,11 +120,10 @@ provider identity. The policy:
 - Decides native permission requests and selects their approver.
 - Classifies questions separately. Questions stay interactive.
 
-Resolved restrictions are stored with the task, so later settings changes
-cannot broaden an existing task's authority. Native policies own their
-defaults. A provider without per-tool native permissions can use
-`executionTaskPolicy` for whole-execution approval. Presentation metadata never
-selects policy.
+Resolved restrictions are stored with the task, so later settings changes cannot
+broaden an existing task's authority. Native policies own their defaults. A
+provider without per-tool native permissions can use `executionTaskPolicy` for
+whole-execution approval. Presentation metadata never selects policy.
 
 A provider may validate local session state before resuming. If it rejects the
 state, or a different service worker owns the session, the task starts a fresh
@@ -137,15 +136,14 @@ Worker discovery exposes serializable `Provider.metadata` for delegation forms,
 including native permission controls, effort choices and budget help. Providers
 also define their settings schemas and sections.
 
-The approval decision maker is shared by every provider. A provider whose
-native checks leave permission requests open sets
-`nativePermissions.approvalDecider`, and its task policy defaults the task's
-decider to the `approvals.decider` setting.
+The approval decision maker is shared by every provider. A provider whose native
+checks leave permission requests open sets `nativePermissions.approvalDecider`,
+and its task policy defaults the task's decider to the `approvals.decider`
+setting.
 
 A provider's own settings form one block under `providers.<id>`, registered in
-`src/shared/providers/settings.ts`. Settings there are user-only. Metadata
-names the block's permission mode by path in
-`nativePermissions.permissionSetting`.
+`src/shared/providers/settings.ts`. Settings there are user-only. Metadata names
+the block's permission mode by path in `nativePermissions.permissionSetting`.
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and
@@ -192,11 +190,10 @@ change Claude's native defaults.
 | `close()`             | Optional. Releases provider resources during service shutdown.                                                                                  |
 
 When the provider creates a native session, it calls
-`RunContext.session(id, stateRef)` so the service stores the session's
-identity, host owner and state reference. Deleting a session that is already
-gone must succeed. A deletion error keeps the local task resources so the user
-can retry.
+`RunContext.session(id, stateRef)` so the service stores the session's identity,
+host owner and state reference. Deleting a session that is already gone must
+succeed. A deletion error keeps the local task resources so the user can retry.
 
-The development-only fixture provider implements this contract for
-deterministic checks. Production registration and bundles exclude it. See
+The development-only fixture provider implements this contract for deterministic
+checks. Production registration and bundles exclude it. See
 [Fixture scenarios](fixture-scenarios.md).

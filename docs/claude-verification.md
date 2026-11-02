@@ -20,8 +20,9 @@ these checks. Run them when you update the SDK or change the minimum:
    when the SDK adds a message type, system subtype or assistant error. Check
    how `src/service/features/providers/claude/events/activity.ts` presents it,
    then list it in `sdk-message-coverage.ts` beside that file.
-2. Select the version through `PATH` or `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`
-   and run the [live Claude checks](#live-claude-checks).
+2. Select the version through `PATH` or
+   `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` and run the
+   [live Claude checks](#live-claude-checks).
 3. In a live task from the panel, steer, interrupt and answer a question.
 
 Keep the minimum at or below the SDK's paired version, `claudeCodeVersion` in
@@ -78,14 +79,14 @@ thread panel for that check.
 
 ### Edit recording
 
-The `edits` scenario runs file edits through Claude and checks the recorded
-rows through `get_changes`. It covers Write, Edit, NotebookEdit, a 3 MB file,
-files created and deleted by commands, binary-file warnings, subagent hooks and
+The `edits` scenario runs file edits through Claude and checks the recorded rows
+through `get_changes`. It covers Write, Edit, NotebookEdit, a 3 MB file, files
+created and deleted by commands, binary-file warnings, subagent hooks and
 turn-end shutdown.
 
 - `git restore git-only.txt` checks the warning for a command whose checkout
-  diff the CLI skips. Other Git commands, such as `git restore -- file.txt`,
-  can return precise diffs. Read-only `git status` may return no edit data and
+  diff the CLI skips. Other Git commands, such as `git restore -- file.txt`, can
+  return precise diffs. Read-only `git status` may return no edit data and
   creates no warning.
 - The main task runs in `default` mode. Two more tasks check Bash recording in
   `auto` and `bypassPermissions` modes, and a fourth checks that a background
@@ -97,8 +98,8 @@ turn-end shutdown.
 
 Run this scenario whenever you qualify a CLI or SDK version. The local mapper
 fixtures hold captured CLI 2.1.300 responses for the main worker, subagents and
-skipped diffs, plus synthetic cases. The captured large-file case replaces its
-3 MB original content with a size marker and keeps its hunks. These fixtures do
+skipped diffs, plus synthetic cases. The captured large-file case replaces its 3
+MB original content with a size marker and keeps its hunks. These fixtures do
 not establish compatibility with a different live CLI.
 
 Some cases have no live coverage:

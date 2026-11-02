@@ -59,9 +59,9 @@ polling and acknowledgement.
 
 The panel attempts delivery on service changes and on a fallback timer, even
 while hidden or busy. The service saves a claim before sending, so only one
-panel attempts each notification, and it records host acceptance or failure.
-An ambiguous failure or panel teardown causes no automatic retry. The report
-stays available through polling when a notification is lost.
+panel attempts each notification, and it records host acceptance or failure. An
+ambiguous failure or panel teardown causes no automatic retry. The report stays
+available through polling when a notification is lost.
 
 ### Observed and unverified behavior
 
@@ -132,8 +132,8 @@ chosen path for registration. Other platforms use the path field.
 
 ## Composer mentions
 
-Composer mentions are temporarily disabled. The flow in Codex is unverified.
-To test, set `composerMentionsEnabled` to `true` in
+Composer mentions are temporarily disabled. The flow in Codex is unverified. To
+test, set `composerMentionsEnabled` to `true` in
 `src/service/platform/server/mentions.ts`.
 
 ## Plugin startup and hooks

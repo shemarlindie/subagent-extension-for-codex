@@ -10,7 +10,8 @@ labels: bug
 
 ## Versions
 
-- Extension version (`/health` at http://127.0.0.1:17317/health, or `~/.codex/plugins/cache/shemarlindie/subagent-extension-for-codex/`):
+- Extension version (`/health` at http://127.0.0.1:17317/health, or
+  `~/.codex/plugins/cache/shemarlindie/subagent-extension-for-codex/`):
 - Codex (`codex --version`, or the desktop app version):
 - Claude Code (`claude --version`):
 - Node.js (`node --version`):

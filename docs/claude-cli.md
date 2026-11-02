@@ -20,18 +20,18 @@ The version policy lives in
 
 ## Which `claude` runs
 
-1. When `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` is set, it names the executable
-   as an absolute path. A relative path or a missing file blocks Claude tasks.
-   The service does not fall back to `PATH` while the variable is set.
+1. When `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` is set, it names the
+   executable as an absolute path. A relative path or a missing file blocks
+   Claude tasks. The service does not fall back to `PATH` while the variable is
+   set.
 2. Otherwise, the service runs the first executable `claude` in an absolute
-   directory on its own `PATH`. It skips relative and empty entries. On
-   Windows, it runs `claude.exe` or the binary behind npm's `claude.cmd`
-   launcher.
+   directory on its own `PATH`. It skips relative and empty entries. On Windows,
+   it runs `claude.exe` or the binary behind npm's `claude.cmd` launcher.
 
 The service resolves symlinks to find the installed binary. The lookup runs
-without a shell, so aliases and interactive shell setup do not apply. A
-`claude` your terminal finds through an alias or a `PATH` set in `.zshrc` may
-differ from the one the service sees. See
+without a shell, so aliases and interactive shell setup do not apply. A `claude`
+your terminal finds through an alias or a `PATH` set in `.zshrc` may differ from
+the one the service sees. See
 [Environment variables](configuration.md#environment-variables) for other
 service overrides.
 
@@ -43,10 +43,9 @@ check. Running sessions keep their process.
 
 ## When the CLI isn't ready
 
-A missing or unsupported CLI blocks new Claude tasks. Projects, task history
-and the panel stay usable. The panel shows the readiness error, and
-`list_workers` reports the selected executable, its version and the supported
-range.
+A missing or unsupported CLI blocks new Claude tasks. Projects, task history and
+the panel stay usable. The panel shows the readiness error, and `list_workers`
+reports the selected executable, its version and the supported range.
 
 | Message                                        | Fix                                                                                                                |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -56,9 +55,9 @@ range.
 | not a Claude Code release version              | Install a release. Prereleases aren't supported.                                                                   |
 | `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` ... | Fix or unset the override.                                                                                         |
 
-After a fix, refresh the panel or call `list_workers` again. The service
-caches a failed check for about 30 seconds. Restart the service after changing
-its environment.
+After a fix, refresh the panel or call `list_workers` again. The service caches
+a failed check for about 30 seconds. Restart the service after changing its
+environment.
 
 A ready CLI can still fail when it starts a session, for example on
 authentication or the network. Model discovery and task execution report those

@@ -20,9 +20,9 @@ Global history never selects a project. See
 [Host capabilities](host-capabilities.md#project-context-and-registration) for
 how the panel resolves context.
 
-Project dropdowns include a search field that matches saved names and
-repository paths. On narrow panels, header actions such as **Settings** move
-into **Panel actions**, with **Add chat project** first when needed.
+Project dropdowns include a search field that matches saved names and repository
+paths. On narrow panels, header actions such as **Settings** move into **Panel
+actions**, with **Add chat project** first when needed.
 
 Changing scope closes unsent forms. An action you already submitted still
 completes, but its result never selects work in the new scope.
@@ -49,8 +49,8 @@ By default, removal deletes only the saved registration. Files, task history and
 worktrees remain. Running turns may finish, and later turns need approval again.
 Parent approvals still apply, and starting a task from the repository's chat can
 register it again. Parent approvals set in
-`SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` return when the service restarts unless
-you remove them from that setting.
+`SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` return when the service restarts
+unless you remove them from that setting.
 
 **Also remove extension task data**, off by default, stops and removes every
 task with that exact repository path across all chats. This includes
@@ -104,11 +104,11 @@ the profile icon for the worker's name. Under **All projects**, tasks group
 under a header for each project. Each group appears at the position of its
 newest task, and its header stays visible while its rows scroll.
 
-- The header shows the project's task count. Click it to collapse the group.
-  The panel remembers collapsed groups across reloads where browser storage is
+- The header shows the project's task count. Click it to collapse the group. The
+  panel remembers collapsed groups across reloads where browser storage is
   available.
-- A collapsed header shows a pencil when a hidden task needs input and an
-  accent dot when one is unread.
+- A collapsed header shows a pencil when a hidden task needs input and an accent
+  dot when one is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.
@@ -123,8 +123,8 @@ have a dialog open, wait for a submitted request or browse the list or another
 page.
 
 Wide panels show the task list and inspector side by side, with a resizable
-divider. Narrow panels switch between them. Runtime accumulates across turns
-and includes the active run.
+divider. Narrow panels switch between them. Runtime accumulates across turns and
+includes the active run.
 
 ### Read and unread tasks
 
@@ -137,8 +137,8 @@ A task becomes read when its Chat tab shows the latest message. Opening an
 unread task places a **New** divider above the first unseen item and scrolls to
 it.
 
-- **Task actions → Mark unread** or **Mark read** changes read state. Right-click
-  or long-press a task row for the same actions.
+- **Task actions → Mark unread** or **Mark read** changes read state.
+  Right-click or long-press a task row for the same actions.
 - **Mark unread from here**, the eye icon on a reply, marks the task unread from
   that reply on.
 - **Mark all read** beside the filter count marks every listed task.
@@ -183,21 +183,20 @@ You can undo these changes:
 - Marking tasks read or unread, including **Mark unread from here** and **Mark
   all read**. Undo puts back each task's **New** divider.
 - Removing, clearing, editing and reordering queued messages.
-- Adding, renaming and removing projects. Removing a project's tasks with it
-  and removing a parent folder grant can't be undone.
-- Changing the composer's model or reasoning, which saves the profile's
-  default.
+- Adding, renaming and removing projects. Removing a project's tasks with it and
+  removing a parent folder grant can't be undone.
+- Changing the composer's model or reasoning, which saves the profile's default.
 - Marking a file viewed in Changes.
 
-Undo and redo always show a toast that says what changed, and name the task
-when it isn't on screen. Pressing them again while the toast is open adds each
-step to its list, and the toast's **Undo** or **Redo** button reverses every
-step it lists. Quick presses all count, in order.
+Undo and redo always show a toast that says what changed, and name the task when
+it isn't on screen. Pressing them again while the toast is open adds each step
+to its list, and the toast's **Undo** or **Redo** button reverses every step it
+lists. Quick presses all count, in order.
 
-A change itself shows a toast with **Undo** only when it takes something off
-the screen: archiving or unarchiving, removing or clearing queued messages,
-removing a project and **Mark all read**. Bulk changes list up to three of the
-tasks or messages they touched.
+A change itself shows a toast with **Undo** only when it takes something off the
+screen: archiving or unarchiving, removing or clearing queued messages, removing
+a project and **Mark all read**. Bulk changes list up to three of the tasks or
+messages they touched.
 
 - When an undo or redo fails, a warning toast says why, for example when a
   queued message was already sent. It stays longer, and the panel forgets that
@@ -227,24 +226,23 @@ profile resets model and reasoning to the profile's settings, and read-only
 profiles keep read-only permissions. Expand the profile summary to change
 individual choices.
 
-**Add project…** at the end of the project menu opens **Add project**. The
-added project becomes the composer's choice, and the task list keeps its
-project filter.
+**Add project…** at the end of the project menu opens **Add project**. The added
+project becomes the composer's choice, and the task list keeps its project
+filter.
 
 The model and reasoning chips edit the selected profile's settings, so the
-profile starts with your last choice next time. **Default** clears the
-profile's setting and names the provider or global default it then inherits. A
-failed save shows an error below the composer, and the choice still applies to
-the task. Permission mode applies to this task only. Saving it would widen
-later tasks, including those agents start, so change the default in
-**Settings**. Workspace, revision and budgets use your settings defaults.
+profile starts with your last choice next time. **Default** clears the profile's
+setting and names the provider or global default it then inherits. A failed save
+shows an error below the composer, and the choice still applies to the task.
+Permission mode applies to this task only. Saving it would widen later tasks,
+including those agents start, so change the default in **Settings**. Workspace,
+revision and budgets use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds explicit
 context, workspace and revision, approval decision maker, dependencies and
 budgets. **Wait for tasks** searches titles or IDs in the selected project and
-accepts several dependencies. The form blocks unsupported cost budgets and
-notes that Claude checks cost after each response, so a response can exceed the
-limit.
+accepts several dependencies. The form blocks unsupported cost budgets and notes
+that Claude checks cost after each response, so a response can exceed the limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.
@@ -260,16 +258,16 @@ stays open.
 **Settings** opens a full-width page with **Back to Tasks**. It offers
 per-section resets, validates budgets and asks before discarding unsaved edits.
 **Save** sends changed fields and keeps the page open. Drafts survive switching
-sections, and failed reads offer a retry. See
-[Configuration](configuration.md) for permission and approval defaults.
+sections, and failed reads offer a retry. See [Configuration](configuration.md)
+for permission and approval defaults.
 
 Search settings by section name, label, description, setting path or choice.
-Press `/` to start searching.
-Results appear together under section headings and remain editable. The count
-includes each setting row or profile row once. Matching words are highlighted,
-and choice or alias matches explain why the result appears. For example,
-“timeout” finds Runtime limit and “spending” finds Cost limit. Searching for
-custom instructions opens matching instruction editors.
+Press `/` to start searching. Results appear together under section headings and
+remain editable. The count includes each setting row or profile row once.
+Matching words are highlighted, and choice or alias matches explain why the
+result appears. For example, “timeout” finds Runtime limit and “spending” finds
+Cost limit. Searching for custom instructions opens matching instruction
+editors.
 
 Search keeps drafts and stays open after saving. **Save** includes changes
 outside the current results. Clear search or press Escape in its field to
@@ -278,8 +276,8 @@ hidden field clears search and receives focus. Section resets are available
 after clearing search.
 
 Use **Import and export** to save, copy or import your defaults as JSON. Save
-your settings changes first. If copying fails, select and copy the text shown
-in the panel. For exported settings and file locations, see
+your settings changes first. If copying fails, select and copy the text shown in
+the panel. For exported settings and file locations, see
 [Copy settings between computers](configuration.md#copy-settings-between-computers).
 
 Tabs, drafts, answers, reading positions and viewed files last for the panel
@@ -309,12 +307,12 @@ recreated worktrees.
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
-A failed send keeps the draft and its error. Unless the service confirms that
-it rejected the message, the error says delivery could not be confirmed. This
-covers lost responses and 30 seconds without confirmation, after which the
-panel stops waiting. The service may still accept the message. Sending the same
-text again from the same panel reuses the original request, so it can't create
-a duplicate. A late confirmation clears the unchanged draft. After a reload, check
+A failed send keeps the draft and its error. Unless the service confirms that it
+rejected the message, the error says delivery could not be confirmed. This
+covers lost responses and 30 seconds without confirmation, after which the panel
+stops waiting. The service may still accept the message. Sending the same text
+again from the same panel reuses the original request, so it can't create a
+duplicate. A late confirmation clears the unchanged draft. After a reload, check
 Chat before resending. See
 [Retrying message sends](mcp-reference.md#retrying-message-sends) for the
 service rules.
@@ -324,8 +322,8 @@ service rules.
 - **Steer** sends a queued message into the running turn after its next tool
   call. It is unavailable while the worker waits for input or for an earlier
   steer.
-- A pending steer offers **Interrupt and send now**. An unconsumed steer stays at
-  the front of the queue.
+- A pending steer offers **Interrupt and send now**. An unconsumed steer stays
+  at the front of the queue.
 - Queued messages offer **Edit** and **Remove**. Reorder them by dragging, or
   with Alt+Up and Alt+Down on a focused message. See
   [Undo and redo](#undo-and-redo) to reverse these changes.
@@ -369,12 +367,12 @@ cancelled work never appears successful.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
 - File tool rows show the path and options. Successful results show "File
-  content isn't stored." The **Changes** tab shows the edits, and tasks run
-  with full events also show file contents.
+  content isn't stored." The **Changes** tab shows the edits, and tasks run with
+  full events also show file contents.
 - **Debug details** shows an event's readable content, metadata and event data
   JSON. Tasks run with [full events](configuration.md#environment-variables)
-  also show the original Claude response.
-  Objects and arrays below the second level start folded.
+  also show the original Claude response. Objects and arrays below the second
+  level start folded.
 
 **View activity** on a Chat outcome opens that turn. Recent turns scroll into
 view. Older turns load separately under **Showing activity for turn n** until
@@ -472,11 +470,10 @@ stay intact.
 The panel updates as the service reports changes. Refreshes keep forms and
 reading positions, and hidden or submitting panels wait to refresh. The header
 shows connection status only when there is a problem. A failed connection shows
-**Reconnecting…** in the header toolbar and retries, and a failed first connection
-shows **Connection failed**. Changes has
+**Reconnecting…** in the header toolbar and retries, and a failed first
+connection shows **Connection failed**. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how
-each host connects and
-[Local development](development.md#what-reloads-when) for applying source
-changes.
+each host connects and [Local development](development.md#what-reloads-when) for
+applying source changes.

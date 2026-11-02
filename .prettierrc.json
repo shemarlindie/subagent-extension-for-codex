@@ -1,0 +1,9 @@
+{
+  "overrides": [
+    {
+      "files": "*.md",
+      "excludeFiles": "**/SKILL.md",
+      "options": { "proseWrap": "always" }
+    }
+  ]
+}

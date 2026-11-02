@@ -4,8 +4,7 @@ Use this guide when you change the React panel, its state or its transports.
 
 - [The panel guide](panel-guide.md) describes user-visible behavior.
 - [UI verification](ui-verification.md) covers browser checks.
-- [Architecture](architecture.md) covers the service and shared code
-  boundaries.
+- [Architecture](architecture.md) covers the service and shared code boundaries.
 
 The embedded MCP App and the standalone console share one React application.
 Bootstrap (`app/bootstrap.tsx`) picks the host bridge or HTTP transport, and
@@ -78,18 +77,19 @@ Forms keep editable drafts in React Hook Form, so refreshes preserve field nodes
 and unsent input. Use Base UI (`@base-ui/react`) with project styling for
 dialogs, tabs, selection, autocomplete and switches. Keep simple buttons, text
 inputs and textareas native, except the shared Base UI search field. Reuse the
-shared selection fields and `TabList` for consistent keyboard and focus behavior.
-Keep search text separate from selected values in lookup fields. When selection
-can change outside a tab strip, reveal the selected tab without scrolling its
-parent.
+shared selection fields and `TabList` for consistent keyboard and focus
+behavior. Keep search text separate from selected values in lookup fields. When
+selection can change outside a tab strip, reveal the selected tab without
+scrolling its parent.
 
 ### New-task composer
 
 The composer (`features/delegation/new-task/`) and the Advanced task dialog
 share settings reads, task defaults, submission policy and task-start arguments.
-Their read progress and retry logic live in `features/delegation/delegate-reads.ts`.
-Keep their intentional profile difference. The composer starts with General, and
-Advanced task starts with the default worker profile from settings.
+Their read progress and retry logic live in
+`features/delegation/delegate-reads.ts`. Keep their intentional profile
+difference. The composer starts with General, and Advanced task starts with the
+default worker profile from settings.
 
 The composer's model and reasoning chips save each choice as the selected
 profile's default setting. `useProfileChoice` sets the field and calls
@@ -122,9 +122,8 @@ Animations must preserve reading position. Use opacity for arrival fades in
 measured timelines. Avoid row transforms, which can distort measurements and
 grow the scroll area. Chat eases message height changes and reports intermediate
 sizes to `useReadingScroll`, which glides to the new end while following
-overflowing content.
-Respect reduced-motion preferences. Skip animation when the Web Animations API
-is unavailable, including in tests.
+overflowing content. Respect reduced-motion preferences. Skip animation when the
+Web Animations API is unavailable, including in tests.
 
 ## Loading and pending UI
 
@@ -229,17 +228,17 @@ To add a page:
   busy and error handling and the scope captured when the dialog opened. Send
   messages or run tools only after the user submits.
 - **Undoable action:** remember each deliberate user change in
-  `controller.undo`, or the action context's `undo`. Use `track` when the
-  panel shows the change before the service confirms it, so the shortcut never
-  skips past a change still saving to an older one. Use `record` for changes
-  shown only after success. Steps call service tools or session memory with
-  the values captured before the change, never component state, and reject
-  with a message the user can read. Set `toast` only when the change takes
-  something off the screen, list a bulk change's `items`, and give a `view`
-  such as `taskView` when the label doesn't name what changed. Views with
-  their own reads, such as a project's archive, read again when
-  `undoRevision` changes. Don't record automatic changes, such as Chat marking
-  a task read, or changes that start work or reach the worker.
+  `controller.undo`, or the action context's `undo`. Use `track` when the panel
+  shows the change before the service confirms it, so the shortcut never skips
+  past a change still saving to an older one. Use `record` for changes shown
+  only after success. Steps call service tools or session memory with the values
+  captured before the change, never component state, and reject with a message
+  the user can read. Set `toast` only when the change takes something off the
+  screen, list a bulk change's `items`, and give a `view` such as `taskView`
+  when the label doesn't name what changed. Views with their own reads, such as
+  a project's archive, read again when `undoRevision` changes. Don't record
+  automatic changes, such as Chat marking a task read, or changes that start
+  work or reach the worker.
 - **Selector:** add one for a pure calculation shared across views. Keep
   transport calls and mutations out of selectors.
 - **Transport:** add one when the connection mechanism changes. Implement
@@ -255,16 +254,15 @@ scheduling and connection resources.
 The controller keeps session memory apart from view state that can survive a
 reload.
 
-- **Session memory:** `controller.session` (`app/state/session/`) holds
-  per-task tabs, composer visibility, reading positions, opened and viewed files
-  in Changes, question answers and new-task options. It lasts until the controller
+- **Session memory:** `controller.session` (`app/state/session/`) holds per-task
+  tabs, composer visibility, reading positions, opened and viewed files in
+  Changes, question answers and new-task options. It lasts until the controller
   is replaced.
 - **Reload state:** the standalone console and the development host keep view
   choices (page, project, task, new-task view, filter, search and tab) in the
-  browser URL.
-  They keep open dialog descriptors, form drafts and the last Settings section
-  in browser storage. Unsent task and new-task composer text also stays in
-  browser storage until sent or cleared.
+  browser URL. They keep open dialog descriptors, form drafts and the last
+  Settings section in browser storage. Unsent task and new-task composer text
+  also stays in browser storage until sent or cleared.
 - **Task list width and collapsed project groups:** saved in browser storage
   wherever it is available. Groups expanded with **Show more** stay expanded
   while the project groups are shown.
@@ -302,16 +300,16 @@ retries.
 - **Settings:** the service supplies typed sections and rows. Save only changed
   fields, preserve disabled budget amounts, and keep section drafts during
   navigation and validation. Search and browsing share mounted controls to
-  retain drafts and field identity.
-  Search matches metadata independently of draft values, so editing a result
-  keeps it in place. Synonyms come from each setting schema's `keywords`
-  metadata.
+  retain drafts and field identity. Search matches metadata independently of
+  draft values, so editing a result keeps it in place. Synonyms come from each
+  setting schema's `keywords` metadata.
 - **Activity:** grouping keeps the original events for debug inspection. Render
   event data only when its inspector opens. Original responses load from the
   service while that inspector is open and are released when it closes.
 - **File preview:** `features/file-preview/` owns format detection and reusable
-  viewers. See the [file-preview guide](../src/panel/features/file-preview/README.md)
-  for rendering policy and limits.
+  viewers. See the
+  [file-preview guide](../src/panel/features/file-preview/README.md) for
+  rendering policy and limits.
 
 ## Build and verification
 

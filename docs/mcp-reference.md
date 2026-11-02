@@ -32,10 +32,10 @@ To delegate a task:
 Put the full worker request in `description`. The service generates the task
 title from its first line or sentence.
 
-The default `workspace_strategy: "current_repo"` uses the approved checkout
-with its existing changes. `workspace_strategy: "worktree"` starts a task branch
-from a committed revision. Follow-up turns keep the task's conversation scope
-and workspace. See [Task continuation](task-continuation.md) for recovery.
+The default `workspace_strategy: "current_repo"` uses the approved checkout with
+its existing changes. `workspace_strategy: "worktree"` starts a task branch from
+a committed revision. Follow-up turns keep the task's conversation scope and
+workspace. See [Task continuation](task-continuation.md) for recovery.
 
 ### Retrying message sends
 
@@ -76,8 +76,8 @@ incomplete files and unrecorded command changes.
   `added`, `modified` or `deleted`.
 - An incomplete file has no diff. It counts as a file but adds no lines to the
   totals.
-- When a command changed files it could not name, the response says some
-  command changes were not recorded.
+- When a command changed files it could not name, the response says some command
+  changes were not recorded.
 - A reverted file, or one created and deleted in the same scope, drops out
   unless it is incomplete.
 
@@ -130,17 +130,17 @@ Other `app_` tools serve panel reads and controls.
 and the event's `response_ref`. It returns `{ available: true, original }`, or
 `{ available: false }` if the response is unavailable.
 
-`app_record_timing` accepts best-effort panel diagnostics in strict batches of
-1 to 50 records, with an optional bounded `dropped_count`. It rejects unknown
+`app_record_timing` accepts best-effort panel diagnostics in strict batches of 1
+to 50 records, with an optional bounded `dropped_count`. It rejects unknown
 fields and arbitrary metadata, and stores only the hash of a send request ID.
 See [Panel calls](logging.md#panel-calls) for accepted operations, fields,
 timing boundaries and delivery limits.
 
-`app_export_settings` returns a JSON string in `document`. The export contains
-a `format` number, currently `2`, the extension `version` and the user's saved
+`app_export_settings` returns a JSON string in `document`. The export contains a
+`format` number, currently `2`, the extension `version` and the user's saved
 nested `settings`. `app_import_settings` accepts this document with user
-authority, lists skipped dotted paths and rejects other formats. The format number controls compatibility
-independently of the extension version.
+authority, lists skipped dotted paths and rejects other formats. The format
+number controls compatibility independently of the extension version.
 
 `app_save_settings_file` writes the user's settings export to a new file in the
 service computer's Downloads folder. It accepts no destination or file contents
@@ -161,16 +161,16 @@ must have no pending input request. If the turn can no longer accept the steer,
 the message stays at the front of the queue.
 
 `app_restore_queued_messages` undoes queued message removals. The panel names
-each message and the position to restore. The service takes the text, sender
-and steer state from the task's recorded events, so it restores only messages
-that were removed and haven't been sent or queued again. A task that isn't busy
-gets a paused queue, so restoring never starts a turn, and an archived task
-returns to the task lists. `app_clear_queue` takes
-optional `message_ids` so redo removes only the restored messages.
+each message and the position to restore. The service takes the text, sender and
+steer state from the task's recorded events, so it restores only messages that
+were removed and haven't been sent or queued again. A task that isn't busy gets
+a paused queue, so restoring never starts a turn, and an archived task returns
+to the task lists. `app_clear_queue` takes optional `message_ids` so redo
+removes only the restored messages.
 
 `app_wait_for_updates` returns when the owner's revision or a targeted reply
-draft changes, or after at most 25 seconds. Revision tokens are opaque and change
-after a service restart, so compare them only for equality. See
+draft changes, or after at most 25 seconds. Revision tokens are opaque and
+change after a service restart, so compare them only for equality. See
 [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
@@ -227,10 +227,10 @@ the agent and defers to the tool descriptions. Together they give this protocol:
 3. For a notification, retrieve the report by task and message ID unless you
    already processed it. Skip reports with `acknowledged: true`, whichever route
    delivered them. Worker reports do not grant user authority.
-4. After processing a report, call `acknowledge_message({ task_id, message_id })`.
-   If you processed it but did not acknowledge it, acknowledge without handling
-   it again. Retry a failed acknowledgement with the same ID without repeating
-   the work.
+4. After processing a report, call
+   `acknowledge_message({ task_id, message_id })`. If you processed it but did
+   not acknowledge it, acknowledge without handling it again. Retry a failed
+   acknowledgement with the same ID without repeating the work.
 5. If you lose the cursor or processing context, read from `after: 0` and skip
    acknowledged reports.
 
