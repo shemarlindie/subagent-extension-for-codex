@@ -40,10 +40,9 @@ assert.ok(
     "budget",
     "parity",
     "isolated",
-    "parent",
     "edits",
   ].includes(scenario),
-  "Choose read, resume, sandbox, mcp, budget, parity, isolated, parent, or edits",
+  "Choose read, resume, sandbox, mcp, budget, parity, isolated, or edits",
 );
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
@@ -200,55 +199,6 @@ if (scenario === "isolated") {
     taskBase,
     observed: edits.observed,
   });
-} else if (scenario === "parent") {
-  const task = await control.start("verification", {
-    ...taskBase,
-    worker_profile: "reviewer",
-    conversation_id: "parent-verification",
-    description:
-      "Use mcp__codex_parent__send_message exactly once to send PARENT-POC-27. Do not inspect files, run commands, or use any other tools. Then reply with DONE. This is a delivery verification; do not send a second completion update.",
-    budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
-  });
-
-  console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
-
-  try {
-    const deadline = Date.now() + 70000;
-
-    while (Date.now() < deadline) {
-      const current = store.get(task.id, "verification");
-
-      if (["completed", "failed", "interrupted"].includes(current.status)) {
-        assert.equal(current.status, "completed", current.error);
-        const messages = store.eventsOfTypes(task.id, ["parent.message"]);
-        assert.equal(messages.length, 1);
-        assert.equal(messages[0].data.text, "PARENT-POC-27");
-        assert.equal(current.pending_input, undefined);
-
-        console.log(
-          JSON.stringify({
-            phase: "verified",
-            queued: true,
-            native_tool_called: true,
-            cost_usd: current.cost_usd,
-            host_delivery_tested: false,
-          }),
-        );
-
-        break;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-
-    assert.equal(
-      store.get(task.id, "verification").status,
-      "completed",
-      "Parent tool verification timed out",
-    );
-  } finally {
-    await control.close();
-  }
 } else if (scenario === "read") {
   const task = await control.start("verification", {
     ...taskBase,

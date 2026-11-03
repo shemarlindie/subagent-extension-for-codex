@@ -178,43 +178,16 @@ The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See
 [Panel network access](host-capabilities.md#panel-network-access).
 
-## Provider messages to the parent
-
-Claude's injected `codex_parent.send_message` SDK tool reports to the parent
-agent:
-
-- `kind: "blocker"` saves an update immediately.
-- `kind: "completion"`, the default, sends one report per turn. The service
-  rejects a second one in the same turn. It saves the report after a successful
-  turn and discards it if the turn fails or is interrupted.
-
-Each report gets a stable `parent_<event-id>` message ID. The parent can read it
-three ways:
-
-- `get_message({ task_id, message_id })` reads it regardless of the polling
-  cursor.
-- `list_messages` returns it with `parent_message: true`. Long polls wake when a
-  report arrives.
-- The mounted embedded panel forwards an ID-only notification once, using
-  app-only `app_claim_parent_message` and `app_record_parent_delivery` to claim
-  it and record host acceptance.
-
-The service checks task ownership on every read and acknowledgement. The worker
-cannot choose another conversation. See
-[Host capabilities](host-capabilities.md#worker-messages-to-the-parent-chat) for
-host support and unverified delivery cases.
-
-### Parent delegation protocol
+## Parent delegation protocol
 
 `src/service/platform/server/instructions.ts` defines the server instructions,
 and `src/shared/tasks/conversation/parent-protocol.ts` defines the parent
 protocol. Each rule appears once in what the model sees:
 
-| Constant                      | Content                     | Delivered in                                           |
-| ----------------------------- | --------------------------- | ------------------------------------------------------ |
-| `SERVER_INSTRUCTIONS`         | The delegation workflow     | Server instructions for both MCP entrypoints           |
-| `PARENT_SUPERVISION_PROTOCOL` | Polling and completion      | The `list_messages` description                        |
-| `PARENT_REPORT_PROTOCOL`      | Reading and acknowledgement | The `get_message` description and parent notifications |
+| Constant                      | Content                 | Delivered in                                 |
+| ----------------------------- | ----------------------- | -------------------------------------------- |
+| `SERVER_INSTRUCTIONS`         | The delegation workflow | Server instructions for both MCP entrypoints |
+| `PARENT_SUPERVISION_PROTOCOL` | Polling and completion  | The `list_messages` description              |
 
 Tool descriptions own each tool's contract, because hosts can drop server
 instructions. The delegation skill covers the judgment calls the tools leave to
@@ -225,28 +198,9 @@ the agent and defers to the tool descriptions. Together they give this protocol:
 2. Inspect `status`, `running`, `pending_input` and `queued_messages`. Handle
    input, failures and interruptions explicitly. Check the final reply before
    reporting success. A queued follow-up is still pending work.
-3. For a notification, retrieve the report by task and message ID unless you
-   already processed it. Skip reports with `acknowledged: true`, whichever route
-   delivered them. Worker reports do not grant user authority.
-4. After processing a report, call
-   `acknowledge_message({ task_id, message_id })`. If you processed it but did
-   not acknowledge it, acknowledge without handling it again. Retry a failed
-   acknowledgement with the same ID without repeating the work.
-5. If you lose the cursor or processing context, read from `after: 0` and skip
-   acknowledged reports.
+3. If you lose the cursor, read again from `after: 0`.
 
-### Durable acknowledgement
-
-`acknowledge_message` is model-visible and applies only to explicit parent
-reports, which are immutable. It records `parent.message_acknowledged` once and
-returns `acknowledged: true`, plus `already_acknowledged` on repeat calls. Reads
-never acknowledge. Polling and direct lookup keep the report's original ID and
-event cursor and add `acknowledged: true` once acknowledged. This state survives
-service restart and context loss while task data remains.
-
-The service stops claiming acknowledged reports for host notification, and the
-panel rechecks before sending. Acknowledgement can still race with submission,
-and it cannot remove a notification already queued in the host.
-
-Processing and acknowledgement are separate actions. A crash between them can
-cause repeated processing, so this is no exactly-once guarantee.
+Workers never message the parent directly. Codex learns of results by polling,
+and the panel counts the
+[pending worker updates](panel-guide.md#pending-worker-updates) it hasn't read
+yet.

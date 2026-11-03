@@ -44,33 +44,20 @@ Host support for long-lived MCP calls needs separate verification. See the
 [MCP reference](mcp-reference.md#app-and-user-authority) for the wait contract
 and [Transport](panel-guide.md#transport) for refresh behavior.
 
-## Worker messages to the parent chat
+## Panel messages to the parent chat
 
-A mounted, connected thread panel forwards ID-only worker notifications through
-`App.sendMessage` when the host advertises `openai/message`. Automatic
-submission uses `_meta["openai/message"]: { target: "active", send: true }`.
-**Ask Codex** uses the portable bridge call to place text in the composer or
-queue. Global panels and the standalone console do not forward notifications.
-
-Each notification arrives as a user message. It names the worker, task and
-stable message ID and tells the parent to retrieve the stored report. See the
-[MCP reference](mcp-reference.md#provider-messages-to-the-parent) for retrieval,
-polling and acknowledgement.
-
-The panel attempts delivery on service changes and on a fallback timer, even
-while hidden or busy. The service saves a claim before sending, so only one
-panel attempts each notification, and it records host acceptance or failure. An
-ambiguous failure or panel teardown causes no automatic retry. The report stays
-available through polling when a notification is lost.
+The panel sends nothing to the chat on its own. In a thread panel, **Ask Codex**
+and **Send to Codex** in
+[Pending worker updates](panel-guide.md#pending-worker-updates) use the portable
+`App.sendMessage` call. Codex sends the text at once, or queues it behind an
+active turn. Global panels and the standalone console send nothing to the chat.
 
 ### Observed and unverified behavior
 
-- Observed: during an active parent turn, Codex accepts automatic submissions
-  into its queue. After the turn ends, the first queued message arrives as an
-  MCP App message and starts the next parent turn. The API has no steer option.
+- Observed: during an active parent turn, Codex accepts the message into its
+  queue. After the turn ends, the first queued message arrives as an MCP App
+  message and starts the next parent turn. The API has no steer option.
 - Untested: delivery to an already idle thread.
-- Unverified: delivery while the panel is closed, unrendered, offscreen or in
-  another chat. Host suspension or panel teardown can stop delivery.
 - A queued result does not show that Codex received the message or began a new
   turn.
 

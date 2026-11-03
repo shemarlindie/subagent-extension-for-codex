@@ -18,7 +18,6 @@ import {
   handoffMessage,
   type HandoffTarget,
 } from "../../features/tasks/controls/handoff-message";
-import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
 import { TimingReporter } from "../../features/tasks/controls/timing-reporter";
 import { PendingUpdateLoader } from "../../features/tasks/pending-updates/pending-update-loader";
@@ -106,8 +105,6 @@ export class Controller {
     refresh: () => this.refresh(),
   });
 
-  private parentRelay: ParentMessageRelay;
-
   private detailLoader = new TaskDetailLoader({
     ...this.stateContext,
     generation: () => this.generation,
@@ -121,7 +118,6 @@ export class Controller {
     hidden: () => this.environment.hidden(),
     busy: () => this.state.busy,
     refresh: () => this.run(() => this.refresh()),
-    forwardParentMessage: () => this.forwardParentMessage(),
   });
 
   private updates = new UpdateFollower({
@@ -222,12 +218,6 @@ export class Controller {
     private environment: PanelEnvironment = browserEnvironment,
     private viewState?: UiStatePersistence,
   ) {
-    this.parentRelay = new ParentMessageRelay(transport, () =>
-      this.disposed || !this.state.host.canSendParent
-        ? undefined
-        : this.state.conversation,
-    );
-
     this.session = new SessionStateStore(viewState?.composerDrafts);
     this.restoredView = viewState?.initial.view ?? {};
 
@@ -451,9 +441,6 @@ export class Controller {
 
   private async fallbackRefresh() {
     try {
-      // Parent reports should still attempt delivery while UI reads are paused.
-      this.forwardParentMessage();
-
       if (!this.environment.hidden() && !this.state.busy) {
         await this.refresh();
       }
@@ -506,19 +493,6 @@ export class Controller {
     return this.timing.fetch(name, () => this.transport.tool<T>(name, args));
   }
 
-  private forwardParentMessage() {
-    if (
-      !this.disposed &&
-      this.state.connected &&
-      this.transport.embedded &&
-      this.state.scopeKnown &&
-      this.state.host.canSendParent &&
-      this.state.conversation
-    ) {
-      this.run(() => this.parentRelay.forward(this.state.conversation!));
-    }
-  }
-
   async refresh(): Promise<void> {
     if (this.disposed || !this.state.connected) return;
 
@@ -527,8 +501,6 @@ export class Controller {
 
       return;
     }
-
-    this.forwardParentMessage();
 
     this.refreshing = true;
     const intent = { tab: this.tabIntentRevision, selection: this.generation };

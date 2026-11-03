@@ -7,14 +7,13 @@ import { RevisionTrigger } from "./revision-trigger";
 function fixture(t: { onTestFinished(fn: () => void): void }) {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   t.onTestFinished(() => vi.useRealTimers());
-  const state = { hidden: false, busy: false, refreshes: 0, forwards: 0 };
+  const state = { hidden: false, busy: false, refreshes: 0 };
 
   const trigger = new RevisionTrigger({
     closed: () => false,
     hidden: () => state.hidden,
     busy: () => state.busy,
     refresh: () => state.refreshes++,
-    forwardParentMessage: () => state.forwards++,
   });
 
   t.onTestFinished(() => trigger.dispose());
@@ -50,8 +49,6 @@ test("a hidden or busy panel keeps the refresh pending until it resumes", (t) =>
   trigger.report("boot:1");
   vi.advanceTimersByTime(100);
   assert.equal(state.refreshes, 0);
-  // A hidden panel still delivers parent messages.
-  assert.equal(state.forwards, 1);
   trigger.resume();
   assert.equal(state.refreshes, 0);
 

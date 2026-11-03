@@ -109,11 +109,6 @@
       "count": 1
     }
   },
-  "src/panel/transports/host.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/service/features/providers/claude/events/activity.ts": {
     "complexity": {
       "count": 2

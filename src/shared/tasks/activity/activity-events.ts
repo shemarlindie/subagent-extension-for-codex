@@ -33,12 +33,10 @@ export const activityKind = (e: Event) =>
   activityPresentation(e).kind ?? e.type;
 
 /**
- * The text of a worker reply or of a worker report for Codex. Activity shows
- * either as a collapsible preview in place of a summary.
+ * The text of a worker reply. Activity shows it as a collapsible preview in
+ * place of a summary.
  */
-export const replyText = (e: Event) =>
-  eventPayload(e, "agent.reply")?.text ??
-  eventPayload(e, "parent.message")?.text;
+export const replyText = (e: Event) => eventPayload(e, "agent.reply")?.text;
 
 export function activityFailed(e: Event) {
   const failed = activityPresentation(e).failed;
@@ -49,8 +47,7 @@ export function activityFailed(e: Event) {
     eventPayload(e, "tool.completed")?.error === true ||
     eventPayload(e, "agent.completed")?.is_error === true ||
     Boolean(eventPayload(e, "task.interrupted")?.error) ||
-    Boolean(eventPayload(e, "task.completed")?.error) ||
-    Boolean(eventPayload(e, "parent.message_delivery")?.error)
+    Boolean(eventPayload(e, "task.completed")?.error)
   ) {
     return true;
   }
@@ -105,10 +102,6 @@ export function serviceSummary(e: Event) {
 
 /** Row titles for service events whose type doesn't read as one. */
 const eventTitles: Partial<Record<string, string>> = {
-  "parent.message": "Message queued for Codex",
-  "parent.message_attempted": "Sending message to Codex",
-  "parent.message_acknowledged": "Worker report acknowledged by Codex",
-  "parent.message_delivery": "Codex message delivery result",
   "agent.completed": "Turn completed",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
@@ -193,7 +186,6 @@ export function failureSummary(event: Event) {
   const taskFailure = eventPayload(event, "task.failed");
   const interrupted = eventPayload(event, "task.interrupted");
   const taskCompleted = eventPayload(event, "task.completed");
-  const delivery = eventPayload(event, "parent.message_delivery");
   const agent = eventPayload(event, "agent.completed");
 
   const textOutput = contentText(tool?.content ?? opaqueData.content);
@@ -202,7 +194,6 @@ export function failureSummary(event: Event) {
     taskFailure?.error,
     interrupted?.error,
     taskCompleted?.error,
-    delivery?.error,
     agent?.result,
     opaqueData.error,
     opaqueData.message,

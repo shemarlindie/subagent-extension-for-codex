@@ -22,7 +22,6 @@ import {
   preToolUseHook,
   setClaudeOptions,
 } from "./claude-test-harness.js";
-import { PARENT_TOOL } from "./parent-tool.js";
 import { ClaudeAgentProvider } from "./provider.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
@@ -140,28 +139,6 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
   assert.equal(await check("Agent", {}), "deny");
   assert.equal(await check("mcp__server__tool", {}), "deny");
-  assert.equal(await check(`${PARENT_TOOL}_other`, {}), "deny");
-  assert.equal(await check(PARENT_TOOL, { message: "Done" }), "allow");
-
-  c.input = async () => {
-    throw new Error("Parent reporting must not request approval");
-  };
-
-  const parentReport = await options!.canUseTool!(
-    PARENT_TOOL,
-    { message: "Done" },
-    {
-      signal: c.signal,
-      toolUseID: "parent-report",
-      requestId: "parent-report",
-    },
-  );
-
-  assert.deepEqual(parentReport, {
-    behavior: "allow",
-    updatedInput: { message: "Done" },
-  });
-
   assert.equal(await check("Skill", { skill: "review" }), undefined);
   assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
 });
@@ -272,25 +249,6 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     const hook = preToolUseHook(options);
 
     assert.equal(options!.allowedTools, undefined);
-
-    const parentDecision = await hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: PARENT_TOOL,
-        tool_input: { message: "Done" },
-        session_id: "x",
-        transcript_path: "x",
-        cwd: workspace,
-        tool_use_id: "parent-report",
-      },
-      "parent-report",
-      { signal: c.signal },
-    );
-
-    assert.equal(
-      (parentDecision as any).hookSpecificOutput?.permissionDecision,
-      "allow",
-    );
 
     const decision = await hook(
       {

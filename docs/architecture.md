@@ -170,9 +170,8 @@ respect the current scope and discard stale responses.
 Refresh notifications only tell clients when to refetch durable events and
 messages. The console uses SSE and the embedded panel uses long polling.
 
-Explicit worker reports go through a durable delivery queue, and the parent
-retrieves and acknowledges them by stable message ID. See
-[Provider messages to the parent](mcp-reference.md#provider-messages-to-the-parent)
-for the contract and
-[Worker messages to the parent chat](host-capabilities.md#worker-messages-to-the-parent-chat)
-for host delivery limits.
+The parent learns of worker results by polling `list_messages`. The service
+records which updates the parent has read, and the panel can send the rest to
+the chat on request. See
+[Pending worker updates](panel-guide.md#pending-worker-updates) and
+[Panel messages to the parent chat](host-capabilities.md#panel-messages-to-the-parent-chat).

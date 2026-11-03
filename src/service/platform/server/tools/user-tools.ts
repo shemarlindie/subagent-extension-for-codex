@@ -7,10 +7,6 @@ import {
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
-import {
-  claimParentMessage,
-  recordParentDelivery,
-} from "../../../features/tasks/conversation/parent-messages.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
 import {
   composerMentionsEnabled,
@@ -95,37 +91,6 @@ export function userTools(
         const task = c.applyBudget(owner, a.task_id, a.budget);
 
         return { budget: task.budget, status: task.status };
-      },
-    }),
-    app_claim_parent_message: tool({
-      description:
-        "User interface only: claim one queued worker message for this parent conversation. Claims are not automatically retried.",
-      schema: z.object({ conversation_id: z.string().min(1) }),
-      run: (a) => claimParentMessage(c.store, owner, a.conversation_id),
-    }),
-    app_record_parent_delivery: tool({
-      description:
-        "User interface only: record the host delivery result for a claimed worker message.",
-      schema: taskId.extend({
-        conversation_id: z.string().min(1),
-        attempt_id: z.number().int().positive(),
-        delivered: z.boolean(),
-        skipped: z.literal("acknowledged").optional(),
-        error: z.string().max(2000).optional(),
-      }),
-      run: (a) => {
-        recordParentDelivery(
-          c.store,
-          owner,
-          a.task_id,
-          a.attempt_id,
-          a.conversation_id,
-          a.delivered,
-          a.error,
-          a.skipped,
-        );
-
-        return { recorded: true };
       },
     }),
     app_get_chat: tool({

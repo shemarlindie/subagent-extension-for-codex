@@ -88,25 +88,6 @@ const taskStatusPayloadSchema = z.object({
   error: z.string().optional(),
 });
 
-const parentMessagePayloadSchema = z.object({
-  text: z.string(),
-});
-
-const parentMessageAttemptedPayloadSchema = z.object({
-  message_id: z.number(),
-});
-
-const parentMessageDeliveryPayloadSchema = z.object({
-  attempt_id: z.number(),
-  delivered: z.boolean(),
-  skipped: z.literal("acknowledged").optional(),
-  error: z.string().optional(),
-});
-
-const parentMessageAcknowledgedPayloadSchema = z.object({
-  message_id: z.number(),
-});
-
 export const taskEventPayloadMapSchema = z.object({
   "task.started": taskStartedPayloadSchema,
   "task.turn_ended": taskTurnEndedPayloadSchema,
@@ -124,8 +105,4 @@ export const taskEventPayloadMapSchema = z.object({
   "task.message_removed": taskMessageRemovedPayloadSchema,
   "task.queued": emptyEventPayloadSchema,
   "task.completed": taskStatusPayloadSchema,
-  "parent.message": parentMessagePayloadSchema,
-  "parent.message_attempted": parentMessageAttemptedPayloadSchema,
-  "parent.message_delivery": parentMessageDeliveryPayloadSchema,
-  "parent.message_acknowledged": parentMessageAcknowledgedPayloadSchema,
 });

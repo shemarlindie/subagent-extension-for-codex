@@ -20,8 +20,7 @@ const TESTS = ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"];
 // Lower or remove these when files are refactored; don't raise them without a
 // review rationale.
 const SOURCE_FILE_LINE_CEILINGS = [
-  // Removing the parent message relay brings this back under 1280.
-  ["src/panel/app/state/controller.ts", 1283],
+  ["src/panel/app/state/controller.ts", 1280],
   ["src/service/features/tasks/runtime/control.ts", 1000],
   ["dev/panel/host/host.tsx", 800],
   ["dev/panel/scenarios/activity-scenarios.ts", 575],

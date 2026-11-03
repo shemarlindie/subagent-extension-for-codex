@@ -125,13 +125,6 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         ?.description?.includes(PARENT_SUPERVISION_PROTOCOL),
     );
 
-    const ackTool = tools.tools.find(
-      (tool) => tool.name === "acknowledge_message",
-    );
-
-    assert.ok(ackTool);
-    assert.deepEqual((ackTool._meta as any).ui.visibility, ["model", "app"]);
-
     const mentionTool = tools.tools.find(
       (tool) => tool.name === "app_search_mentions",
     );

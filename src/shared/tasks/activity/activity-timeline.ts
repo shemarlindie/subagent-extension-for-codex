@@ -313,7 +313,6 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       eventPayload(e, "agent.completed")?.result ??
       eventPayload(e, "task.instruction")?.message ??
       eventPayload(e, "task.waiting")?.reason ??
-      eventPayload(e, "parent.message_delivery")?.error ??
       (toolCompleted ? contentText(toolCompleted.content) : undefined) ??
       string(
         d.text ??
@@ -325,7 +324,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    // Replies and reports for Codex carry their own text, so no summary repeats it.
+    // Replies carry their own text, so no summary repeats it.
     if (replyText(e) !== undefined || thinkingSignal(e)) {
       group.summary = undefined;
     }

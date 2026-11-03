@@ -504,137 +504,7 @@ test("user task renaming checks ownership and persists across active turn update
   }
 });
 
-test("completion reports wait for successful finalization while blockers persist immediately", async () => {
-  const started = Promise.withResolvers<RunContext>();
-  const finish = Promise.withResolvers<void>();
-  const provider = new TestProvider();
-
-  provider.run = async (context) => {
-    started.resolve(context);
-    await finish.promise;
-
-    return { reply: "Done" };
-  };
-
-  const { c, store, repo } = await setup(provider);
-
-  try {
-    const task = await c.start("alice", {
-      ...input(repo),
-      conversation_id: "parent-chat",
-    });
-
-    const context = await started.promise;
-    assert.equal(context.messageParent!("  Done  "), undefined);
-    assert.deepEqual(eventData(store, task.id, "parent.message"), []);
-
-    assert.throws(
-      () => context.messageParent!("Duplicate", "completion"),
-      /already has a parent completion report/,
-    );
-
-    const blocker = context.messageParent!("  Need attention  ", "blocker");
-    assert.equal(typeof blocker, "number");
-
-    assert.deepEqual(eventData(store, task.id, "parent.message"), [
-      { text: "Need attention" },
-    ]);
-
-    finish.resolve();
-    await until(() => !c.active.has(task.id));
-    assert.equal(store.get(task.id, "alice").status, "completed");
-
-    assert.deepEqual(eventData(store, task.id, "parent.message"), [
-      { text: "Need attention" },
-      { text: "Done" },
-    ]);
-
-    const events = store.events(task.id, "alice");
-
-    const report = events
-      .filter((event) => event.type === "parent.message")
-      .at(-1)!;
-
-    const completed = events.find((event) => event.type === "task.completed")!;
-    assert.ok(report.id > completed.id);
-  } finally {
-    finish.resolve();
-    await c.close();
-  }
-});
-
-test.each(["failed", "interrupted"] as const)(
-  "a %s turn discards its completion report and its follow-up gets a fresh report",
-  async (outcome) => {
-    const started = Promise.withResolvers<RunContext>();
-    const finish = Promise.withResolvers<void>();
-    const provider = new TestProvider();
-
-    provider.run = async (context) => {
-      if (context.task.turn === 1) {
-        context.messageParent!("Discard this completion");
-        context.messageParent!("Immediate blocker", "blocker");
-        started.resolve(context);
-        await finish.promise;
-
-        if (outcome === "failed") {
-          throw new Error("Provider failed after reporting");
-        }
-
-        return { reply: "Interrupted output" };
-      }
-
-      context.messageParent!("Follow-up completion");
-
-      return { reply: "Follow-up done" };
-    };
-
-    const { c, store, repo } = await setup(provider);
-
-    try {
-      const task = await c.start("alice", {
-        ...input(repo),
-        conversation_id: "parent-chat",
-      });
-
-      const context = await started.promise;
-
-      if (outcome === "interrupted") {
-        const stopping = c.interrupt("alice", task.id);
-        await until(() => context.signal.aborted);
-        finish.resolve();
-        await stopping;
-      } else {
-        finish.resolve();
-      }
-
-      await until(() => !c.active.has(task.id));
-      assert.equal(store.get(task.id, "alice").status, outcome);
-
-      assert.deepEqual(eventData(store, task.id, "parent.message"), [
-        { text: "Immediate blocker" },
-      ]);
-
-      await c.send("alice", task.id, "Try again", "parent");
-
-      await until(
-        () => store.get(task.id, "alice").turn === 2 && !c.active.has(task.id),
-      );
-
-      assert.equal(store.get(task.id, "alice").status, "completed");
-
-      assert.deepEqual(eventData(store, task.id, "parent.message"), [
-        { text: "Immediate blocker" },
-        { text: "Follow-up completion" },
-      ]);
-    } finally {
-      finish.resolve();
-      await c.close();
-    }
-  },
-);
-
-test("runtime budget expiry retains recorded edits and discards the completion report", async () => {
+test("runtime budget expiry retains recorded edits", async () => {
   const started = Promise.withResolvers<RunContext>();
   const finish = Promise.withResolvers<void>();
   const provider = new TestProvider();
@@ -652,7 +522,6 @@ test("runtime budget expiry retains recorded edits and discards the completion r
       source: "tool",
     });
 
-    context.messageParent!("Must not deliver");
     started.resolve(context);
     await finish.promise;
 
@@ -682,7 +551,6 @@ test("runtime budget expiry retains recorded edits and discards the completion r
     assert.equal(stopped.status, "failed");
     assert.match(stopped.error!, /Runtime budget exhausted/);
     assert.deepEqual(eventData(store, task.id, "agent.reply"), []);
-    assert.deepEqual(eventData(store, task.id, "parent.message"), []);
 
     assert.deepEqual(
       c.changes.changes(stopped).files.map((file) => file.path),

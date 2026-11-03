@@ -4,10 +4,7 @@ import {
   conversation,
   MESSAGE_EVENTS,
 } from "../../../../shared/tasks/conversation/messages.js";
-import {
-  PARENT_REPORT_PROTOCOL,
-  PARENT_SUPERVISION_PROTOCOL,
-} from "../../../../shared/tasks/conversation/parent-protocol.js";
+import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../../shared/tasks/model.js";
 import { listedTask, replyFrom } from "../../../../shared/tasks/task-list.js";
 import {
@@ -23,7 +20,6 @@ import {
   MAX_MESSAGE_WAIT_SECONDS,
   pollMessages,
 } from "../../../features/tasks/conversation/message-poll.js";
-import { acknowledgeParentMessage } from "../../../features/tasks/conversation/parent-messages.js";
 import {
   panelContextInput,
   resolvePanelContext,
@@ -248,7 +244,8 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     get_message: tool({
       readOnly: true,
-      description: `Read one conversation message by task and message ID, independent of the polling cursor. ${PARENT_REPORT_PROTOCOL}`,
+      description:
+        "Read one conversation message by task and message ID, independent of the polling cursor.",
       schema: taskId.extend({ message_id: z.string().min(1) }),
       run: (a) => {
         const task = c.store.get(a.task_id, owner);
@@ -266,13 +263,6 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
 
         return { message };
       },
-    }),
-    acknowledge_message: tool({
-      description:
-        "Record that you processed a worker report (parent_message: true). Reading never acknowledges. Repeat calls are idempotent. Replies and ordinary worker messages cannot be acknowledged. Acknowledged reports stay readable with acknowledged: true and trigger no new host notifications.",
-      schema: taskId.extend({ message_id: z.string().min(1) }),
-      run: (a) =>
-        acknowledgeParentMessage(c.store, owner, a.task_id, a.message_id),
     }),
     get_changes: tool({
       readOnly: true,

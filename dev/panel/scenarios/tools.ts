@@ -452,7 +452,6 @@ export function previewTool(
       { conversation_id: null },
       options,
     ),
-    app_claim_parent_message: null,
     get_panel_context: panelContext(args, options),
     list_projects: projectsWith(options),
     list_tasks: newestFirst(tasks)

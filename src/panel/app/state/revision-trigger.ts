@@ -3,8 +3,6 @@ interface RevisionContext {
   hidden(): boolean;
   busy(): boolean;
   refresh(): void;
-  /** Delivers queued parent messages, which a hidden panel still sends. */
-  forwardParentMessage(): void;
 }
 
 /** How long changes gather before the refresh they trigger. */
@@ -31,7 +29,6 @@ export class RevisionTrigger {
     this.timer = setTimeout(() => {
       this.timer = undefined;
       this.pending = true;
-      if (this.context.hidden()) this.context.forwardParentMessage();
       this.resume();
     }, THROTTLE_MS);
   }

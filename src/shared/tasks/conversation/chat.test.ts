@@ -159,34 +159,6 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
   );
 });
 
-test("Chat leaves out worker reports to the parent and keeps the matching final reply", () => {
-  const items = chatItems(task, [
-    event(1, "agent.message", {
-      role: "assistant",
-      message_id: "sdk_final",
-      text: "Done.",
-      raw_response: { message: { id: "sdk_final" } },
-    }),
-    event(2, "parent.message", { text: "Worker report" }),
-    event(3, "agent.reply", { text: "Done.", turn: 1 }),
-    event(4, "task.turn_ended", {
-      turn: 1,
-      outcome: "completed",
-      runtime_ms: 0,
-      cost_usd: 0,
-    }),
-  ]);
-
-  assert.deepEqual(
-    items.map((item) => [item.id, item.event_id, item.kind]),
-    [
-      ["request", 0, "message"],
-      ["sdk_final", 3, "message"],
-      ["turn_1_4", 4, "outcome"],
-    ],
-  );
-});
-
 test("Chat reads every event that leaves a task unread, and an input request adds no item", () => {
   for (const type of READ_EVENTS) assert.ok(CHAT_EVENTS.includes(type), type);
 

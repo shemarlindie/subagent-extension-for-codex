@@ -19,7 +19,6 @@ import {
   writeTools,
 } from "../configuration/tool-policy.js";
 import { recordClaudeFileEdits } from "./file-edits.js";
-import { PARENT_TOOL, parentEnvironment, parentServer } from "./parent-tool.js";
 
 /** The reason shown when a permission prompt is denied without a message. */
 function defaultDenialMessage(tool: string) {
@@ -57,8 +56,10 @@ function systemPromptAppend(c: RunContext, readOnly: boolean) {
       : "Never modify the primary checkout.",
   ];
 
+  const environment = `You are a delegated worker running inside Subagent Extension for Codex. Codex is the parent agent, and the user communicates through its chat and the extension panel. Task ID: ${c.task.id}. Parent conversation: ${c.task.conversation_id ?? "unavailable"}. Workspace: ${c.task.workspace}. Your replies appear in the task conversation, where Codex reads them. Use AskUserQuestion for questions and the normal permission flow for approvals.`;
+
   const parts = [
-    parentEnvironment(c),
+    environment,
     `You are an independent ${role}. ${rules.join(" ")}`,
   ];
 
@@ -98,11 +99,9 @@ export async function claudeTurnOptions(
   const guarded = (tool: string) =>
     policy.path_guard && pathTools.includes(tool);
 
-  // Restricted workers retain parent reporting alongside permitted task tools.
   const restrictedDenial = (tool: string) => {
     if (
       !restricted ||
-      tool === PARENT_TOOL ||
       tool === "AskUserQuestion" ||
       tool === "Skill" ||
       readTools.includes(tool)
@@ -162,7 +161,6 @@ export async function claudeTurnOptions(
           "Skill",
         ]
       : { type: "preset", preset: "claude_code" },
-    mcpServers: { codex_parent: parentServer(c) },
     disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
     ...(c.task.budget.max_cost_usd === null
       ? {}
@@ -196,17 +194,6 @@ export async function claudeTurnOptions(
               const tool = input.tool_name;
               const params = input.tool_input as Record<string, unknown>;
 
-              // Approve reporting before native modes such as dontAsk can deny it,
-              // without a bare allowedTools entry that shadows canUseTool.
-              if (tool === PARENT_TOOL) {
-                return {
-                  hookSpecificOutput: {
-                    hookEventName: "PreToolUse",
-                    permissionDecision: "allow",
-                  },
-                };
-              }
-
               const deny = (reason: string): HookJSONOutput => ({
                 hookSpecificOutput: {
                   hookEventName: "PreToolUse",
@@ -234,10 +221,6 @@ export async function claudeTurnOptions(
       ],
     },
     canUseTool: async (tool, input, { signal }) => {
-      if (tool === PARENT_TOOL) {
-        return { behavior: "allow", updatedInput: input };
-      }
-
       if (tool === "AskUserQuestion") {
         const answer = await c.input(tool, input, signal);
 

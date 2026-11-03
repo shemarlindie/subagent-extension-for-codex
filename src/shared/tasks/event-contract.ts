@@ -75,25 +75,6 @@ interface TaskStatusPayload {
   error?: string;
 }
 
-interface ParentMessagePayload {
-  text: string;
-}
-
-interface ParentMessageAttemptedPayload {
-  message_id: number;
-}
-
-interface ParentMessageDeliveryPayload {
-  attempt_id: number;
-  delivered: boolean;
-  skipped?: "acknowledged";
-  error?: string;
-}
-
-interface ParentMessageAcknowledgedPayload {
-  message_id: number;
-}
-
 /** Lifecycle and conversation payloads owned by the shared task feature. */
 export interface TaskEventPayloadMap {
   "task.started": TaskStartedPayload;
@@ -112,8 +93,4 @@ export interface TaskEventPayloadMap {
   "task.message_removed": TaskMessageRemovedPayload;
   "task.queued": EmptyEventPayload;
   "task.completed": TaskStatusPayload;
-  "parent.message": ParentMessagePayload;
-  "parent.message_attempted": ParentMessageAttemptedPayload;
-  "parent.message_delivery": ParentMessageDeliveryPayload;
-  "parent.message_acknowledged": ParentMessageAcknowledgedPayload;
 }

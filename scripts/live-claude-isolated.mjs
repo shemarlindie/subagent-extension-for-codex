@@ -27,7 +27,7 @@ export async function runIsolatedScenario({
         worker_profile: "reviewer",
         conversation_id: "isolated-verification",
         description:
-          "Read README.md with the native Read tool. Then use mcp__codex_parent__send_message exactly once to send ISOLATED-27. Include the exact README verification marker in your final reply. Do not use other tools or ask questions.",
+          "Read README.md with the native Read tool. Include the exact README verification marker in your final reply. Do not use other tools or ask questions.",
         budget: { max_runtime_minutes: 1, max_cost_usd: 0.25 },
       });
 
@@ -73,11 +73,7 @@ export async function runIsolatedScenario({
         init.data.response_ref,
       );
 
-      assert.deepEqual(
-        native.mcp_servers.map(({ name, status }) => ({ name, status })),
-        [{ name: "codex_parent", status: "connected" }],
-        "Only the extension's parent server should load",
-      );
+      assert.deepEqual(native.mcp_servers, [], "External MCP servers loaded");
 
       assert.equal(
         native.skills.includes("marker-skill"),
@@ -85,14 +81,8 @@ export async function runIsolatedScenario({
         "Project skill loading differs from settings policy",
       );
 
-      const mcpTools = init.data.tools.filter((name) =>
-        name.startsWith("mcp__"),
-      );
-
-      assert.ok(mcpTools.includes("mcp__codex_parent__send_message"));
-
       assert.ok(
-        mcpTools.every((name) => name.startsWith("mcp__codex_parent__")),
+        !init.data.tools.some((name) => name.startsWith("mcp__")),
         "External MCP tools loaded",
       );
 
@@ -124,10 +114,6 @@ export async function runIsolatedScenario({
           "COBALT-27",
         ),
       );
-
-      const messages = store.eventsOfTypes(task.id, ["parent.message"]);
-      assert.equal(messages.length, 1);
-      assert.ok(messages[0].data.text.includes("ISOLATED-27"));
 
       assert.equal(
         execFileSync("git", ["-C", repo, "status", "--porcelain"], {

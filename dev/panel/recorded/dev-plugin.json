@@ -173,8 +173,7 @@
           "TaskStop",
           "ToolSearch",
           "WebSearch",
-          "Write",
-          "mcp__codex_parent__send_message"
+          "Write"
         ],
         "activity": {
           "kind": "agent.started",
@@ -218,8 +217,7 @@
             "TaskStop",
             "ToolSearch",
             "WebSearch",
-            "Write",
-            "mcp__codex_parent__send_message"
+            "Write"
           ],
           "mcp_servers": [],
           "model": "claude-opus-5-5",
@@ -3654,148 +3652,6 @@
       }
     },
     {
-      "id": 51073,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.started",
-      "timestamp": "2026-10-02T12:01:02.480Z",
-      "data": {
-        "id": "toolu_017YEE7d22gm2SpejKNP3YAG",
-        "name": "ToolSearch",
-        "input": {
-          "query": "select:mcp__codex_parent__send_message",
-          "max_results": 1
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011Cgcxo3unVBCLeT9hPHxsY",
-          "hasThinking": false
-        },
-        "response_ref": "response-51073",
-        "raw_response": {
-          "type": "assistant",
-          "message": {
-            "model": "claude-opus-5-5",
-            "id": "msg_011Cgcxo3unVBCLeT9hPHxsY",
-            "type": "message",
-            "role": "assistant",
-            "content": [
-              {
-                "type": "tool_use",
-                "id": "toolu_017YEE7d22gm2SpejKNP3YAG",
-                "name": "ToolSearch",
-                "input": {
-                  "query": "select:mcp__codex_parent__send_message",
-                  "max_results": 1
-                },
-                "caller": {
-                  "type": "direct"
-                }
-              }
-            ],
-            "container": null,
-            "stop_reason": null,
-            "stop_sequence": null,
-            "stop_details": null,
-            "usage": {
-              "input_tokens": 2,
-              "cache_creation_input_tokens": 465,
-              "cache_read_input_tokens": 51181,
-              "cache_creation": {
-                "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 465
-              },
-              "output_tokens": 8,
-              "service_tier": "standard",
-              "inference_geo": "global",
-              "speed": "standard"
-            },
-            "input_transformations": [],
-            "diagnostics": null,
-            "context_management": null
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "7a29224d-e984-49e9-b97c-21279ea70f71",
-          "timestamp": "2026-11-01T22:02:26.325Z",
-          "request_id": "req_preview_0013",
-          "wire_tool_inputs": {
-            "toolu_017YEE7d22gm2SpejKNP3YAG": {
-              "query": "select:mcp__codex_parent__send_message",
-              "max_results": 1
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": 51074,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.completed",
-      "timestamp": "2026-10-02T12:01:02.486Z",
-      "data": {
-        "id": "toolu_017YEE7d22gm2SpejKNP3YAG",
-        "content": [
-          {
-            "type": "opaque",
-            "data": {
-              "type": "tool_reference",
-              "tool_name": "mcp__codex_parent__send_message"
-            }
-          }
-        ],
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "39521f7a-7f64-4b7c-9a68-3286ac5d2600",
-          "hasThinking": false
-        },
-        "response_ref": "response-51074",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": [
-              {
-                "type": "tool_result",
-                "tool_use_id": "toolu_017YEE7d22gm2SpejKNP3YAG",
-                "content": [
-                  {
-                    "type": "tool_reference",
-                    "tool_name": "mcp__codex_parent__send_message"
-                  }
-                ]
-              }
-            ]
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "39521f7a-7f64-4b7c-9a68-3286ac5d2600",
-          "timestamp": "2026-11-01T22:02:26.333Z",
-          "tool_use_result": {
-            "matches": ["mcp__codex_parent__send_message"],
-            "query": "select:mcp__codex_parent__send_message",
-            "total_deferred_tools": 21
-          },
-          "tool_result_meta": [
-            {
-              "id": "toolu_017YEE7d22gm2SpejKNP3YAG",
-              "permission_decision": {
-                "decision": "accept",
-                "source": "config"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": 51075,
       "task_id": "preview-recorded-dev-plugin",
       "type": "claude.activity",
@@ -3958,183 +3814,6 @@
           "thinking_duration_ms": 1048,
           "thinking_display": "updates"
         }
-      }
-    },
-    {
-      "id": 51079,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.started",
-      "timestamp": "2026-10-02T12:01:15.740Z",
-      "data": {
-        "id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-        "name": "mcp__codex_parent__send_message",
-        "input": {
-          "kind": "blocker",
-          "message": "Proposed approach (I'm going ahead with it now; tell me if you want changes).\n\nWhat the probe showed (codex-cli 0.166.0, temp CODEX_HOME):\n- `plugin remove` when the plugin is absent exits 0.\n- `marketplace remove` when the marketplace is absent exits 1 (\"not configured or installed\").\n- Running `marketplace add <same path>` twice is fine. Adding a different source under the same name exits 1 (\"already added from a different source; remove it before adding\"). So switching from a remote/Git `demo-user` marketplace to the local one means removing it first.\n- Running `plugin add` again at the same version re-copies the release into `plugins/cache/demo-user/subagent-extension-for-codex/0.1.0` and drops stale files. That refreshes a same-version local rebuild on disk.\n- Removing the marketplace leaves the plugin config entry, and `plugin add` then fails with \"not found\". So the order is: remove the plugin, then the marketplace.\n- `plugin list --json` and `marketplace list --json` give the installed plugin and the marketplace's source type and path, so I can check state up front instead of swallowing errors.\n- Task data lives in `~/.local/share/subagent-extension-for-codex`, outside PLUGIN_DATA, so uninstalling keeps it.\n\nPlan: one script, `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`.\n- install and update are the same operation. It runs `npm run build` and assembles into `release/`, then checks state. If a marketplace named demo-user points somewhere other than `./release`, it removes it, after removing the plugin if that is installed. Then it adds the marketplace if missing and runs `plugin add`. The build runs before anything is removed. Removing the plugin isn't needed when the marketplace already points at `./release`, since add re-copies.\n- uninstall checks state, removes the plugin if installed and the marketplace if present, and otherwise says there's nothing to do. Any other codex failure stops with its output.\n- The script honors CODEX_HOME and CODEX_BIN, so tests can isolate it.\n- The script prints a note that a running service keeps its old code when the version is unchanged. The proxy reuses it (\"Same version, installation present\"). Restarting Codex only reloads the proxy. To run the new backend, stop the service (pid in service.json, SIGTERM). That interrupts running turns. No service control in the script.\n- Limit: uninstall removes the local marketplace, so a user who had the remote one must re-add it (`codex plugin marketplace add demo-user/subagent-extension-for-codex`). The script prints that hint when the remote one was replaced. I won't save and restore it automatically.\n- Tests: one integration test that skips without codex. It covers install twice, then update, then uninstall twice, against a temp CODEX_HOME, plus switching from a pre-existing different-source marketplace. I'll pass `--skip-build`... no, see below.\n- Docs: replace the two-command block in development.md#build with the script, and add the service note.\n\nOpen question I'm deciding myself: so the test doesn't run a full build, the script takes `--no-build` to reuse the existing dist/. I'll keep it unless you object."
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CgcxoUrTxaBh9q47ugXkN",
-          "hasThinking": false
-        },
-        "response_ref": "response-51079",
-        "raw_response": {
-          "type": "assistant",
-          "message": {
-            "model": "claude-opus-5-5",
-            "id": "msg_011CgcxoUrTxaBh9q47ugXkN",
-            "type": "message",
-            "role": "assistant",
-            "content": [
-              {
-                "type": "tool_use",
-                "id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-                "name": "mcp__codex_parent__send_message",
-                "input": {
-                  "kind": "blocker",
-                  "message": "Proposed approach (I'm going ahead with it now; tell me if you want changes).\n\nWhat the probe showed (codex-cli 0.166.0, temp CODEX_HOME):\n- `plugin remove` when the plugin is absent exits 0.\n- `marketplace remove` when the marketplace is absent exits 1 (\"not configured or installed\").\n- Running `marketplace add <same path>` twice is fine. Adding a different source under the same name exits 1 (\"already added from a different source; remove it before adding\"). So switching from a remote/Git `demo-user` marketplace to the local one means removing it first.\n- Running `plugin add` again at the same version re-copies the release into `plugins/cache/demo-user/subagent-extension-for-codex/0.1.0` and drops stale files. That refreshes a same-version local rebuild on disk.\n- Removing the marketplace leaves the plugin config entry, and `plugin add` then fails with \"not found\". So the order is: remove the plugin, then the marketplace.\n- `plugin list --json` and `marketplace list --json` give the installed plugin and the marketplace's source type and path, so I can check state up front instead of swallowing errors.\n- Task data lives in `~/.local/share/subagent-extension-for-codex`, outside PLUGIN_DATA, so uninstalling keeps it.\n\nPlan: one script, `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`.\n- install and update are the same operation. It runs `npm run build` and assembles into `release/`, then checks state. If a marketplace named demo-user points somewhere other than `./release`, it removes it, after removing the plugin if that is installed. Then it adds the marketplace if missing and runs `plugin add`. The build runs before anything is removed. Removing the plugin isn't needed when the marketplace already points at `./release`, since add re-copies.\n- uninstall checks state, removes the plugin if installed and the marketplace if present, and otherwise says there's nothing to do. Any other codex failure stops with its output.\n- The script honors CODEX_HOME and CODEX_BIN, so tests can isolate it.\n- The script prints a note that a running service keeps its old code when the version is unchanged. The proxy reuses it (\"Same version, installation present\"). Restarting Codex only reloads the proxy. To run the new backend, stop the service (pid in service.json, SIGTERM). That interrupts running turns. No service control in the script.\n- Limit: uninstall removes the local marketplace, so a user who had the remote one must re-add it (`codex plugin marketplace add demo-user/subagent-extension-for-codex`). The script prints that hint when the remote one was replaced. I won't save and restore it automatically.\n- Tests: one integration test that skips without codex. It covers install twice, then update, then uninstall twice, against a temp CODEX_HOME, plus switching from a pre-existing different-source marketplace. I'll pass `--skip-build`... no, see below.\n- Docs: replace the two-command block in development.md#build with the script, and add the service note.\n\nOpen question I'm deciding myself: so the test doesn't run a full build, the script takes `--no-build` to reuse the existing dist/. I'll keep it unless you object."
-                },
-                "caller": {
-                  "type": "direct"
-                }
-              }
-            ],
-            "container": null,
-            "stop_reason": null,
-            "stop_sequence": null,
-            "stop_details": null,
-            "usage": {
-              "input_tokens": 4,
-              "cache_creation_input_tokens": 694,
-              "cache_read_input_tokens": 51646,
-              "cache_creation": {
-                "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 694
-              },
-              "output_tokens": 7,
-              "service_tier": "standard",
-              "inference_geo": "global",
-              "speed": "standard"
-            },
-            "input_transformations": [],
-            "diagnostics": null,
-            "context_management": null
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "36d46ff4-c52c-4fe2-a6f3-5a6b42e26f60",
-          "timestamp": "2026-11-01T22:02:39.587Z",
-          "request_id": "req_preview_0014",
-          "wire_tool_inputs": {
-            "toolu_01DA5p82HUwg4UyrquMmZGu7": {
-              "kind": "blocker",
-              "message": "Proposed approach (I'm going ahead with it now; tell me if you want changes).\n\nWhat the probe showed (codex-cli 0.166.0, temp CODEX_HOME):\n- `plugin remove` when the plugin is absent exits 0.\n- `marketplace remove` when the marketplace is absent exits 1 (\"not configured or installed\").\n- Running `marketplace add <same path>` twice is fine. Adding a different source under the same name exits 1 (\"already added from a different source; remove it before adding\"). So switching from a remote/Git `demo-user` marketplace to the local one means removing it first.\n- Running `plugin add` again at the same version re-copies the release into `plugins/cache/demo-user/subagent-extension-for-codex/0.1.0` and drops stale files. That refreshes a same-version local rebuild on disk.\n- Removing the marketplace leaves the plugin config entry, and `plugin add` then fails with \"not found\". So the order is: remove the plugin, then the marketplace.\n- `plugin list --json` and `marketplace list --json` give the installed plugin and the marketplace's source type and path, so I can check state up front instead of swallowing errors.\n- Task data lives in `~/.local/share/subagent-extension-for-codex`, outside PLUGIN_DATA, so uninstalling keeps it.\n\nPlan: one script, `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`.\n- install and update are the same operation. It runs `npm run build` and assembles into `release/`, then checks state. If a marketplace named demo-user points somewhere other than `./release`, it removes it, after removing the plugin if that is installed. Then it adds the marketplace if missing and runs `plugin add`. The build runs before anything is removed. Removing the plugin isn't needed when the marketplace already points at `./release`, since add re-copies.\n- uninstall checks state, removes the plugin if installed and the marketplace if present, and otherwise says there's nothing to do. Any other codex failure stops with its output.\n- The script honors CODEX_HOME and CODEX_BIN, so tests can isolate it.\n- The script prints a note that a running service keeps its old code when the version is unchanged. The proxy reuses it (\"Same version, installation present\"). Restarting Codex only reloads the proxy. To run the new backend, stop the service (pid in service.json, SIGTERM). That interrupts running turns. No service control in the script.\n- Limit: uninstall removes the local marketplace, so a user who had the remote one must re-add it (`codex plugin marketplace add demo-user/subagent-extension-for-codex`). The script prints that hint when the remote one was replaced. I won't save and restore it automatically.\n- Tests: one integration test that skips without codex. It covers install twice, then update, then uninstall twice, against a temp CODEX_HOME, plus switching from a pre-existing different-source marketplace. I'll pass `--skip-build`... no, see below.\n- Docs: replace the two-command block in development.md#build with the script, and add the service note.\n\nOpen question I'm deciding myself: so the test doesn't run a full build, the script takes `--no-build` to reuse the existing dist/. I'll keep it unless you object."
-            }
-          },
-          "tool_use_meta": [
-            {
-              "id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-              "display_name": "Send Message",
-              "server_display_name": "codex_parent",
-              "tool_name": "send_message"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": 51080,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message",
-      "timestamp": "2026-10-02T12:01:15.745Z",
-      "data": {
-        "text": "Proposed approach (I'm going ahead with it now; tell me if you want changes).\n\nWhat the probe showed (codex-cli 0.166.0, temp CODEX_HOME):\n- `plugin remove` when the plugin is absent exits 0.\n- `marketplace remove` when the marketplace is absent exits 1 (\"not configured or installed\").\n- Running `marketplace add <same path>` twice is fine. Adding a different source under the same name exits 1 (\"already added from a different source; remove it before adding\"). So switching from a remote/Git `demo-user` marketplace to the local one means removing it first.\n- Running `plugin add` again at the same version re-copies the release into `plugins/cache/demo-user/subagent-extension-for-codex/0.1.0` and drops stale files. That refreshes a same-version local rebuild on disk.\n- Removing the marketplace leaves the plugin config entry, and `plugin add` then fails with \"not found\". So the order is: remove the plugin, then the marketplace.\n- `plugin list --json` and `marketplace list --json` give the installed plugin and the marketplace's source type and path, so I can check state up front instead of swallowing errors.\n- Task data lives in `~/.local/share/subagent-extension-for-codex`, outside PLUGIN_DATA, so uninstalling keeps it.\n\nPlan: one script, `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`.\n- install and update are the same operation. It runs `npm run build` and assembles into `release/`, then checks state. If a marketplace named demo-user points somewhere other than `./release`, it removes it, after removing the plugin if that is installed. Then it adds the marketplace if missing and runs `plugin add`. The build runs before anything is removed. Removing the plugin isn't needed when the marketplace already points at `./release`, since add re-copies.\n- uninstall checks state, removes the plugin if installed and the marketplace if present, and otherwise says there's nothing to do. Any other codex failure stops with its output.\n- The script honors CODEX_HOME and CODEX_BIN, so tests can isolate it.\n- The script prints a note that a running service keeps its old code when the version is unchanged. The proxy reuses it (\"Same version, installation present\"). Restarting Codex only reloads the proxy. To run the new backend, stop the service (pid in service.json, SIGTERM). That interrupts running turns. No service control in the script.\n- Limit: uninstall removes the local marketplace, so a user who had the remote one must re-add it (`codex plugin marketplace add demo-user/subagent-extension-for-codex`). The script prints that hint when the remote one was replaced. I won't save and restore it automatically.\n- Tests: one integration test that skips without codex. It covers install twice, then update, then uninstall twice, against a temp CODEX_HOME, plus switching from a pre-existing different-source marketplace. I'll pass `--skip-build`... no, see below.\n- Docs: replace the two-command block in development.md#build with the script, and add the service note.\n\nOpen question I'm deciding myself: so the test doesn't run a full build, the script takes `--no-build` to reuse the existing dist/. I'll keep it unless you object."
-      }
-    },
-    {
-      "id": 51081,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.completed",
-      "timestamp": "2026-10-02T12:01:15.751Z",
-      "data": {
-        "id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-        "content": [
-          {
-            "type": "text",
-            "text": "Queued parent message parent_81. Host delivery is pending."
-          }
-        ],
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "628e3d3b-1b47-4aca-9342-6ec61160aea1",
-          "hasThinking": false
-        },
-        "response_ref": "response-51081",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": [
-              {
-                "tool_use_id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-                "type": "tool_result",
-                "content": [
-                  {
-                    "type": "text",
-                    "text": "Queued parent message parent_81. Host delivery is pending."
-                  }
-                ]
-              }
-            ]
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "628e3d3b-1b47-4aca-9342-6ec61160aea1",
-          "timestamp": "2026-11-01T22:02:39.599Z",
-          "tool_use_result": [
-            {
-              "type": "text",
-              "text": "Queued parent message parent_81. Host delivery is pending."
-            }
-          ],
-          "tool_result_meta": [
-            {
-              "id": "toolu_01DA5p82HUwg4UyrquMmZGu7",
-              "permission_decision": {
-                "decision": "accept",
-                "source": "hook",
-                "reason_type": "hook"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": 51082,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_attempted",
-      "timestamp": "2026-10-02T12:01:15.773Z",
-      "data": {
-        "message_id": 81
-      }
-    },
-    {
-      "id": 51083,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_delivery",
-      "timestamp": "2026-10-02T12:01:15.806Z",
-      "data": {
-        "attempt_id": 83,
-        "delivered": true
       }
     },
     {
@@ -4307,15 +3986,6 @@
         "message": "Approach looks suitably small. Pushback: keep --no-build only if it has a clear developer use too (e.g. frontend iteration already built); document that it still assembles current dist. Add meaningful build-failure preservation and genuine CLI failure propagation coverage rather than only happy path sequencing. You can use temporary miniature checkout/build scripts and/or fake executables following existing development integration suites to avoid full builds for those failures. Retain real CLI coverage for same-version overwrite/stale-file removal, twice uninstall, source switch. Do not add parser-only unit tests. Verify how plugin list behaves for orphaned config after marketplace removal, so uninstall doesn't falsely skip an installed entry if discovery omits it. No auto restoring remote sources needed.",
         "from": "parent",
         "delivery": "steer"
-      }
-    },
-    {
-      "id": 51090,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_acknowledged",
-      "timestamp": "2026-10-02T12:01:22.192Z",
-      "data": {
-        "message_id": 81
       }
     },
     {
@@ -18007,155 +17677,6 @@
       }
     },
     {
-      "id": 51371,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.started",
-      "timestamp": "2026-10-02T12:06:37.917Z",
-      "data": {
-        "id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-        "name": "mcp__codex_parent__send_message",
-        "input": {
-          "kind": "completion",
-          "message": "The dev plugin script is in place and its 6 integration tests pass. Nothing is committed, and I made no changes to the real Codex installation or service.\n\nChanges:\n- `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`. Unknown or extra arguments print usage and exit 1 before any build.\n- install and update are the same operation: `npm run build`, then assemble release/, then the shared removal step, then `marketplace add <abs release>` and `plugin add`. A build or assembly failure stops before the installation changes.\n- The removal step always runs `plugin remove`. That exits 0 when the plugin is absent and also clears an orphaned config entry and cache, which `plugin list` doesn't report. Then it runs `marketplace remove demo-user`. Only status 1 with stderr exactly `Error: marketplace \\`demo-user\\` is not configured or installed` counts as a no-op. Any other output or status is printed and becomes the exit status. There are no list queries, path checks or config parsing; `marketplace list` fails outright when a configured local source directory is missing.\n- uninstall prints the commands that re-add the published marketplace. Nothing restores it automatically.\n- The install output says: reopen the panel, restart Codex for the proxy and skills, and a same-version running service keeps its old code even after a Codex restart. To load new service code, stop it (pid in service.json), which interrupts its running turns. The script does no service control.\n- `package.json` gains the `dev:plugin` script.\n- `docs/development.md` gets a new \"Install a local build\" subsection under Build, replacing the two-command block. It covers the operations, the build-first and absent behavior, replacing the published marketplace, task data, macOS and Linux only (Windows npm shim limit), and a table of what reloads what, including the same-version service limit with links to task-continuation.\n\nTests are in `tests/integration/development/dev-plugin.test.ts`. They use a miniature checkout with the real scripts and a fake build marked by BUILD_ID, run against the real Codex CLI in a temp CODEX_HOME, and skip without codex or on Windows:\n- install, install, update at the same version: the cache holds only the last build's files, so the stale file is gone. Uninstall twice, then no marketplace and no cache.\n- A same-name marketplace from another source gets replaced, with the source then pointing at release/.\n- A deleted other source: uninstall still succeeds and cleans up.\n- Unknown args are rejected before building.\n- A build failure leaves the installed copy intact.\n- A fake CODEX_BIN shows failures propagating for `plugin add` (status 3), another marketplace-remove error, the absent line plus an extra error, and the absent line with status 2. All four fail closed.\n\nProbe findings (codex-cli 0.166.0):\n- Same-version `plugin add` re-copies the release and drops stale files.\n- `marketplace add` refuses a different source under the same name.\n- `marketplace list` and `plugin list` exit 1 when a local source directory is gone, while both removes still work.\n\nChecks: prettier, eslint, knip and tsc (test project) are clean, and the focused vitest run passes 6/6. I didn't run the full `npm test` or a real-repo `npm run dev:plugin` (you're running that one).\n\nLimits:\n- Update briefly removes the cached install between remove and add. A proxy starting in that window could see the installation missing and drain the service.\n- The absent match depends on Codex's exact error text, so a CLI wording change makes uninstall fail when the marketplace is absent; it fails loudly, not silently.\n- The \"other source\" tests use a second local directory, not a real Git marketplace."
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CgcyD7u4PbCEq4eVBSU7n",
-          "hasThinking": false
-        },
-        "response_ref": "response-51371",
-        "raw_response": {
-          "type": "assistant",
-          "message": {
-            "model": "claude-opus-5-5",
-            "id": "msg_011CgcyD7u4PbCEq4eVBSU7n",
-            "type": "message",
-            "role": "assistant",
-            "content": [
-              {
-                "type": "tool_use",
-                "id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-                "name": "mcp__codex_parent__send_message",
-                "input": {
-                  "kind": "completion",
-                  "message": "The dev plugin script is in place and its 6 integration tests pass. Nothing is committed, and I made no changes to the real Codex installation or service.\n\nChanges:\n- `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`. Unknown or extra arguments print usage and exit 1 before any build.\n- install and update are the same operation: `npm run build`, then assemble release/, then the shared removal step, then `marketplace add <abs release>` and `plugin add`. A build or assembly failure stops before the installation changes.\n- The removal step always runs `plugin remove`. That exits 0 when the plugin is absent and also clears an orphaned config entry and cache, which `plugin list` doesn't report. Then it runs `marketplace remove demo-user`. Only status 1 with stderr exactly `Error: marketplace \\`demo-user\\` is not configured or installed` counts as a no-op. Any other output or status is printed and becomes the exit status. There are no list queries, path checks or config parsing; `marketplace list` fails outright when a configured local source directory is missing.\n- uninstall prints the commands that re-add the published marketplace. Nothing restores it automatically.\n- The install output says: reopen the panel, restart Codex for the proxy and skills, and a same-version running service keeps its old code even after a Codex restart. To load new service code, stop it (pid in service.json), which interrupts its running turns. The script does no service control.\n- `package.json` gains the `dev:plugin` script.\n- `docs/development.md` gets a new \"Install a local build\" subsection under Build, replacing the two-command block. It covers the operations, the build-first and absent behavior, replacing the published marketplace, task data, macOS and Linux only (Windows npm shim limit), and a table of what reloads what, including the same-version service limit with links to task-continuation.\n\nTests are in `tests/integration/development/dev-plugin.test.ts`. They use a miniature checkout with the real scripts and a fake build marked by BUILD_ID, run against the real Codex CLI in a temp CODEX_HOME, and skip without codex or on Windows:\n- install, install, update at the same version: the cache holds only the last build's files, so the stale file is gone. Uninstall twice, then no marketplace and no cache.\n- A same-name marketplace from another source gets replaced, with the source then pointing at release/.\n- A deleted other source: uninstall still succeeds and cleans up.\n- Unknown args are rejected before building.\n- A build failure leaves the installed copy intact.\n- A fake CODEX_BIN shows failures propagating for `plugin add` (status 3), another marketplace-remove error, the absent line plus an extra error, and the absent line with status 2. All four fail closed.\n\nProbe findings (codex-cli 0.166.0):\n- Same-version `plugin add` re-copies the release and drops stale files.\n- `marketplace add` refuses a different source under the same name.\n- `marketplace list` and `plugin list` exit 1 when a local source directory is gone, while both removes still work.\n\nChecks: prettier, eslint, knip and tsc (test project) are clean, and the focused vitest run passes 6/6. I didn't run the full `npm test` or a real-repo `npm run dev:plugin` (you're running that one).\n\nLimits:\n- Update briefly removes the cached install between remove and add. A proxy starting in that window could see the installation missing and drain the service.\n- The absent match depends on Codex's exact error text, so a CLI wording change makes uninstall fail when the marketplace is absent; it fails loudly, not silently.\n- The \"other source\" tests use a second local directory, not a real Git marketplace."
-                },
-                "caller": {
-                  "type": "direct"
-                }
-              }
-            ],
-            "container": null,
-            "stop_reason": null,
-            "stop_sequence": null,
-            "stop_details": null,
-            "usage": {
-              "input_tokens": 2,
-              "cache_creation_input_tokens": 694,
-              "cache_read_input_tokens": 91695,
-              "cache_creation": {
-                "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 694
-              },
-              "output_tokens": 3,
-              "service_tier": "standard",
-              "inference_geo": "global",
-              "speed": "standard"
-            },
-            "input_transformations": [],
-            "diagnostics": null,
-            "context_management": null
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "ead34724-e22e-42d5-8744-b917d275a974",
-          "timestamp": "2026-11-01T22:08:01.764Z",
-          "request_id": "req_preview_0044",
-          "wire_tool_inputs": {
-            "toolu_01H3AwfYFhp66rU11dpA2wbD": {
-              "kind": "completion",
-              "message": "The dev plugin script is in place and its 6 integration tests pass. Nothing is committed, and I made no changes to the real Codex installation or service.\n\nChanges:\n- `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`. Unknown or extra arguments print usage and exit 1 before any build.\n- install and update are the same operation: `npm run build`, then assemble release/, then the shared removal step, then `marketplace add <abs release>` and `plugin add`. A build or assembly failure stops before the installation changes.\n- The removal step always runs `plugin remove`. That exits 0 when the plugin is absent and also clears an orphaned config entry and cache, which `plugin list` doesn't report. Then it runs `marketplace remove demo-user`. Only status 1 with stderr exactly `Error: marketplace \\`demo-user\\` is not configured or installed` counts as a no-op. Any other output or status is printed and becomes the exit status. There are no list queries, path checks or config parsing; `marketplace list` fails outright when a configured local source directory is missing.\n- uninstall prints the commands that re-add the published marketplace. Nothing restores it automatically.\n- The install output says: reopen the panel, restart Codex for the proxy and skills, and a same-version running service keeps its old code even after a Codex restart. To load new service code, stop it (pid in service.json), which interrupts its running turns. The script does no service control.\n- `package.json` gains the `dev:plugin` script.\n- `docs/development.md` gets a new \"Install a local build\" subsection under Build, replacing the two-command block. It covers the operations, the build-first and absent behavior, replacing the published marketplace, task data, macOS and Linux only (Windows npm shim limit), and a table of what reloads what, including the same-version service limit with links to task-continuation.\n\nTests are in `tests/integration/development/dev-plugin.test.ts`. They use a miniature checkout with the real scripts and a fake build marked by BUILD_ID, run against the real Codex CLI in a temp CODEX_HOME, and skip without codex or on Windows:\n- install, install, update at the same version: the cache holds only the last build's files, so the stale file is gone. Uninstall twice, then no marketplace and no cache.\n- A same-name marketplace from another source gets replaced, with the source then pointing at release/.\n- A deleted other source: uninstall still succeeds and cleans up.\n- Unknown args are rejected before building.\n- A build failure leaves the installed copy intact.\n- A fake CODEX_BIN shows failures propagating for `plugin add` (status 3), another marketplace-remove error, the absent line plus an extra error, and the absent line with status 2. All four fail closed.\n\nProbe findings (codex-cli 0.166.0):\n- Same-version `plugin add` re-copies the release and drops stale files.\n- `marketplace add` refuses a different source under the same name.\n- `marketplace list` and `plugin list` exit 1 when a local source directory is gone, while both removes still work.\n\nChecks: prettier, eslint, knip and tsc (test project) are clean, and the focused vitest run passes 6/6. I didn't run the full `npm test` or a real-repo `npm run dev:plugin` (you're running that one).\n\nLimits:\n- Update briefly removes the cached install between remove and add. A proxy starting in that window could see the installation missing and drain the service.\n- The absent match depends on Codex's exact error text, so a CLI wording change makes uninstall fail when the marketplace is absent; it fails loudly, not silently.\n- The \"other source\" tests use a second local directory, not a real Git marketplace."
-            }
-          },
-          "tool_use_meta": [
-            {
-              "id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-              "display_name": "Send Message",
-              "server_display_name": "codex_parent",
-              "tool_name": "send_message"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": 51372,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.completed",
-      "timestamp": "2026-10-02T12:06:37.925Z",
-      "data": {
-        "id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-        "content": [
-          {
-            "type": "text",
-            "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-          }
-        ],
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "05312a80-292e-427b-a3f6-639ced06d31e",
-          "hasThinking": false
-        },
-        "response_ref": "response-51372",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": [
-              {
-                "tool_use_id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-                "type": "tool_result",
-                "content": [
-                  {
-                    "type": "text",
-                    "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-                  }
-                ]
-              }
-            ]
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "05312a80-292e-427b-a3f6-639ced06d31e",
-          "timestamp": "2026-11-01T22:08:01.773Z",
-          "tool_use_result": [
-            {
-              "type": "text",
-              "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-            }
-          ],
-          "tool_result_meta": [
-            {
-              "id": "toolu_01H3AwfYFhp66rU11dpA2wbD",
-              "permission_decision": {
-                "decision": "accept",
-                "source": "hook",
-                "reason_type": "hook"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": 51373,
       "task_id": "preview-recorded-dev-plugin",
       "type": "claude.activity",
@@ -18507,43 +18028,6 @@
       "data": {}
     },
     {
-      "id": 51379,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message",
-      "timestamp": "2026-10-02T12:06:51.388Z",
-      "data": {
-        "text": "The dev plugin script is in place and its 6 integration tests pass. Nothing is committed, and I made no changes to the real Codex installation or service.\n\nChanges:\n- `scripts/dev-plugin.mjs`, run as `npm run dev:plugin -- install|update|uninstall`. Unknown or extra arguments print usage and exit 1 before any build.\n- install and update are the same operation: `npm run build`, then assemble release/, then the shared removal step, then `marketplace add <abs release>` and `plugin add`. A build or assembly failure stops before the installation changes.\n- The removal step always runs `plugin remove`. That exits 0 when the plugin is absent and also clears an orphaned config entry and cache, which `plugin list` doesn't report. Then it runs `marketplace remove demo-user`. Only status 1 with stderr exactly `Error: marketplace \\`demo-user\\` is not configured or installed` counts as a no-op. Any other output or status is printed and becomes the exit status. There are no list queries, path checks or config parsing; `marketplace list` fails outright when a configured local source directory is missing.\n- uninstall prints the commands that re-add the published marketplace. Nothing restores it automatically.\n- The install output says: reopen the panel, restart Codex for the proxy and skills, and a same-version running service keeps its old code even after a Codex restart. To load new service code, stop it (pid in service.json), which interrupts its running turns. The script does no service control.\n- `package.json` gains the `dev:plugin` script.\n- `docs/development.md` gets a new \"Install a local build\" subsection under Build, replacing the two-command block. It covers the operations, the build-first and absent behavior, replacing the published marketplace, task data, macOS and Linux only (Windows npm shim limit), and a table of what reloads what, including the same-version service limit with links to task-continuation.\n\nTests are in `tests/integration/development/dev-plugin.test.ts`. They use a miniature checkout with the real scripts and a fake build marked by BUILD_ID, run against the real Codex CLI in a temp CODEX_HOME, and skip without codex or on Windows:\n- install, install, update at the same version: the cache holds only the last build's files, so the stale file is gone. Uninstall twice, then no marketplace and no cache.\n- A same-name marketplace from another source gets replaced, with the source then pointing at release/.\n- A deleted other source: uninstall still succeeds and cleans up.\n- Unknown args are rejected before building.\n- A build failure leaves the installed copy intact.\n- A fake CODEX_BIN shows failures propagating for `plugin add` (status 3), another marketplace-remove error, the absent line plus an extra error, and the absent line with status 2. All four fail closed.\n\nProbe findings (codex-cli 0.166.0):\n- Same-version `plugin add` re-copies the release and drops stale files.\n- `marketplace add` refuses a different source under the same name.\n- `marketplace list` and `plugin list` exit 1 when a local source directory is gone, while both removes still work.\n\nChecks: prettier, eslint, knip and tsc (test project) are clean, and the focused vitest run passes 6/6. I didn't run the full `npm test` or a real-repo `npm run dev:plugin` (you're running that one).\n\nLimits:\n- Update briefly removes the cached install between remove and add. A proxy starting in that window could see the installation missing and drain the service.\n- The absent match depends on Codex's exact error text, so a CLI wording change makes uninstall fail when the marketplace is absent; it fails loudly, not silently.\n- The \"other source\" tests use a second local directory, not a real Git marketplace."
-      }
-    },
-    {
-      "id": 51380,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_attempted",
-      "timestamp": "2026-10-02T12:06:51.495Z",
-      "data": {
-        "message_id": 380
-      }
-    },
-    {
-      "id": 51381,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_delivery",
-      "timestamp": "2026-10-02T12:06:51.569Z",
-      "data": {
-        "attempt_id": 381,
-        "delivered": true
-      }
-    },
-    {
-      "id": 51382,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_acknowledged",
-      "timestamp": "2026-10-02T12:07:07.526Z",
-      "data": {
-        "message_id": 380
-      }
-    },
-    {
       "id": 51383,
       "task_id": "preview-recorded-dev-plugin",
       "type": "task.instruction",
@@ -18604,8 +18088,7 @@
           "TaskStop",
           "ToolSearch",
           "WebSearch",
-          "Write",
-          "mcp__codex_parent__send_message"
+          "Write"
         ],
         "activity": {
           "kind": "agent.started",
@@ -18649,8 +18132,7 @@
             "TaskStop",
             "ToolSearch",
             "WebSearch",
-            "Write",
-            "mcp__codex_parent__send_message"
+            "Write"
           ],
           "mcp_servers": [],
           "model": "claude-opus-5-5",
@@ -21373,164 +20855,6 @@
       }
     },
     {
-      "id": 51448,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.started",
-      "timestamp": "2026-10-02T12:10:45.953Z",
-      "data": {
-        "id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-        "name": "mcp__codex_parent__send_message",
-        "input": {
-          "kind": "blocker",
-          "message": "Proposed approach for the service stop prompt, with one pushback: drain instead of SIGTERM. I'm starting on it now; tell me if you want SIGTERM instead.\n\nWhy drain: the service already exposes `POST /api/service/drain`, which needs the admin bearer token. A newer proxy uses it for handoff (launcher.ts:270). A draining service starts no new turns and lets running turns finish for up to 10 minutes. It then exits through the same close() path SIGTERM uses. Proxies on the same API keep using it until it exits, and their next call starts the installed build. So:\n- Ownership is proven without PIDs. Before sending the token, the script checks the /health challenge proof against the data directory's admin token (health-proof.ts, the same check the launcher makes). PID reuse and stale service.json can't misdirect it, because whatever answers must hold the token.\n- /health reports `launcher`. The script refuses anything but `stdio`: npm run dev, npm start and supervisors are left alone with a message saying to stop them yourself.\n- Running turns aren't cut off, which removes the \"interrupts active turns\" downside. The prompt can say they finish first, up to 10 minutes.\n- No SIGKILL, no PID handling, no ps/lsof parsing.\n\nFlow, after a successful install/update/uninstall (a build failure exits before this):\n1. Data dir: SUBAGENT_EXTENSION_FOR_CODEX_DATA resolved, else ~/.local/share/subagent-extension-for-codex. Token: SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, else <data>/admin-token.\n2. The origin comes from service.json (loopback http only). A missing file or ECONNREFUSED means \"No service is running\", and the script continues.\n3. Probe /health with a challenge and refuse with a reason if any of these hold: not our service, proof fails, launcher isn't stdio. If it's already draining, say so and do nothing. If it doesn't respond, the message is \"not responding; inspect <data>/service.log or stop pid N yourself\", with no signal sent.\n4. Ask, defaulting to No. Install/update: \"Restart the running service so it loads the new build? Running turns finish first (up to 10 minutes). [y/N]\". Uninstall: \"Also stop the running service? ... [y/N]\". With no TTY and no `--stop-service`, it leaves the service running and prints the command to rerun with the flag. `--stop-service` skips the prompt.\n5. After the answer, it re-probes and re-verifies the proof and launcher, then POSTs drain and reports the number of running turns. Other outcomes it reports: \"already gone\", or refused with the reason.\n\nImplementation:\n- `scripts/dev-plugin.mjs` imports `newChallenge`/`provesToken`/`challengeHeader` from `src/service/platform/service/health-proof.ts`. To allow that, the npm script becomes `node --import tsx scripts/dev-plugin.mjs`, like dev:reset. I'll inline the 4-line data dir default, since runtime.ts has import-time package lookups.\n- Arguments: the operation plus an optional `--stop-service`, anything else rejected.\n\nTests:\n- A fake service in the test serves /health with a real proof (healthProof from health-proof.ts) and records drain calls. It runs against temp data dirs only. The real drain-to-exit behavior is the service's own tested path; I'll confirm that coverage exists.\n- Cases:\n  - `--stop-service` drains\n  - noninteractive without the flag leaves the service alone\n  - a wrong-token proof is refused\n  - foreground is refused\n  - no service running\n  - a failed build never probes\n  - prompt default No vs \"y\" via a PTY (`script`), plus the re-probe before drain\n- Docs: update the canonical \"Install a local build\" section."
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CgcyW1e19BDg2LJjrf6Jb",
-          "hasThinking": false
-        },
-        "response_ref": "response-51448",
-        "raw_response": {
-          "type": "assistant",
-          "message": {
-            "model": "claude-opus-5-5",
-            "id": "msg_011CgcyW1e19BDg2LJjrf6Jb",
-            "type": "message",
-            "role": "assistant",
-            "content": [
-              {
-                "type": "tool_use",
-                "id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-                "name": "mcp__codex_parent__send_message",
-                "input": {
-                  "kind": "blocker",
-                  "message": "Proposed approach for the service stop prompt, with one pushback: drain instead of SIGTERM. I'm starting on it now; tell me if you want SIGTERM instead.\n\nWhy drain: the service already exposes `POST /api/service/drain`, which needs the admin bearer token. A newer proxy uses it for handoff (launcher.ts:270). A draining service starts no new turns and lets running turns finish for up to 10 minutes. It then exits through the same close() path SIGTERM uses. Proxies on the same API keep using it until it exits, and their next call starts the installed build. So:\n- Ownership is proven without PIDs. Before sending the token, the script checks the /health challenge proof against the data directory's admin token (health-proof.ts, the same check the launcher makes). PID reuse and stale service.json can't misdirect it, because whatever answers must hold the token.\n- /health reports `launcher`. The script refuses anything but `stdio`: npm run dev, npm start and supervisors are left alone with a message saying to stop them yourself.\n- Running turns aren't cut off, which removes the \"interrupts active turns\" downside. The prompt can say they finish first, up to 10 minutes.\n- No SIGKILL, no PID handling, no ps/lsof parsing.\n\nFlow, after a successful install/update/uninstall (a build failure exits before this):\n1. Data dir: SUBAGENT_EXTENSION_FOR_CODEX_DATA resolved, else ~/.local/share/subagent-extension-for-codex. Token: SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, else <data>/admin-token.\n2. The origin comes from service.json (loopback http only). A missing file or ECONNREFUSED means \"No service is running\", and the script continues.\n3. Probe /health with a challenge and refuse with a reason if any of these hold: not our service, proof fails, launcher isn't stdio. If it's already draining, say so and do nothing. If it doesn't respond, the message is \"not responding; inspect <data>/service.log or stop pid N yourself\", with no signal sent.\n4. Ask, defaulting to No. Install/update: \"Restart the running service so it loads the new build? Running turns finish first (up to 10 minutes). [y/N]\". Uninstall: \"Also stop the running service? ... [y/N]\". With no TTY and no `--stop-service`, it leaves the service running and prints the command to rerun with the flag. `--stop-service` skips the prompt.\n5. After the answer, it re-probes and re-verifies the proof and launcher, then POSTs drain and reports the number of running turns. Other outcomes it reports: \"already gone\", or refused with the reason.\n\nImplementation:\n- `scripts/dev-plugin.mjs` imports `newChallenge`/`provesToken`/`challengeHeader` from `src/service/platform/service/health-proof.ts`. To allow that, the npm script becomes `node --import tsx scripts/dev-plugin.mjs`, like dev:reset. I'll inline the 4-line data dir default, since runtime.ts has import-time package lookups.\n- Arguments: the operation plus an optional `--stop-service`, anything else rejected.\n\nTests:\n- A fake service in the test serves /health with a real proof (healthProof from health-proof.ts) and records drain calls. It runs against temp data dirs only. The real drain-to-exit behavior is the service's own tested path; I'll confirm that coverage exists.\n- Cases:\n  - `--stop-service` drains\n  - noninteractive without the flag leaves the service alone\n  - a wrong-token proof is refused\n  - foreground is refused\n  - no service running\n  - a failed build never probes\n  - prompt default No vs \"y\" via a PTY (`script`), plus the re-probe before drain\n- Docs: update the canonical \"Install a local build\" section."
-                },
-                "caller": {
-                  "type": "direct"
-                }
-              }
-            ],
-            "container": null,
-            "stop_reason": null,
-            "stop_sequence": null,
-            "stop_details": null,
-            "usage": {
-              "input_tokens": 2,
-              "cache_creation_input_tokens": 1126,
-              "cache_read_input_tokens": 115536,
-              "cache_creation": {
-                "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 1126
-              },
-              "output_tokens": 5,
-              "service_tier": "standard",
-              "inference_geo": "global",
-              "speed": "standard"
-            },
-            "input_transformations": [],
-            "diagnostics": null,
-            "context_management": null
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "b5d20875-c9fc-4059-b153-35a5e5dba0ac",
-          "timestamp": "2026-11-01T22:12:09.798Z",
-          "request_id": "req_preview_0052",
-          "wire_tool_inputs": {
-            "toolu_01SFqrr6s7g9ap6iXJMo1g9M": {
-              "kind": "blocker",
-              "message": "Proposed approach for the service stop prompt, with one pushback: drain instead of SIGTERM. I'm starting on it now; tell me if you want SIGTERM instead.\n\nWhy drain: the service already exposes `POST /api/service/drain`, which needs the admin bearer token. A newer proxy uses it for handoff (launcher.ts:270). A draining service starts no new turns and lets running turns finish for up to 10 minutes. It then exits through the same close() path SIGTERM uses. Proxies on the same API keep using it until it exits, and their next call starts the installed build. So:\n- Ownership is proven without PIDs. Before sending the token, the script checks the /health challenge proof against the data directory's admin token (health-proof.ts, the same check the launcher makes). PID reuse and stale service.json can't misdirect it, because whatever answers must hold the token.\n- /health reports `launcher`. The script refuses anything but `stdio`: npm run dev, npm start and supervisors are left alone with a message saying to stop them yourself.\n- Running turns aren't cut off, which removes the \"interrupts active turns\" downside. The prompt can say they finish first, up to 10 minutes.\n- No SIGKILL, no PID handling, no ps/lsof parsing.\n\nFlow, after a successful install/update/uninstall (a build failure exits before this):\n1. Data dir: SUBAGENT_EXTENSION_FOR_CODEX_DATA resolved, else ~/.local/share/subagent-extension-for-codex. Token: SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, else <data>/admin-token.\n2. The origin comes from service.json (loopback http only). A missing file or ECONNREFUSED means \"No service is running\", and the script continues.\n3. Probe /health with a challenge and refuse with a reason if any of these hold: not our service, proof fails, launcher isn't stdio. If it's already draining, say so and do nothing. If it doesn't respond, the message is \"not responding; inspect <data>/service.log or stop pid N yourself\", with no signal sent.\n4. Ask, defaulting to No. Install/update: \"Restart the running service so it loads the new build? Running turns finish first (up to 10 minutes). [y/N]\". Uninstall: \"Also stop the running service? ... [y/N]\". With no TTY and no `--stop-service`, it leaves the service running and prints the command to rerun with the flag. `--stop-service` skips the prompt.\n5. After the answer, it re-probes and re-verifies the proof and launcher, then POSTs drain and reports the number of running turns. Other outcomes it reports: \"already gone\", or refused with the reason.\n\nImplementation:\n- `scripts/dev-plugin.mjs` imports `newChallenge`/`provesToken`/`challengeHeader` from `src/service/platform/service/health-proof.ts`. To allow that, the npm script becomes `node --import tsx scripts/dev-plugin.mjs`, like dev:reset. I'll inline the 4-line data dir default, since runtime.ts has import-time package lookups.\n- Arguments: the operation plus an optional `--stop-service`, anything else rejected.\n\nTests:\n- A fake service in the test serves /health with a real proof (healthProof from health-proof.ts) and records drain calls. It runs against temp data dirs only. The real drain-to-exit behavior is the service's own tested path; I'll confirm that coverage exists.\n- Cases:\n  - `--stop-service` drains\n  - noninteractive without the flag leaves the service alone\n  - a wrong-token proof is refused\n  - foreground is refused\n  - no service running\n  - a failed build never probes\n  - prompt default No vs \"y\" via a PTY (`script`), plus the re-probe before drain\n- Docs: update the canonical \"Install a local build\" section."
-            }
-          },
-          "tool_use_meta": [
-            {
-              "id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-              "display_name": "Send Message",
-              "server_display_name": "codex_parent",
-              "tool_name": "send_message"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": 51449,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message",
-      "timestamp": "2026-10-02T12:10:45.957Z",
-      "data": {
-        "text": "Proposed approach for the service stop prompt, with one pushback: drain instead of SIGTERM. I'm starting on it now; tell me if you want SIGTERM instead.\n\nWhy drain: the service already exposes `POST /api/service/drain`, which needs the admin bearer token. A newer proxy uses it for handoff (launcher.ts:270). A draining service starts no new turns and lets running turns finish for up to 10 minutes. It then exits through the same close() path SIGTERM uses. Proxies on the same API keep using it until it exits, and their next call starts the installed build. So:\n- Ownership is proven without PIDs. Before sending the token, the script checks the /health challenge proof against the data directory's admin token (health-proof.ts, the same check the launcher makes). PID reuse and stale service.json can't misdirect it, because whatever answers must hold the token.\n- /health reports `launcher`. The script refuses anything but `stdio`: npm run dev, npm start and supervisors are left alone with a message saying to stop them yourself.\n- Running turns aren't cut off, which removes the \"interrupts active turns\" downside. The prompt can say they finish first, up to 10 minutes.\n- No SIGKILL, no PID handling, no ps/lsof parsing.\n\nFlow, after a successful install/update/uninstall (a build failure exits before this):\n1. Data dir: SUBAGENT_EXTENSION_FOR_CODEX_DATA resolved, else ~/.local/share/subagent-extension-for-codex. Token: SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, else <data>/admin-token.\n2. The origin comes from service.json (loopback http only). A missing file or ECONNREFUSED means \"No service is running\", and the script continues.\n3. Probe /health with a challenge and refuse with a reason if any of these hold: not our service, proof fails, launcher isn't stdio. If it's already draining, say so and do nothing. If it doesn't respond, the message is \"not responding; inspect <data>/service.log or stop pid N yourself\", with no signal sent.\n4. Ask, defaulting to No. Install/update: \"Restart the running service so it loads the new build? Running turns finish first (up to 10 minutes). [y/N]\". Uninstall: \"Also stop the running service? ... [y/N]\". With no TTY and no `--stop-service`, it leaves the service running and prints the command to rerun with the flag. `--stop-service` skips the prompt.\n5. After the answer, it re-probes and re-verifies the proof and launcher, then POSTs drain and reports the number of running turns. Other outcomes it reports: \"already gone\", or refused with the reason.\n\nImplementation:\n- `scripts/dev-plugin.mjs` imports `newChallenge`/`provesToken`/`challengeHeader` from `src/service/platform/service/health-proof.ts`. To allow that, the npm script becomes `node --import tsx scripts/dev-plugin.mjs`, like dev:reset. I'll inline the 4-line data dir default, since runtime.ts has import-time package lookups.\n- Arguments: the operation plus an optional `--stop-service`, anything else rejected.\n\nTests:\n- A fake service in the test serves /health with a real proof (healthProof from health-proof.ts) and records drain calls. It runs against temp data dirs only. The real drain-to-exit behavior is the service's own tested path; I'll confirm that coverage exists.\n- Cases:\n  - `--stop-service` drains\n  - noninteractive without the flag leaves the service alone\n  - a wrong-token proof is refused\n  - foreground is refused\n  - no service running\n  - a failed build never probes\n  - prompt default No vs \"y\" via a PTY (`script`), plus the re-probe before drain\n- Docs: update the canonical \"Install a local build\" section."
-      }
-    },
-    {
-      "id": 51450,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.completed",
-      "timestamp": "2026-10-02T12:10:45.964Z",
-      "data": {
-        "id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-        "content": [
-          {
-            "type": "text",
-            "text": "Queued parent message parent_450. Host delivery is pending."
-          }
-        ],
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "8cb73617-73f6-47d7-b2cc-64c60eccb51e",
-          "hasThinking": false
-        },
-        "response_ref": "response-51450",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": [
-              {
-                "tool_use_id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-                "type": "tool_result",
-                "content": [
-                  {
-                    "type": "text",
-                    "text": "Queued parent message parent_450. Host delivery is pending."
-                  }
-                ]
-              }
-            ]
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "8cb73617-73f6-47d7-b2cc-64c60eccb51e",
-          "timestamp": "2026-11-01T22:12:09.811Z",
-          "tool_use_result": [
-            {
-              "type": "text",
-              "text": "Queued parent message parent_450. Host delivery is pending."
-            }
-          ],
-          "tool_result_meta": [
-            {
-              "id": "toolu_01SFqrr6s7g9ap6iXJMo1g9M",
-              "permission_decision": {
-                "decision": "accept",
-                "source": "hook",
-                "reason_type": "hook"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": 51451,
       "task_id": "preview-recorded-dev-plugin",
       "type": "claude.activity",
@@ -21559,25 +20883,6 @@
           "session_id": "preview-session",
           "uuid": "2a339fc8-e45e-47b6-b26e-da75c6aa8dcd"
         }
-      }
-    },
-    {
-      "id": 51452,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_attempted",
-      "timestamp": "2026-10-02T12:10:46.074Z",
-      "data": {
-        "message_id": 450
-      }
-    },
-    {
-      "id": 51453,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_delivery",
-      "timestamp": "2026-10-02T12:10:46.114Z",
-      "data": {
-        "attempt_id": 453,
-        "delivered": true
       }
     },
     {
@@ -22154,15 +21459,6 @@
         "message": "Good pushback: use existing authenticated drain API, approved. This better fits graceful update and avoids duplicating process ownership. Explain limits accurately: turns finish up to 10 minutes, then interrupted; don't claim never interrupted. Reuse challenge proof, require launcher stdio, finite fetch timeouts, strict loopback origin, redirect:'error' for proof/drain (never send credentials to redirected targets). No direct PID signaling fallback. Node24 supports type stripping for health-proof.ts if self-contained, so avoid tsx npm entry change if plain node suffices, and ensure miniature checkout fixtures copy required module/import dependencies. Fake HTTP tests need sandbox localhost listeners allowed: our shell sandbox likely denies, so request escalation up front for tests requiring listeners if needed per AGENTS. Keep helper feature-owned and implementation modest. No need automatically detect active backend differences, prompt for running plugin-owned service is fine.",
         "from": "parent",
         "delivery": "steer"
-      }
-    },
-    {
-      "id": 51467,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_acknowledged",
-      "timestamp": "2026-10-02T12:10:59.306Z",
-      "data": {
-        "message_id": 450
       }
     },
     {
@@ -32044,155 +31340,6 @@
       }
     },
     {
-      "id": 51668,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.started",
-      "timestamp": "2026-10-02T12:15:46.005Z",
-      "data": {
-        "id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-        "name": "mcp__codex_parent__send_message",
-        "input": {
-          "kind": "completion",
-          "message": "The service drain follow-up is implemented and all 12 tests in dev-plugin.test.ts pass in my environment, which can bind loopback ports. Nothing is committed. Your edits to the doc section are kept.\n\nFiles:\n- `scripts/dev-plugin-service.mjs` (new): owns the service step and exports only `offerDrain(question, requested)`. It:\n  - finds the data directory from SUBAGENT_EXTENSION_FOR_CODEX_DATA or the default path, ignoring `.env`\n  - reads service.json, requiring a plain loopback HTTP origin (no credentials, path, search or hash) without echoing it\n  - probes /health with a challenge, a 2s timeout and redirect:'error'\n  - requires a valid token proof, `service` set to the extension and `launcher: stdio`\n  - treats `draining` as nothing to do and any status other than ok as refused\n  - compares the instance (service.json pid, startedAt and origin) after the prompt and refuses if it changed\n  - POSTs drain with a 5s timeout and redirect:'error', and accepts only 202 with `{status:'draining'}`\n  It never prints the token and never signals a PID.\n- `scripts/dev-plugin.mjs`: argument parsing allows `--stop-service`. After a successful install or uninstall it calls offerDrain. A failed requested drain prints \"<plugin> is installed/uninstalled, but the service wasn't drained.\" and exits 1. A build failure exits before this step.\n- Outcomes that succeed: no service running, already draining, default No, and noninteractive without the flag (prints a rerun hint). A refused service without a request is reported and the script exits 0.\n- health-proof.ts is imported directly under plain Node 24 type stripping, so package.json is unchanged.\n- `tests/integration/development/dev-plugin.test.ts`:\n  - The fixture now always uses a temp data dir and removes any token override, so the existing codex tests never probe the real service.\n  - The miniature checkout copies the service module and health-proof.ts.\n  - New cases run against a fake loopback service with a real proof and a fake codex that always succeeds:\n    - `--stop-service` drains with the right bearer for uninstall and install\n    - noninteractive without the flag leaves the service running\n    - a PTY run via script(1): \"\", \"n\" and \"y\" give 0, 0 and 1 drains\n    - requested drains fail with exit 1 and the reason for a wrong proof, a foreground launcher, an instance replaced between checks, and a 202 without `status: draining`, with the token absent from stderr\n    - no service.json and a closed port both succeed\n    - a failed build makes zero health checks\n- docs/development.md \"Install a local build\" now covers the prompt, `--stop-service`, the drain semantics (up to 10 minutes, then the remaining turns are interrupted), the ownership checks and the exit status.\n\nChecks: eslint, prettier, knip and `tsc -p tsconfig.test.json` are clean, and the focused vitest run passes 12/12. I didn't run the full npm test.\n\nLimits:\n- The Linux branch of the PTY helper (`script -qec`) hasn't been run.\n- A small race remains between reading service.json and the /health probe within one check. The token proof still bounds it to a service on this data directory.\n- After uninstall, a new service starts only if a proxy that is still connected makes a call."
-        },
-        "activity": {
-          "kind": "tool.started",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "msg_011CgcyuZrP6axC99DJFoxAT",
-          "hasThinking": false
-        },
-        "response_ref": "response-51668",
-        "raw_response": {
-          "type": "assistant",
-          "message": {
-            "model": "claude-opus-5-5",
-            "id": "msg_011CgcyuZrP6axC99DJFoxAT",
-            "type": "message",
-            "role": "assistant",
-            "content": [
-              {
-                "type": "tool_use",
-                "id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-                "name": "mcp__codex_parent__send_message",
-                "input": {
-                  "kind": "completion",
-                  "message": "The service drain follow-up is implemented and all 12 tests in dev-plugin.test.ts pass in my environment, which can bind loopback ports. Nothing is committed. Your edits to the doc section are kept.\n\nFiles:\n- `scripts/dev-plugin-service.mjs` (new): owns the service step and exports only `offerDrain(question, requested)`. It:\n  - finds the data directory from SUBAGENT_EXTENSION_FOR_CODEX_DATA or the default path, ignoring `.env`\n  - reads service.json, requiring a plain loopback HTTP origin (no credentials, path, search or hash) without echoing it\n  - probes /health with a challenge, a 2s timeout and redirect:'error'\n  - requires a valid token proof, `service` set to the extension and `launcher: stdio`\n  - treats `draining` as nothing to do and any status other than ok as refused\n  - compares the instance (service.json pid, startedAt and origin) after the prompt and refuses if it changed\n  - POSTs drain with a 5s timeout and redirect:'error', and accepts only 202 with `{status:'draining'}`\n  It never prints the token and never signals a PID.\n- `scripts/dev-plugin.mjs`: argument parsing allows `--stop-service`. After a successful install or uninstall it calls offerDrain. A failed requested drain prints \"<plugin> is installed/uninstalled, but the service wasn't drained.\" and exits 1. A build failure exits before this step.\n- Outcomes that succeed: no service running, already draining, default No, and noninteractive without the flag (prints a rerun hint). A refused service without a request is reported and the script exits 0.\n- health-proof.ts is imported directly under plain Node 24 type stripping, so package.json is unchanged.\n- `tests/integration/development/dev-plugin.test.ts`:\n  - The fixture now always uses a temp data dir and removes any token override, so the existing codex tests never probe the real service.\n  - The miniature checkout copies the service module and health-proof.ts.\n  - New cases run against a fake loopback service with a real proof and a fake codex that always succeeds:\n    - `--stop-service` drains with the right bearer for uninstall and install\n    - noninteractive without the flag leaves the service running\n    - a PTY run via script(1): \"\", \"n\" and \"y\" give 0, 0 and 1 drains\n    - requested drains fail with exit 1 and the reason for a wrong proof, a foreground launcher, an instance replaced between checks, and a 202 without `status: draining`, with the token absent from stderr\n    - no service.json and a closed port both succeed\n    - a failed build makes zero health checks\n- docs/development.md \"Install a local build\" now covers the prompt, `--stop-service`, the drain semantics (up to 10 minutes, then the remaining turns are interrupted), the ownership checks and the exit status.\n\nChecks: eslint, prettier, knip and `tsc -p tsconfig.test.json` are clean, and the focused vitest run passes 12/12. I didn't run the full npm test.\n\nLimits:\n- The Linux branch of the PTY helper (`script -qec`) hasn't been run.\n- A small race remains between reading service.json and the /health probe within one check. The token proof still bounds it to a service on this data directory.\n- After uninstall, a new service starts only if a proxy that is still connected makes a call."
-                },
-                "caller": {
-                  "type": "direct"
-                }
-              }
-            ],
-            "container": null,
-            "stop_reason": null,
-            "stop_sequence": null,
-            "stop_details": null,
-            "usage": {
-              "input_tokens": 2,
-              "cache_creation_input_tokens": 1497,
-              "cache_read_input_tokens": 153677,
-              "cache_creation": {
-                "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 1497
-              },
-              "output_tokens": 3,
-              "service_tier": "standard",
-              "inference_geo": "global",
-              "speed": "standard"
-            },
-            "input_transformations": [],
-            "diagnostics": null,
-            "context_management": null
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "e6b9c762-cf03-46ed-9c97-75e465f3effe",
-          "timestamp": "2026-11-01T22:17:09.852Z",
-          "request_id": "req_preview_0074",
-          "wire_tool_inputs": {
-            "toolu_01Nr2R21ykXiUfgPgUe2myUR": {
-              "kind": "completion",
-              "message": "The service drain follow-up is implemented and all 12 tests in dev-plugin.test.ts pass in my environment, which can bind loopback ports. Nothing is committed. Your edits to the doc section are kept.\n\nFiles:\n- `scripts/dev-plugin-service.mjs` (new): owns the service step and exports only `offerDrain(question, requested)`. It:\n  - finds the data directory from SUBAGENT_EXTENSION_FOR_CODEX_DATA or the default path, ignoring `.env`\n  - reads service.json, requiring a plain loopback HTTP origin (no credentials, path, search or hash) without echoing it\n  - probes /health with a challenge, a 2s timeout and redirect:'error'\n  - requires a valid token proof, `service` set to the extension and `launcher: stdio`\n  - treats `draining` as nothing to do and any status other than ok as refused\n  - compares the instance (service.json pid, startedAt and origin) after the prompt and refuses if it changed\n  - POSTs drain with a 5s timeout and redirect:'error', and accepts only 202 with `{status:'draining'}`\n  It never prints the token and never signals a PID.\n- `scripts/dev-plugin.mjs`: argument parsing allows `--stop-service`. After a successful install or uninstall it calls offerDrain. A failed requested drain prints \"<plugin> is installed/uninstalled, but the service wasn't drained.\" and exits 1. A build failure exits before this step.\n- Outcomes that succeed: no service running, already draining, default No, and noninteractive without the flag (prints a rerun hint). A refused service without a request is reported and the script exits 0.\n- health-proof.ts is imported directly under plain Node 24 type stripping, so package.json is unchanged.\n- `tests/integration/development/dev-plugin.test.ts`:\n  - The fixture now always uses a temp data dir and removes any token override, so the existing codex tests never probe the real service.\n  - The miniature checkout copies the service module and health-proof.ts.\n  - New cases run against a fake loopback service with a real proof and a fake codex that always succeeds:\n    - `--stop-service` drains with the right bearer for uninstall and install\n    - noninteractive without the flag leaves the service running\n    - a PTY run via script(1): \"\", \"n\" and \"y\" give 0, 0 and 1 drains\n    - requested drains fail with exit 1 and the reason for a wrong proof, a foreground launcher, an instance replaced between checks, and a 202 without `status: draining`, with the token absent from stderr\n    - no service.json and a closed port both succeed\n    - a failed build makes zero health checks\n- docs/development.md \"Install a local build\" now covers the prompt, `--stop-service`, the drain semantics (up to 10 minutes, then the remaining turns are interrupted), the ownership checks and the exit status.\n\nChecks: eslint, prettier, knip and `tsc -p tsconfig.test.json` are clean, and the focused vitest run passes 12/12. I didn't run the full npm test.\n\nLimits:\n- The Linux branch of the PTY helper (`script -qec`) hasn't been run.\n- A small race remains between reading service.json and the /health probe within one check. The token proof still bounds it to a service on this data directory.\n- After uninstall, a new service starts only if a proxy that is still connected makes a call."
-            }
-          },
-          "tool_use_meta": [
-            {
-              "id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-              "display_name": "Send Message",
-              "server_display_name": "codex_parent",
-              "tool_name": "send_message"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": 51669,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "tool.completed",
-      "timestamp": "2026-10-02T12:15:46.013Z",
-      "data": {
-        "id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-        "content": [
-          {
-            "type": "text",
-            "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-          }
-        ],
-        "activity": {
-          "kind": "tool.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "e28c1cb6-c6e8-4668-85ff-0cc04b3cb0c0",
-          "hasThinking": false
-        },
-        "response_ref": "response-51669",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": [
-              {
-                "tool_use_id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-                "type": "tool_result",
-                "content": [
-                  {
-                    "type": "text",
-                    "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-                  }
-                ]
-              }
-            ]
-          },
-          "parent_tool_use_id": null,
-          "session_id": "preview-session",
-          "uuid": "e28c1cb6-c6e8-4668-85ff-0cc04b3cb0c0",
-          "timestamp": "2026-11-01T22:17:09.860Z",
-          "tool_use_result": [
-            {
-              "type": "text",
-              "text": "Queued for delivery after this turn completes successfully. Host delivery is pending."
-            }
-          ],
-          "tool_result_meta": [
-            {
-              "id": "toolu_01Nr2R21ykXiUfgPgUe2myUR",
-              "permission_decision": {
-                "decision": "accept",
-                "source": "hook",
-                "reason_type": "hook"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": 51670,
       "task_id": "preview-recorded-dev-plugin",
       "type": "claude.activity",
@@ -32558,43 +31705,6 @@
       "type": "task.completed",
       "timestamp": "2026-10-02T12:15:57.565Z",
       "data": {}
-    },
-    {
-      "id": 51677,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message",
-      "timestamp": "2026-10-02T12:15:57.565Z",
-      "data": {
-        "text": "The service drain follow-up is implemented and all 12 tests in dev-plugin.test.ts pass in my environment, which can bind loopback ports. Nothing is committed. Your edits to the doc section are kept.\n\nFiles:\n- `scripts/dev-plugin-service.mjs` (new): owns the service step and exports only `offerDrain(question, requested)`. It:\n  - finds the data directory from SUBAGENT_EXTENSION_FOR_CODEX_DATA or the default path, ignoring `.env`\n  - reads service.json, requiring a plain loopback HTTP origin (no credentials, path, search or hash) without echoing it\n  - probes /health with a challenge, a 2s timeout and redirect:'error'\n  - requires a valid token proof, `service` set to the extension and `launcher: stdio`\n  - treats `draining` as nothing to do and any status other than ok as refused\n  - compares the instance (service.json pid, startedAt and origin) after the prompt and refuses if it changed\n  - POSTs drain with a 5s timeout and redirect:'error', and accepts only 202 with `{status:'draining'}`\n  It never prints the token and never signals a PID.\n- `scripts/dev-plugin.mjs`: argument parsing allows `--stop-service`. After a successful install or uninstall it calls offerDrain. A failed requested drain prints \"<plugin> is installed/uninstalled, but the service wasn't drained.\" and exits 1. A build failure exits before this step.\n- Outcomes that succeed: no service running, already draining, default No, and noninteractive without the flag (prints a rerun hint). A refused service without a request is reported and the script exits 0.\n- health-proof.ts is imported directly under plain Node 24 type stripping, so package.json is unchanged.\n- `tests/integration/development/dev-plugin.test.ts`:\n  - The fixture now always uses a temp data dir and removes any token override, so the existing codex tests never probe the real service.\n  - The miniature checkout copies the service module and health-proof.ts.\n  - New cases run against a fake loopback service with a real proof and a fake codex that always succeeds:\n    - `--stop-service` drains with the right bearer for uninstall and install\n    - noninteractive without the flag leaves the service running\n    - a PTY run via script(1): \"\", \"n\" and \"y\" give 0, 0 and 1 drains\n    - requested drains fail with exit 1 and the reason for a wrong proof, a foreground launcher, an instance replaced between checks, and a 202 without `status: draining`, with the token absent from stderr\n    - no service.json and a closed port both succeed\n    - a failed build makes zero health checks\n- docs/development.md \"Install a local build\" now covers the prompt, `--stop-service`, the drain semantics (up to 10 minutes, then the remaining turns are interrupted), the ownership checks and the exit status.\n\nChecks: eslint, prettier, knip and `tsc -p tsconfig.test.json` are clean, and the focused vitest run passes 12/12. I didn't run the full npm test.\n\nLimits:\n- The Linux branch of the PTY helper (`script -qec`) hasn't been run.\n- A small race remains between reading service.json and the /health probe within one check. The token proof still bounds it to a service on this data directory.\n- After uninstall, a new service starts only if a proxy that is still connected makes a call."
-      }
-    },
-    {
-      "id": 51678,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_attempted",
-      "timestamp": "2026-10-02T12:15:57.673Z",
-      "data": {
-        "message_id": 678
-      }
-    },
-    {
-      "id": 51679,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_delivery",
-      "timestamp": "2026-10-02T12:15:57.727Z",
-      "data": {
-        "attempt_id": 679,
-        "delivered": true
-      }
-    },
-    {
-      "id": 51680,
-      "task_id": "preview-recorded-dev-plugin",
-      "type": "parent.message_acknowledged",
-      "timestamp": "2026-10-02T12:16:12.579Z",
-      "data": {
-        "message_id": 678
-      }
     }
   ]
 }

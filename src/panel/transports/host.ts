@@ -3,10 +3,6 @@ import {
   applyDocumentTheme,
   applyHostStyleVariables,
 } from "@modelcontextprotocol/ext-apps";
-import {
-  OPENAI_MESSAGE_KEY,
-  OpenAIMessageParamsSchema,
-} from "@openai/mcp-extensions/app";
 
 import { version } from "../../../package.json";
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
@@ -91,7 +87,6 @@ export class HostTransport implements Transport {
         context?.availableDisplayModes?.includes("fullscreen"),
       ),
       canSend: Boolean(capabilities?.message?.text),
-      canSendParent: capabilities?.experimental?.[OPENAI_MESSAGE_KEY] != null,
       canShare: Boolean(capabilities?.updateModelContext?.structuredContent),
     });
   }
@@ -140,25 +135,13 @@ export class HostTransport implements Transport {
     this.disposed = true;
   }
 
-  async send(text: string, options?: { submit?: boolean }) {
+  async send(text: string) {
     if (this.disposed) throw new Error("The console has closed.");
 
-    if (
-      options?.submit &&
-      this.app.getHostCapabilities()?.experimental?.[OPENAI_MESSAGE_KEY] == null
-    ) {
-      throw new Error("This host does not support submitting worker messages.");
-    }
-
-    const params = OpenAIMessageParamsSchema.parse({
+    const result = await this.app.sendMessage({
       role: "user",
       content: [{ type: "text", text }],
-      ...(options?.submit
-        ? { _meta: { [OPENAI_MESSAGE_KEY]: { target: "active", send: true } } }
-        : {}),
     });
-
-    const result = await this.app.sendMessage(params);
 
     if (result.isError) {
       throw new Error(

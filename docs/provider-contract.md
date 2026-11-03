@@ -36,25 +36,6 @@ Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the
 control plane accounts for the increase across resumed turns.
 
-### Messages to the parent
-
-The optional `messageParent` callback sends a blocker update immediately, or
-holds one completion report until the turn succeeds. Failed and interrupted
-turns discard the completion report. See the `RunContext` interface for
-signatures.
-
-Claude exposes the callback through the injected `codex_parent.send_message`
-tool, whatever the file and execution restrictions. The provider approves this
-tool in its `PreToolUse` hook, including in `dontAsk` mode. Native ask and deny
-rules and stronger hook decisions still apply, as described in
-[Claude's hook decision rules](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).
-SDK `allowedTools` stays unset so it cannot shadow `canUseTool`.
-
-Queueing a report does not confirm host delivery, and providers cannot
-acknowledge it for the parent. See
-[Provider messages to the parent](mcp-reference.md#provider-messages-to-the-parent)
-for retrieval and acknowledgement.
-
 ## Recording file edits
 
 Report each successful text edit through `RunContext.fileChanged(edit)`. A

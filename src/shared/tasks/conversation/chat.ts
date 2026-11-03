@@ -118,17 +118,14 @@ function note(e: Event): ChatNote | undefined {
 }
 
 /**
- * Chat for a task, in order: its conversation (see `conversation`) without
- * worker reports to the parent, which Activity shows instead, an outcome row
- * where each turn ended, with a failed turn's error, standalone task failures,
- * and small notes for a new session, worktree recreation and compaction.
+ * Chat for a task, in order: its conversation (see `conversation`), an
+ * outcome row where each turn ended, with a failed turn's error, standalone
+ * task failures, and small notes for a new session, worktree recreation and
+ * compaction.
  */
 export function chatItems(task: Task, events: Event[]): ChatItem[] {
   const sorted = [...events].sort((a, b) => a.id - b.id);
-
-  const messages = conversation(task, sorted).filter(
-    (message) => !message.parent_message,
-  );
+  const messages = conversation(task, sorted);
 
   const items: ChatItem[] = [];
   let next = 0;

@@ -185,12 +185,10 @@ test("settings choose whether sessions load Claude Code settings and their MCP s
   assert.deepEqual(loaded.options.settingSources, ["user", "project", "local"]);
   assert.equal(loaded.options.strictMcpConfig, undefined);
 
-  // Without settings, servers from other MCP configuration stay out too,
-  // while the extension's own server stays available.
+  // Without settings, servers from other MCP configuration stay out too.
   const noSettings = await runWithPolicy({ ...parity, settings_files: false });
   assert.deepEqual(noSettings.options.settingSources, []);
   assert.equal(noSettings.options.strictMcpConfig, true);
-  assert.ok(noSettings.options.mcpServers?.codex_parent);
 
   const noUserMcp = await runWithPolicy({ ...parity, user_mcp: false });
 

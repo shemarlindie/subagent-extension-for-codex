@@ -464,36 +464,6 @@ export class Store {
       .map(decodeEvent);
   }
 
-  /** The oldest unclaimed, unacknowledged parent message belonging to this owner and chat. */
-  pendingParentMessage(owner: string, conversation: string): Event | undefined {
-    const row = this.orm
-      .select({
-        id: events.id,
-        task_id: events.task_id,
-        type: events.type,
-        timestamp: events.timestamp,
-        data: events.data,
-      })
-      .from(events)
-      .innerJoin(tasks, eq(tasks.id, events.task_id))
-      .where(
-        and(
-          eq(tasks.owner, owner),
-          eq(
-            sql`json_extract(${tasks.body}, '$.conversation_id')`,
-            conversation,
-          ),
-          eq(events.type, "parent.message"),
-          sql`NOT EXISTS (SELECT 1 FROM events AS attempts WHERE attempts.task_id = ${events.task_id} AND attempts.type IN ('parent.message_attempted', 'parent.message_acknowledged') AND json_extract(attempts.data, '$.message_id') = ${events.id})`,
-        ),
-      )
-      .orderBy(events.id)
-      .limit(1)
-      .get();
-
-    return row && decodeEvent(row);
-  }
-
   /** The id of the latest event, or of a task's latest one; 0 before any. */
   lastEventId(id?: string): number {
     const row = this.orm

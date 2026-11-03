@@ -516,30 +516,6 @@ export class Control {
         t.session_owner = this.ownerWorker;
         this.store.save(t);
       },
-      messageParent: (text, kind = "completion") => {
-        if (!t.conversation_id) {
-          throw new Error("Task has no parent conversation");
-        }
-
-        if (a.abort.signal.aborted) throw new Error("Task was interrupted");
-        const message = text.trim();
-
-        if (!message || message.length > 20000) {
-          throw new Error("Invalid parent message");
-        }
-
-        if (kind === "blocker") {
-          return this.store.event(t, "parent.message", { text: message }).id;
-        }
-
-        if (a.parentMessage) {
-          throw new Error("This turn already has a parent completion report");
-        }
-
-        a.parentMessage = message;
-
-        return;
-      },
       input: a.input.request,
     };
   }
@@ -588,10 +564,6 @@ export class Control {
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
         recordStatusEvent(this.store, t);
-
-        if (outcome === "completed" && a.parentMessage) {
-          this.store.event(t, "parent.message", { text: a.parentMessage });
-        }
       });
     } finally {
       // Settle diagnostics before queued work can start and replace its counters.

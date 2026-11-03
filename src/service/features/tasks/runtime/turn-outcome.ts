@@ -35,8 +35,6 @@ export interface Active {
   sendPending?: boolean;
   /** Where the provider takes steers, once it registers. */
   sink?: (steer: Steer) => boolean;
-  /** Completion report held until a successful turn is recorded. */
-  parentMessage?: string;
   abort: AbortController;
   done: Promise<void>;
 }
