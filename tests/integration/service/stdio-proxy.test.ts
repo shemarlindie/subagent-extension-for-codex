@@ -26,19 +26,21 @@ async function proxy(t: import("vitest").TestContext, port: number) {
     await rm(data, { recursive: true, force: true });
   });
 
-  await client.connect(
-    new StdioClientTransport({
-      command: process.execPath,
-      args: [resolve("dist/stdio.js")],
-      env: serviceEnv(
-        { data, port },
-        { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
-      ),
-      stderr: "pipe",
-    }),
-  );
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [resolve("dist/stdio.js")],
+    env: serviceEnv(
+      { data, port },
+      { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
+    ),
+    stderr: "pipe",
+  });
 
-  return client;
+  let stderr = "";
+  transport.stderr?.on("data", (chunk: Buffer) => (stderr += chunk));
+  await client.connect(transport);
+
+  return { client, stderr: () => stderr };
 }
 
 test("the proxy completes the MCP handshake while the service is still starting", async (t) => {
@@ -99,7 +101,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
   const { port } = server.address() as import("node:net").AddressInfo;
 
-  const client = await proxy(t, port);
+  const { client, stderr } = await proxy(t, port);
   await starting.promise;
   const { tools } = await client.listTools();
 
@@ -128,4 +130,8 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
   assert.ok(!result.isError, JSON.stringify(result.content));
   assert.equal(prematureRequests, 0);
+
+  // Codex records this line, which tells a closed stdin from a signal.
+  await client.close();
+  assert.match(stderr(), /Proxy stopping: stdin closed/);
 });

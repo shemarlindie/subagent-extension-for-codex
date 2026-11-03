@@ -139,6 +139,15 @@ test("isolated built service flushes correlated requests, auth failures, timing 
     "service.stopped",
   ]);
 
+  expect(records).toContainEqual(
+    expect.objectContaining({
+      event: "service.stopping",
+      signal: "SIGTERM",
+      parent_pid: process.pid,
+      active_tasks: 0,
+    }),
+  );
+
   for (const [response, reason] of [
     [missing, "missing_credentials"],
     [wrong, "invalid_bearer"],

@@ -243,3 +243,14 @@ server.registerTool(
 );
 
 await server.connect(new StdioServerTransport());
+
+// Codex records MCP server stderr, so these lines show how the proxy ended.
+process.stdin.once("end", () => console.error("Proxy stopping: stdin closed"));
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    console.error(`Proxy stopping: ${signal}`);
+    // The handler is gone now, so the signal ends the process as usual.
+    process.kill(process.pid, signal);
+  });
+}

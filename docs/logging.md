@@ -46,10 +46,15 @@ Other fields add task, turn, provider or tool context when available.
 
 - Look for `service.starting`, `service.ready`, `service.draining`,
   `service.stopping` and `service.stopped` to identify startup and handoff
-  stages. `service.recovered` and `service.drained` include durations. If
-  startup fails before structured logging starts, check the terminal or
-  `service.log`. A fatal exception also writes a `service.crashed` marker to
-  stderr before Node's normal crash handling.
+  stages. `service.stopping` records the `signal`, the `active_tasks` that
+  stopping interrupts and `parent_pid`, which is 1 once the proxy that launched
+  the service has exited. `service.recovered` and `service.drained` include
+  durations. If startup fails before structured logging starts, check the
+  terminal or `service.log`. A fatal exception also writes a `service.crashed`
+  marker to stderr before Node's normal crash handling.
+- The stdio proxy writes `Proxy stopping:` to stderr with `stdin closed`,
+  `SIGINT` or `SIGTERM`. Codex records it with other MCP server stderr. A proxy
+  that ends without the line was killed outright.
 - Match a failed HTTP response's `X-Request-Id` to `request_id` in the logs. The
   service generates this ID and carries it through asynchronous tool handling.
   `http.request` records the method, a fixed route label, status, `duration_ms`

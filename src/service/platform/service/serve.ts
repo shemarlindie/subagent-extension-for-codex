@@ -234,7 +234,13 @@ export async function serve({
 
   function close(signal = "drain") {
     return (closing ??= (async () => {
-      logEvent("info", "service.stopping", { signal });
+      logEvent("info", "service.stopping", {
+        signal,
+        // 1 once the proxy that launched this service has exited.
+        parent_pid: process.ppid,
+        active_tasks: c.active.size,
+      });
+
       stopMetrics();
       clearInterval(prune);
       server.close();
