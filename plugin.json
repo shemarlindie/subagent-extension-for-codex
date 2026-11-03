@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "subagent-extension-for-codex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Delegate tasks to Claude, inspect progress, and collect results.",
   "author": {
     "name": "Shemar Lindie",
