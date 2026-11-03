@@ -17,9 +17,7 @@ export function Header() {
     state = useSnapshot(),
     blocked = !state.connected || state.busy,
     // Thread mode scopes the panel to the conversation; Settings stays available.
-    threadMode = !!state.conversation,
-    expandLabel =
-      state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
+    threadMode = !!state.conversation;
 
   const newTaskFocus = useRef(false);
 
@@ -36,11 +34,7 @@ export function Header() {
     return document.getElementById("new-task-message") ?? true;
   };
 
-  const expand = () =>
-      controller.run(async () => {
-        await controller.transport.expand?.();
-      }),
-    settings = () => controller.run(() => controller.settings());
+  const settings = () => controller.run(() => controller.settings());
 
   const projectName =
     projectChoices(state).find(
@@ -109,26 +103,6 @@ export function Header() {
               </Button>
             </TooltipWrapper>
           )}
-          {state.host.canExpand && (
-            <TooltipWrapper label={expandLabel}>
-              <Button
-                id="expand"
-                variant="ghost"
-                className="toolbar-icon-button"
-                aria-label={expandLabel}
-                onClick={expand}
-              >
-                <Icon
-                  name={
-                    state.host.displayMode === "fullscreen"
-                      ? "collapse"
-                      : "expand"
-                  }
-                  size={14}
-                />
-              </Button>
-            </TooltipWrapper>
-          )}
           <TooltipWrapper label="Settings">
             <Button
               id="settings"
@@ -169,11 +143,6 @@ export function Header() {
                     onClick={() => controller.addProject()}
                   >
                     Add chat project
-                  </Menu.Item>
-                )}
-                {state.host.canExpand && (
-                  <Menu.Item className="menu-item" onClick={expand}>
-                    {expandLabel}
                   </Menu.Item>
                 )}
                 <Menu.Item

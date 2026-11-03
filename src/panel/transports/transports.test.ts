@@ -507,7 +507,7 @@ test.each([undefined, true])(
   },
 );
 
-test("host sends messages, shares selection context and toggles available display modes", async () => {
+test("host sends messages, shares selection context and requests fullscreen", async () => {
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);
   await transport.send("Review the result");
@@ -520,13 +520,6 @@ test("host sends messages, shares selection context and toggles available displa
     { mode: "fullscreen" },
   ]);
 
-  fake.app.getHostContext = () => ({
-    displayMode: "fullscreen",
-    availableDisplayModes: ["inline", "fullscreen"],
-  });
-
-  await transport.expand();
-  assert.deepEqual(fake.calls.at(-1), { mode: "inline" });
   fake.app.sendMessage = async () => ({ isError: true });
   await assert.rejects(transport.send("message"), /host declined delivery/);
   transport.dispose();

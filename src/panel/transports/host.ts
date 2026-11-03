@@ -88,9 +88,7 @@ export class HostTransport implements Transport {
       ...(context?.timeZone ? { timeZone: context.timeZone } : {}),
       displayMode,
       canExpand: Boolean(
-        context?.availableDisplayModes?.includes(
-          displayMode === "fullscreen" ? "inline" : "fullscreen",
-        ),
+        context?.availableDisplayModes?.includes("fullscreen"),
       ),
       canSend: Boolean(capabilities?.message?.text),
       canSendParent: capabilities?.experimental?.[OPENAI_MESSAGE_KEY] != null,
@@ -184,11 +182,8 @@ export class HostTransport implements Transport {
     if (this.disposed) throw new Error("The console has closed.");
     const context = this.app.getHostContext();
 
-    const mode =
-      context?.displayMode === "fullscreen" ? "inline" : "fullscreen";
-
-    if (context?.availableDisplayModes?.includes(mode)) {
-      await this.app.requestDisplayMode({ mode });
+    if (context?.availableDisplayModes?.includes("fullscreen")) {
+      await this.app.requestDisplayMode({ mode: "fullscreen" });
     }
   }
 }

@@ -9,11 +9,6 @@
       "count": 1
     }
   },
-  "src/panel/app/header.tsx": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/panel/app/state/controller.ts": {
     "complexity": {
       "count": 1

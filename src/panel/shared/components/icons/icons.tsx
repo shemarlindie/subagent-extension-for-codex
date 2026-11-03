@@ -21,7 +21,6 @@ const ICON_NAMES = [
   "shield-check",
   "settings",
   "expand",
-  "collapse",
   "more-horizontal",
   "more-vertical",
   "more-circle",

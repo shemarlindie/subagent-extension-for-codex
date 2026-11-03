@@ -197,12 +197,12 @@ export class FakeTransport implements Transport {
 
   async expand() {
     this.expandCalls++;
+    this.setDisplayMode("fullscreen");
+  }
 
-    this.host = {
-      ...this.host,
-      displayMode: this.host.displayMode === "inline" ? "fullscreen" : "inline",
-    };
-
+  /** Changes the display mode, as the host does on its own. */
+  setDisplayMode(displayMode: HostState["displayMode"]) {
+    this.host = { ...this.host, displayMode };
     this.events.host(this.host);
   }
 

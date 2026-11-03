@@ -105,8 +105,7 @@ test("inline preview expands and collapses while preserving the selected task", 
     "Review database",
   );
 
-  await user.click(screen.getByRole("button", { name: "Collapse" }));
-  assert.equal(transport.expandCalls, 2);
+  act(() => transport.setDisplayMode("inline"));
   assert.equal(controller.getSnapshot().selected, "two");
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByRole("button", { name: "Open panel" }));
@@ -159,7 +158,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   const field = await screen.findByLabelText("Description");
   await pasteText(user, field, "Preserve this suspended draft");
   const dialogState = controller.getSnapshot().dialog;
-  await act(() => transport.expand());
+  act(() => transport.setDisplayMode("inline"));
   assert.ok(screen.getByRole("region", { name: "Delegated Work preview" }));
   assertAbsent(screen.queryByRole("dialog"));
   assert.ok(controller.getSnapshot().dialog === dialogState);
@@ -181,7 +180,7 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
     0,
   );
 
-  await act(() => transport.expand());
+  act(() => transport.setDisplayMode("inline"));
   assertAbsent(screen.queryByRole("dialog"));
   await act(() => controller.changeProject("/repo/b"));
   assert.equal(controller.getSnapshot().dialog, undefined);
