@@ -40,6 +40,8 @@ covers this kind of individual use.
 
 <!-- prettier-ignore -->
 > [!NOTE]
+> Windows support is in progress and not ready for use yet.
+>
 > This is an early release. Expect rough edges, and settings or behavior may
 > change between versions. Please report problems in
 > [Issues](https://github.com/shemarlindie/subagent-extension-for-codex/issues).
