@@ -28,8 +28,8 @@ Claude Agent SDK and the Claude Code harness.
 And yes, some of us still use Codex.
 
 <picture>
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/35edbfc0-bd57-425b-a30a-c95d55ee8aca">
-  <img width="1440" alt="Codex delegates a task to Claude and follows it in the Delegated Work panel" src="https://github.com/user-attachments/assets/f6178243-d96c-4e40-9fe5-105e1a1a1ef4">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a6e2ad47-1b51-46f4-a5f7-8d3d1c01efc4">
+  <img width="1440" alt="Codex delegates a task to Claude and follows it in the Delegated Work panel" src="https://github.com/user-attachments/assets/4b2f34ec-a922-4446-8c51-9bd5b90575ba">
 </picture>
 
 **Is this allowed?** Yes, when you run it on your own computer for your own
