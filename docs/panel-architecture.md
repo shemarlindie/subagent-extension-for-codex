@@ -175,6 +175,9 @@ inspect pending states in the fixture UI.
   Keep shared presentation out of feature-specific banner classes.
 - `Icon` renders the shared icon catalog, and `Chevron` renders compact carets.
   Icons are decorative unless given a label.
+- `TooltipWrapper` labels controls for mouse and keyboard users. Base UI turns
+  tooltips off for touch, so use `Infotip` for info triggers whose note must
+  open on tap.
 - `Button` variants cover primary, secondary, toolbar and inline actions. Pass
   `type="submit"` explicitly for form submission. Base UI button parts can reuse
   `buttonClass`. Domain controls such as task rows may keep their own native

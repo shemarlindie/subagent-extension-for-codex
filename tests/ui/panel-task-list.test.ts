@@ -196,11 +196,11 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   const costInfo = screen.getByRole("button", { name: "About estimated cost" });
   await user.hover(costInfo);
 
-  expect((await screen.findByRole("tooltip")).textContent).toMatch(
+  expect((await screen.findByRole("dialog")).textContent).toMatch(
     /this task at API list prices/,
   );
 
   // Clicking an info trigger keeps its note open.
   await user.click(costInfo);
-  assert.ok(screen.getByRole("tooltip"));
+  assert.ok(screen.getByRole("dialog"));
 });

@@ -10,8 +10,6 @@ interface TooltipWrapperProps {
   popupClassName?: string;
   arrow?: boolean;
   sideOffset?: number;
-  /** Clicking the trigger closes the tooltip. Turn off for info triggers. */
-  closeOnClick?: boolean;
 }
 
 export function TooltipWrapper({
@@ -23,7 +21,6 @@ export function TooltipWrapper({
   popupClassName,
   arrow = false,
   sideOffset = 6,
-  closeOnClick = true,
 }: TooltipWrapperProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -56,7 +53,6 @@ export function TooltipWrapper({
     <Tooltip.Root open={open} onOpenChange={changeOpen}>
       <Tooltip.Trigger
         delay={250}
-        closeOnClick={closeOnClick}
         aria-label={triggerLabel ?? label}
         render={children}
       />

@@ -1,5 +1,5 @@
 import { Icon } from "../../../shared/components/icons/icons";
-import { TooltipWrapper } from "../../../shared/components/tooltip";
+import { Infotip } from "../../../shared/components/infotip";
 import { estimatedCostNote } from "../shared/estimated-cost";
 
 export const ESTIMATED_COST_LABEL = "Estimated cost";
@@ -9,15 +9,14 @@ export function EstimatedCostLabel() {
   return (
     <span className="estimated-cost-label">
       {ESTIMATED_COST_LABEL}
-      <TooltipWrapper
+      <Infotip
         label={estimatedCostNote("task")}
         triggerLabel="About estimated cost"
-        closeOnClick={false}
       >
         <button type="button" className="text-button estimated-cost-info">
           <Icon name="info" size={11} />
         </button>
-      </TooltipWrapper>
+      </Infotip>
     </span>
   );
 }
