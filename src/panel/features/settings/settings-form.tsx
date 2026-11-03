@@ -141,6 +141,22 @@ export function SettingsForm({
     return () => controller.guardDismiss(undefined);
   }, [controller]);
 
+  // Opening settings focuses search once it is enabled, unless focus has moved
+  // on from the arrival heading.
+  const searchFocused = useRef(false);
+
+  useEffect(() => {
+    if (loading || searchFocused.current) return;
+    searchFocused.current = true;
+
+    const active = document.activeElement;
+    if (active !== document.body && active?.id !== "settings-heading") return;
+
+    element.current
+      ?.querySelector<HTMLInputElement>('[type="search"]')
+      ?.focus({ preventScroll: true });
+  }, [loading]);
+
   const sectionOf = (path: string) =>
     sections.find((section) => sectionPaths(section).includes(path));
 

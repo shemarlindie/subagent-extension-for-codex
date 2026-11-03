@@ -513,9 +513,10 @@ test("settings search keeps hidden drafts and reveals invalid fields on save", a
       exact: true,
     });
 
-  // The hidden tasks page keeps its search mounted, but "/" focuses this one
-  // once settings load.
-  await expect(search).toBeEnabled();
+  // Opening settings focuses search once it loads. The hidden tasks page keeps
+  // its search mounted, but "/" focuses this one.
+  await expect(search).toBeFocused();
+  await search.blur();
   await page.keyboard.press("/");
   await expect(search).toBeFocused();
   await expect(search).toHaveValue("");
