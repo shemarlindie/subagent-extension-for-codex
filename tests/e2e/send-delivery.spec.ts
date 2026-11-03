@@ -52,8 +52,10 @@ firstReplyTest(
     const history = page.getByRole("region", { name: "Chat history" });
     await expect(history).toContainText("Fixture worker running turn 1");
 
-    // Hold the stream down until the turn ends, so its reply arrives while away.
+    // Hold the stream and the panel's reads down until the turn ends, so its
+    // reply arrives while away. A refresh already queued can't read it early.
     await page.route("**/api/events", (route) => route.abort());
+    await page.route("**/api/tools/**", (route) => route.abort());
     inProcessService.dropConnections();
 
     await expect(
@@ -78,6 +80,7 @@ firstReplyTest(
       .toContain('"status":"completed"');
 
     await expect(history).not.toContainText("Fixture session turn: 1.");
+    await page.unroute("**/api/tools/**");
     await page.unroute("**/api/events");
     await expect(page.getByText("Connected", { exact: true })).toBeVisible();
     await expect(history).toContainText("Fixture session turn: 1.");
