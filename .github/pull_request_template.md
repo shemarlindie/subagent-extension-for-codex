@@ -12,6 +12,5 @@
 
 ## Checklist
 
-- [ ] Tests follow
-      [Choosing test coverage](https://github.com/shemarlindie/subagent-extension-for-codex/blob/main/docs/development.md#choosing-test-coverage).
+- [ ] Tests follow [Choosing test coverage](https://github.com/shemarlindie/subagent-extension-for-codex/blob/main/docs/development.md#choosing-test-coverage).
 - [ ] Documentation reflects the change.

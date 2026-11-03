@@ -4,6 +4,10 @@
       "files": "*.md",
       "excludeFiles": "**/SKILL.md",
       "options": { "proseWrap": "always" }
+    },
+    {
+      "files": ".github/**/*.md",
+      "options": { "proseWrap": "never" }
     }
   ]
 }

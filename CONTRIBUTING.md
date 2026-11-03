@@ -54,6 +54,8 @@ reason in the body when it isn't obvious.
 A squash merge can use the pull request title as the commit subject, so give the
 title the same form.
 
+Don't hard-wrap lines in pull request descriptions.
+
 Name branches `type/short-description` in kebab case with the same types, such
 as `feat/undo-redo` or `fix/composer-reload-text`. Add the issue number when
 there is one, such as `fix/123-composer-reload-text`.
