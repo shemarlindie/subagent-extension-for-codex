@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import type { Locator, Page } from "@playwright/test";
 
 import type { Task } from "../../src/shared/tasks/model";
-import { send, startTask } from "./console-actions";
+import { scrollChatUp, send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 import { streamingTest } from "./streaming-fixtures";
 
@@ -389,8 +389,7 @@ streamingTest(
     await expect(streaming).toBeVisible();
     // Leave only after Chat reaches the reply. Leaving earlier skips unseen rows.
     await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
-    await history.hover();
-    await page.mouse.wheel(0, -900);
+    await scrollChatUp(page, 900);
     await expect(latest).toBeVisible();
     const anchor = await middleParagraph(history);
     const readingPartial = (await streaming.textContent())?.length ?? 0;

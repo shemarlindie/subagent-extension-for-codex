@@ -1,5 +1,5 @@
 // Console steps the browser flows share, driven through the visible UI.
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /** Starts a task from the new-task composer. */
 export async function startTask(page: Page, message: string) {
@@ -20,6 +20,33 @@ export async function send(page: Page, message: string) {
   const composer = page.getByRole("textbox", { name: "Message", exact: true });
   await composer.fill(message);
   await composer.press("Enter");
+}
+
+/**
+ * Scrolls Chat up with the mouse wheel and waits for the scroll to settle.
+ * Chat shows its scroll button on the wheel input, and a slow runner can apply
+ * the scroll later, so only samples an interval apart that agree count.
+ */
+export async function scrollChatUp(page: Page, distance: number) {
+  const history = page.getByRole("region", { name: "Chat history" });
+  let last: number | undefined;
+
+  await history.hover();
+  await page.mouse.wheel(0, -distance);
+
+  await expect
+    .poll(
+      async () => {
+        const top = await history.evaluate((element) => element.scrollTop),
+          settled = top === last;
+
+        last = top;
+
+        return settled;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
 }
 
 /** Opens the Projects page from the project dropdown. */
