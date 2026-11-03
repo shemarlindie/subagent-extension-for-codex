@@ -444,6 +444,18 @@ loading or failed. A later message recreates the worktree from its branch, or
 from the base commit if the branch was deleted. The panel never applies or
 pushes changes.
 
+## Pending worker updates
+
+In thread mode, the header counts worker updates Codex hasn't seen: turn
+replies, failed turns, budget stops and questions or permission requests routed
+to Codex. The count turns the warning color while a worker waits for an answer.
+Codex sees an update when it reads it with `list_messages`, or a reply with
+`get_message`. Archived and deleted tasks don't count.
+
+Select the count to review the updates by task. **Send to Codex** sends the
+checked ones in one message, and they stay counted until Codex reads them.
+**Mark seen** stops counting them without telling Codex.
+
 ## Handoff and deletion
 
 **Bring to Codex**, called **Copy for Codex** in the console, prepares an

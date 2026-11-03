@@ -120,6 +120,7 @@ export class FakeTransport implements Transport {
         deletions: 0,
       },
       app_get_chat: { items: [], next_cursor: 0 },
+      app_list_pending_updates: { tasks: [] },
       get_message: { message: { id: "parent_1" } },
       get_settings: { values: defaults },
     };

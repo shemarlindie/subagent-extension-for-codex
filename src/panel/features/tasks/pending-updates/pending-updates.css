@@ -1,0 +1,127 @@
+/* The header count and the dialog that sends pending worker updates to Codex. */
+header .pending-updates-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+/* A worker waits on Codex's answer. */
+header .pending-updates-button[data-waiting] {
+  border-color: var(--color-border-warning);
+  background: var(--color-background-warning);
+  color: var(--color-text-warning);
+}
+.pending-update-tasks,
+.pending-updates {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pending-update-tasks > li + li {
+  border-top: 1px solid var(--line);
+}
+.pending-update-task,
+.pending-update {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+}
+/* The count's dot sits 4px from the title and the number. */
+.pending-update-task {
+  gap: 4px;
+  padding: 12px 0 4px;
+  font-weight: 600;
+}
+.pending-update-task .checkbox {
+  margin-right: 4px;
+}
+/* Updates start under the task title, past the task checkbox. */
+.pending-update {
+  padding: 5px 0 5px 24px;
+  font-size: 12px;
+}
+/* A task's only update has no checkbox, so its row isn't clickable. */
+.pending-update:not(:has(.checkbox)) {
+  cursor: default;
+}
+.pending-updates > li:last-child .pending-update {
+  padding-bottom: 12px;
+}
+/* The footer's margin spaces the list's end, as in other dialogs. */
+.pending-update-tasks
+  > li:last-child
+  .pending-updates
+  > li:last-child
+  .pending-update {
+  padding-bottom: 0;
+}
+.pending-update-title,
+.pending-update-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pending-update-text {
+  flex: 1;
+  color: var(--muted);
+}
+.pending-update-count,
+.pending-update time {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: normal;
+}
+.pending-update-count {
+  display: inline-flex;
+  gap: 4px;
+}
+.pending-update-count::before {
+  content: "·";
+}
+.pending-update-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--muted);
+  font-size: 11px;
+}
+.pending-update-tag[data-kind="request"] {
+  background: var(--color-background-warning);
+  color: var(--color-text-warning);
+}
+.pending-update-tag:is([data-kind="failed"], [data-kind="budget"]) {
+  background: var(--color-background-danger);
+  color: var(--color-text-danger);
+}
+/* Close sits apart from the two actions on the updates. */
+.pending-updates-form #dismiss {
+  margin-right: auto;
+}
+/* The snippet gets its own line, so the timestamp doesn't squeeze it. */
+@media (max-width: 480px) {
+  .pending-update {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .pending-update time {
+    margin-left: auto;
+  }
+  .pending-update-text {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .pending-update:has(.checkbox) .pending-update-text {
+    padding-left: 24px;
+  }
+}

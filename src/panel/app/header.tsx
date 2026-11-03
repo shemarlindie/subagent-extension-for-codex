@@ -3,6 +3,7 @@ import { useRef } from "react";
 
 import { NewTaskButton } from "../features/delegation/new-task/new-task-button";
 import { ProjectScope } from "../features/projects/project-scope";
+import { PendingUpdatesIndicator } from "../features/tasks/pending-updates/pending-updates-indicator";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
 import { Infotip } from "../shared/components/infotip";
@@ -86,6 +87,8 @@ export function Header() {
       </div>
       <div className="toolbar">
         {status}
+        {/* Outside the inline toolbar, so narrow panels keep it. */}
+        {threadMode && <PendingUpdatesIndicator />}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
           {state.projectCandidate && (

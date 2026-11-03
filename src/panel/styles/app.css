@@ -13,6 +13,7 @@
 @import "../shared/components/select/chip-select.css";
 @import "../shared/components/loading-spinner/loading-spinner.css";
 @import "../shared/components/json-tree/json-tree.css";
+@import "../shared/components/checkbox/checkbox.css";
 @import "../features/tasks/activity/activity.css";
 @import "../features/tasks/inspector/task-details.css";
 @import "../features/tasks/inspector/task-inspector.css";
@@ -24,6 +25,7 @@
 @import "../features/settings/settings.css";
 @import "../features/projects/projects.css";
 @import "../features/tasks/archive/archive.css";
+@import "../features/tasks/pending-updates/pending-updates.css";
 @import "../shared/components/navigation/navigation.css";
 @import "../shared/components/motion/motion.css";
 @import "../shared/components/loading-skeleton/loading-skeleton.css";

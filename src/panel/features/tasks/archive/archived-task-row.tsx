@@ -1,7 +1,7 @@
 import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
+import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
-import { ArchiveCheckbox } from "./archive-checkbox";
 
 type ArchivedTaskRowProps = {
   task: Task;
@@ -29,7 +29,7 @@ export function ArchivedTaskRow({
   return (
     <li className="archived-task" data-task={task.id}>
       <label className="archived-task-label">
-        <ArchiveCheckbox
+        <Checkbox
           checked={checked}
           disabled={disabled}
           onCheckedChange={onCheckedChange}

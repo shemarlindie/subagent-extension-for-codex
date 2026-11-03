@@ -52,36 +52,6 @@
   color: var(--muted);
   font-size: 12px;
 }
-.archive-checkbox {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--text) 35%, var(--line));
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--bg);
-  cursor: pointer;
-}
-.archive-checkbox[data-checked],
-.archive-checkbox[data-indeterminate] {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.archive-checkbox[data-disabled] {
-  opacity: 0.5;
-  cursor: default;
-}
-.archive-checkbox:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-.archive-checkbox-indicator {
-  display: flex;
-}
 .archive-delete-confirm {
   padding: 12px;
   border: 1px solid var(--color-border-danger);

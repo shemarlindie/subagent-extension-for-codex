@@ -6,12 +6,12 @@ import {
 } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
+import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { LoadingSpinner } from "../../../shared/components/loading-spinner/loading-spinner";
 import { Presence } from "../../../shared/components/motion/presence";
 import { BackButton } from "../../../shared/components/navigation/back-button";
 import { PageFrame } from "../../../shared/components/navigation/page-frame";
-import { ArchiveCheckbox } from "./archive-checkbox";
 import { ArchiveDeleteConfirm } from "./archive-delete-confirm";
 import { ArchivedTaskRow } from "./archived-task-row";
 
@@ -121,7 +121,7 @@ export function ProjectArchive({
             <>
               <div className="project-archive-toolbar">
                 <label className="project-archive-select">
-                  <ArchiveCheckbox
+                  <Checkbox
                     checked={checked.size === listed.length}
                     indeterminate={
                       checked.size > 0 && checked.size < listed.length

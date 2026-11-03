@@ -24,6 +24,10 @@ export function restoreDialog(
     return { kind: saved.kind, project, scope };
   }
 
+  if (saved.kind === "pending-updates") {
+    return state.conversation ? { kind: saved.kind, scope } : undefined;
+  }
+
   if (saved.kind === "project") {
     return {
       kind: saved.kind,

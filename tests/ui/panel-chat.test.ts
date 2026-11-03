@@ -506,3 +506,86 @@ test("global mode hides Ask Codex about this reply even when the host can send",
     await screen.findByRole("menuitem", { name: "Bring to Codex" }),
   ).toBeTruthy();
 });
+
+test("pending worker updates send only the checked ones and stay counted until Codex reads them", async (t) => {
+  const reply = (event_id: number, text: string) => ({
+    event_id,
+    kind: "reply" as const,
+    text,
+    timestamp: "2026-10-02T03:00:00Z",
+  });
+
+  const { transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.host.canSend = true;
+
+      transport.pendingUpdates = [
+        {
+          task_id: "upload",
+          title: "Limit upload sizes",
+          updates: [
+            reply(12, "Newest upload reply."),
+            reply(7, "Older upload reply."),
+          ],
+        },
+        {
+          task_id: "loader",
+          title: "Migrate the config loader",
+          updates: [
+            {
+              event_id: 9,
+              kind: "request",
+              text: "Which format\nshould it support?",
+              timestamp: "2026-10-02T02:00:00Z",
+            },
+          ],
+        },
+      ];
+    },
+    { conversation: "parent-chat" },
+  );
+
+  const label = "3 pending worker updates";
+  await user.click(await screen.findByRole("button", { name: label }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const upload = document.querySelector<HTMLElement>('[data-task="upload"]')!;
+  const loader = document.querySelector<HTMLElement>('[data-task="loader"]')!;
+  const [uploadTask, , older] = within(upload).getAllByRole("checkbox");
+  // A task's only update has no checkbox of its own.
+  const [loaderTask, ...loaderRest] = within(loader).getAllByRole("checkbox");
+  assert.deepEqual(loaderRest, []);
+  const markSeen = dialog.getByRole("button", { name: "Mark seen" });
+  const send = dialog.getByRole("button", { name: "Send to Codex" });
+
+  await user.click(older!);
+  assert.equal(uploadTask!.getAttribute("aria-checked"), "mixed");
+
+  // From partial, the task checkbox checks every update, then clears them.
+  await user.click(uploadTask!);
+  await user.click(uploadTask!);
+  await user.click(loaderTask!);
+  assert.equal(markSeen.hasAttribute("disabled"), true);
+  assert.equal(send.hasAttribute("disabled"), true);
+
+  await user.click(uploadTask!);
+  await user.click(older!);
+  await user.click(loaderTask!);
+  await user.click(send);
+  await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
+
+  assert.equal(transport.messages.length, 1);
+  const [message] = transport.messages;
+  expect(message).toContain('task_id="upload", after=11');
+  expect(message).toContain("Newest upload reply.");
+  expect(message).not.toContain("Older upload reply.");
+  expect(message).toContain('task_id="loader", after=8');
+  expect(message).toContain("Which format should it support?");
+
+  // Sending leaves them counted until Codex reads them.
+  assert.ok(screen.getByRole("button", { name: label }));
+
+  assert.ok(
+    !transport.calls.some((call) => call.name === "app_mark_updates_seen"),
+  );
+});

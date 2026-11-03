@@ -14,6 +14,7 @@ import {
 import { deleteTaskDialog } from "../../features/tasks/controls/delete-task-form";
 import { handoffDialog } from "../../features/tasks/controls/handoff-form";
 import { permissionDialog } from "../../features/tasks/controls/permission-form";
+import { pendingUpdatesDialog } from "../../features/tasks/pending-updates/pending-updates-form";
 import type { DialogDefinition, DialogKind } from "./dialog-definition";
 
 // A new dialog variant fails to compile until it is registered here.
@@ -26,6 +27,7 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   "delegate-loading": delegateLoadingDialog,
   respond: permissionDialog,
   handoff: handoffDialog,
+  "pending-updates": pendingUpdatesDialog,
   delete: deleteTaskDialog,
   file: changedFileDialog,
   worktree: worktreeDialog,

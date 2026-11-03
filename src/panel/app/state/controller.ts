@@ -21,6 +21,7 @@ import {
 import { ParentMessageRelay } from "../../features/tasks/controls/parent-message-relay";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
 import { TimingReporter } from "../../features/tasks/controls/timing-reporter";
+import { PendingUpdateLoader } from "../../features/tasks/pending-updates/pending-update-loader";
 import { TaskDetailLoader } from "../../features/tasks/task-detail-loader";
 import { errorMessage } from "../../shared/utils/error-message";
 import { sharedRequest } from "../../shared/utils/shared-request";
@@ -214,6 +215,7 @@ export class Controller {
   });
 
   private changeLoader = new ChangeLoader(this.stateContext);
+  readonly pendingUpdates = new PendingUpdateLoader(this.stateContext);
 
   constructor(
     readonly transport: Transport,
@@ -593,6 +595,7 @@ export class Controller {
       );
 
       if (!accepted) return;
+      this.run(() => this.pendingUpdates.load());
 
       // Share after fallback selection so the host sees the same task as the panel.
       if (this.reconcileShare) {
@@ -1524,7 +1527,8 @@ export class Controller {
           "scope"
         >
       | Omit<Extract<DialogState, { kind: "file" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">,
+      | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">
+      | { kind: "pending-updates" },
   ) {
     if (this.state.dialog || this.state.busy) return;
 

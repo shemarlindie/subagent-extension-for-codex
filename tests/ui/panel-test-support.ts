@@ -24,6 +24,7 @@ import {
   windowActivity,
   windowTurnActivity,
 } from "../../src/shared/tasks/activity/activity-tail.js";
+import type { PendingTaskUpdates } from "../../src/shared/tasks/conversation/parent-updates.js";
 
 // UI primitives read browser capabilities at module initialization.
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -178,6 +179,8 @@ export class FakeTransport implements Transport {
   changedFiles: Record<string, ChangedFileContent> = {};
   shared: Record<string, unknown>[] = [];
   messages: string[] = [];
+  /** app_list_pending_updates tasks. */
+  pendingUpdates: PendingTaskUpdates[] = [];
   async share(data: Record<string, unknown>) {
     this.shared.push(data);
   }
@@ -247,6 +250,7 @@ export class FakeTransport implements Transport {
       get_settings: { values: defaults },
       start_task: this.tasks[0],
       submit_input: {},
+      app_list_pending_updates: { tasks: this.pendingUpdates },
     };
 
     assert.ok(name in values, `Unexpected tool ${name}`);

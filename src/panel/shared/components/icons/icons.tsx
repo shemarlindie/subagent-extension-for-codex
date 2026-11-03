@@ -54,6 +54,7 @@ const ICON_NAMES = [
   "copy",
   "enter",
   "reply",
+  "paper-plane",
   "stop-solid",
   // The task list resizer draws its own narrower grip inline.
   "grip-vertical",

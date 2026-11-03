@@ -1,5 +1,6 @@
 /* eslint-disable simple-import-sort/exports */
 import type { Event } from "../../../shared/events/types.js";
+import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
 import type {
   ChangeCountsState,
   ChangesState,
@@ -92,6 +93,8 @@ export type DialogState =
     }
   | { kind: "respond"; task: Task; scope: number }
   | { kind: "handoff"; task: Task; target?: HandoffTarget; scope: number }
+  // Sends worker updates Codex hasn't seen, or marks them seen.
+  | { kind: "pending-updates"; scope: number }
   // Confirms deleting the task and everything related to it.
   | { kind: "delete"; task: Task; scope: number }
   // A file the task changed, previewed as it is now and as its diff.
@@ -137,6 +140,7 @@ export type PersistedDialog =
       target?: HandoffTarget;
       draft?: PersistedDialogDraft;
     }
+  | { kind: "pending-updates"; draft?: PersistedDialogDraft }
   | { kind: "delete"; taskId: string; draft?: PersistedDialogDraft }
   | {
       kind: "file";
@@ -186,6 +190,8 @@ export type Snapshot = {
   /** Where Chat's "New" divider moved when the user marked the task unread from a message. */
   newMark?: NewMark;
   taskArrival?: Pick<Task, "id" | "title">;
+  /** Worker updates Codex hasn't seen, from the last read in a conversation. */
+  pendingUpdates?: { conversation: string; tasks: PendingTaskUpdates[] };
   /** The undo toast's message, until it times out or is closed. */
   undoNotice?: UndoNotice;
   /** Counts applied undo and redo steps, so views with their own reads reload. */

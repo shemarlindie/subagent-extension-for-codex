@@ -1,0 +1,30 @@
+.checkbox {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--text) 35%, var(--line));
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--bg);
+  cursor: pointer;
+}
+.checkbox[data-checked],
+.checkbox[data-indeterminate] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.checkbox[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.checkbox:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.checkbox-indicator {
+  display: flex;
+}

@@ -111,17 +111,18 @@ Model-visible tools may read settings and change ordinary defaults.
 `get_settings` marks user-only setting groups with `userOnly: true` in its
 schema. App-only tools carry user authority:
 
-| Tool                                                                    | User authority                                       |
-| ----------------------------------------------------------------------- | ---------------------------------------------------- |
-| `app_start_task`                                                        | Task overrides                                       |
-| `app_submit_input`                                                      | Answers to permissions routed to the user            |
-| `app_update_settings`, `app_import_settings`                            | Sensitive settings                                   |
-| `app_raise_budget`                                                      | Budget increases on existing tasks                   |
-| `app_register_project`, `app_browse_project`                            | Direct registration and folder browsing              |
-| `app_rename_project`, `app_remove_project`                              | [Project management](panel-guide.md#manage-projects) |
-| `app_set_tasks_archived`, `app_delete_tasks`                            | [Archive](panel-guide.md#archive-tasks) and deletion |
-| `app_set_task_read`, `app_mark_tasks_read`, `app_mark_task_unread_from` | [Read state](panel-guide.md#read-and-unread-tasks)   |
-| `app_steer_queued_message`                                              | Moving a queued message into the running turn        |
+| Tool                                                                    | User authority                                                             |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `app_start_task`                                                        | Task overrides                                                             |
+| `app_submit_input`                                                      | Answers to permissions routed to the user                                  |
+| `app_update_settings`, `app_import_settings`                            | Sensitive settings                                                         |
+| `app_raise_budget`                                                      | Budget increases on existing tasks                                         |
+| `app_register_project`, `app_browse_project`                            | Direct registration and folder browsing                                    |
+| `app_rename_project`, `app_remove_project`                              | [Project management](panel-guide.md#manage-projects)                       |
+| `app_set_tasks_archived`, `app_delete_tasks`                            | [Archive](panel-guide.md#archive-tasks) and deletion                       |
+| `app_set_task_read`, `app_mark_tasks_read`, `app_mark_task_unread_from` | [Read state](panel-guide.md#read-and-unread-tasks)                         |
+| `app_mark_updates_seen`                                                 | [Pending updates](panel-guide.md#pending-worker-updates) Codex hasn't read |
+| `app_steer_queued_message`                                              | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls.
 

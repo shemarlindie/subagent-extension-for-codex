@@ -12,6 +12,7 @@ export const persistedDialogIds = [
   "delegate",
   "permission",
   "handoff",
+  "pending_updates",
   "delete_task",
   "file",
   "worktree_remove",
@@ -62,6 +63,8 @@ export function persistDialog(dialog: DialogState): PersistedDialog {
     case "settings":
     case "settings-loading":
       return { kind: "settings" };
+    case "pending-updates":
+      return { kind: dialog.kind };
     case "delegate":
       return {
         kind: dialog.kind,
@@ -118,6 +121,7 @@ function dialogReference(
         ...(value.forNewTask === true ? { forNewTask: true } : {}),
       };
     case "settings":
+    case "pending-updates":
       return { kind: value.kind };
     case "delegate":
       return {
@@ -221,6 +225,8 @@ export function persistedDialogId(dialog: PersistedDialog): PersistedDialogId {
       return "permission";
     case "delete":
       return "delete_task";
+    case "pending-updates":
+      return "pending_updates";
     case "worktree":
       return dialog.action === "remove"
         ? "worktree_remove"

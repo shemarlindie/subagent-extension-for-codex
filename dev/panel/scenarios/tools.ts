@@ -26,6 +26,7 @@ import {
   originalResponseResult,
   withoutOriginalResponses,
 } from "./original-response-tools";
+import { PREVIEW_PENDING_TOOLS, previewPending } from "./pending-update-tools";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -417,6 +418,7 @@ export function previewTool(
   }
 
   if (PREVIEW_UNREAD_TOOLS.includes(name)) return previewUnreadTool(name, args);
+  if (PREVIEW_PENDING_TOOLS.includes(name)) return previewPending(name, args);
 
   if (PREVIEW_ARCHIVE_TOOLS.includes(name)) {
     return previewArchiveTool(previewTasks, args);
