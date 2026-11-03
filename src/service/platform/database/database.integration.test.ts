@@ -56,6 +56,7 @@ test("a fresh database gets every active table and the connection settings", (t)
     "file_changes",
     "project_roots",
     "task_archive",
+    "task_parent_seen",
     "task_read",
     "task_send_receipts",
     "tasks",

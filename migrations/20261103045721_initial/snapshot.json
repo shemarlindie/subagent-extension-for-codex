@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "45c91515-a393-4d64-ba3c-a0ab2a9a28a7",
+  "id": "195e7abf-9696-475e-9271-2a32ad461b19",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -20,6 +20,10 @@
     },
     {
       "name": "events",
+      "entityType": "tables"
+    },
+    {
+      "name": "task_parent_seen",
       "entityType": "tables"
     },
     {
@@ -239,6 +243,16 @@
       "entityType": "columns"
     },
     {
+      "table": "task_parent_seen",
+      "name": "event_id",
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
       "table": "task_send_receipts",
       "name": "owner",
       "type": "text",
@@ -451,6 +465,21 @@
       "entityType": "fks"
     },
     {
+      "table": "task_parent_seen",
+      "name": "fk_task_parent_seen_event_id_events_id_fk",
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "events",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "entityType": "fks"
+    },
+    {
       "table": "task_send_receipts",
       "name": "fk_task_send_receipts_task_id_tasks_id_fk",
       "columns": [
@@ -541,6 +570,15 @@
       "name": "events_pk",
       "columns": [
         "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "task_parent_seen",
+      "name": "task_parent_seen_pk",
+      "columns": [
+        "event_id"
       ],
       "nameExplicit": false,
       "entityType": "pks"

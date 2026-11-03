@@ -47,6 +47,17 @@ export const taskRead = sqliteTable("task_read", {
 });
 
 /**
+ * Worker updates the parent agent has seen, by event: those a message read
+ * returned to it and those the user marked seen. An update without a row is
+ * pending.
+ */
+export const parentSeen = sqliteTable("task_parent_seen", {
+  event_id: integer()
+    .primaryKey()
+    .references(() => events.id, { onDelete: "cascade" }),
+});
+
+/**
  * Tasks the user archived to keep them out of the panel's task lists, and
  * when. A task without a row isn't archived.
  */

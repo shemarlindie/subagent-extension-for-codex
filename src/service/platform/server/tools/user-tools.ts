@@ -22,6 +22,7 @@ import { activityTools } from "./activity-tools.js";
 import type { agentTools } from "./agent-tools.js";
 import { taskId, tool, type ToolContext } from "./definition.js";
 import { panelTimingTool } from "./panel-timing-tool.js";
+import { pendingUpdateTools } from "./pending-update-tools.js";
 import { projectTools } from "./project-tools.js";
 import { queueTools } from "./queue-tools.js";
 import { settingsTransferTools } from "./settings-transfer-tools.js";
@@ -189,5 +190,6 @@ export function userTools(
     ...activityTools(c, owner),
     app_record_timing: panelTimingTool(),
     ...taskLifecycleTools(c, owner),
+    ...pendingUpdateTools(c, owner),
   };
 }

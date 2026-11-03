@@ -230,15 +230,21 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
           .max(MAX_MESSAGE_WAIT_SECONDS)
           .default(0),
       }),
-      run: (a) =>
-        pollMessages(
+      run: async (a) => {
+        const result = await pollMessages(
           c.store,
           c.drafts,
           owner,
           a.task_id,
           a.after,
           a.wait_seconds,
-        ),
+        );
+
+        // The parent has now seen the updates this read covered.
+        c.parentSeen.markRange(owner, a.task_id, a.after, result.next_cursor);
+
+        return result;
+      },
     }),
     get_message: tool({
       readOnly: true,
@@ -253,6 +259,10 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         ).find((m) => m.id === a.message_id);
 
         if (!message) throw new Error("Message not found");
+
+        if (message.kind === "reply") {
+          c.parentSeen.markEvents(owner, [message.event_id]);
+        }
 
         return { message };
       },

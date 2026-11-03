@@ -28,6 +28,7 @@ import { SessionPrompts } from "../conversation/session-prompts.js";
 import { PendingInput } from "../input/pending-input.js";
 import { ActivityPages } from "../storage/activity-pages.js";
 import { ArchiveStore } from "../storage/archive-store.js";
+import { ParentSeenStore } from "../storage/parent-seen-store.js";
 import { Store } from "../storage/store.js";
 import {
   raiseBudget,
@@ -77,6 +78,8 @@ export class Control {
   changes: Changes;
   /** Which tasks the user archived from the panel's lists. */
   archive: ArchiveStore;
+  /** Which worker updates the parent agent has seen. */
+  parentSeen: ParentSeenStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   private sendRequests: SendRequests;
@@ -101,6 +104,7 @@ export class Control {
   ) {
     this.changes = new Changes(store);
     this.archive = new ArchiveStore(store);
+    this.parentSeen = new ParentSeenStore(store);
     this.sendRequests = new SendRequests(store);
 
     this.settings = new Settings(
