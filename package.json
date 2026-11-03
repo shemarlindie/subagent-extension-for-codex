@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Claude delegation for Codex",
+  "description": "Delegate to Claude without leaving Codex.",
   "license": "MIT",
   "author": "Shemar Lindie",
   "homepage": "https://github.com/shemarlindie/subagent-extension-for-codex#readme",
