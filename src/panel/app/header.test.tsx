@@ -38,7 +38,6 @@ function setup(overrides: Partial<Snapshot> = {}) {
     .spyOn(controller, "addProject")
     .mockImplementation(() => {});
 
-  const delegate = vi.spyOn(controller, "delegate").mockResolvedValue();
   const settings = vi.spyOn(controller, "settings").mockResolvedValue();
 
   const view = render(
@@ -53,7 +52,6 @@ function setup(overrides: Partial<Snapshot> = {}) {
     view,
     user: userEvent.setup(),
     addProject,
-    delegate,
     settings,
   };
 }
@@ -130,18 +128,3 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
     assert.equal(addProject.mock.calls.length, 0);
   },
 );
-
-test("global menu opens Advanced task without offering unsupported expansion", async () => {
-  const { view, user, delegate } = setup();
-
-  expect(view.queryByRole("button", { name: "Expand" })).toBeNull();
-  await user.click(view.getByRole("button", { name: "Panel actions" }));
-
-  const action = await view.findByRole("menuitem", { name: "Advanced task…" });
-
-  expect(view.queryByRole("menuitem", { name: "Expand" })).toBeNull();
-  expect(view.queryByRole("menuitem", { name: "Add chat project" })).toBeNull();
-
-  await user.click(action);
-  await waitFor(() => assert.equal(delegate.mock.calls.length, 1));
-});

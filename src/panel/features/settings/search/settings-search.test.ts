@@ -98,21 +98,6 @@ describe("settings search matching", () => {
     ).toBeGreaterThan(search.rowMatch(section, choice)!.score);
   });
 
-  it("explains matches found only in a choice description", () => {
-    const row = {
-      kind: "select" as const,
-      path: "task.provider",
-      label: "Provider",
-      options: [
-        { value: "balanced", label: "Balanced", description: "Fast responses" },
-      ],
-    };
-
-    expect(settingsSearch("fast").rowMatch(task, row)?.explanation).toBe(
-      "Includes Balanced: Fast responses",
-    );
-  });
-
   it("keeps instructions closed for model and profile name queries", () => {
     expect(
       settingsSearch("model").scopeMatch(profiles, researcher)

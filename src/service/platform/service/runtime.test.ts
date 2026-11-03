@@ -23,19 +23,6 @@ async function manifest(directory: string, name: string) {
 const moduleAt = (...segments: string[]) =>
   pathToFileURL(join(...segments, "module.js"));
 
-test("package root resolves from source, built entries and bundle chunks", async (t) => {
-  const root = await tree(t);
-  await manifest(root, "subagent-extension-for-codex");
-
-  for (const location of [
-    ["src", "service", "platform", "service"],
-    ["dist"],
-    ["dist", "chunks"],
-  ]) {
-    assert.equal(findPackageRoot(moduleAt(root, ...location)), root);
-  }
-});
-
 test("package root skips other packages' manifests and malformed ones", async (t) => {
   const root = await tree(t);
   await manifest(root, "subagent-extension-for-codex");

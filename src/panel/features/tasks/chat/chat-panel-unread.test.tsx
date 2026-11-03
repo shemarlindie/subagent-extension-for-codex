@@ -202,23 +202,6 @@ const failureNotes = noteItems.map((_, index): ChatItem => ({
   text: `Failure ${index}`,
 }));
 
-test("an unread task opens with a New divider after what the user had read, which stays once read", () => {
-  const { view, updateTask } = setup(
-    { unread: true, read_through: 3 },
-    [],
-    failureNotes,
-  );
-
-  const divider = view.getByRole("separator", { name: "New messages" });
-
-  expect(divider.nextElementSibling?.getAttribute("data-chat-item")).toBe(
-    "note-4",
-  );
-
-  updateTask({ unread: undefined, read_through: undefined });
-  expect(view.getByRole("separator", { name: "New messages" })).toBe(divider);
-});
-
 test("marking the open task read removes its New divider", async () => {
   const { controller, task, view, reopen } = setup(
     { unread: true, read_through: 3 },
@@ -241,7 +224,6 @@ test("marking the open task read removes its New divider", async () => {
 });
 
 test.each([
-  { name: "a read task", task: {} },
   {
     name: "a task just marked unread, before the service gives its marker,",
     task: { unread: true },

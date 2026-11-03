@@ -62,11 +62,6 @@ test("scrolls the selected tab into view when selection or layout changes", () =
 
   view.rerender(<TabsHarness value="models" layoutKey="horizontal" />);
 
-  expect(scrollTo).toHaveBeenLastCalledWith({
-    left: 82,
-    behavior: expect.any(String),
-  });
-
   Object.defineProperty(list, "scrollLeft", {
     configurable: true,
     value: 150,

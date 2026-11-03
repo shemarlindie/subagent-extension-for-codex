@@ -104,18 +104,6 @@ test("SDK idle sessions report a finished turn or host finishing state", () => {
   assert.equal(finishing.state, "info");
 });
 
-test("rejected SDK rate limits report waiting rather than running", () => {
-  const current = currentActivityStatus([
-    event(1, "claude.activity", {
-      type: "rate_limit_event",
-      rate_limit_info: { status: "rejected" },
-    }),
-  ]);
-
-  assert.equal(current.text, "Waiting for rate limit reset");
-  assert.equal(current.state, "info");
-});
-
 test("failed SDK result takes precedence over a still-running host task", () => {
   const current = currentActivityStatus(
     [

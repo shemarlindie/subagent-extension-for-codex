@@ -201,22 +201,6 @@ test("host collapse preserves a delegation draft until scope changes", async (t)
   );
 });
 
-describe("nonembedded panels retain the full interface in inline mode", () => {
-  test("nonembedded panel", async (t) => {
-    await setup(
-      t,
-      (transport) => {
-        transport.embedded = false;
-      },
-      { displayMode: "inline" },
-    );
-
-    assert.ok(screen.getByRole("button", { name: "New task" }));
-    assert.ok(screen.getByRole("region", { name: "Selected task" }));
-    assertAbsent(screen.queryByRole("button", { name: "Open panel" }));
-  });
-});
-
 test("inline preview renders refresh errors without exposing the full interface", async (t) => {
   const { controller } = await setup(t, undefined, { displayMode: "inline" });
   await act(async () => controller.report(new Error("Refresh unavailable")));

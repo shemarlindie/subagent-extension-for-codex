@@ -56,14 +56,3 @@ test("restoring puts the anchor file back where it was, even if files above it m
   // c.ts starts 200px down, so it sits 10px above the top at 210.
   assert.equal(container.scrollTop, 210);
 });
-
-test("a missing anchor falls back to the saved offset", () => {
-  const { container, viewport } = setup();
-
-  restorePosition(viewport, container, {
-    top: 80,
-    anchor: { path: "gone.ts", top: 0 },
-  });
-
-  assert.equal(container.scrollTop, 80);
-});

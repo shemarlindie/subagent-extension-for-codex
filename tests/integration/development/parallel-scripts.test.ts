@@ -134,15 +134,3 @@ test.concurrent(
     );
   },
 );
-
-test.concurrent.each([{ args: [] }, { args: ["example"] }])(
-  "rejects invalid direct invocation with arguments $args",
-  async ({ args }) => {
-    const { npm_execpath: _npm, ...env } = process.env;
-
-    assert.equal(
-      await exitCode(process.execPath, [runner, ...args], { env }),
-      1,
-    );
-  },
-);

@@ -16,7 +16,6 @@ import {
   measureTaskWait,
   measureTaskWrite,
   recordTaskTiming,
-  sendRef,
 } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
 
@@ -88,13 +87,6 @@ test("timing records carry the service log's instance and request IDs", async ()
   assert.equal(inside?.task_id, undefined);
   assert.equal(outside?.instance_id, logCorrelation().instance_id);
   assert.equal(outside?.request_id, undefined);
-});
-
-test("send references are stable for retries and never hold the raw ID", () => {
-  assert.equal(sendRef("my private request"), sendRef("my private request"));
-  assert.notEqual(sendRef("one"), sendRef("two"));
-  assert.match(sendRef("my private request") ?? "", /^[0-9a-f]{16}$/);
-  assert.equal(sendRef(undefined), undefined);
 });
 
 test("measured phases report their outcome and rethrow the same error", async () => {

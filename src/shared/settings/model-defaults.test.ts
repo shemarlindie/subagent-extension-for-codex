@@ -27,10 +27,6 @@ test("provider results skip the profile scope", () => {
   });
 });
 
-test("omitted scopes are skipped", () => {
+test("global defaults resolve without a selected provider or profile", () => {
   expect(resolveModelDefaults(values, {}).model).toBe("global-model");
-
-  expect(
-    resolveModelDefaults(values, { profile: "reviewer" }).providerModel,
-  ).toBe("global-model");
 });

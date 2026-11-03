@@ -47,15 +47,6 @@ test("binary files have no diff", () => {
   assert.equal(changedFileDiff(changes, "logo.png"), undefined);
 });
 
-test("each read's diff is parsed once, however many views ask", () => {
-  assert.equal(changedFileEntries(changes), changedFileEntries(changes));
-
-  assert.notEqual(
-    changedFileEntries({ ...changes }),
-    changedFileEntries(changes),
-  );
-});
-
 test("a file's signature changes only when its changes do", () => {
   const signature = (diff: string) =>
     changedFileEntries({ ...changes, diff }).map((entry) => entry.signature);

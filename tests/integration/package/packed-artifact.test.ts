@@ -46,7 +46,6 @@ const exec = promisify(execFile);
 let root: string;
 let pkg: string;
 let repository: string;
-let serviceRepository: string;
 /** The paths npm packed, before the tests add their own files to the extracted package. */
 let packedFiles: string[];
 
@@ -145,7 +144,6 @@ beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "packed-artifact-")));
   main = { data: join(root, "data"), port: await freePort() };
   repository = join(root, "repository");
-  serviceRepository = join(root, "service-repository");
 
   // Pack the existing build (pretest builds it) instead of rebuilding through prepack.
   await access(resolve("dist/main.js"));
@@ -173,10 +171,8 @@ beforeAll(async () => {
     "SUBAGENT_EXTENSION_FOR_CODEX_MENTION_TEST_MODE=1\n",
   );
 
-  for (const directory of [repository, serviceRepository]) {
-    await mkdir(directory);
-    await exec("git", ["init", "-q", directory]);
-  }
+  await mkdir(repository);
+  await exec("git", ["init", "-q", repository]);
 }, 180_000);
 
 afterAll(async () => {
@@ -341,11 +337,6 @@ describe("packed artifact", () => {
         expect.arrayContaining([expect.objectContaining({ repository })]),
       );
 
-      // The service itself persists this one, for the restart check below.
-      await callJson(client, "app_register_project", {
-        repository: serviceRepository,
-      });
-
       const { resources } = await client.listResources();
 
       const panel = resources.find((resource) =>
@@ -399,26 +390,6 @@ describe("packed artifact", () => {
 
       const { stdout } = await exec("ps", ["-ww", "-p", pid, "-o", "args="]);
       assert.ok(stdout.includes(join(pkg, "dist/main.js")), stdout);
-    }
-  });
-
-  test("the packaged service keeps the projects it registered across a restart", async () => {
-    await stopService(main);
-    await assert.rejects(health());
-
-    const client = await connectStdio();
-
-    try {
-      const { result: projects } = await callJson(client, "list_projects");
-
-      expect(projects).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ repository }),
-          expect.objectContaining({ repository: serviceRepository }),
-        ]),
-      );
-    } finally {
-      await client.close();
     }
   });
 

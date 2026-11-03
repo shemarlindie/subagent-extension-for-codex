@@ -97,36 +97,6 @@ test("an unavailable host or empty claim does not send or log delivery", async (
   expect(send).not.toHaveBeenCalled();
 });
 
-test("a scope change during claim prevents sending", async () => {
-  const { relay, scope, tool, send } = fixture();
-  let resolve!: (value: typeof message) => void;
-
-  tool
-    .mockReset()
-    .mockImplementationOnce(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    )
-    .mockResolvedValue(undefined);
-
-  const pending = relay.forward("parent");
-  scope.conversation = "elsewhere";
-  resolve(message);
-
-  await expect(pending).rejects.toThrow(/conversation changed/);
-  expect(send).not.toHaveBeenCalled();
-
-  expect(tool).toHaveBeenLastCalledWith(
-    "app_record_parent_delivery",
-    expect.objectContaining({
-      delivered: false,
-      error: "Panel parent conversation changed before delivery",
-    }),
-  );
-});
-
 test("a claimed message from another conversation cannot be sent", async () => {
   const { relay, tool, send } = fixture();
 

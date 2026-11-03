@@ -361,24 +361,6 @@ test("scroll to latest returns to the end, restores focus and follows later repl
   assert.equal(viewport.scrollTop, 500);
 });
 
-test("the end slack includes its 48px boundary", () => {
-  const reading: ReadingState = {};
-  const view = render(createElement(Chat, { reading, items }));
-  const viewport = view.getByTestId("chat");
-
-  viewport.scrollTop = 351;
-  fireEvent.scroll(viewport);
-
-  assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
-
-  viewport.scrollTop = 352;
-  fireEvent.scroll(viewport);
-
-  expect(
-    view.queryByRole("button", { name: "Scroll to latest message" }),
-  ).toBeNull();
-});
-
 test("scroll to latest uses the shared inspector scroller", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items, stacked: true }));

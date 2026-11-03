@@ -132,9 +132,7 @@ test.each([
         assert.deepEqual(writeText.mock.calls, [["Response text"]]),
       );
 
-      assert.ok(
-        await view.findByRole("button", { name: "Copy response — copied" }),
-      );
+      await view.findByRole("button", { name: "Copy response — copied" });
     }
   },
 );

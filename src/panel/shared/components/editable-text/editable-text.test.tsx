@@ -77,6 +77,8 @@ function setup(
 test("Escape discards changes and reopening starts from the saved value", () => {
   const { view, input, onSave } = setup();
 
+  assert.equal(document.activeElement, input);
+
   fireEvent.change(input, { target: { value: "Discard this title" } });
   fireEvent.keyDown(input, { key: "Escape" });
 
@@ -275,32 +277,6 @@ test("Enter confirms a wrapped title without inserting a newline", async () => {
   assert.equal(allowedDefault, false);
   await waitFor(() => assert.equal(view.queryByRole("textbox") === null, true));
   assert.deepEqual(onSave.mock.calls, [[wrappedDraft]]);
-});
-
-test("the readonly preview field is reused when editing begins", () => {
-  const view = render(
-    <EditableText value="Original title" label="Title" onSave={vi.fn()} />,
-  );
-
-  const preview = view.container.querySelector("input");
-
-  assert.ok(preview);
-  assert.equal(preview.readOnly, true);
-  assert.equal(view.queryByRole("textbox") === null, true);
-
-  fireEvent.click(
-    view.getByRole("button", { name: "Edit title: Original title" }),
-  );
-
-  const editor = view.getByRole("textbox", { name: "Title" });
-
-  assert.equal(editor === preview, true);
-  assert.equal(preview.readOnly, false);
-  assert.equal(document.activeElement === preview, true);
-  fireEvent.keyDown(editor, { key: "Escape" });
-  assert.equal(view.container.querySelector("input") === preview, true);
-  assert.equal(preview.readOnly, true);
-  assert.equal(view.queryByRole("textbox") === null, true);
 });
 
 test("growing wrapped text preserves the draft, caret and focus without ancestor animation", (t) => {

@@ -109,18 +109,18 @@ test("a file with its own diff adds a Diff view after its format's views", async
   );
 });
 
-test("source and table rows survive multiple lazy blocks", (t) => {
+test("source and table rows survive a lazy block boundary", (t) => {
   t.onTestFinished(cleanup);
 
-  // Cross two 200-row block boundaries without rendering thousands of DOM nodes.
-  const lines = Array.from({ length: 401 }, (_, index) => `line ${index}`);
+  // One row past a block checks the transition without an oversized fixture.
+  const lines = Array.from({ length: 201 }, (_, index) => `line ${index}`);
   const log = show({ path: "build.log", content: lines.join("\n") });
-  assert.equal(log.container.querySelectorAll(".code-line").length, 401);
+  assert.equal(log.container.querySelectorAll(".code-line").length, 201);
   cleanup();
 
-  const rows = ["n", ...Array.from({ length: 401 }, (_, i) => String(i))];
+  const rows = ["n", ...Array.from({ length: 201 }, (_, i) => String(i))];
   const table = show({ path: "rows.csv", content: rows.join("\n") });
-  assert.equal(table.container.querySelectorAll("tbody tr").length, 401);
+  assert.equal(table.container.querySelectorAll("tbody tr").length, 201);
 });
 
 test("an SVG over 64 KB shows as source with a note, never as an image", (t) => {

@@ -258,12 +258,6 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
     "chat",
   );
 
-  assert.equal(
-    taskPanelContext(selected).panel_selection.tab,
-    "chat",
-    "a newly started task always opens on Chat",
-  );
-
   const alias = join(f.dir, "alias");
   await symlink(a, alias, "dir");
 

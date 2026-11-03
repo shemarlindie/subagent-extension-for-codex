@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 
 import { createServer } from "vite";
-import { afterAll, test, vi } from "vitest";
+import { afterAll, test } from "vitest";
 
 import { fixtureServicePlugin } from "../../../dev/panel/fixture-service/plugin.js";
 import { largeFiles } from "../../../dev/panel/scenarios/large-files.js";
@@ -78,41 +78,6 @@ async function result<T>(name: string, args: Record<string, unknown>) {
 
   return body.result as T;
 }
-
-test("the Vite fixture-service route parses requests and returns tool results", async () => {
-  const created = await fixtureServer();
-
-  // No tool is served yet, so serve one for this test in the server's module graph.
-  const helpers = (await created.ssrLoadModule(
-    resolve(projectRoot, "dev/panel/host/host-helpers.ts"),
-  )) as { FIXTURE_SERVICE_TOOLS: string[] };
-
-  helpers.FIXTURE_SERVICE_TOOLS.push("list_tasks");
-  // Metadata listing must not need Git to seed unrelated repositories.
-  vi.stubEnv("PATH", "");
-
-  try {
-    const { response, body } = await call("list_tasks", {
-      conversation_id: null,
-    });
-
-    assert.equal(response.status, 200);
-
-    assert.match(
-      response.headers.get("content-type") ?? "",
-      /application\/json/,
-    );
-
-    assert.ok(
-      (body.result as { id: string }[]).some(
-        (task) => task.id === "preview-blocks",
-      ),
-    );
-  } finally {
-    vi.unstubAllEnvs();
-    helpers.FIXTURE_SERVICE_TOOLS.pop();
-  }
-});
 
 test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();

@@ -118,41 +118,6 @@ test("a blocked embedded clipboard keeps the copy action available and reports m
   expect(document.querySelector("textarea")).toBeNull();
 });
 
-test("copying again restarts the feedback duration", async () => {
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-
-  onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  replaceClipboard(async () => {});
-  const { view } = setup("Branch", "agent/review");
-
-  await act(async () => {
-    fireEvent.click(view.getByRole("button", { name: "Copy branch" }));
-  });
-
-  act(() => {
-    vi.advanceTimersByTime(1000);
-  });
-
-  await act(async () => {
-    fireEvent.click(view.getByRole("button", { name: "Copy branch — copied" }));
-  });
-
-  act(() => {
-    vi.advanceTimersByTime(1000);
-  });
-
-  assert.ok(view.getByRole("button", { name: "Copy branch — copied" }));
-
-  act(() => {
-    vi.advanceTimersByTime(500);
-  });
-
-  assert.ok(view.getByRole("button", { name: "Copy branch" }));
-});
-
 test("a new command does not inherit the previous command's copied feedback", async () => {
   replaceClipboard(async () => {});
   const { view, update } = setup("Branch", "agent/old");

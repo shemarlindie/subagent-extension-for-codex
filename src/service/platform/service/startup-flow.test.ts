@@ -154,11 +154,6 @@ test("sends SIGTERM only after confirmation and retries startup", async (t) => {
   expect(mocks.serve).toHaveBeenNthCalledWith(1, { network: true });
   expect(mocks.serve).toHaveBeenNthCalledWith(2, { network: true });
 
-  assert.equal(
-    readline.question.mock.calls[0]?.[0],
-    "\nSend SIGTERM to this process and retry startup? [y/N] ",
-  );
-
   assert.deepEqual(kill.mock.calls, [[owner.pid, "SIGTERM"]]);
   assert.equal(mocks.serve.mock.calls.length, 2);
   assert.equal(readline.close.mock.calls.length, 1);

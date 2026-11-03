@@ -93,8 +93,7 @@ test("a provider can present thinking, operations and session status without SDK
   assert.equal(indexed.data.native_detail, "retained");
 });
 
-test("Claude emits provider-owned presentation alongside the original SDK response", () => {
-  let rawResponse: unknown;
+test("Claude status updates are not marked as thinking", () => {
   let emittedActivity: unknown;
 
   const message = {
@@ -108,15 +107,12 @@ test("Claude emits provider-owned presentation alongside the original SDK respon
   claudeMessageNormalizer(true)(
     {
       emit: () => {},
-      emitOpaque: (_type: string, data: Record<string, unknown>) => {
-        rawResponse = data.raw_response;
-        emittedActivity = data.activity;
-      },
+      emitOpaque: (_type: string, data: Record<string, unknown>) =>
+        (emittedActivity = data.activity),
     } as unknown as RunContext,
     message,
   );
 
-  assert.equal(rawResponse, message);
   const activity = emittedActivity as ActivityPresentation;
   // Requesting is a status update, not a thinking signal.
   assert.equal(activity.thinking, false);

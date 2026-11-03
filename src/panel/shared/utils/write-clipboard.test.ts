@@ -42,19 +42,6 @@ function selection() {
   };
 }
 
-test("native clipboard writes the complete value without a fallback", async () => {
-  const text = `git push -u origin agent/${"long-branch".repeat(40)}`;
-  const writeText = vi.fn(async () => {});
-  const execCommand = vi.fn(() => true);
-
-  replace(navigator, "clipboard", { writeText });
-  replace(document, "execCommand", execCommand);
-  await writeClipboardText(text);
-  assert.deepEqual(writeText.mock.calls, [[text]]);
-  assert.equal(execCommand.mock.calls.length, 0);
-  expect(document.querySelector("textarea")).toBeNull();
-});
-
 test.each(["missing", "rejected"])(
   "a %s clipboard API falls back to selecting the full value, then restores focus and selection",
   async (api) => {

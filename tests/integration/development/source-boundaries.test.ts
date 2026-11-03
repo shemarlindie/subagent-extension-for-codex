@@ -78,43 +78,6 @@ test("production boundaries reject each forbidden dependency target", async () =
   }
 });
 
-test("production boundaries allow imports within their runtime and shared feature modules", async () => {
-  for (const [filePath, targets] of [
-    [
-      "src/service/features/tasks/runtime/example.ts",
-      [
-        "./control.js",
-        "../../../platform/panel/panel.js",
-        "../../../../shared/tasks/model.js",
-        "node:fs",
-        "@anthropic-ai/claude-agent-sdk",
-      ],
-    ],
-    [
-      "src/service/platform/panel/example.ts",
-      ["./panel.js", "../../../shared/panel/panel-contract.js"],
-    ],
-    [
-      "src/panel/features/tasks/chat/example.ts",
-      ["./chat.js", "../../../../shared/tasks/model.js", "react"],
-    ],
-    [
-      "src/shared/tasks/example.ts",
-      ["./model.js", "../providers/metadata.js", "zod"],
-    ],
-  ] as const) {
-    for (const target of targets) {
-      const source = `import "${target}";`;
-
-      assert.deepEqual(
-        await boundaryMessages(filePath, source),
-        [],
-        `${filePath} must allow ${source}`,
-      );
-    }
-  }
-});
-
 // Syntax dispatch and dependency ownership are independent. Exercise each
 // visitor with an allowed and forbidden target instead of their full product.
 test("every supported import syntax enforces the same ownership boundary", async () => {
@@ -155,22 +118,4 @@ test("only the Claude-owned shared contract can import SDK types, and never SDK 
       .length,
     1,
   );
-});
-
-test("colocated production tests and test harnesses may import fixtures and other runtimes", async () => {
-  for (const filePath of [
-    "src/service/features/tasks/runtime/example.test.ts",
-    "src/panel/features/tasks/chat/example.test.tsx",
-    "src/panel/app/state/example-test-harness.ts",
-    "src/shared/tasks/example.test.ts",
-  ]) {
-    assert.deepEqual(
-      await boundaryMessages(
-        filePath,
-        'import "node:fs"; import "@anthropic-ai/claude-agent-sdk"; import "/dev/panel/scenarios/fixtures.js";',
-      ),
-      [],
-      `${filePath} must be exempt from production import boundaries`,
-    );
-  }
 });

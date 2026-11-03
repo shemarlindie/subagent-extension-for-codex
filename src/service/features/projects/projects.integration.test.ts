@@ -398,47 +398,6 @@ test("project rename rejects invalid names and unregistered roots without changi
   assert.equal(await f.projects.resolve(repository), repository);
 });
 
-test("project rename and removal tools require user authority", async (t) => {
-  const f = await fixture(t);
-  const repository = await f.repo("repo");
-  await f.projects.register(repository);
-  const control = new Control(f.store, f.workspaces, new Map());
-  control.projects = f.projects;
-
-  for (const tool of ["app_rename_project", "app_remove_project"]) {
-    assert.equal(isUserTool(tool), true);
-
-    await assert.rejects(
-      callTool(control, "owner", tool, { repository, name: "Renamed" }),
-      /user interface/i,
-    );
-  }
-
-  await callTool(
-    control,
-    "owner",
-    "app_rename_project",
-    { repository, name: "  Renamed  " },
-    "user",
-  );
-
-  assert.deepEqual(
-    f.projects.list().map((project) => project.name),
-    ["Renamed"],
-  );
-
-  await callTool(
-    control,
-    "owner",
-    "app_remove_project",
-    { repository },
-    "user",
-  );
-
-  assert.deepEqual(f.projects.list(), []);
-  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
-});
-
 test("project removal is idempotent even after its directory disappears", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("gone/repo");

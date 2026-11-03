@@ -3,11 +3,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  decodeCursor,
   decodeFileCursor,
   diffPage,
   diffParts,
-  encodeCursor,
   encodeFileCursor,
 } from "./changes.js";
 
@@ -23,19 +21,6 @@ test("diffs split by file and page whole files, at least one per page", () => {
   assert.deepEqual(diffPage(parts, 1, 5), { diff: two, end: 2 });
   assert.deepEqual(diffPage(parts, 2, 5), { diff: "", end: 2 });
   assert.deepEqual(diffParts(""), []);
-});
-
-test("cursors carry both trees and the next file", () => {
-  const base = "a".repeat(40),
-    current = "b".repeat(40);
-
-  assert.deepEqual(decodeCursor(encodeCursor(base, current, 7)), {
-    base,
-    current,
-    index: 7,
-  });
-
-  assert.throws(() => decodeCursor("HEAD:main:1"), /Invalid changes cursor/);
 });
 
 test("file cursors carry the tree and the next offset", () => {

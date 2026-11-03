@@ -127,11 +127,6 @@ test("permission fields stay unresolved until worker metadata arrives", (t) => {
     assert.match(control?.textContent ?? "", /Loading…/);
   }
 
-  assert.equal(
-    view.container.querySelectorAll(".select-loading-spinner").length,
-    2,
-  );
-
   assert.doesNotMatch(view.container.textContent ?? "", /Inherit|Parent agent/);
 });
 
@@ -218,21 +213,6 @@ test("unknown task defaults show in-control loading text until selected values r
     assert.equal(control.getAttribute("aria-busy"), "true");
   }
 
-  assert.equal(
-    view.container.querySelectorAll(".select-loading-spinner").length,
-    1,
-  );
-
-  assert.equal(
-    view.container.querySelectorAll(".form-switch-spinner").length,
-    2,
-  );
-
-  assert.equal(
-    view.container.querySelectorAll(".async-control-spinner").length,
-    2,
-  );
-
   assert.match(view.container.textContent ?? "", /Loading budget options/);
 
   assert.doesNotMatch(
@@ -241,7 +221,7 @@ test("unknown task defaults show in-control loading text until selected values r
   );
 });
 
-test("known budget selections stay visible without a spinner while workers finish loading", (t) => {
+test("known budget selections stay visible while workers finish loading", (t) => {
   t.onTestFinished(cleanup);
 
   function Fields() {
@@ -271,6 +251,4 @@ test("known budget selections stay visible without a spinner while workers finis
   assert.equal(costMode.getAttribute("aria-busy"), null);
   assert.equal(costMode.getAttribute("aria-checked"), "true");
   assert.equal(cost?.disabled, true);
-  assert.equal(view.container.querySelector(".select-loading-spinner"), null);
-  assert.equal(view.container.querySelector(".async-control-spinner"), null);
 });

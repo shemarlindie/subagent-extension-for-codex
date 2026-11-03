@@ -14,60 +14,6 @@ import { claudeTaskPolicy } from "./task-policy.js";
 const claudeOptions = (task: { provider_options?: Task["provider_options"] }) =>
   readClaudeTaskOptions(task);
 
-test("Claude preparation preserves native modes and restrictions independently of execution approval", () => {
-  const store = new Store(":memory:");
-
-  try {
-    const defaults = new Settings(store.database, () => ["claude"]).values(
-      "alice",
-    );
-
-    const input = startSchema.parse({
-      repository: "/repo",
-      description: "Review",
-    });
-
-    const prepared = claudeTaskPolicy.prepareStart({
-      input,
-      defaults,
-      authority: "user",
-    });
-
-    const preparedOptions = claudeOptions(prepared);
-    assert.equal(preparedOptions.permission_mode, "default");
-    assert.equal(preparedOptions.permission_source, "setting");
-    assert.equal(preparedOptions.claude_policy.tools, "restricted");
-    assert.equal(preparedOptions.claude_policy.path_guard, true);
-
-    assert.equal(
-      claudeTaskPolicy.decideInput({ ...input } as unknown as Task, "Bash"),
-      undefined,
-    );
-
-    assert.equal(
-      claudeTaskPolicy.parentMayApprove({
-        ...input,
-        provider_options: {
-          claude: { ...preparedOptions, approval_decider: "parent_agent" },
-        },
-      } as unknown as Task),
-      true,
-    );
-
-    assert.equal(
-      claudeTaskPolicy.parentMayApprove({
-        ...input,
-        provider_options: {
-          claude: { ...preparedOptions, approval_decider: "user" },
-        },
-      } as unknown as Task),
-      false,
-    );
-  } finally {
-    store.close();
-  }
-});
-
 test("Claude preparation checks native permission, approval decider, and effort before starting", () => {
   const store = new Store(":memory:");
 

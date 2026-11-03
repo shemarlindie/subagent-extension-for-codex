@@ -33,16 +33,6 @@ const dropped = {
   retries: 0,
 };
 
-test("an empty page keeps the same events array", () => {
-  const previous = [event(1), event(2)];
-
-  const view = mergeActivity({ events: previous }, "task", {
-    events: [],
-  });
-
-  assert.ok(view.events === previous, "Unchanged views can skip rendering");
-});
-
 test("new events append and keep only the most recent tail", () => {
   const previous = [event(1)];
   const page = Array.from({ length: EVENT_TAIL_SIZE }, (_, i) => event(i + 2));

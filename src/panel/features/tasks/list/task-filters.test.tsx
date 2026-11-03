@@ -26,13 +26,12 @@ test("filter counts stay unresolved until the first task list read", (t) => {
     </ControllerContext.Provider>,
   );
 
-  const all = screen.getByRole("radio", { name: "All, loading" });
+  screen.getByRole("radio", { name: "All, loading" });
 
   assert.equal(
     view.container.querySelector(".filters")?.getAttribute("aria-busy"),
     "true",
   );
 
-  assert.equal(all.getAttribute("aria-label"), "All, loading");
   assert.equal(screen.queryByRole("radio", { name: "All, 0" }), null);
 });

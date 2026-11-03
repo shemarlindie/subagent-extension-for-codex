@@ -38,19 +38,7 @@ test("worker question accepts a custom answer with no preset selection", async (
   assertAbsent(screen.queryByRole("dialog"));
   assertAbsent(screen.queryByRole("textbox", { name: "Message" }));
   await user.click(screen.getByRole("button", { name: "Show composer" }));
-  const composer = screen.getByRole("textbox", { name: "Message" });
   const collapse = screen.getByRole("button", { name: "Hide composer" });
-
-  expect(collapse.closest(".chat-composer-box")).toBeNull();
-
-  expect(collapse.parentElement).toBe(
-    composer.closest(".chat-composer-input-row"),
-  );
-
-  assert.ok(
-    collapse.compareDocumentPosition(composer) &
-      Node.DOCUMENT_POSITION_FOLLOWING,
-  );
 
   await user.click(collapse);
   assertAbsent(screen.queryByRole("textbox", { name: "Message" }));

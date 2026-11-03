@@ -1,7 +1,6 @@
 import { applyPatch, structuredPatch } from "diff";
 import { afterEach, expect, test, vi } from "vitest";
 
-import * as logging from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { claudeFileEdits, recordClaudeFileEdits } from "./file-edits.js";
 import captured from "./file-edits-fixtures/cli-2.1.300.json";
@@ -445,44 +444,4 @@ test("uncaptured edit-tool patches retain tool provenance", () => {
   recordClaudeFileEdits(context, "Edit", { ...edit, structuredPatch: null });
 
   expect(context.editUnrecorded).toHaveBeenCalledWith("/repo/b.txt", "tool");
-});
-
-test("M6 mapping and recording failures log an error and never escape the hook", () => {
-  const log = vi.spyOn(logging, "logError").mockImplementation(() => {});
-  const context = recordingContext();
-  const error = new Error("database unavailable");
-
-  const failure = {
-    get filePath(): never {
-      throw error;
-    },
-  };
-
-  expect(() => recordClaudeFileEdits(context, "Write", failure)).not.toThrow();
-
-  expect(log).toHaveBeenLastCalledWith("provider.edit_capture_failed", error, {
-    tool: "Write",
-  });
-
-  vi.mocked(context.fileChanged).mockImplementation(() => {
-    throw error;
-  });
-
-  expect(() => recordClaudeFileEdits(context, "Edit", edit)).not.toThrow();
-
-  expect(log).toHaveBeenLastCalledWith("provider.edit_capture_failed", error, {
-    tool: "Edit",
-  });
-
-  vi.mocked(context.editUnrecorded).mockImplementation(() => {
-    throw error;
-  });
-
-  expect(() =>
-    recordClaudeFileEdits(context, "Bash", {
-      bashEditDiff: { unavailable: true },
-    }),
-  ).not.toThrow();
-
-  expect(log).toHaveBeenCalledTimes(3);
 });

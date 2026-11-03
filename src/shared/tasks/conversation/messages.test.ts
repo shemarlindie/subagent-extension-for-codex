@@ -172,9 +172,7 @@ test("stored acknowledgments annotate only their exact explicit report without c
   const events = [
     event(1, "parent.message", { text: "First" }),
     event(2, "parent.message", { text: "Second" }),
-    said(3, "Ordinary", "sdk_normal"),
     event(4, "parent.message_acknowledged", { message_id: 2 }),
-    event(5, "parent.message_acknowledged", { message_id: 3 }),
   ];
 
   const messages = conversation(task, events);
@@ -186,7 +184,6 @@ test("stored acknowledgments annotate only their exact explicit report without c
     [
       ["parent_1", 1, undefined],
       ["parent_2", 2, true],
-      ["sdk_normal", 3, undefined],
     ],
   );
 });

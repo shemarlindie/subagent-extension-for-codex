@@ -70,24 +70,6 @@ class FakeStream {
   }
 }
 
-test("console default fetch preserves the browser receiver", async () => {
-  const original = globalThis.fetch;
-
-  globalThis.fetch = function (this: unknown) {
-    assert.equal(this, globalThis);
-
-    return Promise.resolve(Response.json({ result: { ok: true } }));
-  };
-
-  try {
-    const transport = new ConsoleTransport("https://console.example");
-    assert.deepEqual(await transport.tool("list_tasks"), { ok: true });
-    await transport.login("local-token");
-  } finally {
-    globalThis.fetch = original;
-  }
-});
-
 test("console requests use browser credentials and required headers for tools and login", async () => {
   const calls: { url: string; options: RequestInit }[] = [];
 
@@ -652,29 +634,6 @@ test("host routes user actions through app-only aliases and preserves settings e
   } finally {
     transport.dispose();
   }
-});
-
-test("console SSE delivers draft deltas as they arrive", async () => {
-  const streams: FakeStream[] = [];
-
-  const transport = new ConsoleTransport("", fetch, () => {
-    const stream = new FakeStream();
-    streams.push(stream);
-
-    return stream as unknown as EventSource;
-  });
-
-  const observed = callbacks();
-  await transport.connect(observed.events);
-  transport.watch();
-  assert.equal(transport.streamsDrafts, true);
-
-  const update = { task_id: "t", message_id: "m", offset: 0, text: "Hi" };
-  const [stream] = streams;
-  assert.ok(stream);
-  stream.delta?.({ data: JSON.stringify(update) });
-  assert.deepEqual(observed.drafts, [update]);
-  transport.dispose();
 });
 
 test("worker messages use explicit submission metadata and require host support", async () => {

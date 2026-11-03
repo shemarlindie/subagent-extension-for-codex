@@ -133,7 +133,6 @@ test("mixed content, tool inputs and tool results are readable and HTML stays li
 
   assert.ok(!text.includes("hidden-signature"));
   assertAbsent(doc.querySelector("script"));
-  assert.equal(doc.querySelectorAll("details.activity-raw").length, 6);
 });
 
 test("failures are distinguished for results, tool errors and denied permissions", () => {

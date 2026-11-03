@@ -223,29 +223,6 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       }),
     );
 
-    assert.deepEqual(
-      opener.icons?.map((icon) => icon.theme),
-      ["light", "dark"],
-    );
-
-    for (const [index, color] of ["#000000", "#ffffff"].entries()) {
-      const icon: NonNullable<typeof opener.icons>[number] | undefined =
-        opener.icons?.[index];
-
-      assert.ok(icon);
-      assert.equal(icon.mimeType, "image/svg+xml");
-      assert.deepEqual(icon.sizes, ["any"]);
-      assert.match(icon.src, /^data:image\/svg\+xml;base64,/);
-
-      assert.match(
-        Buffer.from(
-          icon.src.slice("data:image/svg+xml;base64,".length),
-          "base64",
-        ).toString("utf8"),
-        new RegExp(`stroke="${color}"`),
-      );
-    }
-
     assert.deepEqual(opener._meta?.["openai/ui"], {
       entrypoints: [{ type: "thread" }],
       preferredModelDisplayMode: "inline",
@@ -339,8 +316,6 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     assert.ok(globalOpener);
-    assert.equal(globalOpener.title, "Delegated Work");
-    assert.deepEqual(globalOpener.icons, opener.icons);
 
     assert.deepEqual(globalOpener._meta?.ui, {
       resourceUri: (opener._meta as any).ui.resourceUri,

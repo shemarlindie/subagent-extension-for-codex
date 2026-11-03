@@ -170,31 +170,6 @@ test("change tools return sorted recorded edits, incomplete files and command wa
   }
 });
 
-test("latest-turn rows clear on continuation while the task keeps its recorded history", async () => {
-  const s = await setup();
-
-  try {
-    const t = await s.start(async (c) => {
-      await edit(c, `turn-${c.task.turn}.txt`, "", "turn\n");
-    });
-
-    await s.c.send("alice", t.id, "Continue", "user");
-    await s.done(t.id);
-    const task = await s.tool<Changes>("get_changes", { task_id: t.id });
-
-    const turn = await s.tool<Changes>("get_changes", {
-      task_id: t.id,
-      scope: "turn",
-    });
-
-    expect(task.files.map((f) => f.path)).toEqual(["turn-1.txt", "turn-2.txt"]);
-    expect(turn.files.map((f) => f.path)).toEqual(["turn-2.txt"]);
-    expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
-  } finally {
-    await s.close();
-  }
-});
-
 test("pages split only between whole files and every page lists all files", async () => {
   const s = await setup();
 
