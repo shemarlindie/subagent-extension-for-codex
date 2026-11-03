@@ -7,6 +7,7 @@ import { useLayoutEffect, useRef } from "react";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { buttonClass } from "../components/button/button";
+import { Icon } from "../components/icons/icons";
 import { useAnimatedHeight } from "../components/motion/use-animated-height";
 import { dialogDefinition } from "./dialog-registry";
 
@@ -140,7 +141,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
               aria-label="Close"
               disabled={state.busy}
             >
-              ×
+              <Icon name="close" size={10} />
             </Dialog.Close>
           </div>
           {dialog && definition?.render(dialog)}
