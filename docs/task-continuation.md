@@ -67,12 +67,13 @@ A plugin update installs the new version while the old version's service may
 still run. The next stdio proxy to start compares itself with that service. It
 reads `version`, `apiVersion` and `launcher` from `/health` and `installRoot`
 from `service.json`. Versions compare by semver precedence, so a prerelease such
-as `0.2.0-beta.1` is older than `0.2.0`.
+as `0.2.0-beta.1` is older than `0.2.0`. `apiVersion` changes only when a
+release breaks the previous release's proxy, so most updates keep it.
 
 | Running service                                                | The proxy                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Same version, installation present                             | Uses it.                                                                        |
-| Started by a stdio proxy, older or its installation removed    | Asks it to drain, then starts the new version once it exits.                    |
+| Same version and `apiVersion`, installation present            | Uses it.                                                                        |
+| Started by a stdio proxy, older, on another API or uninstalled | Asks it to drain, then starts the new version once it exits.                    |
 | Started by a stdio proxy, newer                                | Uses it if `apiVersion` matches. Otherwise asks you to update the plugin.       |
 | Started another way (`npm run dev`, `npm start`, a supervisor) | Uses it if `apiVersion` matches. Otherwise refuses. It never stops the service. |
 

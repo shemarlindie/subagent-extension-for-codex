@@ -44,6 +44,11 @@ test("replaces an older or uninstalled plugin service, forwarding while it speak
     action: "replace",
     forward: true,
   });
+
+  assert.deepEqual(handoff(service({ apiVersion: 1 }), own, origin), {
+    action: "replace",
+    forward: false,
+  });
 });
 
 test("never downgrades a newer plugin service", () => {

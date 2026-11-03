@@ -2,7 +2,7 @@ import { installRoot, packageVersion } from "./runtime.js";
 
 /**
  * The proxy-to-service HTTP API version. Bump it when a change breaks a
- * proxy of the previous version, so the launcher won't forward to a service
+ * proxy of the previous release, so the launcher won't forward to a service
  * it can't talk to.
  */
 const serviceApiVersion = 1;
@@ -94,9 +94,9 @@ export type Handoff =
 /**
  * Whether a launcher uses a running service, replaces it with its own
  * version, or must refuse it. Replacement applies only to services a stdio
- * launcher started that are older or whose installation was removed. A
- * replaced service that speaks the same API keeps serving (`forward`) while
- * its running turns finish.
+ * launcher started that are older, speak another API at the same version,
+ * or whose installation was removed. A replaced service that speaks the
+ * same API keeps serving (`forward`) while its running turns finish.
  */
 export function handoff(
   running: RunningService,
@@ -128,7 +128,8 @@ export function handoff(
         };
   }
 
-  if (order < 0 || !running.installed) {
+  // A local build or reinstall can change the API without changing the version.
+  if (order < 0 || !running.installed || !compatible) {
     return { action: "replace", forward: compatible };
   }
 
