@@ -9,6 +9,7 @@ for (const width of [1280, 420]) {
   test(`cycling replies keep their geometry through handoff at ${width}px`, async ({
     consolePage: page,
     repository,
+    inProcessService,
   }) => {
     await startTask(page, "Check cycling conversation geometry");
     const history = page.getByRole("region", { name: "Chat history" });
@@ -20,7 +21,12 @@ for (const width of [1280, 420]) {
 
     expect(taskId).toBeTruthy();
 
-    const cycle = await installChatCycle(page, repository, taskId!);
+    const cycle = await installChatCycle(
+      page,
+      repository,
+      taskId!,
+      inProcessService.announceChange,
+    );
 
     await page.setViewportSize({ width, height: 800 });
     await page.reload();
@@ -32,7 +38,7 @@ for (const width of [1280, 420]) {
       [24999, 25000],
     ] as const) {
       await test.step(`streamed reply at ${streamingAt} becomes stored`, async () => {
-        await cycle.refresh(streamingAt);
+        cycle.refresh(streamingAt);
         const id = cycle.snapshot.draft!.message_id;
         const message = history.locator(`[data-message="${id}"]`);
         await expect(message).toHaveCount(1);
@@ -70,7 +76,7 @@ for (const width of [1280, 420]) {
         expect(before).not.toBeNull();
         const streamed = await message.elementHandle();
         expect(streamed).not.toBeNull();
-        await cycle.refresh(storedAt);
+        cycle.refresh(storedAt);
         await expect(message).toHaveCount(1);
         await expect(message).not.toHaveAttribute("aria-busy", "true");
 
@@ -107,7 +113,7 @@ for (const width of [1280, 420]) {
     // the end. Activity then changes without adding conversation rows.
     const laterTurn = 2 * LIVE_CONVERSATION_PERIOD_MS;
     await page.setViewportSize({ width, height: 640 });
-    await cycle.refresh(laterTurn + 9500);
+    cycle.refresh(laterTurn + 9500);
 
     await expect(
       history.locator('[data-message="msg_cycle_2_first"]'),
@@ -181,7 +187,7 @@ for (const width of [1280, 420]) {
       [laterTurn + 16_000, "Compacting context"],
       [laterTurn + 18_000, "Thinking…"],
     ] as const) {
-      await cycle.refresh(elapsed);
+      cycle.refresh(elapsed);
       await expect(working).toHaveText(label);
       expect((await working.boundingBox())!.height).toBe(height);
       const current = await anchor.boundingBox();

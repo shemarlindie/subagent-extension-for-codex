@@ -9,6 +9,7 @@ export async function installChatCycle(
   page: Page,
   repository: string,
   taskId: string,
+  announceChange: () => void,
 ) {
   let snapshot = liveConversationSnapshot(8999);
   let firstReply: string | undefined;
@@ -92,23 +93,9 @@ export async function installChatCycle(
       snapshot = liveConversationSnapshot(elapsed);
       firstReply = text;
     },
-    async refresh(elapsed: number, text?: string) {
+    refresh(elapsed: number, text?: string) {
       this.at(elapsed, text);
-
-      const button = page.getByRole("button", {
-        name: "Refresh tasks",
-        exact: true,
-      });
-
-      if (await button.isVisible()) {
-        await button.click();
-      } else {
-        await page.getByRole("button", { name: "Panel actions" }).click();
-
-        await page
-          .getByRole("menuitem", { name: "Refresh", exact: true })
-          .click();
-      }
+      announceChange();
     },
   };
 }

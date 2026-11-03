@@ -73,8 +73,7 @@ test("thread header shows settings and omits other global controls", async () =>
   await waitFor(() => assert.equal(settings.mock.calls.length, 1));
 
   await user.click(view.getByRole("button", { name: "Panel actions" }));
-  await view.findByRole("menuitem", { name: "Refresh" });
-  const settingsItem = view.getByRole("menuitem", { name: "Settings" });
+  const settingsItem = await view.findByRole("menuitem", { name: "Settings" });
   expect(view.queryByRole("menuitem", { name: "New task" })).toBeNull();
   expect(view.queryByRole("menuitem", { name: "Advanced task…" })).toBeNull();
 

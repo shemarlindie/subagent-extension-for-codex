@@ -7,7 +7,6 @@ import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
 import { Infotip } from "../shared/components/infotip";
 import { MotionContent } from "../shared/components/motion/motion-content";
-import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../shared/components/tooltip";
 import { connectionTrouble } from "./state/connection";
 import { useController, useSnapshot } from "./state/controller-context";
@@ -22,8 +21,6 @@ export function Header() {
     expandLabel =
       state.host.displayMode === "fullscreen" ? "Collapse" : "Expand";
 
-  // One full turn acknowledges the click, however quickly the refresh returns.
-  const glyph = useRef<HTMLSpanElement>(null);
   const newTaskFocus = useRef(false);
 
   const openNewTask = () => {
@@ -39,17 +36,7 @@ export function Header() {
     return document.getElementById("new-task-message") ?? true;
   };
 
-  const refresh = () => {
-      if (canAnimate(glyph.current)) {
-        glyph.current!.animate(
-          [{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }],
-          { duration: 500, easing: MOTION.easing },
-        );
-      }
-
-      controller.run(() => controller.refresh());
-    },
-    expand = () =>
+  const expand = () =>
       controller.run(async () => {
         await controller.transport.expand?.();
       }),
@@ -122,19 +109,6 @@ export function Header() {
               </Button>
             </TooltipWrapper>
           )}
-          <TooltipWrapper label="Refresh tasks">
-            <Button
-              id="refresh"
-              variant="ghost"
-              className="toolbar-icon-button"
-              aria-label="Refresh tasks"
-              onClick={refresh}
-            >
-              <span ref={glyph} className="refresh-glyph" aria-hidden="true">
-                <Icon name="refresh" size={14} />
-              </span>
-            </Button>
-          </TooltipWrapper>
           {state.host.canExpand && (
             <TooltipWrapper label={expandLabel}>
               <Button
@@ -197,9 +171,6 @@ export function Header() {
                     Add chat project
                   </Menu.Item>
                 )}
-                <Menu.Item className="menu-item" onClick={refresh}>
-                  Refresh
-                </Menu.Item>
                 {state.host.canExpand && (
                   <Menu.Item className="menu-item" onClick={expand}>
                     {expandLabel}

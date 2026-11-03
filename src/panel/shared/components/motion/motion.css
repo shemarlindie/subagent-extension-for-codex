@@ -214,13 +214,6 @@
 .timeline-dot[data-status="running"] {
   animation: motion-glow-rail 2.4s ease-in-out infinite;
 }
-.refresh-glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  line-height: 1;
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,

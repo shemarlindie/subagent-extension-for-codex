@@ -71,7 +71,10 @@ export async function startConsoleService(
     // Ends open requests and the event stream, as a network drop would.
     const dropConnections = () => server.closeAllConnections();
 
-    return { origin, directory, close, dropConnections };
+    // Announces a new revision, as a service write would, so the panel refreshes.
+    const announceChange = () => control.store.projectsChanged();
+
+    return { origin, directory, close, dropConnections, announceChange };
   } catch (error) {
     await close();
     throw error;

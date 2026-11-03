@@ -238,6 +238,7 @@ test.afterEach(async ({ page }, testInfo) => {
 
 test("activity labels reserve one line without moving the conversation", async ({
   consolePage: page,
+  inProcessService,
 }) => {
   await page.setViewportSize({ width: 760, height: 800 });
   await startTask(page, "Keep the conversation still");
@@ -297,10 +298,7 @@ test("activity labels reserve one line without moving the conversation", async (
 
   for (const label of ["Thinking", longLabel, undefined]) {
     activity = label;
-
-    await page
-      .getByRole("button", { name: "Refresh tasks", exact: true })
-      .click();
+    inProcessService.announceChange();
 
     if (label) await expect(working).toHaveText(label);
     else await expect(working).toBeEmpty();

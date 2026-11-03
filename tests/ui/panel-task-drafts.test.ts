@@ -229,11 +229,11 @@ for (const input of ["mouse", "keyboard"] as const) {
 
       await waitFor(() =>
         expect(document.activeElement).toBe(
-          within(menu).getByRole("menuitem", { name: "Refresh" }),
+          within(menu).getByRole("menuitem", { name: "Collapse" }),
         ),
       );
 
-      await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
+      await user.keyboard("{ArrowDown}{ArrowDown}");
 
       expect(document.activeElement).toBe(
         screen.getByRole("menuitem", { name: "New task" }),

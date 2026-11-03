@@ -109,6 +109,7 @@ for (const width of [1280, 420]) {
   test(`Markdown ending carets stay with the final text without moving Chat at ${width}px`, async ({
     consolePage: page,
     repository,
+    inProcessService,
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await startTask(page, "Check Markdown ending carets");
@@ -120,7 +121,14 @@ for (const width of [1280, 420]) {
       .getAttribute("data-task");
 
     expect(taskId).toBeTruthy();
-    const cycle = await installChatCycle(page, repository, taskId!);
+
+    const cycle = await installChatCycle(
+      page,
+      repository,
+      taskId!,
+      inProcessService.announceChange,
+    );
+
     await page.setViewportSize({ width, height: 800 });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("DOM.enable");
@@ -190,7 +198,7 @@ for (const width of [1280, 420]) {
         expect(caret.top).toBeGreaterThanOrEqual(tail.messageTop - 1);
         expect(caret.bottom).toBeLessThanOrEqual(tail.messageBottom + 1);
         expect(caret.right).toBeLessThanOrEqual(tail.messageRight + 1);
-        await cycle.refresh(9000, markdown);
+        cycle.refresh(9000, markdown);
         await expect(message).not.toHaveAttribute("aria-busy", "true");
 
         // Lists each field that moved, so a failure shows what changed.

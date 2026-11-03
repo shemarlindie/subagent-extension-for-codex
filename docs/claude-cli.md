@@ -55,9 +55,9 @@ reports the selected executable, its version and the supported range.
 | not a Claude Code release version              | Install a release. Prereleases aren't supported.                                                                   |
 | `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` ... | Fix or unset the override.                                                                                         |
 
-After a fix, refresh the panel or call `list_workers` again. The service caches
-a failed check for about 30 seconds. Restart the service after changing its
-environment.
+After a fix, the panel picks it up within about a minute, or you can call
+`list_workers` again. The service caches a failed check for about 30 seconds.
+Restart the service after changing its environment.
 
 A ready CLI can still fail when it starts a session, for example on
 authentication or the network. Model discovery and task execution report those
