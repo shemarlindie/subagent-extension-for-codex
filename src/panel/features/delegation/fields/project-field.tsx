@@ -62,6 +62,7 @@ export function ProjectField({
               name="repository"
               id="repository"
               label="Project"
+              itemsLabel="projects"
               required
               disabled={disabled || loading || contextLoading}
               loading={loading || contextLoading}

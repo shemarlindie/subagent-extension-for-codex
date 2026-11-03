@@ -1,23 +1,13 @@
 /* Panel layout: header, project controls, task list, inspector, forms and the narrow-width base. */
 header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 10px;
   padding: 8px 15px;
   border-bottom: 1px solid var(--line);
 }
-header[data-mode="global"] {
-  padding-left: 8px;
-}
-header[data-mode="thread"],
-header[data-mode="thread"] .toolbar {
-  align-items: center;
-}
 header strong {
   font-weight: 600;
-}
-header .mark {
-  flex: none;
 }
 header button {
   white-space: nowrap;
@@ -40,20 +30,27 @@ header .connection {
   font-size: 11px;
   white-space: nowrap;
 }
+header .connection-icon {
+  display: none;
+  align-items: center;
+  padding: 4px;
+}
+header .connection-icon,
+header .connection-icon:hover {
+  color: var(--warn);
+}
 header .brand {
   flex: 1;
-  min-width: 0;
-}
-.brand-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.project-scope {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+header .brand > span {
+  flex: none;
+}
+.project-scope {
+  display: flex;
   min-width: 0;
 }
 .worker-readiness .notice {
@@ -70,30 +67,19 @@ header .brand {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+/* The scope reads as the title's project name, like the thread header.
+   The negative margin lines its text up with that name while the hover fill keeps its padding. */
 .project-scope .select-trigger {
-  flex: 0 1 228px;
-  min-width: 0;
-  width: auto;
-  padding: 7px 8px;
-}
-.project-scope > button {
-  flex: none;
-  align-self: stretch;
-}
-.brand-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.brand-title > span {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 260px;
+  margin-left: -6px;
+  font-weight: 600;
 }
 header > .toolbar {
   flex: none;
 }
 header .toolbar {
-  align-items: flex-end;
+  align-items: center;
 }
 #project-name {
   min-width: 0;
@@ -609,7 +595,7 @@ footer {
   font-size: 12px;
   color: var(--muted);
 }
-/* Project dropdown default; the context bar and narrow rules override it. */
+/* Select fields fill their row by default. The inline appearance sizes to its value. */
 .select-trigger {
   width: 100%;
   padding: 8px;

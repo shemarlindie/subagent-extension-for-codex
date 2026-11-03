@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { startTask } from "./console-actions";
+import { openManageProjects, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 async function openDeleteTask(page: Page) {
@@ -55,7 +55,7 @@ test("bulk delete a project's archived tasks", async ({
     await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
   }
 
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });
   await project.getByRole("button", { name: /View archived tasks/ }).click();
   const archived = page.getByRole("list", { name: "Archived tasks" });

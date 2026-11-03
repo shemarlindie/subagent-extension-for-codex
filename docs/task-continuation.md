@@ -10,8 +10,8 @@ across restarts, updates and backups.
 ## Start a task
 
 1. Choose an approved Git repository root with at least one commit. Add it
-   through **Manage → Add project** if needed. The chat project can register
-   automatically, depending on the user setting and host metadata. See
+   through **Manage projects… → Add project** if needed. The chat project can
+   register automatically, depending on the user setting and host metadata. See
    [Repository access](configuration.md#repository-access).
 2. Choose a workspace:
    - `current_repo`, the default, uses the approved checkout, including staged,

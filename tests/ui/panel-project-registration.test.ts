@@ -14,6 +14,12 @@ import {
   within,
 } from "./panel-test-support";
 
+// The pinned Manage projects… action is always listed, so count only projects.
+const projectOptions = () =>
+  screen
+    .getAllByRole("option")
+    .filter((option) => option.textContent !== "Manage projects…");
+
 test("project picker uses accessible options, changes scope by keyboard, and preserves its trigger during refresh", async (t) => {
   const { controller, user } = await setup(t);
   const picker = screen.getByRole("combobox", { name: "Project scope" });
@@ -25,7 +31,7 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
 
   await waitFor(() => expect(document.activeElement).toBe(search));
   await user.type(search, "/REPO/A");
-  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(projectOptions()).toHaveLength(1);
   expect(screen.getByRole("option", { name: /^a/ })).toBeTruthy();
   await user.keyboard("{ArrowDown}");
 
@@ -56,7 +62,7 @@ test("project picker uses accessible options, changes scope by keyboard, and pre
   await waitFor(() => expect(document.activeElement).toBe(reopenedSearch));
   expect((reopenedSearch as HTMLInputElement).value).toBe("");
   await user.type(reopenedSearch, "All projects");
-  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(projectOptions()).toHaveLength(1);
   await user.keyboard("{ArrowDown}");
 
   await user.keyboard("{Enter}");

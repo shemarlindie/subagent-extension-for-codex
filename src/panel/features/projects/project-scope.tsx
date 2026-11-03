@@ -1,8 +1,7 @@
 import { canNavigate } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { projectChoices } from "../../app/state/selectors";
-import { Button } from "../../shared/components/button/button";
-import { SelectField } from "../../shared/components/select/select-field";
+import { LookupField } from "../../shared/components/select/lookup-field";
 import { projectDisplayName } from "./selectors";
 
 export function ProjectScope() {
@@ -22,11 +21,12 @@ export function ProjectScope() {
     state.busy;
 
   return (
-    <div className="project-scope" aria-label="Project context">
-      <SelectField
-        searchable
+    <div className="project-scope">
+      <LookupField
         id="project-scope"
         label="Project scope"
+        itemsLabel="projects"
+        appearance="inline"
         value={value}
         disabled={disabled}
         loading={loading}
@@ -43,15 +43,15 @@ export function ProjectScope() {
         onValueChange={(value) =>
           controller.run(() => controller.changeProject(value || undefined))
         }
+        action={
+          canNavigate(state, "projects")
+            ? {
+                label: "Manage projects…",
+                onSelect: () => controller.manageProjects(),
+              }
+            : undefined
+        }
       />
-
-      <Button
-        id="manage-projects"
-        disabled={!canNavigate(state, "projects")}
-        onClick={() => controller.manageProjects()}
-      >
-        Manage
-      </Button>
     </div>
   );
 }

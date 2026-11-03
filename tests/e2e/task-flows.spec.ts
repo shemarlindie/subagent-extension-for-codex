@@ -1,4 +1,4 @@
-import { startTask } from "./console-actions";
+import { openManageProjects, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 import { CONSOLE_TOKEN } from "./server";
 
@@ -9,7 +9,7 @@ test("sign in and explicitly register a project through the console", async ({
   await page.goto("/");
   await page.getByLabel("Console token").fill(CONSOLE_TOKEN);
   await page.getByRole("button", { name: "Connect", exact: true }).click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   await page.getByRole("button", { name: "Add project", exact: true }).click();
   await page.getByLabel("Repository path").fill(repository);
 
@@ -360,7 +360,7 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
     taskList.getByRole("button", { name: new RegExp(title) }),
   ).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });
   await project.getByRole("button", { name: /View archived tasks/ }).click();
 

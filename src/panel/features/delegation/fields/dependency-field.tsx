@@ -30,6 +30,7 @@ export function DependencyField({
         name="deps"
         id="deps"
         label="Wait for tasks (optional)"
+        itemsLabel="tasks"
         disabled={loading || projectsLoading || disabled}
         loading={loading || projectsLoading}
         loadingLabel={

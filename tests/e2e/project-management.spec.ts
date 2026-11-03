@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import type { Page } from "@playwright/test";
 
+import { openManageProjects } from "./console-actions";
 import { createRepository, expect, test } from "./fixtures";
 
 async function createProjectWorktree(page: Page, title: string) {
@@ -34,7 +35,7 @@ test("rename a project and remove its approval while retaining task history and 
   const retainedWorktrees = await readdir(worktrees);
   expect(retainedWorktrees).toHaveLength(1);
 
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });
 
   await project
@@ -180,7 +181,7 @@ test("remove project task data and worktrees while preserving checkout files acr
   const worktrees = join(consoleService.directory, "worktrees");
   expect(await readdir(worktrees)).toHaveLength(1);
 
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });
 
   await project
@@ -227,7 +228,7 @@ test("remove project task data and worktrees while preserving checkout files acr
   expect(await readFile(checkoutFile, "utf8")).toBe("Keep my checkout notes\n");
 
   // Reapproval exposes any task records that were accidentally only hidden by scope.
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openManageProjects(page);
   await page.getByRole("button", { name: "Add project", exact: true }).click();
   await page.getByLabel("Repository path").fill(repository);
 

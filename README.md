@@ -74,8 +74,9 @@ plugin subagent-extension-for-codex from the marketplace at
 github.com/shemarlindie/subagent-extension-for-codex."_
 
 Then approve a Git repository root with at least one commit. Use **Add chat
-project** in a chat's Delegated Work panel, or **Manage → Add project** in the
-global panel. The plugin starts its local service the first time Codex connects.
+project** in a chat's Delegated Work panel, or **Manage projects… → Add
+project** in the global panel. The plugin starts its local service the first
+time Codex connects.
 
 While the service runs, you can also use the standalone console at
 `http://127.0.0.1:17317`. If that port is taken, see

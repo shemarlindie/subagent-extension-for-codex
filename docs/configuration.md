@@ -77,7 +77,8 @@ service client as a trusted administrator.
 
 A task target must be a canonical Git repository root with at least one commit.
 A model-supplied path never grants access. Approve a repository through global
-**Manage → Add project**, **Browse…** in Advanced task, or the local CLI:
+**Manage projects… → Add project**, **Browse…** in Advanced task, or the local
+CLI:
 
 ```sh
 node dist/projects-cli.js register /absolute/path/to/repository
@@ -97,8 +98,8 @@ apply. Approvals persist in SQLite and take effect without a restart.
 
 The service also saves parent approvals from
 `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS`. To revoke one, remove it from the
-variable and from **Manage**. While the variable still lists it, the next
-service start approves it again. See
+variable and from **Manage projects…**. While the variable still lists it, the
+next service start approves it again. See
 [Manage projects](panel-guide.md#manage-projects) for renaming, removal and task
 data cleanup.
 

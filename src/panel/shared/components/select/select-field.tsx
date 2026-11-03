@@ -32,6 +32,10 @@ export type SelectFieldProps = {
   label: string;
   options: SelectOption[];
   searchable?: boolean;
+  /** Plural noun for a search's empty message, such as "projects". */
+  itemsLabel?: string;
+  /** "inline" drops the border so the value reads as text, such as in a title. */
+  appearance?: "inline";
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
@@ -44,9 +48,17 @@ export type SelectFieldProps = {
   onBlur?: () => void;
 };
 
+export const selectTriggerClass = (
+  appearance: SelectFieldProps["appearance"],
+) =>
+  appearance === "inline"
+    ? "select-trigger select-trigger-inline"
+    : "select-trigger";
+
 function SelectTrigger({
   id,
   label,
+  appearance,
   options,
   loading = false,
   loadingLabel,
@@ -62,7 +74,7 @@ function SelectTrigger({
       <Select.Trigger
         id={id}
         ref={triggerRef}
-        className="select-trigger"
+        className={selectTriggerClass(appearance)}
         aria-label={label}
         aria-required={required || undefined}
         aria-invalid={invalid || undefined}

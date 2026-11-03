@@ -35,6 +35,7 @@ const ICON_NAMES = [
   "clock",
   "help",
   "info",
+  "alert-triangle",
   "search",
   "glasses",
   "git-merge",

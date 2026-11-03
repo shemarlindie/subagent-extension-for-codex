@@ -5,6 +5,7 @@ import { NewTaskButton } from "../features/delegation/new-task/new-task-button";
 import { ProjectScope } from "../features/projects/project-scope";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
+import { Infotip } from "../shared/components/infotip";
 import { MotionContent } from "../shared/components/motion/motion-content";
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../shared/components/tooltip";
@@ -62,40 +63,45 @@ export function Header() {
     "All projects";
 
   // Only connection problems are visible. The task list explains a missing connection.
+  const trouble = connectionTrouble(state.connection);
+
   const status = (
-    <span
-      id="connection"
-      className={
-        connectionTrouble(state.connection) ? "connection" : "visually-hidden"
-      }
-      role="status"
-    >
-      <MotionContent changeKey={state.connection}>
-        {state.connection}
-      </MotionContent>
-    </span>
+    <>
+      <span
+        id="connection"
+        className={trouble ? "connection" : "visually-hidden"}
+        role="status"
+      >
+        <MotionContent changeKey={state.connection}>
+          {state.connection}
+        </MotionContent>
+      </span>
+      {/* Narrow panels show this icon in place of the text, which stays announced. */}
+      {trouble && (
+        <Infotip label={state.connection}>
+          <button type="button" className="text-button connection-icon">
+            <Icon name="alert-triangle" size={14} />
+          </button>
+        </Infotip>
+      )}
+    </>
   );
 
   return (
-    <header data-mode={threadMode ? "thread" : "global"}>
+    <header>
+      {/* The host tab or rail already shows the logo, so the title is text only. */}
       <div className="brand">
-        {threadMode && (
-          <Icon name="quiet-constellation" size={20} className="mark" />
+        <span>Delegated Work</span>
+        <span className="muted" aria-hidden="true">
+          ·
+        </span>
+        {threadMode ? (
+          <strong id="project-name" title={state.repository}>
+            {projectName}
+          </strong>
+        ) : (
+          <ProjectScope />
         )}
-        <div className="brand-text">
-          {threadMode && (
-            <div className="brand-title">
-              <span>Delegated Work</span>
-              <span className="muted" aria-hidden="true">
-                |
-              </span>
-              <strong id="project-name" title={state.repository}>
-                {projectName}
-              </strong>
-            </div>
-          )}
-          {!threadMode && <ProjectScope />}
-        </div>
       </div>
       <div className="toolbar">
         {status}

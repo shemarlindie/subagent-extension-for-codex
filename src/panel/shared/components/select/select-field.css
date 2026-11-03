@@ -159,6 +159,23 @@
 form .select-trigger {
   width: 100%;
 }
+/* Reads as text with a chevron, showing its fill only on hover or while open. */
+.select-trigger-inline {
+  width: auto;
+  gap: 6px;
+  padding: 4px 6px;
+  border-color: transparent;
+  background: transparent;
+}
+.select-trigger-inline:hover,
+.select-trigger-inline[data-popup-open] {
+  background: var(--hover);
+}
+.select-trigger-inline .chevron,
+.select-trigger-inline .chevron svg {
+  width: 10px;
+  height: 10px;
+}
 .select-trigger[aria-invalid="true"] {
   border-color: var(--warn);
 }
@@ -182,17 +199,47 @@ form .select-trigger {
   font-size: 12px;
 }
 
+/* The list owns the padding so its scrollbar runs along the popup edge, just below the search. */
 .lookup-popup {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 0;
 }
 .lookup-search {
   flex: none;
-  width: 100%;
-  margin-bottom: 4px;
+  width: auto;
+  margin: 4px 4px 0;
 }
 .lookup-list {
   overflow-y: auto;
   min-height: 0;
+  margin-top: 4px;
+  padding: 4px;
+}
+/* The negative offset covers the list's bottom padding so options don't show beneath it. */
+.lookup-action {
+  position: sticky;
+  bottom: -4px;
+  margin-bottom: -4px;
+  padding-bottom: 4px;
+  background: var(--bg);
+}
+.lookup-action .select-separator {
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+.lookup-action .select-item {
+  padding-block: 4px;
+}
+/* Keeps keyboard-highlighted options from scrolling behind the footer. */
+.lookup-list:has(.lookup-action) {
+  scroll-padding-bottom: 36px;
+}
+.lookup-popup .select-empty {
+  text-align: center;
+}
+/* Base UI keeps the empty message mounted while results show. */
+.lookup-popup .select-empty:empty {
+  display: none;
 }

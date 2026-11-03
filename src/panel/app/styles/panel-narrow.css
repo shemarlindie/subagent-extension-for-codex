@@ -50,9 +50,6 @@
   header {
     padding: 6px 10px 6px 18px;
   }
-  header[data-mode="global"] {
-    padding-left: 8px;
-  }
   header button {
     font-size: 12px;
   }
@@ -61,8 +58,17 @@
   header #new-task {
     display: none;
   }
-  header .toolbar-menu {
+  header .toolbar-menu,
+  header .connection-icon {
     display: inline-flex;
+  }
+  /* The icon takes the text's place. The text stays for screen readers. */
+  header .connection {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
   .two {
     grid-template-columns: 1fr;

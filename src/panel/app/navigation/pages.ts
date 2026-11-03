@@ -4,7 +4,7 @@ export const PAGES = {
     label: "Tasks",
     globalOnly: false,
     keepMounted: true,
-    entryFocusId: "manage-projects",
+    entryFocusId: "project-scope",
   },
   projects: {
     label: "Projects",

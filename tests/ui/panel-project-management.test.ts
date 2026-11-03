@@ -12,6 +12,16 @@ import {
   within,
 } from "./panel-test-support";
 
+async function openManage(user: Awaited<ReturnType<typeof setup>>["user"]) {
+  await user.click(screen.getByRole("combobox", { name: "Project scope" }));
+
+  await user.click(
+    await screen.findByRole("option", { name: "Manage projects…" }),
+  );
+
+  await screen.findByRole("heading", { name: "Projects" });
+}
+
 test("project rename drafts survive refresh and failure until a retry succeeds", async (t) => {
   const { controller, transport, user } = await setupProjects(t);
   const original = transport.tool.bind(transport);
@@ -66,7 +76,7 @@ test("Manage cancels edit errors and restores focus when returning from Add", as
     return original<T>(name, args);
   };
 
-  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await openManage(user);
 
   await user.click(
     screen.getByRole("button", { name: "Edit project name: a" }),
@@ -139,7 +149,7 @@ test("Manage opens a page and Back restores task selection, filters and focus", 
   const selected = controller.getSnapshot().selected;
   await act(async () => controller.setSearch("Review"));
   const search = controller.getSnapshot().search;
-  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await openManage(user);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.queryByRole("region", { name: "Selected task" })).toBeNull();
 
@@ -158,13 +168,13 @@ test("Manage opens a page and Back restores task selection, filters and focus", 
   expect(controller.getSnapshot().search).toBe(search);
 
   expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Manage" }),
+    screen.getByRole("combobox", { name: "Project scope" }),
   );
 });
 
 test("removal uses a focused modal, explains folder retention, and resets the optional choice", async (t) => {
   const { user } = await setup(t);
-  await user.click(screen.getByRole("button", { name: "Manage" }));
+  await openManage(user);
   await user.click(screen.getByRole("button", { name: "Remove a" }));
   const modal = screen.getByRole("dialog", { name: "Remove project?" });
 

@@ -1,11 +1,16 @@
 import { Combobox } from "@base-ui/react/combobox";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Chevron } from "../chevron";
 import { Icon } from "../icons/icons";
 import { LoadingSpinner } from "../loading-spinner/loading-spinner";
 import { matchesLookupOption } from "./lookup-matching";
-import type { SelectFieldProps } from "./select-field";
+import {
+  SELECT_ACTION_VALUE,
+  type SelectAction,
+  type SelectFieldProps,
+  selectTriggerClass,
+} from "./select-field";
 
 type LookupFieldProps = SelectFieldProps &
   (
@@ -13,6 +18,8 @@ type LookupFieldProps = SelectFieldProps &
         multiple?: false;
         value: string;
         onValueChange: (value: string) => void;
+        /** Listed last, whatever the search, and run once the list closes. */
+        action?: SelectAction;
       }
     | {
         multiple: true;
@@ -39,18 +46,43 @@ export function LookupField(props: LookupFieldProps) {
       ? selected[0].description
       : undefined;
 
+  const action = props.multiple ? undefined : props.action;
+
+  const itemsLabel = props.itemsLabel ?? "options";
+
+  const emptyMessage = props.options.length
+    ? `No matching ${itemsLabel}`
+    : `No ${itemsLabel} available`;
+
   const items = [...optionByValue.keys()];
+  const listed = action ? [...items, SELECT_ACTION_VALUE] : items;
+
+  // Like ChipSelect, the action waits for the list to close and return focus.
+  const actionChosen = useRef(false);
+
+  const choose = (value: string | null) => {
+    if (value === SELECT_ACTION_VALUE) actionChosen.current = true;
+    else if (!props.multiple) props.onValueChange(value ?? "");
+  };
 
   const rootProps = {
-    items,
+    items: listed,
     name: props.name,
     disabled: props.disabled || props.loading,
     inputValue: query,
     onInputValueChange: setQuery,
     onOpenChange: () => setQuery(""),
+    onOpenChangeComplete: (open: boolean) => {
+      if (open || !actionChosen.current) return;
+      actionChosen.current = false;
+      action?.onSelect();
+    },
     itemToStringLabel: (value: string) =>
-      optionByValue.get(value)?.label ?? value,
+      value === SELECT_ACTION_VALUE
+        ? (action?.label ?? value)
+        : (optionByValue.get(value)?.label ?? value),
     filter: (value: string, search: string) =>
+      value === SELECT_ACTION_VALUE ||
       matchesLookupOption(
         optionByValue.get(value) ?? { value, label: value },
         search,
@@ -62,7 +94,7 @@ export function LookupField(props: LookupFieldProps) {
       <Combobox.Trigger
         id={props.id}
         ref={props.triggerRef}
-        className="select-trigger"
+        className={selectTriggerClass(props.appearance)}
         aria-label={props.label}
         aria-required={props.required || undefined}
         aria-invalid={props.invalid || undefined}
@@ -120,13 +152,43 @@ export function LookupField(props: LookupFieldProps) {
               aria-label={`Search ${props.label.toLowerCase()}`}
               placeholder="Search…"
             />
-            <Combobox.Empty className="select-empty">
-              {props.options.length
-                ? "No matching options"
-                : "No options available"}
-            </Combobox.Empty>
+            {action ? (
+              <ActionLookupEmpty>{emptyMessage}</ActionLookupEmpty>
+            ) : (
+              <Combobox.Empty className="select-empty">
+                {emptyMessage}
+              </Combobox.Empty>
+            )}
             <Combobox.List className="lookup-list">
               {(value: string) => {
+                if (value === SELECT_ACTION_VALUE && action) {
+                  return (
+                    // Pinned below the scrolling options so long lists keep it in view.
+                    <div
+                      key={value}
+                      className="lookup-action"
+                      role="presentation"
+                    >
+                      <Combobox.Separator className="select-separator" />
+                      <Combobox.Item
+                        value={value}
+                        className="select-item select-action"
+                      >
+                        <span className="select-item-content">
+                          {action.icon && (
+                            <Icon
+                              name={action.icon}
+                              size={10}
+                              className="select-worker-icon"
+                            />
+                          )}
+                          <span>{action.label}</span>
+                        </span>
+                      </Combobox.Item>
+                    </div>
+                  );
+                }
+
                 const option = optionByValue.get(value);
 
                 return (
@@ -181,9 +243,25 @@ export function LookupField(props: LookupFieldProps) {
     <Combobox.Root<string>
       {...rootProps}
       value={props.value === "" && !items.includes("") ? null : props.value}
-      onValueChange={(value) => props.onValueChange(value ?? "")}
+      onValueChange={choose}
     >
       {content}
     </Combobox.Root>
+  );
+}
+
+/**
+ * Combobox.Empty counts the action as a match, so it never shows beside one.
+ * This copies its polite status but counts only the options.
+ */
+function ActionLookupEmpty({ children }: { children: string }) {
+  const empty = Combobox.useFilteredItems<string>().every(
+    (value) => value === SELECT_ACTION_VALUE,
+  );
+
+  return (
+    <div className="select-empty" role="status" aria-live="polite" aria-atomic>
+      {empty && children}
+    </div>
   );
 }

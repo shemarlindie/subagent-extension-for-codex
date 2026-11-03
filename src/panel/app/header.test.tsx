@@ -66,7 +66,6 @@ test("thread header shows settings and omits other global controls", async () =>
 
   assert.ok(view.getByText("Delegated Work"));
   expect(view.queryByRole("combobox", { name: "Project scope" })).toBeNull();
-  expect(view.queryByRole("button", { name: "Manage" })).toBeNull();
   const settingsButton = view.getByRole("button", { name: "Settings" });
   expect(view.queryByRole("button", { name: "New task" })).toBeNull();
 

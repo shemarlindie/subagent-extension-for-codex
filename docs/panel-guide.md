@@ -13,7 +13,7 @@ embedded panel and standalone console share one frontend.
 - **Thread launch** shows the conversation's tasks and chat project. It offers
   **Add chat project** when the project needs registration.
 - **Global launch** shows tasks across conversations and offers project
-  selection, **All chats** and **Manage**.
+  selection and **All chats**.
 - Opening an owned task uses that task's scope.
 
 Global history never selects a project. See
@@ -34,9 +34,9 @@ owns placement and display modes.
 
 ### Manage projects
 
-**Manage** appears only in global mode. It opens a full-width Projects page that
-lists saved names and repository paths, including parent approvals. **Back to
-Tasks** returns to the previous task view.
+**Manage projects…** appears last in the global project dropdown. It opens a
+full-width Projects page that lists saved names and repository paths, including
+parent approvals. **Back to Tasks** returns to the previous task view.
 
 - **Add project** opens a dialog where you enter a path or use the service
   host's folder picker.
@@ -471,7 +471,8 @@ The panel updates as the service reports changes. Refreshes keep forms and
 reading positions, and hidden or submitting panels wait to refresh. The header
 shows connection status only when there is a problem. A failed connection shows
 **Reconnecting…** in the header toolbar and retries, and a failed first
-connection shows **Connection failed**. Changes has
+connection shows **Connection failed**. Narrow panels show a warning icon
+instead, and hovering or tapping it shows the status. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how

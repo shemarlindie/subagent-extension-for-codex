@@ -219,7 +219,8 @@ To add a page:
   presentation or an independent interaction. Compose sections in the inspector
   or shell. Keep networking and scope bookkeeping out of JSX.
 - **Dropdown:** reuse the selection fields, and the project autocomplete for
-  editable project suggestions.
+  editable project suggestions. Pass `appearance="inline"` for a borderless
+  trigger that reads as text, like the header's project scope.
 - **Styles:** keep primitive styling beside its component or dialog. Define
   surface colors through CSS variables in `styles/theme.css`, and put panel
   layout in `app/styles/`.

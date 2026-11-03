@@ -21,3 +21,9 @@ export async function send(page: Page, message: string) {
   await composer.fill(message);
   await composer.press("Enter");
 }
+
+/** Opens the Projects page from the project dropdown. */
+export async function openManageProjects(page: Page) {
+  await page.getByRole("combobox", { name: "Project scope" }).click();
+  await page.getByRole("option", { name: "Manage projects…" }).click();
+}

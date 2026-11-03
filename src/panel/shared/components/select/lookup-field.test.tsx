@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { LookupField } from "./lookup-field";
 import { MultiSelectField, SelectField } from "./select-field";
 
 const alpha = {
@@ -184,6 +185,37 @@ test("multiple lookup preserves selected dependencies across searches and suppor
   expect(screen.getByLabelText("Selected dependencies").textContent).toBe(
     "/repos/beta-service,/repos/gamma",
   );
+});
+
+test("lookup action stays listed while searching and runs without changing the value", async () => {
+  const user = userEvent.setup({ delay: null });
+  const onSelect = vi.fn();
+  const onValueChange = vi.fn();
+
+  render(
+    <LookupField
+      id="project"
+      label="Project"
+      itemsLabel="projects"
+      options={options}
+      value="/repos/alpha"
+      onValueChange={onValueChange}
+      action={{ label: "Manage projects…", onSelect }}
+    />,
+  );
+
+  await user.click(screen.getByRole("combobox", { name: "Project" }));
+
+  await user.click(
+    await screen.findByRole("combobox", { name: "Search project" }),
+  );
+
+  await user.paste("missing project");
+  expect(screen.getByText("No matching projects")).toBeTruthy();
+  await user.click(screen.getByRole("option", { name: "Manage projects…" }));
+
+  await waitFor(() => expect(onSelect).toHaveBeenCalledOnce());
+  expect(onValueChange).not.toHaveBeenCalled();
 });
 
 test("refreshing lookup options preserves the search and selected value", async () => {

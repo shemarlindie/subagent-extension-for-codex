@@ -15,8 +15,8 @@ vi.mock("../state/controller-context", () => ({ useSnapshot: () => state }));
 vi.mock("../tasks-page", () => ({
   TasksPage: () => (
     <div>
-      <button id="manage-projects" type="button">
-        Manage projects
+      <button id="project-scope" type="button">
+        Project scope
       </button>
       <input aria-label="Task draft" defaultValue="" />
     </div>
@@ -70,7 +70,7 @@ test("retains task inputs while making the inactive page hidden and inert", () =
 
 test("focuses the arrival heading and returns focus to the retained task opener", () => {
   const view = render(<PageOutlet />);
-  const opener = screen.getByRole("button", { name: "Manage projects" });
+  const opener = screen.getByRole("button", { name: "Project scope" });
   opener.focus();
 
   state.page = "projects";
@@ -115,7 +115,7 @@ test("unmounts Settings on departure and focuses the task navigation entry", () 
   expect(draft.isConnected).toBe(false);
 
   expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Manage projects" }),
+    screen.getByRole("button", { name: "Project scope" }),
   );
 
   state.page = "settings";
