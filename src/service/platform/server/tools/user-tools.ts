@@ -7,7 +7,6 @@ import {
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
-import { browseProject } from "../../../features/projects/project-picker.js";
 import {
   claimParentMessage,
   recordParentDelivery,
@@ -19,10 +18,14 @@ import {
   mentionSearchToolName,
   searchAgentMentions,
 } from "../mentions.js";
+import { activityTools } from "./activity-tools.js";
 import type { agentTools } from "./agent-tools.js";
-import { queuedMessage, taskId, tool, type ToolContext } from "./definition.js";
+import { taskId, tool, type ToolContext } from "./definition.js";
 import { panelTimingTool } from "./panel-timing-tool.js";
+import { projectTools } from "./project-tools.js";
+import { queueTools } from "./queue-tools.js";
 import { settingsTransferTools } from "./settings-transfer-tools.js";
+import { taskLifecycleTools } from "./task-lifecycle-tools.js";
 
 /**
  * App-only tools, named with an `app_` prefix. The panel calls them on the
@@ -48,56 +51,7 @@ export function userTools(
           }),
         }
       : {}),
-    app_register_project: tool({
-      description:
-        "User interface only: approve and persist a Git repository selected by the user. Does not approve its parent or nested repositories.",
-      schema: z.strictObject({ repository: z.string().min(1).max(4096) }),
-      run: async (a) => {
-        if (!c.projects) {
-          throw new Error(
-            "Project registration is unavailable in this service.",
-          );
-        }
-
-        return c.projects.register(a.repository);
-      },
-    }),
-    app_browse_project: tool({
-      description:
-        "User interface only: open a native folder picker on the local macOS service host. Returns a path or null on cancellation; never registers a project.",
-      schema: z.strictObject({}),
-      run: () => browseProject(),
-    }),
-    app_rename_project: tool({
-      description:
-        "User interface only: rename a registered project without changing its repository or tasks.",
-      schema: z.strictObject({
-        repository: z.string().min(1).max(4096),
-        name: z.string().trim().min(1).max(200),
-      }),
-      run: (a) => {
-        if (!c.projects) {
-          throw new Error("Project management is unavailable in this service.");
-        }
-
-        return c.projects.rename(a.repository, a.name);
-      },
-    }),
-    app_remove_project: tool({
-      description:
-        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees/branches; checkout files and provider sessions stay intact. External dependent tasks block deletion.",
-      schema: z.strictObject({
-        repository: z.string().min(1).max(4096),
-        delete_tasks: z.boolean().default(false),
-      }),
-      run: (a) => {
-        if (!c.projects) {
-          throw new Error("Project management is unavailable in this service.");
-        }
-
-        return c.removeProject(owner, a.repository, a.delete_tasks);
-      },
-    }),
+    ...projectTools(c, owner),
     app_start_task: tool({
       ...tools.start_task,
       // The panel already shows the new task, so it opens no inline panel.
@@ -209,62 +163,7 @@ export function userTools(
       }),
       run: (a) => waitForUpdates(c.store, c.drafts, owner, a),
     }),
-    app_steer_queued_message: tool({
-      description:
-        "User interface only: send a queued message into the busy task as a steer, preserving its sender and identity. Unavailable while the worker waits for input.",
-      schema: queuedMessage,
-      run: (a) => c.steerQueued(owner, a.task_id, a.message_id),
-    }),
-    app_edit_queued_message: tool({
-      description:
-        "User interface only: change a queued message's text before its turn starts.",
-      schema: queuedMessage.extend({ message: z.string().min(1).max(20000) }),
-      run: (a) => c.editQueued(owner, a.task_id, a.message_id, a.message),
-    }),
-    app_move_queued_message: tool({
-      description:
-        "User interface only: move a queued message to a zero-based position in the queue, after any steers the worker already has.",
-      schema: queuedMessage.extend({
-        index: z.number().int().nonnegative(),
-      }),
-      run: (a) => c.moveQueued(owner, a.task_id, a.message_id, a.index),
-    }),
-    app_remove_queued_message: tool({
-      description:
-        "User interface only: remove a queued message, whoever queued it, before its turn starts.",
-      schema: queuedMessage,
-      run: (a) => c.removeQueued(owner, a.task_id, a.message_id, "user"),
-    }),
-    app_resume_queue: tool({
-      description:
-        "User interface only: resume a task's paused queue; an idle task starts its next queued message.",
-      schema: taskId,
-      run: (a) => c.resumeQueue(owner, a.task_id),
-    }),
-    app_clear_queue: tool({
-      description:
-        "User interface only: remove the listed queued messages, or every queued message without message_ids.",
-      schema: taskId.extend({
-        message_ids: z.array(z.string().max(200)).min(1).max(1000).optional(),
-      }),
-      run: (a) => c.clearQueue(owner, a.task_id, a.message_ids),
-    }),
-    app_restore_queued_messages: tool({
-      description:
-        "User interface only: undo the removal of queued messages, putting each back at a zero-based queue position with its original text, sender and identity. Messages sent or queued since are left as they are. Restoring never starts a turn: a task that isn't busy keeps its queue paused. An archived task is unarchived.",
-      schema: taskId.extend({
-        messages: z
-          .array(
-            z.strictObject({
-              message_id: z.string().max(200),
-              index: z.number().int().nonnegative(),
-            }),
-          )
-          .min(1)
-          .max(1000),
-      }),
-      run: (a) => c.restoreQueued(owner, a.task_id, a.messages),
-    }),
+    ...queueTools(c, owner),
     app_submit_input: tool({
       ...tools.submit_input,
       description:
@@ -287,136 +186,8 @@ export function userTools(
       run: (a) => c.settings.update(owner, a, "user"),
     }),
     ...settingsTransferTools(c.settings, owner),
-    app_get_change_counts: tool({
-      readOnly: true,
-      description:
-        "User interface only: recorded change totals for the Changes tab and Details.",
-      schema: taskId,
-      run: (a) => c.changes.counts(c.store.get(a.task_id, owner)),
-    }),
-    app_get_original_response: tool({
-      readOnly: true,
-      description:
-        "User interface only: resolve one original response belonging to this task. Missing originals return unavailable.",
-      schema: taskId.extend({ response_ref: z.string().min(1) }),
-      run: (a) => {
-        const original = c.store.originalResponse(
-          a.task_id,
-          owner,
-          a.response_ref,
-        );
-
-        return original === undefined
-          ? { available: false }
-          : { available: true, original };
-      },
-    }),
-    app_get_activity: tool({
-      readOnly: true,
-      description:
-        "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
-      schema: taskId.extend({
-        after: z.number().int().nonnegative().default(0),
-      }),
-      run: (a) => {
-        c.store.get(a.task_id, owner);
-
-        return c.activity.page(a.task_id, a.after);
-      },
-    }),
-    app_get_turn_activity: tool({
-      readOnly: true,
-      description:
-        "User interface only: one turn's activity for the panel's Activity tab: the events after the previous turn's closing status event through this turn's, or to the newest event while the turn runs. Its newest events come with a tally of the older ones, as app_get_activity gives them.",
-      schema: taskId.extend({ turn: z.number().int().positive() }),
-      run: (a) => {
-        c.store.get(a.task_id, owner);
-
-        return c.activity.turn(a.task_id, a.turn);
-      },
-    }),
+    ...activityTools(c, owner),
     app_record_timing: panelTimingTool(),
-    app_remove_worktree: tool({
-      destructive: true,
-      description:
-        "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
-      schema: taskId.extend({ force: z.boolean().default(false) }),
-      run: (a) => c.removeWorktree(owner, a.task_id, a.force),
-    }),
-    app_rename_task: tool({
-      description: "User interface only: change a task's display title.",
-      schema: taskId.extend({ title: z.string().trim().min(1).max(200) }),
-      run: (a) => c.rename(owner, a.task_id, a.title),
-    }),
-    app_set_task_read: tool({
-      description:
-        "User interface only: record whether the user has read a task's replies, outcomes and requests. read true records them read through event through, the newest event the panel has shown, or through the task's newest event without it. read false marks the task unread until the user next sees it. Returns whether the task is still unread, and through, the newest event the user has read.",
-      schema: taskId.extend({
-        read: z.boolean(),
-        through: z.number().int().nonnegative().optional(),
-      }),
-      run: (a) => {
-        const t = c.store.get(a.task_id, owner);
-
-        if (a.read) c.store.markRead(t, a.through);
-        else c.store.markUnread(t);
-
-        return c.store.readState(t.id);
-      },
-    }),
-    app_mark_task_unread_from: tool({
-      description:
-        "User interface only: mark a task unread from event event_id on, so the replies, outcomes and requests from that event are new while earlier events stay read. Returns whether the task is still unread, and through, the newest event the user has read.",
-      schema: taskId.extend({ event_id: z.number().int().positive() }),
-      run: (a) => {
-        const t = c.store.get(a.task_id, owner);
-
-        c.store.markUnreadFrom(t, a.event_id);
-
-        return c.store.readState(t.id);
-      },
-    }),
-    app_mark_tasks_read: tool({
-      description:
-        "User interface only: record that the user has read every reply, outcome and request of these tasks so far.",
-      schema: z.strictObject({
-        task_ids: z.array(z.string()).min(1).max(1000),
-      }),
-      run: (a) => {
-        const marked = a.task_ids.map((id) => c.store.get(id, owner));
-
-        c.store.transaction(() => {
-          for (const t of marked) c.store.markRead(t);
-        });
-
-        return { task_ids: marked.map((t) => t.id) };
-      },
-    }),
-    app_set_tasks_archived: tool({
-      description:
-        "User interface only: archive or unarchive tasks. Archived tasks leave the panel's task lists until unarchived or sent a message. Archiving skips tasks that haven't stopped or that have a pending request or queued messages. Returns task_ids, the tasks changed, and skipped.",
-      schema: z.strictObject({
-        task_ids: z.array(z.string()).min(1).max(1000),
-        archived: z.boolean(),
-      }),
-      run: (a) => c.archive.setArchived(owner, a.task_ids, a.archived),
-    }),
-    app_delete_tasks: tool({
-      destructive: true,
-      description:
-        "User interface only: delete stopped tasks with their events, requests, worktrees and branches, dependents first. With delete_agent_task it also deletes each provider session. A task outside them that depends on one stops the whole deletion. This can't be undone.",
-      schema: z.strictObject({
-        task_ids: z.array(z.string()).min(1).max(1000),
-        delete_agent_task: z.boolean().default(false),
-      }),
-      run: (a) => c.delete(owner, a.task_ids, a.delete_agent_task),
-    }),
-    app_delete_branch: tool({
-      destructive: true,
-      description:
-        "User interface only: delete a stopped worktree task's branch once its worktree is removed.",
-      schema: taskId,
-      run: (a) => c.deleteBranch(owner, a.task_id),
-    }),
+    ...taskLifecycleTools(c, owner),
   };
 }
