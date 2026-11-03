@@ -132,7 +132,8 @@ export function Composer({
   }, [collapsed]);
 
   // A task started from the new-task composer keeps typing focus here once
-  // its events load and the composer is enabled.
+  // its events load and the composer is enabled, unless the person has moved
+  // focus elsewhere since, such as into a menu that focus would close.
   useEffect(() => {
     const { session } = controller;
 
@@ -140,6 +141,8 @@ export function Composer({
     if (!session.get("task", sessionTaskId).composerFocus) return;
 
     session.update("task", sessionTaskId, { composerFocus: undefined });
+    const focused = document.activeElement;
+    if (focused && focused !== document.body) return;
     input.current?.focus({ preventScroll: true });
   }, [controller, collapsed, disabled, sessionTaskId]);
 

@@ -531,6 +531,25 @@ test("question toggles preserve the ordinary composer's hidden preference", () =
   assert.ok(view.getByRole("button", { name: "Show composer" }));
 });
 
+test.each([false, true])(
+  "a started task's composer takes focus unless focus moved elsewhere: %s",
+  (movedFocus) => {
+    const chat = setup();
+    const { controller, task, reopen } = chat;
+
+    const elsewhere = document.body.appendChild(
+      document.createElement("button"),
+    );
+
+    onTestFinished(() => elsewhere.remove());
+    if (movedFocus) elsewhere.focus();
+    controller.session.update("task", task.id, { composerFocus: true });
+    reopen({});
+
+    expect(document.activeElement).toBe(movedFocus ? elsewhere : chat.composer);
+  },
+);
+
 test("questions collapse the composer while preserving its draft and Stop action", async () => {
   const focus = vi.spyOn(HTMLElement.prototype, "focus");
   onTestFinished(() => focus.mockRestore());
