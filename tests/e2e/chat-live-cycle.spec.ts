@@ -44,22 +44,37 @@ for (const width of [1280, 420]) {
         await expect(message).toHaveCount(1);
         await expect(message).toHaveAttribute("aria-busy", "true");
 
-        // The fixture supplies the final text before the row finishes opening.
-        // Measure its settled height before checking the draft-to-saved handoff.
+        // The fixture supplies the final text before the row finishes opening,
+        // and on narrow panels the task view slides in after the reload.
+        // Measure the settled box before checking the draft-to-saved handoff.
         await expect
           .poll(() =>
-            message.evaluate((element) =>
-              element
-                .getAnimations()
-                .some(
-                  (animation) =>
-                    animation.playState === "running" &&
-                    animation.effect instanceof KeyframeEffect &&
-                    animation.effect
-                      .getKeyframes()
-                      .some((frame) => frame.height !== undefined),
-                ),
-            ),
+            message.evaluate((element) => {
+              for (
+                let box: Element | null = element;
+                box;
+                box = box.parentElement
+              ) {
+                const moving = box
+                  .getAnimations()
+                  .some(
+                    (animation) =>
+                      animation.playState === "running" &&
+                      animation.effect instanceof KeyframeEffect &&
+                      animation.effect
+                        .getKeyframes()
+                        .some(
+                          (frame) =>
+                            frame.height !== undefined ||
+                            frame.transform !== undefined,
+                        ),
+                  );
+
+                if (moving) return true;
+              }
+
+              return false;
+            }),
           )
           .toBe(false);
 
