@@ -1,4 +1,4 @@
-import { send, startTask } from "./console-actions";
+import { scrollChatUp, send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 test.use({ reducedMotion: "no-preference" });
@@ -10,8 +10,7 @@ test("announce new tasks without moving the reader, then open one with View", as
   await startTask(page, "Read this history [fixture:reply lines=40]");
   const history = page.getByRole("region", { name: "Chat history" });
   await expect(history).toContainText("Fixture reply line 40.");
-  await history.hover();
-  await page.mouse.wheel(0, -700);
+  await scrollChatUp(page, 700);
 
   await expect(
     page.getByRole("button", { name: "Scroll to latest message", exact: true }),

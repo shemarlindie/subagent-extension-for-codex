@@ -1,6 +1,6 @@
 import { LIVE_CONVERSATION_PERIOD_MS } from "../../dev/panel/scenarios/live-conversation";
 import { installChatCycle } from "./chat-cycle-test-harness";
-import { startTask } from "./console-actions";
+import { scrollChatUp, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 test.use({ reducedMotion: "no-preference" });
@@ -130,8 +130,7 @@ for (const width of [1280, 420]) {
       )
       .toBeLessThanOrEqual(1);
 
-    await history.hover();
-    await page.mouse.wheel(0, -250);
+    await scrollChatUp(page, 250);
 
     await expect(
       page.getByRole("button", {
@@ -139,26 +138,6 @@ for (const width of [1280, 420]) {
         exact: true,
       }),
     ).toBeVisible();
-
-    // The wheel scroll can still be moving when Playwright returns, so anchor
-    // only once samples an interval apart agree.
-    let scrollTop: number | undefined;
-
-    await expect
-      .poll(
-        async () => {
-          const current = await history.evaluate(
-              (element) => element.scrollTop,
-            ),
-            settled = current === scrollTop;
-
-          scrollTop = current;
-
-          return settled;
-        },
-        { intervals: [100] },
-      )
-      .toBe(true);
 
     const anchorId = await history.evaluate((element) => {
       const frame = element.getBoundingClientRect();
