@@ -149,6 +149,25 @@ export class Control {
     void this.schedule();
   }
 
+  /**
+   * Whether no task is running, starting, queued or waiting, so stopping
+   * interrupts nothing. A dependency wait survives a restart, and a busy
+   * dependency counts on its own.
+   */
+  idle() {
+    return (
+      !this.scheduling &&
+      !this.active.size &&
+      !this.store
+        .all()
+        .some(
+          (t) =>
+            BUSY.includes(t.status) &&
+            t.waiting_reason !== "waiting_for_dependency",
+        )
+    );
+  }
+
   workers() {
     return [...this.providers.values()].map((p) => ({
       provider: p.id,

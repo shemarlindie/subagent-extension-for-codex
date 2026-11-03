@@ -156,7 +156,8 @@ codex plugin remove subagent-extension-for-codex@shemarlindie
 codex plugin marketplace remove shemarlindie
 ```
 
-The service keeps running after you remove the plugin. Stop it with
+The service exits once Codex stops the plugin and its tasks finish. To stop it
+sooner, run
 `kill "$(cat ~/.local/share/subagent-extension-for-codex/service.pid)"`, which
 interrupts running turns.
 

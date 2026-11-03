@@ -24,6 +24,21 @@ export function retryable(error: unknown, readOnly = false) {
 }
 
 /**
+ * Holds a stream open to the service while this process runs, so the
+ * service knows a client remains. A dropped stream is never reopened here,
+ * so an idle proxy can't restart a service that stopped. The next call's
+ * reconnect opens a new one.
+ */
+export function holdPresence({ origin, token }: ServiceConnection) {
+  fetch(`${origin}/api/service/presence`, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: "error",
+  })
+    .then((response) => response.body?.pipeTo(new WritableStream()))
+    .catch(() => {});
+}
+
+/**
  * The stdio proxy's link to the service. The connection starts on first
  * use, or early through `connect`, so the MCP handshake never waits for a
  * cold service start. A failed connection attempt is forgotten, and a call

@@ -28,6 +28,7 @@ every client the same absolute data directory.
 | `SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL`     | `info`                                        | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
 | `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`   | First `claude` on the service's `PATH`        | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
 | `SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS`   | Unset                                         | Set to `1` when starting the service to retain original responses for diagnostics and fixture recording.                                  |
+| `SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS` | `15000`                                       | For tests. Milliseconds a plugin service waits unused before it exits.                                                                    |
 | `PORT`                                       | `17317`                                       | Service listener port, on loopback by default.                                                                                            |
 | `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN`        | `http://127.0.0.1:<PORT>`                     | Standalone origin and CORS allowlist.                                                                                                     |
 

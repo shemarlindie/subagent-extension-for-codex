@@ -28,6 +28,8 @@ test("dependents wait on an interrupted dependency and fail with a failed one, a
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(store.get(second.id, "alice").status, "waiting");
   assert.equal(store.get(second.id, "alice").waiting_for, first.id);
+  // The wait survives a restart, so it doesn't keep the service running.
+  assert.equal(c.idle(), true);
 
   assert.deepEqual(
     store

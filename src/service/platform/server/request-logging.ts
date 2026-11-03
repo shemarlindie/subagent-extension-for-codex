@@ -15,6 +15,7 @@ function route(req: Request) {
       "/api/logout",
       "/api/events",
       "/api/service/drain",
+      "/api/service/presence",
     ].includes(req.path)
   ) {
     return req.path;
@@ -43,7 +44,10 @@ export function requestLogging(
     const complete = (aborted: boolean) => {
       if (finished) return;
       finished = true;
-      const stream = routeName === "/api/events" || routeName === "/mcp";
+
+      const stream = ["/api/events", "/api/service/presence", "/mcp"].includes(
+        routeName,
+      );
 
       const level =
         res.statusCode >= 500 || (aborted && !stream) ? "warn" : "info";

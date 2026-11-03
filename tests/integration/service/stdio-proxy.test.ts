@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -13,34 +13,63 @@ import {
   healthProof,
 } from "../../../src/service/platform/service/health-proof.js";
 import { waitForListening } from "../../support/helpers.js";
-import { serviceEnv } from "../../support/service.js";
+import {
+  freePort,
+  type Service,
+  serviceEnv,
+  stopService,
+} from "../../support/service.js";
 
-/** Runs the built proxy against a service on `port`, without the user's overrides. */
-async function proxy(t: import("vitest").TestContext, port: number) {
-  const data = await mkdtemp(join(tmpdir(), "stdio-proxy-"));
+/** A short idle grace, so the tests don't wait out the real one. */
+const idleGrace = 1000;
 
+async function data(t: import("vitest").TestContext) {
+  const dir = await mkdtemp(join(tmpdir(), "stdio-proxy-"));
+  t.onTestFinished(() => rm(dir, { recursive: true, force: true }));
+
+  return dir;
+}
+
+/** Runs the built proxy against `service`, without the user's overrides. */
+async function proxy(
+  t: import("vitest").TestContext,
+  service: Service,
+  overrides: Record<string, string> = {},
+) {
   const client = new Client({ name: "stdio-proxy-test", version: "1" });
-
-  t.onTestFinished(async () => {
-    await client.close();
-    await rm(data, { recursive: true, force: true });
-  });
 
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [resolve("dist/stdio.js")],
-    env: serviceEnv(
-      { data, port },
-      { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
-    ),
+    env: serviceEnv(service, overrides),
     stderr: "pipe",
   });
 
   let stderr = "";
   transport.stderr?.on("data", (chunk: Buffer) => (stderr += chunk));
+  t.onTestFinished(() => client.close());
   await client.connect(transport);
 
-  return { client, stderr: () => stderr };
+  return { client, pid: transport.pid!, stderr: () => stderr };
+}
+
+function running(pid: number) {
+  try {
+    process.kill(pid, 0);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Waits for an idle stop, with ten seconds for the stop itself. */
+async function waitForExit(pid: number) {
+  for (let i = 0; i < (idleGrace + 10000) / 100 && running(pid); i++) {
+    await new Promise((done) => setTimeout(done, 100));
+  }
+
+  assert.equal(running(pid), false, `process ${pid} is still running`);
 }
 
 test("the proxy completes the MCP handshake while the service is still starting", async (t) => {
@@ -101,7 +130,12 @@ test("the proxy completes the MCP handshake while the service is still starting"
 
   const { port } = server.address() as import("node:net").AddressInfo;
 
-  const { client, stderr } = await proxy(t, port);
+  const { client, stderr } = await proxy(
+    t,
+    { data: await data(t), port },
+    { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
+  );
+
   await starting.promise;
   const { tools } = await client.listTools();
 
@@ -135,3 +169,41 @@ test("the proxy completes the MCP handshake while the service is still starting"
   await client.close();
   assert.match(stderr(), /Proxy stopping: stdin closed/);
 });
+
+test(
+  "a service the proxy started outlives a killed proxy while another remains, and exits once the last one closes",
+  { timeout: idleGrace * 2 + 30000 },
+  async (t) => {
+    const service = { data: await data(t), port: await freePort() };
+    t.onTestFinished(() => stopService(service).catch(() => {}));
+
+    const grace = {
+      SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS: String(idleGrace),
+    };
+
+    const first = await proxy(t, service, grace);
+    const second = await proxy(t, service, grace);
+
+    for (const { client } of [first, second]) {
+      const result = await client.callTool({
+        name: "list_projects",
+        arguments: {},
+      });
+
+      assert.ok(!result.isError, JSON.stringify(result.content));
+    }
+
+    const pid = Number(
+      await readFile(join(service.data, "service.pid"), "utf8"),
+    );
+
+    // A killed proxy can't say goodbye. Its closed socket is enough.
+    process.kill(first.pid, "SIGKILL");
+    // Past the grace and the next idle check, the service would have stopped.
+    await new Promise((done) => setTimeout(done, idleGrace + 2000));
+    assert.ok(running(pid), "the service stopped while a proxy remained");
+
+    await second.client.close();
+    await waitForExit(pid);
+  },
+);

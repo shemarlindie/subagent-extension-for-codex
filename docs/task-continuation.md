@@ -50,8 +50,13 @@ Start the service with the same `SUBAGENT_EXTENSION_FOR_CODEX_DATA` value, then
 check the task list. The data directory holds the database, worktrees and admin
 token.
 
-Disconnecting a client leaves the service and its tasks running. Stopping the
-service interrupts its active turns. On restart:
+Disconnecting a client leaves its tasks running. A service the plugin started
+exits about 15 seconds after its last Codex proxy and console disconnect and its
+tasks finish. A task waiting for input counts as unfinished. A task waiting for
+a dependency doesn't, since the wait resumes after a restart. Services started
+another way run until you stop them.
+
+Stopping the service interrupts its active turns. On restart:
 
 - A turn that was running becomes interrupted.
 - Steers that turn had not taken move to the front of its queue.

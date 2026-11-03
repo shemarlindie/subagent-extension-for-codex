@@ -264,6 +264,16 @@ export function application(
     res.status(202).json({ status: "draining", running: app.locals.drain() });
   });
 
+  // A stdio proxy holds this open while it runs, so an idle plugin service
+  // knows a client remains.
+  app.get("/api/service/presence", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.flushHeaders();
+    // Fetch aborts a response body that stays silent for five minutes.
+    const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 15000);
+    req.on("close", () => clearInterval(heartbeat));
+  });
+
   app.post(["/api/tools/:name", "/api/user-tools/:name"], async (req, res) => {
     try {
       // The raw token is an administrator credential. MCP hosts must enforce

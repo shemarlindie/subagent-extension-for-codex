@@ -46,7 +46,8 @@ Other fields add task, turn, provider or tool context when available.
 
 - Look for `service.starting`, `service.ready`, `service.draining`,
   `service.stopping` and `service.stopped` to identify startup and handoff
-  stages. `service.stopping` records the `signal`, the `active_tasks` that
+  stages. `service.stopping` records the `signal` (`SIGINT`, `SIGTERM`, `drain`
+  or `idle` for a plugin service that exited unused), the `active_tasks` that
   stopping interrupts and `parent_pid`, which is 1 once the proxy that launched
   the service has exited. `service.recovered` and `service.drained` include
   durations. If startup fails before structured logging starts, check the

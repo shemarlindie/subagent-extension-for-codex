@@ -219,6 +219,25 @@ test("a plain interrupt pauses the queue, keeping pending steers at its front, u
   await c.close();
 });
 
+test("a running task keeps the service from idling, and a paused queue doesn't", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+
+  const { c, store, repo } = await setup(
+    new TestProvider({ beforeReply: checkpoints.beforeReply }),
+  );
+
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
+  assert.equal(c.idle(), false);
+
+  // An interrupted task's paused queue waits for a person, so it holds nothing.
+  await c.send("alice", t.id, "Later", "user", { delivery: "queue" });
+  await c.interrupt("alice", t.id);
+  assert.equal(store.get(t.id, "alice").queue_paused, true);
+  await until(() => c.idle());
+  await c.close();
+});
+
 test("queued messages can be reordered behind the steers the worker already has", async () => {
   const checkpoints = new TurnCheckpoints(1);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });

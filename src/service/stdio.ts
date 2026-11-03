@@ -36,9 +36,17 @@ import {
   packagePath,
   packageVersion,
 } from "./platform/service/runtime.js";
-import { serviceClient } from "./platform/service/service-client.js";
+import {
+  holdPresence,
+  serviceClient,
+} from "./platform/service/service-client.js";
 
-const service = serviceClient(connectService);
+const service = serviceClient(async () => {
+  const connection = await connectService();
+  holdPresence(connection);
+
+  return connection;
+});
 
 // Definitions supply schemas only; the proxy forwards calls to the service.
 const tools: Record<string, AnyTool> = definitions({} as Control, "local");
@@ -245,7 +253,15 @@ server.registerTool(
 await server.connect(new StdioServerTransport());
 
 // Codex records MCP server stderr, so these lines show how the proxy ended.
-process.stdin.once("end", () => console.error("Proxy stopping: stdin closed"));
+function stdinClosed() {
+  console.error("Proxy stopping: stdin closed");
+  // Codex closes stdin to stop the proxy. The presence stream would otherwise
+  // keep it running.
+  process.exit(0);
+}
+
+process.stdin.once("end", stdinClosed);
+process.stdin.once("close", stdinClosed);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {

@@ -27,13 +27,17 @@ stdio proxy ----------------------> shared loopback service
 
 One local service serves every host connection for one user. A data-directory
 lease stops other processes from owning the same state. Closing a host
-connection leaves tasks running.
+connection leaves tasks running. A service the plugin started exits once no
+client remains and its tasks finish. See
+[Reconnect after a restart](task-continuation.md#reconnect-after-a-restart).
 
 The packaged stdio proxy connects to the service or launches it. It answers the
 MCP handshake from its own tool definitions and connects in the background, so a
 cold service start can't exceed the host's MCP startup timeout.
 
 - Tool calls wait up to 60 seconds for the connection.
+- Each connection holds a `/api/service/presence` stream open, which tells the
+  service a client remains. The proxy exits when Codex closes its stdin.
 - When a call finds the service gone, the proxy starts a new one. It sends the
   call again when the service can't have received it, or when the call is
   read-only. See `src/service/platform/service/service-client.ts`.

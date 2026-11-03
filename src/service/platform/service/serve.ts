@@ -50,7 +50,19 @@ const drainLimit = 10 * 60 * 1000;
 /** How long a stopping service waits to answer calls it already received. */
 const callDrainLimit = 10000;
 
-/** Starts the HTTP service and runs it until SIGINT or SIGTERM. */
+/**
+ * How long a plugin service stays unused, with no client, call or task,
+ * before it exits. It also gives the proxy that started it time to connect.
+ * Tests shorten it.
+ */
+const idleGrace = Number(
+  process.env.SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS ?? 15000,
+);
+
+/** Streams a client holds open while it runs: proxy presence and console events. */
+const clientStreams = ["/api/service/presence", "/api/events"];
+
+/** Starts the HTTP service and runs it until a signal, a handoff or an idle stop. */
 export async function serve({
   providers: makeProviders,
   network = false,
@@ -223,14 +235,31 @@ export async function serve({
   const prune = setInterval(() => auth.prune(), 60000);
   // Calls are POSTs. GETs include event streams that never end on their own.
   let calls = 0;
+  let clients = 0;
+  // Updated as calls and clients end too, so a call between checks counts.
+  let lastUse = performance.now();
+  const use = () => (lastUse = performance.now());
 
   server.on("request", (req, res) => {
-    if (req.method === "GET") return;
-    calls++;
-    res.once("close", () => calls--);
+    if (req.method !== "GET") {
+      calls++;
+
+      res.once("close", () => {
+        calls--;
+        use();
+      });
+    } else if (clientStreams.includes(req.url?.split("?")[0] ?? "")) {
+      clients++;
+
+      res.once("close", () => {
+        clients--;
+        use();
+      });
+    }
   });
 
   let closing: Promise<void> | undefined;
+  let idleStop: NodeJS.Timeout | undefined;
 
   function close(signal = "drain") {
     return (closing ??= (async () => {
@@ -243,6 +272,7 @@ export async function serve({
 
       stopMetrics();
       clearInterval(prune);
+      clearInterval(idleStop);
       server.close();
       server.closeIdleConnections();
       // Answer calls already received, so a proxy sees a reset only for
@@ -284,6 +314,15 @@ export async function serve({
 
     return c.active.size;
   };
+
+  // A service the plugin started exits once Codex and the console have gone
+  // and its tasks have finished. Others run until they're stopped.
+  if (serviceIdentity().launcher === "stdio") {
+    idleStop = setInterval(() => {
+      if (clients || calls || draining || !c.idle()) use();
+      else if (performance.now() - lastUse >= idleGrace) void close("idle");
+    }, 1000);
+  }
 
   process.on("SIGINT", () => void close("SIGINT"));
   process.on("SIGTERM", () => void close("SIGTERM"));

@@ -126,10 +126,12 @@ test, set `composerMentionsEnabled` to `true` in
 ## Plugin startup and hooks
 
 `mcp.json` launches the packaged stdio proxy, which connects to or starts the
-shared local service. Disconnecting stdio leaves the service and tasks running.
-The launcher's working directory belongs to the installed package, so it cannot
-identify the chat project. See [Build](development.md#build) for package
-contents.
+shared local service. Disconnecting stdio leaves tasks running. The service
+exits once no client remains and its tasks finish, as
+[Reconnect after a restart](task-continuation.md#reconnect-after-a-restart)
+describes. The launcher's working directory belongs to the installed package, so
+it cannot identify the chat project. See [Build](development.md#build) for
+package contents.
 
 The package has no lifecycle hooks or native settings entrypoint. Edit settings
 in the panel. See
