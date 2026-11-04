@@ -199,7 +199,7 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   );
 });
 
-test("current repository selection locks revision to HEAD and submits the checkout strategy", async (t) => {
+test("project folder selection locks revision to HEAD and submits the checkout strategy", async (t) => {
   const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
   const revision = screen.getByLabelText<HTMLInputElement>("Revision");
@@ -208,7 +208,7 @@ test("current repository selection locks revision to HEAD and submits the checko
 
   assert.match(
     screen.getByRole("combobox", { name: "Workspace" }).textContent ?? "",
-    /Current repository/,
+    /Project folder/,
   );
 
   await selectOption(user, "Workspace", "Isolated worktree");
@@ -217,11 +217,7 @@ test("current repository selection locks revision to HEAD and submits the checko
   await pasteText(user, revision, "feature-branch");
   await enterTask(user, "Review my uncommitted edits");
 
-  await selectOption(
-    user,
-    "Workspace",
-    "Current repository (uncommitted changes)",
-  );
+  await selectOption(user, "Workspace", "Project folder (uncommitted changes)");
 
   await waitFor(() => assert.equal(revision.value, "HEAD"));
   assert.equal(revision.readOnly, true);

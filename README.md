@@ -77,10 +77,10 @@ Codex desktop app. You can also ask Codex to install it: _"Install the Codex
 plugin subagent-extension-for-codex from the marketplace at
 github.com/shemarlindie/subagent-extension-for-codex."_
 
-Then approve a Git repository root with at least one commit. Use **Add chat
-project** in a chat's Delegated Work panel, or **Manage projects… → Add
-project** in the global panel. The plugin starts its local service the first
-time Codex connects.
+Then approve a Git repository root with at least one commit. Use **Allow tasks
+here** in a chat's Delegated Work panel, or **Manage projects… → Add project**
+in the global panel. The plugin starts its local service the first time Codex
+connects.
 
 While the service runs, you can also use the standalone console at
 `http://127.0.0.1:17317`. If that port is taken, see
@@ -103,7 +103,7 @@ Start a task in any of these ways:
    my uncommitted changes."_ Codex starts the task and, when the host supports
    it, opens Delegated Work on the task's Chat.
 2. **Open the chat's panel.** Ask Codex to open Delegated Work. The panel lists
-   the chat's tasks and offers **Add chat project** when the chat's repository
+   the chat's tasks and offers **Allow tasks here** when the chat's repository
    isn't approved yet.
 3. **Use the sidebar.** In the Codex desktop app, select **Delegated Work** in
    the sidebar to see tasks from every chat. **New task** starts one there.

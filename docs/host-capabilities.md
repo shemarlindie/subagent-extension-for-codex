@@ -107,8 +107,8 @@ desktop installation delivers this metadata.
 
 ### Registration
 
-Reading context never registers a project, though it can suggest **Add chat
-project**. Registration needs a user action or the configured task-start policy.
+Reading context never registers a project, though it can suggest **Allow tasks
+here**. Registration needs a user action or the configured task-start policy.
 `get_current_project` reports registration and the task-start policy without
 changing either. Model-supplied paths cannot grant access or trigger automatic
 registration. [Repository access](configuration.md#repository-access) owns these

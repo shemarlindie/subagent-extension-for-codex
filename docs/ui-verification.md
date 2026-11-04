@@ -48,7 +48,7 @@ relaunches the panel.
 Host settings:
 
 - **Sandbox cwd** supplies the chat directory. The default is the checkout,
-  which is not a fixture project and shows **Add chat project**. Enter
+  which is not a fixture project and shows **Allow tasks here**. Enter
   `/demo/website` to open that project.
 - **Automatically add chat projects** matches the user setting of that name.
 - **Claude Code unavailable** shows readiness notices in the panel and the New

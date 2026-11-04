@@ -66,9 +66,9 @@ function ProjectForm({ dialog }: ProjectFormProps) {
   return (
     <form onSubmit={submit}>
       <p className="form-note">
-        Adding a repository allows delegated tasks to access it. Enter a path on
-        the computer running the service. Browse opens a folder picker on that
-        computer.
+        Adding a repository allows delegated tasks to access it until you remove
+        it. Enter a path on the computer running the service. Browse opens a
+        folder picker on that computer.
       </p>
       <Field id="project-repository" label="Repository path">
         <div className="project-path-entry">

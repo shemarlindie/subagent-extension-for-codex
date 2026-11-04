@@ -190,7 +190,7 @@ test("a chat project hint prefills registration without registering it automatic
     }),
   );
 
-  await user.click(screen.getByRole("button", { name: "Add chat project" }));
+  await user.click(screen.getByRole("button", { name: "Allow tasks here" }));
   const dialog = await screen.findByRole("dialog");
 
   assert.equal(

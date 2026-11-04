@@ -222,7 +222,7 @@ test("MCP get_current_project reports the thread root without registering it", a
   assert.equal(current.repository, repository);
   assert.equal(current.registered, false);
   assert.equal(current.auto_register_on_task_start, true);
-  assert.match(String(current.next_step), /Add project/);
+  assert.match(String(current.next_step), /Allow tasks here/);
 
   await client.callTool({
     name: "open_subagent_extension_for_codex",

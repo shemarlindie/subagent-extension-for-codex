@@ -11,7 +11,7 @@ embedded panel and standalone console share one frontend.
 ## Project and chat integration
 
 - **Thread launch** shows the conversation's tasks and chat project. It offers
-  **Add chat project** when the project needs registration.
+  **Allow tasks here** when the project needs registration.
 - **Global launch** shows tasks across conversations and offers project
   selection and **All chats**.
 - Opening an owned task uses that task's scope.
@@ -22,7 +22,7 @@ how the panel resolves context.
 
 Project dropdowns include a search field that matches saved names and repository
 paths. On narrow panels, header actions such as **Settings** move into **Panel
-actions**, with **Add chat project** first when needed.
+actions**, with **Allow tasks here** first when needed.
 
 Changing scope closes unsent forms. An action you already submitted still
 completes, but its result never selects work in the new scope.
@@ -469,8 +469,8 @@ copy instead.
 
 **Task actions** in the task heading includes handoff and deletion. **Delete
 task** stops running, queued or waiting work, then removes the task's history,
-requests, recorded edits, worktree and branch. Files in the current repository
-stay intact.
+requests, recorded edits, worktree and branch. Files in the project folder stay
+intact.
 
 - **Also delete the agent task**, off by default, also removes the provider
   session. If that fails, the local task stays for retry.

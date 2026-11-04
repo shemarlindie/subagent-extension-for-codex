@@ -109,7 +109,7 @@ export function TaskDetailsSkeleton({
     : FACTS.map((fact) => ({ ...fact, text: undefined }));
 
   const projectText = task
-      ? `${task.repository.split("/").at(-1) ?? ""} · ${task.revision} · ${task.workspace_strategy === "current_repo" ? "current repository" : "isolated worktree"}`
+      ? `${task.repository.split("/").at(-1) ?? ""} · ${task.revision} · ${task.workspace_strategy === "current_repo" ? "project folder" : "isolated worktree"}`
       : "repository · revision · isolated worktree",
     runtimeText =
       task?.budget.max_runtime_minutes === null

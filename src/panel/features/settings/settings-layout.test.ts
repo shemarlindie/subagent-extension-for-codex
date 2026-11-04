@@ -56,7 +56,7 @@ const taskSection: SettingSection = {
       path: "task.workspace_strategy",
       label: "Workspace",
       options: [
-        { value: "current_repo", label: "Current repository" },
+        { value: "current_repo", label: "Project folder" },
         { value: "worktree", label: "Isolated worktree" },
       ],
     },

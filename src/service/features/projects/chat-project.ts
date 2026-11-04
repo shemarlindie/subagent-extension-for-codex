@@ -101,8 +101,8 @@ export async function currentChatProject(
       ? {}
       : {
           next_step: auto
-            ? "Starting a task for this repository from this chat adds it automatically. Otherwise ask the user to use Add project in the panel."
-            : "Ask the user to use Add project in the panel before delegating to this project.",
+            ? "Starting a task for this repository from this chat adds it automatically. Otherwise ask the user to use Allow tasks here in the panel."
+            : "Ask the user to use Allow tasks here in the panel before delegating to this project.",
         }),
   };
 }

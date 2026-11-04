@@ -22,8 +22,8 @@ To delegate a task:
 2. Pass an approved root's absolute path as `repository` to `start_task`. For an
    unregistered root, the
    [task-start registration policy](configuration.md#repository-access) may
-   apply. Otherwise, direct the user to **Add project**, **Browse** or the
-   projects CLI and wait for registration.
+   apply. Otherwise, direct the user to **Allow tasks here**, **Add project**,
+   **Browse** or the projects CLI and wait for registration.
 3. Read replies with `list_messages`, which supports long polling. Read recorded
    edits with `get_changes`, using `scope: "turn"` for the latest turn.
 4. Continue with `send_message`. Inspect pending input before answering it with

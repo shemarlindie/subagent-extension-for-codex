@@ -108,7 +108,7 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         Repository: task.repository,
         "Workspace strategy":
           task.workspace_strategy === "current_repo"
-            ? "Current repository"
+            ? "Project folder"
             : "Isolated worktree",
         "Base commit": task.base_commit ?? task.revision,
         Session: task.session_id ?? "Not started",
@@ -148,7 +148,7 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
             <span className="task-details-meta-project">
               {task.repository.split("/").at(-1)} · {task.revision} ·{" "}
               {task.workspace_strategy === "current_repo"
-                ? "current repository"
+                ? "project folder"
                 : "isolated worktree"}
             </span>
             <span className="task-details-meta-runtime">

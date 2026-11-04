@@ -34,7 +34,7 @@ export function WorkspaceField({
           { value: "worktree", label: "Isolated worktree" },
           {
             value: "current_repo",
-            label: "Current repository (uncommitted changes)",
+            label: "Project folder (uncommitted changes)",
           },
         ]}
       />

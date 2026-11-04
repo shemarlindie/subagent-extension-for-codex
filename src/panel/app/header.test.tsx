@@ -81,7 +81,24 @@ test("thread header shows settings and omits other global controls", async () =>
   await waitFor(() => assert.equal(settings.mock.calls.length, 2));
 });
 
-test("Add chat project invokes registration from the menu", async () => {
+test("Allow tasks here names the path in its tooltip", async () => {
+  const { view, user } = setup({
+    conversation: "chat-1",
+    projectCandidate: "/repo",
+  });
+
+  const action = view.getByRole("button", { name: "Allow tasks here" });
+
+  assert.equal(action.getAttribute("title"), null);
+  await user.hover(action);
+
+  assert.match(
+    (await view.findByRole("tooltip")).textContent ?? "",
+    /Let tasks run and edit files in \/repo\. Stays allowed until you remove it in Manage projects\./,
+  );
+});
+
+test("Allow tasks here invokes registration from the menu", async () => {
   const { view, user, addProject } = setup({
     conversation: "chat-1",
     projectCandidate: "/repo",
@@ -90,7 +107,7 @@ test("Add chat project invokes registration from the menu", async () => {
   await user.click(view.getByRole("button", { name: "Panel actions" }));
 
   const action = await view.findByRole("menuitem", {
-    name: "Add chat project",
+    name: "Allow tasks here",
   });
 
   await user.click(action);
@@ -98,7 +115,7 @@ test("Add chat project invokes registration from the menu", async () => {
 });
 
 test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
-  "Add chat project stays disabled with %j",
+  "Allow tasks here stays disabled with %j",
   async (blocked) => {
     const { view, user, addProject } = setup({
       conversation: "chat-1",
@@ -109,7 +126,7 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
     assert.equal(
       (
         view.getByRole("button", {
-          name: "Add chat project",
+          name: "Allow tasks here",
         }) as HTMLButtonElement
       ).disabled,
       true,
@@ -118,7 +135,7 @@ test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
     await user.click(view.getByRole("button", { name: "Panel actions" }));
 
     const action = await view.findByRole("menuitem", {
-      name: "Add chat project",
+      name: "Allow tasks here",
     });
 
     assert.equal(action.getAttribute("aria-disabled"), "true");

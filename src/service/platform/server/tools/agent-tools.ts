@@ -39,14 +39,14 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       readOnly: true,
       conversation: "panel",
       description:
-        "Resolve panel defaults for repository, revision and conversation from explicit arguments, host_directory or this conversation's latest task. task_id selects an owned task. null conversation_id means all conversations. Never registers a project or starts work. For a returned panel_project_candidate, ask the user to use Add project in the panel.",
+        "Resolve panel defaults for repository, revision and conversation from explicit arguments, host_directory or this conversation's latest task. task_id selects an owned task. null conversation_id means all conversations. Never registers a project or starts work. For a returned panel_project_candidate, ask the user to use Allow tasks here in the panel.",
       schema: panelContextInput,
       run: (a) => resolvePanelContext(c, owner, a),
     }),
     list_projects: tool({
       readOnly: true,
       description:
-        "List registered project roots. Pass one to start_task as the explicit absolute repository. Never registers. If the chat's project is missing, ask the user to use Add project in the panel.",
+        "List registered project roots. Pass one to start_task as the explicit absolute repository. Never registers. If the chat's project is missing, ask the user to use Allow tasks here or Add project in the panel.",
       schema: z.strictObject({}),
       run: () => c.projects?.list() ?? [],
     }),

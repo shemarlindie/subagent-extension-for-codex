@@ -113,7 +113,7 @@ export const startSchema = z.object({
     .enum(["worktree", "current_repo"])
     .default("current_repo")
     .describe(
-      "current_repo uses the registered checkout directly, including uncommitted files, and requires revision HEAD. worktree creates an isolated checkout at revision without uncommitted files. Use it for isolated or parallel edits.",
+      "current_repo uses the approved project folder directly, including uncommitted files, and requires revision HEAD. worktree creates an isolated checkout at revision without uncommitted files. Use it for isolated or parallel edits.",
     ),
   budget: z
     .object({
