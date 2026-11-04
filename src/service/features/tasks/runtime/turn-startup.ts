@@ -3,6 +3,7 @@ import { now } from "../../../../shared/time.js";
 import type { Changes } from "../../changes/changes.js";
 import type { Projects } from "../../projects/projects.js";
 import type { Provider } from "../../providers/types.js";
+import { gitState } from "../../workspaces/git.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
 import type { SessionPrompts } from "../conversation/session-prompts.js";
 import type { Store } from "../storage/store.js";
@@ -106,6 +107,12 @@ async function prepareWorkspace(c: TurnStartupContext, t: Task) {
     });
 
     action = "recreated";
+  }
+
+  // Read each turn, so a later `git init` or a removed `.git` takes effect.
+  if (t.workspace_strategy === "current_repo") {
+    if ((await gitState(t.workspace!)) === "none") t.no_git = true;
+    else delete t.no_git;
   }
 
   // Only a new control-plane turn resets the latest-turn edits.

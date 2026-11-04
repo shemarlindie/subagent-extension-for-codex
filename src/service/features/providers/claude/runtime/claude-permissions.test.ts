@@ -131,6 +131,11 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
   );
 
   assert.equal(
+    await check("Read", { file_path: join(workspace, "vendor/.git/config") }),
+    "deny",
+  );
+
+  assert.equal(
     await check("Read", { file_path: join(workspace, ".git") }),
     "deny",
   );

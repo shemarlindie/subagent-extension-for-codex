@@ -39,8 +39,8 @@ export async function inWorkspace(workspace: string, path: string) {
   return !(
     rel.startsWith("..") ||
     isAbsolute(rel) ||
-    rel === ".git" ||
-    rel.startsWith(".git/")
+    // Any depth, since plain folders often hold nested repositories.
+    rel.split(/[\\/]/).includes(".git")
   );
 }
 

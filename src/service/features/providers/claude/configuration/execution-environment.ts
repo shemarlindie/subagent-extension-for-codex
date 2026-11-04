@@ -24,6 +24,21 @@ export function claudeEnvironment(
   );
 }
 
+/** Git metadata stays readable for Git commands and is never writable. */
+async function gitSandboxPaths(workspace: string) {
+  const gitDirectory = await realpath(
+    resolve(
+      workspace,
+      (await git(workspace, ["rev-parse", "--git-common-dir"])).trim(),
+    ),
+  );
+
+  return {
+    read: [gitDirectory],
+    write: [gitDirectory, join(workspace, ".git")],
+  };
+}
+
 /** Bash sandbox settings for a task. Claude Code itself runs outside this sandbox. */
 export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   if (!task.workspace) throw new Error("Task workspace unavailable");
@@ -31,12 +46,9 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   const repository = await realpath(task.repository);
   const data = await realpath(dataDirectory());
 
-  const gitDirectory = await realpath(
-    resolve(
-      workspace,
-      (await git(workspace, ["rev-parse", "--git-common-dir"])).trim(),
-    ),
-  );
+  const gitPaths = task.no_git
+    ? { read: [], write: [] }
+    : await gitSandboxPaths(workspace);
 
   return {
     enabled: true,
@@ -63,9 +75,9 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
           process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
         ]),
       ],
-      allowRead: [workspace, gitDirectory],
+      allowRead: [workspace, ...gitPaths.read],
       allowWrite: [workspace],
-      denyWrite: [gitDirectory, join(workspace, ".git")],
+      denyWrite: gitPaths.write,
     },
   };
 }

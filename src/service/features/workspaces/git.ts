@@ -52,20 +52,64 @@ export async function gitRepositoryRoot(cwd: string) {
         await git(
           cwd,
           ["rev-parse", "--show-toplevel"],
-          undefined,
+          // Keeps Git's messages readable by `gitWorkTreeRoot`.
+          { LC_ALL: "C" },
           undefined,
           ROOT_PROBE_TIMEOUT_MS,
         )
       ).trim(),
     );
   } catch (error) {
-    if (error instanceof Error && "killed" in error && error.killed) {
-      throw new Error(
+    throw probeError(error);
+  }
+}
+
+function probeError(error: unknown) {
+  return error instanceof Error && "killed" in error && error.killed
+    ? new Error(
         `Git repository validation did not finish within ${ROOT_PROBE_TIMEOUT_MS / 1000} seconds. Please retry.`,
         { cause: error },
-      );
-    }
+      )
+    : error;
+}
 
+/**
+ * The work tree containing `cwd`, or undefined only when Git reports that it
+ * has none. Any other failure still throws, because a failed probe must never
+ * downgrade a real repository to a plain folder.
+ */
+export async function gitWorkTreeRoot(cwd: string) {
+  try {
+    return await gitRepositoryRoot(cwd);
+  } catch (error) {
+    const stderr = (error as { stderr?: unknown }).stderr;
+    if (String(stderr).includes("not a git repository")) return undefined;
     throw error;
+  }
+}
+
+export type GitState = "ready" | "no_commits" | "none";
+
+export const WORKTREE_NEEDS_GIT =
+  "Worktrees need a Git repository with at least one commit.";
+
+/** What Git can do for a folder: whether it has a work tree and a commit. */
+export async function gitState(cwd: string): Promise<GitState> {
+  if ((await gitWorkTreeRoot(cwd)) === undefined) return "none";
+
+  try {
+    await git(
+      cwd,
+      ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
+      undefined,
+      undefined,
+      ROOT_PROBE_TIMEOUT_MS,
+    );
+
+    return "ready";
+  } catch (error) {
+    // With --quiet, Git reports only a missing commit by exiting with 1.
+    if ((error as { code?: unknown }).code === 1) return "no_commits";
+    throw probeError(error);
   }
 }

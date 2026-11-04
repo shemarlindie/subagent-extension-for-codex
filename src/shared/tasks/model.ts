@@ -113,7 +113,7 @@ export const startSchema = z.object({
     .enum(["worktree", "current_repo"])
     .default("current_repo")
     .describe(
-      "current_repo uses the approved project folder directly, including uncommitted files, and requires revision HEAD. worktree creates an isolated checkout at revision without uncommitted files. Use it for isolated or parallel edits.",
+      "current_repo uses the approved project folder directly, including uncommitted files, and requires revision HEAD. worktree creates an isolated checkout at revision without uncommitted files and needs a Git repository with at least one commit. Use it for isolated or parallel edits.",
     ),
   budget: z
     .object({
@@ -229,7 +229,12 @@ export interface Task extends Start {
   workspace?: string;
   workspace_removed?: true;
   branch_deleted?: true;
+  /** Absent when the repository had no commit as the task started. */
   base_commit?: string;
+  /** The workspace had no Git work tree when the latest turn started. */
+  no_git?: true;
+  /** Why a saved worktree default couldn't apply to this writing task. */
+  workspace_fallback?: "no_git" | "no_commits";
   /** The task worktree branch. */
   branch?: string;
 
