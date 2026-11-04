@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { test, type TestContext } from "vitest";
 
+import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
+import {
+  hostProjectCandidate,
+  withHostRepository,
+} from "../../platform/panel/host-context.js";
 import { Control } from "../tasks/runtime/control.js";
 import { Store } from "../tasks/storage/store.js";
 import { Workspaces } from "../workspaces/workspace.js";
@@ -85,7 +90,12 @@ test("chat project registration is enabled by default and opt-out is owner scope
 
   assert.deepEqual(
     await currentChatProject(f.control, "alice", hostMeta(repository)),
-    { repository, registered: true, auto_register_on_task_start: false },
+    {
+      repository,
+      git: "no_commits",
+      registered: true,
+      auto_register_on_task_start: false,
+    },
   );
 });
 
@@ -286,3 +296,114 @@ test("missing project registry makes automatic chat registration a graceful no-o
     undefined,
   );
 });
+
+async function plainFolder(dir: string, name: string) {
+  const folder = join(dir, name);
+  await mkdir(folder, { recursive: true });
+
+  return folder;
+}
+
+test("an unregistered plain chat folder is reported, offered and never added", async (t) => {
+  const f = await fixture(t);
+  const folder = await plainFolder(f.dir, "notes");
+
+  const current = await currentChatProject(
+    f.control,
+    "alice",
+    hostMeta(folder),
+  );
+
+  assert.equal(current.repository, folder);
+  assert.equal(current.git, "none");
+  assert.equal(current.registered, false);
+  assert.equal(current.auto_register_on_task_start, false);
+  assert.match(current.next_step ?? "", /Allow tasks here/);
+
+  assert.equal(
+    await autoRegisterChatProject(f.control, "alice", hostMeta(folder)),
+    undefined,
+  );
+
+  assert.deepEqual(f.control.projects!.list(), []);
+});
+
+test("a chat in a registered plain folder's subfolder resolves to that folder", async (t) => {
+  const f = await fixture(t);
+  const folder = await plainFolder(f.dir, "notes");
+  const child = await plainFolder(folder, "deep/inside");
+  await f.control.projects!.register(folder);
+
+  const current = await currentChatProject(f.control, "alice", hostMeta(child));
+  assert.equal(current.repository, folder);
+  assert.equal(current.registered, true);
+
+  assert.deepEqual(await withHostRepository(f.control, {}, hostMeta(child)), {
+    repository: folder,
+  });
+});
+
+test("a directory registration would reject is no candidate", async (t) => {
+  const f = await fixture(t);
+
+  assert.equal(
+    await hostProjectCandidate(f.control, pathToFileURL("/").href),
+    undefined,
+  );
+});
+
+test("a chat with no directory offers no candidate and registers nothing", async (t) => {
+  const f = await fixture(t);
+
+  assert.equal(await hostProjectCandidate(f.control, undefined), undefined);
+  assert.equal(await autoRegisterChatProject(f.control, "alice"), undefined);
+
+  await assert.rejects(
+    currentChatProject(f.control, "alice"),
+    /no usable local project directory/,
+  );
+
+  assert.deepEqual(f.control.projects!.list(), []);
+  const provider = new FixtureProvider();
+
+  const control = new Control(
+    new Store(join(f.dir, "explicit.sqlite")),
+    new Workspaces(join(f.dir, "explicit-worktrees"), []),
+    new Map([[provider.id, provider]]),
+  );
+
+  control.stopped = true;
+  control.projects = new Projects(control.store.database, control.workspaces);
+  t.onTestFinished(() => control.close());
+
+  const repository = await f.repo("approved");
+  await control.projects.register(repository);
+
+  const task = await control.start("alice", {
+    provider: provider.id,
+    repository,
+    description: "Explicit approved project",
+  });
+
+  assert.equal(task.repository, repository);
+});
+
+test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
+  "a folder the service can't read stays a candidate with unknown Git",
+  async (t) => {
+    const f = await fixture(t);
+    const folder = await plainFolder(f.dir, "blocked");
+    await chmod(folder, 0o000);
+    t.onTestFinished(() => chmod(folder, 0o755));
+
+    assert.deepEqual(
+      await hostProjectCandidate(f.control, pathToFileURL(folder).href),
+      { repository: folder },
+    );
+
+    assert.equal(
+      await autoRegisterChatProject(f.control, "alice", hostMeta(folder)),
+      undefined,
+    );
+  },
+);

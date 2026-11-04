@@ -337,7 +337,11 @@ test("sandbox directory hints resolve approved Git roots without granting access
       host_directory: pathToFileURL(b).href,
     }),
     {
-      panel_project_candidate: { repository: b, auto_register: true },
+      panel_project_candidate: {
+        repository: b,
+        git: "no_commits",
+        auto_register: true,
+      },
       panel_scope: {
         conversation_id: "chat-a",
         repository: a,
@@ -437,7 +441,11 @@ test("an unregistered chat Git root is an add-project candidate without granting
 
   assert.deepEqual(context, {
     panel_scope: { conversation_id: "new-chat" },
-    panel_project_candidate: { repository, auto_register: true },
+    panel_project_candidate: {
+      repository,
+      git: "no_commits",
+      auto_register: true,
+    },
   });
 
   assert.deepEqual(f.c.projects!.list(), []);
@@ -510,4 +518,21 @@ test("the panel's opening tasks carry their read state", async (t) => {
   const [opened] = openingTasks(f.c, "alice");
   assert.equal(opened?.unread, true);
   assert.equal(opened?.read_through, 0);
+});
+
+test("a plain chat folder is a candidate that isn't added automatically", async (t) => {
+  const { c, dir } = await fixture(t);
+  const folder = join(dir, "notes");
+  await mkdir(folder);
+
+  const context = await resolvePanelContext(c, "alice", {
+    conversation_id: "chat",
+    host_directory: pathToFileURL(folder).href,
+  });
+
+  assert.deepEqual(context.panel_project_candidate, {
+    repository: folder,
+    git: "none",
+    auto_register: false,
+  });
 });

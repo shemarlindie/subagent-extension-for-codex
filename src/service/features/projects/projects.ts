@@ -12,7 +12,7 @@ import { accessibleRealpath, Workspaces } from "../workspaces/workspace.js";
 import { projectRoots } from "./schema.js";
 
 /** Whether `path` is `parent` or inside it. */
-const within = (parent: string, path: string) => {
+export const within = (parent: string, path: string) => {
   const child = relative(parent, path);
 
   return child === "" || (!child.startsWith("..") && !isAbsolute(child));
@@ -24,7 +24,7 @@ const realpathOrSame = (path: string) => realpath(path).catch(() => path);
  * Rejects folders that would expose the admin token or a user's whole account.
  * A Git root has its own rules, since it is rarely chosen by accident.
  */
-async function assertPlainFolderAllowed(folder: string) {
+export async function assertPlainFolderAllowed(folder: string) {
   const home = await realpathOrSame(homedir());
 
   if (dirname(folder) === folder || within(folder, home)) {

@@ -53,7 +53,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     get_current_project: tool({
       readOnly: true,
       description:
-        "Find the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. For an unregistered project, follow next_step.",
+        "Find the current chat's project from host directory metadata: its Git root, a registered folder containing it, or the directory itself. Reports whether it is registered and its Git state. Never registers. For an unregistered project, follow next_step.",
       schema: z.strictObject({}),
       run: () => currentChatProject(c, owner, hostMeta),
     }),
