@@ -4,6 +4,18 @@
   "private": true,
   "type": "module",
   "description": "Delegate to Claude without leaving Codex.",
+  "keywords": [
+    "codex",
+    "codex-cli",
+    "codex-plugin",
+    "claude-code",
+    "subagents",
+    "codex-subagents",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agents"
+  ],
   "license": "MIT",
   "author": "Shemar Lindie",
   "homepage": "https://github.com/shemarlindie/subagent-extension-for-codex#readme",

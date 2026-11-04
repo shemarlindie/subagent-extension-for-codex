@@ -1,11 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="499" height="104" viewBox="0 0 499 104" role="img" aria-label="Subagent Extension for Codex">
-  <!-- Follows the color scheme for pages that show only the README's fallback image. -->
-  <style>
-    @media (prefers-color-scheme: dark) {
-      .title { fill: #f0f6fc; }
-      .subtitle { fill: #9198a1; }
-    }
-  </style>
   <g transform="translate(0 8) scale(1.375)">
     <rect width="64" height="64" rx="14" fill="#3a7ca5" />
     <g fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">

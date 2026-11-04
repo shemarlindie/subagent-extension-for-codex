@@ -432,11 +432,12 @@ what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
 GitHub, so the README's links to `docs/` don't resolve inside an extracted
 package.
 
-`npm run release:assemble`, run after a build, writes `release/`, the package
-the release publishes to npm. It holds the packed files, a manifest with no
-scripts or dependencies, and an `.agents/plugins/marketplace.json` that lists
-the plugin with source `./`. The directory is both a Codex marketplace and the
-plugin. [Install a local build](#install-a-local-build) installs it, and
+After a build, `npm run release:assemble` creates the package published to npm
+in `release/`. The package at the root of the repo is not published. The release
+contains the packed files, a manifest with no scripts or dependencies, and an
+`.agents/plugins/marketplace.json` that lists the plugin with source `./`. The
+directory is both a Codex marketplace and the plugin.
+[Install a local build](#install-a-local-build) installs it, and
 [Releasing and CI](releasing.md) publishes it.
 
 Adding the checkout itself (`codex plugin marketplace add ./`) adds `main`'s

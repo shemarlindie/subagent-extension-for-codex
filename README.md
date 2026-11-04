@@ -1,7 +1,8 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-banner-dark.svg">
-    <img src="docs/assets/readme-banner-light.svg" width="400" alt="Subagent Extension for Codex">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-banner-light.svg">
+    <img src="docs/assets/readme-banner-fallback.svg" width="400" alt="Subagent Extension for Codex">
   </picture>
 </p>
 
@@ -23,7 +24,8 @@
 
 Delegate tasks to Claude from Codex through a local MCP service, then follow,
 steer and review them in the Delegated Work panel. Claude runs through the
-Claude Agent SDK and the Claude Code harness.
+[Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) and the
+Claude Code harness.
 
 And yes, some of us still use Codex.
 
