@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 const execute = promisify(execFile);
 
 const script = `try
-  set selectedFolder to choose folder with prompt "Choose a Git repository to add to Delegated Work"
+  set selectedFolder to choose folder with prompt "Choose a folder to add to Delegated Work"
   return POSIX path of selectedFolder
 on error number -128
   return ""
@@ -18,7 +18,7 @@ export async function browseProject(
 ) {
   if (options.platform !== "darwin") {
     throw new Error(
-      "Folder browsing is available on macOS. Enter an absolute repository path instead.",
+      "Folder browsing is available on macOS. Enter an absolute folder path instead.",
     );
   }
 

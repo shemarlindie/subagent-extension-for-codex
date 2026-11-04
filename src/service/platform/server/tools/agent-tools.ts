@@ -46,9 +46,9 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     list_projects: tool({
       readOnly: true,
       description:
-        "List registered project roots. Pass one to start_task as the explicit absolute repository. Never registers. If the chat's project is missing, ask the user to use Allow tasks here or Add project in the panel.",
+        "List registered project roots. Pass one to start_task as the explicit absolute repository. git is ready, no_commits or none when known, and only ready supports worktrees. Never registers. If the chat's project is missing, ask the user to use Allow tasks here or Add project in the panel.",
       schema: z.strictObject({}),
-      run: () => c.projects?.list() ?? [],
+      run: () => c.projects?.listWithGit() ?? [],
     }),
     get_current_project: tool({
       readOnly: true,

@@ -30,7 +30,7 @@ const exists = (path: string) =>
  * A folder's real path, once the service can read it. macOS privacy controls
  * and file permissions both surface here, so the user learns what to change.
  */
-async function accessibleRealpath(path: string) {
+export async function accessibleRealpath(path: string) {
   try {
     const actual = await realpath(path);
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
+  chmod,
   mkdir,
   mkdtemp,
   realpath,
@@ -22,6 +23,16 @@ import { Store } from "../tasks/storage/store.js";
 import { git } from "../workspaces/git.js";
 import { Workspaces } from "../workspaces/workspace.js";
 import { Projects } from "./projects.js";
+
+// Worker threads don't pass a stubbed HOME to the native homedir().
+vi.mock("node:os", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:os")>();
+
+  return {
+    ...actual,
+    homedir: () => process.env.HOME ?? actual.homedir(),
+  };
+});
 
 async function fixture(t: import("vitest").TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "projects-test-")));
@@ -254,7 +265,7 @@ test("project registration requires user authority and grants live persistent ac
       { repository: join(repository, "src") },
       "user",
     ),
-    /repository root/i,
+    /inside the Git repository/,
   );
 
   assert.deepEqual(f.projects.list(), []);
@@ -787,3 +798,156 @@ test("registering, renaming and removing a project each report a change", async 
   projects.list();
   assert.equal(changes, 3);
 });
+
+test("a plain folder registers at its exact root and lists without Git", async (t) => {
+  const f = await fixture(t);
+  const folder = join(f.dir, "notes");
+  await mkdir(join(folder, "sub"), { recursive: true });
+
+  assert.deepEqual(await f.projects.register(folder), {
+    repository: folder,
+    kind: "repository",
+  });
+
+  assert.equal((await f.projects.listWithGit())[0]?.git, "none");
+  assert.equal(await f.projects.resolve(folder), folder);
+
+  await assert.rejects(
+    f.projects.resolve(join(folder, "sub")),
+    /outside allowed roots/,
+  );
+
+  // A recent answer is reused, since the panel reads this on every refresh.
+  execFileSync("git", ["init", "-q", folder]);
+  assert.equal((await f.projects.listWithGit())[0]?.git, "none");
+
+  const start = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start + 11_000);
+  t.onTestFinished(() => clock.mockRestore());
+  assert.equal((await f.projects.listWithGit())[0]?.git, "no_commits");
+
+  await rm(folder, { recursive: true });
+  clock.mockReturnValue(start + 22_000);
+  assert.equal((await f.projects.listWithGit())[0]?.git, undefined);
+});
+
+test("a parent approval still permits only Git roots", async (t) => {
+  const f = await fixture(t);
+  const parent = join(f.dir, "parent");
+  await mkdir(join(parent, "plain"), { recursive: true });
+  await f.projects.register(parent, "parent");
+  const repository = join(parent, "repo");
+  await mkdir(repository);
+  execFileSync("git", ["init", "-q", repository]);
+
+  assert.equal(await f.projects.resolve(repository), repository);
+
+  await assert.rejects(
+    f.projects.resolve(join(parent, "plain")),
+    /not a git repository/,
+  );
+});
+
+test("registration rejects folders that are too broad or hold service data", async (t) => {
+  const f = await fixture(t);
+  const home = join(f.dir, "home");
+  const data = join(f.dir, "data");
+  await mkdir(join(home, "projects"), { recursive: true });
+  await mkdir(join(data, "inner"), { recursive: true });
+
+  vi.stubEnv("HOME", home);
+  vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_DATA", data);
+
+  t.onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
+
+  await assert.rejects(f.projects.register(home), /too broad/);
+  await assert.rejects(f.projects.register(f.dir), /too broad/);
+  await assert.rejects(f.projects.register("/"), /too broad/);
+  await assert.rejects(f.projects.register(data), /extension's own data/);
+
+  await assert.rejects(
+    f.projects.register(join(data, "inner")),
+    /extension's own data/,
+  );
+
+  await f.projects.register(join(home, "projects"));
+});
+
+test("a folder inside a repository is rejected and names the root to add", async (t) => {
+  const f = await fixture(t);
+  const repository = await f.repo("repo");
+  const child = join(repository, "child");
+  await mkdir(child);
+
+  await assert.rejects(
+    f.projects.register(child),
+    new RegExp(`Add ${repository} instead`),
+  );
+});
+
+test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
+  "a folder the service can't read is not added, starts no task and takes no new turn",
+  async (t) => {
+    const f = await fixture(t);
+    const provider = new FixtureProvider({ turnDelayMs: 0, replyPaceMs: 0 });
+
+    const control = new Control(
+      f.store,
+      f.workspaces,
+      new Map([[provider.id, provider]]),
+    );
+
+    control.projects = f.projects;
+    t.onTestFinished(() => control.close());
+
+    const blocked = join(f.dir, "blocked");
+    const allowed = join(f.dir, "allowed");
+    await mkdir(blocked);
+    await mkdir(allowed);
+    await chmod(blocked, 0o000);
+    t.onTestFinished(() => chmod(blocked, 0o755));
+
+    await assert.rejects(
+      f.projects.register(blocked),
+      /Can't access .*blocked\. On macOS, allow access in System Settings/,
+    );
+
+    assert.deepEqual(f.projects.list(), []);
+    await f.projects.register(allowed);
+
+    const task = await control.start("owner", {
+      provider: provider.id,
+      description: "Plain folder task",
+      repository: allowed,
+    });
+
+    const settled = (status: string, turn: number) =>
+      vi.waitFor(() => {
+        const current = f.store.get(task.id, "owner");
+        assert.equal(current.status, status);
+        assert.ok(current.turn >= turn);
+
+        return current;
+      });
+
+    await settled("completed", 1);
+    await chmod(allowed, 0o000);
+    t.onTestFinished(() => chmod(allowed, 0o755));
+
+    await assert.rejects(
+      control.start("owner", {
+        provider: provider.id,
+        description: "Blocked at start",
+        repository: allowed,
+      }),
+      /Can't access .*allowed/,
+    );
+
+    await assert.rejects(
+      control.send("owner", task.id, "Continue", "user"),
+      /Can't access .*allowed/,
+    );
+  },
+);

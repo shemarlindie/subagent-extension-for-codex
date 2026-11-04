@@ -19,7 +19,7 @@ try {
   const [command, path] = process.argv.slice(2);
 
   if (command === "list") {
-    console.log(JSON.stringify(projects.list(), null, 2));
+    console.log(JSON.stringify(await projects.listWithGit(), null, 2));
   } else if ((command === "register" || command === "approve-parent") && path) {
     console.log(
       JSON.stringify(
@@ -31,7 +31,7 @@ try {
     );
   } else {
     throw new Error(
-      "Usage: projects-cli.js list | register <repository> | approve-parent <directory>",
+      "Usage: projects-cli.js list | register <folder> | approve-parent <directory>",
     );
   }
 } finally {
