@@ -35,8 +35,10 @@ layout. The host owns placement and display modes.
 ### Manage projects
 
 **Manage projects…** appears last in the global project dropdown. It opens a
-full-width Projects page that lists saved names and repository paths, including
-parent approvals. **Back to Tasks** returns to the previous task view.
+full-width Projects page that lists saved names and folder paths, including
+parent approvals. A project with no commit shows a **No Git** or **No commits**
+tag, which explains the effect. **Back to Tasks** returns to the previous task
+view.
 
 - **Add project** opens a dialog where you enter a path or use the service
   host's folder picker.
@@ -72,6 +74,10 @@ Removing the selected project returns the task list to **All projects**.
   separate checkout. The service never merges changes. Worktrees separate
   checkouts but don't restrict commands, so they aren't security sandboxes. See
   [Worktree actions](#worktree-actions).
+- **Folders without commits.** Worktrees need a Git repository with a commit, so
+  tasks in other folders edit them directly. Without Git, those edits can't be
+  undone with Git. If your default is a worktree, the task uses the project
+  folder and warns you that it isn't isolated.
 - **Permissions.** The researcher, reviewer and security reviewer profiles only
   inspect by default. Writing profiles follow your saved
   [Claude permissions](configuration.md#claude-permissions) and
@@ -403,6 +409,8 @@ removing a worktree or deleting its branch keeps the recorded diff.
   without a diff.
 - When the service couldn't capture a command's changed paths, the tab shows
   **Some changes made by commands weren't recorded.**
+- In a folder without Git, the tab says edits made by commands may be missing
+  after any command, and `git init` records them from the next turn.
 
 The service records Claude's edit tools and Bash commands. See
 [Recording limits](mcp-reference.md#recording-limits) for what it misses.

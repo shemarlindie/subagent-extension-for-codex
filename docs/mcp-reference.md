@@ -17,8 +17,9 @@ resources and stateless connections.
 
 To delegate a task:
 
-1. Find the chat's repository with `get_current_project` and approved roots with
-   `list_projects`. Inspect enabled profiles with `list_workers`.
+1. Find the chat's project with `get_current_project` and approved roots with
+   `list_projects`, which reports each one's `git` state. Inspect enabled
+   profiles with `list_workers`.
 2. Pass an approved root's absolute path as `repository` to `start_task`. For an
    unregistered root, the
    [task-start registration policy](configuration.md#repository-access) may
@@ -97,6 +98,9 @@ files return their size.
   changes were not recorded, without file diffs. Other Git commands can return
   precise diffs or no edit data. Read-only commands with no edit data create no
   warning.
+- In a folder without Git, Claude Code reports no Bash edit data, so any command
+  sets `unrecorded_commands`, even one that only read files. `Write` and `Edit`
+  are still recorded. A Git repository without commits records both.
 - Highly repetitive text can produce a valid diff that is not minimal.
 - An `Edit` to an existing empty file appears as an added file.
 - Renames appear as a deletion and an addition.
