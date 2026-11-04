@@ -137,6 +137,8 @@ const projectsWith = ({
         repository,
         name: repository.split("/").at(-1) ?? repository,
         kind: "repository",
+        // Fixtures cannot run git, so the path says what it would find.
+        ...(repository.includes("no-git") ? { git: "none" } : {}),
       })),
   ]
     .filter((project) => !removedProjects.includes(project.repository))

@@ -14,6 +14,7 @@ import { changesSummary } from "../../changes/read-changes";
 import type { ChangeCountsState } from "../../changes/types";
 import { WorktreeActions } from "../../changes/worktree-actions";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
+import { hasRevision, workspaceFallbackReason } from "../workspace-fallback";
 import {
   ESTIMATED_COST_LABEL,
   EstimatedCostLabel,
@@ -108,9 +109,13 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         Repository: task.repository,
         "Workspace strategy":
           task.workspace_strategy === "current_repo"
-            ? "Project folder"
+            ? ["Project folder", workspaceFallbackReason(task)]
+                .filter(Boolean)
+                .join(". ")
             : "Isolated worktree",
-        "Base commit": task.base_commit ?? task.revision,
+        ...(hasRevision(task)
+          ? { "Base commit": task.base_commit ?? task.revision }
+          : {}),
         Session: task.session_id ?? "Not started",
         Dependencies: task.depends_on.join(", ") || "None",
         Turns: task.turn,
@@ -146,7 +151,8 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         <div className="task-details">
           <div className="meta">
             <span className="task-details-meta-project">
-              {task.repository.split("/").at(-1)} · {task.revision} ·{" "}
+              {task.repository.split("/").at(-1)} ·{" "}
+              {hasRevision(task) && `${task.revision} · `}
               {task.workspace_strategy === "current_repo"
                 ? "project folder"
                 : "isolated worktree"}

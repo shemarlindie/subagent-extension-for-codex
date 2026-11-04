@@ -26,6 +26,7 @@ import { ChatNoteRow } from "./chat-note-row";
 import { ChatSkeleton } from "./chat-skeleton";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 import { useHistoryMotion } from "./use-history-motion";
+import { WorkspaceFallbackNotice } from "./workspace-fallback-notice";
 
 type ChatTimelineProps = {
   task?: Task;
@@ -130,6 +131,7 @@ export function ChatTimeline({
       >
         {task && (
           <div className="chat-history" ref={historyRef}>
+            <WorkspaceFallbackNotice task={task} />
             {visibleItems?.length
               ? visibleItems.map((item, index) => {
                   let row: ReactNode;

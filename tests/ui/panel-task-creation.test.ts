@@ -3,6 +3,7 @@ import {
   act,
   assert,
   assertAbsent,
+  configureModelDefaults,
   enterTask,
   openAdvancedTask,
   pasteText,
@@ -257,5 +258,127 @@ test("delegation starts from the saved permission setting and separately selects
     (transport.calls.find((call) => call.name === "start_task")?.args as any)
       .provider_options.claude.permission_mode,
     "acceptEdits",
+  );
+});
+
+/** Serves a profile that can write, since read-only tasks lose no isolation. */
+function writingWorker(
+  transport: Parameters<typeof configureModelDefaults>[0],
+) {
+  const { tool } = transport;
+
+  transport.tool = async <T>(name: string, args = {}) => {
+    const result = await tool.call(transport, name, args);
+
+    return (
+      name === "list_workers"
+        ? (result as { profiles: string[] }[]).map((worker) => ({
+            ...worker,
+            profiles: ["general"],
+          }))
+        : result
+    ) as T;
+  };
+}
+
+test("the composer warns about a lost worktree default and starts in place", async (t) => {
+  const { transport, user } = await setup(t, (transport) => {
+    transport.projects = [
+      { repository: "/repo/a", name: "plain", kind: "repository", git: "none" },
+    ];
+
+    configureModelDefaults(transport, {
+      "task.workspace_strategy": "worktree",
+    });
+
+    writingWorker(transport);
+  });
+
+  await user.click(screen.getByRole("button", { name: "New task" }));
+
+  const note = await screen.findByText(
+    /Your default is a worktree, but this folder has no Git/,
+  );
+
+  assert.equal(note.closest(".notice")?.getAttribute("data-tone"), "warning");
+
+  await user.type(
+    await screen.findByRole("textbox", { name: "Task message" }),
+    "Tidy this folder{Enter}",
+  );
+
+  await waitFor(() => {
+    const args = transport.calls.find((call) => call.name === "start_task")
+      ?.args as { workspace_strategy: string; revision: string } | undefined;
+
+    assert.equal(args?.workspace_strategy, "current_repo");
+    assert.equal(args?.revision, "HEAD");
+  });
+});
+
+test("a project with no commit has one workspace, and a ready project restores the default", async (t) => {
+  const { transport, user } = await setupDelegate(t, (transport) => {
+    transport.projects = [
+      { repository: "/repo/a", name: "plain", kind: "repository", git: "none" },
+      {
+        repository: "/repo/b",
+        name: "ready",
+        kind: "repository",
+        git: "ready",
+      },
+    ];
+
+    configureModelDefaults(transport, {
+      "task.workspace_strategy": "worktree",
+    });
+
+    writingWorker(transport);
+  });
+
+  await screen.findByRole("dialog");
+
+  const workspace = () =>
+    screen.getByRole("combobox", { name: "Workspace" }).textContent;
+
+  await selectOption(user, "Project", /plain/);
+
+  await waitFor(() =>
+    assert.equal(workspace(), "Project folder (edits apply directly)"),
+  );
+
+  assert.equal(screen.queryByLabelText("Revision"), null);
+  screen.getByText(/Your default is a worktree, but this folder has no Git/);
+
+  await selectOption(user, "Project", /ready/);
+  await waitFor(() => assert.equal(workspace(), "Isolated worktree"));
+  screen.getByLabelText("Revision");
+  assert.equal(screen.queryByText(/Your default is a worktree/), null);
+
+  await selectOption(user, "Project", /plain/);
+
+  await waitFor(() =>
+    assert.equal(workspace(), "Project folder (edits apply directly)"),
+  );
+
+  await enterTask(user, "Tidy this folder");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+
+  // The saved worktree default must not reach the service's explicit error.
+  await waitFor(() =>
+    assert.deepEqual(
+      (
+        transport.calls.find((call) => call.name === "start_task")?.args as {
+          workspace_strategy: string;
+          revision: string;
+        }
+      ).workspace_strategy,
+      "current_repo",
+    ),
+  );
+
+  assert.equal(
+    (transport.calls.find((call) => call.name === "start_task")?.args as any)
+      .revision,
+    "HEAD",
   );
 });

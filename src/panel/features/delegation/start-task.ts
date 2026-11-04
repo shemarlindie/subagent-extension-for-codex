@@ -1,14 +1,24 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
 import type { Worker } from "../../app/state/types";
+import { runsInPlace } from "../projects/selectors";
+import type { ProjectGit } from "../projects/types";
 import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 
-/** The `start_task` arguments for a new task's form values. */
+/**
+ * The `start_task` arguments for a new task's form values. A project with no
+ * commit runs in place, whatever worktree default the form started from.
+ */
 export function startTaskArguments(
   values: DelegateValues,
   workers: Worker[],
   conversation: string | undefined,
+  git?: ProjectGit,
 ) {
+  const strategy = runsInPlace(git)
+    ? "current_repo"
+    : values.workspace_strategy;
+
   const { provider, profile: worker_profile } = workerChoice(values.worker);
   const worker = workers.find((item) => item.provider === provider);
 
@@ -36,9 +46,8 @@ export function startTaskArguments(
     worker_profile,
     model: values.model,
     reasoning_effort: values.reasoning_effort,
-    revision:
-      values.workspace_strategy === "current_repo" ? "HEAD" : values.revision,
-    workspace_strategy: values.workspace_strategy,
+    revision: strategy === "current_repo" ? "HEAD" : values.revision,
+    workspace_strategy: strategy,
     conversation_id: conversation ?? null,
     context: values.context.trim() ? [values.context] : [],
     depends_on: values.deps,

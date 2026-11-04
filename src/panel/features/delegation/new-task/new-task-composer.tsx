@@ -7,6 +7,7 @@ import {
 } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
+import { readOnlyProfile } from "../../../../shared/providers/claude/permissions";
 import {
   useController,
   useSnapshot,
@@ -20,8 +21,10 @@ import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../shared/forms/form-field-hint";
 import { workerChoices } from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
-import { workerChoice } from "../delegation";
+import { projectGit, workerChoice } from "../delegation";
+import { WorkspaceNoteView } from "../fields/workspace-note-view";
 import { useAsyncDefaults } from "../use-async-defaults";
+import { workspaceNote } from "../workspace-note";
 import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
 import { NewTaskOptions } from "./options/new-task-options";
 
@@ -222,6 +225,15 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
           </div>
           <div className="chat-composer-meta chat-composer-field-feedback">
             <FormFieldHint id="new-task-hint" message={HINT} />
+          </div>
+          <div className="chat-composer-field-feedback">
+            <WorkspaceNoteView
+              note={workspaceNote({
+                git: projectGit(state, repository),
+                savedStrategy: newTask.defaults?.task.workspace_strategy,
+                readOnly: readOnlyProfile(workerChoice(worker).profile ?? ""),
+              })}
+            />
           </div>
         </div>
         {failed && (

@@ -66,17 +66,17 @@ function ProjectForm({ dialog }: ProjectFormProps) {
   return (
     <form onSubmit={submit}>
       <p className="form-note">
-        Adding a repository allows delegated tasks to access it until you remove
-        it. Enter a path on the computer running the service. Browse opens a
-        folder picker on that computer.
+        Adding a folder allows delegated tasks to access it until you remove it.
+        Enter a path on the computer running the service. Browse opens a folder
+        picker on that computer.
       </p>
-      <Field id="project-repository" label="Repository path">
+      <Field id="project-repository" label="Folder path">
         <div className="project-path-entry">
           <input
             id="project-repository"
             value={repository}
             onChange={(event) => setRepository(event.target.value)}
-            placeholder="/absolute/path/to/repository"
+            placeholder="/absolute/path/to/folder"
             required
             maxLength={4096}
             disabled={state.busy || browsing}

@@ -1,5 +1,5 @@
 import type { Snapshot } from "../../app/state/types.js";
-import type { Project } from "./types.js";
+import type { Project, ProjectGit } from "./types.js";
 
 export function projectDisplayName(
   project: Pick<Project, "name" | "repository">,
@@ -39,4 +39,22 @@ export function projectChoices(state: Snapshot) {
     !choices.some((project) => project.repository === state.repository)
     ? [{ repository: state.repository, kind: "repository" }, ...choices]
     : choices;
+}
+
+/** Whether a project's tasks must run in place, because worktrees need a commit. */
+export const runsInPlace = (git?: ProjectGit) =>
+  git === "none" || git === "no_commits";
+
+/** The short tag for a project without a commit. */
+export function gitTag(git?: ProjectGit) {
+  if (git === "none") return "No Git";
+
+  return git === "no_commits" ? "No commits" : undefined;
+}
+
+/** A project's path for a menu, with its tag when it has one. */
+export function projectPathLabel(project: Project) {
+  const tag = gitTag(project.git);
+
+  return tag ? `${project.repository} · ${tag}` : project.repository;
 }

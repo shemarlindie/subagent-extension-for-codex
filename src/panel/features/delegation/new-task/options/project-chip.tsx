@@ -4,7 +4,10 @@ import { useController as useFieldController } from "react-hook-form";
 import { useController } from "../../../../app/state/controller-context";
 import type { Project } from "../../../../app/state/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
-import { projectDisplayName } from "../../../projects/selectors";
+import {
+  projectDisplayName,
+  projectPathLabel,
+} from "../../../projects/selectors";
 import type { DelegateValues } from "../../delegate-values";
 
 type ProjectChipProps = {
@@ -52,7 +55,7 @@ export function ProjectChip({
       options={projects.map((project) => ({
         value: project.repository,
         label: projectDisplayName(project),
-        description: project.repository,
+        description: projectPathLabel(project),
       }))}
       action={{
         label: "Add project…",

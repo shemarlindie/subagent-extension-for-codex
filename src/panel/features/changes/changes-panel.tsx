@@ -9,6 +9,7 @@ import type { Task } from "../tasks/types";
 import { ChangesHeader } from "./changes-header";
 import { ChangesHeaderSkeleton, ChangesSkeleton } from "./changes-skeleton";
 import { ChangesView } from "./changes-view";
+import { CommandLine } from "./command-line";
 import { useChangesScroll } from "./use-changes-scroll";
 
 type ChangesPanelProps = { task?: Task; taskId?: string };
@@ -79,11 +80,21 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
           >
             {data && task ? (
               <>
-                {data.unrecorded_commands && (
-                  <p className="help changes-note">
-                    Some changes made by commands weren't recorded.
-                  </p>
-                )}
+                {data.unrecorded_commands &&
+                  (task.no_git ? (
+                    <div className="changes-note">
+                      <p className="help">
+                        Edits made by commands may be missing because this
+                        folder has no Git. <code>git init</code> records them
+                        from the next turn.
+                      </p>
+                      <CommandLine label="Set up Git" command="git init" />
+                    </div>
+                  ) : (
+                    <p className="help changes-note">
+                      Some changes made by commands weren't recorded.
+                    </p>
+                  ))}
                 {data.files.length ? (
                   <ChangesView
                     task={task}

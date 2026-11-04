@@ -6,7 +6,12 @@ export interface PanelOutput {
     repository?: string;
     revision?: string;
   };
-  panel_project_candidate?: { repository: string; auto_register: boolean };
+  panel_project_candidate?: {
+    repository: string;
+    /** Absent when the folder couldn't be read. */
+    git?: "ready" | "no_commits" | "none";
+    auto_register: boolean;
+  };
   panel_selection?: { task_id: string; tab: "chat" };
   tasks?: Record<string, unknown>[];
 }

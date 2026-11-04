@@ -5,7 +5,7 @@ import type {
   ChangeCountsState,
   ChangesState,
 } from "../../features/changes/types.js";
-import type { Project } from "../../features/projects/types.js";
+import type { Project, ProjectGit } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
   Defaults,
@@ -32,7 +32,11 @@ export type PanelData = {
     repository?: unknown;
     revision?: string;
   };
-  panel_project_candidate?: { repository: string; auto_register?: boolean };
+  panel_project_candidate?: {
+    repository: string;
+    git?: ProjectGit;
+    auto_register?: boolean;
+  };
   panel_selection?: { task_id?: string; tab?: string };
   tasks?: Task[];
 };
@@ -203,6 +207,7 @@ export type Snapshot = {
   repository?: string;
   projectCandidate?: string;
   projectCandidateAuto?: boolean;
+  projectCandidateGit?: ProjectGit;
   revision: string;
   // Null until the user picks one; the list then follows the first nonempty filter.
   filter: Filter | null;

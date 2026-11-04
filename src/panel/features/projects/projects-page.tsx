@@ -10,6 +10,7 @@ import { BackButton } from "../../shared/components/navigation/back-button";
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { ProjectArchive } from "../tasks/archive/project-archive";
+import { ProjectGitTag } from "./project-git-tag";
 import { ProjectListSkeleton } from "./project-list-skeleton";
 import { projectDisplayName } from "./selectors";
 
@@ -116,6 +117,7 @@ export function ProjectsPage() {
                         {project.kind === "parent" && (
                           <span className="muted">Parent approval</span>
                         )}
+                        <ProjectGitTag git={project.git} />
                       </div>
                       <code className="managed-project-path">
                         {project.repository}

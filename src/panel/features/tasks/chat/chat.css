@@ -332,6 +332,15 @@ body[data-expanded-panel="true"]
 .chat-timeline .notice {
   margin: 0;
 }
+.workspace-fallback-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.notice.workspace-fallback-notice p {
+  margin: 0;
+}
 .chat-timeline .chat-budget-notice {
   padding: 8px 10px;
 }

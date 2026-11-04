@@ -376,6 +376,13 @@ h3 {
   margin: 16px 0;
   background: var(--notice-bg);
 }
+.workspace-note {
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+.notice.workspace-note p {
+  margin: 0;
+}
 .notice[data-tone="error"] {
   --notice-accent: var(--danger);
 }

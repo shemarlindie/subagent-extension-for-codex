@@ -89,7 +89,7 @@ test("browsing a folder fills the project draft without granting access", async 
 
   await waitFor(() =>
     assert.equal(
-      within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
+      within(dialog).getByLabelText<HTMLInputElement>("Folder path").value,
       "/repo/picked",
     ),
   );
@@ -123,8 +123,7 @@ test("cancelling the native picker preserves the manual project path", async (t)
 
   const dialog = await screen.findByRole("dialog");
 
-  const path =
-    within(dialog).getByLabelText<HTMLInputElement>("Repository path");
+  const path = within(dialog).getByLabelText<HTMLInputElement>("Folder path");
 
   await pasteText(user, path, "/repo/manual-draft");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
@@ -162,7 +161,7 @@ test("project registration errors preserve the draft and do not change the selec
 
   await pasteText(
     user,
-    within(dialog).getByLabelText("Repository path"),
+    within(dialog).getByLabelText("Folder path"),
     "/repo/invalid/src",
   );
 
@@ -170,7 +169,7 @@ test("project registration errors preserve the draft and do not change the selec
   await screen.findByText("Use repository root");
 
   assert.equal(
-    within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
+    within(dialog).getByLabelText<HTMLInputElement>("Folder path").value,
     "/repo/invalid/src",
   );
 
@@ -194,7 +193,7 @@ test("a chat project hint prefills registration without registering it automatic
   const dialog = await screen.findByRole("dialog");
 
   assert.equal(
-    within(dialog).getByLabelText<HTMLInputElement>("Repository path").value,
+    within(dialog).getByLabelText<HTMLInputElement>("Folder path").value,
     "/repo/chat-project",
   );
 
@@ -228,7 +227,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
   await within(dialog).findByText("Native folder picker unavailable");
-  const path = within(dialog).getByLabelText("Repository path");
+  const path = within(dialog).getByLabelText("Folder path");
   await pasteText(user, path, "/repo/manual-fallback");
   await user.click(within(dialog).getByRole("button", { name: "Add project" }));
 
@@ -292,8 +291,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
 
   const dialog = await screen.findByRole("dialog");
 
-  const path =
-    within(dialog).getByLabelText<HTMLInputElement>("Repository path");
+  const path = within(dialog).getByLabelText<HTMLInputElement>("Folder path");
 
   await pasteText(user, path, "/repo/new-draft");
 

@@ -212,6 +212,10 @@
   /* The button inherits one line of text, plus 12px padding and 2px border. */
   min-height: calc(1lh + 14px);
 }
+.changes-note {
+  display: grid;
+  gap: 6px;
+}
 .changes-note,
 .changes-empty,
 .changes-error {
