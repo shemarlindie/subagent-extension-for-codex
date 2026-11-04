@@ -161,9 +161,16 @@ export function recordClaudeFileEdits(
   context: Pick<RunContext, "fileChanged" | "editUnrecorded">,
   toolName: string,
   response: unknown,
+  noGit = false,
 ): void {
   try {
     const result = claudeFileEdits(toolName, response);
+
+    // Claude Code reports command edits only inside a Git work tree, so a
+    // missing diff here can't show that the command edited nothing.
+    if (noGit && toolName === "Bash" && !record(response)?.bashEditDiff) {
+      context.editUnrecorded(undefined, "command");
+    }
 
     for (const edit of result.edits) context.fileChanged(edit);
 

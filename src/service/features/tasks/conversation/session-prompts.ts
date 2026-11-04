@@ -194,7 +194,9 @@ export class SessionPrompts {
             ]
           : []),
         ...(changes.unrecorded_commands
-          ? ["Commands also changed files that weren't recorded."]
+          ? [
+              `Commands also ${d.no_git ? "may have changed" : "changed"} files that weren't recorded.`,
+            ]
           : []),
       ];
 

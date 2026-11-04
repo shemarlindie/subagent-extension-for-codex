@@ -187,7 +187,12 @@ export async function claudeTurnOptions(
           hooks: [
             async (input) => {
               if (input.hook_event_name === "PostToolUse") {
-                recordClaudeFileEdits(c, input.tool_name, input.tool_response);
+                recordClaudeFileEdits(
+                  c,
+                  input.tool_name,
+                  input.tool_response,
+                  c.task.no_git,
+                );
               }
 
               return {};

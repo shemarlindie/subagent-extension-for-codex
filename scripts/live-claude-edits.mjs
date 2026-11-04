@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
@@ -516,5 +517,110 @@ Then reply DONE.`);
         JSON.stringify(fixtureHooks, null, 2),
       );
     }
+  }
+}
+
+/**
+ * Folders without Git or commits, through the real control plane: tool and
+ * command edits under the extension sandbox, a blocked read outside the folder
+ * and a resumed session. Locks in the Claude Code behavior the design relies on.
+ */
+export async function runFoldersScenario({ control, store, root, taskBase }) {
+  control.settings.update("verification", {
+    set: { providers: { claude: { sandbox: "extension", path_guard: "on" } } },
+  });
+
+  const outside = join(root, "outside.txt");
+  await writeFile(outside, "SECRET-OUTSIDE\n");
+
+  try {
+    for (const name of ["plain", "no-commits"]) {
+      const folder = join(root, name);
+      await mkdir(folder);
+      if (name === "no-commits") execFileSync("git", ["init", "-q", folder]);
+      control.workspaces.allowedRoots.push(folder);
+      control.workspaces.exactRoots.push(folder);
+
+      const task = await control.start("verification", {
+        ...taskBase,
+        repository: folder,
+        worker_profile: "implementer",
+        workspace_strategy: "current_repo",
+        provider_options: { claude: { permission_mode: "default" } },
+        description: `Perform exactly these steps in order using the named tools, one tool call per step. Do not use other tools.
+1. Write: create note.txt containing alpha.
+2. Bash: run exactly: printf 'beta\\n' > bash.txt
+3. Bash: run exactly: cat ${outside}
+Then remember the code word red-fox and reply DONE.`,
+        budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
+      });
+
+      console.log(
+        JSON.stringify({ phase: "folders_started", name, task_id: task.id }),
+      );
+
+      const first = await waitForTask(control, store, task);
+
+      assert.equal(!!first.no_git, name === "plain", `${name}: no_git`);
+      assert.equal(first.base_commit, undefined, `${name}: base_commit`);
+      assert.equal(await readFile(join(folder, "bash.txt"), "utf8"), "beta\n");
+
+      const denied = store
+        .events(task.id, "verification")
+        .map((event) => JSON.stringify(event.data))
+        .join("\n");
+
+      assert.ok(
+        !denied.includes("SECRET-OUTSIDE"),
+        `${name}: the sandbox blocks a read outside the folder`,
+      );
+
+      const changes = await recordedChanges(control, task.id);
+      requireFile(changes, "note.txt", "added");
+
+      if (name === "plain") {
+        assert.ok(changes.unrecorded_commands, "plain: command notice");
+        assert.ok(!changes.files.some((file) => file.path === "bash.txt"));
+      } else {
+        requireFile(changes, "bash.txt", "added", "command");
+      }
+
+      await control.send(
+        "verification",
+        task.id,
+        "Bash: run exactly: printf 'gamma\\n' > resume.txt\nThen reply with the code word I asked you to remember.",
+        "user",
+      );
+
+      while (store.get(task.id, "verification").turn < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const second = await waitForTask(control, store, task);
+
+      assert.equal(second.session_id, first.session_id, `${name}: resumed`);
+
+      assert.equal(
+        await readFile(join(folder, "resume.txt"), "utf8"),
+        "gamma\n",
+      );
+
+      assert.match(
+        String(store.latestEvent(task.id, "agent.reply")?.data.text ?? ""),
+        /red-fox/i,
+        `${name}: the resumed session kept its context`,
+      );
+
+      console.log(
+        JSON.stringify({
+          phase: "folders_verified",
+          name,
+          task_id: task.id,
+          cost_usd: second.cost_usd,
+        }),
+      );
+    }
+  } finally {
+    await control.close();
   }
 }

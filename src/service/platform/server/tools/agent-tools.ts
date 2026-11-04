@@ -267,7 +267,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     get_changes: tool({
       readOnly: true,
       description:
-        "Read the worker's recorded edits for the whole task or the latest turn as a unified diff with per-file stats. Prefer this to the worker's own account of its changes. Every page lists every file. Pass next_cursor to read more diffs. Incomplete files have no diff, and unrecorded_commands means a command changed files without recorded edits. Inspect those files directly. Commits and worktree removal leave these diffs unchanged. Worktree commits are on task.branch.",
+        "Read the worker's recorded edits for the whole task or the latest turn as a unified diff with per-file stats. Prefer this to the worker's own account of its changes. Every page lists every file. Pass next_cursor to read more diffs. Incomplete files have no diff, and unrecorded_commands means a command changed or, in a folder without Git, may have changed files without recorded edits. Inspect those files directly. Commits and worktree removal leave these diffs unchanged. Worktree commits are on task.branch.",
       schema: taskId.extend({
         scope: z.enum(["task", "turn"]).default("task"),
         cursor: z.string().max(300).optional(),
