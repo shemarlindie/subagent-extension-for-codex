@@ -65,6 +65,7 @@ const slim = Object.fromEntries(
     "name",
     "version",
     "description",
+    "keywords",
     "license",
     "author",
     "homepage",
