@@ -364,7 +364,7 @@ test("host opens links through the host and reports a refusal", async () => {
   transport.dispose();
 });
 
-test("host preserves structured settings envelopes and unwraps other tools", async () => {
+test("host returns output schema results as sent and unwraps other tools", async () => {
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);
   const observed = callbacks();
@@ -397,6 +397,10 @@ test("host preserves structured settings envelopes and unwraps other tools", asy
     await transport.tool("set_agent_settings", { max_runtime_minutes: 0.5 }),
     settings,
   );
+
+  const saved = { path: "/home/person/settings.json" };
+  fake.respond({ structuredContent: saved });
+  assert.deepEqual(await transport.tool("app_save_settings_file"), saved);
 
   fake.app.ontoolresult({
     structuredContent: { panel_scope: { conversation_id: null } },

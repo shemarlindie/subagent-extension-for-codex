@@ -125,9 +125,10 @@ export class HostTransport implements Transport {
 
     if (!body) throw new Error("The service returned no structured data.");
 
-    return name.endsWith("_settings")
-      ? (body as T)
-      : decodePanelToolResult<T>(name, body.result, this.events?.timing);
+    // A tool with an output schema sends its result as the structured content.
+    return "result" in body
+      ? decodePanelToolResult<T>(name, body.result, this.events?.timing)
+      : (body as T);
   }
 
   watch() {}
