@@ -3,6 +3,19 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.2.0
+
+### Features
+
+- Support folders without Git or commits (#15)
+
+### Fixes
+
+- Let the host or browser save exports (#17)
+- Stop reporting saved settings exports as failed (#18)
+- Stop reduced motion delaying layout changes by a frame (#14)
+- Keep upward scrolls from resuming follow (#10)
+
 ## 0.1.1
 
 ### Features
