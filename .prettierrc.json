@@ -1,4 +1,5 @@
 {
+  "plugins": ["prettier-plugin-packagejson"],
   "overrides": [
     {
       "files": "*.md",
