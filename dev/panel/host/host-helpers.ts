@@ -14,6 +14,7 @@ export type Settings = {
   width: string;
   canSend: boolean;
   canShare: boolean;
+  canDownload: boolean;
   showInspector: boolean;
   threadId: string;
   cwd: string;
@@ -192,7 +193,8 @@ export function fixtureCall(
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =
       name.includes("open_subagent_extension_for_codex") ||
-      name.endsWith("_settings");
+      name.endsWith("_settings") ||
+      name === "app_save_settings_file";
 
     return {
       content: [{ type: "text", text: JSON.stringify(result) }],

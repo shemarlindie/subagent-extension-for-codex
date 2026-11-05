@@ -19,6 +19,7 @@ const defaults: Settings = {
   width: "480",
   canSend: true,
   canShare: true,
+  canDownload: true,
   showInspector: false,
   threadId: PREVIEW_THREAD,
   cwd: "file:///repo",

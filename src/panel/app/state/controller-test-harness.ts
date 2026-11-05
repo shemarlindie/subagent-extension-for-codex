@@ -93,6 +93,10 @@ export class FakeTransport implements Transport {
     await this.connectGate;
   }
 
+  async saveJson() {
+    return false;
+  }
+
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
     const answer = this.handler?.(name, args);

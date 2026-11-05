@@ -10,8 +10,11 @@ import type { PanelData, Transport, TransportEvents } from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 import { HostContextCompatibilityTransport } from "./host-context-compat";
 
+/** Native dialogs wait on the user, who can outlast the default request timeout. */
+const NATIVE_DIALOG_OPTIONS = { timeout: 150000 };
+
 function toolRequestOptions(name: string, args: Record<string, unknown>) {
-  if (name === "app_browse_project") return { timeout: 150000 };
+  if (name === "app_browse_project") return NATIVE_DIALOG_OPTIONS;
 
   // An update wait holds as long as it was asked to, plus a margin.
   if (name === "app_wait_for_updates") {
@@ -160,6 +163,32 @@ export class HostTransport implements Transport {
     if (this.disposed) throw new Error("The console has closed.");
     const result = await this.app.openLink({ url });
     if (result.isError) throw new Error("The host declined to open the link.");
+  }
+
+  async saveJson(name: string, text: string) {
+    if (this.disposed) throw new Error("The console has closed.");
+    if (!this.app.getHostCapabilities()?.downloadFile) return false;
+
+    const result = await this.app.downloadFile(
+      {
+        contents: [
+          {
+            type: "resource",
+            resource: {
+              uri: `file:///${encodeURIComponent(name)}`,
+              mimeType: "application/json",
+              text,
+            },
+          },
+        ],
+      },
+      NATIVE_DIALOG_OPTIONS,
+    );
+
+    // A cancelled save and a refusal look the same here.
+    if (result.isError) throw new Error("The host didn't save the file.");
+
+    return true;
   }
 
   async expand() {

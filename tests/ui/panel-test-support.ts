@@ -198,6 +198,10 @@ export class FakeTransport implements Transport {
     events.host(this.host);
   }
 
+  async saveJson() {
+    return false;
+  }
+
   async expand() {
     this.expandCalls++;
     this.setDisplayMode("fullscreen");

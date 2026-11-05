@@ -61,6 +61,15 @@ active turn. Global panels and the standalone console send nothing to the chat.
 - A queued result does not show that Codex received the message or began a new
   turn.
 
+## Settings file export
+
+**Export file** uses the portable `App.downloadFile` call when the host
+advertises `downloadFile`. The host decides where the file goes and whether to
+prompt. The Codex desktop app 26.1029.61003 doesn't advertise it, so its exports
+go to the home folder, as
+[Copy settings between computers](configuration.md#copy-settings-between-computers)
+describes.
+
 ## Project context and registration
 
 Portable MCP Apps host context has presentation fields but no standard

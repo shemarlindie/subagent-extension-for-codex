@@ -1,6 +1,7 @@
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
 import { CONNECTION } from "../app/state/connection";
 import type { Transport, TransportEvents } from "../app/state/types";
+import { downloadJson } from "../shared/utils/download-json";
 import { decodePanelToolResult } from "./event-decoding";
 
 export class ConsoleTransport implements Transport {
@@ -62,6 +63,12 @@ export class ConsoleTransport implements Transport {
 
   async login(token: string) {
     await this.api("/api/login", { token });
+  }
+
+  async saveJson(name: string, text: string) {
+    downloadJson(name, text);
+
+    return true;
   }
 
   watch() {

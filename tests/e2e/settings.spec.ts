@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "./fixtures";
 
 test("settings reject invalid values, reset sections and confirm discarding edits", async ({
@@ -417,26 +419,24 @@ test("pending imports protect settings edits and failures restore editing", asyn
   }
 });
 
-test("saving settings reports failures and the service computer's full path", async ({
+test("exporting settings reports failures, then downloads the file in the browser", async ({
   consolePage: page,
 }) => {
   const pending = Promise.withResolvers<void>();
-  let saves = 0;
-  const path = String.raw`C:\Users\Renée Example\Téléchargements\delegated-work-settings-${"long-name-".repeat(12)}.json`;
+  let exports = 0;
 
-  // Keep file writes inside the service integration tests, away from real Downloads.
-  await page.route("**/api/tools/app_save_settings_file", async (route) => {
-    saves++;
+  await page.route("**/api/tools/app_export_settings", async (route) => {
+    exports++;
 
-    if (saves === 1) {
+    if (exports === 1) {
       await pending.promise;
 
       await route.fulfill({
         status: 400,
-        json: { error: "Downloads isn't writable." },
+        json: { error: "The export failed." },
       });
     } else {
-      await route.fulfill({ json: { result: { path } } });
+      await route.fallback();
     }
   });
 
@@ -473,33 +473,32 @@ test("saving settings reports failures and the service computer's full path", as
 
   await expect(copy).toBeDisabled();
   await expect(importButton).toBeDisabled();
-  expect(saves).toBe(1);
+  expect(exports).toBe(1);
   pending.resolve();
 
-  await expect(page.getByRole("alert")).toContainText(
-    "Downloads isn't writable.",
-  );
-
+  await expect(page.getByRole("alert")).toContainText("The export failed.");
   await expect(page.getByRole("alert")).toContainText("Use Copy JSON instead.");
 
   await expect(copy).toBeEnabled();
   await expect(importButton).toBeEnabled();
   await expect(paste).toHaveValue("{}");
 
-  await saveFile.click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    saveFile.click(),
+  ]);
 
-  await expect(
-    page.getByRole("status").filter({ hasText: "Saved to" }),
-  ).toHaveText(`Saved to ${path}`);
-
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  expect(saves).toBe(2);
+  expect(download.suggestedFilename()).toBe("delegated-work-settings.json");
 
   expect(
-    await page
-      .locator(".settings-transfer-status")
-      .evaluate((element) => element.scrollWidth <= element.clientWidth),
-  ).toBe(true);
+    JSON.parse(await readFile(await download.path(), "utf8")),
+  ).toMatchObject({ format: 2 });
+
+  await expect(
+    page.getByRole("status").filter({ hasText: "Exported" }),
+  ).toBeVisible();
+
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
 test("settings search keeps hidden drafts and reveals invalid fields on save", async ({

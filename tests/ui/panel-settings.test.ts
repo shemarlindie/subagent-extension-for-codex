@@ -623,3 +623,45 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
     false,
   );
 });
+
+test("the service saves an export only when the host or browser can't, and never after a refusal", async (t) => {
+  const { transport, user } = await setupSettings(t, (transport) => {
+    serveSettings(transport, { sections: [] });
+    const original = transport.tool.bind(transport);
+
+    transport.tool = async <T>(name: string, args = {}) => {
+      if (name === "app_export_settings") return { document: "{}" } as T;
+
+      if (name === "app_save_settings_file") {
+        transport.calls.push({ name, args });
+
+        return { path: "/home/person/settings.json" } as T;
+      }
+
+      return original<T>(name, args);
+    };
+  });
+
+  const serviceSaves = () =>
+    transport.calls.filter((call) => call.name === "app_save_settings_file");
+
+  await user.click(
+    await screen.findByRole("tab", { name: "Import and export" }),
+  );
+
+  const exportFile = screen.getByRole("button", { name: "Export file" });
+
+  // Without a host or browser save, the service saves and reports where.
+  await user.click(exportFile);
+  await screen.findByText("/home/person/settings.json");
+  assert.equal(serviceSaves().length, 1);
+
+  // A host that declines has no download, and the service must not save instead.
+  transport.saveJson = async () => {
+    throw new Error("The host didn't save the file.");
+  };
+
+  await user.click(exportFile);
+  await screen.findByText(/didn't save the file\. Use Copy JSON instead\./);
+  assert.equal(serviceSaves().length, 1);
+});
