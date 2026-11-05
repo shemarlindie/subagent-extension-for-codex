@@ -22,14 +22,16 @@ type RunSetting = { label: string; compact?: string };
 
 /** The settings a task started with, in the order they're shown. */
 function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
-  const native = providerTaskFacts(task)["Permission mode"],
+  const facts = providerTaskFacts(task),
+    native = facts["Permission mode"],
     permission = readOnlyProfile(task.worker_profile)
       ? "Read only"
       : native && shortPermissionLabel(native),
     reasoning = task.reasoning_effort || "default",
     profile = titleCase(task.worker_profile),
     // Named as the composer names it, when the provider still lists the model.
-    model = task.model ? modelName(models, task.model) : "Default model";
+    ran = facts["Effective model"] ?? task.model,
+    model = ran ? modelName(models, ran) : "Default model";
 
   return [
     { label: profile, compact: profile },
@@ -42,6 +44,20 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
       ? [{ label: permission, compact: compactPermissionLabel(permission) }]
       : []),
   ];
+}
+
+/** What the task runs with, and what it asked for where that differs. */
+function runSettingsTitle(task: Task, settings: RunSetting[]) {
+  const facts = providerTaskFacts(task),
+    requested = [
+      facts["Requested permission mode"],
+      facts["Effective model"] && task.model,
+    ].filter(Boolean);
+
+  return [
+    `Set when the task started: ${settings.map((setting) => setting.label).join(" · ")}`,
+    ...(requested.length ? [`Requested: ${requested.join(", ")}`] : []),
+  ].join(". ");
 }
 
 /**
@@ -62,7 +78,7 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
     <ul
       className="task-run-settings"
       aria-label="Task settings"
-      title={`Set when the task started: ${settings.map((setting) => setting.label).join(" · ")}`}
+      title={runSettingsTitle(task, settings)}
     >
       {settings.map(({ label, compact }, index) => (
         <li key={label} data-compact={compact ? undefined : "hidden"}>

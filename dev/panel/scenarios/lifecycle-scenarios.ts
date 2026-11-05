@@ -364,16 +364,6 @@ const resumed = lifecycle(
   ["task.session_started", { reason: "session_unavailable" }],
   ["task.started", { turn: 2 }],
   [
-    "agent.limited",
-    {
-      setting: "permission_mode",
-      requested: "bypassPermissions",
-      effective: "default",
-      reason:
-        "Running with Ask for approval. Your organization turned off Bypass permission prompts.",
-    },
-  ],
-  [
     "agent.reply",
     {
       text: resumedReplies[1],

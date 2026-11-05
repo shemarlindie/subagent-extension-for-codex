@@ -42,6 +42,16 @@ export function SettingsSectionRows({
           <Help id={`settings-${section.id}-help`} parts={section.help} />
         </div>
       ) : null}
+      {section.facts?.length ? (
+        <dl className="settings-facts">
+          {section.facts.map(({ label, detail }) => (
+            <div key={`${label}${detail}`} className="setting-row">
+              <dt className="setting-label">{label}</dt>
+              <dd className="help">{detail}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
       {rows.map(({ row, scopes, match }) => {
         if (row.kind === "models") {
           const ordered = search.active

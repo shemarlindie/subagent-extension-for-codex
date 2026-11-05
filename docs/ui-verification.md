@@ -54,6 +54,8 @@ Host settings:
 - **Automatically add chat projects** matches the user setting of that name.
 - **Claude Code unavailable** shows readiness notices in the panel and the New
   task form.
+- **Org policy** applies a fixture policy to the composer's menus and Settings,
+  with a saved mode it blocks.
 - **Added projects** lists projects you registered. They persist across reloads
   until **Reset projects**.
 - **Host style variable overrides** takes JSON. See
@@ -75,6 +77,8 @@ Host settings:
 | Move the date helpers                       | Cost budget exhausted. The warning notice applies a higher limit without sending a message.                                                                                                |
 | Finish the date helper migration            | Runtime budget exhausted. The warning notice applies a higher runtime limit without sending a message.                                                                                     |
 | Move the screens to the new layout          | Long Chat conversation for scrolling.                                                                                                                                                      |
+| Clean up the upload retries                 | Org policy limited the mode: the note in Chat, effective values in run settings and Details.                                                                                               |
+| Fix the flaky upload test                   | Org policy turned the chosen sandbox off, so the turn failed before its prompt.                                                                                                            |
 | Stabilise the retry timer test              | Worktree recreated from its branch in a new session.                                                                                                                                       |
 | Migrate the config loader                   | Pending inline question and queue-only composer. Queued messages stay until reload.                                                                                                        |
 | Plan the sign-in rollout                    | Three stacked questions, single and multiple choices, and queue-only composer.                                                                                                             |

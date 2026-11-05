@@ -15,6 +15,8 @@ export type SelectOption = {
   showDescriptionInValue?: boolean;
   /** Optional leading icon for the menu option and selected value. */
   icon?: IconName;
+  /** Listed but not choosable, with the reason in `description`. */
+  disabled?: boolean;
 };
 
 /** A command listed after a select's options, such as "Add project…". */
@@ -137,10 +139,12 @@ type SelectOptionsProps = {
   options: SelectOption[];
   /** Listed last. The owning select runs it when `SELECT_ACTION_VALUE` is chosen. */
   action?: SelectAction;
+  /** A line under the list, such as why it's short. */
+  footer?: string;
 };
 
 /** The shared dropdown list, reused by compact selects such as `ChipSelect`. */
-export function SelectOptions({ options, action }: SelectOptionsProps) {
+export function SelectOptions({ options, action, footer }: SelectOptionsProps) {
   return (
     <Select.Portal>
       <Select.Positioner
@@ -156,6 +160,7 @@ export function SelectOptions({ options, action }: SelectOptionsProps) {
                 key={option.value}
                 value={option.value}
                 className="select-item"
+                disabled={option.disabled}
               >
                 <span className="select-item-content">
                   {option.icon && (
@@ -208,6 +213,7 @@ export function SelectOptions({ options, action }: SelectOptionsProps) {
               </>
             )}
           </Select.List>
+          {footer && <p className="select-footer">{footer}</p>}
         </Select.Popup>
       </Select.Positioner>
     </Select.Portal>

@@ -7,6 +7,8 @@ type ModelChipProps = {
   models: ModelChoice[];
   /** The model a blank choice inherits, from the profile, provider or global default. */
   inherited?: string;
+  /** Why the list is shorter than usual. */
+  footer?: string;
   loading: boolean;
   disabled: boolean;
 };
@@ -29,6 +31,7 @@ export function modelChipLabel(
 export function ModelChip({
   models,
   inherited,
+  footer,
   loading,
   disabled,
 }: ModelChipProps) {
@@ -44,6 +47,7 @@ export function ModelChip({
       onValueChange={choose}
       loading={loading}
       disabled={disabled}
+      footer={footer}
       options={[
         {
           value: "",

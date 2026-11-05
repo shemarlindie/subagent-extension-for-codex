@@ -44,3 +44,25 @@ export const blockedReason = (
   policy?.blocked.find(
     (item) => item.setting === setting && item.value === value,
   )?.reason;
+
+/** A setting's choices, with those policy rules out locked and explained. */
+export function withBlockedOptions<O extends { value: string }>(
+  options: O[],
+  policy: ProviderPolicy | undefined,
+  setting: ProviderPolicy["blocked"][number]["setting"],
+) {
+  return options.map((option) => {
+    const reason = blockedReason(policy, setting, option.value);
+
+    return reason ? { ...option, disabled: true, description: reason } : option;
+  });
+}
+
+/**
+ * The mode a new task can use: a blocked one reads as the mode Claude Code
+ * would fall back to, so a form never shows or submits what can't run.
+ */
+export const allowedPermissionMode = (
+  policy: ProviderPolicy | undefined,
+  mode: string,
+) => (blockedReason(policy, "permission_mode", mode) ? "default" : mode);

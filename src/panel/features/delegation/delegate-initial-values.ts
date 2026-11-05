@@ -146,6 +146,7 @@ export function delegateInitialValues({
       preferredProvider,
       preferredWorker?.metadata,
       defaults,
+      preferredWorker?.policy,
     ),
     repository: target.repository ?? "",
     revision: startingRevision(

@@ -22,6 +22,8 @@ export type Settings = {
   autoRegister: boolean;
   /** Fixtures only; the live service checks the installed Claude Code. */
   claudeUnavailable: boolean;
+  /** Fixtures only; the live service asks Claude Code. */
+  orgPolicy: "" | "device" | "console";
   /** Fixtures only; lets the preview simulate successful budget updates. */
   successfulBudgetUpdates: boolean;
   /** Fixtures only; delays content reads so loading placeholders can be inspected. */

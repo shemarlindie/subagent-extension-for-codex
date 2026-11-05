@@ -31,6 +31,8 @@ type ChipSelectProps = {
   title?: string;
   /** A command listed after the options, such as "Add project…". It runs once the menu closes. */
   action?: SelectAction;
+  /** A line under the menu's options. */
+  footer?: string;
 };
 
 /**
@@ -49,6 +51,7 @@ export function ChipSelect({
   placeholder = label,
   title,
   action,
+  footer,
 }: ChipSelectProps) {
   const selected = options.find((option) => option.value === value),
     text = selected ? (selected.chipLabel ?? selected.label) : placeholder;
@@ -92,7 +95,7 @@ export function ChipSelect({
           {loading ? <LoadingSpinner /> : <Chevron />}
         </span>
       </Select.Trigger>
-      <SelectOptions options={options} action={action} />
+      <SelectOptions options={options} action={action} footer={footer} />
     </Select.Root>
   );
 }

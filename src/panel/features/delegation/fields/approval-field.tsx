@@ -1,6 +1,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
+import { withBlockedOptions } from "../../../../shared/providers/policy";
 import type { Worker } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { Field } from "../../../shared/forms/fields";
@@ -13,6 +14,12 @@ interface ApprovalFieldProps {
   disabled?: boolean;
   loading?: boolean;
 }
+
+/** The worker's modes, or a stand-in once it's known to have none. */
+const fallbackPermissions = (
+  options: { value: string; label: string }[] | undefined,
+  unresolved: boolean,
+) => options ?? (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
 
 export function ApprovalField({
   workers,
@@ -29,10 +36,7 @@ export function ApprovalField({
     info?.metadata,
   )?.nativePermissions;
 
-  const unresolved = loading && !info,
-    permissionOptions =
-      permissions?.options ??
-      (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
+  const unresolved = loading && !info;
 
   return (
     <>
@@ -46,7 +50,11 @@ export function ApprovalField({
           loading={loading}
           loadingLabel="Loading permission options"
           placeholder={unresolved ? "Loading…" : undefined}
-          options={permissionOptions}
+          options={withBlockedOptions(
+            fallbackPermissions(permissions?.options, unresolved),
+            info?.policy,
+            "permission_mode",
+          )}
         />
         <p className="help">
           {unresolved

@@ -13,6 +13,7 @@ const settingOptionSchema = z.object({
   value: z.string(),
   label: z.string(),
   description: z.string().optional(),
+  disabled: z.boolean().optional(),
 });
 
 const settingRowBaseSchema = z.object({
@@ -25,6 +26,7 @@ const settingRowBaseSchema = z.object({
 const selectSettingRowSchema = settingRowBaseSchema.extend({
   kind: z.literal("select"),
   options: z.array(settingOptionSchema),
+  warning: z.string().optional(),
 });
 
 const switchSettingRowSchema = settingRowBaseSchema.extend({
@@ -55,6 +57,7 @@ const modelScopeSchema = z.object({
     path: z.string(),
     label: z.string(),
     options: z.array(settingOptionSchema).optional(),
+    warning: z.string().optional(),
   }),
   effort: z.object({
     path: z.string(),
@@ -82,5 +85,13 @@ export const settingSectionSchema = z.object({
   id: z.string(),
   title: z.string(),
   help: z.array(helpPartSchema).optional(),
+  facts: z
+    .array(
+      z.object({
+        label: z.string(),
+        detail: z.string(),
+      }),
+    )
+    .optional(),
   rows: z.array(settingRowSchema),
 });

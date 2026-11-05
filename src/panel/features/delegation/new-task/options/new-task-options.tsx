@@ -3,7 +3,16 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerMetadata } from "../../../../../shared/providers/metadata";
-import type { NewTaskState, Snapshot } from "../../../../app/state/types";
+import {
+  modelAllowed,
+  withBlockedOptions,
+} from "../../../../../shared/providers/policy";
+import type { ModelChoice } from "../../../../../shared/providers/types";
+import type {
+  NewTaskState,
+  Snapshot,
+  Worker,
+} from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
@@ -25,6 +34,29 @@ type NewTaskOptionsProps = {
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
 
+/** The choices org policy changes: locked modes, and a saved model it excludes. */
+function policyOptions(
+  provider: string,
+  workerInfo: Worker | undefined,
+  models: ModelChoice[],
+  model: string | undefined,
+) {
+  const policy = workerInfo?.policy,
+    permissions = providerMetadata(provider, workerInfo?.metadata)
+      ?.nativePermissions?.options;
+
+  return {
+    ...(model && !modelAllowed(policy, models, model)
+      ? { model: undefined }
+      : {}),
+    modelsFooter: policy?.available_models
+      ? "Your organization limits these models."
+      : undefined,
+    permissions:
+      permissions && withBlockedOptions(permissions, policy, "permission_mode"),
+  };
+}
+
 /** What the selected worker resolves to, once settings have loaded. */
 function resolvedOptions(
   newTask: NewTaskState,
@@ -37,15 +69,17 @@ function resolvedOptions(
       ? modelDefaults(newTask.defaults, state.workers, worker, model)
       : undefined;
 
+  const { workerInfo, providerModel } = resolved ?? {},
+    models = workerInfo?.models ?? [];
+
   return {
-    models: resolved?.workerInfo?.models ?? [],
+    models,
     // The chips edit the profile's settings, so Default clears them and
     // inherits the provider's.
-    model: resolved?.providerModel,
+    model: providerModel,
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
-    permissions: providerMetadata(provider, resolved?.workerInfo?.metadata)
-      ?.nativePermissions?.options,
+    ...policyOptions(provider, workerInfo, models, providerModel),
     readOnly: Boolean(profile && readOnlyProfile(profile)),
   };
 }
@@ -146,6 +180,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           <ModelChip
             models={resolved.models}
             inherited={resolved.model}
+            footer={resolved.modelsFooter}
             loading={loading}
             disabled={disabled}
           />

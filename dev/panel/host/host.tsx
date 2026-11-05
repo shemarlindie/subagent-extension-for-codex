@@ -93,6 +93,7 @@ const defaults: Settings = {
   cwd: __DEV_HOST_CWD__,
   autoRegister: true,
   claudeUnavailable: false,
+  orgPolicy: "",
   successfulBudgetUpdates: false,
   slowAsyncReads: false,
   addedProjects: [],
@@ -250,6 +251,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    orgPolicy,
     successfulBudgetUpdates,
     slowAsyncReads,
   } = settings;
@@ -265,6 +267,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    orgPolicy,
     successfulBudgetUpdates,
     slowAsyncReads,
   ]);
@@ -343,6 +346,7 @@ export function Host() {
         result = fixtureCall(name, args, {
           autoRegisterChatProject: current.autoRegister,
           claudeUnavailable: current.claudeUnavailable,
+          ...(current.orgPolicy ? { orgPolicy: current.orgPolicy } : {}),
           successfulBudgetUpdates: current.successfulBudgetUpdates,
           deferTaskList: current.slowAsyncReads,
           addedProjects: added.current,
@@ -750,6 +754,22 @@ export function Host() {
                 >
                   Claude Code unavailable
                 </span>
+              </label>
+              <label>
+                Org policy
+                <select
+                  value={orgPolicy}
+                  disabled={source === "live"}
+                  onChange={(e) =>
+                    update({
+                      orgPolicy: e.target.value as Settings["orgPolicy"],
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  <option value="device">On this computer</option>
+                  <option value="console">Admin console</option>
+                </select>
               </label>
               <div className="added-projects">
                 <span>Added projects (fixtures)</span>

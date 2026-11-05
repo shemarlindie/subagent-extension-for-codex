@@ -26,7 +26,7 @@ import {
   withoutOriginalResponses,
 } from "./original-response-tools";
 import { PREVIEW_PENDING_TOOLS, previewPending } from "./pending-update-tools";
-import { previewModels } from "./preview-models";
+import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -82,6 +82,8 @@ export type PreviewOptions = {
   autoRegisterChatProject?: boolean;
   /** Reports Claude as not ready, as the service does for an unsupported CLI. */
   claudeUnavailable?: boolean;
+  /** Applies an org policy from this source, as discovery reports it. */
+  orgPolicy?: "device" | "console";
   /** Applies budget changes to fixture tasks instead of rejecting the action. */
   successfulBudgetUpdates?: boolean;
   /** Leaves launch task data to the delayed list read when inspecting loading. */
@@ -495,7 +497,10 @@ export function previewTool(
         // The service skips model discovery while the CLI isn't ready.
         ...(options.claudeUnavailable
           ? { readiness: previewClaudeUnavailable }
-          : { models: previewModels, readiness: previewClaudeReady }),
+          : {
+              ...previewCatalog(options.orgPolicy),
+              readiness: previewClaudeReady,
+            }),
         capabilities: {
           cost_budget: true,
           interrupt: true,
@@ -506,7 +511,7 @@ export function previewTool(
     ],
     // Built with the service's own section builder, so the preview matches it.
     get_settings: (() => {
-      const values = withSetting(
+      const base = withSetting(
         withSetting(
           previewSettingsDefaults,
           "projects.auto_register_chat",
@@ -516,6 +521,11 @@ export function previewTool(
         "sonnet",
       );
 
+      // Saved before the policy arrived, so the warnings have something to say.
+      const values = options.orgPolicy
+        ? withSetting(base, "providers.claude.permission_mode", "auto")
+        : base;
+
       return {
         schema: { type: "object", properties: {} },
         values,
@@ -523,7 +533,9 @@ export function previewTool(
         sections: settingsSections({
           values,
           providers: ["claude"],
-          catalogs: [{ provider: "claude", models: previewModels }],
+          catalogs: [
+            { provider: "claude", ...previewCatalog(options.orgPolicy) },
+          ],
         }),
       };
     })(),

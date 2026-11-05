@@ -21,6 +21,7 @@ import {
   liveConversationTask,
 } from "./live-conversation";
 import { liveTasks, liveTimelines, statusTasks } from "./live-scenarios";
+import { orgPolicyTasks, orgPolicyTimelines } from "./org-policy-scenarios";
 import { projectTasks } from "./project-scenarios";
 
 export { previewLiveStatus, previewStreamingDraft } from "./live-scenarios";
@@ -83,6 +84,7 @@ export const previewTasks: Task[] = [
     statusTasks,
     recordedFixtures.map((recorded) => recorded.task),
     projectTasks,
+    orgPolicyTasks,
   );
 
 const timelinesById = new Map(
@@ -92,6 +94,7 @@ const timelinesById = new Map(
     ...inputTimelines,
     ...conversationTimelines,
     ...liveTimelines,
+    ...orgPolicyTimelines,
   ].map((timeline) => [timeline.taskId, timeline]),
 );
 
@@ -122,6 +125,8 @@ export const previewEvents: Event[] = [
     "preview-runtime-budget",
     "preview-long-chat",
     "preview-live-streaming",
+    "preview-policy-limited",
+    "preview-policy-blocked",
   ].flatMap((id) => timelinesById.get(id)!.events),
   ...liveTimelines
     .filter((timeline) => timeline.taskId !== "preview-live-streaming")
