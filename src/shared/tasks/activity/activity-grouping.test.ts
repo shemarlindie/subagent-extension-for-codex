@@ -692,6 +692,24 @@ test("merged normalized message content separates housekeeping bursts in input e
   );
 });
 
+test("a limited session reads as its reason", () => {
+  const [group] = groupActivity([
+    event(1, "agent.limited", {
+      setting: "model",
+      requested: "opus",
+      effective: "claude-sonnet-5-5",
+      reason: "Running with claude-sonnet-5-5 instead of opus.",
+    }),
+  ]);
+
+  assert.equal(group?.title, "Session limited");
+
+  assert.equal(
+    group?.summary,
+    "Running with claude-sonnet-5-5 instead of opus.",
+  );
+});
+
 test("a turn completion keeps its result when no matching reply follows", () => {
   const groups = groupActivity([
     event(1, "agent.completed", { result: "Done." }),

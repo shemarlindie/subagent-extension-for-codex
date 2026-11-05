@@ -89,6 +89,9 @@ export function serviceSummary(e: Event) {
     return `Turn ${turnEnded.turn} ${turnEnded.outcome}`;
   }
 
+  const limited = eventPayload(e, "agent.limited");
+  if (limited) return limited.reason;
+
   const queueChanged = eventPayload(e, "task.queue_changed");
 
   if (queueChanged) {
@@ -103,6 +106,7 @@ export function serviceSummary(e: Event) {
 /** Row titles for service events whose type doesn't read as one. */
 const eventTitles: Partial<Record<string, string>> = {
   "agent.completed": "Turn completed",
+  "agent.limited": "Session limited",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
   "task.instruction": "Message",
