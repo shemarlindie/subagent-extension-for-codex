@@ -552,6 +552,7 @@ export function previewTool(
         }),
       };
     })(),
+    app_export_settings: { document: JSON.stringify(previewSettingsDefaults) },
   };
 
   if (!(name in fixtures)) {

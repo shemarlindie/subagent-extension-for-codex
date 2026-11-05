@@ -161,6 +161,28 @@ export class HostTransport implements Transport {
     if (result.isError) throw new Error("The host declined to open the link.");
   }
 
+  async saveJson(name: string, text: string) {
+    if (this.disposed) throw new Error("The console has closed.");
+    if (!this.app.getHostCapabilities()?.downloadFile) return false;
+
+    const result = await this.app.downloadFile({
+      contents: [
+        {
+          type: "resource",
+          resource: {
+            uri: `file:///${encodeURIComponent(name)}`,
+            mimeType: "application/json",
+            text,
+          },
+        },
+      ],
+    });
+
+    if (result.isError) throw new Error("The file wasn't saved.");
+
+    return true;
+  }
+
   async expand() {
     if (this.disposed) throw new Error("The console has closed.");
     const context = this.app.getHostContext();

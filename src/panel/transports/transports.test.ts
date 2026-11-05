@@ -349,6 +349,51 @@ test("host folder browsing allows native interaction time while ordinary tools u
   transport.dispose();
 });
 
+test("host saves a file only when it offers downloads, and reports a refusal", async () => {
+  const fake = hostApp();
+  const transport = new HostTransport(fake.app as any);
+
+  assert.equal(await transport.saveJson("settings.json", "{}"), false);
+
+  const downloads: unknown[] = [];
+  let isError = false;
+
+  Object.assign(fake.app, {
+    getHostCapabilities: () => ({ serverTools: {}, downloadFile: {} }),
+    downloadFile: async (params: unknown) => {
+      downloads.push(params);
+
+      return { isError };
+    },
+  });
+
+  assert.equal(await transport.saveJson("settings.json", "{}"), true);
+
+  assert.deepEqual(downloads, [
+    {
+      contents: [
+        {
+          type: "resource",
+          resource: {
+            uri: "file:///settings.json",
+            mimeType: "application/json",
+            text: "{}",
+          },
+        },
+      ],
+    },
+  ]);
+
+  isError = true;
+
+  await assert.rejects(
+    transport.saveJson("settings.json", "{}"),
+    /wasn't saved/,
+  );
+
+  transport.dispose();
+});
+
 test("host opens links through the host and reports a refusal", async () => {
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);

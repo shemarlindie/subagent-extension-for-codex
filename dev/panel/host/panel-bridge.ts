@@ -99,6 +99,12 @@ export function connectPanel(
     return {};
   };
 
+  bridge.ondownloadfile = async (params) => {
+    record("download file", params);
+
+    return {};
+  };
+
   bridge.addEventListener("loggingmessage", (params) => record("log", params));
 
   // Listen before the document loads: the panel sends initialize at startup.

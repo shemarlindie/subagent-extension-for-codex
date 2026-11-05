@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { z } from "zod";
 
-import { downloadsDirectory } from "./downloads-directory.js";
 import { type Settings } from "./settings.js";
 import { exportSettings } from "./settings-transfer.js";
 
@@ -14,11 +14,9 @@ export const settingsFileOutputSchema = z.object({ path: z.string() });
 export async function saveSettingsFile(
   settings: Settings,
   owner: string,
-  directory = downloadsDirectory,
+  folder = homedir(),
 ) {
   const { document } = exportSettings(settings, owner);
-  const folder = await directory();
-  await mkdir(folder, { recursive: true, mode: 0o700 });
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
   const path = join(

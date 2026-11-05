@@ -144,8 +144,9 @@ authority, lists skipped dotted paths and rejects other formats. The format
 number controls compatibility independently of the extension version.
 
 `app_save_settings_file` writes the user's settings export to a new file in the
-service computer's Downloads folder. It accepts no destination or file contents
-from the caller and returns the saved path. See
+service computer's home folder. The panel uses it only when neither the host nor
+the browser can save the file. It accepts no destination or file contents from
+the caller and returns the saved path. See
 [Copy settings between computers](configuration.md#copy-settings-between-computers).
 
 For Claude permissions routed to `parent_agent`, model-visible `submit_input`

@@ -273,6 +273,7 @@ export function Host() {
     const capabilities: McpUiHostCapabilities = {
       serverTools: {},
       openLinks: {},
+      downloadFile: {},
       logging: {},
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),

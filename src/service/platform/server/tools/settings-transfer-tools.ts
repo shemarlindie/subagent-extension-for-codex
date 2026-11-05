@@ -34,7 +34,7 @@ export function settingsTransferTools(settings: Settings, owner: string) {
     }),
     app_save_settings_file: tool({
       description:
-        "User interface only: save the user's defaults as a new JSON file in Downloads on the service computer and return its path.",
+        "User interface only: save the user's defaults as a new JSON file in the home folder on the service computer and return its path.",
       schema: z.strictObject({}),
       outputSchema: settingsFileOutputSchema,
       run: () => saveSettingsFile(settings, owner),

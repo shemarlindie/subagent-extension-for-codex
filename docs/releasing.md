@@ -120,8 +120,7 @@ The workflow relies on settings made by hand before the first release:
 
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
 `main` and pull requests. Windows runs the build, package tests and focused
-settings file tests, including its native Downloads lookup. Other parts of the
-suite use POSIX shell fakes.
+settings file tests. Other parts of the suite use POSIX shell fakes.
 
 The macOS checks run on a self-hosted runner when the `MACOS_RUNNER` repository
 variable names its label, and on `macos-latest` when the variable is unset.

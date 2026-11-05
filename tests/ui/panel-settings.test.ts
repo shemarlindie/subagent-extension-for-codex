@@ -623,3 +623,61 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
     false,
   );
 });
+
+test("export uses the host or browser first, and the service only when neither can save", async (t) => {
+  const saved: [name: string, text: string][] = [];
+
+  const { transport, user } = await setupSettings(t, (transport) => {
+    serveSettings(transport, { sections: [] });
+    const original = transport.tool.bind(transport);
+
+    transport.tool = async <T>(name: string, args = {}) => {
+      if (name === "app_export_settings") return { document: "{}" } as T;
+
+      if (name === "app_save_settings_file") {
+        transport.calls.push({ name, args });
+
+        return { path: "/home/person/settings.json" } as T;
+      }
+
+      return original<T>(name, args);
+    };
+  });
+
+  const serviceSaves = () =>
+    transport.calls.filter((call) => call.name === "app_save_settings_file");
+
+  await user.click(
+    await screen.findByRole("tab", { name: "Import and export" }),
+  );
+
+  const exportFile = screen.getByRole("button", { name: "Export file" });
+
+  // Without a host or browser save, the service saves and reports where.
+  await user.click(exportFile);
+  await screen.findByText("/home/person/settings.json");
+  assert.equal(serviceSaves().length, 1);
+
+  // A host that declines has no download, and the service must not save instead.
+  let result: boolean | Error = new Error("The file wasn't saved.");
+
+  Object.assign(transport, {
+    saveJson: async (name: string, text: string) => {
+      if (result instanceof Error) throw result;
+      saved.push([name, text]);
+
+      return result;
+    },
+  });
+
+  await user.click(exportFile);
+  await screen.findByText(/The file wasn't saved\. Use Copy JSON instead\./);
+  assert.equal(serviceSaves().length, 1);
+
+  // A host or browser save names no path, because only it knows the location.
+  result = true;
+  await user.click(exportFile);
+  await screen.findByText("Exported");
+  assert.deepEqual(saved, [["delegated-work-settings.json", "{}"]]);
+  assert.equal(serviceSaves().length, 1);
+});

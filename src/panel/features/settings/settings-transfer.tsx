@@ -17,6 +17,8 @@ type SettingsTransferForm = { document: string };
 type TransferStatus =
   | { kind: "idle" }
   | { kind: "copied" }
+  // The host or browser took the file, and only it knows where the file went.
+  | { kind: "exported" }
   | { kind: "saved"; path: string }
   // The host blocked the clipboard, so the export is shown for manual copy.
   | { kind: "manual"; document: string }
@@ -56,7 +58,22 @@ export function SettingsTransfer({
     setExporting(action);
 
     try {
+      const { document } = await controller.tool<SettingsExport>(
+        "app_export_settings",
+      );
+
       if (action === "save") {
+        const exported = await controller.transport.saveJson?.(
+          "delegated-work-settings.json",
+          document,
+        );
+
+        if (exported) {
+          setStatus({ kind: "exported" });
+
+          return;
+        }
+
         const { path } = await controller.tool<{ path: string }>(
           "app_save_settings_file",
         );
@@ -65,10 +82,6 @@ export function SettingsTransfer({
 
         return;
       }
-
-      const { document } = await controller.tool<SettingsExport>(
-        "app_export_settings",
-      );
 
       try {
         await writeClipboardText(document);
@@ -117,9 +130,6 @@ export function SettingsTransfer({
       <p className="settings-transfer-note">
         Save or copy your settings as JSON. Save your changes first.
       </p>
-      <p className="settings-transfer-note">
-        Exported files are saved to Downloads.
-      </p>
       <div className="settings-transfer-actions">
         <Button disabled={disabled} onClick={() => void exportSaved("save")}>
           {exporting === "save" ? "Saving…" : "Export file"}
@@ -131,6 +141,7 @@ export function SettingsTransfer({
       <div className="settings-transfer-status">
         <span role="status">
           {status.kind === "copied" ? "Copied" : null}
+          {status.kind === "exported" ? "Exported" : null}
           {status.kind === "saved" ? (
             <>
               Saved to <code>{status.path}</code>

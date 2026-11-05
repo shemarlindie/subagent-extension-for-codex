@@ -61,6 +61,13 @@ active turn. Global panels and the standalone console send nothing to the chat.
 - A queued result does not show that Codex received the message or began a new
   turn.
 
+## Settings file export
+
+**Export file** uses the portable `App.downloadFile` call when the host
+advertises `downloadFile`. The host decides where the file goes and whether to
+prompt. Otherwise the service saves it in its computer's home folder. Whether
+Codex advertises `downloadFile` hasn't been checked. The dev host always does.
+
 ## Project context and registration
 
 Portable MCP Apps host context has presentation fields but no standard

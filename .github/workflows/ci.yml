@@ -60,7 +60,7 @@ jobs:
       - run: npm install --global @openai/codex@0.162.1
       - run: npm run build
       - run: npx vitest run tests/integration/package
-      - run: npx vitest run src/service/features/settings/downloads-directory.test.ts src/service/features/settings/downloads-directory.integration.test.ts src/service/features/settings/settings-file.integration.test.ts
+      - run: npx vitest run src/service/features/settings/settings-file.integration.test.ts
 
   # A pull request that changes the listed version may merge only once that
   # version is published. A release must be published from its head commit,
