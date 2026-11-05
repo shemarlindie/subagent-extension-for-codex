@@ -12,6 +12,7 @@ import {
   distanceFromEnd,
   end,
   END_SLACK_PX,
+  followsEnd,
   type Glide,
   glideAhead,
   glideProgress,
@@ -87,6 +88,11 @@ export function useReadingScroll({
   const glide = useRef<Glide | undefined>(undefined);
   const glideTimer = useRef<number | undefined>(undefined);
 
+  const pin = useCallback((next: boolean) => {
+    pinnedRef.current = next;
+    setPinned(next);
+  }, []);
+
   // Arrival fades change only opacity, so measuring and scrolling leave them
   // playing.
   const stopAnimations = useCallback(() => {
@@ -122,9 +128,7 @@ export function useReadingScroll({
         preserveScroll && saved ? container.scrollTop - saved.top : 0;
 
       if (pinnedRef.current && scrolled) {
-        const nextPinned = distanceFromEnd(container) <= END_SLACK_PX;
-        pinnedRef.current = nextPinned;
-        setPinned(nextPinned);
+        pin(distanceFromEnd(container) <= END_SLACK_PX);
       }
 
       if (pinnedRef.current) {
@@ -147,7 +151,7 @@ export function useReadingScroll({
         correctedScrollTop.current = container.scrollTop;
       }
     },
-    [reading, itemAttribute],
+    [reading, itemAttribute, pin],
   );
 
   /**
@@ -270,12 +274,10 @@ export function useReadingScroll({
   const judge = useCallback(
     (viewport: HTMLElement, container: HTMLElement) => {
       stopAnimations();
-      const next = distanceFromEnd(container) <= END_SLACK_PX;
-      pinnedRef.current = next;
-      setPinned(next);
+      pin(followsEnd(container, pinnedRef.current, reading.position));
       remember(viewport, container);
     },
-    [remember, stopAnimations],
+    [reading, pin, remember, stopAnimations],
   );
 
   const awaitGlide = useCallback(() => {
@@ -381,9 +383,7 @@ export function useReadingScroll({
     const distance = Math.abs(target - before);
 
     // Reading from the row unpins, unless the row already sits at the end.
-    const next = end(container) - target <= END_SLACK_PX;
-    pinnedRef.current = next;
-    setPinned(next);
+    pin(end(container) - target <= END_SLACK_PX);
 
     // Revealing a row the reader asked for glides to it; opening at one jumps.
     if (focusReveal && distance >= 1 && canGlide(container)) {
@@ -404,6 +404,7 @@ export function useReadingScroll({
     active,
     ready,
     itemAttribute,
+    pin,
     remember,
     stopAnimations,
     startGlide,
@@ -448,8 +449,7 @@ export function useReadingScroll({
     window.clearTimeout(glideTimer.current);
     glide.current = undefined;
     correctedScrollTop.current = top;
-    pinnedRef.current = false;
-    setPinned(false);
+    pin(false);
     remember(viewport, container);
   };
 
@@ -514,8 +514,7 @@ export function useReadingScroll({
     const container = scrollContainer(viewport);
     const target = end(container);
     const distance = Math.abs(container.scrollTop - target);
-    pinnedRef.current = true;
-    setPinned(true);
+    pin(true);
 
     if (distance >= 1 && canGlide(container)) {
       startGlide(container, target);
@@ -526,7 +525,7 @@ export function useReadingScroll({
 
     viewport.focus({ preventScroll: true });
     remember(viewport, container);
-  }, [startGlide, remember, stopAnimations]);
+  }, [pin, startGlide, remember, stopAnimations]);
 
   useLayoutEffect(
     () => () => {
