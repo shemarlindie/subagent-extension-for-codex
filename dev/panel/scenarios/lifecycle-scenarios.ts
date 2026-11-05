@@ -52,6 +52,14 @@ failed.sdk({
   key: { projectKey: "demo-project", sessionId: SESSION },
 });
 
+failed.sdk({
+  type: "system",
+  subtype: "session_writes_lost",
+  error_code: "ENOSPC",
+  lost: ["transcript"],
+  transcript_session_ids: [SESSION],
+});
+
 rateLimit(failed, "rejected");
 
 failed.result({

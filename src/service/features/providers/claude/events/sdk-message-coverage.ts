@@ -38,6 +38,7 @@ const systemSubtypes: Record<SdkSystemSubtype, true> = {
   elicitation_complete: true,
   permission_denied: true,
   mirror_error: true,
+  session_writes_lost: true,
   informational: true,
 };
 
