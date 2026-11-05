@@ -347,19 +347,46 @@ every program on the computer.
 
 Org policy outranks these settings, and Claude Code enforces it whether or not
 `settings_files` is on. It comes from your organization's admin console, device
-management or a `managed-settings.json` file.
+management or a `managed-settings.json` file. Other keys in it still apply, even
+when the panel doesn't mention them.
 
-The extension can't apply a sandbox that policy overrides, so it checks before
-each turn and stops the task when the session wouldn't have what you chose:
+The extension never reads policy files. An idle Claude session reports what
+applies, under the same rules as a task, so an API key on a custom
+`ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The result
+is cached for five minutes.
 
-- Policy that sets `sandbox.enabled: false` blocks `extension` and
-  `extension_locked`.
-- Any admin policy blocks `extension_locked`, unless it sets
-  `sandbox.network.allowManagedDomainsOnly` or
-  `parentSettingsBehavior: "merge"`.
+| Policy                                                                                                  | New tasks                                                        | Panel                                                                      |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `permissions.disableBypassPermissionsMode`, `disableAutoMode`                                           | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
+| `availableModels`                                                                                       | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
+| `deniedModels`                                                                                          | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
+| `sandbox.enabled: false`                                                                                | `extension` and `extension_locked` fail before the prompt.       | Both are locked, with the reason.                                          |
+| Any admin policy without `sandbox.network.allowManagedDomainsOnly` or `parentSettingsBehavior: "merge"` | `extension_locked` fails before the prompt.                      | It's locked, with the reason.                                              |
+| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                              | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
 
-If Claude Code can't report its settings, a sandboxed task fails without
-running. `user_config` tasks have nothing to check.
+A saved choice that policy now blocks stays saved, with a warning on its row,
+and applies again if the policy lifts. Locks are a convenience: importing
+settings can still save a blocked value, and the checks above stop it from
+taking effect.
+
+The sandbox is checked before every turn, because Claude Code picks up new
+policy while it runs. If Claude Code can't report its settings, a sandboxed task
+fails without running. `user_config` tasks have nothing to check.
+
+Limits:
+
+- These checks are verified against real policy files and a cached console
+  policy. Fetching from a real admin console is untested, including whether the
+  first session after sign-in already has the policy.
+- A model outside `availableModels` was seen to run only with an API key. Other
+  sign-ins are untested, and the extension's check applies to all of them.
+- Discovery runs in the service's directory, so project settings can differ. A
+  mode that reads as allowed may still fall back, and Chat then says so.
+- The extension's model matching is simpler than Claude Code's, so it can refuse
+  an older ID of an allowed family. An alias still works.
+- A denied tool call doesn't say who set the rule, so denials aren't attributed
+  to the organization.
+- Windows and device management profiles are untested.
 
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.

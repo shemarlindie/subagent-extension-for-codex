@@ -61,4 +61,6 @@ Restart the service after changing its environment.
 
 A ready CLI can still fail when it starts a session, for example on
 authentication or the network. Model discovery and task execution report those
-failures when they happen.
+failures when they happen. When [org policy](configuration.md#org-policy) makes
+Claude Code refuse to start, such as with a sign-in pin, the task shows the
+CLI's own text, which names the fix, and the service log keeps its reason code.

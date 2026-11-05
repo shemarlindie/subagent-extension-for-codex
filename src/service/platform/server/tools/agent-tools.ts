@@ -161,7 +161,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     list_workers: tool({
       readOnly: true,
       description:
-        "List installed providers with their profiles, capabilities and readiness. When readiness.ready is false, report readiness.message to the user instead of retrying.",
+        "List installed providers with their profiles, capabilities, readiness and any org policy limits. When readiness.ready is false, report readiness.message to the user instead of retrying. When policy is present, its blocked choices fail at start_task; absent policy doesn't mean everything is allowed.",
       schema: z.object({}),
       run: () => c.availableWorkers(owner),
     }),

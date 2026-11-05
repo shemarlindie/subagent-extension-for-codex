@@ -19,7 +19,9 @@ To delegate a task:
 
 1. Find the chat's project with `get_current_project` and approved roots with
    `list_projects`, which reports each one's `git` state. Inspect enabled
-   profiles with `list_workers`.
+   profiles with `list_workers`. Its `policy` field reports what
+   [org policy](configuration.md#org-policy) limits. `start_task` fails with the
+   reason when you ask for a mode or model it rules out.
 2. Pass an approved root's absolute path as `repository` to `start_task`. For an
    unregistered root, the
    [task-start registration policy](configuration.md#repository-access) may

@@ -52,6 +52,7 @@
     "fixture:record": "tsx dev/panel/recording/record-fixture.ts",
     "showcase:capture": "tsx dev/panel/showcase/capture.ts",
     "db:generate": "drizzle-kit generate",
+    "check:claude-policy": "node scripts/check-claude-policy.mjs",
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "predev": "npm run schemas:generate",
