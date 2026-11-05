@@ -19,7 +19,9 @@ const integrationTimeout = 60_000;
 export default defineConfig({
   plugins: [react()],
   test: {
-    pool: "threads",
+    // Tests run the executables they write. In a shared process, another file's
+    // spawn can briefly hold such a file open, and Linux fails with ETXTBSY.
+    pool: "forks",
     fsModuleCache: true,
     environmentOptions: {
       jsdom: { url: "http://localhost/", pretendToBeVisual: true },
