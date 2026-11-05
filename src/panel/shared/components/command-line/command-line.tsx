@@ -1,4 +1,4 @@
-import { CopyButton } from "../file-preview/copy-button";
+import { CopyButton } from "../copy-button/copy-button";
 
 type CommandLineProps = {
   label: string;

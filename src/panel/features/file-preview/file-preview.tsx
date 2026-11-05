@@ -11,10 +11,10 @@ import {
 import { createPortal } from "react-dom";
 
 import { useController } from "../../app/state/controller-context";
+import { CopyButton } from "../../shared/components/copy-button/copy-button";
 import { formatBytes } from "../../shared/utils/format";
 import { scrollChildIntoView } from "../../shared/utils/scroll-into-view";
 import { hasClipboardApi } from "../../shared/utils/write-clipboard";
-import { CopyButton } from "./copy-button";
 import { type ParsedDiffFile } from "./diff/diff-format";
 import { FileBadge } from "./file-badge";
 import {

@@ -36,7 +36,9 @@
 @import "../features/tasks/list/filters.css";
 @import "../features/tasks/unread/unread.css";
 @import "../features/file-preview/file-preview.css";
+@import "../shared/components/copy-button/copy-button.css";
 @import "../features/changes/changes.css";
+@import "../shared/components/command-line/command-line.css";
 @import "../features/tasks/chat/chat.css";
 @import "../features/delegation/delegation.css";
 @import "../features/delegation/new-task/new-task.css";
