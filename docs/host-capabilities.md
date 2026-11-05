@@ -65,8 +65,10 @@ active turn. Global panels and the standalone console send nothing to the chat.
 
 **Export file** uses the portable `App.downloadFile` call when the host
 advertises `downloadFile`. The host decides where the file goes and whether to
-prompt. Otherwise the service saves it in its computer's home folder. Whether
-Codex advertises `downloadFile` hasn't been checked. The dev host always does.
+prompt.
+[Copy settings between computers](configuration.md#copy-settings-between-computers)
+covers the other cases. Whether Codex advertises `downloadFile` hasn't been
+checked. The dev host always does.
 
 ## Project context and registration
 

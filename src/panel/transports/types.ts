@@ -42,6 +42,6 @@ export interface Transport {
   /** Opens an external link through the host, which may block new windows. */
   openLink?(url: string): Promise<void>;
   /** Saves through the host or browser. False when the service has to save it. */
-  saveJson?(name: string, text: string): Promise<boolean>;
+  saveJson(name: string, text: string): Promise<boolean>;
   login?(token: string): Promise<void>;
 }

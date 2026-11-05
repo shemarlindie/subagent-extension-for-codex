@@ -8,11 +8,18 @@ import { Store } from "../tasks/storage/store.js";
 import { Settings } from "./settings.js";
 import { saveSettingsFile } from "./settings-file.js";
 
+function useHomeFolder(folder: string) {
+  vi.stubEnv("HOME", folder);
+  vi.stubEnv("USERPROFILE", folder);
+}
+
 async function fixture(t: TestContext) {
   const directory = await mkdtemp(join(tmpdir(), "settings-file-"));
   const store = new Store(join(directory, "settings.sqlite"));
+  useHomeFolder(directory);
 
   t.onTestFinished(async () => {
+    vi.unstubAllEnvs();
     store.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -23,7 +30,7 @@ async function fixture(t: TestContext) {
   };
 }
 
-test("parallel exports create private distinct files containing the saved defaults", async (t) => {
+test("parallel exports create private distinct files in the home folder containing the saved defaults", async (t) => {
   const { directory, settings } = await fixture(t);
 
   settings.update("source", {
@@ -37,10 +44,11 @@ test("parallel exports create private distinct files containing the saved defaul
   });
 
   const [first, second] = await Promise.all([
-    saveSettingsFile(settings, "source", directory),
-    saveSettingsFile(settings, "source", directory),
+    saveSettingsFile(settings, "source"),
+    saveSettingsFile(settings, "source"),
   ]);
 
+  expect(dirname(first.path)).toBe(directory);
   expect(first.path).not.toBe(second.path);
   const document = await readFile(first.path, "utf8");
   expect(await readFile(second.path, "utf8")).toBe(document);
@@ -63,33 +71,19 @@ test("parallel exports create private distinct files containing the saved defaul
   // A subsequent export leaves the earlier file exactly as the user saved it.
   await writeFile(first.path, "earlier export");
 
-  const third = await saveSettingsFile(settings, "source", directory);
+  const third = await saveSettingsFile(settings, "source");
 
   expect(third.path).not.toBe(first.path);
   expect(await readFile(first.path, "utf8")).toBe("earlier export");
 });
 
-test("a destination that cannot hold files reports failure", async (t) => {
+test("a home folder that cannot hold files reports failure", async (t) => {
   const { directory, settings } = await fixture(t);
   const blocked = join(directory, "not-a-directory");
   await writeFile(blocked, "keep this file");
+  useHomeFolder(blocked);
 
-  await expect(saveSettingsFile(settings, "source", blocked)).rejects.toThrow();
+  await expect(saveSettingsFile(settings, "source")).rejects.toThrow();
 
   expect(await readFile(blocked, "utf8")).toBe("keep this file");
-});
-
-test("an export goes to the home folder by default", async (t) => {
-  const { directory, settings } = await fixture(t);
-  vi.stubEnv("HOME", directory);
-  vi.stubEnv("USERPROFILE", directory);
-
-  t.onTestFinished(() => {
-    vi.unstubAllEnvs();
-  });
-
-  const { path } = await saveSettingsFile(settings, "source");
-
-  expect(dirname(path)).toBe(directory);
-  expect(JSON.parse(await readFile(path, "utf8"))).toMatchObject({ format: 2 });
 });

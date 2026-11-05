@@ -63,7 +63,7 @@ export function SettingsTransfer({
       );
 
       if (action === "save") {
-        const exported = await controller.transport.saveJson?.(
+        const exported = await controller.transport.saveJson(
           "delegated-work-settings.json",
           document,
         );

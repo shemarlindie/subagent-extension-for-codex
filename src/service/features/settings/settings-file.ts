@@ -11,16 +11,12 @@ import { exportSettings } from "./settings-transfer.js";
 export const settingsFileOutputSchema = z.object({ path: z.string() });
 
 /** Saves only the caller's export. Neither contents nor destination come from the panel. */
-export async function saveSettingsFile(
-  settings: Settings,
-  owner: string,
-  folder = homedir(),
-) {
+export async function saveSettingsFile(settings: Settings, owner: string) {
   const { document } = exportSettings(settings, owner);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
   const path = join(
-    folder,
+    homedir(),
     `delegated-work-settings-${timestamp}-${randomUUID()}.json`,
   );
 

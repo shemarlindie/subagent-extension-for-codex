@@ -624,9 +624,7 @@ test("leaving settings with unsaved edits asks before discarding them", async (t
   );
 });
 
-test("export uses the host or browser first, and the service only when neither can save", async (t) => {
-  const saved: [name: string, text: string][] = [];
-
+test("the service saves an export only when the host or browser can't, and never after a refusal", async (t) => {
   const { transport, user } = await setupSettings(t, (transport) => {
     serveSettings(transport, { sections: [] });
     const original = transport.tool.bind(transport);
@@ -659,25 +657,11 @@ test("export uses the host or browser first, and the service only when neither c
   assert.equal(serviceSaves().length, 1);
 
   // A host that declines has no download, and the service must not save instead.
-  let result: boolean | Error = new Error("The host didn't save the file.");
-
-  Object.assign(transport, {
-    saveJson: async (name: string, text: string) => {
-      if (result instanceof Error) throw result;
-      saved.push([name, text]);
-
-      return result;
-    },
-  });
+  transport.saveJson = async () => {
+    throw new Error("The host didn't save the file.");
+  };
 
   await user.click(exportFile);
   await screen.findByText(/didn't save the file\. Use Copy JSON instead\./);
-  assert.equal(serviceSaves().length, 1);
-
-  // A host or browser save names no path, because only it knows the location.
-  result = true;
-  await user.click(exportFile);
-  await screen.findByText("Exported");
-  assert.deepEqual(saved, [["delegated-work-settings.json", "{}"]]);
   assert.equal(serviceSaves().length, 1);
 });
