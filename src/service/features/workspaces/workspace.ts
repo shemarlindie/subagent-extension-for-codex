@@ -9,7 +9,7 @@ import {
   stat,
   utimes,
 } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
 import {
@@ -25,6 +25,13 @@ const exists = (path: string) =>
     () => true,
     () => false,
   );
+
+/** Whether `path` is `parent` or inside it. A name like `..notes` is inside. */
+export const within = (parent: string, path: string) => {
+  const child = relative(parent, path);
+
+  return child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child);
+};
 
 /**
  * A folder's real path, once the service can read it. macOS privacy controls
@@ -195,14 +202,7 @@ export class Workspaces {
     const actual = await accessibleRealpath(path);
     const roots = await realRoots(this.allowedRoots);
 
-    if (
-      !roots.some((root) => {
-        if (root === undefined) return false;
-        const p = relative(root, actual);
-
-        return !p.startsWith("..") && !isAbsolute(p);
-      })
-    ) {
+    if (!roots.some((root) => root !== undefined && within(root, actual))) {
       throw new Error("Repository outside allowed roots");
     }
 

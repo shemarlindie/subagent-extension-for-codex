@@ -1,14 +1,8 @@
 import { realpath } from "node:fs/promises";
-import {
-  basename,
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve,
-} from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { scalarText } from "../../../../../shared/text.js";
+import { within } from "../../../workspaces/workspace.js";
 
 export const readTools = ["Read", "Glob", "Grep"];
 export const writeTools = ["Edit", "Write"];
@@ -34,13 +28,12 @@ export async function inWorkspace(workspace: string, path: string) {
     }
   }
 
-  const rel = relative(await realpath(workspace), actual);
+  const root = await realpath(workspace);
 
-  return !(
-    rel.startsWith("..") ||
-    isAbsolute(rel) ||
+  return (
+    within(root, actual) &&
     // Any depth, since plain folders often hold nested repositories.
-    rel.split(/[\\/]/).includes(".git")
+    !relative(root, actual).split(/[\\/]/).includes(".git")
   );
 }
 

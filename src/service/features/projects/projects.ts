@@ -1,22 +1,19 @@
 import { realpathSync } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, relative } from "node:path";
+import { basename, dirname, isAbsolute } from "node:path";
 
 import { eq } from "drizzle-orm";
 
 import { type Database } from "../../platform/database/database.js";
 import { dataDirectory } from "../../platform/service/runtime.js";
 import { type GitState, gitState, gitWorkTreeRoot } from "../workspaces/git.js";
-import { accessibleRealpath, Workspaces } from "../workspaces/workspace.js";
+import {
+  accessibleRealpath,
+  within,
+  Workspaces,
+} from "../workspaces/workspace.js";
 import { projectRoots } from "./schema.js";
-
-/** Whether `path` is `parent` or inside it. */
-export const within = (parent: string, path: string) => {
-  const child = relative(parent, path);
-
-  return child === "" || (!child.startsWith("..") && !isAbsolute(child));
-};
 
 const realpathOrSame = (path: string) => realpath(path).catch(() => path);
 
@@ -209,9 +206,8 @@ export class Projects {
     const approved = () =>
       this.list().some((root) => {
         if (root.kind === "repository") return root.repository === actual;
-        const child = relative(root.repository, actual);
 
-        return child === "" || (!child.startsWith("..") && !isAbsolute(child));
+        return within(root.repository, actual);
       });
 
     if (!approved()) {

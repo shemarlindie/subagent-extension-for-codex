@@ -873,6 +873,12 @@ test("registration rejects folders that are too broad or hold service data", asy
   );
 
   await f.projects.register(join(home, "projects"));
+
+  // A name that only starts with dots is still inside its parent.
+  const dotted = join(f.dir, "dotted");
+  await mkdir(join(dotted, "..data"), { recursive: true });
+  vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_DATA", join(dotted, "..data"));
+  await assert.rejects(f.projects.register(dotted), /extension's own data/);
 });
 
 test("a folder inside a repository is rejected and names the root to add", async (t) => {

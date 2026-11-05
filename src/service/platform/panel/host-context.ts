@@ -2,16 +2,14 @@ import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  assertPlainFolderAllowed,
-  within,
-} from "../../features/projects/projects.js";
+import { assertPlainFolderAllowed } from "../../features/projects/projects.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import {
   type GitState,
   gitState,
   gitWorkTreeRoot,
 } from "../../features/workspaces/git.js";
+import { within } from "../../features/workspaces/workspace.js";
 
 // Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
 // Panel context consumes the directory hint. Native permission inheritance
