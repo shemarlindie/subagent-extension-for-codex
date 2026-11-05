@@ -116,11 +116,15 @@ the user asks. Skip small changes that tests cover.
 
 ## Writing style
 
+These rules apply to everything you write, including code comments,
+documentation, commit messages, pull requests, plans and chat replies.
+
 Use plain language, active voice, and direct statements. Start with the main
 point. Add the context, reasons, and examples the reader needs.
 
 Be concise, precise and consistent. Keep claims accurate, explain uncertainty,
-and avoid repetition.
+and avoid repetition. Skip obvious or expected behavior, including what stays
+the same.
 
 Use short paragraphs. Add headings, lists, or tables when they make the writing
 easier to follow.
@@ -138,8 +142,7 @@ clearest way to communicate an important distinction.
 - Give each guide a clear purpose and audience. Keep the README focused on
   orientation and setup. Place detailed procedures and contracts in their owning
   guides. Include implementation details, safeguards and verification results
-  only when readers need them to use, operate or change the feature. Skip
-  obvious or expected behavior.
+  only when readers need them to use, operate or change the feature.
 - Keep one canonical home for each explanation and link to it elsewhere,
   repeating only a brief summary needed locally. Update explanations in place
   and remove superseded material after retaining useful details. Check affected

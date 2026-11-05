@@ -110,7 +110,7 @@ function withDraft(changelog) {
           : [];
       });
 
-      return [`### ${heading}`, ...(items.length ? ["", ...items] : [])].join(
+      return [`### ${heading}`, "", ...(items.length ? items : ["None"])].join(
         "\n",
       );
     },

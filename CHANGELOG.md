@@ -7,6 +7,8 @@ without one. Write for users: what changed, and anything to do by hand.
 
 ### Features
 
+None
+
 ### Fixes
 
 - Keep focus where it moved while a new task loads (#6)
