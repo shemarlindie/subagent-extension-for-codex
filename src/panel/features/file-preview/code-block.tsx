@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { CopyButton } from "./copy-button";
+import { CopyButton } from "../../shared/components/copy-button/copy-button";
 
 type CodeBlockProps = {
   /** The exact text the copy action writes. */
