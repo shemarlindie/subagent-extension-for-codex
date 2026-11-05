@@ -5,6 +5,7 @@ import { useSessionState } from "../../app/state/session/use-session-state";
 import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
 import { useAnimatedHeight } from "../../shared/components/motion/use-animated-height";
 import { ScrollLatestButton } from "../../shared/components/scroll-latest-button/scroll-latest-button";
+import { gitInitCommand } from "../projects/selectors";
 import type { Task } from "../tasks/types";
 import { ChangesHeader } from "./changes-header";
 import { ChangesHeaderSkeleton, ChangesSkeleton } from "./changes-skeleton";
@@ -88,7 +89,10 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
                         folder has no Git. <code>git init</code> records them
                         from the next turn.
                       </p>
-                      <CommandLine label="Set up Git" command="git init" />
+                      <CommandLine
+                        label="Set up Git"
+                        command={gitInitCommand(task.repository)}
+                      />
                     </div>
                   ) : (
                     <p className="help changes-note">

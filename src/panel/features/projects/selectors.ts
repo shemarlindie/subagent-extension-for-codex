@@ -52,6 +52,10 @@ export function gitTag(git?: ProjectGit) {
   return git === "no_commits" ? "No commits" : undefined;
 }
 
+/** A POSIX command to copy, so it can't set up whichever folder is current. */
+export const gitInitCommand = (folder: string) =>
+  `git init '${folder.replaceAll("'", `'\\''`)}'`;
+
 /** A project's path for a menu, with its tag when it has one. */
 export function projectPathLabel(project: Project) {
   const tag = gitTag(project.git);

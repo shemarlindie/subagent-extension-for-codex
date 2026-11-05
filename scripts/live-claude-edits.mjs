@@ -551,7 +551,10 @@ export async function runFoldersScenario({ control, store, root, taskBase }) {
 1. Write: create note.txt containing alpha.
 2. Bash: run exactly: printf 'beta\\n' > bash.txt
 3. Bash: run exactly: cat ${outside}
-Then remember the code word red-fox and reply DONE.`,
+4. Bash: run exactly: printf 'gitdir: evil\\n' > .git
+5. Bash: run exactly: mkdir -p evil/hooks
+6. Bash: run exactly: mkdir -p .git/hooks
+Steps 3, 4 and 6 may fail. Continue past them without retrying. Then remember the code word red-fox and reply DONE.`,
         budget: { max_runtime_minutes: 3, max_cost_usd: 0.5 },
       });
 
@@ -564,6 +567,14 @@ Then remember the code word red-fox and reply DONE.`,
       assert.equal(!!first.no_git, name === "plain", `${name}: no_git`);
       assert.equal(first.base_commit, undefined, `${name}: base_commit`);
       assert.equal(await readFile(join(folder, "bash.txt"), "utf8"), "beta\n");
+
+      // Denying a path that doesn't exist must block it and leave nothing behind.
+      if (name === "plain") {
+        await assert.rejects(
+          access(join(folder, ".git")),
+          "plain: .git blocked",
+        );
+      }
 
       const denied = store
         .events(task.id, "verification")

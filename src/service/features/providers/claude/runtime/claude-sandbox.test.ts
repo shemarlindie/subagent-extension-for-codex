@@ -63,7 +63,7 @@ test("Claude SDK serializes the extension Bash sandbox without enabling automati
   assert.ok(settings.sandbox.filesystem.denyRead.includes(canonicalWorkspace));
 });
 
-test("The extension sandbox needs no Git metadata for a folder without Git", async () => {
+test("The extension sandbox reads no Git metadata for a folder without Git and blocks creating it", async () => {
   const { c, workspace } = await context();
   const canonical = await realpath(workspace);
 
@@ -71,7 +71,7 @@ test("The extension sandbox needs no Git metadata for a folder without Git", asy
 
   assert.deepEqual(filesystem?.allowRead, [canonical]);
   assert.deepEqual(filesystem?.allowWrite, [canonical]);
-  assert.deepEqual(filesystem?.denyWrite, []);
+  assert.deepEqual(filesystem?.denyWrite, [join(canonical, ".git")]);
 });
 
 test("The extension sandbox denies reads of a data directory outside home by its real path", async (t) => {

@@ -46,8 +46,10 @@ export async function claudeSandbox(task: Task): Promise<SandboxSettings> {
   const repository = await realpath(task.repository);
   const data = await realpath(dataDirectory());
 
+  // A worker must not create `.git` either. The service's own Git commands run
+  // outside this sandbox and would load any config or hooks it planted.
   const gitPaths = task.no_git
-    ? { read: [], write: [] }
+    ? { read: [], write: [join(workspace, ".git")] }
     : await gitSandboxPaths(workspace);
 
   return {

@@ -76,14 +76,15 @@ function probeError(error: unknown) {
 /**
  * The work tree containing `cwd`, or undefined only when Git reports that it
  * has none. Any other failure still throws, because a failed probe must never
- * downgrade a real repository to a plain folder.
+ * downgrade a real repository to a plain folder. That includes a `.git` file
+ * whose target is missing, which Git reports without the "(or any" wording.
  */
 export async function gitWorkTreeRoot(cwd: string) {
   try {
     return await gitRepositoryRoot(cwd);
   } catch (error) {
-    const stderr = (error as { stderr?: unknown }).stderr;
-    if (String(stderr).includes("not a git repository")) return undefined;
+    const stderr = String((error as { stderr?: unknown }).stderr);
+    if (stderr.includes("not a git repository (or any")) return undefined;
     throw error;
   }
 }

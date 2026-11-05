@@ -117,7 +117,10 @@ export function ProjectsPage() {
                         {project.kind === "parent" && (
                           <span className="muted">Parent approval</span>
                         )}
-                        <ProjectGitTag git={project.git} />
+                        <ProjectGitTag
+                          git={project.git}
+                          folder={project.repository}
+                        />
                       </div>
                       <code className="managed-project-path">
                         {project.repository}

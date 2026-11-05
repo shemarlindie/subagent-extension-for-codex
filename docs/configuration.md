@@ -96,7 +96,9 @@ first commit takes effect without adding it again:
 | `none`       | Not inside a work tree    | No        | No                  |
 
 Without Git, only the exact approved folder can run tasks. A subfolder of it
-can't, and parent approvals still permit only Git roots. Registration rejects:
+can't, and parent approvals permit only Git roots. Under the `extension`
+sandboxes, a worker can't create `.git`, so run `git init` yourself.
+Registration rejects:
 
 - a folder inside a Git repository, and the error names the root to add
 - the filesystem root, the home directory and its ancestors

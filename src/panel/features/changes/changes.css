@@ -221,6 +221,9 @@
 .changes-error {
   margin: 0;
 }
+.changes-note + .changes-files {
+  margin-top: 12px;
+}
 .changes-commands {
   display: grid;
   gap: 4px;
