@@ -33,6 +33,7 @@ const SOURCE_FILE_LINE_CEILINGS = [
 export default defineConfig(
   {
     ignores: [
+      ".claude/worktrees/",
       "dist/",
       "release/",
       ".subagent-extension-for-codex/",
