@@ -29,9 +29,9 @@ otherwise. Before 1.0, a breaking change bumps the minor version. It creates
 `chore/release-v<version>` and sets the version in `package.json`,
 `package-lock.json`, `plugin.json` and the marketplace. Unless `CHANGELOG.md`
 already has a `## <version>` section, it drafts one with Features and Fixes
-sections from the `feat` and `fix` commits. It commits, pushes and opens a draft
-pull request to `main` that links to the notes. It needs the `gh` CLI, signed
-in.
+sections from the `feat` and `fix` commits, writing `None` in an empty section.
+It commits, pushes and opens a draft pull request to `main` that links to the
+notes. It needs the `gh` CLI, signed in.
 
 When `main` already lists an unreleased version, as with the first release, run
 the **Release** workflow on `main`, with no branch or pull request.

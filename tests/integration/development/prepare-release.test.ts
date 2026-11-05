@@ -151,7 +151,7 @@ plugin.json
 `,
     );
 
-    // Both sections appear, with only feat and fix commits listed.
+    // Both sections appear, listing only feat and fix commits or saying None.
     assert.equal(
       await show("CHANGELOG.md"),
       `# Changelog
@@ -165,6 +165,8 @@ Intro.
 - Add a setting
 
 ### Fixes
+
+None
 
 ## 0.1.0
 

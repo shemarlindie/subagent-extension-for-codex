@@ -573,10 +573,10 @@ Before adding a test, name the behavior it protects and inspect existing
 coverage. Give each behavior one primary test layer, starting from the broadest
 that can reliably exercise it. Go broader only when the behavior depends on what
 that layer adds. Extend the test or suite that already owns it when possible.
-These rules apply to tests added in the same change as well as existing ones.
 
 Add tests or cases only when existing coverage does not adequately protect
-changed behavior or a concrete, relevant failure.
+changed behavior or a concrete, relevant failure. Don't add tests that add bloat
+for little protection.
 
 | Layer             | Location                                                                       | Covers                                                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
