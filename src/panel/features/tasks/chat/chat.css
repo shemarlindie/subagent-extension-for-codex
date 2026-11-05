@@ -592,7 +592,6 @@ body[data-expanded-panel="true"]
 }
 .chat-continue-tooltip {
   padding: 7px 12px;
-  border-color: var(--accent);
   border-radius: var(--border-radius-sm);
   background: var(--accent);
   color: var(--color-text-inverse);

@@ -245,7 +245,7 @@
   align-items: center;
   min-width: 0;
   border-radius: 4px;
-  background: var(--surface);
+  background: var(--code-bg);
 }
 .command {
   min-width: 0;
