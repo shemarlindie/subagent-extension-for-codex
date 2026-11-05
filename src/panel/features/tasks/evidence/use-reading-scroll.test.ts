@@ -560,6 +560,31 @@ test.each(["wheel", "touch", "keyboard"] as const)(
   },
 );
 
+test("an upward scroll still near the end does not resume following", () => {
+  const reading: ReadingState = {};
+  const props = { reading, follow: true };
+  const view = render(createElement(Chat, { ...props, items }));
+  const viewport = view.getByTestId("chat");
+  const scrollTo = vi.fn();
+  Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+
+  const button = () =>
+    view.queryByRole("button", { name: "Scroll to latest message" });
+
+  // An animated wheel scroll reports its first frames close to the end.
+  fireEvent.wheel(viewport, { deltaY: -100 });
+  // An update can render between a frame and its scroll event.
+  viewport.scrollTop = 370;
+  view.rerender(createElement(Chat, { ...props, items }));
+  fireEvent.scroll(viewport);
+  expect(button()).not.toBeNull();
+
+  const more = [...items, "g"];
+  view.rerender(createElement(Chat, { ...props, items: more }));
+  expect(scrollTo).not.toHaveBeenCalled();
+  expect(viewport.scrollTop).toBe(370);
+});
+
 test("a smooth return that never moves finishes at the end", (t) => {
   vi.useFakeTimers();
 
