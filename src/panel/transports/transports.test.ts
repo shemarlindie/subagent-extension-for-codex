@@ -360,8 +360,8 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
 
   Object.assign(fake.app, {
     getHostCapabilities: () => ({ serverTools: {}, downloadFile: {} }),
-    downloadFile: async (params: unknown) => {
-      downloads.push(params);
+    downloadFile: async (params: unknown, options: unknown) => {
+      downloads.push(params, options);
 
       return { isError };
     },
@@ -382,13 +382,15 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
         },
       ],
     },
+    // A save dialog can stay open longer than the default request timeout.
+    { timeout: 150000 },
   ]);
 
   isError = true;
 
   await assert.rejects(
     transport.saveJson("settings.json", "{}"),
-    /wasn't saved/,
+    /didn't save the file/,
   );
 
   transport.dispose();

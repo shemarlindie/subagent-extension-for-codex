@@ -659,7 +659,7 @@ test("export uses the host or browser first, and the service only when neither c
   assert.equal(serviceSaves().length, 1);
 
   // A host that declines has no download, and the service must not save instead.
-  let result: boolean | Error = new Error("The file wasn't saved.");
+  let result: boolean | Error = new Error("The host didn't save the file.");
 
   Object.assign(transport, {
     saveJson: async (name: string, text: string) => {
@@ -671,7 +671,7 @@ test("export uses the host or browser first, and the service only when neither c
   });
 
   await user.click(exportFile);
-  await screen.findByText(/The file wasn't saved\. Use Copy JSON instead\./);
+  await screen.findByText(/didn't save the file\. Use Copy JSON instead\./);
   assert.equal(serviceSaves().length, 1);
 
   // A host or browser save names no path, because only it knows the location.
