@@ -30,9 +30,9 @@ import { sandboxBlock } from "../configuration/sandbox-check.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
+import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
-import { ModelCatalog } from "./models.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
 /**
@@ -77,7 +77,7 @@ export class ClaudeAgentProvider implements Provider {
     dynamic_subagents: false,
   };
 
-  private catalogs = new Map<string, ModelCatalog>();
+  private discoveries = new Map<string, ClaudeDiscovery>();
 
   constructor(
     private launch: typeof query = query,
@@ -119,22 +119,30 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   models(settings?: SettingsValues): Promise<ModelChoice[]> {
-    const claude = settings?.providers.claude;
+    return this.discovery(settings).models();
+  }
 
+  policy(settings?: SettingsValues) {
+    return this.discovery(settings).policy();
+  }
+
+  /** One discovery per configuration, as settings change what a session loads. */
+  private discovery(settings?: SettingsValues) {
     const configuration = {
       settings_files:
-        claude?.settings_files ?? claudeOverrideDefaults.settings_files,
+        settings?.providers.claude.settings_files ??
+        claudeOverrideDefaults.settings_files,
     };
 
     const key = JSON.stringify(configuration);
-    let catalog = this.catalogs.get(key);
+    let discovery = this.discoveries.get(key);
 
-    if (!catalog) {
-      catalog = new ModelCatalog(this.launch, this.cli, configuration);
-      this.catalogs.set(key, catalog);
+    if (!discovery) {
+      discovery = new ClaudeDiscovery(this.launch, this.cli, configuration);
+      this.discoveries.set(key, discovery);
     }
 
-    return catalog.models();
+    return discovery;
   }
 
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {

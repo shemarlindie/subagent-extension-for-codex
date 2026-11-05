@@ -8,6 +8,7 @@ import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import type {
   Capabilities,
   ModelChoice,
+  ProviderPolicy,
   ProviderReadiness,
 } from "../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
@@ -84,6 +85,8 @@ export interface Provider {
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
   readiness?(): Promise<ProviderReadiness>;
   models?(settings?: SettingsValues): Promise<ModelChoice[]>;
+  /** What org policy limits for new tasks. Nothing means nothing known. */
+  policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task): Promise<void>;

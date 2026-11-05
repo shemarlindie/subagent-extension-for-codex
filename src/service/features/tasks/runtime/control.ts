@@ -73,6 +73,7 @@ import {
   turnPrompt,
   type TurnStartupContext,
 } from "./turn-startup.js";
+import { workerStatus } from "./worker-status.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
@@ -182,26 +183,13 @@ export class Control {
 
   async availableWorkers(owner: string) {
     return Promise.all(
-      this.workers().map(async (worker) => {
-        const provider = this.providers.get(worker.provider)!;
-        const readiness = await provider.readiness?.();
-        const known = readiness ? { ...worker, readiness } : worker;
-        // Model discovery launches the runtime, so it waits until that is ready.
-        if (!provider.models || readiness?.ready === false) return known;
-
-        try {
-          return {
-            ...known,
-            models: await provider.models(this.settings.values(owner)),
-          };
-        } catch {
-          return {
-            ...known,
-            model_discovery_error:
-              "Model discovery unavailable; enter a model ID or retry later.",
-          };
-        }
-      }),
+      this.workers().map((worker) =>
+        workerStatus(
+          worker,
+          this.providers.get(worker.provider)!,
+          this.settings.values(owner),
+        ),
+      ),
     );
   }
 
