@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { symlink } from "node:fs/promises";
+import { mkdir, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -86,6 +86,34 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
   });
 });
 
+test("PostToolUse flags a command in a task whose folder has no Git", async () => {
+  const { c, workspace } = await context();
+  c.task.no_git = true;
+
+  const options = await claudeTurnOptions(
+    c,
+    fakeClaudePath,
+    new AbortController(),
+  );
+
+  await options.hooks?.PostToolUse?.[0]?.hooks[0]?.(
+    {
+      hook_event_name: "PostToolUse",
+      tool_name: "Bash",
+      tool_input: { command: "ls" },
+      tool_response: { stdout: "" },
+      session_id: "session-test",
+      transcript_path: "transcript-test",
+      cwd: workspace,
+      tool_use_id: "bash",
+    },
+    "bash",
+    { signal: c.signal },
+  );
+
+  expect(c.editUnrecorded).toHaveBeenCalledWith(undefined, "command");
+});
+
 test("Claude read-only profile bundle denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {
   const { c, workspace } = await context();
   await symlink(tmpdir(), join(workspace, "escape"));
@@ -127,6 +155,13 @@ test("Claude read-only profile bundle denies outside paths, symlink escapes, Git
 
   assert.equal(
     await check("Read", { file_path: join(workspace, "escape", "secret") }),
+    "deny",
+  );
+
+  await mkdir(join(workspace, "vendor/.git"), { recursive: true });
+
+  assert.equal(
+    await check("Read", { file_path: join(workspace, "vendor/.git/config") }),
     "deny",
   );
 

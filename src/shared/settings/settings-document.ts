@@ -231,7 +231,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
           kind: "select",
           ...described("task.workspace_strategy"),
           options: options({
-            current_repo: "Current repository",
+            current_repo: "Project folder",
             worktree: "Isolated worktree",
           }),
         },

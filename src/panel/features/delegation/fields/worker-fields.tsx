@@ -16,6 +16,8 @@ interface WorkerFieldsProps {
   disabled?: boolean;
   revisionDisabled?: boolean;
   revisionLoading?: boolean;
+  /** The project has no commit, so the task has no revision to choose. */
+  revisionHidden?: boolean;
 }
 
 export function WorkerFields({
@@ -25,6 +27,7 @@ export function WorkerFields({
   disabled = false,
   revisionDisabled = false,
   revisionLoading = false,
+  revisionHidden = false,
 }: WorkerFieldsProps) {
   const { register, control } = useFormContext<DelegateValues>();
   const strategy = useWatch({ control, name: "workspace_strategy" });
@@ -75,25 +78,27 @@ export function WorkerFields({
           />
         </Field>
       </div>
-      <div>
-        <Field id="revision" label="Revision">
-          <AsyncControl
-            loading={revisionLoading && !revision}
-            label="Resolving repository revision"
-          >
-            <input
-              id="revision"
-              disabled={revisionDisabled}
-              placeholder={
-                revisionLoading && !revision ? "Loading…" : undefined
-              }
-              readOnly={strategy === "current_repo"}
-              required
-              {...register("revision", { required: true })}
-            />
-          </AsyncControl>
-        </Field>
-      </div>
+      {!revisionHidden && (
+        <div>
+          <Field id="revision" label="Revision">
+            <AsyncControl
+              loading={revisionLoading && !revision}
+              label="Resolving repository revision"
+            >
+              <input
+                id="revision"
+                disabled={revisionDisabled}
+                placeholder={
+                  revisionLoading && !revision ? "Loading…" : undefined
+                }
+                readOnly={strategy === "current_repo"}
+                required
+                {...register("revision", { required: true })}
+              />
+            </AsyncControl>
+          </Field>
+        </div>
+      )}
     </div>
   );
 }

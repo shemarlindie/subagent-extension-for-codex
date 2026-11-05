@@ -27,8 +27,29 @@ export const docsSite = {
   kind: "repository",
 };
 
+export const notesFolder = {
+  repository: "/demo/notes",
+  name: "Field notes",
+  kind: "repository",
+  git: "none",
+};
+
+export const sketchFolder = {
+  repository: "/demo/sketch",
+  name: "Sketch",
+  kind: "repository",
+  git: "no_commits",
+};
+
 /** Registered projects. Thread "dev-thread" has tasks in the first two. */
-export const previewProjects = [demoProject, demoWebsite, mobileApp, docsSite];
+export const previewProjects = [
+  demoProject,
+  demoWebsite,
+  mobileApp,
+  docsSite,
+  notesFolder,
+  sketchFolder,
+];
 
 /** The dev host's default Thread ID; most tasks belong to it. */
 export const PREVIEW_THREAD = "dev-thread";

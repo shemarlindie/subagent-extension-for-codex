@@ -19,7 +19,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, test, vi } from "vitest";
 
-import { gitRepositoryRoot } from "./git.js";
+import { gitRepositoryRoot, gitState, gitWorkTreeRoot } from "./git.js";
 import { Workspaces } from "./workspace.js";
 
 const deadline = vi.hoisted(() => ({
@@ -153,4 +153,38 @@ test("the repository root is a real path even when Git prints another spelling",
   vi.stubEnv("PATH", bin);
 
   assert.equal(await gitRepositoryRoot(directory), directory);
+});
+
+test("only Git's own answer classifies a folder as having no work tree", async (t) => {
+  assert.equal(await gitWorkTreeRoot(directory), undefined);
+  assert.equal(await gitState(directory), "none");
+
+  execFileSync("git", ["init", "-q", directory]);
+  assert.equal(await gitWorkTreeRoot(directory), directory);
+  assert.equal(await gitState(directory), "no_commits");
+
+  await assert.rejects(gitWorkTreeRoot(join(directory, "missing")));
+
+  // A `.git` file with a missing target marks a broken repository. Git's wording
+  // varies by version, so this checks that its failure reaches the caller.
+  const broken = join(directory, "broken");
+  await mkdir(broken);
+  await writeFile(join(broken, ".git"), "gitdir: /missing/worktrees/task\n");
+  await assert.rejects(gitWorkTreeRoot(broken), { code: 128 });
+
+  t.onTestFinished(async () => {
+    const child = deadline.child;
+    if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+    child.kill("SIGKILL");
+    await once(child, "close");
+  });
+
+  await stalledGit();
+  deadline.expireWhenReady = true;
+
+  await assert.rejects(
+    gitWorkTreeRoot(directory),
+    /Git repository validation did not finish within 5 seconds/,
+  );
 });

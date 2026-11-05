@@ -88,7 +88,7 @@ test("settings reject invalid values, reset sections and confirm discarding edit
     .click();
 
   await expect(prefix).toHaveValue("agent/");
-  await expect(workspace).toHaveText("Current repository");
+  await expect(workspace).toHaveText("Project folder");
 
   await page
     .getByRole("button", { name: "Save 2 changes", exact: true })
@@ -100,7 +100,7 @@ test("settings reject invalid values, reset sections and confirm discarding edit
 
   await page.reload();
   await expect(prefix).toHaveValue("agent/");
-  await expect(workspace).toHaveText("Current repository");
+  await expect(workspace).toHaveText("Project folder");
 });
 
 test("advanced task options set the task's model and permission policy", async ({

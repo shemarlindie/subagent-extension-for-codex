@@ -57,7 +57,7 @@ test("unsupported hosts retain manual registration without executing a picker", 
         return { stdout: "", stderr: "" };
       }),
     }),
-    /absolute repository path/i,
+    /absolute folder path/i,
   );
 
   assert.equal(executed, false);

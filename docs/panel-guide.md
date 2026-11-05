@@ -11,7 +11,7 @@ embedded panel and standalone console share one frontend.
 ## Project and chat integration
 
 - **Thread launch** shows the conversation's tasks and chat project. It offers
-  **Add chat project** when the project needs registration.
+  **Allow tasks here** when the project needs registration.
 - **Global launch** shows tasks across conversations and offers project
   selection and **All chats**.
 - Opening an owned task uses that task's scope.
@@ -22,7 +22,7 @@ how the panel resolves context.
 
 Project dropdowns include a search field that matches saved names and repository
 paths. On narrow panels, header actions such as **Settings** move into **Panel
-actions**, with **Add chat project** first when needed.
+actions**, with **Allow tasks here** first when needed.
 
 Changing scope closes unsent forms. An action you already submitted still
 completes, but its result never selects work in the new scope.
@@ -35,8 +35,10 @@ layout. The host owns placement and display modes.
 ### Manage projects
 
 **Manage projects…** appears last in the global project dropdown. It opens a
-full-width Projects page that lists saved names and repository paths, including
-parent approvals. **Back to Tasks** returns to the previous task view.
+full-width Projects page that lists saved names and folder paths, including
+parent approvals. A folder without Git or a repository with no commit shows a
+slashed icon beside its name, and its note explains the effect. **Back to
+Tasks** returns to the previous task view.
 
 - **Add project** opens a dialog where you enter a path or use the service
   host's folder picker.
@@ -72,6 +74,10 @@ Removing the selected project returns the task list to **All projects**.
   separate checkout. The service never merges changes. Worktrees separate
   checkouts but don't restrict commands, so they aren't security sandboxes. See
   [Worktree actions](#worktree-actions).
+- **Folders without commits.** Worktrees need a Git repository with a commit, so
+  tasks in other folders edit them directly. Without Git, those edits can't be
+  undone with Git. If your default is a worktree, the task uses the project
+  folder and warns you that it isn't isolated.
 - **Permissions.** The researcher, reviewer and security reviewer profiles only
   inspect by default. Writing profiles follow your saved
   [Claude permissions](configuration.md#claude-permissions) and
@@ -158,9 +164,9 @@ Archiving hides a stopped task with nothing waiting from the task list.
   **Archive all** archives every stopped one. Search and filters don't limit
   either action.
 
-**View archived tasks** beside a project on the Projects page lists that
-project's archived tasks from any chat, newest first. Select tasks to act on
-them, or select none to act on all.
+The **View archived tasks** icon beside a project on the Projects page lists
+that project's archived tasks from any chat, newest first. Select tasks to act
+on them, or select none to act on all.
 
 - **Unarchive** returns the tasks to the task list.
 - **Delete** asks first, then deletes the tasks like **Delete task**. Turn on
@@ -403,6 +409,8 @@ removing a worktree or deleting its branch keeps the recorded diff.
   without a diff.
 - When the service couldn't capture a command's changed paths, the tab shows
   **Some changes made by commands weren't recorded.**
+- In a folder without Git, the tab says edits made by commands may be missing
+  after any command, and `git init` records them from the next turn.
 
 The service records Claude's edit tools and Bash commands. See
 [Recording limits](mcp-reference.md#recording-limits) for what it misses.
@@ -469,8 +477,8 @@ copy instead.
 
 **Task actions** in the task heading includes handoff and deletion. **Delete
 task** stops running, queued or waiting work, then removes the task's history,
-requests, recorded edits, worktree and branch. Files in the current repository
-stay intact.
+requests, recorded edits, worktree and branch. Files in the project folder stay
+intact.
 
 - **Also delete the agent task**, off by default, also removes the provider
   session. If that fails, the local task stays for retry.

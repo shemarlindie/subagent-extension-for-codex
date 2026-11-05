@@ -11,7 +11,7 @@ test("sign in and explicitly register a project through the console", async ({
   await page.getByRole("button", { name: "Connect", exact: true }).click();
   await openManageProjects(page);
   await page.getByRole("button", { name: "Add project", exact: true }).click();
-  await page.getByLabel("Repository path").fill(repository);
+  await page.getByLabel("Folder path").fill(repository);
 
   await page
     .getByRole("dialog")

@@ -1,5 +1,12 @@
 import type { Task } from "../../../src/shared/tasks/model";
-import { docsSite, mobileApp, taskBase, timestamps } from "./scenario-context";
+import {
+  docsSite,
+  mobileApp,
+  notesFolder,
+  sketchFolder,
+  taskBase,
+  timestamps,
+} from "./scenario-context";
 
 // Projects of uneven sizes, so All projects shows long groups stopping at
 // "Show more" beside short ones. Their own thread keeps dev-thread unchanged.
@@ -88,4 +95,32 @@ export const projectTasks: Task[] = [
     "completed",
     38,
   ),
+  // A worktree default fell back, because the folder has no Git.
+  {
+    ...project(
+      notesFolder.repository,
+      "preview-notes-plain",
+      "Tidy the field notes",
+      "completed",
+      39,
+    ),
+    worker_profile: "implementer",
+    workspace_strategy: "current_repo",
+    workspace: notesFolder.repository,
+    no_git: true,
+    workspace_fallback: "no_git",
+  },
+  {
+    ...project(
+      sketchFolder.repository,
+      "preview-sketch",
+      "Outline the sketch",
+      "completed",
+      40,
+    ),
+    worker_profile: "implementer",
+    workspace_strategy: "current_repo",
+    workspace: sketchFolder.repository,
+    workspace_fallback: "no_commits",
+  },
 ];

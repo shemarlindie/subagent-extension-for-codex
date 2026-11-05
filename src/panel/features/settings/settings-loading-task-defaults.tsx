@@ -19,7 +19,7 @@ export function SettingsLoadingTaskDefaults() {
       label: "Workspace",
       key: "workspace",
       options: [
-        { value: "current_repo", label: "Current repository" },
+        { value: "current_repo", label: "Project folder" },
         { value: "worktree", label: "Isolated worktree" },
       ],
     },

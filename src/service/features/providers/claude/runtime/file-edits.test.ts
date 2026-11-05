@@ -418,6 +418,28 @@ function recordingContext() {
   } satisfies Pick<RunContext, "fileChanged" | "editUnrecorded">;
 }
 
+test("only a folder without Git flags a command with no reported diff", () => {
+  const plain = recordingContext();
+  recordClaudeFileEdits(plain, "Bash", { stdout: "" }, true);
+  expect(plain.editUnrecorded).toHaveBeenCalledWith(undefined, "command");
+
+  const repository = recordingContext();
+  recordClaudeFileEdits(repository, "Bash", { stdout: "" });
+  expect(repository.editUnrecorded).not.toHaveBeenCalled();
+
+  const reported = recordingContext();
+  recordClaudeFileEdits(reported, "Bash", bashResponse, true);
+
+  expect(reported.editUnrecorded).not.toHaveBeenCalledWith(
+    undefined,
+    "command",
+  );
+
+  const otherTool = recordingContext();
+  recordClaudeFileEdits(otherTool, "Read", {}, true);
+  expect(otherTool.editUnrecorded).not.toHaveBeenCalled();
+});
+
 test("the hook records mapped edits and missing files", () => {
   const context = recordingContext();
 

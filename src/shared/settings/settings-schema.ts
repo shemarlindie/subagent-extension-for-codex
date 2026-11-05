@@ -106,7 +106,11 @@ export const settingsSchema = z.strictObject({
       .default("reviewer"),
     workspace_strategy: z
       .enum(["worktree", "current_repo"])
-      .meta({ title: "Workspace" })
+      .meta({
+        title: "Workspace",
+        description:
+          "A project with no Git commit always uses the project folder, because worktrees need a commit.",
+      })
       .default("current_repo"),
     // Git checks the whole name when a worktree is created.
     worktree_branch_prefix: z

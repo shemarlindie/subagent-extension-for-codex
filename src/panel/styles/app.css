@@ -38,5 +38,6 @@
 @import "../features/file-preview/file-preview.css";
 @import "../features/changes/changes.css";
 @import "../features/tasks/chat/chat.css";
+@import "../features/delegation/delegation.css";
 @import "../features/delegation/new-task/new-task.css";
 @import "../shared/components/editable-text/editable-text.css";

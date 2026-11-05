@@ -17,10 +17,19 @@ export function taskProjects(state: Snapshot, projects = state.projects) {
     !projects.some((project) => project.repository === candidate)
     ? [
         ...projects,
-        { repository: candidate, kind: "repository", pending: true },
+        {
+          repository: candidate,
+          kind: "repository",
+          git: state.projectCandidateGit,
+          pending: true,
+        },
       ]
     : projects;
 }
+
+/** A project's Git state, when the service could read it. */
+export const projectGit = (state: Snapshot, repository?: string) =>
+  taskProjects(state).find((project) => project.repository === repository)?.git;
 
 /** A worker choice's `provider:profile` value; a bare provider has no profile. */
 export function workerChoice(value: string) {

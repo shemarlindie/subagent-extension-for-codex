@@ -332,6 +332,15 @@ body[data-expanded-panel="true"]
 .chat-timeline .notice {
   margin: 0;
 }
+.workspace-fallback-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.notice.workspace-fallback-notice p {
+  margin: 0;
+}
 .chat-timeline .chat-budget-notice {
   padding: 8px 10px;
 }
@@ -583,7 +592,6 @@ body[data-expanded-panel="true"]
 }
 .chat-continue-tooltip {
   padding: 7px 12px;
-  border-color: var(--accent);
   border-radius: var(--border-radius-sm);
   background: var(--accent);
   color: var(--color-text-inverse);

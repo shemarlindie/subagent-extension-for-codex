@@ -30,12 +30,13 @@
   /* Keep a label on one line up to the cap, so timestamps don't wrap. */
   width: max-content;
   max-width: 320px;
+  overflow-wrap: anywhere;
   padding: 4px 8px;
-  border: 1px solid var(--line);
   border-radius: 5px;
-  background: var(--surface);
+  background: var(--popup-bg);
   color: var(--text);
-  box-shadow: 0 4px 14px #0003;
+  /* Tight and dark enough to stay darker than the popup, so its edge stays crisp. */
+  box-shadow: 0 1px 4px #0004;
   font-size: 11px;
   line-height: 1.35;
 }

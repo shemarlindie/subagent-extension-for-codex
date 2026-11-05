@@ -141,7 +141,7 @@ the stored conversation. See [Task continuation](task-continuation.md).
 
 | Strategy       | Workspace                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------- |
-| `current_repo` | The approved checkout, including uncommitted files. Requires revision `HEAD`.                   |
+| `current_repo` | The approved folder, including uncommitted files. Requires revision `HEAD`. Git is optional.    |
 | `worktree`     | A separate checkout from the requested committed revision, without the user's uncommitted work. |
 
 For both strategies, the changes feature stores provider-reported edits as task

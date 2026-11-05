@@ -9,7 +9,7 @@ export function projectTools(c: Control, owner: string) {
   return {
     app_register_project: tool({
       description:
-        "User interface only: approve and persist a Git repository selected by the user. Does not approve its parent or nested repositories.",
+        "User interface only: approve and persist a folder selected by the user, with or without Git. Does not approve its parent or nested repositories.",
       schema: z.strictObject({ repository: z.string().min(1).max(4096) }),
       run: async (a) => {
         if (!c.projects) {

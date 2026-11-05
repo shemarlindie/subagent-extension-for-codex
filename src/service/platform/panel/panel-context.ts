@@ -4,7 +4,11 @@ import type { PanelOutput } from "../../../shared/panel/panel-contract.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { readFields } from "../../../shared/tasks/task-list.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
-import { hostProjectCandidate, withHostRepository } from "./host-context.js";
+import {
+  hostProjectCandidate,
+  isGitRoot,
+  withHostRepository,
+} from "./host-context.js";
 
 export const panelContextInput = z.object({
   conversation_id: z.string().min(1).max(256).nullable().optional(),
@@ -84,16 +88,17 @@ export async function resolvePanelContext(
 
   const candidate =
     !args.repository && !target && args.conversation_id !== null
-      ? await hostProjectCandidate(args.host_directory)
+      ? await hostProjectCandidate(c, args.host_directory)
       : undefined;
 
   return {
-    ...(candidate && candidate !== repository
+    ...(candidate && candidate.repository !== repository
       ? {
           panel_project_candidate: {
-            repository: candidate,
+            ...candidate,
             // New task may offer it; starting that task adds it with the user's choice.
             auto_register:
+              isGitRoot(candidate) &&
               !!c.projects &&
               c.settings.values(owner).projects.auto_register_chat,
           },

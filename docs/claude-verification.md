@@ -46,6 +46,7 @@ SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mj
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `read`     | A reviewer task reads a file with the native Read tool. This is the default scenario.                                                                                                                               |
 | `edits`    | Recorded file edits. See [Edit recording](#edit-recording).                                                                                                                                                         |
+| `folders`  | Folders without Git or commits: edits, the extension sandbox, a blocked outside read, blocked `.git` writes and a resumed session. Run it with `edits` when you qualify a CLI or SDK version.                       |
 | `resume`   | The worker asks a native question, and the session resumes after the answer.                                                                                                                                        |
 | `sandbox`  | The extension sandbox, with only the expected fixture commands approved and a local listener.                                                                                                                       |
 | `mcp`      | A task started and completed through the built stdio MCP server.                                                                                                                                                    |
@@ -53,7 +54,7 @@ SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mj
 | `parity`   | Claude Code settings loading, with default settings and a project-local skill, `.mcp.json` stdio server and `PreToolUse` hook. It approves only fixture tools and runs a subagent.                                  |
 | `isolated` | Settings loading off excludes the project hook and external MCP servers. A second task keeps settings on with user MCP off, checking that the hook runs while external servers stay absent. Both tasks read a file. |
 
-Each scenario uses a temporary Git fixture and a small native cost limit. Claude
+Each scenario uses a temporary fixture and a small native cost limit. Claude
 checks cost after each response, so a response can exceed the limit.
 
 Tasks run on `haiku` at `medium` effort to keep costs low. Set

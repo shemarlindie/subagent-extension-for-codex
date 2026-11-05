@@ -98,7 +98,7 @@ test("Manage cancels edit errors and restores focus when returning from Add", as
 
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByRole("textbox", { name: "Repository path" }),
+      screen.getByRole("textbox", { name: "Folder path" }),
     ),
   );
 
@@ -133,7 +133,7 @@ test("a picker finishing after leaving Add cannot replace a new draft", async (t
   await user.click(screen.getByRole("button", { name: "Browse…" }));
   await user.click(screen.getByRole("button", { name: "Close" }));
   await user.click(screen.getByRole("button", { name: "Add project" }));
-  const input = screen.getByRole("textbox", { name: "Repository path" });
+  const input = screen.getByRole("textbox", { name: "Folder path" });
   await pasteText(user, input, "/new-draft");
 
   await act(async () => {
@@ -178,9 +178,7 @@ test("removal uses a focused modal, explains folder retention, and resets the op
   await user.click(screen.getByRole("button", { name: "Remove a" }));
   const modal = screen.getByRole("dialog", { name: "Remove project?" });
 
-  expect(modal.textContent).toContain(
-    "Your repository folder and files stay on disk.",
-  );
+  expect(modal.textContent).toContain("Your folder and files stay on disk.");
 
   expect(modal.textContent?.toLowerCase()).not.toContain("delete");
   expect(modal.textContent).not.toContain("through an approved parent folder");

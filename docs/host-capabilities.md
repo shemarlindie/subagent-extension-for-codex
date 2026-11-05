@@ -73,10 +73,11 @@ grant access.
 
 The optional Codex adapter advertises
 `capabilities.experimental["codex/sandbox-state-meta"]`. It reads `sandboxCwd`
-as a local `file:` URI, resolves its canonical Git root, and checks it against
-approved projects. An unsupported, malformed, unavailable or unapproved hint
-falls back to explicit project selection or same-chat task history. The adapter
-reads directory context only and inherits no host permission profile.
+as a local `file:` URI and resolves its canonical Git root. Without one, it uses
+the nearest registered folder, then the directory itself. It checks the result
+against approved projects. An unsupported, malformed, unavailable or unapproved
+hint falls back to explicit project selection or same-chat task history. The
+adapter reads directory context only and inherits no host permission profile.
 
 The adapter follows public Codex source at
 [`c5d242fa`](https://github.com/openai/codex/commit/c5d242fa7907bff1b7a7e26e95febc548c0a6963)
@@ -107,12 +108,14 @@ desktop installation delivers this metadata.
 
 ### Registration
 
-Reading context never registers a project, though it can suggest **Add chat
-project**. Registration needs a user action or the configured task-start policy.
-`get_current_project` reports registration and the task-start policy without
-changing either. Model-supplied paths cannot grant access or trigger automatic
-registration. [Repository access](configuration.md#repository-access) owns these
-rules.
+Reading context never registers a project, though it can suggest **Allow tasks
+here**. Registration needs a user action or the configured task-start policy,
+which adds Git roots only. A chat with no directory has no candidate.
+Directories Codex generates for chats outside a project are treated like any
+other folder. `get_current_project` reports registration and the task-start
+policy without changing either. Model-supplied paths cannot grant access or
+trigger automatic registration.
+[Repository access](configuration.md#repository-access) owns these rules.
 
 The native macOS folder picker runs on the service machine and returns the
 chosen path for registration. Other platforms use the path field.
