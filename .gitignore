@@ -10,6 +10,8 @@ dist/
 *.sqlite*
 .DS_Store
 .ruff_cache/
+.claude/worktrees/
+.claude/settings.local.json
 
 product-icon-candidates/
 showcase-captures/
