@@ -327,6 +327,15 @@ export class ClaudeAgentProvider implements Provider {
           turn_count: m.num_turns,
         });
 
+        // Claude Code refused to start, and its own text names the fix.
+        if ("startup_failure_reason" in m && m.startup_failure_reason) {
+          logEvent("warn", "provider.startup_refused", {
+            reason: m.startup_failure_reason,
+          });
+
+          throw new Error(m.errors.join("; "));
+        }
+
         if (m.subtype !== "success" || m.is_error) {
           throw new Error(
             `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,

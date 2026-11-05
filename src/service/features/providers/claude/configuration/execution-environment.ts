@@ -17,11 +17,15 @@ const privateVariable = (name: string) =>
 export function claudeEnvironment(
   source: NodeJS.ProcessEnv,
 ): NodeJS.ProcessEnv {
-  return Object.fromEntries(
-    Object.entries(source).filter(
-      ([name, value]) => value !== undefined && !privateVariable(name),
+  return {
+    ...Object.fromEntries(
+      Object.entries(source).filter(
+        ([name, value]) => value !== undefined && !privateVariable(name),
+      ),
     ),
-  );
+    // A refusal otherwise ends with stderr alone, without its reason code.
+    CLAUDE_CODE_STARTUP_FAILURE_RESULTS: "1",
+  };
 }
 
 /** Git metadata stays readable for Git commands and is never writable. */

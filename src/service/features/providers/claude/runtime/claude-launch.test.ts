@@ -163,7 +163,11 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
     SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "synthetic-service-token",
   });
 
-  assert.deepEqual(Object.keys(env).sort(), ["PATH", "USER_TOOLCHAIN_HOME"]);
+  assert.deepEqual(Object.keys(env).sort(), [
+    "CLAUDE_CODE_STARTUP_FAILURE_RESULTS",
+    "PATH",
+    "USER_TOOLCHAIN_HOME",
+  ]);
 
   let spawned: Record<string, string | undefined> | undefined;
 
@@ -199,6 +203,44 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
       `${name} must not reach Claude Code`,
     );
   }
+});
+
+test("a refusal shows Claude Code's own text, and other failures keep their prefix", async () => {
+  const run = async (result: Record<string, unknown>) => {
+    const { c } = await context();
+    setClaudeOptions(c.task, { permission_mode: "default" });
+
+    const launch = () =>
+      Object.assign(
+        (async function* () {
+          yield {
+            type: "result",
+            is_error: true,
+            subtype: "error_during_execution",
+            usage: {},
+            errors: ["Sign in with your organization."],
+            ...result,
+          };
+        })(),
+        { close: () => {} },
+      );
+
+    return new ClaudeAgentProvider(
+      launch as unknown as ConstructorParameters<typeof ClaudeAgentProvider>[0],
+      undefined,
+      readyClaudeCli,
+    ).run(c, "Work");
+  };
+
+  await assert.rejects(
+    run({ startup_failure_reason: "org_pin_api_key_conflict" }),
+    (error: Error) => error.message === "Sign in with your organization.",
+  );
+
+  await assert.rejects(
+    run({}),
+    /^Error: Claude result: error_during_execution: Sign in with your organization\.$/,
+  );
 });
 
 test("Claude asks for a plain reply before the custom instructions, with no structured output tool", async () => {
