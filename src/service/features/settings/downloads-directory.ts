@@ -36,7 +36,9 @@ async function execute(command: string, args: string[]) {
   try {
     const { stdout } = await executeFile(command, args, {
       encoding: "utf8",
-      timeout: 10_000,
+      // The Windows script compiles C# on each run, which can exceed 10 seconds
+      // on a busy computer. Only an explicit export waits on this.
+      timeout: 30_000,
       maxBuffer: 16_384,
       windowsHide: true,
     });
