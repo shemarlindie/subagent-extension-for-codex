@@ -16,6 +16,8 @@ export interface Capabilities {
 
 export interface ModelChoice {
   value: string;
+  /** The full model ID an alias stands for. */
+  resolvedModel?: string;
   displayName: string;
   description: string;
   supportsEffort?: boolean;

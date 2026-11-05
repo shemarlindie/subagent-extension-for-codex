@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { claudeMetadata } from "../../../../shared/providers/metadata.js";
-import type { ModelChoice } from "../../../../shared/providers/types.js";
+import type {
+  ModelChoice,
+  ProviderPolicy,
+} from "../../../../shared/providers/types.js";
 import { Projects } from "../../projects/projects.js";
 import { claudeTaskPolicy } from "../../providers/claude/configuration/task-policy.js";
 import type { Provider } from "../../providers/types.js";
@@ -487,4 +490,118 @@ test("a turn queued before its project is removed fails instead of running", asy
   );
 
   assert.equal(store.get(queued.id, "owner").workspace, undefined);
+});
+
+const orgPolicy: ProviderPolicy = {
+  managed: true,
+  blocked: [
+    {
+      setting: "permission_mode",
+      value: "bypassPermissions",
+      reason: "Turned off by your organization",
+    },
+  ],
+  available_models: ["haiku"],
+  available_models_match: "prefix",
+  notes: [],
+};
+
+/** A provider with Claude's options and the given org policy. */
+async function underPolicy(
+  policy: (() => Promise<ProviderPolicy | undefined>) | undefined,
+) {
+  const provider: Provider = new TestProvider();
+  provider.id = "claude";
+  provider.taskPolicy = claudeTaskPolicy;
+  provider.metadata = claudeMetadata;
+
+  provider.models = async () => [
+    { value: "haiku", displayName: "Haiku", description: "" },
+  ];
+
+  if (policy) provider.policy = policy;
+
+  const context = await setup(provider);
+
+  return {
+    ...context,
+    start: (extra: object) =>
+      context.c.start("alice", {
+        ...input(context.repo),
+        provider: "claude",
+        ...extra,
+      }),
+  };
+}
+
+const bypass = {
+  provider_options: { claude: { permission_mode: "bypassPermissions" } },
+};
+
+test("a mode or model a request names itself fails at start when policy rules it out", async () => {
+  const { start } = await underPolicy(async () => orgPolicy);
+
+  await assert.rejects(
+    start(bypass),
+    /Can't use permission mode bypassPermissions: Turned off by your organization/,
+  );
+
+  await assert.rejects(
+    start({ model: "opus" }),
+    /Your organization doesn't allow this model/,
+  );
+
+  assert.equal((await start({ model: "haiku" })).model, "haiku");
+});
+
+test("a saved mode that became blocked still starts, as Claude Code falls back itself", async () => {
+  const { c, start } = await underPolicy(async () => orgPolicy);
+
+  c.settings.update("alice", {
+    set: { providers: { claude: { permission_mode: "bypassPermissions" } } },
+  });
+
+  const task = await start({});
+
+  assert.equal(
+    task.provider_options?.claude?.permission_mode,
+    "bypassPermissions",
+  );
+});
+
+test("a saved model policy excludes gives way to the default, with a note", async () => {
+  const { c, start, store } = await underPolicy(async () => orgPolicy);
+
+  c.settings.update("alice", {
+    set: { models: { global: { model: "opus" } } },
+  });
+
+  const task = await start({});
+
+  assert.ok(!task.model);
+
+  assert.deepEqual(
+    store
+      .events(task.id, "alice")
+      .filter((event) => event.type === "agent.limited")
+      .map((event) => event.data),
+    [
+      {
+        setting: "model",
+        requested: "opus",
+        effective: "default",
+        reason:
+          "Running with the default model. Your organization doesn't allow opus.",
+      },
+    ],
+  );
+});
+
+test("failed discovery blocks no start", async () => {
+  const { start } = await underPolicy(() =>
+    Promise.reject(new Error("Discovery failed")),
+  );
+
+  assert.equal((await start({ model: "opus" })).model, "opus");
+  assert.ok(await start(bypass));
 });

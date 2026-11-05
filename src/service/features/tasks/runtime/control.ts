@@ -203,11 +203,12 @@ export class Control {
     const provider = this.providers.get(parsed.provider);
     if (!provider) throw new Error("Provider is not enabled");
 
-    const req = await resolveStart(
+    const { req, limited } = await resolveStart(
       provider,
       parsed,
       this.settings.values(owner),
       authority,
+      !!(input as { model?: unknown }).model,
     );
 
     for (const id of req.depends_on) this.store.get(id, owner);
@@ -252,6 +253,7 @@ export class Control {
     this.store.transaction(() => {
       this.store.save(t);
       this.store.event(t, "task.queued");
+      if (limited) this.store.event(t, "agent.limited", limited);
     });
 
     this.queueWaits.queued(t.id, "start");
