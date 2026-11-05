@@ -189,7 +189,18 @@ export function captureOptions(
           usage: {},
         };
       })(),
-      { close: () => {} },
+      {
+        close: () => {},
+        // The settings Claude Code reports with no org policy.
+        getSettings: async () => ({
+          effective: {
+            sandbox: {
+              ...args.options?.sandbox,
+              ...args.options?.managedSettings?.sandbox,
+            },
+          },
+        }),
+      },
     ) as unknown as Query;
   };
 }

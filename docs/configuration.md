@@ -343,6 +343,24 @@ namespaces, for example with an AppArmor profile for `bwrap` or by setting
 `kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
 every program on the computer.
 
+### Org policy
+
+Org policy outranks these settings, and Claude Code enforces it whether or not
+`settings_files` is on. It comes from your organization's admin console, device
+management or a `managed-settings.json` file.
+
+The extension can't apply a sandbox that policy overrides, so it checks before
+each turn and stops the task when the session wouldn't have what you chose:
+
+- Policy that sets `sandbox.enabled: false` blocks `extension` and
+  `extension_locked`.
+- Any admin policy blocks `extension_locked`, unless it sets
+  `sandbox.network.allowManagedDomainsOnly` or
+  `parentSettingsBehavior: "merge"`.
+
+If Claude Code can't report its settings, a sandboxed task fails without
+running. `user_config` tasks have nothing to check.
+
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.
 The model and API harness run outside the Bash sandbox, and containment of the

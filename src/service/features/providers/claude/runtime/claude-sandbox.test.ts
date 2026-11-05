@@ -3,10 +3,24 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type {
+  query,
+  SDKUserMessage,
+  Settings,
+} from "@anthropic-ai/claude-agent-sdk";
 import { test, vi } from "vitest";
 
+import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
+import type { ClaudePolicy } from "../../../../../shared/providers/claude/permissions.js";
 import { claudeSandbox } from "../configuration/execution-environment.js";
-import { context, parity, runWithPolicy } from "./claude-test-harness.js";
+import {
+  context,
+  parity,
+  reply,
+  runWithPolicy,
+  setClaudeOptions,
+} from "./claude-test-harness.js";
+import { ClaudeAgentProvider } from "./provider.js";
 
 test("Claude SDK serializes the extension Bash sandbox without enabling automatic or unsandboxed execution", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
@@ -210,4 +224,131 @@ test("settings choose whether sessions load Claude Code settings and their MCP s
   ]);
 
   assert.equal(noUserMcp.options.strictMcpConfig, true);
+});
+
+/** A turn against a session that reports `settings`, tracking what reached it. */
+async function sandboxTurn(
+  sandbox: ClaudePolicy["sandbox"],
+  settings?: () => Promise<{ effective: Settings }>,
+) {
+  const { c } = await context();
+
+  setClaudeOptions(c.task, {
+    permission_mode: "default",
+    claude_policy: { ...parity, sandbox },
+  });
+
+  const sent: string[] = [];
+
+  const launch = (args: { prompt: AsyncIterable<SDKUserMessage> }) =>
+    Object.assign(
+      (async function* () {
+        for await (const message of args.prompt) {
+          sent.push(message.message.content as string);
+
+          yield {
+            type: "result",
+            subtype: "success",
+            result: reply,
+            total_cost_usd: 0,
+            usage: {},
+          };
+        }
+      })(),
+      { close: () => {}, ...(settings ? { getSettings: settings } : {}) },
+    );
+
+  const provider = new ClaudeAgentProvider(
+    launch as unknown as typeof query,
+    undefined,
+    readyClaudeCli,
+  );
+
+  return { c, sent, run: () => provider.run(c, "Prompt") };
+}
+
+const effectiveSandbox = (sandbox: Settings["sandbox"]) => async () => ({
+  effective: { sandbox },
+});
+
+const asked = {
+  enabled: true,
+  failIfUnavailable: true,
+  allowUnsandboxedCommands: false,
+};
+
+test("a sandboxed task fails before its prompt when policy turns the sandbox off", async () => {
+  const { run, sent } = await sandboxTurn(
+    "extension",
+    effectiveSandbox({ ...asked, enabled: false }),
+  );
+
+  await assert.rejects(run, /organization's policy turns the sandbox off/);
+  assert.deepEqual(sent, []);
+});
+
+test("a locked-network task fails before its prompt when an admin policy drops the lock", async () => {
+  const { run, sent } = await sandboxTurn(
+    "extension_locked",
+    effectiveSandbox(asked),
+  );
+
+  await assert.rejects(run, /doesn't let the extension lock it/);
+  assert.deepEqual(sent, []);
+});
+
+test("a locked-network task runs when the effective settings keep the lock", async () => {
+  const { run, sent } = await sandboxTurn(
+    "extension_locked",
+    effectiveSandbox({
+      ...asked,
+      network: { allowManagedDomainsOnly: true },
+    }),
+  );
+
+  assert.deepEqual(await run(), { reply });
+  assert.deepEqual(sent, ["Prompt"]);
+});
+
+test("a sandboxed task fails when Claude Code can't report its settings, and other tasks don't ask", async () => {
+  const missing = await sandboxTurn("extension");
+  await assert.rejects(missing.run, /didn't confirm it's on/);
+  assert.deepEqual(missing.sent, []);
+
+  const failing = await sandboxTurn("extension", () =>
+    Promise.reject(new Error("Unsupported")),
+  );
+
+  await assert.rejects(failing.run, /didn't confirm it's on/);
+
+  const unsandboxed = await sandboxTurn("user_config");
+  assert.deepEqual(await unsandboxed.run(), { reply });
+  assert.deepEqual(unsandboxed.sent, ["Prompt"]);
+});
+
+test("each turn checks the sandbox again, so policy that arrives between turns stops the next one", async () => {
+  let sandbox: Settings["sandbox"] = asked;
+
+  const turn = await sandboxTurn("extension", async () => ({
+    effective: { sandbox },
+  }));
+
+  assert.deepEqual(await turn.run(), { reply });
+  sandbox = { ...asked, enabled: false };
+  await assert.rejects(turn.run, /turns the sandbox off/);
+  assert.deepEqual(turn.sent, ["Prompt"]);
+});
+
+test("an interrupt during the sandbox check sends no prompt", async () => {
+  const controller = new AbortController();
+
+  const { c, run, sent } = await sandboxTurn("extension", async () => {
+    controller.abort();
+
+    return { effective: { sandbox: asked } };
+  });
+
+  c.signal = controller.signal;
+  await assert.rejects(run, /without a result/);
+  assert.deepEqual(sent, []);
 });

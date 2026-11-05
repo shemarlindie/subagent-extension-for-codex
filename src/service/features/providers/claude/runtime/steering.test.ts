@@ -163,6 +163,30 @@ test("a steer goes into the running turn as a priority next message, and is take
   assert.ok(!ctx.events.some((e) => e.type === "claude.activity"));
 });
 
+test("a steer already waiting when the turn starts follows the prompt", async () => {
+  const ctx = await context();
+  const received: unknown[] = [];
+
+  ctx.c.acceptSteers = (sink) =>
+    void sink({ id: "msg_early", text: "Also this" });
+
+  const query = fakeQuery(async function* (next) {
+    received.push(
+      (await next()).message.content,
+      (await next()).message.content,
+    );
+
+    yield result("Done");
+  });
+
+  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
+
+  assert.deepEqual(received, ["Prompt", "Also this"]);
+});
+
 test("a steer the turn won't take is withdrawn as the final message ends, and no more are accepted", async () => {
   const ctx = await context();
   const cancelled: string[] = [];

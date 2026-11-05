@@ -9,6 +9,7 @@ import {
   query,
   type SDKMessage,
   type SDKUserMessage,
+  type Settings,
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
@@ -26,6 +27,7 @@ import {
   type TurnOutput,
 } from "../../types.js";
 import { ClaudeCli } from "../configuration/executable.js";
+import { sandboxBlock } from "../configuration/sandbox-check.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
 import { Inbox } from "./inbox.js";
@@ -33,13 +35,14 @@ import { ModelCatalog } from "./models.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
 /**
- * The installed SDK's Query declaration omits two controls supported by the
- * CLI runtime: an interrupt that also cancels queued messages, and withdrawing
- * one queued message.
+ * The installed SDK's Query declaration omits controls supported by the CLI
+ * runtime: an interrupt that also cancels queued messages, withdrawing one
+ * queued message, and reading the session's settings.
  */
 type SteerableQuery = Omit<Query, "interrupt"> & {
   interrupt(options?: { cancelQueued?: boolean }): Promise<unknown>;
   cancelAsyncMessage?(uuid: string): Promise<boolean>;
+  getSettings?(): Promise<{ effective: Settings }>;
 };
 
 /**
@@ -147,13 +150,6 @@ export class ClaudeAgentProvider implements Provider {
     // Streaming input mode, so steers can follow the prompt while it runs.
     const inbox = new Inbox<SDKUserMessage>();
 
-    inbox.push({
-      type: "user",
-      message: { role: "user", content: prompt },
-      parent_tool_use_id: null,
-      session_id: "",
-    });
-
     const normalize = claudeMessageNormalizer(this.fullEvents);
     const launched = performance.now();
     let firstEvent = true;
@@ -189,23 +185,6 @@ export class ClaudeAgentProvider implements Provider {
     c.signal.addEventListener("abort", interrupt, { once: true });
     if (c.signal.aborted) interrupt();
 
-    c.acceptSteers((steer) => {
-      if (ending || c.signal.aborted) return false;
-      const uuid = randomUUID();
-      steers.set(uuid, steer.id);
-
-      inbox.push({
-        type: "user",
-        message: { role: "user", content: steer.text },
-        parent_tool_use_id: null,
-        session_id: "",
-        priority: "next",
-        uuid,
-      });
-
-      return true;
-    });
-
     // The CLI runs a steer the turn ends without taking as a turn of its
     // own, so each one is withdrawn as the final message ends; one already
     // on its way runs, and this turn waits for it.
@@ -227,6 +206,38 @@ export class ClaudeAgentProvider implements Provider {
     let streaming: string | undefined;
 
     try {
+      const blocked = await sandboxBlock(stream, options);
+
+      // With no prompt sent, ending the input ends the session before any
+      // model call, and whatever the CLI still has to say arrives below.
+      if (blocked || c.signal.aborted) {
+        inbox.end();
+      } else {
+        inbox.push({
+          type: "user",
+          message: { role: "user", content: prompt },
+          parent_tool_use_id: null,
+          session_id: "",
+        });
+
+        c.acceptSteers((steer) => {
+          if (ending || c.signal.aborted) return false;
+          const uuid = randomUUID();
+          steers.set(uuid, steer.id);
+
+          inbox.push({
+            type: "user",
+            message: { role: "user", content: steer.text },
+            parent_tool_use_id: null,
+            session_id: "",
+            priority: "next",
+            uuid,
+          });
+
+          return true;
+        });
+      }
+
       for await (const m of stream) {
         if (firstEvent) {
           firstEvent = false;
@@ -323,6 +334,7 @@ export class ClaudeAgentProvider implements Provider {
         break;
       }
 
+      if (blocked) throw new Error(blocked);
       if (reply === undefined) throw new Error("Claude ended without a result");
 
       return { reply };
