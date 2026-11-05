@@ -9,15 +9,16 @@ across restarts, updates and backups.
 
 ## Start a task
 
-1. Choose an approved Git repository root with at least one commit. Add it
-   through **Manage projects… → Add project** if needed. The chat project can
-   register automatically, depending on the user setting and host metadata. See
+1. Choose an approved folder. Add it through **Manage projects… → Add project**
+   if needed. A chat's Git root can register automatically, depending on the
+   user setting and host metadata. See
    [Repository access](configuration.md#repository-access).
 2. Choose a workspace:
-   - `current_repo`, the default, uses the approved checkout, including staged,
+   - `current_repo`, the default, uses the approved folder, including staged,
      unstaged and untracked files. It accepts only revision `HEAD`.
    - `worktree` creates a separate checkout on a task branch from a committed
-     revision, `HEAD` by default. Merging its changes is up to you.
+     revision, `HEAD` by default. It needs a Git repository with a commit.
+     Merging its changes is up to you.
 3. Select the worker profile and limits, then submit the task.
 
 Worktrees isolate files only.

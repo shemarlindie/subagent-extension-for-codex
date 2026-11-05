@@ -220,7 +220,7 @@ export class Workspaces {
   /** Creates the task's workspace; worktrees get branch `<prefix><task-id>`. */
   async create(t: Task, branchPrefix = "agent/") {
     if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD") {
-      throw new Error("Current repository workspace requires revision HEAD");
+      throw new Error("Project folder workspace requires revision HEAD");
     }
 
     t.repository = await this.repository(t.repository);

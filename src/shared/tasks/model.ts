@@ -93,7 +93,7 @@ export const startSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Explicit absolute Git root from list_projects or get_current_project. Starting a task for the chat's unregistered project registers it when the user allows.",
+      "Explicit absolute project folder from list_projects or get_current_project. Starting a task for the chat's unregistered Git root registers it when the user allows.",
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),

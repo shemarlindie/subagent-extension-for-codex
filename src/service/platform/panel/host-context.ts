@@ -54,7 +54,7 @@ const permissionDenied = (error: unknown) =>
   );
 
 /**
- * A local project suggestion for review; this does not resolve or grant access.
+ * A local project suggestion for review. This doesn't resolve or grant access.
  * The Git root when there is one, otherwise the nearest registered folder, then
  * the directory itself when it could be registered. A blocked folder stays a
  * candidate with `git` unknown, so adding it can say what to change.

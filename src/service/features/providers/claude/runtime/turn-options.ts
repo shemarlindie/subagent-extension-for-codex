@@ -47,7 +47,7 @@ function workspaceRule(task: Task) {
 
   return task.no_git || !task.base_commit
     ? "This is the user's project folder, with no Git history to undo edits. Preserve unrelated files. Write profiles edit it directly."
-    : "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly.";
+    : "This is the current repository. Preserve unrelated uncommitted changes. Write profiles edit the user checkout directly.";
 }
 
 /** The task's role and workspace rules, then the user's custom instructions. */

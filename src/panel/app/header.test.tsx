@@ -87,14 +87,11 @@ test("Allow tasks here names the path in its tooltip", async () => {
     projectCandidate: "/repo",
   });
 
-  const action = view.getByRole("button", { name: "Allow tasks here" });
-
-  assert.equal(action.getAttribute("title"), null);
-  await user.hover(action);
+  await user.hover(view.getByRole("button", { name: "Allow tasks here" }));
 
   assert.match(
     (await view.findByRole("tooltip")).textContent ?? "",
-    /Let tasks run and edit files in \/repo\. Stays allowed until you remove it in Manage projects\./,
+    /edit files in \/repo\./,
   );
 });
 

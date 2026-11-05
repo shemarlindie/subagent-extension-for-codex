@@ -111,11 +111,11 @@ desktop installation delivers this metadata.
 Reading context never registers a project, though it can suggest **Allow tasks
 here**. Registration needs a user action or the configured task-start policy,
 which adds Git roots only. A chat with no directory has no candidate.
-Directories Codex generates for chats outside a project are plain folders like
-any other. `get_current_project` reports registration and the task-start policy
-without changing either. Model-supplied paths cannot grant access or trigger
-automatic registration. [Repository access](configuration.md#repository-access)
-owns these rules.
+Directories Codex generates for chats outside a project are treated like any
+other folder. `get_current_project` reports registration and the task-start
+policy without changing either. Model-supplied paths cannot grant access or
+trigger automatic registration.
+[Repository access](configuration.md#repository-access) owns these rules.
 
 The native macOS folder picker runs on the service machine and returns the
 chosen path for registration. Other platforms use the path field.

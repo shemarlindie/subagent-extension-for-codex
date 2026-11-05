@@ -40,7 +40,7 @@ the checkout's service on port 17317, and a plugin update can
 that a stdio proxy started.
 
 With **Automatically add chat projects** on (the default), starting a task from
-a chat registers its project. Use **Manage projects… → Add project** or
+a chat registers its Git root. Use **Manage projects… → Add project** or
 `npm run projects` to register others. See
 [Repository access](configuration.md#repository-access).
 

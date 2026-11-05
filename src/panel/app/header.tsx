@@ -93,7 +93,7 @@ export function Header() {
         <div className="toolbar toolbar-inline">
           {state.projectCandidate && (
             <TooltipWrapper
-              label={`Let tasks run and edit files in ${state.projectCandidate}. Stays allowed until you remove it in Manage projects.`}
+              label={`Let tasks run and edit files in ${state.projectCandidate}. It stays allowed until you remove it in Manage projects.`}
               triggerLabel="Allow tasks here"
             >
               <Button

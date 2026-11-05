@@ -50,7 +50,7 @@ export async function resolveStart(
   validateBudgets(provider, req);
 
   if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {
-    throw new Error("Current repository workspace requires revision HEAD");
+    throw new Error("Project folder workspace requires revision HEAD");
   }
 
   return req;
