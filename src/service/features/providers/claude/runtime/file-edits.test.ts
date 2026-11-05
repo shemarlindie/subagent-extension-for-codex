@@ -435,9 +435,9 @@ test("only a folder without Git flags a command with no reported diff", () => {
     "command",
   );
 
-  const write = recordingContext();
-  recordClaudeFileEdits(write, "Read", {}, true);
-  expect(write.editUnrecorded).not.toHaveBeenCalled();
+  const otherTool = recordingContext();
+  recordClaudeFileEdits(otherTool, "Read", {}, true);
+  expect(otherTool.editUnrecorded).not.toHaveBeenCalled();
 });
 
 test("the hook records mapped edits and missing files", () => {

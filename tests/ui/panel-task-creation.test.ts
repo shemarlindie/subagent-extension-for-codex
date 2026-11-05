@@ -302,10 +302,13 @@ test("the composer warns about a lost worktree default and starts in place", asy
 
   assert.equal(note.closest(".notice")?.getAttribute("data-tone"), "warning");
 
-  await user.type(
+  await pasteText(
+    user,
     await screen.findByRole("textbox", { name: "Task message" }),
-    "Tidy this folder{Enter}",
+    "Tidy this folder",
   );
+
+  await user.keyboard("{Enter}");
 
   await waitFor(() => {
     const args = transport.calls.find((call) => call.name === "start_task")
@@ -346,13 +349,13 @@ test("a project with no commit has one workspace, and a ready project restores t
     assert.equal(workspace(), "Project folder (edits apply directly)"),
   );
 
-  assert.equal(screen.queryByLabelText("Revision"), null);
+  assertAbsent(screen.queryByLabelText("Revision"));
   screen.getByText(/Your default is a worktree, but this folder has no Git/);
 
   await selectOption(user, "Project", /ready/);
   await waitFor(() => assert.equal(workspace(), "Isolated worktree"));
   screen.getByLabelText("Revision");
-  assert.equal(screen.queryByText(/Your default is a worktree/), null);
+  assertAbsent(screen.queryByText(/Your default is a worktree/));
 
   await selectOption(user, "Project", /plain/);
 
@@ -364,21 +367,11 @@ test("a project with no commit has one workspace, and a ready project restores t
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
   // The saved worktree default must not reach the service's explicit error.
-  await waitFor(() =>
-    assert.deepEqual(
-      (
-        transport.calls.find((call) => call.name === "start_task")?.args as {
-          workspace_strategy: string;
-          revision: string;
-        }
-      ).workspace_strategy,
-      "current_repo",
-    ),
-  );
+  await waitFor(() => {
+    const args = transport.calls.find((call) => call.name === "start_task")
+      ?.args as { workspace_strategy: string; revision: string } | undefined;
 
-  assert.equal(
-    (transport.calls.find((call) => call.name === "start_task")?.args as any)
-      .revision,
-    "HEAD",
-  );
+    assert.equal(args?.workspace_strategy, "current_repo");
+    assert.equal(args?.revision, "HEAD");
+  });
 });

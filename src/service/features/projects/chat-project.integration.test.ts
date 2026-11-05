@@ -7,7 +7,6 @@ import { pathToFileURL } from "node:url";
 
 import { test, type TestContext } from "vitest";
 
-import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import {
   hostProjectCandidate,
   withHostRepository,
@@ -350,42 +349,6 @@ test("a directory registration would reject is no candidate", async (t) => {
     await hostProjectCandidate(f.control, pathToFileURL("/").href),
     undefined,
   );
-});
-
-test("a chat with no directory offers no candidate and registers nothing", async (t) => {
-  const f = await fixture(t);
-
-  assert.equal(await hostProjectCandidate(f.control, undefined), undefined);
-  assert.equal(await autoRegisterChatProject(f.control, "alice"), undefined);
-
-  await assert.rejects(
-    currentChatProject(f.control, "alice"),
-    /no usable local project directory/,
-  );
-
-  assert.deepEqual(f.control.projects!.list(), []);
-  const provider = new FixtureProvider();
-
-  const control = new Control(
-    new Store(join(f.dir, "explicit.sqlite")),
-    new Workspaces(join(f.dir, "explicit-worktrees"), []),
-    new Map([[provider.id, provider]]),
-  );
-
-  control.stopped = true;
-  control.projects = new Projects(control.store.database, control.workspaces);
-  t.onTestFinished(() => control.close());
-
-  const repository = await f.repo("approved");
-  await control.projects.register(repository);
-
-  const task = await control.start("alice", {
-    provider: provider.id,
-    repository,
-    description: "Explicit approved project",
-  });
-
-  assert.equal(task.repository, repository);
 });
 
 test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(

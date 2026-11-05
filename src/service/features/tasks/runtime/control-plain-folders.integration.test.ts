@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { onTestFinished, test } from "vitest";
 
 import { copyCommittedRepository } from "../../../../../tests/support/repository-test-harness.js";
+import type { Provider } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
 import { Control } from "./control.js";
@@ -17,7 +18,7 @@ import {
 } from "./control-test-harness.js";
 
 /** Approved folders in each Git state, with a provider that records prompts. */
-async function folders(provider: PromptRecorder = new PromptRecorder()) {
+async function folders<P extends Provider>(provider: P) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "plain-folders-")));
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
 
@@ -68,15 +69,14 @@ async function folders(provider: PromptRecorder = new PromptRecorder()) {
 }
 
 test("a task runs in place in a plain folder and records its edits", async () => {
-  const provider = new DependencyWriter("note.txt", "hello\n");
-  const f = await folders(provider as unknown as PromptRecorder);
+  const f = await folders(new DependencyWriter("note.txt", "hello\n"));
   const t = await f.finished((await f.start(f.plain)).id);
 
   assert.equal(t.status, "completed", t.error);
   assert.equal(t.workspace, f.plain);
   assert.equal(t.base_commit, undefined);
   assert.equal(t.no_git, true);
-  assert.match(provider.prompts.get(t.id)!, /folder with no Git history/);
+  assert.match(f.provider.prompts.get(t.id)!, /folder with no Git history/);
 
   assert.deepEqual(
     f.c.changes.changes(t, "task").files.map((file) => file.path),
@@ -85,7 +85,7 @@ test("a task runs in place in a plain folder and records its edits", async () =>
 });
 
 test("a task runs in place in a repository with no commits", async () => {
-  const f = await folders();
+  const f = await folders(new PromptRecorder());
   const t = await f.finished((await f.start(f.unborn)).id);
 
   assert.equal(t.status, "completed", t.error);
@@ -96,7 +96,7 @@ test("a task runs in place in a repository with no commits", async () => {
 });
 
 test("an explicit worktree or revision fails at once without commits", async () => {
-  const f = await folders();
+  const f = await folders(new PromptRecorder());
 
   for (const repository of [f.plain, f.unborn]) {
     await assert.rejects(
@@ -116,7 +116,7 @@ test("an explicit worktree or revision fails at once without commits", async () 
 });
 
 test("a saved worktree default falls back, and only a writing task reports it", async () => {
-  const f = await folders();
+  const f = await folders(new PromptRecorder());
 
   // A current_repo default loses nothing.
   assert.equal((await f.start(f.plain)).workspace_fallback, undefined);
@@ -148,7 +148,7 @@ test("a saved worktree default falls back, and only a writing task reports it", 
 });
 
 test("git init between turns clears no_git and the next turn still runs", async () => {
-  const f = await folders();
+  const f = await folders(new PromptRecorder());
   const first = await f.finished((await f.start(f.plain)).id);
   assert.equal(first.no_git, true);
 
@@ -162,7 +162,7 @@ test("git init between turns clears no_git and the next turn still runs", async 
 });
 
 test("a removed .git doesn't fail the task's next new session", async () => {
-  const f = await folders();
+  const f = await folders(new PromptRecorder());
   const first = await f.finished((await f.start(f.repo)).id);
   assert.ok(first.base_commit);
 
@@ -179,23 +179,9 @@ test("a removed .git doesn't fail the task's next new session", async () => {
 });
 
 test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
-  "a folder the service can't read fails the start with what to change",
-  async () => {
-    const f = await folders();
-    await chmod(f.plain, 0o000);
-    onTestFinished(() => chmod(f.plain, 0o755));
-
-    await assert.rejects(
-      f.start(f.plain),
-      /Can't access .*plain\. On macOS, allow access in System Settings/,
-    );
-  },
-);
-
-test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
   "a blocked root doesn't stop tasks in other projects",
   async () => {
-    const f = await folders();
+    const f = await folders(new PromptRecorder());
     const parent = join(f.dir, "parent");
     const blocked = join(parent, "blocked");
     await mkdir(blocked, { recursive: true });

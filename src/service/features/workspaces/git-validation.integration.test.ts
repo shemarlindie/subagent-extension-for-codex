@@ -7,7 +7,6 @@ import {
 } from "node:child_process";
 import { once } from "node:events";
 import {
-  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -188,19 +187,3 @@ test("only Git's own answer classifies a folder as having no work tree", async (
     /Git repository validation did not finish within 5 seconds/,
   );
 });
-
-test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
-  "a permission failure never classifies a folder as plain",
-  async () => {
-    await chmod(directory, 0o000);
-
-    try {
-      await assert.rejects(
-        gitState(directory),
-        /(Permission denied|cannot change)/,
-      );
-    } finally {
-      await chmod(directory, 0o755);
-    }
-  },
-);

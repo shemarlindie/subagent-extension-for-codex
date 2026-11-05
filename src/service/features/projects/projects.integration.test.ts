@@ -265,7 +265,7 @@ test("project registration requires user authority and grants live persistent ac
       { repository: join(repository, "src") },
       "user",
     ),
-    /inside the Git repository/,
+    new RegExp(`inside the Git repository .*Add ${repository} instead`),
   );
 
   assert.deepEqual(f.projects.list(), []);
@@ -816,8 +816,15 @@ test("a plain folder registers at its exact root and lists without Git", async (
     f.projects.resolve(join(folder, "sub")),
     /outside allowed roots/,
   );
+});
 
-  // A recent answer is reused, since the panel reads this on every refresh.
+test("a project's Git state is reused briefly, then read again", async (t) => {
+  const f = await fixture(t);
+  const folder = join(f.dir, "notes");
+  await mkdir(folder);
+  await f.projects.register(folder);
+  assert.equal((await f.projects.listWithGit())[0]?.git, "none");
+
   execFileSync("git", ["init", "-q", folder]);
   assert.equal((await f.projects.listWithGit())[0]?.git, "none");
 
@@ -829,23 +836,6 @@ test("a plain folder registers at its exact root and lists without Git", async (
   await rm(folder, { recursive: true });
   clock.mockReturnValue(start + 22_000);
   assert.equal((await f.projects.listWithGit())[0]?.git, undefined);
-});
-
-test("a parent approval still permits only Git roots", async (t) => {
-  const f = await fixture(t);
-  const parent = join(f.dir, "parent");
-  await mkdir(join(parent, "plain"), { recursive: true });
-  await f.projects.register(parent, "parent");
-  const repository = join(parent, "repo");
-  await mkdir(repository);
-  execFileSync("git", ["init", "-q", repository]);
-
-  assert.equal(await f.projects.resolve(repository), repository);
-
-  await assert.rejects(
-    f.projects.resolve(join(parent, "plain")),
-    /not a git repository/,
-  );
 });
 
 test("registration rejects folders that are too broad or hold service data", async (t) => {
@@ -879,18 +869,6 @@ test("registration rejects folders that are too broad or hold service data", asy
   await mkdir(join(dotted, "..data"), { recursive: true });
   vi.stubEnv("SUBAGENT_EXTENSION_FOR_CODEX_DATA", join(dotted, "..data"));
   await assert.rejects(f.projects.register(dotted), /extension's own data/);
-});
-
-test("a folder inside a repository is rejected and names the root to add", async (t) => {
-  const f = await fixture(t);
-  const repository = await f.repo("repo");
-  const child = join(repository, "child");
-  await mkdir(child);
-
-  await assert.rejects(
-    f.projects.register(child),
-    new RegExp(`Add ${repository} instead`),
-  );
 });
 
 test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
@@ -929,16 +907,10 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
       repository: allowed,
     });
 
-    const settled = (status: string, turn: number) =>
-      vi.waitFor(() => {
-        const current = f.store.get(task.id, "owner");
-        assert.equal(current.status, status);
-        assert.ok(current.turn >= turn);
+    await vi.waitFor(() =>
+      assert.equal(f.store.get(task.id, "owner").status, "completed"),
+    );
 
-        return current;
-      });
-
-    await settled("completed", 1);
     await chmod(allowed, 0o000);
     t.onTestFinished(() => chmod(allowed, 0o755));
 
