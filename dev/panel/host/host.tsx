@@ -86,6 +86,7 @@ const defaults: Settings = {
   width: "480",
   canSend: true,
   canShare: true,
+  canDownload: true,
   showInspector: false,
   // The fixtures give most of their tasks to this thread.
   threadId: PREVIEW_THREAD,
@@ -244,6 +245,7 @@ export function Host() {
     launch,
     canSend,
     canShare,
+    canDownload,
     threadId,
     cwd,
     autoRegister,
@@ -258,6 +260,7 @@ export function Host() {
     launch,
     canSend,
     canShare,
+    canDownload,
     threadId,
     cwd,
     autoRegister,
@@ -273,10 +276,10 @@ export function Host() {
     const capabilities: McpUiHostCapabilities = {
       serverTools: {},
       openLinks: {},
-      downloadFile: {},
       logging: {},
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),
+      ...(canDownload ? { downloadFile: {} } : {}),
     };
 
     let client: Promise<Client> | undefined;
@@ -560,6 +563,14 @@ export function Host() {
             onChange={(e) => update({ canShare: e.target.checked })}
           />
           Update context
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={canDownload}
+            onChange={(e) => update({ canDownload: e.target.checked })}
+          />
+          File downloads
         </label>
         {source === "fixtures" && (
           <label

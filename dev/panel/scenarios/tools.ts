@@ -1,4 +1,3 @@
-import { type ModelChoice } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
 import {
   settingsDefaults,
@@ -27,39 +26,13 @@ import {
   withoutOriginalResponses,
 } from "./original-response-tools";
 import { PREVIEW_PENDING_TOOLS, previewPending } from "./pending-update-tools";
+import { previewModels } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
   previewReadState,
   previewUnreadTool,
 } from "./unread-tools";
-
-const previewModels: ModelChoice[] = [
-  {
-    value: "default",
-    displayName: "Default (recommended)",
-    description: "Opus 5.5 · Best for everyday, complex tasks",
-    supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
-  },
-  {
-    value: "opus",
-    displayName: "Opus 5.5",
-    description: "For complex work and everyday tasks",
-    supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
-  },
-  {
-    value: "sonnet",
-    displayName: "Sonnet 5.5",
-    description: "Most efficient for simpler tasks",
-    supportedEffortLevels: ["low", "medium", "high"],
-  },
-  {
-    value: "haiku",
-    displayName: "Haiku 4.5",
-    description: "Fastest for quick answers",
-    supportsEffort: false,
-  },
-];
 
 // A new user's settings with only Claude enabled, as the service reports them.
 const previewSettingsDefaults = (() => {
@@ -555,6 +528,10 @@ export function previewTool(
       };
     })(),
     app_export_settings: { document: JSON.stringify(previewSettingsDefaults) },
+    // Long enough to show how the panel wraps a path it can't shorten.
+    app_save_settings_file: {
+      path: `/Users/${"long-name-".repeat(12)}/delegated-work-settings-2026-11-05T09-36-05Z.json`,
+    },
   };
 
   if (!(name in fixtures)) {
