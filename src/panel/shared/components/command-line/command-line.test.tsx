@@ -11,9 +11,9 @@ import {
 } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import { Controller } from "../../app/state/controller";
-import { ControllerContext } from "../../app/state/controller-context";
-import type { Transport } from "../../app/state/types";
+import { Controller } from "../../../app/state/controller";
+import { ControllerContext } from "../../../app/state/controller-context";
+import type { Transport } from "../../../app/state/types";
 import { CommandLine } from "./command-line";
 
 function replaceClipboard(writeText: (text: string) => Promise<void>) {

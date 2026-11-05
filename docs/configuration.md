@@ -76,15 +76,42 @@ service client as a trusted administrator.
 
 ## Repository access
 
-A task target must be a canonical Git repository root with at least one commit.
-A model-supplied path never grants access. Approve a repository through global
-**Manage projects… → Add project**, **Browse…** in Advanced task, or the local
-CLI:
+A task target must be an approved folder, or a Git repository root under an
+approved parent. A model-supplied path never grants access. Approve a folder
+through global **Manage projects… → Add project**, **Browse…** in Advanced task,
+**Allow tasks here** in a chat, or the local CLI:
 
 ```sh
-node dist/projects-cli.js register /absolute/path/to/repository
+node dist/projects-cli.js register /absolute/path/to/folder
 node dist/projects-cli.js list
 ```
+
+The service reads a project's Git state from its folder, so `git init` or a
+first commit takes effect without adding it again:
+
+| `git`        | Meaning                   | Worktrees | Bash edits recorded |
+| ------------ | ------------------------- | --------- | ------------------- |
+| `ready`      | Git root with a commit    | Yes       | Yes                 |
+| `no_commits` | Git root without a commit | No        | Yes                 |
+| `none`       | Not inside a work tree    | No        | No                  |
+
+Without Git, only the exact approved folder can run tasks. A subfolder of it
+can't, and parent approvals permit only Git roots. Under the `extension`
+sandboxes, a worker can't create `.git`, so run `git init` yourself.
+Registration rejects:
+
+- a folder inside a Git repository, and the error names the root to add
+- the filesystem root, the home directory and its ancestors
+- any path that contains or sits inside the data directory
+
+A task can reach everything inside its folder, including nested repositories
+that aren't separately approved.
+
+macOS privacy controls can block the service from `~/Documents`, `~/Desktop` and
+`~/Downloads`. A folder the service can't read isn't added, and a task in one
+stops before Claude runs. The error says where to allow access. Granting it may
+not be enough, because access in these locations hasn't been verified. Keep
+projects elsewhere if the error persists.
 
 To approve every repository under a directory:
 
@@ -106,7 +133,8 @@ data cleanup.
 
 **Automatically add chat projects** (`projects.auto_register_chat`, default
 `true`) is a user-only setting. When a task starts from a chat whose Git root is
-unapproved, it registers that root using the host's sandbox metadata.
+unapproved, it registers that root using the host's sandbox metadata. A chat's
+folder without Git is only offered through **Allow tasks here**.
 
 - Explicit task paths and `host_directory` hints never grant access.
 - Listing projects, discovering context and opening panels never register

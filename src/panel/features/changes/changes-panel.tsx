@@ -2,9 +2,11 @@ import { useRef } from "react";
 
 import { useSnapshot } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
+import { CommandLine } from "../../shared/components/command-line/command-line";
 import { LoadingSwap } from "../../shared/components/loading-skeleton/loading-swap";
 import { useAnimatedHeight } from "../../shared/components/motion/use-animated-height";
 import { ScrollLatestButton } from "../../shared/components/scroll-latest-button/scroll-latest-button";
+import { gitInitCommand } from "../projects/selectors";
 import type { Task } from "../tasks/types";
 import { ChangesHeader } from "./changes-header";
 import { ChangesHeaderSkeleton, ChangesSkeleton } from "./changes-skeleton";
@@ -79,11 +81,24 @@ export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
           >
             {data && task ? (
               <>
-                {data.unrecorded_commands && (
-                  <p className="help changes-note">
-                    Some changes made by commands weren't recorded.
-                  </p>
-                )}
+                {data.unrecorded_commands &&
+                  (task.no_git ? (
+                    <div className="changes-note">
+                      <p className="help">
+                        Edits made by commands may be missing because this
+                        folder has no Git. <code>git init</code> records them
+                        from the next turn.
+                      </p>
+                      <CommandLine
+                        label="Set up Git"
+                        command={gitInitCommand(task.repository)}
+                      />
+                    </div>
+                  ) : (
+                    <p className="help changes-note">
+                      Some changes made by commands weren't recorded.
+                    </p>
+                  ))}
                 {data.files.length ? (
                   <ChangesView
                     task={task}

@@ -47,8 +47,8 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
       </p>
       <code className="managed-project-path">{project.repository}</code>
       <p className="form-note">
-        Only the project registration is removed. Your repository folder and
-        files stay on disk. Task data is kept by default.
+        Only the project registration is removed. Your folder and files stay on
+        disk. Task data is kept by default.
       </p>
       <div className="delete-option">
         <div className="delete-option-text">

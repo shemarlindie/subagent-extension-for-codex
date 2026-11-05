@@ -6,9 +6,9 @@ import {
   useSnapshot,
 } from "../../../../app/state/controller-context";
 import { Button } from "../../../../shared/components/button/button";
+import { CopyButton } from "../../../../shared/components/copy-button/copy-button";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { formatUserDateTime } from "../../../../shared/utils/user-date-time.js";
-import { CopyButton } from "../../../file-preview/copy-button";
 import { formatDuration } from "../../list/duration";
 import { estimatedCostNote } from "../../shared/estimated-cost";
 import { formatCost } from "../chat-model";

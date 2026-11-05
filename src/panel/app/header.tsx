@@ -92,13 +92,14 @@ export function Header() {
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
           {state.projectCandidate && (
-            <TooltipWrapper label="Add chat project">
+            <TooltipWrapper
+              label={`Let tasks run and edit files in ${state.projectCandidate}. It stays allowed until you remove it in Manage projects.`}
+              triggerLabel="Allow tasks here"
+            >
               <Button
                 id="add-chat-project"
                 variant="ghost"
                 className="toolbar-icon-button"
-                aria-label="Add chat project"
-                title={state.projectCandidate}
                 disabled={!state.connected || !state.scopeKnown || state.busy}
                 onClick={() => controller.addProject()}
               >
@@ -145,7 +146,7 @@ export function Header() {
                     }
                     onClick={() => controller.addProject()}
                   >
-                    Add chat project
+                    Allow tasks here
                   </Menu.Item>
                 )}
                 <Menu.Item

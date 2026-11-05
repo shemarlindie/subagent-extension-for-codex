@@ -266,6 +266,13 @@ export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
     ],
   }),
 
+  // A folder without Git: a recorded edit, and commands that may have edited.
+  "preview-notes-plain": (): ChangeFixture => ({
+    unrecordedCommands: true,
+    base: { "notes.md": "# Field notes\n" },
+    turns: [{ "notes.md": "# Field notes\n\n- Tidied\n" }],
+  }),
+
   // Every large file, added, for the file previews: megabytes of diff, so
   // the changes come in several pages.
   "preview-profile": (): ChangeFixture => ({

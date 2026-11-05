@@ -21,7 +21,7 @@ import {
   startDelegateReads,
 } from "../delegate-reads";
 import type { DelegateValues } from "../delegate-values";
-import { workerChoice } from "../delegation";
+import { projectGit, workerChoice } from "../delegation";
 import { startTaskArguments } from "../start-task";
 
 interface NewTaskLoaderContext extends DelegateReadContext {
@@ -155,7 +155,12 @@ export class NewTaskLoader {
 
       task = await this.context.tool<Task>(
         "start_task",
-        startTaskArguments(values, state.workers, state.conversation),
+        startTaskArguments(
+          values,
+          state.workers,
+          state.conversation,
+          projectGit(state, values.repository),
+        ),
       );
     } catch (error) {
       return errorMessage(error);

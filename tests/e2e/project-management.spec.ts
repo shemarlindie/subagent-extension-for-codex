@@ -230,7 +230,7 @@ test("remove project task data and worktrees while preserving checkout files acr
   // Reapproval exposes any task records that were accidentally only hidden by scope.
   await openManageProjects(page);
   await page.getByRole("button", { name: "Add project", exact: true }).click();
-  await page.getByLabel("Repository path").fill(repository);
+  await page.getByLabel("Folder path").fill(repository);
 
   await page
     .getByRole("dialog")
@@ -272,7 +272,7 @@ test("add a project from the new-task composer, keeping the list scope, and star
   await chip.click();
   await page.getByRole("option", { name: "Add project…" }).click();
   const dialog = page.getByRole("dialog", { name: "Add project" });
-  await dialog.getByLabel("Repository path").fill(added);
+  await dialog.getByLabel("Folder path").fill(added);
 
   await dialog
     .getByRole("button", { name: "Add project", exact: true })

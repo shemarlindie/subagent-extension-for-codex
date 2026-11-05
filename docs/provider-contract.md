@@ -92,6 +92,10 @@ as `git restore file.txt`. Other Git commands can report precise hunks or no
 edit data, so the provider follows the reported fields and never infers changes
 from the command text.
 
+Claude Code omits `bashEditDiff` outside a Git work tree. For a task with
+`no_git`, a Bash response without it maps to the same warning, because absence
+can't show that the command edited nothing.
+
 ## Lifecycle policy
 
 Each provider supplies a `taskPolicy`, and the control plane never branches on

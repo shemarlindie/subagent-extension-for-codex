@@ -1,6 +1,7 @@
 /* eslint-disable simple-import-sort/exports */
 import type { Event } from "../../../shared/events/types.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
+import type { GitState } from "../../../shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
@@ -32,7 +33,11 @@ export type PanelData = {
     repository?: unknown;
     revision?: string;
   };
-  panel_project_candidate?: { repository: string; auto_register?: boolean };
+  panel_project_candidate?: {
+    repository: string;
+    git?: GitState;
+    auto_register?: boolean;
+  };
   panel_selection?: { task_id?: string; tab?: string };
   tasks?: Task[];
 };
@@ -203,6 +208,7 @@ export type Snapshot = {
   repository?: string;
   projectCandidate?: string;
   projectCandidateAuto?: boolean;
+  projectCandidateGit?: GitState;
   revision: string;
   // Null until the user picks one; the list then follows the first nonempty filter.
   filter: Filter | null;

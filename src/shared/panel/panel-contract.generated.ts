@@ -11,6 +11,9 @@ export const panelOutputSchema = z.object({
   panel_project_candidate: z
     .object({
       repository: z.string(),
+      git: z
+        .union([z.literal("ready"), z.literal("no_commits"), z.literal("none")])
+        .optional(),
       auto_register: z.boolean(),
     })
     .optional(),

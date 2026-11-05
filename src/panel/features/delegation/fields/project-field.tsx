@@ -7,7 +7,7 @@ import { Field } from "../../../shared/forms/fields";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../shared/forms/form-field-hint";
 import { FormSelect } from "../../../shared/forms/form-select";
-import { projectDisplayName } from "../../projects/selectors";
+import { projectDisplayName, projectPathLabel } from "../../projects/selectors";
 import type { DelegateValues } from "../delegate-values";
 import { ProjectAutocomplete } from "./project-autocomplete";
 
@@ -79,8 +79,8 @@ export function ProjectField({
                 value: project.repository,
                 label: projectDisplayName(project),
                 description: project.pending
-                  ? `${project.repository} · Chat project, added when the task starts`
-                  : project.repository,
+                  ? `${projectPathLabel(project)} · Chat project, added when the task starts`
+                  : projectPathLabel(project),
                 showDescriptionInValue: true,
               }))}
             />

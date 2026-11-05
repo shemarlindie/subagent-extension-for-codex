@@ -39,21 +39,21 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       readOnly: true,
       conversation: "panel",
       description:
-        "Resolve panel defaults for repository, revision and conversation from explicit arguments, host_directory or this conversation's latest task. task_id selects an owned task. null conversation_id means all conversations. Never registers a project or starts work. For a returned panel_project_candidate, ask the user to use Add project in the panel.",
+        "Resolve panel defaults for repository, revision and conversation from explicit arguments, host_directory or this conversation's latest task. task_id selects an owned task. null conversation_id means all conversations. Never registers a project or starts work. For a returned panel_project_candidate, ask the user to use Allow tasks here in the panel.",
       schema: panelContextInput,
       run: (a) => resolvePanelContext(c, owner, a),
     }),
     list_projects: tool({
       readOnly: true,
       description:
-        "List registered project roots. Pass one to start_task as the explicit absolute repository. Never registers. If the chat's project is missing, ask the user to use Add project in the panel.",
+        "List registered project roots. Pass one to start_task as the explicit absolute repository. git is ready, no_commits or none when known, and only ready supports worktrees. Never registers. If the chat's project is missing, ask the user to use Allow tasks here or Add project in the panel.",
       schema: z.strictObject({}),
-      run: () => c.projects?.list() ?? [],
+      run: () => c.projects?.listWithGit() ?? [],
     }),
     get_current_project: tool({
       readOnly: true,
       description:
-        "Find the current chat's local Git root from host directory metadata and report whether it is registered. Never registers. For an unregistered project, follow next_step.",
+        "Find the current chat's project from host directory metadata: its Git root, a registered folder containing it, or the directory itself. Reports whether it is registered and its Git state. Never registers. For an unregistered project, follow next_step.",
       schema: z.strictObject({}),
       run: () => currentChatProject(c, owner, hostMeta),
     }),
@@ -77,7 +77,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       panel: true,
       conversation: "chat",
       description:
-        "Start asynchronous work on the full request in description. The service generates the title. Work runs in the current checkout by default, including uncommitted changes. Reopen existing work with open_subagent_extension_for_codex(task_id), never another start_task.",
+        "Start asynchronous work on the full request in description. The service generates the title. Work runs in the current checkout by default, including uncommitted changes. If the result has workspace_fallback, tell the user the task isn't isolated in a worktree and edits apply directly to the project folder. Reopen existing work with open_subagent_extension_for_codex(task_id), never another start_task.",
       schema: startSchema.extend({
         conversation_id: startSchema.shape.conversation_id.nullable(),
         provider: startSchema.shape.provider.unwrap().optional(),
@@ -267,7 +267,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     get_changes: tool({
       readOnly: true,
       description:
-        "Read the worker's recorded edits for the whole task or the latest turn as a unified diff with per-file stats. Prefer this to the worker's own account of its changes. Every page lists every file. Pass next_cursor to read more diffs. Incomplete files have no diff, and unrecorded_commands means a command changed files without recorded edits. Inspect those files directly. Commits and worktree removal leave these diffs unchanged. Worktree commits are on task.branch.",
+        "Read the worker's recorded edits for the whole task or the latest turn as a unified diff with per-file stats. Prefer this to the worker's own account of its changes. Every page lists every file. Pass next_cursor to read more diffs. Incomplete files have no diff, and unrecorded_commands means a command changed or, in a folder without Git, may have changed files without recorded edits. Inspect those files directly. Commits and worktree removal leave these diffs unchanged. Worktree commits are on task.branch.",
       schema: taskId.extend({
         scope: z.enum(["task", "turn"]).default("task"),
         cursor: z.string().max(300).optional(),

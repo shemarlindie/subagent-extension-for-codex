@@ -1045,6 +1045,7 @@ export class Controller {
           ? candidate.repository
           : undefined,
       projectCandidateAuto: candidate?.auto_register === true,
+      projectCandidateGit: candidate?.git,
     });
   }
 

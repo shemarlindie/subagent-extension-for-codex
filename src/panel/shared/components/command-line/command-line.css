@@ -1,0 +1,28 @@
+/* Each value and its copy action share one surface. */
+.command-line {
+  display: grid;
+  grid-template-columns: 9ch minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.command-label {
+  color: var(--muted);
+}
+.command-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+.command {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  user-select: all;
+}

@@ -1,6 +1,16 @@
 import { expect, test } from "vitest";
 
-import { projectApproved, projectDisplayName } from "./selectors";
+import {
+  gitInitCommand,
+  projectApproved,
+  projectDisplayName,
+} from "./selectors";
+
+test("the Git setup command names its folder and survives shell quoting", () => {
+  expect(gitInitCommand("/work/Bob's notes")).toBe(
+    `git init '/work/Bob'\\''s notes'`,
+  );
+});
 
 test("project names fall back to path basenames across path styles", () => {
   expect(projectDisplayName({ repository: "/workspaces/example/" })).toBe(

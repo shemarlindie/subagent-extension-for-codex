@@ -13,6 +13,7 @@ import {
   observedEditsProvider,
   prepareEditsFixture,
   runEditsScenario,
+  runFoldersScenario,
 } from "./live-claude-edits.mjs";
 import { runIsolatedScenario } from "./live-claude-isolated.mjs";
 
@@ -22,7 +23,7 @@ const latestReply = (store, id) =>
 
 if (process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY !== "1") {
   console.error(
-    "Set SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity, or $1.50 for edits. The edits scenario runs four tasks. A response can exceed the budget before work stops.",
+    "Set SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity or folders, or $1.50 for edits. The edits scenario runs four tasks, and folders runs two. A response can exceed the budget before work stops.",
   );
 
   process.exit(1);
@@ -41,8 +42,9 @@ assert.ok(
     "parity",
     "isolated",
     "edits",
+    "folders",
   ].includes(scenario),
-  "Choose read, resume, sandbox, mcp, budget, parity, isolated, or edits",
+  "Choose read, resume, sandbox, mcp, budget, parity, isolated, edits, or folders",
 );
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
@@ -190,6 +192,8 @@ const control = new Control(
 
 if (scenario === "isolated") {
   await runIsolatedScenario({ control, store, repo, root, taskBase });
+} else if (scenario === "folders") {
+  await runFoldersScenario({ control, store, root, taskBase });
 } else if (scenario === "edits") {
   await runEditsScenario({
     control,

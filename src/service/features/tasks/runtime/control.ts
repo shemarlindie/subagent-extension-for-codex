@@ -61,7 +61,7 @@ import {
   SendRequests,
   type SentMessage,
 } from "./send-requests.js";
-import { resolveStart } from "./start-request.js";
+import { resolveProjectWorkspace, resolveStart } from "./start-request.js";
 import { deletionBatch, deletionOrder } from "./task-deletion.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
@@ -232,8 +232,17 @@ export class Control {
 
     for (const id of req.depends_on) this.mutableTask(owner, id);
 
+    const workspace = await resolveProjectWorkspace(
+      repository,
+      req,
+      this.settings.values(owner),
+      (input as { workspace_strategy?: unknown }).workspace_strategy ===
+        "worktree",
+    );
+
     const t: Task = {
       ...req,
+      ...workspace,
       repository,
       id: `task_${randomUUID()}`,
       owner,

@@ -1,6 +1,7 @@
 import { type SubmitEvent, useEffect, useRef } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
+import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
@@ -10,6 +11,7 @@ import { Field } from "../../shared/forms/fields";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
+import { runsInPlace } from "../projects/selectors";
 import {
   type DelegateFormDialog,
   delegateInitialValues,
@@ -18,7 +20,7 @@ import {
   workerChoices,
 } from "./delegate-initial-values";
 import type { DelegateValues } from "./delegate-values";
-import { taskProjects, workerChoice } from "./delegation";
+import { projectGit, taskProjects, workerChoice } from "./delegation";
 import { ApprovalField } from "./fields/approval-field";
 import { BudgetFields } from "./fields/budget-fields";
 import { DependencyField } from "./fields/dependency-field";
@@ -26,8 +28,10 @@ import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
 import { WorkerFields } from "./fields/worker-fields";
 import { WorkspaceField } from "./fields/workspace-field";
+import { WorkspaceNoteView } from "./fields/workspace-note-view";
 import { startTaskArguments } from "./start-task";
 import { useAsyncDefaults } from "./use-async-defaults";
+import { workspaceNote } from "./workspace-note";
 
 interface DelegateFormProps {
   dialog: DelegateFormDialog;
@@ -87,7 +91,12 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
         return controller.tool<Task>(
           "start_task",
-          startTaskArguments(values, state.workers, conversation),
+          startTaskArguments(
+            values,
+            state.workers,
+            conversation,
+            projectGit(state, values.repository),
+          ),
         );
       }, true),
     );
@@ -123,6 +132,24 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   useEffect(() => {
     if (strategy === "current_repo") form.setValue("revision", "HEAD");
   }, [strategy, repository, form]);
+
+  // A project with no commit has one valid workspace. Leaving it restores the
+  // saved default, the value the form would have started with.
+  const git = projectGit(state, repository),
+    inPlace = runsInPlace(git),
+    savedStrategy = defaults.task.workspace_strategy,
+    wasInPlace = useRef(false);
+
+  useEffect(() => {
+    // Async defaults can fill the saved value after this project is chosen.
+    if (inPlace && strategy !== "current_repo") {
+      form.setValue("workspace_strategy", "current_repo");
+    } else if (!inPlace && wasInPlace.current) {
+      form.setValue("workspace_strategy", savedStrategy);
+    }
+
+    wasInPlace.current = inPlace;
+  }, [inPlace, strategy, savedStrategy, form]);
 
   const conversation = useRef(state.conversation).current;
 
@@ -183,6 +210,16 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         <WorkspaceField
           settingsReady={statuses.settings === "ready"}
           settingsLoading={statuses.settings === "loading"}
+          inPlace={inPlace}
+        />
+        <WorkspaceNoteView
+          note={workspaceNote({
+            git,
+            savedStrategy,
+            readOnly: readOnlyProfile(
+              workerChoice(selectedWorker).profile ?? "",
+            ),
+          })}
         />
         <ApprovalField
           workers={state.workers}
@@ -209,6 +246,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
           revisionLoading={
             statuses.context === "loading" || statuses.settings === "loading"
           }
+          revisionHidden={inPlace}
         />
         <ModelFields
           defaults={defaults}

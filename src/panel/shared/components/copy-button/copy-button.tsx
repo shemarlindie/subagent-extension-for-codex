@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
-import { useController } from "../../app/state/controller-context";
-import { Button } from "../../shared/components/button/button";
-import { Icon } from "../../shared/components/icons/icons";
-import { TooltipWrapper } from "../../shared/components/tooltip";
-import { copyText } from "../../shared/utils/copy-text";
-import { writeClipboardText } from "../../shared/utils/write-clipboard";
+import { useController } from "../../../app/state/controller-context";
+import { copyText } from "../../utils/copy-text";
+import { writeClipboardText } from "../../utils/write-clipboard";
+import { Button } from "../button/button";
+import { Icon } from "../icons/icons";
+import { TooltipWrapper } from "../tooltip";
 
 type CopyButtonProps = {
   text: string;

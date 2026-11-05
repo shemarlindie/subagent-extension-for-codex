@@ -20,8 +20,13 @@
 .project-list-skeleton .managed-projects {
   width: 100%;
 }
+/* The name placeholder's width is a percentage of its title. */
+.project-list-skeleton .managed-project-title {
+  flex: 1;
+}
+/* Matches the name's edit field, so the row keeps its height when it loads. */
 .project-skeleton-name {
-  height: 11px;
+  height: 28px;
 }
 .project-skeleton-name-wide {
   width: min(220px, 66%);
@@ -31,10 +36,6 @@
 }
 .project-skeleton-name-short {
   width: min(120px, 38%);
-}
-.project-skeleton-approval {
-  width: 82px;
-  height: 9px;
 }
 .project-skeleton-path {
   width: min(360px, 78%);
@@ -46,16 +47,34 @@
   height: 24px;
   border-radius: 50%;
 }
+/* Less on top, since the name's edit field and line height add space above it. */
 .managed-project {
-  padding: 18px 0;
+  padding: 14px 0 18px;
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
 .managed-project-heading {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   overflow-wrap: anywhere;
+}
+/* A long name wraps, with its tags still beside it. */
+.managed-project-heading > :not(.managed-project-title) {
+  flex: none;
+}
+/* A touch-sized target around the icon, without changing the row's layout. */
+.managed-project-heading .project-git-icon {
+  display: inline-flex;
+  margin: -5px;
+  padding: 5px;
+}
+.project-git-note {
+  display: grid;
+  gap: 6px;
+}
+.project-git-note p {
+  margin: 0;
 }
 .managed-project-path {
   display: block;
@@ -73,13 +92,18 @@
   min-width: 0;
 }
 .managed-project-title {
-  flex: 1;
   min-width: 0;
   line-height: 24px;
 }
-.managed-project-archive {
-  white-space: nowrap;
+/* The editor sizes to its container, so it takes the row. Hiding the tags
+   stops them jumping to the row's end. */
+.managed-project-title:has([data-editing]) {
+  flex: 1;
 }
+.managed-project-title:has([data-editing]) ~ * {
+  display: none;
+}
+.managed-project-archive,
 .managed-project-remove {
   color: var(--muted);
 }

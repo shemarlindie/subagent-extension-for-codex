@@ -10,6 +10,7 @@ import { BackButton } from "../../shared/components/navigation/back-button";
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { ProjectArchive } from "../tasks/archive/project-archive";
+import { ProjectGitIcon } from "./project-git-icon";
 import { ProjectListSkeleton } from "./project-list-skeleton";
 import { projectDisplayName } from "./selectors";
 
@@ -116,38 +117,50 @@ export function ProjectsPage() {
                         {project.kind === "parent" && (
                           <span className="muted">Parent approval</span>
                         )}
+                        <ProjectGitIcon
+                          git={project.git}
+                          folder={project.repository}
+                          name={name}
+                        />
                       </div>
                       <code className="managed-project-path">
                         {project.repository}
                       </code>
                     </div>
-                    <Button
-                      variant="text"
-                      className="managed-project-archive"
-                      disabled={disabled}
-                      aria-label={`View archived tasks in ${name}`}
-                      data-repository={project.repository}
-                      onClick={() =>
-                        setArchive({ repository: project.repository, name })
-                      }
-                    >
-                      View archived tasks
-                    </Button>
-                    <TooltipWrapper
-                      label="Remove project"
-                      triggerLabel={`Remove ${name}`}
-                    >
-                      <Button
-                        variant="ghost"
-                        className="toolbar-icon-button managed-project-remove"
-                        disabled={disabled}
-                        aria-label={`Remove ${name}`}
-                        data-repository={project.repository}
-                        onClick={() => controller.removeProject(project)}
+                    <div className="toolbar">
+                      <TooltipWrapper
+                        label="View archived tasks"
+                        triggerLabel={`View archived tasks in ${name}`}
                       >
-                        <Icon name="minus" size={16} />
-                      </Button>
-                    </TooltipWrapper>
+                        <Button
+                          variant="ghost"
+                          className="toolbar-icon-button managed-project-archive"
+                          disabled={disabled}
+                          aria-label={`View archived tasks in ${name}`}
+                          data-repository={project.repository}
+                          onClick={() =>
+                            setArchive({ repository: project.repository, name })
+                          }
+                        >
+                          <Icon name="archive-view" size={16} />
+                        </Button>
+                      </TooltipWrapper>
+                      <TooltipWrapper
+                        label="Remove project"
+                        triggerLabel={`Remove ${name}`}
+                      >
+                        <Button
+                          variant="ghost"
+                          className="toolbar-icon-button managed-project-remove"
+                          disabled={disabled}
+                          aria-label={`Remove ${name}`}
+                          data-repository={project.repository}
+                          onClick={() => controller.removeProject(project)}
+                        >
+                          <Icon name="minus" size={16} />
+                        </Button>
+                      </TooltipWrapper>
+                    </div>
                   </div>
                 </li>
               );

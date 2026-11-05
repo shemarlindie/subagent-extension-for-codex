@@ -5,6 +5,7 @@ import {
   readOnlyProfile,
 } from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
+import type { Task } from "../../../../../shared/tasks/model.js";
 import type { RunContext } from "../../types.js";
 import {
   claudeEnvironment,
@@ -39,6 +40,16 @@ function settingsOptions(policy: ClaudePolicy): Partial<Options> {
   };
 }
 
+function workspaceRule(task: Task) {
+  if (task.workspace_strategy !== "current_repo") {
+    return "Never modify the primary checkout.";
+  }
+
+  return task.no_git || !task.base_commit
+    ? "This is the user's project folder, with no Git history to undo edits. Preserve unrelated files. Write profiles edit it directly."
+    : "This is the current repository. Preserve unrelated uncommitted changes. Write profiles edit the user checkout directly.";
+}
+
 /** The task's role and workspace rules, then the user's custom instructions. */
 function systemPromptAppend(c: RunContext, readOnly: boolean) {
   const role =
@@ -51,9 +62,7 @@ function systemPromptAppend(c: RunContext, readOnly: boolean) {
     readOnly
       ? "Inspect only; you cannot edit files or run shell commands."
       : "Follow the configured native permission mode for tool execution.",
-    c.task.workspace_strategy === "current_repo"
-      ? "This is the current repository; preserve unrelated uncommitted changes. Write profiles edit the user checkout directly."
-      : "Never modify the primary checkout.",
+    workspaceRule(c.task),
   ];
 
   const environment = `You are a delegated worker running inside Subagent Extension for Codex. Codex is the parent agent, and the user communicates through its chat and the extension panel. Task ID: ${c.task.id}. Parent conversation: ${c.task.conversation_id ?? "unavailable"}. Workspace: ${c.task.workspace}. Your replies appear in the task conversation, where Codex reads them. Use AskUserQuestion for questions and the normal permission flow for approvals.`;
@@ -178,7 +187,12 @@ export async function claudeTurnOptions(
           hooks: [
             async (input) => {
               if (input.hook_event_name === "PostToolUse") {
-                recordClaudeFileEdits(c, input.tool_name, input.tool_response);
+                recordClaudeFileEdits(
+                  c,
+                  input.tool_name,
+                  input.tool_response,
+                  c.task.no_git,
+                );
               }
 
               return {};

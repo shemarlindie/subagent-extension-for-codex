@@ -100,6 +100,12 @@
   /* Panel tokens: aliases of the host variables, so a host override reaches every surface. */
   --bg: var(--color-background-primary);
   --surface: var(--color-background-tertiary);
+  /* Tooltips and popovers: a solid tint of the page. Dark theme needs a stronger one. */
+  --popup-bg: color-mix(
+    in srgb,
+    var(--color-text-primary) 5%,
+    var(--color-background-primary)
+  );
   /* The user's chat bubble, which the chat skeleton matches. */
   --user-bubble-bg: color-mix(
     in oklab,
@@ -132,6 +138,11 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
+  --popup-bg: color-mix(
+    in srgb,
+    var(--color-text-primary) 7%,
+    var(--color-background-primary)
+  );
   --color-background-primary: rgb(17, 17, 17);
   --color-background-secondary: rgba(47, 47, 47, 0.96);
   --color-background-tertiary: rgb(14, 14, 14);

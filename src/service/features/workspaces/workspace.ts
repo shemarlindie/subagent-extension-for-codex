@@ -3,15 +3,22 @@ import {
   copyFile,
   mkdir,
   mkdtemp,
+  opendir,
   realpath,
   rm,
   stat,
   utimes,
 } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
-import { git, gitRepositoryRoot } from "./git.js";
+import {
+  git,
+  gitRepositoryRoot,
+  gitState,
+  gitWorkTreeRoot,
+  WORKTREE_NEEDS_GIT,
+} from "./git.js";
 
 const exists = (path: string) =>
   access(path).then(
@@ -19,10 +26,71 @@ const exists = (path: string) =>
     () => false,
   );
 
+/** Whether `path` is `parent` or inside it. A name like `..notes` is inside. */
+export const within = (parent: string, path: string) => {
+  const child = relative(parent, path);
+
+  return child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child);
+};
+
+/**
+ * A folder's real path, once the service can read it. macOS privacy controls
+ * and file permissions both surface here, so the user learns what to change.
+ */
+export async function accessibleRealpath(path: string) {
+  try {
+    const actual = await realpath(path);
+
+    if ((await stat(actual)).isDirectory()) {
+      await (await opendir(actual)).close();
+    }
+
+    return actual;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+
+    if (code === "EPERM" || code === "EACCES") {
+      throw new Error(
+        `Can't access ${path}. On macOS, allow access in System Settings > Privacy & Security > Files & Folders, then try again.`,
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
+}
+
+/** Real paths of the roots the service can still reach. Others grant nothing. */
+const realRoots = (roots: string[]) =>
+  Promise.all(
+    roots.map(async (root) => {
+      try {
+        return await realpath(root);
+      } catch (error) {
+        // A removed or blocked project must not block other approvals or grant
+        // access.
+        const code = (error as NodeJS.ErrnoException).code;
+
+        if (
+          code === "ENOENT" ||
+          code === "ENOTDIR" ||
+          code === "EPERM" ||
+          code === "EACCES"
+        ) {
+          return undefined;
+        }
+
+        throw error;
+      }
+    }),
+  );
+
 export class Workspaces {
+  /** `exactRoots` lists the roots that can run without Git. */
   constructor(
     public root: string,
     public allowedRoots: string[],
+    public exactRoots: string[] = [],
   ) {}
 
   /**
@@ -131,35 +199,20 @@ export class Workspaces {
   }
 
   async repository(path: string) {
-    const actual = await realpath(path);
+    const actual = await accessibleRealpath(path);
+    const roots = await realRoots(this.allowedRoots);
 
-    const roots = await Promise.all(
-      this.allowedRoots.map(async (root) => {
-        try {
-          return await realpath(root);
-        } catch (error) {
-          // A removed project must not block other approvals or grant access.
-          const code = (error as NodeJS.ErrnoException).code;
-          if (code === "ENOENT" || code === "ENOTDIR") return undefined;
-          throw error;
-        }
-      }),
-    );
-
-    if (
-      !roots.some((root) => {
-        if (root === undefined) return false;
-        const p = relative(root, actual);
-
-        return !p.startsWith("..") && !isAbsolute(p);
-      })
-    ) {
+    if (!roots.some((root) => root !== undefined && within(root, actual))) {
       throw new Error("Repository outside allowed roots");
     }
 
-    if ((await gitRepositoryRoot(actual)) !== actual) {
-      throw new Error("Use repository root");
-    }
+    // Only an exact approved root may run without Git, so a parent approval
+    // never reaches a plain folder inside it.
+    const root = (await realRoots(this.exactRoots)).includes(actual)
+      ? ((await gitWorkTreeRoot(actual)) ?? actual)
+      : await gitRepositoryRoot(actual);
+
+    if (root !== actual) throw new Error("Use repository root");
 
     return actual;
   }
@@ -167,19 +220,23 @@ export class Workspaces {
   /** Creates the task's workspace; worktrees get branch `<prefix><task-id>`. */
   async create(t: Task, branchPrefix = "agent/") {
     if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD") {
-      throw new Error("Current repository workspace requires revision HEAD");
+      throw new Error("Project folder workspace requires revision HEAD");
     }
 
     t.repository = await this.repository(t.repository);
 
-    t.base_commit = (
-      await git(t.repository, [
-        "rev-parse",
-        "--verify",
-        "--end-of-options",
-        `${t.revision}^{commit}`,
-      ])
-    ).trim();
+    if ((await gitState(t.repository)) === "ready") {
+      t.base_commit = (
+        await git(t.repository, [
+          "rev-parse",
+          "--verify",
+          "--end-of-options",
+          `${t.revision}^{commit}`,
+        ])
+      ).trim();
+    } else if (t.workspace_strategy === "worktree") {
+      throw new Error(WORKTREE_NEEDS_GIT);
+    }
 
     if (t.workspace_strategy === "current_repo") {
       t.workspace = t.repository;
@@ -206,7 +263,7 @@ export class Workspaces {
       "-b",
       branch,
       workspace,
-      t.base_commit,
+      t.base_commit!,
     ]);
 
     t.workspace = workspace;

@@ -7,11 +7,14 @@ import { type DelegateValues, pendingPlaceholder } from "../delegate-values";
 interface WorkspaceFieldProps {
   settingsReady?: boolean;
   settingsLoading?: boolean;
+  /** The project has no commit, so this is the only valid choice. */
+  inPlace?: boolean;
 }
 
 export function WorkspaceField({
   settingsReady = true,
   settingsLoading = false,
+  inPlace = false,
 }: WorkspaceFieldProps) {
   const { control } = useFormContext<DelegateValues>();
   const value = useWatch({ control, name: "workspace_strategy" });
@@ -30,13 +33,22 @@ export function WorkspaceField({
         placeholder={
           unresolved ? pendingPlaceholder(settingsLoading) : undefined
         }
-        options={[
-          { value: "worktree", label: "Isolated worktree" },
-          {
-            value: "current_repo",
-            label: "Current repository (uncommitted changes)",
-          },
-        ]}
+        options={
+          inPlace
+            ? [
+                {
+                  value: "current_repo",
+                  label: "Project folder (edits apply directly)",
+                },
+              ]
+            : [
+                { value: "worktree", label: "Isolated worktree" },
+                {
+                  value: "current_repo",
+                  label: "Project folder (uncommitted changes)",
+                },
+              ]
+        }
       />
     </Field>
   );
