@@ -36,9 +36,9 @@ layout. The host owns placement and display modes.
 
 **Manage projects…** appears last in the global project dropdown. It opens a
 full-width Projects page that lists saved names and folder paths, including
-parent approvals. A project with no commit shows a **No Git** or **No commits**
-tag, which explains the effect. **Back to Tasks** returns to the previous task
-view.
+parent approvals. A folder without Git or a repository with no commit shows a
+slashed icon beside its name, and its note explains the effect. **Back to
+Tasks** returns to the previous task view.
 
 - **Add project** opens a dialog where you enter a path or use the service
   host's folder picker.
@@ -164,9 +164,9 @@ Archiving hides a stopped task with nothing waiting from the task list.
   **Archive all** archives every stopped one. Search and filters don't limit
   either action.
 
-**View archived tasks** beside a project on the Projects page lists that
-project's archived tasks from any chat, newest first. Select tasks to act on
-them, or select none to act on all.
+The **View archived tasks** icon beside a project on the Projects page lists
+that project's archived tasks from any chat, newest first. Select tasks to act
+on them, or select none to act on all.
 
 - **Unarchive** returns the tasks to the task list.
 - **Delete** asks first, then deletes the tasks like **Delete task**. Turn on
