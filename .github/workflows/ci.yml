@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A new push cancels its pull request's older run. Other runs, including the
+# release's call to this workflow, each get their own group.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
     name: Checks (${{ matrix.os }})
