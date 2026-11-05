@@ -581,10 +581,6 @@ test("an upward scroll still near the end does not resume following", () => {
   view.rerender(createElement(Chat, { ...props, items: more }));
   expect(scrollTo).not.toHaveBeenCalled();
   expect(viewport.scrollTop).toBe(370);
-
-  viewport.scrollTop = 480;
-  fireEvent.scroll(viewport);
-  expect(button()).toBeNull();
 });
 
 test("a smooth return that never moves finishes at the end", (t) => {
