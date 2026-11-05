@@ -50,6 +50,15 @@ interface AgentStartedPayload {
   tools?: string[];
 }
 
+/** A session runs with something other than what the task asked for. */
+interface AgentLimitedPayload {
+  setting: "permission_mode" | "model";
+  requested: string;
+  effective: string;
+  /** A sentence for the user, saying what the task runs with and why. */
+  reason: string;
+}
+
 interface AgentCompletedPayload {
   cost_usd?: number;
   total_cost_usd?: number;
@@ -100,6 +109,7 @@ export interface EventPayloadMap extends TaskEventPayloadMap {
   "agent.content": AgentContentPayload;
   "agent.reply": AgentReplyPayload;
   "agent.started": AgentStartedPayload;
+  "agent.limited": AgentLimitedPayload;
   "agent.completed": AgentCompletedPayload;
   "agent.input_required": AgentInputRequiredPayload;
   "agent.input_submitted": AgentInputSubmittedPayload;

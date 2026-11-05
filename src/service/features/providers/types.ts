@@ -54,6 +54,11 @@ export interface RunContext {
   /** Explicit escape path for provider-owned or future event names. */
   emitOpaque: OpaqueEventEmitter;
   session: (id: string, stateRef: string) => void;
+  /**
+   * Stores what the session runs with where it differs from the task's request,
+   * under `provider_options.<id>.effective`. Replaces the earlier values.
+   */
+  effectiveOptions(values: Record<string, unknown>): void;
   input: (
     tool: string,
     input: Record<string, unknown>,

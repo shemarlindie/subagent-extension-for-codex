@@ -5,7 +5,10 @@ import type { EventPayloadMap } from "../../../../shared/events/event-contract.j
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
-import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
+import {
+  assertSelectedProviderOptions,
+  withEffectiveOptions,
+} from "../../../../shared/providers/options.js";
 import {
   type BudgetRaise,
   type InputAuthority,
@@ -542,6 +545,10 @@ export class Control {
         t.session_id = id;
         t.session_state_ref = ref;
         t.session_owner = this.ownerWorker;
+        this.store.save(t);
+      },
+      effectiveOptions: (effective) => {
+        t.provider_options = withEffectiveOptions(t, effective);
         this.store.save(t);
       },
       input: a.input.request,

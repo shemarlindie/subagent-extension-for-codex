@@ -1,7 +1,9 @@
 import type { Options, Settings } from "@anthropic-ai/claude-agent-sdk";
 
-/** How long Claude Code may take to report its settings at startup. */
-const CHECK_TIMEOUT_MS = 30_000;
+import {
+  readSessionSettings,
+  type SettingsReader,
+} from "./session-settings.js";
 
 const CHOOSE_ANOTHER = "Choose another option in Settings or ask your admin.";
 
@@ -47,28 +49,13 @@ function shortfall(
  * also lands here, and its own result follows on the stream.
  */
 export async function sandboxBlock(
-  session: { getSettings?(): Promise<{ effective: Settings }> },
+  session: SettingsReader,
   requested: RequestedSandbox,
 ) {
   if (!requested.sandbox) return undefined;
-  if (!session.getSettings) return UNCONFIRMED;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  const settings = await readSessionSettings(session);
 
-  try {
-    const settings = await Promise.race([
-      session.getSettings(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("Timed out")),
-          CHECK_TIMEOUT_MS,
-        );
-      }),
-    ]);
-
-    return shortfall(requested, settings.effective.sandbox);
-  } catch {
-    return UNCONFIRMED;
-  } finally {
-    clearTimeout(timer);
-  }
+  return settings
+    ? shortfall(requested, settings.effective.sandbox)
+    : UNCONFIRMED;
 }

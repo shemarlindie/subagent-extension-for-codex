@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { titleCase } from "../../text.js";
+
 export const claudePermissionModes = [
   "default",
   "acceptEdits",
@@ -91,6 +93,18 @@ const permissionLabels: Partial<
 
 export function permissionLabel(mode: ClaudePermissionMode | "inherit") {
   return permissionLabels[mode] ?? mode;
+}
+
+/**
+ * A permission mode's label shortened for a chip: "Plan — read only" reads
+ * "Plan", and the default mode reads by what it does, "Ask for approval".
+ */
+export function shortPermissionLabel(label: string) {
+  if (label === "Use extension setting") return "Extension setting";
+
+  const [name = label, detail] = label.split(" — ");
+
+  return name === "Default" && detail ? titleCase(detail) : name;
 }
 
 const permissionRank: Partial<Record<ClaudePermissionMode, number>> = {

@@ -297,6 +297,29 @@ test("cost counts each turn once, though a resumed session reports its running t
   await c.close();
 });
 
+test("a session's effective options are stored apart from what the task requested", async () => {
+  class Limited extends TestProvider {
+    override async run(c: RunContext, p: string) {
+      c.effectiveOptions({ model: "other" });
+
+      return super.run(c, p);
+    }
+  }
+
+  const { c, store, repo } = await setup(new Limited());
+
+  const t = await c.start("alice", input(repo));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const stored = store.get(t.id, "alice");
+
+  assert.deepEqual(stored.provider_options?.[stored.provider], {
+    ...t.provider_options?.[t.provider],
+    effective: { model: "other" },
+  });
+
+  await c.close();
+});
+
 test("runtime budget stops a worker waiting for input", async () => {
   const { c, store, repo } = await setup();
 

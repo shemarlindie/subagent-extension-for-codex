@@ -9,7 +9,6 @@ import {
   query,
   type SDKMessage,
   type SDKUserMessage,
-  type Settings,
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
@@ -28,8 +27,10 @@ import {
 } from "../../types.js";
 import { ClaudeCli } from "../configuration/executable.js";
 import { sandboxBlock } from "../configuration/sandbox-check.js";
+import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
+import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
 import { ModelCatalog } from "./models.js";
 import { claudeTurnOptions } from "./turn-options.js";
@@ -42,8 +43,7 @@ import { claudeTurnOptions } from "./turn-options.js";
 type SteerableQuery = Omit<Query, "interrupt"> & {
   interrupt(options?: { cancelQueued?: boolean }): Promise<unknown>;
   cancelAsyncMessage?(uuid: string): Promise<boolean>;
-  getSettings?(): Promise<{ effective: Settings }>;
-};
+} & SettingsReader;
 
 /**
  * A frame the CLI sends that the SDK doesn't declare: where a message sent
@@ -204,6 +204,9 @@ export class ClaudeAgentProvider implements Provider {
     let reply: string | undefined;
     // The main worker's message being streamed.
     let streaming: string | undefined;
+    // A steer the CLI runs as its own turn starts again, in whatever mode
+    // the first one left, so only the first start says what the task got.
+    let started = false;
 
     try {
       const blocked = await sandboxBlock(stream, options);
@@ -303,6 +306,12 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         normalize(c, m);
+
+        if (m.type === "system" && m.subtype === "init" && !started) {
+          started = true;
+          await recordEffectiveSettings(c, m, stream);
+        }
+
         if (m.type !== "result") continue;
 
         logEvent("info", "provider.result", {

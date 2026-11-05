@@ -85,6 +85,7 @@ async function context() {
     emit: (type) => events.push({ type }),
     emitOpaque: (type) => events.push({ type }),
     session: () => {},
+    effectiveOptions: () => {},
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),
     steerTaken: (id) => taken.push(id),
@@ -185,6 +186,35 @@ test("a steer already waiting when the turn starts follows the prompt", async ()
   );
 
   assert.deepEqual(received, ["Prompt", "Also this"]);
+});
+
+test("only a turn's first start says which mode the task got, since a later one follows from the turn", async () => {
+  const ctx = await context();
+  const effective: unknown[] = [];
+
+  ctx.c.effectiveOptions = (values) => effective.push(values);
+
+  const init = (permissionMode: string) => ({
+    type: "system",
+    subtype: "init",
+    model: "model",
+    tools: [],
+    permissionMode,
+  });
+
+  const query = fakeQuery(async function* (next) {
+    await next();
+    yield init(ctx.c.task.provider_options!.claude!.permission_mode as string);
+    yield init("acceptEdits");
+    yield result("Done");
+  });
+
+  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
+
+  assert.deepEqual(effective, []);
 });
 
 test("a steer the turn won't take is withdrawn as the final message ends, and no more are accepted", async () => {

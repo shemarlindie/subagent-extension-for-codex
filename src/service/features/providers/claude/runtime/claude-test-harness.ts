@@ -98,6 +98,7 @@ export async function context() {
     emit: (type, data) => events.push({ type, data }),
     emitOpaque: (type, data) => events.push({ type, data }),
     session: (id, ref) => sessions.push({ id, ref }),
+    effectiveOptions: (effective) => setClaudeOptions(task, { effective }),
     input: async () => ({ approved: false, message: "User declined" }),
     acceptSteers: () => {},
     steerTaken: () => {},

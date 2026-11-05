@@ -1,14 +1,14 @@
-import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
+import {
+  readOnlyProfile,
+  shortPermissionLabel,
+} from "../../../../../shared/providers/claude/permissions";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { titleCase } from "../../../../../shared/text";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { Icon } from "../../../../shared/components/icons/icons";
-import {
-  compactPermissionLabel,
-  shortPermissionLabel,
-} from "../../../delegation/permission-label";
+import { compactPermissionLabel } from "../../../delegation/permission-label";
 import {
   compactReasoningLabel,
   modelName,

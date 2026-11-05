@@ -308,6 +308,9 @@ body[data-expanded-panel="true"]
 .chat-note[data-note="failure"] {
   color: var(--danger);
 }
+.chat-note[data-note="limited"] {
+  color: var(--warn);
+}
 .chat-working {
   /* Reserve one line even when idle so activity never shifts the conversation. */
   flex: none;
