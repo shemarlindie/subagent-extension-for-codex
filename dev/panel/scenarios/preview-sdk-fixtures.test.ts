@@ -63,6 +63,7 @@ const sdkKinds: Record<Kind<SDKMessage>, true> = {
   "system:elicitation_complete": true,
   "system:permission_denied": true,
   "system:mirror_error": true,
+  "system:session_writes_lost": true,
   "system:informational": true,
 };
 

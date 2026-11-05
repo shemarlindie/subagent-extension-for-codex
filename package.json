@@ -69,7 +69,7 @@
     "dev:plugin": "node scripts/dev-plugin.mjs"
   },
   "devDependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.300",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.318",
     "@base-ui/react": "^1.9.0",
     "@eslint/js": "^10.0.1",
     "@eslint/markdown": "^8.0.3",

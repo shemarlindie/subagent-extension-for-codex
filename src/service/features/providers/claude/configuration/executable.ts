@@ -10,7 +10,7 @@ import { promisify } from "node:util";
  * whenever the SDK version changes.
  */
 export const claudeCliSupport = {
-  sdk: "0.3.300",
+  sdk: "0.3.318",
   minimum: "2.1.285",
 } as const;
 

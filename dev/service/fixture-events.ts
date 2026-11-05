@@ -119,6 +119,7 @@ const systemActivityDefaults: Record<
     message: "Fixture permission was denied.",
   },
   mirror_error: { error: "Fixture transcript sync failed." },
+  session_writes_lost: { error_code: "ENOSPC", lost: ["transcript"] },
   informational: { content: "Fixture informational event.", level: "notice" },
 };
 
