@@ -87,8 +87,10 @@ export function useReadingScroll({
   const animations = useRef<Animation[]>([]);
   const glide = useRef<Glide | undefined>(undefined);
   const glideTimer = useRef<number | undefined>(undefined);
+  const releasedTop = useRef<number | undefined>(undefined);
 
   const pin = useCallback((next: boolean) => {
+    if (next) releasedTop.current = undefined;
     pinnedRef.current = next;
     setPinned(next);
   }, []);
@@ -274,10 +276,10 @@ export function useReadingScroll({
   const judge = useCallback(
     (viewport: HTMLElement, container: HTMLElement) => {
       stopAnimations();
-      pin(followsEnd(container, pinnedRef.current, reading.position));
+      pin(followsEnd(container, releasedTop.current));
       remember(viewport, container);
     },
-    [reading, pin, remember, stopAnimations],
+    [pin, remember, stopAnimations],
   );
 
   const awaitGlide = useCallback(() => {
@@ -450,6 +452,7 @@ export function useReadingScroll({
     glide.current = undefined;
     correctedScrollTop.current = top;
     pin(false);
+    releasedTop.current = top;
     remember(viewport, container);
   };
 
@@ -513,10 +516,9 @@ export function useReadingScroll({
     if (!viewport) return;
     const container = scrollContainer(viewport);
     const target = end(container);
-    const distance = Math.abs(container.scrollTop - target);
     pin(true);
 
-    if (distance >= 1 && canGlide(container)) {
+    if (Math.abs(container.scrollTop - target) >= 1 && canGlide(container)) {
       startGlide(container, target);
     } else {
       glide.current = undefined;

@@ -15,18 +15,16 @@ export function distanceFromEnd(container: HTMLElement) {
 
 /**
  * Whether a scroll leaves the reader following the end. An animated scroll away
- * reports its first frames close to the end, so a released reader moving up
- * stays released. Otherwise the next update would glide back over the gesture.
+ * reports its first frames close to the end, so a reader released at
+ * `releasedTop` must return there first. Otherwise the next update would glide
+ * back over the gesture.
  */
-export function followsEnd(
-  container: HTMLElement,
-  pinned: boolean,
-  saved?: ReadingPosition,
-) {
-  const movingAway =
-    !pinned && saved !== undefined && container.scrollTop < saved.top;
+export function followsEnd(container: HTMLElement, releasedTop?: number) {
+  const away =
+    releasedTop !== undefined &&
+    container.scrollTop < Math.min(releasedTop, end(container));
 
-  return !movingAway && distanceFromEnd(container) <= END_SLACK_PX;
+  return !away && distanceFromEnd(container) <= END_SLACK_PX;
 }
 
 /** The scroll position that puts `row` at the top, or the end without one. */

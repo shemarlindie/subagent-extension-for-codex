@@ -573,7 +573,13 @@ test("an upward scroll still near the end does not resume following", () => {
 
   // An animated wheel scroll reports its first frames close to the end.
   fireEvent.wheel(viewport, { deltaY: -100 });
+  viewport.scrollTop = 380;
+  fireEvent.scroll(viewport);
+  expect(button()).not.toBeNull();
+
+  // An update can also render between a frame and its scroll event.
   viewport.scrollTop = 370;
+  view.rerender(createElement(Chat, { ...props, items }));
   fireEvent.scroll(viewport);
   expect(button()).not.toBeNull();
 
