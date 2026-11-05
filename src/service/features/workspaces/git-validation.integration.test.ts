@@ -165,11 +165,12 @@ test("only Git's own answer classifies a folder as having no work tree", async (
 
   await assert.rejects(gitWorkTreeRoot(join(directory, "missing")));
 
-  // A `.git` file with a missing target marks a broken repository.
+  // A `.git` file with a missing target marks a broken repository. Git's wording
+  // varies by version, so this checks that its failure reaches the caller.
   const broken = join(directory, "broken");
   await mkdir(broken);
   await writeFile(join(broken, ".git"), "gitdir: /missing/worktrees/task\n");
-  await assert.rejects(gitWorkTreeRoot(broken), /not a git repository/);
+  await assert.rejects(gitWorkTreeRoot(broken), { code: 128 });
 
   t.onTestFinished(async () => {
     const child = deadline.child;
