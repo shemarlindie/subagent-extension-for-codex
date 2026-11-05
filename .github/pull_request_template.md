@@ -2,9 +2,13 @@
 
 <!-- Say what the change does and the problem it solves. Link the issue if there is one. -->
 
+## What it looks like
+
+<!-- Show visible UI changes with screenshots or video. Delete this section if there are none. -->
+
 ## How you checked it
 
-<!-- Describe checks CI doesn't run, such as browser checks against fixtures or live Claude checks. Add screenshots for visible UI changes. -->
+<!-- Describe checks CI doesn't run, such as browser checks against fixtures or live Claude checks. -->
 
 ## Notes for review
 
