@@ -6,7 +6,7 @@ import {
   SkeletonShape,
   SkeletonTextFrame,
 } from "../../../shared/components/loading-skeleton/loading-skeleton";
-import { hasRevision } from "../workspace-fallback";
+import { hasRevision } from "../task-workspace";
 
 const FACTS = [
   { label: "Task ID", labelSize: "small", valueKind: "short" },

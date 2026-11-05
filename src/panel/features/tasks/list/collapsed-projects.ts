@@ -1,37 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  saveStrings,
+  storedStrings,
+} from "../../../shared/utils/stored-strings";
+
 const STORAGE_KEY = "dw_collapsed_projects";
-
-function storedCollapsed(): ReadonlySet<string> {
-  try {
-    const saved: unknown = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) ?? "[]",
-    );
-
-    return new Set(
-      Array.isArray(saved)
-        ? saved.filter((item): item is string => typeof item === "string")
-        : [],
-    );
-  } catch {
-    return new Set();
-  }
-}
 
 /**
  * The projects whose task list groups the viewer collapsed. Browser storage
  * keeps them across reloads wherever it is available.
  */
 export function useCollapsedProjects() {
-  const [collapsed, setCollapsed] = useState(storedCollapsed);
+  const [collapsed, setCollapsed] = useState(() => storedStrings(STORAGE_KEY));
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...collapsed]));
-    } catch {
-      // Groups still collapse for this session without browser storage.
-    }
-  }, [collapsed]);
+  useEffect(() => saveStrings(STORAGE_KEY, collapsed), [collapsed]);
 
   const setGroupOpen = useCallback(
     (repository: string, open: boolean) =>

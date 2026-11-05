@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 
+import type { GitState } from "../../../shared/tasks/model.js";
+
 const exec = promisify(execFile);
 
 /** Runs Git in `cwd`, optionally writing `input` to its standard input. */
@@ -88,8 +90,6 @@ export async function gitWorkTreeRoot(cwd: string) {
     throw error;
   }
 }
-
-export type GitState = "ready" | "no_commits" | "none";
 
 export const WORKTREE_NEEDS_GIT =
   "Worktrees need a Git repository with at least one commit.";

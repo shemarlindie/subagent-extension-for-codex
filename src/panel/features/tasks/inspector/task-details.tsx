@@ -14,7 +14,7 @@ import { changesSummary } from "../../changes/read-changes";
 import type { ChangeCountsState } from "../../changes/types";
 import { WorktreeActions } from "../../changes/worktree-actions";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "../list/duration";
-import { hasRevision, workspaceFallbackReason } from "../workspace-fallback";
+import { hasRevision, workspaceFallbackReason } from "../task-workspace";
 import {
   ESTIMATED_COST_LABEL,
   EstimatedCostLabel,

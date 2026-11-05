@@ -21,8 +21,7 @@ import {
   startDelegateReads,
 } from "../delegate-reads";
 import type { DelegateValues } from "../delegate-values";
-import { workerChoice } from "../delegation";
-import { projectGit } from "../delegation";
+import { projectGit, workerChoice } from "../delegation";
 import { startTaskArguments } from "../start-task";
 
 interface NewTaskLoaderContext extends DelegateReadContext {

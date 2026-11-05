@@ -1,7 +1,7 @@
-import type { ProjectGit } from "../projects/types";
+import type { GitState } from "../../../shared/tasks/model";
 
 type WorkspaceNoteInput = {
-  git?: ProjectGit;
+  git?: GitState;
   savedStrategy?: string;
   readOnly: boolean;
 };

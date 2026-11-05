@@ -1,11 +1,11 @@
-/** What Git can do for a project. Absent when the service couldn't read it. */
-export type ProjectGit = "ready" | "no_commits" | "none";
+import type { GitState } from "../../../shared/tasks/model";
 
 export type Project = {
   repository: string;
   name?: string;
   kind: string;
-  git?: ProjectGit;
+  /** Absent when the service couldn't read the folder. */
+  git?: GitState;
   /** The chat's unregistered project, added when a task starts with it. */
   pending?: boolean;
 };

@@ -1,11 +1,12 @@
 /* eslint-disable simple-import-sort/exports */
 import type { Event } from "../../../shared/events/types.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
+import type { GitState } from "../../../shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
 } from "../../features/changes/types.js";
-import type { Project, ProjectGit } from "../../features/projects/types.js";
+import type { Project } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
   Defaults,
@@ -34,7 +35,7 @@ export type PanelData = {
   };
   panel_project_candidate?: {
     repository: string;
-    git?: ProjectGit;
+    git?: GitState;
     auto_register?: boolean;
   };
   panel_selection?: { task_id?: string; tab?: string };
@@ -207,7 +208,7 @@ export type Snapshot = {
   repository?: string;
   projectCandidate?: string;
   projectCandidateAuto?: boolean;
-  projectCandidateGit?: ProjectGit;
+  projectCandidateGit?: GitState;
   revision: string;
   // Null until the user picks one; the list then follows the first nonempty filter.
   filter: Filter | null;

@@ -1,7 +1,7 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
+import type { GitState } from "../../../shared/tasks/model";
 import type { Worker } from "../../app/state/types";
 import { runsInPlace } from "../projects/selectors";
-import type { ProjectGit } from "../projects/types";
 import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 
@@ -13,7 +13,7 @@ export function startTaskArguments(
   values: DelegateValues,
   workers: Worker[],
   conversation: string | undefined,
-  git?: ProjectGit,
+  git?: GitState,
 ) {
   const strategy = runsInPlace(git)
     ? "current_repo"

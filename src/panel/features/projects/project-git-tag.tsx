@@ -1,10 +1,10 @@
 import { Popover } from "@base-ui/react/popover";
 
+import type { GitState } from "../../../shared/tasks/model";
 import { CommandLine } from "../changes/command-line";
 import { gitInitCommand, gitTag } from "./selectors";
-import type { ProjectGit } from "./types";
 
-type ProjectGitTagProps = { git?: ProjectGit; folder: string };
+type ProjectGitTagProps = { git?: GitState; folder: string };
 
 /**
  * A muted tag for a project with no commit. The note it opens is a popover,

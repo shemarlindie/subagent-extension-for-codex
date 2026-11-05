@@ -82,7 +82,7 @@ export async function resolveProjectWorkspace(
 
   return {
     workspace_strategy: "current_repo",
-    ...(savedWorktree && !readOnlyProfile(req.worker_profile)
+    ...(!readOnlyProfile(req.worker_profile)
       ? { workspace_fallback: state === "none" ? "no_git" : "no_commits" }
       : {}),
   };

@@ -203,6 +203,9 @@ export interface InputPresentation {
   formApproveLabel?: string;
 }
 
+/** What Git can do for a folder. */
+export type GitState = "ready" | "no_commits" | "none";
+
 export interface Task extends Start {
   title: string;
   id: string;

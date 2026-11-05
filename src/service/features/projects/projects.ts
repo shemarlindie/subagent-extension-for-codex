@@ -5,9 +5,10 @@ import { basename, dirname, isAbsolute } from "node:path";
 
 import { eq } from "drizzle-orm";
 
+import type { GitState } from "../../../shared/tasks/model.js";
 import { type Database } from "../../platform/database/database.js";
 import { dataDirectory } from "../../platform/service/runtime.js";
-import { type GitState, gitState, gitWorkTreeRoot } from "../workspaces/git.js";
+import { gitState, gitWorkTreeRoot } from "../workspaces/git.js";
 import {
   accessibleRealpath,
   within,
