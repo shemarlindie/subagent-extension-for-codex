@@ -1,6 +1,11 @@
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
+import {
+  allowedPermissionMode,
+  withBlockedOptions,
+} from "../../../../shared/providers/policy";
 import type { Worker } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { Field } from "../../../shared/forms/fields";
@@ -14,13 +19,20 @@ interface ApprovalFieldProps {
   loading?: boolean;
 }
 
+/** The worker's modes, or a stand-in once it's known to have none. */
+const fallbackPermissions = (
+  options: { value: string; label: string }[] | undefined,
+  unresolved: boolean,
+) => options ?? (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
+
 export function ApprovalField({
   workers,
   disabled = false,
   loading = false,
 }: ApprovalFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
+  const { control, setValue } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
+  const mode = useWatch({ control, name: "permission_mode" });
   const { provider } = workerChoice(worker);
   const info = workers.find((item) => item.provider === provider);
 
@@ -29,10 +41,13 @@ export function ApprovalField({
     info?.metadata,
   )?.nativePermissions;
 
-  const unresolved = loading && !info,
-    permissionOptions =
-      permissions?.options ??
-      (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
+  const unresolved = loading && !info;
+  const allowedMode = allowedPermissionMode(info?.policy, mode);
+
+  // A restored draft or late policy can leave a blocked mode, which won't run.
+  useEffect(() => {
+    if (allowedMode !== mode) setValue("permission_mode", allowedMode);
+  }, [allowedMode, mode, setValue]);
 
   return (
     <>
@@ -46,7 +61,11 @@ export function ApprovalField({
           loading={loading}
           loadingLabel="Loading permission options"
           placeholder={unresolved ? "Loading…" : undefined}
-          options={permissionOptions}
+          options={withBlockedOptions(
+            fallbackPermissions(permissions?.options, unresolved),
+            info?.policy,
+            "permission_mode",
+          )}
         />
         <p className="help">
           {unresolved

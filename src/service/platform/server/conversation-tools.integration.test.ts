@@ -8,6 +8,7 @@ import { expect, onTestFinished, test } from "vitest";
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-helpers.js";
 import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
+import { until } from "../../../../tests/support/until.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import type { ListedTask } from "../../../shared/tasks/task-list.js";
@@ -20,15 +21,6 @@ import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { withLogContext } from "../logging/logger.js";
 import { callTool, definitions, isUserTool } from "./tools.js";
-
-async function until(fn: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (fn()) return;
-    await new Promise((r) => setTimeout(r, 10));
-  }
-
-  throw new Error("Timed out");
-}
 
 async function setup(provider: Provider = fixtureProvider()) {
   const dir = await mkdtemp(join(tmpdir(), "conversation-tools-"));

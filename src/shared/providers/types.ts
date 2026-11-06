@@ -16,6 +16,8 @@ export interface Capabilities {
 
 export interface ModelChoice {
   value: string;
+  /** The full model ID an alias stands for. */
+  resolvedModel?: string;
   displayName: string;
   description: string;
   supportsEffort?: boolean;
@@ -29,4 +31,27 @@ export interface ProviderReadiness {
   message?: string;
   /** Facts for diagnostics, such as the executable path and version. */
   details: Record<string, string>;
+}
+
+/**
+ * What policy limits for new tasks, in terms the panel can show. Absent means
+ * nothing known, never that the organization allows everything, so tasks are
+ * still checked as they run.
+ */
+export interface ProviderPolicy {
+  /** Whether an organization's policy applies, as opposed to local settings. */
+  managed: boolean;
+  /** Where the organization's policy comes from, when that can be told. */
+  source?: "console" | "device";
+  /** Choices ruled out, each with the reason to show. */
+  blocked: {
+    setting: "permission_mode" | "sandbox";
+    value: string;
+    reason: string;
+  }[];
+  /** The model allowlist, for checking typed model IDs. */
+  available_models?: string[];
+  available_models_match?: "prefix" | "exact";
+  /** Other active policy, as plain-language rows for Settings. */
+  notes: { label: string; detail: string }[];
 }

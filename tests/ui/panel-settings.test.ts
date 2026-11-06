@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { settingsSections } from "../../src/shared/settings/settings-document.js";
 import {
   assert,
   assertAbsent,
@@ -283,6 +284,57 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
       },
     },
   );
+});
+
+test("settings shows an organization's limits and warns on saved choices they block", async (t) => {
+  const values = {
+    task: { provider: "claude" },
+    providers: { claude: { permission_mode: "bypassPermissions" } },
+  };
+
+  const { user } = await setupSettings(t, (transport) =>
+    serveSettings(transport, {
+      values,
+      sections: settingsSections({
+        values,
+        providers: ["claude"],
+        catalogs: [
+          {
+            provider: "claude",
+            policy: {
+              managed: true,
+              blocked: [
+                {
+                  setting: "permission_mode",
+                  value: "bypassPermissions",
+                  reason: "Turned off by your organization",
+                },
+              ],
+              notes: [
+                {
+                  label: "Hooks",
+                  detail: "Only your organization's hooks run.",
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    }),
+  );
+
+  await user.click(
+    await screen.findByRole("tab", { name: /^Organization policy/ }),
+  );
+
+  assert.ok(screen.getByText("Hooks"));
+  assert.ok(screen.getByText("Only your organization's hooks run."));
+
+  await user.click(
+    screen.getByRole("tab", { name: /^Approvals and projects/ }),
+  );
+
+  assert.ok(screen.getByText(/Your saved mode, .* is turned off/));
 });
 
 test("settings explains invalid disabled budgets and lets the user restore editing", async (t) => {

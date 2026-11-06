@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
+import { until } from "../../../../tests/support/until.js";
 import { callTool, isUserTool } from "../../platform/server/tools.js";
 import { executionTaskPolicy } from "../providers/task-policy.js";
 import { PendingInput } from "../tasks/input/pending-input.js";
@@ -632,15 +633,6 @@ test("tasks and interrupted continuations stay bound to the chosen project", asy
   );
 
   control.projects = f.projects;
-
-  const until = async (fn: () => boolean) => {
-    for (let i = 0; i < 300; i++) {
-      if (fn()) return;
-      await new Promise((done) => setTimeout(done, 10));
-    }
-
-    throw new Error("Timed out waiting for fixture lifecycle");
-  };
 
   try {
     await assert.rejects(

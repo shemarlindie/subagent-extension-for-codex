@@ -150,6 +150,17 @@
 .select-action[data-highlighted] {
   color: var(--text);
 }
+.select-footer {
+  margin: 4px 0 0;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.select-item[data-disabled] {
+  cursor: default;
+  opacity: 0.6;
+}
 .autocomplete-empty,
 .select-empty {
   padding: 8px 10px;

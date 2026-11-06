@@ -166,6 +166,9 @@ export function ModelTable({
                 <SettingsSearchHighlight text={note} />
               </p>
             )}
+            {scope.model.warning && (
+              <p className="help warn">{scope.model.warning}</p>
+            )}
             {scope.effort.unsupported && (
               <p id={warningId} className="help warn">
                 {unsupportedEffortWarning}

@@ -269,11 +269,11 @@ for permission and approval defaults.
 
 Search settings by section name, label, description, setting path or choice.
 Press `/` to start searching. Results appear together under section headings and
-remain editable. The count includes each setting row or profile row once.
-Matching words are highlighted, and choice or alias matches explain why the
-result appears. For example, “timeout” finds Runtime limit and “spending” finds
-Cost limit. Searching for custom instructions opens matching instruction
-editors.
+remain editable. The count includes each setting row or profile row once, and
+**Organization policy** counts once as a whole. Matching words are highlighted,
+and choice or alias matches explain why the result appears. For example,
+“timeout” finds Runtime limit and “spending” finds Cost limit. Searching for
+custom instructions opens matching instruction editors.
 
 Search keeps drafts and stays open after saving. **Save** includes changes
 outside the current results. Clear search or press Escape in its field to

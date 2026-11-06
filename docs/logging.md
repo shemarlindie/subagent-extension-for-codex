@@ -61,11 +61,11 @@ Other fields add task, turn, provider or tool context when available.
   `http.request` records the method, a fixed route label, status, `duration_ms`
   and whether the connection aborted. Event streams log their full connection
   lifetime when they close.
-- Inspect `tool.completed` for dispatch durations and outcomes. Validation and
-  access rejections log at warning level with outcome `rejected`. Unexpected
-  failures log at error level with outcome `failed`. Successful read-only tools
-  log at debug level. These records describe the dispatch only. A worker's later
-  outcome appears in the task records.
+- Inspect `tool.completed` for dispatch durations and outcomes. Validation,
+  access and policy rejections log at warning level with outcome `rejected`.
+  Unexpected failures log at error level with outcome `failed`. Successful
+  read-only tools log at debug level. These records describe the dispatch only.
+  A worker's later outcome appears in the task records.
 - Filter by `task_id` for `task.execution_started`, `task.execution_failed` and
   `task.execution_completed`. Completion includes the final status, duration and
   turn cost when available. Execution errors, store listener errors and edit
@@ -95,6 +95,17 @@ Individual HTTP 401 and 403 records log at debug level.
 
 See [Admin token](configuration.md#admin-token) for token creation, overrides
 and session lifetime. Never paste token values into a diagnostic report.
+
+### Org policy limits
+
+| Event                                                                                                                        | Meaning                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider.policy_read`                                                                                                       | What a discovery refresh found: policy source, blocked choices and allowed models. `settings_read: false` means whether policy applies is unknown. |
+| `provider.policy_read_failed`, `provider.policy_source_failed`, `provider.settings_read_failed`, `provider.discovery_failed` | Why the panel may show no policy locks.                                                                                                            |
+| `provider.policy_rejected`                                                                                                   | A mode or model refused at start, and why.                                                                                                         |
+| `provider.startup_refused`                                                                                                   | Claude Code's reason code when it refused to start, such as for a sign-in pin.                                                                     |
+| `provider.sandbox_blocked`                                                                                                   | Why a task's sandbox check stopped it.                                                                                                             |
+| `provider.settings_limited`                                                                                                  | A mode or model that differs from the one requested.                                                                                               |
 
 ## Measure performance
 
@@ -328,9 +339,9 @@ messages. As a backstop, the logger:
 
 `logError` keeps the error type, a classification, a restricted error code, the
 cause type and up to eight stack frames. It omits the message and cause text.
-Categories include authentication, rate limit, abort, timeout, connection and
-budget failures, with `unknown` as the fallback. They are for diagnosis only and
-do not change error handling.
+Categories include authentication, rate limit, abort, timeout, connection,
+budget and policy failures, with `unknown` as the fallback. They are for
+diagnosis only and do not change error handling.
 
 Stack frames can still contain local file paths, so review logs before sharing
 them. Raw stdout and stderr and opt-in mention-search logs skip these redaction

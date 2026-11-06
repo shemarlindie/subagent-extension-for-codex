@@ -98,6 +98,28 @@ describe("settings search matching", () => {
     ).toBeGreaterThan(search.rowMatch(section, choice)!.score);
   });
 
+  it("finds a read-only facts section as one result", () => {
+    const policy: SettingSection = {
+      id: "organization-policy",
+      title: "Organization policy",
+      facts: [
+        { label: "Hooks", detail: "Only managed hooks run." },
+        { label: "Models", detail: "Limited to opus." },
+      ],
+      rows: [],
+    };
+
+    for (const query of ["policy", "hooks", "opus"]) {
+      expect(settingsSearch(query).sectionMatches(policy)).toHaveLength(1);
+    }
+
+    expect(settingsSearch("runtime").sectionMatches(policy)).toHaveLength(0);
+
+    expect(
+      settingsSearch("policy").sectionMatches({ ...policy, facts: [] }),
+    ).toHaveLength(1);
+  });
+
   it("keeps instructions closed for model and profile name queries", () => {
     expect(
       settingsSearch("model").scopeMatch(profiles, researcher)

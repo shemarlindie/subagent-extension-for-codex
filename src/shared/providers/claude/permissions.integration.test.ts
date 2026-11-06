@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
+import { until } from "../../../../tests/support/until.js";
 import { claudeTaskPolicy } from "../../../service/features/providers/claude/configuration/task-policy.js";
 import {
   type RunContext,
@@ -250,15 +251,6 @@ class PromptProvider extends FixtureProvider {
       reply: JSON.stringify(answer),
     };
   }
-}
-
-async function until(predicate: () => boolean) {
-  for (let attempt = 0; attempt < 300; attempt++) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  throw new Error("Timed out waiting for native permission request");
 }
 
 test("new Claude tasks require native permission and decision fields", async (t) => {

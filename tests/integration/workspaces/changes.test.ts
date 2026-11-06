@@ -18,15 +18,7 @@ import type {
   Changes,
 } from "../../../src/shared/changes/changes.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
-
-async function until(done: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (done()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  throw new Error("Task did not complete");
-}
+import { until } from "../../support/until.js";
 
 async function setup() {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "agent-changes-")));

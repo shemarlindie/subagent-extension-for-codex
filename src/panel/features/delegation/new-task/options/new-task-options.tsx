@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerMetadata } from "../../../../../shared/providers/metadata";
-import type { NewTaskState, Snapshot } from "../../../../app/state/types";
+import {
+  allowedPermissionMode,
+  modelAllowed,
+  withBlockedOptions,
+} from "../../../../../shared/providers/policy";
+import type { ModelChoice } from "../../../../../shared/providers/types";
+import type {
+  NewTaskState,
+  Snapshot,
+  Worker,
+} from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
@@ -25,27 +35,52 @@ type NewTaskOptionsProps = {
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
 
+/** The choices org policy changes: locked modes, and a saved model it excludes. */
+function policyOptions(
+  provider: string,
+  workerInfo: Worker | undefined,
+  models: ModelChoice[],
+  model: string | undefined,
+) {
+  const policy = workerInfo?.policy,
+    permissions = providerMetadata(provider, workerInfo?.metadata)
+      ?.nativePermissions?.options;
+
+  return {
+    model: model && modelAllowed(policy, models, model) ? model : undefined,
+    modelsFooter: policy?.available_models
+      ? "Your organization limits these models."
+      : undefined,
+    permissions:
+      permissions && withBlockedOptions(permissions, policy, "permission_mode"),
+  };
+}
+
 /** What the selected worker resolves to, once settings have loaded. */
 function resolvedOptions(
   newTask: NewTaskState,
   state: Snapshot,
   worker: string,
   model: string,
+  mode: string,
 ) {
   const { provider, profile } = workerChoice(worker),
     resolved = newTask.defaults
       ? modelDefaults(newTask.defaults, state.workers, worker, model)
       : undefined;
 
+  const { workerInfo, providerModel } = resolved ?? {},
+    models = workerInfo?.models ?? [];
+
   return {
-    models: resolved?.workerInfo?.models ?? [],
-    // The chips edit the profile's settings, so Default clears them and
-    // inherits the provider's.
-    model: resolved?.providerModel,
+    models,
+    modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
+    allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
-    permissions: providerMetadata(provider, resolved?.workerInfo?.metadata)
-      ?.nativePermissions?.options,
+    // The chips edit the profile's settings, so Default clears them and
+    // inherits the provider's.
+    ...policyOptions(provider, workerInfo, models, providerModel),
     readOnly: Boolean(profile && readOnlyProfile(profile)),
   };
 }
@@ -91,12 +126,12 @@ function settingsSummary(
  * permission it sets collapse into a summary that expands for editing.
  */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
-  const { control, getValues } = useFormContext<DelegateValues>(),
+  const { control, getValues, setValue } = useFormContext<DelegateValues>(),
     values = useWatch({
       control,
       name: ["worker", "model", "reasoning_effort", "permission_mode"],
     }),
-    [worker, model] = values,
+    [worker, model, , mode] = values,
     // A draft that already overrides the profile opens with its settings shown.
     // Reasoning stays blank until settings load.
     [expanded, setExpanded] = useState(() => {
@@ -114,7 +149,21 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       state.busy ||
       statuses.settings !== "ready" ||
       statuses.workers !== "ready",
-    resolved = resolvedOptions(newTask, state, worker, model);
+    resolved = resolvedOptions(newTask, state, worker, model, mode),
+    { modelExcluded, allowedMode } = resolved;
+
+  // A saved model policy excludes shows as what will run. Sent blank, the
+  // service falls back from it and says so in Chat.
+  useEffect(() => {
+    if (!modelExcluded) return;
+    setValue("model", "");
+    setValue("reasoning_effort", "default");
+  }, [modelExcluded, setValue]);
+
+  // A restored draft or late policy can leave a blocked mode, which won't run.
+  useEffect(() => {
+    if (allowedMode !== mode) setValue("permission_mode", allowedMode);
+  }, [allowedMode, mode, setValue]);
 
   return (
     <div
@@ -146,6 +195,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           <ModelChip
             models={resolved.models}
             inherited={resolved.model}
+            footer={resolved.modelsFooter}
             loading={loading}
             disabled={disabled}
           />

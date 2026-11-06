@@ -1,8 +1,10 @@
+import { withClaudePolicy } from "../providers/claude/settings-policy.js";
+import { modelAllowed } from "../providers/policy.js";
 import {
   providerApprovalRows,
   providerRestrictionSections,
 } from "../providers/settings.js";
-import { type ModelChoice } from "../providers/types.js";
+import { type ModelChoice, type ProviderPolicy } from "../providers/types.js";
 import { roles } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/reasoning.js";
 import { scalarText, titleCase } from "../text.js";
@@ -56,7 +58,11 @@ function described(path: string) {
 const options = (labels: Record<string, string>): SettingOption[] =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));
 
-type Catalog = { provider: string; models?: ModelChoice[] };
+type Catalog = {
+  provider: string;
+  models?: ModelChoice[];
+  policy?: ProviderPolicy;
+};
 
 export interface ScopeInput {
   values: unknown;
@@ -97,9 +103,11 @@ export function modelScope(
 
   const effectiveModel = resolveModelDefaults(values, chain).model ?? "default";
 
-  const metadata = catalogs
-    .find((catalog) => catalog.provider === provider)
-    ?.models?.find((model) => model.value === effectiveModel);
+  const catalog = catalogs.find((item) => item.provider === provider);
+
+  const metadata = catalog?.models?.find(
+    (model) => model.value === effectiveModel,
+  );
 
   const levels =
     metadata?.supportsEffort === false ? [] : metadata?.supportedEffortLevels;
@@ -142,6 +150,7 @@ export function modelScope(
     effectiveModel,
     levels,
     modelChoices,
+    modelExcluded: !modelAllowed(catalog?.policy, choices, saved),
     effortChoices: [
       { value: "default", label: "Inherit" },
       ...effortLevels.map((level) => ({ value: level, label: level })),
@@ -167,6 +176,12 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         path: info.modelPath,
         label: `${label} model`,
         options: info.modelChoices,
+        ...(info.modelExcluded
+          ? {
+              warning:
+                "Your organization doesn't allow this model. New tasks use the default.",
+            }
+          : {}),
       },
       effort: {
         path: info.effortPath,
@@ -209,7 +224,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
 
   const userOnly = "Only you can change these settings.";
 
-  return [
+  const sections: SettingSection[] = [
     {
       id: "task",
       title: "Task defaults",
@@ -305,4 +320,10 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       ],
     },
   ];
+
+  return withClaudePolicy(
+    sections,
+    input.catalogs.find(({ provider }) => provider === "claude")?.policy,
+    values,
+  );
 }

@@ -343,6 +343,46 @@ namespaces, for example with an AppArmor profile for `bwrap` or by setting
 `kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
 every program on the computer.
 
+### Org policy
+
+Org policy outranks these settings, and Claude Code enforces it whether or not
+`settings_files` is on. It comes from your organization's admin console, device
+management or a `managed-settings.json` file. Other keys in it still apply, even
+when the panel doesn't mention them.
+
+The extension never reads policy files. An idle Claude session reports what
+applies, under the same rules as a task, so an API key on a custom
+`ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The result
+is cached for five minutes.
+
+| Policy                                                                                                  | New tasks                                                        | Panel                                                                      |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `permissions.disableBypassPermissionsMode`, `disableAutoMode`                                           | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
+| `availableModels`                                                                                       | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
+| `deniedModels`                                                                                          | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
+| `sandbox.enabled: false`, `sandbox.allowUnsandboxedCommands: true`, `sandbox.failIfUnavailable: false`  | `extension` and `extension_locked` fail before the prompt.       | Both are locked, with the reason.                                          |
+| Any admin policy without `sandbox.network.allowManagedDomainsOnly` or `parentSettingsBehavior: "merge"` | `extension_locked` fails before the prompt.                      | It's locked, with the reason.                                              |
+| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                              | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
+
+A saved choice that policy now blocks stays saved, with a warning on its row,
+and applies again if the policy lifts. Locks are a convenience: importing
+settings can still save a blocked value, and the checks above stop it from
+taking effect.
+
+The sandbox and model are checked before every turn, because policy can change
+while a task runs. A model it now excludes gives way to Default, with a note. If
+Claude Code can't report its settings, a sandboxed task fails without running.
+`user_config` tasks have nothing to check.
+
+Limits:
+
+- Discovery runs outside any project, so project settings can differ. A mode
+  that reads as allowed may still fall back, and Chat then says so.
+- The extension's model matching is simpler than Claude Code's, so it can refuse
+  an older ID of an allowed family. An alias still works.
+- A denied tool call doesn't say who set the rule, so denials aren't attributed
+  to the organization.
+
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.
 The model and API harness run outside the Bash sandbox, and containment of the

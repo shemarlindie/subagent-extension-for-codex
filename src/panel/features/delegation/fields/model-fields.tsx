@@ -45,6 +45,7 @@ export function ModelFields({
         >
           <ModelAutocomplete
             models={workerInfo?.models ?? []}
+            policy={workerInfo?.policy}
             placeholder={
               settingsReady
                 ? model || "Worker default"

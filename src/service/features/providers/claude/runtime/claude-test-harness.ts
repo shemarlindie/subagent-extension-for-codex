@@ -98,6 +98,8 @@ export async function context() {
     emit: (type, data) => events.push({ type, data }),
     emitOpaque: (type, data) => events.push({ type, data }),
     session: (id, ref) => sessions.push({ id, ref }),
+    effectiveOptions: (effective) => setClaudeOptions(task, { effective }),
+    promptHeld: () => {},
     input: async () => ({ approved: false, message: "User declined" }),
     acceptSteers: () => {},
     steerTaken: () => {},
@@ -189,7 +191,18 @@ export function captureOptions(
           usage: {},
         };
       })(),
-      { close: () => {} },
+      {
+        close: () => {},
+        // The settings Claude Code reports with no org policy.
+        getSettings: async () => ({
+          effective: {
+            sandbox: {
+              ...args.options?.sandbox,
+              ...args.options?.managedSettings?.sandbox,
+            },
+          },
+        }),
+      },
     ) as unknown as Query;
   };
 }

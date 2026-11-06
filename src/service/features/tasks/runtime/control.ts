@@ -5,7 +5,10 @@ import type { EventPayloadMap } from "../../../../shared/events/event-contract.j
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
-import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
+import {
+  assertSelectedProviderOptions,
+  withEffectiveOptions,
+} from "../../../../shared/providers/options.js";
 import {
   type BudgetRaise,
   type InputAuthority,
@@ -36,7 +39,8 @@ import {
   remainingRuntime,
   validateBudgets,
 } from "./budget.js";
-import { observeExecution } from "./execution-logging.js";
+import { logStartLimited, observeExecution } from "./execution-logging.js";
+import { effortRequested } from "./policy-check.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -70,6 +74,7 @@ import {
   turnPrompt,
   type TurnStartupContext,
 } from "./turn-startup.js";
+import { workerStatus } from "./worker-status.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY = ["queued", "starting", "running", "waiting"];
@@ -179,26 +184,13 @@ export class Control {
 
   async availableWorkers(owner: string) {
     return Promise.all(
-      this.workers().map(async (worker) => {
-        const provider = this.providers.get(worker.provider)!;
-        const readiness = await provider.readiness?.();
-        const known = readiness ? { ...worker, readiness } : worker;
-        // Model discovery launches the runtime, so it waits until that is ready.
-        if (!provider.models || readiness?.ready === false) return known;
-
-        try {
-          return {
-            ...known,
-            models: await provider.models(this.settings.values(owner)),
-          };
-        } catch {
-          return {
-            ...known,
-            model_discovery_error:
-              "Model discovery unavailable; enter a model ID or retry later.",
-          };
-        }
-      }),
+      this.workers().map((worker) =>
+        workerStatus(
+          worker,
+          this.providers.get(worker.provider)!,
+          this.settings.values(owner),
+        ),
+      ),
     );
   }
 
@@ -212,11 +204,13 @@ export class Control {
     const provider = this.providers.get(parsed.provider);
     if (!provider) throw new Error("Provider is not enabled");
 
-    const req = await resolveStart(
+    const { req, limited } = await resolveStart(
       provider,
       parsed,
       this.settings.values(owner),
       authority,
+      !!(input as { model?: unknown }).model,
+      effortRequested(input),
     );
 
     for (const id of req.depends_on) this.store.get(id, owner);
@@ -261,7 +255,10 @@ export class Control {
     this.store.transaction(() => {
       this.store.save(t);
       this.store.event(t, "task.queued");
+      if (limited) this.store.event(t, "agent.limited", limited);
     });
+
+    if (limited) logStartLimited(t, limited);
 
     this.queueWaits.queued(t.id, "start");
     void this.schedule();
@@ -408,6 +405,7 @@ export class Control {
       }
 
       const prompt = await turnPrompt(startup, t, newSession, signal);
+      const sentBefore = t.instructions_sent;
       // The session holds these from now on, so a resumed turn gets only later ones.
       t.instructions_sent = t.instructions.length;
       this.store.save(t);
@@ -415,7 +413,7 @@ export class Control {
       const output = await measureTaskWait(
         "provider_run",
         { task_id: t.id, turn: t.turn },
-        () => provider.run(this.runContext(t, a), prompt),
+        () => provider.run(this.runContext(t, a, sentBefore), prompt),
         { signal, end: () => ({ input_wait_ms: a.input.waitedMs }) },
       );
 
@@ -457,19 +455,23 @@ export class Control {
       prompts: this.prompts,
       projects: this.projects,
       ownerWorker: this.ownerWorker,
+      settings: (owner) => this.settings.values(owner),
       branchPrefix: (owner) =>
         this.settings.values(owner).task.worktree_branch_prefix,
     };
   }
 
   /** What the provider calls back into while the turn runs. */
-  private runContext(t: Task, a: Active): RunContext {
+  private runContext(t: Task, a: Active, sentBefore: number): RunContext {
     return {
       task: t,
       fileChanged: (edit) => this.changes.record(t, edit),
       editUnrecorded: (path, source) =>
         this.changes.unrecorded(t, path, source),
       signal: a.abort.signal,
+      promptHeld: () => {
+        t.instructions_sent = sentBefore;
+      },
       acceptSteers: (sink) => {
         a.sink = sink;
 
@@ -542,6 +544,10 @@ export class Control {
         t.session_id = id;
         t.session_state_ref = ref;
         t.session_owner = this.ownerWorker;
+        this.store.save(t);
+      },
+      effectiveOptions: (effective) => {
+        t.provider_options = withEffectiveOptions(t, effective);
         this.store.save(t);
       },
       input: a.input.request,

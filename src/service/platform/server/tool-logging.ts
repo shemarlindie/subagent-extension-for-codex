@@ -1,5 +1,8 @@
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
-import { errorCategory } from "../logging/error-metadata.js";
+import {
+  errorCategory,
+  PolicyRejectedError,
+} from "../logging/error-metadata.js";
 import { logError, logEvent, withLogContext } from "../logging/logger.js";
 
 const rejectionMessages = new Set([
@@ -15,6 +18,7 @@ const rejectionMessages = new Set([
 function rejected(error: unknown) {
   return (
     error instanceof SendRejectedError ||
+    error instanceof PolicyRejectedError ||
     (error instanceof Error &&
       (error.name === "ZodError" || rejectionMessages.has(error.message)))
   );

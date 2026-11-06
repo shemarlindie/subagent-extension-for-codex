@@ -5,6 +5,8 @@ export interface SettingOption {
   value: string;
   label: string;
   description?: string;
+  /** Listed but not choosable, with the reason in `description`. */
+  disabled?: boolean;
 }
 
 export interface ModelScope {
@@ -16,6 +18,8 @@ export interface ModelScope {
     label: string;
     /** Without a discovered catalog the model ID is typed instead. */
     options?: SettingOption[];
+    /** The saved model won't apply, and why. */
+    warning?: string;
   };
   effort: {
     path: string;
@@ -45,6 +49,8 @@ interface SettingRowBase {
 export interface SelectSettingRow extends SettingRowBase {
   kind: "select";
   options: SettingOption[];
+  /** The saved choice won't apply, and why. It stays saved. */
+  warning?: string;
 }
 
 export interface SwitchSettingRow extends SettingRowBase {
@@ -84,5 +90,7 @@ export interface SettingSection {
   id: string;
   title: string;
   help?: HelpPart[];
+  /** Read-only facts shown instead of settings. */
+  facts?: { label: string; detail: string }[];
   rows: SettingRow[];
 }

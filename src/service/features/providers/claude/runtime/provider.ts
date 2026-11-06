@@ -26,21 +26,24 @@ import {
   type TurnOutput,
 } from "../../types.js";
 import { ClaudeCli } from "../configuration/executable.js";
+import { sandboxBlock } from "../configuration/sandbox-check.js";
+import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
+import { ClaudeDiscovery } from "./discovery.js";
+import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
-import { ModelCatalog } from "./models.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
 /**
- * The installed SDK's Query declaration omits two controls supported by the
- * CLI runtime: an interrupt that also cancels queued messages, and withdrawing
- * one queued message.
+ * The installed SDK's Query declaration omits controls supported by the CLI
+ * runtime: an interrupt that also cancels queued messages, withdrawing one
+ * queued message, and reading the session's settings.
  */
 type SteerableQuery = Omit<Query, "interrupt"> & {
   interrupt(options?: { cancelQueued?: boolean }): Promise<unknown>;
   cancelAsyncMessage?(uuid: string): Promise<boolean>;
-};
+} & SettingsReader;
 
 /**
  * A frame the CLI sends that the SDK doesn't declare: where a message sent
@@ -74,7 +77,7 @@ export class ClaudeAgentProvider implements Provider {
     dynamic_subagents: false,
   };
 
-  private catalogs = new Map<string, ModelCatalog>();
+  private discoveries = new Map<string, ClaudeDiscovery>();
 
   constructor(
     private launch: typeof query = query,
@@ -116,22 +119,30 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   models(settings?: SettingsValues): Promise<ModelChoice[]> {
-    const claude = settings?.providers.claude;
+    return this.discovery(settings).models();
+  }
 
+  policy(settings?: SettingsValues) {
+    return this.discovery(settings).policy();
+  }
+
+  /** One discovery per configuration, as settings change what a session loads. */
+  private discovery(settings?: SettingsValues) {
     const configuration = {
       settings_files:
-        claude?.settings_files ?? claudeOverrideDefaults.settings_files,
+        settings?.providers.claude.settings_files ??
+        claudeOverrideDefaults.settings_files,
     };
 
     const key = JSON.stringify(configuration);
-    let catalog = this.catalogs.get(key);
+    let discovery = this.discoveries.get(key);
 
-    if (!catalog) {
-      catalog = new ModelCatalog(this.launch, this.cli, configuration);
-      this.catalogs.set(key, catalog);
+    if (!discovery) {
+      discovery = new ClaudeDiscovery(this.launch, this.cli, configuration);
+      this.discoveries.set(key, discovery);
     }
 
-    return catalog.models();
+    return discovery;
   }
 
   async run(c: RunContext, prompt: string): Promise<TurnOutput> {
@@ -147,14 +158,6 @@ export class ClaudeAgentProvider implements Provider {
     // Streaming input mode, so steers can follow the prompt while it runs.
     const inbox = new Inbox<SDKUserMessage>();
     const promptId = randomUUID();
-
-    inbox.push({
-      type: "user",
-      message: { role: "user", content: prompt },
-      parent_tool_use_id: null,
-      session_id: "",
-      uuid: promptId,
-    });
 
     const normalize = claudeMessageNormalizer(this.fullEvents);
     const launched = performance.now();
@@ -193,23 +196,6 @@ export class ClaudeAgentProvider implements Provider {
     c.signal.addEventListener("abort", interrupt, { once: true });
     if (c.signal.aborted) interrupt();
 
-    c.acceptSteers((steer) => {
-      if (ending || c.signal.aborted) return false;
-      const uuid = randomUUID();
-      steers.set(uuid, steer.id);
-
-      inbox.push({
-        type: "user",
-        message: { role: "user", content: steer.text },
-        parent_tool_use_id: null,
-        session_id: "",
-        priority: "next",
-        uuid,
-      });
-
-      return true;
-    });
-
     // The CLI runs a steer the turn ends without taking as a turn of its
     // own, so each one is withdrawn as the final message ends; one already
     // on its way runs, and this turn waits for it.
@@ -229,8 +215,45 @@ export class ClaudeAgentProvider implements Provider {
     let reply: string | undefined;
     // The main worker's message being streamed.
     let streaming: string | undefined;
+    // A steer the CLI runs as its own turn starts again, in whatever mode
+    // the first one left, so only the first start says what the task got.
+    let started = false;
 
     try {
+      const blocked = await sandboxBlock(stream, options);
+
+      // With no prompt sent, ending the input ends the session before any
+      // model call, and whatever the CLI still has to say arrives below.
+      if (blocked || c.signal.aborted) {
+        c.promptHeld();
+        inbox.end();
+      } else {
+        inbox.push({
+          type: "user",
+          message: { role: "user", content: prompt },
+          parent_tool_use_id: null,
+          session_id: "",
+          uuid: promptId,
+        });
+
+        c.acceptSteers((steer) => {
+          if (ending || c.signal.aborted) return false;
+          const uuid = randomUUID();
+          steers.set(uuid, steer.id);
+
+          inbox.push({
+            type: "user",
+            message: { role: "user", content: steer.text },
+            parent_tool_use_id: null,
+            session_id: "",
+            priority: "next",
+            uuid,
+          });
+
+          return true;
+        });
+      }
+
       for await (const m of stream) {
         if (firstEvent) {
           firstEvent = false;
@@ -309,6 +332,12 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         normalize(c, m);
+
+        if (m.type === "system" && m.subtype === "init" && !started) {
+          started = true;
+          await recordEffectiveSettings(c, m, stream);
+        }
+
         if (m.type !== "result") continue;
 
         logEvent("info", "provider.result", {
@@ -323,6 +352,15 @@ export class ClaudeAgentProvider implements Provider {
           cost_usd: m.total_cost_usd,
           turn_count: m.num_turns,
         });
+
+        // Claude Code refused to start, and its own text names the fix.
+        if ("startup_failure_reason" in m && m.startup_failure_reason) {
+          logEvent("warn", "provider.startup_refused", {
+            reason: m.startup_failure_reason,
+          });
+
+          throw new Error(m.errors.join("; "));
+        }
 
         if (m.subtype !== "success") {
           throw new Error(
@@ -345,6 +383,14 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         break;
+      }
+
+      if (blocked) {
+        logEvent("warn", "provider.sandbox_blocked", {
+          reason: blocked.message,
+        });
+
+        throw blocked;
       }
 
       if (reply === undefined) throw new Error("Claude ended without a result");

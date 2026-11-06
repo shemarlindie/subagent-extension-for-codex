@@ -164,6 +164,16 @@ decision maker and resolved session restrictions under
 whole-execution approval. Changing the execution approval default does not
 change Claude's native defaults.
 
+A session can run with less than a task asked for, such as when org policy rules
+out its mode. Requested values stay as they were. `RunContext.effectiveOptions`
+stores what differs under `provider_options.<provider_id>.effective`, replacing
+the earlier values, and an `agent.limited` event gives each new difference with
+a sentence for the user. Claude compares the turn's first `init` with the
+request.
+
+A provider that ends a turn before sending its prompt calls
+`RunContext.promptHeld`, so the next turn sends those instructions again.
+
 ## Provider lifecycle methods
 
 | Method                | Purpose                                                                                                                                         |
@@ -171,6 +181,7 @@ change Claude's native defaults.
 | `capabilities`        | Declares supported task features and limits. The control plane rejects unsupported budgets before execution.                                    |
 | `readiness()`         | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
 | `models(settings)`    | Optional. Supplies model and effort suggestions using the requesting user's settings. Custom model IDs are still accepted.                      |
+| `policy(settings)`    | Optional. What org policy limits for new tasks. Nothing means nothing known, never that everything is allowed, so checks continue as tasks run. |
 | `deleteSession(task)` | Optional. Deletes provider state only when task deletion asks for it.                                                                           |
 | `close()`             | Optional. Releases provider resources during service shutdown.                                                                                  |
 

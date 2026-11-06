@@ -32,6 +32,8 @@ export interface FixtureProviderOptions {
   modelChoices?: ModelChoice[];
   deleteSessionError?: boolean;
   closeError?: boolean;
+  /** Org policy as discovery would report it, read each time it's needed. */
+  policy?: Provider["policy"];
   /** Defaults for incidental execution. Explicit wait/pace markers win. */
   turnDelayMs?: number;
   replyPaceMs?: number;
@@ -49,6 +51,7 @@ export class FixtureProvider implements Provider {
   id = "fixture";
   metadata: ProviderMetadata = createFixtureProviderMetadata();
   capabilities = { ...fixtureProviderCapabilities };
+  policy?: Provider["policy"];
 
   private runState: FixtureProviderRunState = {
     sessions: new Map(),
@@ -68,6 +71,7 @@ export class FixtureProvider implements Provider {
 
   constructor(options: FixtureProviderOptions = {}) {
     this.runOptions = { ...options };
+    if (options.policy) this.policy = options.policy;
     this.modelsMode = options.models ?? "default";
     this.readinessMode = options.readiness ?? "ready";
     this.readinessDelayMs = Math.max(0, options.readinessDelayMs ?? 0);

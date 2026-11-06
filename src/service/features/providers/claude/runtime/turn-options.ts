@@ -133,6 +133,8 @@ export async function claudeTurnOptions(
           ...(policy.sandbox === "extension_locked"
             ? {
                 // Policy-tier lock: settings files cannot add network domains.
+                // An admin policy drops this tier unless it allows merging,
+                // so the provider confirms the lock before each turn.
                 managedSettings: {
                   sandbox: { network: { allowManagedDomainsOnly: true } },
                 },

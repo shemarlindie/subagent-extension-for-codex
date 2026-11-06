@@ -146,6 +146,9 @@ export function SettingRowView({
     <div className="setting-text">
       {labelElement}
       <Help id={helpId(row.path)} parts={row.help} />
+      {row.kind === "select" && row.warning && (
+        <p className="help warn">{row.warning}</p>
+      )}
     </div>
   );
 

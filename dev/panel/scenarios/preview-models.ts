@@ -1,6 +1,9 @@
-import { type ModelChoice } from "../../../src/shared/providers/types";
+import type {
+  ModelChoice,
+  ProviderPolicy,
+} from "../../../src/shared/providers/types";
 
-export const previewModels: ModelChoice[] = [
+const previewModels: ModelChoice[] = [
   {
     value: "default",
     displayName: "Default (recommended)",
@@ -26,3 +29,47 @@ export const previewModels: ModelChoice[] = [
     supportsEffort: false,
   },
 ];
+
+/** Policy as discovery reports it, with a lock the extension can't apply. */
+const previewOrgPolicy = (
+  source: NonNullable<ProviderPolicy["source"]>,
+): ProviderPolicy => ({
+  managed: true,
+  source,
+  blocked: [
+    {
+      setting: "permission_mode",
+      value: "auto",
+      reason: "Turned off by your organization",
+    },
+    {
+      setting: "permission_mode",
+      value: "bypassPermissions",
+      reason: "Turned off by your organization",
+    },
+    {
+      setting: "sandbox",
+      value: "extension",
+      reason: "Your organization turned off the sandbox",
+    },
+    {
+      setting: "sandbox",
+      value: "extension_locked",
+      reason: "Your organization turned off the sandbox",
+    },
+  ],
+  available_models: ["sonnet", "haiku"],
+  available_models_match: "prefix",
+  notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
+});
+
+/** What discovery reports for a worker, with an allowlist narrowing the models. */
+export const previewCatalog = (source?: ProviderPolicy["source"]) =>
+  source
+    ? {
+        models: previewModels.filter(({ value }) =>
+          ["sonnet", "haiku"].includes(value),
+        ),
+        policy: previewOrgPolicy(source),
+      }
+    : { models: previewModels };

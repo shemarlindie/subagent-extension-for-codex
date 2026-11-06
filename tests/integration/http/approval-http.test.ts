@@ -19,6 +19,7 @@ import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
+import { until } from "../../support/until.js";
 
 class PermissionProvider extends FixtureProvider {
   override async run(ctx: RunContext): Promise<TurnOutput> {
@@ -28,15 +29,6 @@ class PermissionProvider extends FixtureProvider {
       reply: JSON.stringify(answer),
     };
   }
-}
-
-async function until(predicate: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  throw new Error("Timed out waiting for task");
 }
 
 async function setup() {
@@ -411,7 +403,7 @@ test("HTTP and MCP mark only send failures confirmed before acceptance", async (
       });
 
       expect(result.isError).toBe(true);
-      expect(JSON.stringify(result.content)).toMatch(scenario.message);
+      expect(result.content).toEqual([{ type: "text", text: body.error }]);
 
       expect(result._meta?.send_rejected).toBe(
         scenario.rejected ? true : undefined,

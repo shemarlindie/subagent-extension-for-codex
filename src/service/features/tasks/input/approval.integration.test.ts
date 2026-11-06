@@ -7,6 +7,7 @@ import { test } from "vitest";
 
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { copyCommittedRepository } from "../../../../../tests/support/repository-test-harness.js";
+import { until } from "../../../../../tests/support/until.js";
 import { approvalModes, type Task } from "../../../../shared/tasks/model.js";
 import { callTool } from "../../../platform/server/tools.js";
 import { type RunContext, type TurnOutput } from "../../providers/types.js";
@@ -19,15 +20,6 @@ const baseRequest = {
   description: "Check approval",
   workspace_strategy: "current_repo",
 };
-
-async function until(predicate: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  throw new Error("Timed out waiting for task");
-}
 
 class PermissionProvider extends FixtureProvider {
   constructor(private readonly tool = "Bash") {

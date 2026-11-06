@@ -55,6 +55,13 @@ const agentStartedPayloadSchema = z.object({
   tools: z.array(z.string()).optional(),
 });
 
+const agentLimitedPayloadSchema = z.object({
+  setting: z.union([z.literal("permission_mode"), z.literal("model")]),
+  requested: z.string(),
+  effective: z.string(),
+  reason: z.string(),
+});
+
 const agentCompletedPayloadSchema = z.object({
   cost_usd: z.number().optional(),
   total_cost_usd: z.number().optional(),
@@ -114,6 +121,7 @@ export const eventPayloadMapSchema = taskEventPayloadMapSchema.extend({
   "agent.content": agentContentPayloadSchema,
   "agent.reply": agentReplyPayloadSchema,
   "agent.started": agentStartedPayloadSchema,
+  "agent.limited": agentLimitedPayloadSchema,
   "agent.completed": agentCompletedPayloadSchema,
   "agent.input_required": agentInputRequiredPayloadSchema,
   "agent.input_submitted": agentInputSubmittedPayloadSchema,

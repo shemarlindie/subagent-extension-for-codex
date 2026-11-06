@@ -2,7 +2,13 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useState } from "react";
 import { useController, useFormContext } from "react-hook-form";
 
-import type { ModelChoice } from "../../../../shared/providers/types";
+import { modelAllowed } from "../../../../shared/providers/policy";
+import type {
+  ModelChoice,
+  ProviderPolicy,
+} from "../../../../shared/providers/types";
+import { FormFieldError } from "../../../shared/forms/form-field-error";
+import { descriptionIds } from "../../../shared/utils/description-ids";
 import type { DelegateValues } from "../delegate-values";
 
 function matches(model: ModelChoice, query: string) {
@@ -16,6 +22,7 @@ function matches(model: ModelChoice, query: string) {
 /** Discovered models are suggestions; custom model IDs and aliases remain valid. */
 interface ModelAutocompleteProps {
   models: ModelChoice[];
+  policy?: ProviderPolicy;
   placeholder: string;
   describedBy?: string;
   disabled?: boolean;
@@ -23,75 +30,95 @@ interface ModelAutocompleteProps {
 
 export function ModelAutocomplete({
   models,
+  policy,
   placeholder,
   describedBy,
   disabled = false,
 }: ModelAutocompleteProps) {
   const { control } = useFormContext<DelegateValues>();
-  const { field } = useController({ control, name: "model" });
+
+  const { field, fieldState } = useController({
+    control,
+    name: "model",
+    rules: {
+      validate: (value) =>
+        modelAllowed(policy, models, value.trim()) ||
+        "Your organization doesn't allow this model.",
+    },
+  });
+
   const [open, setOpen] = useState(false);
   // An unmatched custom ID closes the menu so the rest of the form stays usable.
   const hasMatches = models.some((model) => matches(model, field.value));
 
   return (
-    <Autocomplete.Root
-      items={models}
-      value={field.value}
-      onValueChange={field.onChange}
-      itemToStringValue={(model: ModelChoice) => model.value}
-      filter={matches}
-      open={open && hasMatches}
-      onOpenChange={setOpen}
-      openOnInputClick
-    >
-      <Autocomplete.Input
-        id="model"
-        name={field.name}
-        ref={field.ref}
-        onBlur={field.onBlur}
-        maxLength={200}
-        placeholder={placeholder}
-        disabled={disabled}
-        aria-describedby={describedBy}
-      />
-      {models.length > 0 && (
-        <Autocomplete.Portal>
-          <Autocomplete.Positioner
-            className="autocomplete-positioner"
-            sideOffset={6}
-            align="start"
-          >
-            <Autocomplete.Popup
-              id="available-models"
-              className="autocomplete-popup"
+    <>
+      <Autocomplete.Root
+        items={models}
+        value={field.value}
+        onValueChange={field.onChange}
+        itemToStringValue={(model: ModelChoice) => model.value}
+        filter={matches}
+        open={open && hasMatches}
+        onOpenChange={setOpen}
+        openOnInputClick
+      >
+        <Autocomplete.Input
+          id="model"
+          name={field.name}
+          ref={field.ref}
+          onBlur={field.onBlur}
+          maxLength={200}
+          placeholder={placeholder}
+          disabled={disabled}
+          aria-invalid={fieldState.invalid || undefined}
+          aria-describedby={descriptionIds(
+            describedBy,
+            fieldState.error ? "model-error" : undefined,
+          )}
+        />
+        {models.length > 0 && (
+          <Autocomplete.Portal>
+            <Autocomplete.Positioner
+              className="autocomplete-positioner"
+              sideOffset={6}
+              align="start"
             >
-              <Autocomplete.List>
-                {(model: ModelChoice) => (
-                  <Autocomplete.Item
-                    key={model.value}
-                    value={model}
-                    className="autocomplete-item"
-                  >
-                    <span className="select-item-text">
-                      <span>
-                        {model.displayName}
-                        {model.displayName !== model.value && (
-                          <span className="model-id"> {model.value}</span>
+              <Autocomplete.Popup
+                id="available-models"
+                className="autocomplete-popup"
+              >
+                <Autocomplete.List>
+                  {(model: ModelChoice) => (
+                    <Autocomplete.Item
+                      key={model.value}
+                      value={model}
+                      className="autocomplete-item"
+                    >
+                      <span className="select-item-text">
+                        <span>
+                          {model.displayName}
+                          {model.displayName !== model.value && (
+                            <span className="model-id"> {model.value}</span>
+                          )}
+                        </span>
+                        {model.description && (
+                          <span className="select-item-description">
+                            {model.description}
+                          </span>
                         )}
                       </span>
-                      {model.description && (
-                        <span className="select-item-description">
-                          {model.description}
-                        </span>
-                      )}
-                    </span>
-                  </Autocomplete.Item>
-                )}
-              </Autocomplete.List>
-            </Autocomplete.Popup>
-          </Autocomplete.Positioner>
-        </Autocomplete.Portal>
+                    </Autocomplete.Item>
+                  )}
+                </Autocomplete.List>
+              </Autocomplete.Popup>
+            </Autocomplete.Positioner>
+          </Autocomplete.Portal>
+        )}
+      </Autocomplete.Root>
+      {fieldState.error && (
+        <FormFieldError id="model-error" message={fieldState.error.message} />
       )}
-    </Autocomplete.Root>
+    </>
   );
 }

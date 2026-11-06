@@ -8,6 +8,7 @@ import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import type {
   Capabilities,
   ModelChoice,
+  ProviderPolicy,
   ProviderReadiness,
 } from "../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
@@ -42,6 +43,8 @@ export interface RunContext {
    * returns false when the turn can't take it any more, as it ends.
    */
   acceptSteers(sink: (steer: Steer) => boolean): void;
+  /** Reports that the turn ended without sending its prompt, so the next one sends it. */
+  promptHeld(): void;
   /** Reports that the turn took a steer. One it never takes is left over. */
   steerTaken(id: string): void;
   /**
@@ -54,6 +57,11 @@ export interface RunContext {
   /** Explicit escape path for provider-owned or future event names. */
   emitOpaque: OpaqueEventEmitter;
   session: (id: string, stateRef: string) => void;
+  /**
+   * Stores what the session runs with where it differs from the task's request,
+   * under `provider_options.<id>.effective`. Replaces the earlier values.
+   */
+  effectiveOptions(values: Record<string, unknown>): void;
   input: (
     tool: string,
     input: Record<string, unknown>,
@@ -79,6 +87,8 @@ export interface Provider {
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
   readiness?(): Promise<ProviderReadiness>;
   models?(settings?: SettingsValues): Promise<ModelChoice[]>;
+  /** What org policy limits for new tasks. Nothing means nothing known. */
+  policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task): Promise<void>;

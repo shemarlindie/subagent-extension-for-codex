@@ -38,6 +38,7 @@
     "build": "npm run schemas:generate && tsc --noEmit && npm run build:bundles",
     "build:bundles": "npm run clean && node scripts/build-service.mjs && node scripts/build-panel.mjs",
     "check": "npm run schemas:check && node scripts/run-parallel.mjs check:source build:bundles",
+    "check:claude-policy": "node scripts/check-claude-policy.mjs",
     "check:source": "node scripts/run-parallel.mjs format:check lint knip typecheck:source",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "db:generate": "drizzle-kit generate",

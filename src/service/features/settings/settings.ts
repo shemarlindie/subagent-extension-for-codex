@@ -9,11 +9,11 @@ import {
   preferredSettingsProvider,
   providerModelSettingScopes,
 } from "../../../shared/providers/settings.js";
-import { type ModelChoice } from "../../../shared/providers/types.js";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js";
 import { settingText } from "../../../shared/settings/setting-text.js";
 import {
   modelScope,
+  type ScopeInput,
   settingsSections,
   unsupportedEffortWarning,
 } from "../../../shared/settings/settings-document.js";
@@ -134,10 +134,7 @@ export class Settings {
     };
   }
 
-  read(
-    owner: string,
-    catalogs: { provider: string; models?: ModelChoice[] }[] = [],
-  ) {
+  read(owner: string, catalogs: ScopeInput["catalogs"] = []) {
     const providers = this.providers(),
       modelProviders = this.modelProviders();
 

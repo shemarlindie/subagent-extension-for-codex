@@ -1,3 +1,4 @@
+import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import type { Changes } from "../../changes/changes.js";
@@ -7,6 +8,8 @@ import { gitState } from "../../workspaces/git.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
 import type { SessionPrompts } from "../conversation/session-prompts.js";
 import type { Store } from "../storage/store.js";
+import { logStartLimited } from "./execution-logging.js";
+import { limitTurnModel } from "./policy-check.js";
 import { measureTaskWait } from "./timing.js";
 
 /** What readying a turn reads and writes. */
@@ -17,6 +20,7 @@ export interface TurnStartupContext {
   prompts: SessionPrompts;
   projects?: Projects;
   ownerWorker: string;
+  settings(owner: string): SettingsValues;
   branchPrefix(owner: string): string;
 }
 
@@ -34,6 +38,12 @@ export async function startTurn(
 ) {
   const timing = { task_id: t.id, turn: t.turn };
   const { projects } = c;
+  const limited = await limitTurnModel(provider, t, c.settings(t.owner));
+
+  if (limited) {
+    c.store.event(t, "agent.limited", limited);
+    logStartLimited(t, limited);
+  }
 
   if (projects) {
     await measureTaskWait(

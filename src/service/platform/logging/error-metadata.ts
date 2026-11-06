@@ -1,6 +1,16 @@
+/**
+ * Org policy rules out what a task asked for. A tool call that throws it logs
+ * as a routine rejection. A running task that throws it still logs as a failure.
+ */
+export class PolicyRejectedError extends Error {
+  override name = "PolicyRejectedError";
+}
+
 /** Static categories retain useful failure reasons without copying SDK messages or payloads. */
 export function errorCategory(error: unknown) {
   if (!(error instanceof Error)) return "unknown";
+  // Checked first: policy wording can mention networks or timeouts.
+  if (error instanceof PolicyRejectedError) return "policy";
   const message = error.message.toLowerCase();
   const status = "status" in error ? error.status : undefined;
 

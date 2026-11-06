@@ -1,4 +1,5 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
+import { allowedPermissionMode } from "../../../shared/providers/policy";
 import type { GitState } from "../../../shared/tasks/model";
 import type { Worker } from "../../app/state/types";
 import { runsInPlace } from "../projects/selectors";
@@ -29,7 +30,10 @@ export function startTaskArguments(
 
   const nativeOptions = permissions
     ? {
-        [permissions.permissionOption]: values.permission_mode,
+        [permissions.permissionOption]: allowedPermissionMode(
+          worker?.policy,
+          values.permission_mode,
+        ),
         ...(permissions.approvalDeciderOption
           ? { [permissions.approvalDeciderOption]: values.approval_decider }
           : {}),
