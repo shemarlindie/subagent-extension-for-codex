@@ -1,4 +1,7 @@
-/** Org policy rules out what a task asked for. Logs as a routine rejection. */
+/**
+ * Org policy rules out what a task asked for. A tool call that throws it logs
+ * as a routine rejection. A running task that throws it still logs as a failure.
+ */
 export class PolicyRejectedError extends Error {
   override name = "PolicyRejectedError";
 }

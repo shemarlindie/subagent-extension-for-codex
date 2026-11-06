@@ -375,18 +375,12 @@ fails without running. `user_config` tasks have nothing to check.
 
 Limits:
 
-- These checks are verified against real policy files and a cached console
-  policy. Fetching from a real admin console is untested, including whether the
-  first session after sign-in already has the policy.
-- A model outside `availableModels` was seen to run only with an API key. Other
-  sign-ins are untested, and the extension's check applies to all of them.
 - Discovery runs in the service's directory, so project settings can differ. A
   mode that reads as allowed may still fall back, and Chat then says so.
 - The extension's model matching is simpler than Claude Code's, so it can refuse
   an older ID of an allowed family. An alias still works.
 - A denied tool call doesn't say who set the rule, so denials aren't attributed
   to the organization.
-- Windows and device management profiles are untested.
 
 Worktrees separate checkouts but do not restrict commands. With default
 settings, a task with a write profile has your full Claude Code capabilities.
