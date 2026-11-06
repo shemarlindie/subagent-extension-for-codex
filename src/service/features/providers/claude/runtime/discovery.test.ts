@@ -146,6 +146,11 @@ test("discovery runs outside any project, without the Bypass flag as root", asyn
   await read();
   assert.equal(options.allowDangerouslySkipPermissions, false);
 
+  // Claude Code only accepts this exact value.
+  vi.stubEnv("IS_SANDBOX", "0");
+  await read();
+  assert.equal(options.allowDangerouslySkipPermissions, false);
+
   vi.stubEnv("IS_SANDBOX", "1");
   await read();
   assert.equal(options.allowDangerouslySkipPermissions, true);

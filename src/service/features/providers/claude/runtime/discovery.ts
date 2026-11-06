@@ -32,7 +32,8 @@ type Discovered = { models: ModelChoice[]; policy?: ProviderPolicy };
 
 const SETTINGS_REASON = "Not available with your Claude Code setup";
 
-const runsAsRoot = () => process.getuid?.() === 0 && !process.env.IS_SANDBOX;
+const runsAsRoot = () =>
+  process.getuid?.() === 0 && process.env.IS_SANDBOX !== "1";
 
 /** Modes the session refuses to switch to, which a task would lose too. */
 async function blockedModes(session: Query, policy: Settings | undefined) {
