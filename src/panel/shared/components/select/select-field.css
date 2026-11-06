@@ -150,7 +150,6 @@
 .select-action[data-highlighted] {
   color: var(--text);
 }
-.autocomplete-empty,
 .select-footer {
   margin: 4px 0 0;
   padding: 6px 8px 2px;
@@ -162,6 +161,7 @@
   cursor: default;
   opacity: 0.6;
 }
+.autocomplete-empty,
 .select-empty {
   padding: 8px 10px;
   font-size: 12px;
