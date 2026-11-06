@@ -178,14 +178,22 @@ for (const [name, d] of Object.entries(tools)) {
 
         const body = await response.json();
 
+        if (!response.ok) {
+          return {
+            isError: true,
+            ...(body.send_rejected === true
+              ? { _meta: { send_rejected: true } }
+              : {}),
+            content: [
+              { type: "text", text: body.error ?? "Service request failed" },
+            ],
+          };
+        }
+
         return {
-          isError: !response.ok,
+          isError: false,
           content: [{ type: "text", text: JSON.stringify(body) }],
-          ...(response.ok
-            ? {
-                structuredContent: toolStructuredContent(d, body.result),
-              }
-            : {}),
+          structuredContent: toolStructuredContent(d, body.result),
         };
       } catch (error) {
         return {
