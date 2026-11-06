@@ -4,6 +4,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerMetadata } from "../../../../../shared/providers/metadata";
 import {
+  allowedPermissionMode,
   modelAllowed,
   withBlockedOptions,
 } from "../../../../../shared/providers/policy";
@@ -63,6 +64,7 @@ function resolvedOptions(
   state: Snapshot,
   worker: string,
   model: string,
+  mode: string,
 ) {
   const { provider, profile } = workerChoice(worker),
     resolved = newTask.defaults
@@ -75,6 +77,7 @@ function resolvedOptions(
   return {
     models,
     modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
+    allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
     // The chips edit the profile's settings, so Default clears them and
     // inherits the provider's.
     model: providerModel,
@@ -131,7 +134,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       control,
       name: ["worker", "model", "reasoning_effort", "permission_mode"],
     }),
-    [worker, model] = values,
+    [worker, model, , mode] = values,
     // A draft that already overrides the profile opens with its settings shown.
     // Reasoning stays blank until settings load.
     [expanded, setExpanded] = useState(() => {
@@ -149,8 +152,8 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       state.busy ||
       statuses.settings !== "ready" ||
       statuses.workers !== "ready",
-    resolved = resolvedOptions(newTask, state, worker, model),
-    { modelExcluded } = resolved;
+    resolved = resolvedOptions(newTask, state, worker, model, mode),
+    { modelExcluded, allowedMode } = resolved;
 
   // A saved model policy excludes shows as what will run. Sent blank, the
   // service falls back from it and says so in Chat.
@@ -159,6 +162,11 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     setValue("model", "");
     setValue("reasoning_effort", "default");
   }, [modelExcluded, setValue]);
+
+  // A restored draft or late policy can leave a blocked mode, which won't run.
+  useEffect(() => {
+    if (allowedMode !== mode) setValue("permission_mode", allowedMode);
+  }, [allowedMode, mode, setValue]);
 
   return (
     <div

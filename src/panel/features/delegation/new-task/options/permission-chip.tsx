@@ -23,13 +23,6 @@ function chipText(label: string) {
   return chipWords[label] ?? label;
 }
 
-/** The mode a locked choice falls back to, since a task can't run it. */
-function usableMode(options: PermissionChipProps["options"], value: string) {
-  return options?.find((option) => option.value === value)?.disabled
-    ? "default"
-    : value;
-}
-
 /** The chip's text for a permission mode, if the provider offers it. */
 export function permissionChipLabel(
   options: PermissionChipProps["options"],
@@ -38,8 +31,7 @@ export function permissionChipLabel(
 ) {
   if (readOnly) return "Read only";
 
-  const mode = usableMode(options, value);
-  const option = options?.find((candidate) => candidate.value === mode);
+  const option = options?.find((candidate) => candidate.value === value);
 
   return option && shortPermissionLabel(option.label);
 }
@@ -61,7 +53,7 @@ export function PermissionChip({
     <ChipSelect
       id="new-task-permission"
       label="Permission mode"
-      value={readOnly ? "read-only" : usableMode(options, field.value)}
+      value={readOnly ? "read-only" : field.value}
       onValueChange={field.onChange}
       loading={loading}
       disabled={disabled || readOnly}

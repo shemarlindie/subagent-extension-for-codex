@@ -10,7 +10,7 @@ import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
 import { ModelAutocomplete } from "../../fields/model-autocomplete";
 import { startTaskArguments } from "../../start-task";
-import { PermissionChip, permissionChipLabel } from "./permission-chip";
+import { PermissionChip } from "./permission-chip";
 
 afterEach(cleanup);
 
@@ -87,28 +87,7 @@ test("a locked mode shows its reason, and neither a click nor the keyboard picks
   assert.match(chip.getAttribute("aria-label") ?? "", /: Ask$/);
 });
 
-test("a saved mode now blocked reads and submits as the fallback", () => {
-  render(
-    <Form values={{ permission_mode: "bypassPermissions" }}>
-      <PermissionChip
-        options={options}
-        readOnly={false}
-        loading={false}
-        disabled={false}
-      />
-    </Form>,
-  );
-
-  assert.match(
-    screen.getByRole("combobox").getAttribute("aria-label") ?? "",
-    /: Ask$/,
-  );
-
-  assert.equal(
-    permissionChipLabel(options, "bypassPermissions", false),
-    "Ask for approval",
-  );
-
+test("a blocked mode submits as the fallback", () => {
   const input = startTaskArguments(
     {
       permission_mode: "bypassPermissions",

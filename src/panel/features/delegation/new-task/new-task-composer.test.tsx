@@ -16,6 +16,8 @@ import type {
   Snapshot,
   Transport,
 } from "../../../app/state/types";
+import type { DelegateValues } from "../delegate-values";
+import { NEW_TASK_SESSION_ID } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
 const ready: NewTaskState = {
@@ -37,6 +39,7 @@ const ready: NewTaskState = {
 function setup(
   newTask: NewTaskState = ready,
   overrides: Partial<Snapshot> = {},
+  draft?: Partial<DelegateValues>,
 ) {
   onTestFinished(cleanup);
 
@@ -46,6 +49,10 @@ function setup(
   );
 
   onTestFinished(() => controller.dispose());
+
+  if (draft) {
+    controller.session.update("newTask", NEW_TASK_SESSION_ID, { draft });
+  }
 
   const state: Snapshot = {
     ...controller.getSnapshot(),
@@ -133,6 +140,40 @@ test("a saved model policy excludes shows and sends as the default", async () =>
   await user.type(view.getByRole("textbox"), "Do it{Enter}");
 
   await waitFor(() => assert.equal(start.mock.calls[0]?.[0].model, ""));
+});
+
+test("a draft's blocked mode shows and sends as the fallback", async () => {
+  const { view, user, start } = setup(
+    ready,
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [
+              {
+                setting: "permission_mode",
+                value: "auto",
+                reason: "Turned off by your organization",
+              },
+            ],
+            notes: [],
+          },
+        },
+      ],
+    },
+    { permission_mode: "auto" },
+  );
+
+  assert.ok(await view.findByRole("button", { name: /^Edit .*Ask/ }));
+  await user.type(view.getByRole("textbox"), "Do it{Enter}");
+
+  await waitFor(() =>
+    assert.equal(start.mock.calls[0]?.[0].permission_mode, "default"),
+  );
 });
 
 test("the profile's settings collapse into a summary that expands for editing", async () => {
