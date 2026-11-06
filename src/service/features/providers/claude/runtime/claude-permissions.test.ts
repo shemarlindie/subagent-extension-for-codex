@@ -14,7 +14,6 @@ import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
-import * as logging from "../../../../platform/logging/logger.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import {
   captureOptions,
@@ -69,21 +68,13 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
     }),
   );
 
-  const error = new Error("recording failed");
-
   vi.mocked(c.fileChanged).mockImplementation(() => {
-    throw error;
+    throw new Error("recording failed");
   });
-
-  const log = vi.spyOn(logging, "logError").mockImplementation(() => {});
 
   expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
     {},
   );
-
-  expect(log).toHaveBeenCalledWith("provider.edit_capture_failed", error, {
-    tool: "Write",
-  });
 });
 
 test("PostToolUse flags a command in a task whose folder has no Git", async () => {

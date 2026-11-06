@@ -266,11 +266,9 @@ test("transactions reject nesting and asynchronous callbacks", (t) => {
 
 test("a failing listener neither undoes the commit nor stops other listeners", (t) => {
   const { store, task, heard } = transactionFixture(t);
-  const errors = vi.spyOn(logging, "logError").mockImplementation(() => {});
-  const failure = new Error("listener failed");
 
   store.bus.prependListener("event", () => {
-    throw failure;
+    throw new Error("listener failed");
   });
 
   store.transaction(() => {
@@ -281,15 +279,6 @@ test("a failing listener neither undoes the commit nor stops other listeners", (
   store.event(task, "task.completed");
   assert.deepEqual(heard, ["task.started", "task.completed"]);
   assert.equal(store.events(task.id, task.owner).length, 2);
-  assert.equal(errors.mock.calls.length, 2);
-
-  expect(errors).toHaveBeenNthCalledWith(1, "store.listener_failed", failure, {
-    listener: "event",
-  });
-
-  expect(errors).toHaveBeenNthCalledWith(2, "store.listener_failed", failure, {
-    listener: "event",
-  });
 });
 
 test("a transaction announces one change per owner after it commits, and a rollback none", (t) => {

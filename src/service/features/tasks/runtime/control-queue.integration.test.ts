@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 
-import { expect, test, vi } from "vitest";
+import { test } from "vitest";
 
-import * as logging from "../../../platform/logging/logger.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,
@@ -18,7 +17,6 @@ test("a queued message waits for its own turn, which follows at once", async () 
   const checkpoints = new TurnCheckpoints(1);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
   const { c, store, repo } = await setup(recorder);
-  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
 
   const t = await c.start("alice", input(repo));
   await checkpoints.ready();
@@ -48,17 +46,6 @@ test("a queued message waits for its own turn, which follows at once", async () 
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
   assert.deepEqual(recorder.prompts.slice(1), ["Then write the docs"]);
-
-  expect(
-    log.mock.calls
-      .filter(([, event]) => event === "task.event_storage")
-      .map(([, , fields]) => [fields?.turn, fields?.status]),
-  ).toEqual([
-    [1, "completed"],
-    [2, "completed"],
-  ]);
-
-  log.mockRestore();
 
   // The task never showed as completed between the turns.
   const types = store

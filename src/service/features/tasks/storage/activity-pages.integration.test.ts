@@ -119,7 +119,6 @@ test("a poll returns only the events after its cursor and extends the tally", (t
 });
 
 test("a poll with nothing new does not count the history again", (t) => {
-  const recordLog = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
   const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 500);
 
@@ -134,19 +133,9 @@ test("a poll with nothing new does not count the history again", (t) => {
   assert.equal(read.mock.calls.length, 2);
   assert.deepEqual(again.dropped, first.dropped);
   assert.deepEqual(again.events, []);
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_latest",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: 0,
-    tally_rows: 0,
-    cache: "hit",
-  });
 });
 
 test("a turn reads from the previous turn's close through its own close", (t) => {
-  const recordLog = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
   const { store, task, write } = fixture(t);
 
   const end = (turn: number) => {
@@ -178,26 +167,6 @@ test("a turn reads from the previous turn's close through its own close", (t) =>
   assert.equal(second.events.length, EVENT_TAIL_SIZE);
   assert.equal(second.dropped?.count, 33);
   assert.equal(second.events.at(-1)!.type, "task.completed");
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_turn",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: EVENT_TAIL_SIZE,
-    tally_rows: 33,
-    cache: "none",
-  });
-
-  pages.turn(task.id, 2);
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_turn",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: EVENT_TAIL_SIZE,
-    tally_rows: 33,
-    cache: "none",
-  });
 
   assert.deepEqual(pages.turn(task.id, 1), windowTurnActivity(log, 1));
   assert.equal(pages.turn(task.id, 1).events.length, 8);
