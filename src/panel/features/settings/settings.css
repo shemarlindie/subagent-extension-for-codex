@@ -268,13 +268,13 @@
   opacity: 0.65;
   cursor: wait;
 }
-/* A section's intro text, hidden when the section has none. */
 .settings-facts {
   margin: 0;
 }
 .settings-facts dd {
   margin: 0;
 }
+/* A section's intro text, hidden when the section has none. */
 .settings-section-intro {
   padding-bottom: 8px;
 }

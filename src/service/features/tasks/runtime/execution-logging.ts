@@ -6,7 +6,10 @@ import {
   withLogContext,
 } from "../../../platform/logging/logger.js";
 
-/** A choice policy changed as a task started, before any execution context. */
+/**
+ * A choice policy changed as a task or later turn started. Names the task,
+ * since a new one has no execution context yet.
+ */
 export function logStartLimited(
   task: Task,
   { setting, requested, effective }: EventPayloadMap["agent.limited"],

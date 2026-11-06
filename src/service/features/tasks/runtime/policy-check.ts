@@ -5,8 +5,7 @@ import {
   modelAllowed,
 } from "../../../../shared/providers/policy.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import type { Start } from "../../../../shared/tasks/model.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Start, Task } from "../../../../shared/tasks/model.js";
 import { PolicyRejectedError } from "../../../platform/logging/error-metadata.js";
 import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";

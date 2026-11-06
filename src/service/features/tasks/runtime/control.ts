@@ -394,7 +394,6 @@ export class Control {
       const provider = this.providers.get(t.provider)!;
       const startup = this.turnStartup();
       const newSession = await startTurn(startup, t, provider, begin, signal);
-
       const remaining = remainingRuntime(t);
 
       if (remaining !== Infinity) {
