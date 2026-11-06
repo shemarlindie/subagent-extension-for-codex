@@ -223,62 +223,58 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
   assert.deepEqual(ctx.taken, ["msg_late"]);
 });
 
-test("the empty result for a stopped background command doesn't end the turn", async () => {
+/** The turn's reply when the CLI plays `frames`, given the prompt's uuid. */
+const replyTo = async (frames: (uuid: string) => Frame[]) => {
   const ctx = await context();
 
   const query = fakeQuery(async function* (next) {
-    await next();
-    yield { type: "system", subtype: "task_notification", status: "stopped" };
-    yield { ...result(""), num_turns: 0 };
-    yield { ...result("Answer"), num_turns: 1 };
+    const { uuid } = await next();
+    yield* frames(uuid!);
   });
 
-  const provider = new ClaudeAgentProvider(
-    query.launch,
-    undefined,
-    readyClaudeCli,
+  return new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
   );
+};
 
-  assert.deepEqual(await provider.run(ctx.c, "Prompt"), { reply: "Answer" });
+test("a result from before the prompt started doesn't end the turn", async () => {
+  assert.deepEqual(
+    await replyTo((uuid) => [
+      lifecycle(uuid, "queued"),
+      result(""),
+      lifecycle(uuid, "started"),
+      result("Answer"),
+    ]),
+    { reply: "Answer" },
+  );
 });
 
-test("an empty result with no background command still ends the turn", async () => {
-  const ctx = await context();
-
-  const query = fakeQuery(async function* (next) {
-    await next();
-    yield { ...result(""), num_turns: 0 };
-    yield { ...result("Unreached"), num_turns: 1 };
-  });
-
-  const provider = new ClaudeAgentProvider(
-    query.launch,
-    undefined,
-    readyClaudeCli,
+test("the prompt's own empty result ends the turn", async () => {
+  assert.deepEqual(
+    await replyTo((uuid) => [
+      lifecycle(uuid, "queued"),
+      result(""),
+      lifecycle(uuid, "started"),
+      result(""),
+      result("Unreached"),
+    ]),
+    { reply: "" },
   );
-
-  assert.deepEqual(await provider.run(ctx.c, "Prompt"), { reply: "" });
 });
 
-test("a failed result reports its own text, or a fallback when it has none", async () => {
+test("an error ends the turn before the prompt starts, with its own text", async () => {
   for (const [text, expected] of [
     ["Invalid API key", /^Error: Invalid API key$/],
     ["", /^Error: Claude reported an error with no message$/],
   ] as const) {
-    const ctx = await context();
-
-    const query = fakeQuery(async function* (next) {
-      await next();
-      yield { ...result(text), is_error: true };
-    });
-
-    const provider = new ClaudeAgentProvider(
-      query.launch,
-      undefined,
-      readyClaudeCli,
+    await assert.rejects(
+      replyTo((uuid) => [
+        lifecycle(uuid, "queued"),
+        { ...result(text), is_error: true },
+      ]),
+      expected,
     );
-
-    await assert.rejects(provider.run(ctx.c, "Prompt"), expected);
   }
 });
 

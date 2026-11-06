@@ -146,12 +146,14 @@ export class ClaudeAgentProvider implements Provider {
 
     // Streaming input mode, so steers can follow the prompt while it runs.
     const inbox = new Inbox<SDKUserMessage>();
+    const promptId = randomUUID();
 
     inbox.push({
       type: "user",
       message: { role: "user", content: prompt },
       parent_tool_use_id: null,
       session_id: "",
+      uuid: promptId,
     });
 
     const normalize = claudeMessageNormalizer(this.fullEvents);
@@ -172,8 +174,8 @@ export class ClaudeAgentProvider implements Provider {
     // Widened because a callback sets it, which TypeScript can't see.
     let continuing = false as boolean;
     let fallback: ReturnType<typeof setTimeout> | undefined;
-    // A background command's notice arrived, so an empty result can follow.
-    let backgroundNotice = false;
+    // The CLI has queued the prompt and not started it.
+    let promptWaiting = false;
 
     const interrupt = () => {
       // Interrupting ends the turn with an interrupted result and keeps the
@@ -246,6 +248,7 @@ export class ClaudeAgentProvider implements Provider {
 
         if ((m as { type: string }).type === "command_lifecycle") {
           const { command_uuid, state } = m as unknown as CommandLifecycle;
+          if (command_uuid === promptId) promptWaiting = state === "queued";
           const id = steers.get(command_uuid);
 
           if (id && state === "started") {
@@ -293,19 +296,14 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        if (m.type === "system" && m.subtype === "task_notification") {
-          backgroundNotice = true;
-        }
-
         // Resuming after a turn that left a background command, the CLI reports
-        // it stopped and gives a result with no turns before it runs the prompt.
+        // it stopped and gives a result before it starts the prompt. An error
+        // still ends the turn, as the prompt may never start.
         if (
-          backgroundNotice &&
+          promptWaiting &&
           m.type === "result" &&
           m.subtype === "success" &&
-          !m.is_error &&
-          m.num_turns === 0 &&
-          !m.result
+          !m.is_error
         ) {
           continue;
         }
