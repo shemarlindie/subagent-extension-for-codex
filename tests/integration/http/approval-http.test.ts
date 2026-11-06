@@ -411,7 +411,7 @@ test("HTTP and MCP mark only send failures confirmed before acceptance", async (
       });
 
       expect(result.isError).toBe(true);
-      expect(JSON.stringify(result.content)).toMatch(scenario.message);
+      expect(result.content).toEqual([{ type: "text", text: body.error }]);
 
       expect(result._meta?.send_rejected).toBe(
         scenario.rejected ? true : undefined,

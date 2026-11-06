@@ -30,6 +30,10 @@ import {
 } from "./tools.js";
 import type { AnyTool } from "./tools/definition.js";
 
+/** The text the HTTP API reports for the same failure, without a class name. */
+const errorText = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 export function mcp(
   c: Control,
   owner: string,
@@ -114,7 +118,7 @@ export function mcp(
             ...(error instanceof SendRejectedError
               ? { _meta: { send_rejected: true } }
               : {}),
-            content: [{ type: "text", text: String(error) }],
+            content: [{ type: "text", text: errorText(error) }],
           };
         }
       },
@@ -138,7 +142,7 @@ export function mcp(
       } catch (error) {
         return {
           isError: true,
-          content: [{ type: "text", text: String(error) }],
+          content: [{ type: "text", text: errorText(error) }],
         };
       }
     },
@@ -155,7 +159,7 @@ export function mcp(
       } catch (error) {
         return {
           isError: true,
-          content: [{ type: "text", text: String(error) }],
+          content: [{ type: "text", text: errorText(error) }],
         };
       }
     },
