@@ -277,6 +277,61 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
   assert.deepEqual(ctx.taken, ["msg_late"]);
 });
 
+/** The turn's reply when the CLI plays `frames`, given the prompt's uuid. */
+const replyTo = async (frames: (uuid: string) => Frame[]) => {
+  const ctx = await context();
+
+  const query = fakeQuery(async function* (next) {
+    const { uuid } = await next();
+    yield* frames(uuid!);
+  });
+
+  return new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
+};
+
+test("a result from before the prompt started doesn't end the turn", async () => {
+  assert.deepEqual(
+    await replyTo((uuid) => [
+      lifecycle(uuid, "queued"),
+      result(""),
+      lifecycle(uuid, "started"),
+      result("Answer"),
+    ]),
+    { reply: "Answer" },
+  );
+});
+
+test("the prompt's own empty result ends the turn", async () => {
+  assert.deepEqual(
+    await replyTo((uuid) => [
+      lifecycle(uuid, "queued"),
+      result(""),
+      lifecycle(uuid, "started"),
+      result(""),
+      result("Unreached"),
+    ]),
+    { reply: "" },
+  );
+});
+
+test("an error ends the turn before the prompt starts, with its own text", async () => {
+  for (const [text, expected] of [
+    ["Invalid API key", /^Error: Invalid API key$/],
+    ["", /^Error: Claude reported an error with no message$/],
+  ] as const) {
+    await assert.rejects(
+      replyTo((uuid) => [
+        lifecycle(uuid, "queued"),
+        { ...result(text), is_error: true },
+      ]),
+      expected,
+    );
+  }
+});
+
 test("an interrupt ends the turn through the query, cancelling queued messages, without stopping the process", async () => {
   const ctx = await context();
   const interrupts: unknown[] = [];
