@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type RequestListener,
+  type ServerResponse,
+} from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -12,6 +17,7 @@ import {
   challengeHeader,
   healthProof,
 } from "../../../src/service/platform/service/health-proof.js";
+import { serviceIdentity } from "../../../src/service/platform/service/identity.js";
 import { waitForListening } from "../../support/helpers.js";
 import {
   freePort,
@@ -53,6 +59,36 @@ async function proxy(
   return { client, pid: transport.pid!, stderr: () => stderr };
 }
 
+const token = "test-token";
+
+/** A loopback server standing in for the service. Returns its port. */
+async function stubService(
+  t: import("vitest").TestContext,
+  listener: RequestListener,
+) {
+  const server = createServer(listener);
+  await waitForListening(server.listen(0, "127.0.0.1"));
+
+  t.onTestFinished(
+    () => new Promise<void>((done) => server.close(() => done())),
+  );
+
+  return (server.address() as import("node:net").AddressInfo).port;
+}
+
+function answerHealth(req: IncomingMessage, res: ServerResponse, ready = true) {
+  res.statusCode = ready ? 200 : 503;
+
+  res.end(
+    JSON.stringify({
+      service: "subagent-extension-for-codex",
+      status: ready ? "ok" : "starting",
+      apiVersion: serviceIdentity().apiVersion,
+      proof: healthProof(token, String(req.headers[challengeHeader])),
+    }),
+  );
+}
+
 function running(pid: number) {
   try {
     process.kill(pid, 0);
@@ -79,22 +115,11 @@ test("the proxy completes the MCP handshake while the service is still starting"
   let observeCall = false;
   let prematureRequests = 0;
 
-  const server = createServer((req, res) => {
+  const port = await stubService(t, (req, res) => {
     res.setHeader("Content-Type", "application/json");
 
     if (req.url === "/health") {
-      res.statusCode = ready ? 200 : 503;
-
-      res.end(
-        JSON.stringify({
-          service: "subagent-extension-for-codex",
-          status: ready ? "ok" : "starting",
-          proof: healthProof(
-            "test-token",
-            String(req.headers[challengeHeader]),
-          ),
-        }),
-      );
+      answerHealth(req, res, ready);
 
       if (!ready) {
         starting.resolve();
@@ -112,7 +137,7 @@ test("the proxy completes the MCP handshake while the service is still starting"
       return;
     }
 
-    if (req.headers.authorization !== "Bearer test-token") {
+    if (req.headers.authorization !== `Bearer ${token}`) {
       res.statusCode = 401;
       res.end(JSON.stringify({ error: "unauthorized" }));
 
@@ -122,18 +147,10 @@ test("the proxy completes the MCP handshake while the service is still starting"
     res.end(JSON.stringify({ result: { projects: [] } }));
   });
 
-  await waitForListening(server.listen(0, "127.0.0.1"));
-
-  t.onTestFinished(
-    () => new Promise<void>((done) => server.close(() => done())),
-  );
-
-  const { port } = server.address() as import("node:net").AddressInfo;
-
   const { client, stderr } = await proxy(
     t,
     { data: await data(t), port },
-    { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "test-token" },
+    { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token },
   );
 
   await starting.promise;
@@ -168,6 +185,54 @@ test("the proxy completes the MCP handshake while the service is still starting"
   // Codex records this line, which tells a closed stdin from a signal.
   await client.close();
   assert.match(stderr(), /Proxy stopping: stdin closed/);
+});
+
+test("a failed call gives the service's message and says when a send was rejected", async (t) => {
+  const port = await stubService(t, (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    if (req.url === "/health") return answerHealth(req, res);
+
+    // The proxy lists projects to check its token when it connects.
+    if (req.url?.endsWith("/list_projects")) {
+      return res.end(JSON.stringify({ result: { projects: [] } }));
+    }
+
+    res.statusCode = 400;
+
+    res.end(
+      JSON.stringify(
+        req.url?.endsWith("/send_message")
+          ? { error: "Send refused", send_rejected: true }
+          : { error: "Not found" },
+      ),
+    );
+  });
+
+  const { client } = await proxy(
+    t,
+    { data: await data(t), port },
+    { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token },
+  );
+
+  assert.deepEqual(
+    await client.callTool({
+      name: "send_message",
+      arguments: { task_id: "task", message: "Next" },
+    }),
+    {
+      isError: true,
+      _meta: { send_rejected: true },
+      content: [{ type: "text", text: "Send refused" }],
+    },
+  );
+
+  assert.deepEqual(
+    await client.callTool({
+      name: "get_task",
+      arguments: { task_id: "task" },
+    }),
+    { isError: true, content: [{ type: "text", text: "Not found" }] },
+  );
 });
 
 test(
