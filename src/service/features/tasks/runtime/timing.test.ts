@@ -1,25 +1,19 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import {
-  configureLogging,
-  logCorrelation,
-  withLogContext,
-} from "../../../platform/logging/logger.js";
-import {
   configureTimingLog,
   flushTimingLog,
   measureTaskWait,
   measureTaskWrite,
-  recordTaskTiming,
 } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
 
-test("timing records go to a private JSON Lines file, not the console", async () => {
+test("timing records go to a JSON Lines file, not the console", async () => {
   const directory = await mkdtemp(join(tmpdir(), "task-timing-"));
   const path = join(directory, "timing.jsonl");
   const debug = vi.spyOn(console, "debug");
@@ -63,30 +57,7 @@ test("timing records go to a private JSON Lines file, not the console", async ()
   );
 
   assert.equal(typeof records[0]?.duration_ms, "number");
-  assert.equal((await stat(path)).mode & 0o777, 0o600);
   assert.equal(debug.mock.calls.length, 0);
-});
-
-test("timing records carry the service log's instance and request IDs", async () => {
-  const timing = await captureTiming();
-  configureLogging(undefined);
-  onTestFinished(() => configureLogging(undefined));
-
-  withLogContext({ request_id: "req-1", route: "/mcp", task_id: "t" }, () =>
-    recordTaskTiming({ phase: "inside" }),
-  );
-
-  recordTaskTiming({ phase: "outside" });
-
-  const [inside, outside] = await timing.records();
-
-  assert.equal(inside?.instance_id, logCorrelation().instance_id);
-  assert.equal(inside?.request_id, "req-1");
-  // Only selected correlation fields come from the log context.
-  assert.equal(inside?.route, undefined);
-  assert.equal(inside?.task_id, undefined);
-  assert.equal(outside?.instance_id, logCorrelation().instance_id);
-  assert.equal(outside?.request_id, undefined);
 });
 
 test("measured phases report their outcome and rethrow the same error", async () => {

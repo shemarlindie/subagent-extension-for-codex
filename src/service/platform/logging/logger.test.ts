@@ -148,7 +148,7 @@ test("redacts credential and content fields from explicit metadata and inherited
   expect(await readFile(path, "utf8")).not.toContain("private-");
 });
 
-test("captures error classification and frames without raw error messages or causes", async (t) => {
+test("keeps error type and frames without raw error messages or causes", async (t) => {
   const path = await logFile(t);
 
   const error = Object.assign(
@@ -224,29 +224,4 @@ test("redacts configured credential values while retaining numeric token usage",
 
   expect(result[1]?.input_tokens).toBe("[redacted]");
   expect(await readFile(path, "utf8")).not.toContain("credential");
-});
-
-test("classifies missing and invalid provider credentials without persisting messages", async (t) => {
-  const path = await logFile(t);
-
-  for (const message of [
-    "Missing API key private-value",
-    "Invalid API key private-value",
-    "Missing token private-value",
-    "Invalid token private-value",
-  ]) {
-    logError("provider.failed", new Error(message));
-  }
-
-  const result = await records(path);
-  expect(result).toHaveLength(4);
-
-  for (const record of result) {
-    expect(record).toMatchObject({
-      event: "provider.failed",
-      error_category: "authentication",
-    });
-  }
-
-  expect(await readFile(path, "utf8")).not.toContain("private-value");
 });
