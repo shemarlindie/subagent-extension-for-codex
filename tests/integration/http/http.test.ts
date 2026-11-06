@@ -26,6 +26,7 @@ import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/shared/tasks/conversat
 import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
+import { until } from "../../support/until.js";
 import { httpFixture, panel } from "./http-test-harness.js";
 
 describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", () => {
@@ -826,14 +827,6 @@ async function changeService(prefix: string) {
 }
 
 /** Polls until `ready` holds, so tests can wait on listener bookkeeping. */
-async function eventually(ready: () => boolean) {
-  for (let i = 0; i < 300 && !ready(); i++) {
-    await new Promise((r) => setTimeout(r, 10));
-  }
-
-  assert.ok(ready());
-}
-
 /** An open console event stream and a reader that consumes it. */
 async function eventStream(base: string, headers: Record<string, string>) {
   const abort = new AbortController();
@@ -953,7 +946,7 @@ test("SSE requires authentication, streams each owner's revision on its changes 
     await local.close();
     await other.close();
 
-    await eventually(
+    await until(
       () =>
         c.store.bus.listenerCount("change") === 0 &&
         c.store.bus.listenerCount("draft") === 0,
@@ -979,7 +972,7 @@ test("a held update wait on the user-tools route returns the new revision when a
     waiting.catch(() => {});
 
     // The wait is held once it listens for changes.
-    await eventually(() => c.store.bus.listenerCount("change") === 1);
+    await until(() => c.store.bus.listenerCount("change") === 1);
 
     const deleting = Date.now();
 

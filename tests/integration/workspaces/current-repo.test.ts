@@ -20,6 +20,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 import { readyClaudeCli } from "../../support/claude-cli.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
+import { until } from "../../support/until.js";
 
 async function setup() {
   const dir = await realpath(
@@ -91,15 +92,6 @@ async function dirty(repo: string, git: (...args: string[]) => string) {
   );
 
   await writeFile(join(repo, "new file.txt"), "untracked content\n");
-}
-
-async function until(done: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (done()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  throw new Error("Task did not complete");
 }
 
 test("current repository rejects a non-HEAD revision without altering the checkout", async () => {

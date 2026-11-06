@@ -15,16 +15,9 @@ import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
 import { Control } from "./control.js";
 
+export { until } from "../../../../../tests/support/until.js";
+
 export const pause = (ms = 10) => new Promise((r) => setTimeout(r, ms));
-
-export async function until(fn: () => boolean) {
-  for (let i = 0; i < 300; i++) {
-    if (fn()) return;
-    await pause();
-  }
-
-  throw new Error("Timed out");
-}
 
 export async function setup(
   provider: Provider = new TestProvider(),
