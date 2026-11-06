@@ -1,7 +1,10 @@
 import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
-import { permissionModeName } from "../../../../../shared/providers/claude/permissions.js";
+import {
+  type ClaudePermissionMode,
+  permissionModeName,
+} from "../../../../../shared/providers/claude/permissions.js";
 import {
   type ClaudeEffectiveSettings,
   readClaudeTaskOptions,
@@ -40,7 +43,11 @@ export function modelHonored(requested: string | undefined, actual: string) {
   );
 }
 
-function modeReason(requested: string, actual: string, policy?: Settings) {
+function modeReason(
+  requested: ClaudePermissionMode,
+  actual: string,
+  policy?: Settings,
+) {
   const why = policyBlocksMode(requested, policy)
     ? `Your organization turned off ${permissionModeName(requested)}.`
     : `Claude Code doesn't allow ${permissionModeName(requested)} for this session.`;

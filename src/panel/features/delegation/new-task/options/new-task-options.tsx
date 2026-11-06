@@ -47,9 +47,7 @@ function policyOptions(
       ?.nativePermissions?.options;
 
   return {
-    ...(model && !modelAllowed(policy, models, model)
-      ? { model: undefined }
-      : {}),
+    model: model && modelAllowed(policy, models, model) ? model : undefined,
     modelsFooter: policy?.available_models
       ? "Your organization limits these models."
       : undefined,
@@ -78,11 +76,10 @@ function resolvedOptions(
     models,
     modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
     allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
-    // The chips edit the profile's settings, so Default clears them and
-    // inherits the provider's.
-    model: providerModel,
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
+    // The chips edit the profile's settings, so Default clears them and
+    // inherits the provider's.
     ...policyOptions(provider, workerInfo, models, providerModel),
     readOnly: Boolean(profile && readOnlyProfile(profile)),
   };

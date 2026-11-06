@@ -1,5 +1,6 @@
-import type { PermissionMode, Settings } from "@anthropic-ai/claude-agent-sdk";
+import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
+import type { ClaudePermissionMode } from "../../../../../shared/providers/claude/permissions.js";
 import { errorCategory } from "../../../../platform/logging/error-metadata.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 
@@ -52,7 +53,7 @@ export const policySettings = (settings: SessionSettings | undefined) =>
 
 /** Whether policy is what turned this mode off. A user's settings can too. */
 export function policyBlocksMode(
-  mode: PermissionMode | string,
+  mode: ClaudePermissionMode,
   policy: Settings | undefined,
 ) {
   if (mode === "bypassPermissions") {
