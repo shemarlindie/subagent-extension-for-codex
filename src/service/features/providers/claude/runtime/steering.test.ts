@@ -260,6 +260,28 @@ test("an empty result with no background command still ends the turn", async () 
   assert.deepEqual(await provider.run(ctx.c, "Prompt"), { reply: "" });
 });
 
+test("a failed result reports its own text, or a fallback when it has none", async () => {
+  for (const [text, expected] of [
+    ["Invalid API key", /^Error: Invalid API key$/],
+    ["", /^Error: Claude reported an error with no message$/],
+  ] as const) {
+    const ctx = await context();
+
+    const query = fakeQuery(async function* (next) {
+      await next();
+      yield { ...result(text), is_error: true };
+    });
+
+    const provider = new ClaudeAgentProvider(
+      query.launch,
+      undefined,
+      readyClaudeCli,
+    );
+
+    await assert.rejects(provider.run(ctx.c, "Prompt"), expected);
+  }
+});
+
 test("an interrupt ends the turn through the query, cancelling queued messages, without stopping the process", async () => {
   const ctx = await context();
   const interrupts: unknown[] = [];

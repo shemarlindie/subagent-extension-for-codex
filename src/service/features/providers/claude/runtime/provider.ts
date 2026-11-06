@@ -326,9 +326,16 @@ export class ClaudeAgentProvider implements Provider {
           turn_count: m.num_turns,
         });
 
-        if (m.subtype !== "success" || m.is_error) {
+        if (m.subtype !== "success") {
           throw new Error(
             `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
+          );
+        }
+
+        // Its text is the error here, such as an invalid API key.
+        if (m.is_error) {
+          throw new Error(
+            m.result || "Claude reported an error with no message",
           );
         }
 
