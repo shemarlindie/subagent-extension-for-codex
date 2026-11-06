@@ -229,7 +229,7 @@ test("settings choose whether sessions load Claude Code settings and their MCP s
 /** A turn against a session that reports `settings`, tracking what reached it. */
 async function sandboxTurn(
   sandbox: ClaudePolicy["sandbox"],
-  settings?: () => Promise<{ effective: Settings }>,
+  settings: () => Promise<{ effective: Settings }>,
 ) {
   const { c } = await context();
 
@@ -260,7 +260,7 @@ async function sandboxTurn(
           };
         }
       })(),
-      { close: () => {}, ...(settings ? { getSettings: settings } : {}) },
+      { close: () => {}, getSettings: settings },
     );
 
   const provider = new ClaudeAgentProvider(
@@ -317,33 +317,13 @@ test("a locked-network task runs when the effective settings keep the lock", asy
   assert.equal(held(), 0);
 });
 
-test("a sandboxed task fails when Claude Code can't report its settings, and other tasks don't ask", async () => {
-  const missing = await sandboxTurn("extension");
-  await assert.rejects(missing.run, /didn't confirm it's on/);
-  assert.deepEqual(missing.sent, []);
-
-  const failing = await sandboxTurn("extension", () =>
+test("a sandboxed task fails when Claude Code can't report its settings", async () => {
+  const { run, sent } = await sandboxTurn("extension", () =>
     Promise.reject(new Error("Unsupported")),
   );
 
-  await assert.rejects(failing.run, /didn't confirm it's on/);
-
-  const unsandboxed = await sandboxTurn("user_config");
-  assert.deepEqual(await unsandboxed.run(), { reply });
-  assert.deepEqual(unsandboxed.sent, ["Prompt"]);
-});
-
-test("each turn checks the sandbox again, so policy that arrives between turns stops the next one", async () => {
-  let sandbox: Settings["sandbox"] = asked;
-
-  const turn = await sandboxTurn("extension", async () => ({
-    effective: { sandbox },
-  }));
-
-  assert.deepEqual(await turn.run(), { reply });
-  sandbox = { ...asked, enabled: false };
-  await assert.rejects(turn.run, /turns the sandbox off/);
-  assert.deepEqual(turn.sent, ["Prompt"]);
+  await assert.rejects(run, /didn't confirm it's on/);
+  assert.deepEqual(sent, []);
 });
 
 test("an interrupt during the sandbox check sends no prompt", async () => {

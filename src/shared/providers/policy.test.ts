@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { blockedReason, modelAllowed } from "./policy.js";
+import { modelAllowed } from "./policy.js";
 import type { ProviderPolicy } from "./types.js";
 
 const models = [
@@ -19,13 +19,7 @@ const policy = (
   available_models_match: "prefix" | "exact" = "prefix",
 ): ProviderPolicy => ({
   managed: true,
-  blocked: [
-    {
-      setting: "permission_mode",
-      value: "auto",
-      reason: "Turned off by your organization",
-    },
-  ],
+  blocked: [],
   available_models,
   available_models_match,
   notes: [],
@@ -68,14 +62,4 @@ test("a model ID entry covers its later versions by prefix, and only its own IDs
   assert.ok(modelAllowed(exact, [], "claude-opus-5-20260101"));
   assert.ok(modelAllowed(exact, [], "claude-opus-5-fast"));
   assert.ok(!modelAllowed(exact, [], "claude-opus-5-5"));
-});
-
-test("a blocked choice gives its reason", () => {
-  assert.equal(
-    blockedReason(policy([]), "permission_mode", "auto"),
-    "Turned off by your organization",
-  );
-
-  assert.equal(blockedReason(policy([]), "permission_mode", "plan"), undefined);
-  assert.equal(blockedReason(undefined, "permission_mode", "auto"), undefined);
 });

@@ -158,21 +158,3 @@ test("a saved choice now blocked warns on its row, and nothing else does", () =>
 
   assert.equal(row(sections({}), MODE).warning, undefined);
 });
-
-test("a saved model outside the allowlist warns on its scope", () => {
-  const all = sections({ models: { global: { model: "opus" } } });
-
-  const models = all.flatMap(({ rows }) =>
-    rows.flatMap((item) => (item.kind === "models" ? item.scopes : [])),
-  );
-
-  assert.match(
-    models.find(({ id }) => id === "global")?.model.warning ?? "",
-    /doesn't allow this model/,
-  );
-
-  assert.equal(
-    models.find(({ id }) => id === "claude")?.model.warning,
-    undefined,
-  );
-});

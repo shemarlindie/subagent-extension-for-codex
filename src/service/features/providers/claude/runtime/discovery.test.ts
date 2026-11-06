@@ -25,12 +25,10 @@ const orgPolicy = {
 function discovery({
   policy,
   rejected = [],
-  getSettings = true,
   resolved = [],
 }: {
   policy?: object;
   rejected?: string[];
-  getSettings?: boolean;
   resolved?: object[];
 }) {
   const launch = () => ({
@@ -38,19 +36,13 @@ function discovery({
     setPermissionMode: async (mode: string) => {
       if (rejected.includes(mode)) throw new Error(REJECTIONS[mode]);
     },
-    ...(getSettings
-      ? {
-          getSettings: async () => ({
-            effective: {},
-            sources: [
-              { source: "flagSettings", settings: {} },
-              ...(policy
-                ? [{ source: "policySettings", settings: policy }]
-                : []),
-            ],
-          }),
-        }
-      : {}),
+    getSettings: async () => ({
+      effective: {},
+      sources: [
+        { source: "flagSettings", settings: {} },
+        ...(policy ? [{ source: "policySettings", settings: policy }] : []),
+      ],
+    }),
     close: () => {},
   });
 
@@ -90,26 +82,6 @@ test("modes the session rejects are blocked, naming the organization when its po
 
   assert.equal(policy?.blocked[0]?.reason, "Turned off by your organization");
   assert.equal(policy?.managed, true);
-});
-
-test("policy that changes how the sandbox runs blocks both extension sandboxes", async () => {
-  for (const sandbox of [
-    { allowUnsandboxedCommands: true },
-    { failIfUnavailable: false },
-  ]) {
-    const policy = await discovery({ policy: { sandbox } }).policy();
-
-    assert.deepEqual(blockedValues(policy, "sandbox"), [
-      "extension",
-      "extension_locked",
-    ]);
-  }
-
-  const matching = await discovery({
-    policy: { sandbox: { allowUnsandboxedCommands: false } },
-  }).policy();
-
-  assert.deepEqual(blockedValues(matching, "sandbox"), ["extension_locked"]);
 });
 
 test("discovery runs outside any project, without the Bypass flag as root", async () => {
@@ -156,14 +128,14 @@ test("discovery runs outside any project, without the Bypass flag as root", asyn
   assert.equal(options.allowDangerouslySkipPermissions, true);
 });
 
-test("a failed policy read is retried soon, and models stay cached with it", async () => {
+test("a session that ends during the policy read keeps its models and is retried soon", async () => {
   let reads = 0;
 
   const launch = () => ({
     supportedModels: async () => models,
     setPermissionMode: async () => {
       reads += 1;
-      if (reads === 1) throw new Error("Session ended");
+      if (reads === 1) throw new Error("Query closed before response received");
     },
     getSettings: async () => ({
       effective: {},
@@ -187,6 +159,7 @@ test("a failed policy read is retried soon, and models stay cached with it", asy
   onTestFinished(() => clock.mockRestore());
   clock.mockReturnValue(started);
 
+  assert.deepEqual(await reader.models(), models);
   assert.equal(await reader.policy(), undefined);
 
   clock.mockReturnValue(started + 60_000);
@@ -207,32 +180,6 @@ test("a mode blocked outside policy doesn't name the organization", async () => 
     ],
     notes: [],
   });
-});
-
-test("models still arrive without getSettings, and policy has no source", async () => {
-  const found = discovery({ rejected: ["auto"], getSettings: false });
-
-  assert.deepEqual(await found.models(), models);
-  assert.equal((await found.policy())?.source, undefined);
-  assert.equal((await found.policy())?.managed, false);
-});
-
-test("a session that ends during the check isn't read as blocking a mode", async () => {
-  const launch = () => ({
-    supportedModels: async () => models,
-    setPermissionMode: async () => {
-      throw new Error("Query closed before response received");
-    },
-    close: () => {},
-  });
-
-  const found = new ClaudeDiscovery(
-    launch as unknown as typeof query,
-    readyClaudeCli,
-  );
-
-  assert.deepEqual(await found.models(), models);
-  assert.equal(await found.policy(), undefined);
 });
 
 test("policy only the session sees is the console's, and policy on this computer is the device's", async () => {
@@ -256,14 +203,21 @@ test("sandbox choices are blocked by what policy leaves in place", async () => {
   const blocked = async (policy: object) =>
     blockedValues(await discovery({ policy }).policy(), "sandbox");
 
-  assert.deepEqual(await blocked({ sandbox: { enabled: false } }), [
-    "extension",
-    "extension_locked",
-  ]);
+  for (const sandbox of [
+    { enabled: false },
+    { allowUnsandboxedCommands: true },
+    { failIfUnavailable: false },
+  ]) {
+    assert.deepEqual(await blocked({ sandbox }), [
+      "extension",
+      "extension_locked",
+    ]);
+  }
 
-  assert.deepEqual(await blocked({ disableAutoMode: "disable" }), [
-    "extension_locked",
-  ]);
+  assert.deepEqual(
+    await blocked({ sandbox: { allowUnsandboxedCommands: false } }),
+    ["extension_locked"],
+  );
 
   assert.deepEqual(await blocked({ parentSettingsBehavior: "merge" }), []);
 

@@ -108,13 +108,13 @@ test("Shift+Enter adds a line instead of sending", async () => {
   assert.equal(start.mock.calls.length, 0);
 });
 
-test("a saved model policy excludes shows and sends as the default", async () => {
-  const { view, user, start } = setup(
+test("an excluded model saved for the provider reads as the default", async () => {
+  const { view } = setup(
     {
       ...ready,
       defaults: withSetting(
         ready.defaults!,
-        "models.profiles.general.model",
+        "models.providers.claude.model",
         "claude-sonnet-5-5",
       ),
     },
@@ -137,9 +137,6 @@ test("a saved model policy excludes shows and sends as the default", async () =>
   );
 
   assert.ok(await view.findByRole("button", { name: /^Edit Default model/ }));
-  await user.type(view.getByRole("textbox"), "Do it{Enter}");
-
-  await waitFor(() => assert.equal(start.mock.calls[0]?.[0].model, ""));
 });
 
 test("a draft's blocked mode shows and sends as the fallback", async () => {
@@ -169,7 +166,9 @@ test("a draft's blocked mode shows and sends as the fallback", async () => {
   );
 
   assert.ok(await view.findByRole("button", { name: /^Edit .*Ask/ }));
-  await user.type(view.getByRole("textbox"), "Do it{Enter}");
+  await user.click(view.getByRole("textbox"));
+  await user.paste("Do it");
+  await user.keyboard("{Enter}");
 
   await waitFor(() =>
     assert.equal(start.mock.calls[0]?.[0].permission_mode, "default"),

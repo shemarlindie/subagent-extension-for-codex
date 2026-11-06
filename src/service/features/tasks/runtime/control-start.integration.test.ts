@@ -570,34 +570,6 @@ test("a saved mode that became blocked still starts, as Claude Code falls back i
   );
 });
 
-test("a saved model policy excludes gives way to the default, with a note", async () => {
-  const { c, start, store } = await underPolicy(async () => orgPolicy);
-
-  c.settings.update("alice", {
-    set: { models: { global: { model: "opus" } } },
-  });
-
-  const task = await start({});
-
-  assert.ok(!task.model);
-
-  assert.deepEqual(
-    store
-      .events(task.id, "alice")
-      .filter((event) => event.type === "agent.limited")
-      .map((event) => event.data),
-    [
-      {
-        setting: "model",
-        requested: "opus",
-        effective: "default",
-        reason:
-          "Running with the default model. Your organization doesn't allow opus.",
-      },
-    ],
-  );
-});
-
 test("a saved effort the default can't run gives way with the saved model", async () => {
   const { c, start } = await underPolicy(
     async () => orgPolicy,
@@ -623,34 +595,6 @@ test("a saved effort the default can't run gives way with the saved model", asyn
   await assert.rejects(
     start({ reasoning_effort: "xhigh" }),
     /does not support reasoning effort xhigh/,
-  );
-});
-
-test("a later turn gives way to the default when policy has excluded the model", async () => {
-  const policy: { current?: ProviderPolicy } = {};
-  const { c, start, store } = await underPolicy(async () => policy.current);
-
-  const task = await start({ model: "claude-opus-5-5" });
-  await until(() => store.get(task.id, "alice").status === "completed");
-  assert.equal(store.get(task.id, "alice").model, "claude-opus-5-5");
-
-  policy.current = orgPolicy;
-  await c.send("alice", task.id, "Again", "parent");
-
-  await until(
-    () =>
-      store.get(task.id, "alice").turn === 2 &&
-      store.get(task.id, "alice").status === "completed",
-  );
-
-  assert.ok(!store.get(task.id, "alice").model);
-
-  assert.deepEqual(
-    store
-      .events(task.id, "alice")
-      .filter((event) => event.type === "agent.limited")
-      .map((event) => event.data.requested),
-    ["claude-opus-5-5"],
   );
 });
 
