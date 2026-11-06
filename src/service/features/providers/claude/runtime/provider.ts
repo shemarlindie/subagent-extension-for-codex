@@ -172,6 +172,8 @@ export class ClaudeAgentProvider implements Provider {
     // Widened because a callback sets it, which TypeScript can't see.
     let continuing = false as boolean;
     let fallback: ReturnType<typeof setTimeout> | undefined;
+    // A background command's notice arrived, so an empty result can follow.
+    let backgroundNotice = false;
 
     const interrupt = () => {
       // Interrupting ends the turn with an interrupted result and keeps the
@@ -288,6 +290,23 @@ export class ClaudeAgentProvider implements Provider {
             await withdraw();
           }
 
+          continue;
+        }
+
+        if (m.type === "system" && m.subtype === "task_notification") {
+          backgroundNotice = true;
+        }
+
+        // Resuming after a turn that left a background command, the CLI reports
+        // it stopped and gives a result with no turns before it runs the prompt.
+        if (
+          backgroundNotice &&
+          m.type === "result" &&
+          m.subtype === "success" &&
+          !m.is_error &&
+          m.num_turns === 0 &&
+          !m.result
+        ) {
           continue;
         }
 

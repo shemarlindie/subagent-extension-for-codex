@@ -223,6 +223,43 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
   assert.deepEqual(ctx.taken, ["msg_late"]);
 });
 
+test("the empty result for a stopped background command doesn't end the turn", async () => {
+  const ctx = await context();
+
+  const query = fakeQuery(async function* (next) {
+    await next();
+    yield { type: "system", subtype: "task_notification", status: "stopped" };
+    yield { ...result(""), num_turns: 0 };
+    yield { ...result("Answer"), num_turns: 1 };
+  });
+
+  const provider = new ClaudeAgentProvider(
+    query.launch,
+    undefined,
+    readyClaudeCli,
+  );
+
+  assert.deepEqual(await provider.run(ctx.c, "Prompt"), { reply: "Answer" });
+});
+
+test("an empty result with no background command still ends the turn", async () => {
+  const ctx = await context();
+
+  const query = fakeQuery(async function* (next) {
+    await next();
+    yield { ...result(""), num_turns: 0 };
+    yield { ...result("Unreached"), num_turns: 1 };
+  });
+
+  const provider = new ClaudeAgentProvider(
+    query.launch,
+    undefined,
+    readyClaudeCli,
+  );
+
+  assert.deepEqual(await provider.run(ctx.c, "Prompt"), { reply: "" });
+});
+
 test("an interrupt ends the turn through the query, cancelling queued messages, without stopping the process", async () => {
   const ctx = await context();
   const interrupts: unknown[] = [];
