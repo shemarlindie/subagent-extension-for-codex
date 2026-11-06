@@ -6,7 +6,10 @@ import {
   type ClaudeEffectiveSettings,
   readClaudeTaskOptions,
 } from "../../../../../shared/providers/claude/task-options.js";
-import { FAMILY_ALIASES } from "../../../../../shared/providers/policy.js";
+import {
+  FAMILY_ALIASES,
+  isModelVariant,
+} from "../../../../../shared/providers/policy.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {
@@ -29,7 +32,7 @@ export function modelHonored(requested: string | undefined, actual: string) {
   const ran = actual.replace(/\[.*\]$/, "");
 
   if (!name || FLEXIBLE_MODELS.includes(name)) return true;
-  if (ran.includes(name) || name.includes(ran)) return true;
+  if (ran.includes(name) || isModelVariant(name, ran)) return true;
 
   return (
     FAMILY_ALIASES.includes(name) &&

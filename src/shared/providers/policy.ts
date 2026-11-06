@@ -2,13 +2,17 @@ import type { ModelChoice, ProviderPolicy } from "./types.js";
 
 export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
 
+/** Whether an ID is a dated or fast form of another. */
+export const isModelVariant = (model: string, base: string) =>
+  model.startsWith(base) && /^(-\d{8}|-fast)+$/.test(model.slice(base.length));
+
 function entryAllows(entry: string, model: string, exact: boolean) {
   if (model === entry) return true;
   if (FAMILY_ALIASES.includes(entry)) return model.includes(`-${entry}-`);
   if (!model.startsWith(entry)) return false;
 
   // An exact entry still covers its dated and fast IDs.
-  return !exact || /^(-\d{8}|-fast)+$/.test(model.slice(entry.length));
+  return !exact || isModelVariant(model, entry);
 }
 
 /**

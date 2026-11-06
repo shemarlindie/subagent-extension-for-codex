@@ -83,7 +83,9 @@ function policyFacts(policy: ProviderPolicy) {
       ? [
           {
             label: "Models",
-            detail: `Limited to ${policy.available_models.join(", ")}.`,
+            detail: policy.available_models.length
+              ? `Limited to ${policy.available_models.join(", ")}.`
+              : "Limited to the default model.",
           },
         ]
       : []),

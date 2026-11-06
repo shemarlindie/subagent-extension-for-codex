@@ -86,6 +86,7 @@ async function context() {
     emitOpaque: (type) => events.push({ type }),
     session: () => {},
     effectiveOptions: () => {},
+    promptHeld: () => {},
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),
     steerTaken: (id) => taken.push(id),

@@ -40,6 +40,7 @@ import {
   validateBudgets,
 } from "./budget.js";
 import { logStartLimited, observeExecution } from "./execution-logging.js";
+import { effortRequested } from "./policy-check.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -209,7 +210,7 @@ export class Control {
       this.settings.values(owner),
       authority,
       !!(input as { model?: unknown }).model,
-      !!(input as { reasoning_effort?: unknown }).reasoning_effort,
+      effortRequested(input),
     );
 
     for (const id of req.depends_on) this.store.get(id, owner);
@@ -393,6 +394,7 @@ export class Control {
       const provider = this.providers.get(t.provider)!;
       const startup = this.turnStartup();
       const newSession = await startTurn(startup, t, provider, begin, signal);
+
       const remaining = remainingRuntime(t);
 
       if (remaining !== Infinity) {
@@ -404,6 +406,7 @@ export class Control {
       }
 
       const prompt = await turnPrompt(startup, t, newSession, signal);
+      const sentBefore = t.instructions_sent;
       // The session holds these from now on, so a resumed turn gets only later ones.
       t.instructions_sent = t.instructions.length;
       this.store.save(t);
@@ -411,7 +414,7 @@ export class Control {
       const output = await measureTaskWait(
         "provider_run",
         { task_id: t.id, turn: t.turn },
-        () => provider.run(this.runContext(t, a), prompt),
+        () => provider.run(this.runContext(t, a, sentBefore), prompt),
         { signal, end: () => ({ input_wait_ms: a.input.waitedMs }) },
       );
 
@@ -453,19 +456,23 @@ export class Control {
       prompts: this.prompts,
       projects: this.projects,
       ownerWorker: this.ownerWorker,
+      settings: (owner) => this.settings.values(owner),
       branchPrefix: (owner) =>
         this.settings.values(owner).task.worktree_branch_prefix,
     };
   }
 
   /** What the provider calls back into while the turn runs. */
-  private runContext(t: Task, a: Active): RunContext {
+  private runContext(t: Task, a: Active, sentBefore: number): RunContext {
     return {
       task: t,
       fileChanged: (edit) => this.changes.record(t, edit),
       editUnrecorded: (path, source) =>
         this.changes.unrecorded(t, path, source),
       signal: a.abort.signal,
+      promptHeld: () => {
+        t.instructions_sent = sentBefore;
+      },
       acceptSteers: (sink) => {
         a.sink = sink;
 

@@ -626,6 +626,34 @@ test("a saved effort the default can't run gives way with the saved model", asyn
   );
 });
 
+test("a later turn gives way to the default when policy has excluded the model", async () => {
+  const policy: { current?: ProviderPolicy } = {};
+  const { c, start, store } = await underPolicy(async () => policy.current);
+
+  const task = await start({ model: "claude-opus-5-5" });
+  await until(() => store.get(task.id, "alice").status === "completed");
+  assert.equal(store.get(task.id, "alice").model, "claude-opus-5-5");
+
+  policy.current = orgPolicy;
+  await c.send("alice", task.id, "Again", "parent");
+
+  await until(
+    () =>
+      store.get(task.id, "alice").turn === 2 &&
+      store.get(task.id, "alice").status === "completed",
+  );
+
+  assert.ok(!store.get(task.id, "alice").model);
+
+  assert.deepEqual(
+    store
+      .events(task.id, "alice")
+      .filter((event) => event.type === "agent.limited")
+      .map((event) => event.data.requested),
+    ["claude-opus-5-5"],
+  );
+});
+
 test("failed discovery blocks no start", async () => {
   const { start } = await underPolicy(() =>
     Promise.reject(new Error("Discovery failed")),

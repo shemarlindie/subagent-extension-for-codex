@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
@@ -74,6 +74,7 @@ function resolvedOptions(
 
   return {
     models,
+    modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
     // The chips edit the profile's settings, so Default clears them and
     // inherits the provider's.
     model: providerModel,
@@ -125,7 +126,7 @@ function settingsSummary(
  * permission it sets collapse into a summary that expands for editing.
  */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
-  const { control, getValues } = useFormContext<DelegateValues>(),
+  const { control, getValues, setValue } = useFormContext<DelegateValues>(),
     values = useWatch({
       control,
       name: ["worker", "model", "reasoning_effort", "permission_mode"],
@@ -148,7 +149,16 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
       state.busy ||
       statuses.settings !== "ready" ||
       statuses.workers !== "ready",
-    resolved = resolvedOptions(newTask, state, worker, model);
+    resolved = resolvedOptions(newTask, state, worker, model),
+    { modelExcluded } = resolved;
+
+  // A saved model policy excludes shows as what will run. Sent blank, the
+  // service falls back from it and says so in Chat.
+  useEffect(() => {
+    if (!modelExcluded) return;
+    setValue("model", "");
+    setValue("reasoning_effort", "default");
+  }, [modelExcluded, setValue]);
 
   return (
     <div

@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+
 import {
   type Query,
   query,
@@ -29,6 +31,8 @@ import {
 type Discovered = { models: ModelChoice[]; policy?: ProviderPolicy };
 
 const SETTINGS_REASON = "Not available with your Claude Code setup";
+
+const runsAsRoot = () => process.getuid?.() === 0 && !process.env.IS_SANDBOX;
 
 /** Modes the session refuses to switch to, which a task would lose too. */
 async function blockedModes(session: Query, policy: Settings | undefined) {
@@ -182,8 +186,8 @@ async function readPolicy(
  * The models the installed Claude Code offers and the policy that applies, read
  * by starting the native harness without a turn. It follows the same rules as a
  * task's session, so its answer is what a task would get. Polling reads the
- * cache; a failure is remembered briefly so a broken runtime isn't relaunched
- * on every read.
+ * cache, and a failure is remembered briefly so a broken runtime isn't
+ * relaunched on every read.
  */
 export class ClaudeDiscovery {
   private catalog?: Discovered & { expires: number };
@@ -208,7 +212,7 @@ export class ClaudeDiscovery {
     return (await this.discovered()).policy;
   }
 
-  /** Cached briefly; a failed discovery is not retried at once. */
+  /** Cached briefly. A failed discovery is not retried at once. */
   private discovered(): Promise<Discovered> {
     if (this.catalog && this.catalog.expires > Date.now()) {
       return Promise.resolve(this.catalog);
@@ -257,6 +261,8 @@ export class ClaudeDiscovery {
         env: claudeEnvironment(process.env),
         abortController,
         persistSession: false,
+        // Outside any project, so one folder's settings don't lock modes for all.
+        cwd: tmpdir(),
         settingSources: this.configuration.settings_files
           ? ["user", "project", "local"]
           : [],
@@ -267,7 +273,8 @@ export class ClaudeDiscovery {
         tools: [],
         permissionMode: "default",
         // Lets the policy check try Bypass. No tool can run without a turn.
-        allowDangerouslySkipPermissions: true,
+        // Claude Code won't start with it as root, where Bypass can't run anyway.
+        allowDangerouslySkipPermissions: !runsAsRoot(),
         canUseTool: async () => ({
           behavior: "deny",
           message: "Model discovery cannot execute tools",
@@ -287,12 +294,16 @@ export class ClaudeDiscovery {
 
       const models = await Promise.race([session.supportedModels(), timeout]);
 
+      // Widened because a callback sets it, which TypeScript can't see.
+      let policyFailed = false as boolean;
+
       // Models stay useful without it, and tasks are still checked as they run.
       const policy = await Promise.race([
         readPolicy(session, this.resolve),
         timeout,
       ]).catch((error: unknown) => {
         logError("provider.policy_read_failed", error);
+        policyFailed = true;
 
         return undefined;
       });
@@ -300,7 +311,8 @@ export class ClaudeDiscovery {
       this.catalog = {
         models,
         ...(policy ? { policy } : {}),
-        expires: Date.now() + 5 * 60 * 1000,
+        // A failed read tells nothing about policy, so it's retried soon.
+        expires: Date.now() + (policyFailed ? 30000 : 5 * 60 * 1000),
       };
 
       this.catalogFailure = undefined;

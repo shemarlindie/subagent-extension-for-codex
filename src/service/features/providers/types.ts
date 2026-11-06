@@ -43,6 +43,8 @@ export interface RunContext {
    * returns false when the turn can't take it any more, as it ends.
    */
   acceptSteers(sink: (steer: Steer) => boolean): void;
+  /** Reports that the turn ended without sending its prompt, so the next one sends it. */
+  promptHeld(): void;
   /** Reports that the turn took a steer. One it never takes is left over. */
   steerTaken(id: string): void;
   /**

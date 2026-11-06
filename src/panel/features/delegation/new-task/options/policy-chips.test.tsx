@@ -114,6 +114,7 @@ test("a saved mode now blocked reads and submits as the fallback", () => {
       permission_mode: "bypassPermissions",
       approval_decider: "user",
       worker: "claude:implementer",
+      model: "",
       context: "",
       deps: [],
       runtimeMode: "none",

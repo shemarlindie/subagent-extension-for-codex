@@ -369,15 +369,15 @@ and applies again if the policy lifts. Locks are a convenience: importing
 settings can still save a blocked value, and the checks above stop it from
 taking effect.
 
-The sandbox is checked before every turn, because Claude Code picks up new
-policy while it runs. If Claude Code can't report its settings, a sandboxed task
-fails without running. `user_config` tasks have nothing to check.
+The sandbox and model are checked before every turn, because policy can change
+while a task runs. A model it now excludes gives way to Default, with a note. If
+Claude Code can't report its settings, a sandboxed task fails without running.
+`user_config` tasks have nothing to check.
 
 Limits:
 
-- Discovery runs in the service's directory, so project settings can differ. A
-  mode that reads as allowed may still fall back, and Chat then says so. A mode
-  those settings block reads as blocked for every project.
+- Discovery runs outside any project, so project settings can differ. A mode
+  that reads as allowed may still fall back, and Chat then says so.
 - The extension's model matching is simpler than Claude Code's, so it can refuse
   an older ID of an allowed family. An alias still works.
 - A denied tool call doesn't say who set the rule, so denials aren't attributed

@@ -98,14 +98,14 @@ export function permissionLabel(mode: ClaudePermissionMode | "inherit") {
   return permissionLabels[mode] ?? mode;
 }
 
-/**
- * A permission mode's label shortened for a chip: "Plan — read only" reads
- * "Plan", and the default mode reads by what it does, "Ask for approval".
- */
 /** A mode's short name, as notes and warnings call it. */
 export const permissionModeName = (mode: string) =>
   shortPermissionLabel(permissionLabel(mode as ClaudePermissionMode));
 
+/**
+ * A permission mode's label shortened for a chip: "Plan — read only" reads
+ * "Plan", and the default mode reads by what it does, "Ask for approval".
+ */
 export function shortPermissionLabel(label: string) {
   if (label === "Use extension setting") return "Extension setting";
 

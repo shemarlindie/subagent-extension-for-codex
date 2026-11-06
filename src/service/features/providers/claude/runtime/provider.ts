@@ -225,6 +225,7 @@ export class ClaudeAgentProvider implements Provider {
       // With no prompt sent, ending the input ends the session before any
       // model call, and whatever the CLI still has to say arrives below.
       if (blocked || c.signal.aborted) {
+        c.promptHeld();
         inbox.end();
       } else {
         inbox.push({

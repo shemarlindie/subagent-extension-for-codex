@@ -92,6 +92,16 @@ test("the section names the source and lists what's limited", () => {
   ]);
 });
 
+test("an empty allowlist reads as the default model", () => {
+  const facts = sections({}, { ...policy, available_models: [] }).find(
+    ({ id }) => id === "organization-policy",
+  )?.facts;
+
+  assert.ok(
+    facts?.some(({ detail }) => detail === "Limited to the default model."),
+  );
+});
+
 test("a mode blocked outside policy isn't blamed on the organization", () => {
   const all = sections(
     { providers: { claude: { permission_mode: "auto" } } },

@@ -171,6 +171,9 @@ the earlier values, and an `agent.limited` event gives each new difference with
 a sentence for the user. Claude compares the turn's first `init` with the
 request.
 
+A provider that ends a turn before sending its prompt calls
+`RunContext.promptHeld`, so the next turn sends those instructions again.
+
 ## Provider lifecycle methods
 
 | Method                | Purpose                                                                                                                                         |

@@ -239,6 +239,11 @@ async function sandboxTurn(
   });
 
   const sent: string[] = [];
+  let held = 0;
+
+  c.promptHeld = () => {
+    held += 1;
+  };
 
   const launch = (args: { prompt: AsyncIterable<SDKUserMessage> }) =>
     Object.assign(
@@ -264,7 +269,7 @@ async function sandboxTurn(
     readyClaudeCli,
   );
 
-  return { c, sent, run: () => provider.run(c, "Prompt") };
+  return { c, sent, held: () => held, run: () => provider.run(c, "Prompt") };
 }
 
 const effectiveSandbox = (sandbox: Settings["sandbox"]) => async () => ({
@@ -278,13 +283,14 @@ const asked = {
 };
 
 test("a sandboxed task fails before its prompt when policy turns the sandbox off", async () => {
-  const { run, sent } = await sandboxTurn(
+  const { run, sent, held } = await sandboxTurn(
     "extension",
     effectiveSandbox({ ...asked, enabled: false }),
   );
 
   await assert.rejects(run, /organization's policy turns the sandbox off/);
   assert.deepEqual(sent, []);
+  assert.equal(held(), 1);
 });
 
 test("a locked-network task fails before its prompt when an admin policy drops the lock", async () => {
@@ -298,7 +304,7 @@ test("a locked-network task fails before its prompt when an admin policy drops t
 });
 
 test("a locked-network task runs when the effective settings keep the lock", async () => {
-  const { run, sent } = await sandboxTurn(
+  const { run, sent, held } = await sandboxTurn(
     "extension_locked",
     effectiveSandbox({
       ...asked,
@@ -308,6 +314,7 @@ test("a locked-network task runs when the effective settings keep the lock", asy
 
   assert.deepEqual(await run(), { reply });
   assert.deepEqual(sent, ["Prompt"]);
+  assert.equal(held(), 0);
 });
 
 test("a sandboxed task fails when Claude Code can't report its settings, and other tasks don't ask", async () => {

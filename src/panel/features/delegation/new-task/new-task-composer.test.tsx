@@ -101,6 +101,40 @@ test("Shift+Enter adds a line instead of sending", async () => {
   assert.equal(start.mock.calls.length, 0);
 });
 
+test("a saved model policy excludes shows and sends as the default", async () => {
+  const { view, user, start } = setup(
+    {
+      ...ready,
+      defaults: withSetting(
+        ready.defaults!,
+        "models.profiles.general.model",
+        "claude-sonnet-5-5",
+      ),
+    },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [],
+            available_models: ["haiku"],
+            available_models_match: "prefix",
+            notes: [],
+          },
+        },
+      ],
+    },
+  );
+
+  assert.ok(await view.findByRole("button", { name: /^Edit Default model/ }));
+  await user.type(view.getByRole("textbox"), "Do it{Enter}");
+
+  await waitFor(() => assert.equal(start.mock.calls[0]?.[0].model, ""));
+});
+
 test("the profile's settings collapse into a summary that expands for editing", async () => {
   const { view, user } = setup();
 

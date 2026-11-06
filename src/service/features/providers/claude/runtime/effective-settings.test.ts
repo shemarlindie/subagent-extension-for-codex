@@ -109,6 +109,7 @@ test("a swapped model is reported, and an alias or a blank model isn't", async (
   }
 
   assert.ok(!modelHonored("opus", "claude-sonnet-5-5"));
+  assert.ok(!modelHonored("claude-opus-5-5", "claude-opus-5"));
   assert.ok(!modelHonored("claude-opus-5-5", "custom-deployment-id"));
 
   const { c, events } = await context();

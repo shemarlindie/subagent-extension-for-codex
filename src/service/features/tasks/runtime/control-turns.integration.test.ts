@@ -224,6 +224,40 @@ test("cost counts each turn once, though a resumed session reports its running t
   await c.close();
 });
 
+test("a message whose turn never sent its prompt reaches the next turn", async () => {
+  class Holding extends PromptRecorder {
+    hold = false;
+
+    override async run(c: RunContext, p: string) {
+      if (this.hold) {
+        c.promptHeld();
+        throw new Error("Stopped before the prompt");
+      }
+
+      return super.run(c, p);
+    }
+  }
+
+  const provider = new Holding();
+  const { c, store, repo } = await setup(provider);
+  const t = await c.start("alice", input(repo));
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  provider.hold = true;
+  await c.send("alice", t.id, "First", "parent");
+  await until(() => store.get(t.id, "alice").status === "failed");
+
+  provider.hold = false;
+  await c.send("alice", t.id, "Second", "parent");
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  const prompt = provider.prompts.at(-1)!;
+  assert.match(prompt, /First/);
+  assert.match(prompt, /Second/);
+
+  await c.close();
+});
+
 test("a session's effective options are stored apart from what the task requested", async () => {
   class Limited extends TestProvider {
     override async run(c: RunContext, p: string) {

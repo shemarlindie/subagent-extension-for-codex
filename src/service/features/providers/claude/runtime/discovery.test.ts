@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { tmpdir } from "node:os";
 
 import type { query, resolveSettings } from "@anthropic-ai/claude-agent-sdk";
-import { test } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
@@ -109,6 +110,82 @@ test("policy that changes how the sandbox runs blocks both extension sandboxes",
   }).policy();
 
   assert.deepEqual(blockedValues(matching, "sandbox"), ["extension_locked"]);
+});
+
+test("discovery runs outside any project, without the Bypass flag as root", async () => {
+  let options: { cwd?: string; allowDangerouslySkipPermissions?: boolean } = {};
+
+  const launch = (args: { options: typeof options }) => {
+    options = args.options;
+
+    return {
+      supportedModels: async () => models,
+      close: () => {},
+    };
+  };
+
+  const read = () =>
+    new ClaudeDiscovery(
+      launch as unknown as typeof query,
+      readyClaudeCli,
+      claudeOverrideDefaults,
+    ).models();
+
+  await read();
+  assert.equal(options.cwd, tmpdir());
+  assert.equal(options.allowDangerouslySkipPermissions, true);
+
+  vi.spyOn(process, "getuid").mockReturnValue(0);
+  vi.stubEnv("IS_SANDBOX", "");
+
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  await read();
+  assert.equal(options.allowDangerouslySkipPermissions, false);
+
+  vi.stubEnv("IS_SANDBOX", "1");
+  await read();
+  assert.equal(options.allowDangerouslySkipPermissions, true);
+});
+
+test("a failed policy read is retried soon, and models stay cached with it", async () => {
+  let reads = 0;
+
+  const launch = () => ({
+    supportedModels: async () => models,
+    setPermissionMode: async () => {
+      reads += 1;
+      if (reads === 1) throw new Error("Session ended");
+    },
+    getSettings: async () => ({
+      effective: {},
+      sources: [{ source: "policySettings", settings: orgPolicy }],
+    }),
+    close: () => {},
+  });
+
+  const reader = new ClaudeDiscovery(
+    launch as unknown as typeof query,
+    readyClaudeCli,
+    claudeOverrideDefaults,
+    (async () => ({
+      effective: {},
+      sources: [],
+    })) as unknown as typeof resolveSettings,
+  );
+
+  const started = Date.now();
+  const clock = vi.spyOn(Date, "now");
+  onTestFinished(() => clock.mockRestore());
+  clock.mockReturnValue(started);
+
+  assert.equal(await reader.policy(), undefined);
+
+  clock.mockReturnValue(started + 60_000);
+  assert.equal((await reader.policy())?.managed, true);
 });
 
 test("a mode blocked outside policy doesn't name the organization", async () => {
