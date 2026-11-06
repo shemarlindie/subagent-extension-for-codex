@@ -46,8 +46,12 @@ export function SettingsSectionRows({
         <dl className="settings-facts">
           {section.facts.map(({ label, detail }) => (
             <div key={`${label}${detail}`} className="setting-row">
-              <dt className="setting-label">{label}</dt>
-              <dd className="help">{detail}</dd>
+              <dt className="setting-label">
+                <SettingsSearchHighlight text={label} />
+              </dt>
+              <dd className="help">
+                <SettingsSearchHighlight text={detail} />
+              </dd>
             </div>
           ))}
         </dl>

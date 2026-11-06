@@ -149,14 +149,26 @@ export function settingsSearch(query: string) {
       row.label,
     );
 
-  const sectionMatches = (section: SettingSection) =>
-    section.rows.flatMap((row) =>
-      row.kind === "models"
-        ? row.scopes
-            .map((scope) => scopeMatch(section, scope))
-            .filter((match) => match !== undefined)
-        : [rowMatch(section, row)].filter((match) => match !== undefined),
+  // Read-only facts have no setting path, and the section counts as one result.
+  const factsMatch = (
+    section: SettingSection,
+    facts: NonNullable<SettingSection["facts"]>,
+  ) =>
+    fieldMatch(
+      section,
+      facts.map(({ label, detail }) => ({ path: "", label, help: [detail] })),
+      section.title,
     );
+
+  const sectionMatches = (section: SettingSection) =>
+    [
+      ...(section.facts ? [factsMatch(section, section.facts)] : []),
+      ...section.rows.flatMap((row) =>
+        row.kind === "models"
+          ? row.scopes.map((scope) => scopeMatch(section, scope))
+          : [rowMatch(section, row)],
+      ),
+    ].filter((match) => match !== undefined);
 
   return {
     active: terms.length > 0,
