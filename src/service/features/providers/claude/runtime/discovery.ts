@@ -15,6 +15,7 @@ import type {
   ModelChoice,
   ProviderPolicy,
 } from "../../../../../shared/providers/types.js";
+import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import {
@@ -108,17 +109,19 @@ async function policySource(
     );
 
     return !managed || managed.policyOrigin === "remote" ? "console" : "device";
-  } catch {
+  } catch (error) {
+    logError("provider.policy_source_failed", error);
+
     return undefined;
   }
 }
 
-/** What applies to new tasks, read from the session itself. */
-async function readPolicy(
-  session: Query & SettingsReader,
+/** What applies to new tasks, given the session's policy settings. */
+async function policyFrom(
+  session: Query,
+  policy: Settings | undefined,
   resolve: typeof resolveSettings,
 ): Promise<ProviderPolicy | undefined> {
-  const policy = policySettings(await readSessionSettings(session));
   const modes = await blockedModes(session, policy);
 
   if (!policy) {
@@ -141,6 +144,28 @@ async function readPolicy(
       : {}),
     notes: policyNotes(policy),
   };
+}
+
+/** Reads policy from the session and logs what was found. */
+async function readPolicy(
+  session: Query & SettingsReader,
+  resolve: typeof resolveSettings,
+) {
+  const settings = await readSessionSettings(session);
+  const found = await policyFrom(session, policySettings(settings), resolve);
+
+  logEvent("info", "provider.policy_read", {
+    // Without the session's settings, whether policy applies is unknown.
+    settings_read: !!settings,
+    managed: settings ? (found?.managed ?? false) : undefined,
+    source: found?.source,
+    blocked: found?.blocked
+      .map(({ setting, value }) => `${setting}:${value}`)
+      .join(","),
+    available_models: found?.available_models?.join(","),
+  });
+
+  return found;
 }
 
 /**
@@ -192,7 +217,9 @@ export class ClaudeDiscovery {
       .finally(() => {
         this.catalogRequest = undefined;
       })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        logError("provider.discovery_failed", error);
+      });
 
     return request;
   }
@@ -254,7 +281,11 @@ export class ClaudeDiscovery {
       const policy = await Promise.race([
         readPolicy(session, this.resolve),
         timeout,
-      ]).catch(() => undefined);
+      ]).catch((error: unknown) => {
+        logError("provider.policy_read_failed", error);
+
+        return undefined;
+      });
 
       this.catalog = {
         models,

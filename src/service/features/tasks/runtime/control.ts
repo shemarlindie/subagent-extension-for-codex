@@ -39,7 +39,7 @@ import {
   remainingRuntime,
   validateBudgets,
 } from "./budget.js";
-import { observeExecution } from "./execution-logging.js";
+import { logStartLimited, observeExecution } from "./execution-logging.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -255,6 +255,8 @@ export class Control {
       this.store.event(t, "task.queued");
       if (limited) this.store.event(t, "agent.limited", limited);
     });
+
+    if (limited) logStartLimited(t, limited);
 
     this.queueWaits.queued(t.id, "start");
     void this.schedule();

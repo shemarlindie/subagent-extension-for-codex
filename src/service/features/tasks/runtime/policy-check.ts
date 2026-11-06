@@ -6,6 +6,8 @@ import {
 } from "../../../../shared/providers/policy.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Start } from "../../../../shared/tasks/model.js";
+import { PolicyRejectedError } from "../../../platform/logging/error-metadata.js";
+import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";
 
 const MODEL_NOT_ALLOWED = "Your organization doesn't allow this model.";
@@ -45,7 +47,26 @@ export async function checkStartPolicy(
 
   const policy = await provider.policy(defaults).catch(() => undefined);
   const reason = mode && blockedReason(policy, "permission_mode", mode);
-  if (reason) throw new Error(`Can't use permission mode ${mode}: ${reason}.`);
+
+  const reject = (setting: string, value: string, why: string, text = why) => {
+    logEvent("warn", "provider.policy_rejected", {
+      provider: provider.id,
+      setting,
+      value,
+      reason: why,
+    });
+
+    return new PolicyRejectedError(text);
+  };
+
+  if (reason) {
+    throw reject(
+      "permission_mode",
+      mode,
+      reason,
+      `Can't use permission mode ${mode}: ${reason}.`,
+    );
+  }
 
   const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
 
@@ -53,7 +74,7 @@ export async function checkStartPolicy(
     return { model: input.model };
   }
 
-  if (modelRequested) throw new Error(MODEL_NOT_ALLOWED);
+  if (modelRequested) throw reject("model", input.model, MODEL_NOT_ALLOWED);
 
   return {
     model: undefined,

@@ -1,5 +1,6 @@
 import type { Options, Settings } from "@anthropic-ai/claude-agent-sdk";
 
+import { PolicyRejectedError } from "../../../../platform/logging/error-metadata.js";
 import {
   readSessionSettings,
   type SettingsReader,
@@ -54,8 +55,8 @@ export async function sandboxBlock(
 ) {
   if (!requested.sandbox) return undefined;
   const settings = await readSessionSettings(session);
+  if (!settings) return new Error(UNCONFIRMED);
+  const reason = shortfall(requested, settings.effective.sandbox);
 
-  return settings
-    ? shortfall(requested, settings.effective.sandbox)
-    : UNCONFIRMED;
+  return reason ? new PolicyRejectedError(reason) : undefined;
 }

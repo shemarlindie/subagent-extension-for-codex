@@ -1,5 +1,6 @@
 import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
+import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
 import type { ClaudePermissionMode } from "../../../../../shared/providers/claude/permissions.js";
 import {
   permissionLabel,
@@ -9,6 +10,7 @@ import {
   type ClaudeEffectiveSettings,
   readClaudeTaskOptions,
 } from "../../../../../shared/providers/claude/task-options.js";
+import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {
   policyBlocksMode,
@@ -75,8 +77,20 @@ export async function recordEffectiveSettings(
 
   const policy = policySettings(await readSessionSettings(session));
 
+  const report = (limit: EventPayloadMap["agent.limited"]) => {
+    const { setting, requested, effective } = limit;
+
+    logEvent("info", "provider.settings_limited", {
+      setting,
+      requested,
+      effective,
+    });
+
+    c.emit("agent.limited", limit);
+  };
+
   if (newMode) {
-    c.emit("agent.limited", {
+    report({
       setting: "permission_mode",
       requested: options.permission_mode,
       effective: newMode,
@@ -85,7 +99,7 @@ export async function recordEffectiveSettings(
   }
 
   if (newModel) {
-    c.emit("agent.limited", {
+    report({
       setting: "model",
       requested: c.task.model!,
       effective: newModel,

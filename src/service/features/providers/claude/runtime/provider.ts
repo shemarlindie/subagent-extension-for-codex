@@ -360,7 +360,14 @@ export class ClaudeAgentProvider implements Provider {
         break;
       }
 
-      if (blocked) throw new Error(blocked);
+      if (blocked) {
+        logEvent("warn", "provider.sandbox_blocked", {
+          reason: blocked.message,
+        });
+
+        throw blocked;
+      }
+
       if (reply === undefined) throw new Error("Claude ended without a result");
 
       return { reply };

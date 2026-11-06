@@ -1,5 +1,8 @@
 import type { PermissionMode, Settings } from "@anthropic-ai/claude-agent-sdk";
 
+import { errorCategory } from "../../../../platform/logging/error-metadata.js";
+import { logEvent } from "../../../../platform/logging/logger.js";
+
 /** How long Claude Code may take to report its settings at startup. */
 const READ_TIMEOUT_MS = 30_000;
 
@@ -25,7 +28,13 @@ export async function readSessionSettings(session: SettingsReader) {
         );
       }),
     ]);
-  } catch {
+  } catch (error) {
+    // A warning, as a refused start also lands here and reports its own cause.
+    logEvent("warn", "provider.settings_read_failed", {
+      error_type: error instanceof Error ? error.name : "NonError",
+      error_category: errorCategory(error),
+    });
+
     return undefined;
   } finally {
     clearTimeout(timer);
