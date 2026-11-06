@@ -509,15 +509,16 @@ const orgPolicy: ProviderPolicy = {
 /** A provider with Claude's options and the given org policy. */
 async function underPolicy(
   policy: (() => Promise<ProviderPolicy | undefined>) | undefined,
+  models: ModelChoice[] = [
+    { value: "haiku", displayName: "Haiku", description: "" },
+  ],
 ) {
   const provider: Provider = new TestProvider();
   provider.id = "claude";
   provider.taskPolicy = claudeTaskPolicy;
   provider.metadata = claudeMetadata;
 
-  provider.models = async () => [
-    { value: "haiku", displayName: "Haiku", description: "" },
-  ];
+  provider.models = async () => models;
 
   if (policy) provider.policy = policy;
 
@@ -594,6 +595,34 @@ test("a saved model policy excludes gives way to the default, with a note", asyn
           "Running with the default model. Your organization doesn't allow opus.",
       },
     ],
+  );
+});
+
+test("a saved effort the default can't run gives way with the saved model", async () => {
+  const { c, start } = await underPolicy(
+    async () => orgPolicy,
+    [
+      {
+        value: "default",
+        displayName: "Default",
+        description: "",
+        supportedEffortLevels: ["low", "medium", "high"],
+      },
+    ],
+  );
+
+  c.settings.update("alice", {
+    set: { models: { global: { model: "opus", reasoning_effort: "xhigh" } } },
+  });
+
+  const task = await start({});
+
+  assert.ok(!task.model);
+  assert.ok(!task.reasoning_effort);
+
+  await assert.rejects(
+    start({ reasoning_effort: "xhigh" }),
+    /does not support reasoning effort xhigh/,
   );
 });
 

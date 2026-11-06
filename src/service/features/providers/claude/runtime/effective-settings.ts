@@ -1,15 +1,12 @@
 import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
-import type { ClaudePermissionMode } from "../../../../../shared/providers/claude/permissions.js";
-import {
-  permissionLabel,
-  shortPermissionLabel,
-} from "../../../../../shared/providers/claude/permissions.js";
+import { permissionModeName } from "../../../../../shared/providers/claude/permissions.js";
 import {
   type ClaudeEffectiveSettings,
   readClaudeTaskOptions,
 } from "../../../../../shared/providers/claude/task-options.js";
+import { FAMILY_ALIASES } from "../../../../../shared/providers/policy.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {
@@ -22,22 +19,30 @@ import {
 /** Model choices that name no fixed model, so any model can honor them. */
 const FLEXIBLE_MODELS = ["default", "best", "opusplan"];
 
-/** Whether a session runs the model asked for: `opus[1m]` matches `claude-opus-5-5`. */
+/**
+ * Whether a session runs the model asked for: `opus[1m]` matches
+ * `claude-opus-5-5`, and `claude-opus-5-5-fast` matches `claude-opus-5-5`. An
+ * alias can be remapped to any ID, so only another family counts against it.
+ */
 export function modelHonored(requested: string | undefined, actual: string) {
   const name = requested?.replace(/\[.*\]$/, "");
+  const ran = actual.replace(/\[.*\]$/, "");
 
-  return !name || FLEXIBLE_MODELS.includes(name) || actual.includes(name);
+  if (!name || FLEXIBLE_MODELS.includes(name)) return true;
+  if (ran.includes(name) || name.includes(ran)) return true;
+
+  return (
+    FAMILY_ALIASES.includes(name) &&
+    !FAMILY_ALIASES.some((family) => ran.includes(family))
+  );
 }
-
-const modeName = (mode: string) =>
-  shortPermissionLabel(permissionLabel(mode as ClaudePermissionMode));
 
 function modeReason(requested: string, actual: string, policy?: Settings) {
   const why = policyBlocksMode(requested, policy)
-    ? `Your organization turned off ${modeName(requested)}.`
-    : `Claude Code doesn't allow ${modeName(requested)} for this session.`;
+    ? `Your organization turned off ${permissionModeName(requested)}.`
+    : `Claude Code doesn't allow ${permissionModeName(requested)} for this session.`;
 
-  return `Running with ${modeName(actual)}. ${why}`;
+  return `Running with ${permissionModeName(actual)}. ${why}`;
 }
 
 function modelReason(requested: string, actual: string, policy?: Settings) {

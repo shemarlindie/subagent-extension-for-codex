@@ -10,6 +10,7 @@ import {
   claudeOverrideDefaults,
   type ClaudeOverrides,
   claudePermissionModes,
+  MODE_TURNED_OFF_BY_ORG,
 } from "../../../../../shared/providers/claude/permissions.js";
 import type {
   ModelChoice,
@@ -46,7 +47,7 @@ async function blockedModes(session: Query, policy: Settings | undefined) {
         setting: "permission_mode",
         value,
         reason: policyBlocksMode(value, policy)
-          ? "Turned off by your organization"
+          ? MODE_TURNED_OFF_BY_ORG
           : SETTINGS_REASON,
       });
     }
@@ -65,6 +66,15 @@ function blockedSandboxes(policy: Settings): ProviderPolicy["blocked"] {
 
   if (policy.sandbox?.enabled === false) {
     const reason = "Your organization turned off the sandbox";
+
+    return [block("extension", reason), block("extension_locked", reason)];
+  }
+
+  if (
+    policy.sandbox?.allowUnsandboxedCommands ||
+    policy.sandbox?.failIfUnavailable === false
+  ) {
+    const reason = "Your organization's policy changes how the sandbox runs";
 
     return [block("extension", reason), block("extension_locked", reason)];
   }

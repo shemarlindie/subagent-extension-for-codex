@@ -91,6 +91,9 @@ const permissionLabels: Partial<
   bypassPermissions: "Bypass permission prompts",
 };
 
+/** The reason a mode is blocked when org policy turned it off. */
+export const MODE_TURNED_OFF_BY_ORG = "Turned off by your organization";
+
 export function permissionLabel(mode: ClaudePermissionMode | "inherit") {
   return permissionLabels[mode] ?? mode;
 }
@@ -99,6 +102,10 @@ export function permissionLabel(mode: ClaudePermissionMode | "inherit") {
  * A permission mode's label shortened for a chip: "Plan — read only" reads
  * "Plan", and the default mode reads by what it does, "Ask for approval".
  */
+/** A mode's short name, as notes and warnings call it. */
+export const permissionModeName = (mode: string) =>
+  shortPermissionLabel(permissionLabel(mode as ClaudePermissionMode));
+
 export function shortPermissionLabel(label: string) {
   if (label === "Use extension setting") return "Extension setting";
 

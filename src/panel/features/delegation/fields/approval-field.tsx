@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
-import { withBlockedOptions } from "../../../../shared/providers/policy";
+import {
+  allowedPermissionMode,
+  withBlockedOptions,
+} from "../../../../shared/providers/policy";
 import type { Worker } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { Field } from "../../../shared/forms/fields";
@@ -26,8 +30,9 @@ export function ApprovalField({
   disabled = false,
   loading = false,
 }: ApprovalFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
+  const { control, setValue } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
+  const mode = useWatch({ control, name: "permission_mode" });
   const { provider } = workerChoice(worker);
   const info = workers.find((item) => item.provider === provider);
 
@@ -37,6 +42,12 @@ export function ApprovalField({
   )?.nativePermissions;
 
   const unresolved = loading && !info;
+  const allowedMode = allowedPermissionMode(info?.policy, mode);
+
+  // A restored draft or late policy can leave a blocked mode, which won't run.
+  useEffect(() => {
+    if (allowedMode !== mode) setValue("permission_mode", allowedMode);
+  }, [allowedMode, mode, setValue]);
 
   return (
     <>

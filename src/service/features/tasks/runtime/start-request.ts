@@ -8,7 +8,7 @@ import type {
 import type { Provider } from "../../providers/types.js";
 import { gitState, WORKTREE_NEEDS_GIT } from "../../workspaces/git.js";
 import { validateBudgets } from "./budget.js";
-import { assertModelEffort } from "./model-effort.js";
+import { assertModelEffort, modelRejectingEffort } from "./model-effort.js";
 import { checkStartPolicy } from "./policy-check.js";
 import { generateTaskTitle } from "./task-title.js";
 
@@ -23,6 +23,7 @@ export async function resolveStart(
   defaults: SettingsValues,
   authority: InputAuthority,
   modelRequested: boolean,
+  effortRequested: boolean,
 ) {
   const readiness = await provider.readiness?.();
   if (readiness?.ready === false) throw new Error(readiness.message);
@@ -55,6 +56,15 @@ export async function resolveStart(
 
   if (!req.title) throw new Error("Task title is required");
   if (!req.description) throw new Error("Task description is required");
+
+  // A saved effort suited the model that gave way, and the default may not offer it.
+  if (
+    limited &&
+    !effortRequested &&
+    (await modelRejectingEffort(provider, req, defaults))
+  ) {
+    delete req.reasoning_effort;
+  }
 
   await assertModelEffort(provider, req, defaults);
   validateBudgets(provider, req);

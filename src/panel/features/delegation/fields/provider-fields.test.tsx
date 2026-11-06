@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { FormProvider, useForm } from "react-hook-form";
 import { expect, test } from "vitest";
 
@@ -30,6 +30,51 @@ function ProviderFields({ worker }: { worker: Worker }) {
     </FormProvider>
   );
 }
+
+test("a blocked mode left in the form becomes the mode that would run", async (t) => {
+  t.onTestFinished(cleanup);
+
+  const worker: Worker = {
+    provider: "claude",
+    profiles: ["reviewer"],
+    capabilities: {},
+    policy: {
+      managed: true,
+      blocked: [
+        {
+          setting: "permission_mode",
+          value: "auto",
+          reason: "Turned off by your organization",
+        },
+      ],
+      notes: [],
+    },
+  };
+
+  let mode: string | undefined;
+
+  function Form() {
+    const form = useForm<DelegateValues>({
+      defaultValues: {
+        worker: "claude:reviewer",
+        permission_mode: "auto",
+        approval_decider: "user",
+      },
+    });
+
+    mode = form.watch("permission_mode");
+
+    return (
+      <FormProvider {...form}>
+        <ApprovalField workers={[worker]} />
+      </FormProvider>
+    );
+  }
+
+  render(<Form />);
+
+  await waitFor(() => assert.equal(mode, "default"));
+});
 
 test("an unfamiliar worker supplies its native permissions and budget presentation", (t) => {
   t.onTestFinished(cleanup);

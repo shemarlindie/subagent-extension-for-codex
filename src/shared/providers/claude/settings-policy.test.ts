@@ -92,6 +92,30 @@ test("the section names the source and lists what's limited", () => {
   ]);
 });
 
+test("a mode blocked outside policy isn't blamed on the organization", () => {
+  const all = sections(
+    { providers: { claude: { permission_mode: "auto" } } },
+    {
+      ...policy,
+      blocked: [
+        {
+          setting: "permission_mode",
+          value: "auto",
+          reason: "Not available with your Claude Code setup",
+        },
+      ],
+    },
+  );
+
+  assert.match(row(all, MODE).warning ?? "", /Auto, isn't available/);
+
+  assert.ok(
+    !all
+      .find(({ id }) => id === "organization-policy")
+      ?.facts?.some(({ label }) => label === "Permission modes"),
+  );
+});
+
 test("blocked choices are locked with their reason, and others stay open", () => {
   const options = row(sections({}), MODE).options;
   const bypass = options.find(({ value }) => value === "bypassPermissions");

@@ -9,7 +9,7 @@ import {
 const CHOOSE_ANOTHER = "Choose another option in Settings or ask your admin.";
 
 const UNCONFIRMED =
-  "You chose the extension sandbox, but Claude Code didn't confirm it's on, so the task didn't start. Update Claude Code, or choose another option in Settings.";
+  "You chose the extension sandbox, but Claude Code didn't confirm it's on in time, so the task didn't start. Try again, update Claude Code, or choose another option in Settings.";
 
 type RequestedSandbox = Pick<Options, "sandbox" | "managedSettings">;
 

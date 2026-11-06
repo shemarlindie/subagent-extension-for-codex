@@ -209,6 +209,7 @@ export class Control {
       this.settings.values(owner),
       authority,
       !!(input as { model?: unknown }).model,
+      !!(input as { reasoning_effort?: unknown }).reasoning_effort,
     );
 
     for (const id of req.depends_on) this.store.get(id, owner);

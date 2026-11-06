@@ -42,6 +42,16 @@ test("listed aliases and the IDs they resolve to pass, and excluded models don't
 
   assert.ok(modelAllowed(limited, models, "haiku"));
   assert.ok(modelAllowed(limited, models, "haiku[1m]"));
+
+  assert.ok(
+    modelAllowed(
+      policy(["claude-opus-5-5"]),
+      [{ value: "opus[1m]", displayName: "Opus", description: "" }],
+      "opus[1m]",
+    ),
+    "an offered model is allowed under the value the catalog gives it",
+  );
+
   assert.ok(modelAllowed(limited, models, "claude-haiku-5-5"));
   assert.ok(modelAllowed(limited, [], "claude-haiku-4-5"));
   assert.ok(!modelAllowed(limited, models, "opus"));

@@ -5,15 +5,8 @@ import type {
 import { settingAt } from "../../settings/settings-schema.js";
 import { blockedReason, withBlockedOptions } from "../policy.js";
 import type { ProviderPolicy } from "../types.js";
-import {
-  type ClaudePermissionMode,
-  permissionLabel,
-  shortPermissionLabel,
-} from "./permissions.js";
+import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
-
-const modeName = (mode: string) =>
-  shortPermissionLabel(permissionLabel(mode as ClaudePermissionMode));
 
 /** A row with what policy rules out locked, and a warning if it's the saved choice. */
 function withPolicy(
@@ -39,10 +32,10 @@ function withPolicy(
   };
 
   if (row.path === "providers.claude.permission_mode") {
-    return lock("permission_mode", () =>
-      policy.managed
-        ? `Your saved mode, ${modeName(saved)}, is turned off by your organization. New tasks ask for approval.`
-        : `Your saved mode, ${modeName(saved)}, isn't available. New tasks ask for approval.`,
+    return lock("permission_mode", (reason) =>
+      reason === MODE_TURNED_OFF_BY_ORG
+        ? `Your saved mode, ${permissionModeName(saved)}, is turned off by your organization. New tasks ask for approval.`
+        : `Your saved mode, ${permissionModeName(saved)}, isn't available. New tasks ask for approval.`,
     );
   }
 
@@ -67,7 +60,10 @@ function policyFacts(policy: ProviderPolicy) {
   const blocked = (setting: ProviderPolicy["blocked"][number]["setting"]) =>
     policy.blocked.filter((item) => item.setting === setting);
 
-  const modes = blocked("permission_mode").map(({ value }) => modeName(value));
+  const modes = blocked("permission_mode")
+    .filter(({ reason }) => reason === MODE_TURNED_OFF_BY_ORG)
+    .map(({ value }) => permissionModeName(value));
+
   const sandbox = [...new Set(blocked("sandbox").map(({ reason }) => reason))];
 
   return [

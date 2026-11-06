@@ -91,6 +91,26 @@ test("modes the session rejects are blocked, naming the organization when its po
   assert.equal(policy?.managed, true);
 });
 
+test("policy that changes how the sandbox runs blocks both extension sandboxes", async () => {
+  for (const sandbox of [
+    { allowUnsandboxedCommands: true },
+    { failIfUnavailable: false },
+  ]) {
+    const policy = await discovery({ policy: { sandbox } }).policy();
+
+    assert.deepEqual(blockedValues(policy, "sandbox"), [
+      "extension",
+      "extension_locked",
+    ]);
+  }
+
+  const matching = await discovery({
+    policy: { sandbox: { allowUnsandboxedCommands: false } },
+  }).policy();
+
+  assert.deepEqual(blockedValues(matching, "sandbox"), ["extension_locked"]);
+});
+
 test("a mode blocked outside policy doesn't name the organization", async () => {
   const policy = await discovery({ rejected: ["auto"] }).policy();
 

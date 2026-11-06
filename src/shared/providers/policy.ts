@@ -1,6 +1,6 @@
 import type { ModelChoice, ProviderPolicy } from "./types.js";
 
-const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
+export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
 
 function entryAllows(entry: string, model: string, exact: boolean) {
   if (model === entry) return true;
@@ -30,7 +30,10 @@ export function modelAllowed(
 
   return (
     models.some(
-      (choice) => choice.value === model || choice.resolvedModel === model,
+      (choice) =>
+        choice.value === value ||
+        choice.value === model ||
+        choice.resolvedModel === model,
     ) || entries.some((entry) => entryAllows(entry, model, exact))
   );
 }

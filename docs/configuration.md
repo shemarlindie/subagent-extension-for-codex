@@ -360,7 +360,7 @@ is cached for five minutes.
 | `permissions.disableBypassPermissionsMode`, `disableAutoMode`                                           | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
 | `availableModels`                                                                                       | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
 | `deniedModels`                                                                                          | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
-| `sandbox.enabled: false`                                                                                | `extension` and `extension_locked` fail before the prompt.       | Both are locked, with the reason.                                          |
+| `sandbox.enabled: false`, `sandbox.allowUnsandboxedCommands: true`, `sandbox.failIfUnavailable: false`  | `extension` and `extension_locked` fail before the prompt.       | Both are locked, with the reason.                                          |
 | Any admin policy without `sandbox.network.allowManagedDomainsOnly` or `parentSettingsBehavior: "merge"` | `extension_locked` fails before the prompt.                      | It's locked, with the reason.                                              |
 | `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                              | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
 
@@ -376,7 +376,8 @@ fails without running. `user_config` tasks have nothing to check.
 Limits:
 
 - Discovery runs in the service's directory, so project settings can differ. A
-  mode that reads as allowed may still fall back, and Chat then says so.
+  mode that reads as allowed may still fall back, and Chat then says so. A mode
+  those settings block reads as blocked for every project.
 - The extension's model matching is simpler than Claude Code's, so it can refuse
   an older ID of an allowed family. An alias still works.
 - A denied tool call doesn't say who set the rule, so denials aren't attributed

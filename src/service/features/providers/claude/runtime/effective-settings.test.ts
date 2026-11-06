@@ -102,9 +102,14 @@ test("a swapped model is reported, and an alias or a blank model isn't", async (
     ["opus", "claude-opus-5-5"],
     ["opus[1m]", "claude-opus-5-5[1m]"],
     ["claude-opus-5-5", "claude-opus-5-5"],
+    ["claude-opus-5-5-fast", "claude-opus-5-5"],
+    ["sonnet", "custom-deployment-id"],
   ] as const) {
     assert.ok(modelHonored(requested, actual), `${requested} on ${actual}`);
   }
+
+  assert.ok(!modelHonored("opus", "claude-sonnet-5-5"));
+  assert.ok(!modelHonored("claude-opus-5-5", "custom-deployment-id"));
 
   const { c, events } = await context();
   setClaudeOptions(c.task, { permission_mode: "default" });

@@ -2,27 +2,40 @@ import type { SettingsValues } from "../../../../shared/settings/settings-schema
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
 
+type ModelEffort = Pick<Task, "model" | "reasoning_effort">;
+
 /**
- * Rejects a reasoning effort the chosen model is known not to support.
- * Unknown or unavailable metadata leaves final validation to the provider.
+ * The model known not to support the chosen reasoning effort, if any. Unknown or
+ * unavailable metadata leaves final validation to the provider.
  */
-export async function assertModelEffort(
+export async function modelRejectingEffort(
   provider: Provider,
-  { model, reasoning_effort: effort }: Pick<Task, "model" | "reasoning_effort">,
+  { model, reasoning_effort: effort }: ModelEffort,
   settings: SettingsValues,
 ) {
-  if (!provider.models || !effort || effort === "default") return;
+  if (!provider.models || !effort || effort === "default") return undefined;
   const models = await provider.models(settings).catch(() => []);
   const known = models.find((item) => item.value === (model || "default"));
 
-  if (
-    known &&
+  return known &&
     (known.supportsEffort === false ||
       (known.supportedEffortLevels !== undefined &&
         !known.supportedEffortLevels.includes(effort)))
-  ) {
+    ? known.value
+    : undefined;
+}
+
+/** Rejects a reasoning effort the chosen model is known not to support. */
+export async function assertModelEffort(
+  provider: Provider,
+  request: ModelEffort,
+  settings: SettingsValues,
+) {
+  const model = await modelRejectingEffort(provider, request, settings);
+
+  if (model) {
     throw new Error(
-      `Model ${known.value} does not support reasoning effort ${effort}`,
+      `Model ${model} does not support reasoning effort ${request.reasoning_effort}`,
     );
   }
 }
