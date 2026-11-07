@@ -5,3 +5,24 @@
 .notice.workspace-note p {
   margin: 0;
 }
+
+/*
+ * The mode's label and help span the row. The sandbox switch and its label
+ * sit beside the select, centered on it.
+ */
+.permission-row {
+  display: grid;
+}
+.permission-row:has(> .sandbox-toggle) {
+  grid-template-columns: 1fr auto;
+  column-gap: 16px;
+}
+.permission-row > label[for="permission-mode"],
+.permission-row > .help {
+  grid-column: 1 / -1;
+}
+.permission-row > .sandbox-toggle {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}

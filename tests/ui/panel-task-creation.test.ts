@@ -255,7 +255,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
   await selectOption(user, "Worker", "claude · reviewer");
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");
-  await selectOption(user, "Bash sandbox", "On");
+  await user.click(screen.getByRole("switch", { name: "Bash sandbox" }));
   await enterTask(user, "Review authentication with parent approvals");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 

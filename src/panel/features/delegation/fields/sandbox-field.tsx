@@ -1,9 +1,7 @@
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 
 import type { ProviderMetadata } from "../../../../shared/providers/metadata";
-import { Presence } from "../../../shared/components/motion/presence";
-import { Field } from "../../../shared/forms/fields";
-import { FormSelect } from "../../../shared/forms/form-select";
+import { FormSwitch } from "../../../shared/forms/form-switch";
 import type { DelegateValues } from "../delegate-values";
 
 interface SandboxFieldProps {
@@ -15,7 +13,7 @@ interface SandboxFieldProps {
   loading: boolean;
 }
 
-/** Turns the worker's Bash sandbox on or off for the task. */
+/** Turns the worker's Bash sandbox on or off for the task, inline beside its mode. */
 export function SandboxField({
   permissions,
   unresolved,
@@ -25,31 +23,34 @@ export function SandboxField({
   const { control } = useFormContext<DelegateValues>(),
     sandbox = permissions?.sandbox;
 
+  if (!sandbox && !unresolved) return null;
+
   return (
-    <Presence show={Boolean(sandbox) || unresolved}>
-      <Field id="sandbox" label="Bash sandbox">
-        <FormSelect
-          control={control}
-          name="sandbox"
-          id="sandbox"
-          label="Bash sandbox"
-          disabled={disabled}
-          loading={loading}
-          loadingLabel="Loading sandbox options"
-          placeholder={unresolved ? "Loading…" : undefined}
-          options={
-            unresolved
-              ? []
-              : [
-                  { value: "on", label: "On" },
-                  { value: "off", label: "Off" },
-                ]
-          }
-        />
-        <p className="help">
-          {unresolved ? "Loading sandbox options." : sandbox?.help}
-        </p>
-      </Field>
-    </Presence>
+    <div className="sandbox-toggle">
+      <Controller
+        control={control}
+        name="sandbox"
+        render={({ field }) => (
+          <FormSwitch
+            id="sandbox"
+            label="Bash sandbox"
+            title={sandbox?.help}
+            checked={field.value === "on"}
+            onCheckedChange={(checked) =>
+              field.onChange(checked ? "on" : "off")
+            }
+            onBlur={field.onBlur}
+            describedBy={sandbox ? "sandbox-help" : undefined}
+            disabled={disabled}
+            loading={loading}
+          />
+        )}
+      />
+      {sandbox && (
+        <span id="sandbox-help" hidden>
+          {sandbox.help}
+        </span>
+      )}
+    </div>
   );
 }

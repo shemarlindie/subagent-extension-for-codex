@@ -41,3 +41,11 @@
   place-items: center;
   color: var(--accent);
 }
+
+.form-switch-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+}
