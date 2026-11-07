@@ -35,6 +35,17 @@ type NewTaskOptionsProps = {
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
 
+/** Why the model list is shorter than usual, if it is. */
+function modelsFooter(workerInfo: Worker | undefined) {
+  if (workerInfo?.model_discovery_error) {
+    return "Couldn't load the model list. Use More options to enter a model ID.";
+  }
+
+  return workerInfo?.policy?.available_models
+    ? "Your organization limits these models."
+    : undefined;
+}
+
 /** The choices org policy changes: locked modes, and a saved model it excludes. */
 function policyOptions(
   provider: string,
@@ -48,9 +59,6 @@ function policyOptions(
 
   return {
     model: model && modelAllowed(policy, models, model) ? model : undefined,
-    modelsFooter: policy?.available_models
-      ? "Your organization limits these models."
-      : undefined,
     permissions:
       permissions && withBlockedOptions(permissions, policy, "permission_mode"),
   };
@@ -78,6 +86,7 @@ function resolvedOptions(
     allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
+    modelsFooter: modelsFooter(workerInfo),
     // The chips edit the profile's settings, so Default clears them and
     // inherits the provider's.
     ...policyOptions(provider, workerInfo, models, providerModel),

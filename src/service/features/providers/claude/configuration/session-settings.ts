@@ -9,7 +9,7 @@ import { logEvent } from "../../../../platform/logging/logger.js";
  * on a hung org policy fetch after about 30 seconds and carries on, as a task
  * should too, so this has to outlast that.
  */
-const READ_TIMEOUT_MS = 45_000;
+export const READ_TIMEOUT_MS = 45_000;
 
 /** What `getSettings` returns. The SDK has it at runtime, without declaring it. */
 export type SessionSettings = {

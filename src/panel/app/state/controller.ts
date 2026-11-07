@@ -540,12 +540,7 @@ export class Controller {
 
       if (this.restoreProject(projects)) version = this.state.scopeVersion;
 
-      if (this.workersStale()) {
-        const workers = await this.readWorkers();
-        if (this.stale(version)) return;
-        this.workersReadAt = Date.now();
-        this.patch({ workers, workersLoaded: true });
-      }
+      if (this.workersStale()) this.run(() => this.refreshWorkers(version));
 
       const { conversation, repository } = this.state;
 
@@ -670,11 +665,28 @@ export class Controller {
     return true;
   }
 
-  /** Retries unready workers each refresh and checks ready workers once an hour. */
+  /**
+   * Reads workers apart from the task list, which model discovery can hold
+   * up for as long as Claude Code waits on a hung org policy fetch.
+   */
+  private async refreshWorkers(version: number) {
+    const workers = await this.readWorkers();
+    if (this.stale(version)) return;
+    this.workersReadAt = Date.now();
+    this.patch({ workers, workersLoaded: true });
+  }
+
+  /**
+   * Retries workers that are unready or missing models each refresh, and
+   * checks the rest once an hour.
+   */
   private workersStale() {
     return (
       !this.state.workers.length ||
-      this.state.workers.some((worker) => worker.readiness?.ready === false) ||
+      this.state.workers.some(
+        (worker) =>
+          worker.readiness?.ready === false || worker.model_discovery_error,
+      ) ||
       Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
     );
   }
