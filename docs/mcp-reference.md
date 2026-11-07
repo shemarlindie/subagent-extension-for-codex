@@ -40,6 +40,14 @@ its existing changes. `workspace_strategy: "worktree"` starts a task branch from
 a committed revision. Follow-up turns keep the task's conversation scope and
 workspace. See [Task continuation](task-continuation.md) for recovery.
 
+Claude tasks take `provider_options.claude.permission_mode`, `approval_decider`
+and `sandbox`. Read-only profiles start in `plan` unless `permission_mode` names
+another mode. `sandbox: true` runs Bash in Claude Code's sandbox. A model can't
+raise the mode or route approvals to itself beyond the settings, or turn off a
+sandbox the settings turn on. See
+[Claude permissions](configuration.md#claude-permissions) and
+[session restrictions](configuration.md#claude-session-restrictions).
+
 ### Retrying message sends
 
 `send_message` and `app_send_message` accept an optional `request_id`. Use a

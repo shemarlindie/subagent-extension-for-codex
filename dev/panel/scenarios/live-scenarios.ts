@@ -164,7 +164,7 @@ export const statusTasks: Task[] = liveStates.map((live, index) => ({
   title: live.title,
   description: `Shows the inspector while "${live.status}" is the latest activity.`,
   worker_profile: "implementer",
-  provider_options: settingOptions("implementer"),
+  provider_options: settingOptions(),
   status: "running",
   workspace_strategy: "current_repo",
   budget: { max_runtime_minutes: null, max_cost_usd: null },

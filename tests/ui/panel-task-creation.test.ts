@@ -77,7 +77,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "fixture · reviewer");
   await pasteText(user, screen.getByLabelText("Model"), "selected-model");
-  await selectOption(user, "Reasoning effort", "high");
+  await selectOption(user, "Reasoning", "high");
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
@@ -231,18 +231,31 @@ test("project folder selection locks revision to HEAD and submits the checkout s
   assert.equal(call.args.repository, "/repo/a");
 });
 
-test("delegation starts from the saved permission setting and separately selects the approval decision maker", async (t) => {
-  const { user, transport } = await setupDelegate(t);
+test("delegation starts a read-only profile in plan mode, keeps a chosen mode and separately selects the approval decision maker and sandbox", async (t) => {
+  const { user, transport } = await setupDelegate(t, (transport) =>
+    writingWorker(transport, ["reviewer", "general"]),
+  );
+
   await screen.findByRole("dialog");
 
-  // The fake service saves Claude's initial Default permission mode.
+  // The fake service's default profile, reviewer, is read-only.
+  assert.equal(
+    screen.getByRole("combobox", { name: "Permission mode" }).textContent,
+    "Plan — read only",
+  );
+
+  // Switching profiles resets the mode: a write profile takes the saved one.
+  await selectOption(user, "Worker", "claude · general");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
     "Default — ask for approval",
   );
 
+  await selectOption(user, "Worker", "claude · reviewer");
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");
+  await user.click(screen.getByRole("switch", { name: "Bash sandbox" }));
   await enterTask(user, "Review authentication with parent approvals");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
@@ -259,11 +272,18 @@ test("delegation starts from the saved permission setting and separately selects
       .provider_options.claude.permission_mode,
     "acceptEdits",
   );
+
+  assert.equal(
+    (transport.calls.find((call) => call.name === "start_task")?.args as any)
+      .provider_options.claude.sandbox,
+    true,
+  );
 });
 
 /** Serves a profile that can write, since read-only tasks lose no isolation. */
 function writingWorker(
   transport: Parameters<typeof configureModelDefaults>[0],
+  profiles = ["general"],
 ) {
   const { tool } = transport;
 
@@ -274,7 +294,7 @@ function writingWorker(
       name === "list_workers"
         ? (result as { profiles: string[] }[]).map((worker) => ({
             ...worker,
-            profiles: ["general"],
+            profiles,
           }))
         : result
     ) as T;

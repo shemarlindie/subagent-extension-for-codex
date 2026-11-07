@@ -1,3 +1,5 @@
+import { isBudgetFailure } from "../../../shared/tasks/failure.js";
+
 /**
  * Org policy rules out what a task asked for. A tool call that throws it logs
  * as a routine rejection. A running task that throws it still logs as a failure.
@@ -11,6 +13,8 @@ export function errorCategory(error: unknown) {
   if (!(error instanceof Error)) return "unknown";
   // Checked first: policy wording can mention networks or timeouts.
   if (error instanceof PolicyRejectedError) return "policy";
+  if ("code" in error && isBudgetFailure(error.code)) return "budget";
+
   const message = error.message.toLowerCase();
   const status = "status" in error ? error.status : undefined;
 
@@ -37,8 +41,6 @@ export function errorCategory(error: unknown) {
   if (/econnrefused|econnreset|enotfound|fetch failed|network/.test(message)) {
     return "connection";
   }
-
-  if (/budget.*exhausted|maximum.*budget/.test(message)) return "budget";
 
   return "unknown";
 }

@@ -114,8 +114,8 @@ Before you start:
   service never merges changes.
 - In a folder without Git, edits apply directly and can't be undone with Git,
   and worktrees aren't available.
-- The researcher, reviewer and security reviewer profiles only inspect by
-  default.
+- The researcher, reviewer and security reviewer profiles start in plan mode,
+  which asks before edits.
 - Usage and billing follow your Claude Code sign-in. A set `ANTHROPIC_API_KEY`
   takes priority over a subscription login. Shown costs are estimates at API
   list prices, and cost limits apply to these estimates. See

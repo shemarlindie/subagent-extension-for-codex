@@ -14,6 +14,7 @@ import { NEW_TASK_SESSION_ID } from "./new-task-values";
 const values: DelegateValues = {
   permission_mode: "acceptEdits",
   approval_decider: "user",
+  sandbox: "off",
   repository: "/repo/a",
   description: "Fix the flaky login test",
   worker: "claude:general",

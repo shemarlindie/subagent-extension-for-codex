@@ -61,7 +61,7 @@ export async function checkStartPolicy(
   }
 
   const policy = await provider.policy(defaults).catch(() => undefined);
-  const reason = mode && blockedReason(policy, "permission_mode", mode);
+  const reason = mode && blockedReason(policy, mode);
 
   const reject = (setting: string, value: string, why: string, text = why) => {
     logEvent("warn", "provider.policy_rejected", {

@@ -65,7 +65,7 @@ export function ModelTable({
       <div className="model-table-head" aria-hidden="true">
         <span />
         <span>Model</span>
-        <span>Reasoning effort</span>
+        <span>Reasoning</span>
       </div>
       {scopes.map((scope) => {
         const modelName = fieldName(scope.model.path),

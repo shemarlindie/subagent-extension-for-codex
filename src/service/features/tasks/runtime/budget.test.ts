@@ -89,13 +89,13 @@ test("remaining runtime stops a turn once either budget is used up", () => {
     Infinity,
   );
 
-  assert.throws(
-    () => remainingRuntime(task({ runtime_ms: 10 * 60000 })),
-    /Runtime budget exhausted/,
-  );
+  assert.throws(() => remainingRuntime(task({ runtime_ms: 10 * 60000 })), {
+    name: "RunError",
+    code: "runtime_budget_exhausted",
+  });
 
-  assert.throws(
-    () => remainingRuntime(task({ cost_usd: 1 })),
-    /Cost budget exhausted/,
-  );
+  assert.throws(() => remainingRuntime(task({ cost_usd: 1 })), {
+    name: "RunError",
+    code: "cost_budget_exhausted",
+  });
 });

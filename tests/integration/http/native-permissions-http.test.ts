@@ -181,7 +181,7 @@ test("cookie-authenticated user tasks use the extension permission setting", asy
 
   const res = await post(
     "/api/user-tools/app_start_task",
-    { ...request, worker_profile: "reviewer" },
+    { ...request, worker_profile: "implementer" },
     {
       Cookie: cookie,
       "X-Subagent-Extension-For-Codex": "1",

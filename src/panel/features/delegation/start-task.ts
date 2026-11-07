@@ -37,6 +37,9 @@ export function startTaskArguments(
         ...(permissions.approvalDeciderOption
           ? { [permissions.approvalDeciderOption]: values.approval_decider }
           : {}),
+        ...(permissions.sandbox
+          ? { [permissions.sandbox.option]: values.sandbox === "on" }
+          : {}),
       }
     : undefined;
 

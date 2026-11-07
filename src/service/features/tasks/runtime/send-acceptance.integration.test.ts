@@ -25,6 +25,7 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
     queue: [{ ...message, delivery: "queue" }],
     queue_paused: true,
     error: "Previous failure",
+    error_code: "cost_budget_exhausted",
     completed_at: "2026-01-01T00:01:00.000Z",
     turn: 1,
     runtime_ms: 0,
@@ -66,6 +67,7 @@ test("failed send acceptance restores send fields and keeps active references", 
       task.status = "queued";
       delete task.queue_paused;
       delete task.error;
+      delete task.error_code;
       delete task.completed_at;
       store.save(task);
       store.event(task, "task.queued");
@@ -90,12 +92,14 @@ test("rollback restores optional send fields that were initially absent", (t) =>
   const { store, task } = fixture(t);
   delete task.queue_paused;
   delete task.error;
+  delete task.error_code;
   delete task.completed_at;
 
   expect(() =>
     commitSend(store, task, () => {
       task.queue_paused = true;
       task.error = "Send failed";
+      task.error_code = "cost_budget_exhausted";
       task.completed_at = "later";
       throw new Error("write failed");
     }),
@@ -103,6 +107,7 @@ test("rollback restores optional send fields that were initially absent", (t) =>
 
   expect(task.queue_paused).toBeUndefined();
   expect(task.error).toBeUndefined();
+  expect(task.error_code).toBeUndefined();
   expect(task.completed_at).toBeUndefined();
 });
 

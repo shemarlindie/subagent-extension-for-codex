@@ -104,7 +104,6 @@ and session lifetime. Never paste token values into a diagnostic report.
 | `provider.policy_read_failed`, `provider.policy_source_failed`, `provider.settings_read_failed`, `provider.discovery_failed` | Why the panel may show no policy locks.                                                                                                            |
 | `provider.policy_rejected`                                                                                                   | A mode or model refused at start, and why.                                                                                                         |
 | `provider.startup_refused`                                                                                                   | Claude Code's reason code when it refused to start, such as for a sign-in pin.                                                                     |
-| `provider.sandbox_blocked`                                                                                                   | Why a task's sandbox check stopped it.                                                                                                             |
 | `provider.settings_limited`                                                                                                  | A mode or model that differs from the one requested.                                                                                               |
 
 ## Measure performance

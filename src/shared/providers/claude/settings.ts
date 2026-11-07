@@ -7,12 +7,8 @@ import type {
 import { settingText } from "../../settings/setting-text.js";
 import {
   claudeOverrideDefaults,
-  claudeOverrideLabels,
-  claudePathGuardSchema,
   claudePermissionModes,
   claudePermissionModeSchema,
-  claudeSandboxSchema,
-  claudeToolsSchema,
   permissionLabel,
 } from "./permissions.js";
 
@@ -20,11 +16,7 @@ const help = {
   permission_mode:
     "Tasks use this mode unless you choose another. Your other Claude Code settings still apply while Load Claude Code settings is on.",
   sandbox:
-    "Your Claude Code settings decide the sandbox by default. The extension sandbox allows writes only in the workspace and blocks home and sibling reads and the network. Locking its network also ignores domains your Claude Code settings allow.",
-  tools:
-    "All tools offers every Claude Code tool. The restricted set offers file, search, Bash, question, skill and MCP tools, and only read, question and skill tools to read-only work. By worker profile restricts only read-only profiles.",
-  path_guard:
-    "Keeps file tools inside the task workspace and out of Git metadata. By worker profile applies it only to read-only profiles.",
+    "Runs Bash commands in Claude Code's sandbox, and stops a task when the sandbox can't run. Your Claude Code settings and your organization's policy decide the rest. Off leaves the sandbox to your Claude Code settings. Codex can turn it on for a task, and only you can turn it off.",
   subagents: "Delegated sessions may start subagents with the Agent tool.",
   settings_files:
     "Sessions load your user, project and local Claude Code settings, including instructions, skills, hooks, permission rules, sandbox settings and MCP servers. Off ignores all of them, including your deny rules and sandbox.",
@@ -33,9 +25,6 @@ const help = {
 };
 
 const userOnly = "Only you can change these settings.";
-
-const options = (labels: Record<string, string>) =>
-  Object.entries(labels).map(([value, label]) => ({ value, label }));
 
 /** Claude's settings block, saved under `providers.claude`. */
 export const claudeSettingsSchema = z
@@ -47,15 +36,10 @@ export const claudeSettingsSchema = z
       })
       .default("default"),
     // Restriction titles drop "Claude": their settings group already names it.
-    sandbox: claudeSandboxSchema
+    sandbox: z
+      .boolean()
       .meta({ title: "Bash sandbox", description: help.sandbox })
       .default(claudeOverrideDefaults.sandbox),
-    tools: claudeToolsSchema
-      .meta({ title: "Tools", description: help.tools })
-      .default(claudeOverrideDefaults.tools),
-    path_guard: claudePathGuardSchema
-      .meta({ title: "Workspace path guard", description: help.path_guard })
-      .default(claudeOverrideDefaults.path_guard),
     subagents: z
       .boolean()
       .meta({ title: "Allow subagents", description: help.subagents })
@@ -99,21 +83,7 @@ export const claudeRestrictionsSection: SettingSection = {
     `Limits on delegated Claude sessions, in every permission mode. ${userOnly}`,
   ],
   rows: [
-    {
-      kind: "select",
-      ...row("sandbox"),
-      options: options(claudeOverrideLabels.sandbox),
-    },
-    {
-      kind: "select",
-      ...row("tools"),
-      options: options(claudeOverrideLabels.tools),
-    },
-    {
-      kind: "select",
-      ...row("path_guard"),
-      options: options(claudeOverrideLabels.path_guard),
-    },
+    { kind: "switch", ...row("sandbox") },
     { kind: "switch", ...row("subagents") },
     { kind: "switch", ...row("settings_files") },
     { kind: "switch", ...row("user_mcp") },

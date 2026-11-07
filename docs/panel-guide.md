@@ -78,9 +78,9 @@ Removing the selected project returns the task list to **All projects**.
   tasks in other folders edit them directly. Without Git, those edits can't be
   undone with Git. If your default is a worktree, the task uses the project
   folder and warns you that it isn't isolated.
-- **Permissions.** The researcher, reviewer and security reviewer profiles only
-  inspect by default. Writing profiles follow your saved
-  [Claude permissions](configuration.md#claude-permissions) and
+- **Permissions.** The researcher, reviewer and security reviewer profiles start
+  in plan mode, which asks before edits. Other profiles follow your saved
+  [Claude permissions](configuration.md#claude-permissions). All follow your
   [session restrictions](configuration.md#claude-session-restrictions).
 - **Budgets.** Runtime and cost budgets span turns. Claude checks cost after
   each response, so a response can exceed the limit. Costs are estimates at API
@@ -228,9 +228,10 @@ or from **Panel actions** on narrow panels.
 **New task** opens a draft in the inspector. Your first message becomes the
 request. Enter starts the task and Shift+Enter adds a line. Below the message,
 choose the project, profile, model, reasoning and permission mode. Selecting a
-profile resets model and reasoning to the profile's settings, and read-only
-profiles keep read-only permissions. Expand the profile summary to change
-individual choices.
+profile resets model and reasoning to the profile's settings and the mode to its
+default. A read-only profile starts in plan mode, and other profiles use your
+saved mode. The mode you choose applies to this task only. Expand the profile
+summary to change individual choices.
 
 **Add project…** at the end of the project menu opens **Add project**. The added
 project becomes the composer's choice, and the task list keeps its project
@@ -240,15 +241,16 @@ The model and reasoning chips edit the selected profile's settings, so the
 profile starts with your last choice next time. **Default** clears the profile's
 setting and names the provider or global default it then inherits. A failed save
 shows an error below the composer, and the choice still applies to the task.
-Permission mode applies to this task only. Saving it would widen later tasks,
-including those agents start, so change the default in **Settings**. Workspace,
-revision and budgets use your settings defaults.
+Workspace, revision, budgets and the Bash sandbox use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds explicit
-context, workspace and revision, approval decision maker, dependencies and
-budgets. **Wait for tasks** searches titles or IDs in the selected project and
-accepts several dependencies. The form blocks unsupported cost budgets and notes
-that Claude checks cost after each response, so a response can exceed the limit.
+context, workspace and revision, approval decision maker, Bash sandbox,
+dependencies and budgets. The mode and sandbox apply to this task only. Saving
+them would change later tasks, including those agents start, so change the
+defaults in **Settings**. **Wait for tasks** searches titles or IDs in the
+selected project and accepts several dependencies. The form blocks unsupported
+cost budgets and notes that Claude checks cost after each response, so a
+response can exceed the limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.

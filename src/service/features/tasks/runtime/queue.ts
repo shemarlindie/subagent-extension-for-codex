@@ -88,6 +88,7 @@ export function deliverQueued(store: Store, t: Task, m: QueuedMessage) {
 export function requeue(t: Task) {
   t.status = "queued";
   delete t.error;
+  delete t.error_code;
   delete t.completed_at;
 }
 

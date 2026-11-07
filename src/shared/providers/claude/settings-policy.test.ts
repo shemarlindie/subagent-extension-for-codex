@@ -13,14 +13,8 @@ const policy: ProviderPolicy = {
   source: "console",
   blocked: [
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
-    },
-    {
-      setting: "sandbox",
-      value: "extension",
-      reason: "Your organization turned off the sandbox",
     },
   ],
   available_models: ["haiku"],
@@ -58,7 +52,6 @@ const row = (all: ReturnType<typeof sections>, path: string) => {
 };
 
 const MODE = "providers.claude.permission_mode";
-const SANDBOX = "providers.claude.sandbox";
 
 test("the section is absent without an organization's policy", () => {
   const ids = (all: ReturnType<typeof sections>) => all.map(({ id }) => id);
@@ -83,10 +76,6 @@ test("the section names the source and lists what's limited", () => {
       label: "Permission modes",
       detail: "Turned off: Bypass permission prompts.",
     },
-    {
-      label: "Bash sandbox",
-      detail: "Your organization turned off the sandbox.",
-    },
     { label: "Models", detail: "Limited to haiku." },
     { label: "Hooks", detail: "Only your organization's hooks run." },
   ]);
@@ -109,7 +98,6 @@ test("a mode blocked outside policy isn't blamed on the organization", () => {
       ...policy,
       blocked: [
         {
-          setting: "permission_mode",
           value: "auto",
           reason: "Not available with your Claude Code setup",
         },
@@ -142,18 +130,13 @@ test("blocked choices are locked with their reason, and others stay open", () =>
 test("a saved choice now blocked warns on its row, and nothing else does", () => {
   const all = sections({
     providers: {
-      claude: { permission_mode: "bypassPermissions", sandbox: "extension" },
+      claude: { permission_mode: "bypassPermissions" },
     },
   });
 
   assert.equal(
     row(all, MODE).warning,
     "Your saved mode, Bypass permission prompts, is turned off by your organization. New tasks ask for approval.",
-  );
-
-  assert.match(
-    row(all, SANDBOX).warning!,
-    /can't start with your saved choice/,
   );
 
   assert.equal(row(sections({}), MODE).warning, undefined);

@@ -149,7 +149,7 @@ export async function runFixtureTurn(
     failAt("start");
 
     const policy = readFixtureTaskOptions(c.task).claude_policy;
-    emitFixturePrelude(scenarios, policy, events, actions);
+    emitFixturePrelude(scenarios, events, actions);
 
     failAt("before-input");
     await runFixtureInputs(c, scenarios, events, actions);

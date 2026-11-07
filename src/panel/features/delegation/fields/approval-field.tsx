@@ -12,6 +12,7 @@ import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import type { DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
+import { SandboxField } from "./sandbox-field";
 
 interface ApprovalFieldProps {
   workers: Worker[];
@@ -51,28 +52,35 @@ export function ApprovalField({
 
   return (
     <>
-      <Field id="permission-mode" label="Permission mode">
-        <FormSelect
-          control={control}
-          name="permission_mode"
-          id="permission-mode"
-          label="Permission mode"
-          disabled={disabled || !permissions}
+      <div className="permission-row">
+        <Field id="permission-mode" label="Permission mode">
+          <FormSelect
+            control={control}
+            name="permission_mode"
+            id="permission-mode"
+            label="Permission mode"
+            disabled={disabled || !permissions}
+            loading={loading}
+            loadingLabel="Loading permission options"
+            placeholder={unresolved ? "Loading…" : undefined}
+            options={withBlockedOptions(
+              fallbackPermissions(permissions?.options, unresolved),
+              info?.policy,
+            )}
+          />
+          <p className="help">
+            {unresolved
+              ? "Loading permission options."
+              : (permissions?.help ?? "This worker has no permission modes.")}
+          </p>
+        </Field>
+        <SandboxField
+          permissions={permissions}
+          unresolved={unresolved}
+          disabled={disabled}
           loading={loading}
-          loadingLabel="Loading permission options"
-          placeholder={unresolved ? "Loading…" : undefined}
-          options={withBlockedOptions(
-            fallbackPermissions(permissions?.options, unresolved),
-            info?.policy,
-            "permission_mode",
-          )}
         />
-        <p className="help">
-          {unresolved
-            ? "Loading permission options."
-            : (permissions?.help ?? "This worker has no permission modes.")}
-        </p>
-      </Field>
+      </div>
       <Presence show={Boolean(permissions?.approvalDecider) || unresolved}>
         <Field id="approval-decider" label="Approval decision maker">
           <FormSelect

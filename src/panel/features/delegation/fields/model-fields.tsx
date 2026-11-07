@@ -37,69 +37,73 @@ export function ModelFields({
     { provider, model, reasoning, workerInfo, metadata, supported } = resolved;
 
   return (
-    <>
-      <Field id="model" label="Model">
-        <AsyncControl
-          loading={workersLoading || (settingsLoading && !selectedModel)}
-          label="Loading model defaults and available models"
-        >
-          <ModelAutocomplete
-            models={workerInfo?.models ?? []}
-            policy={workerInfo?.policy}
-            placeholder={
-              settingsReady
-                ? model || "Worker default"
-                : pendingPlaceholder(settingsLoading)
-            }
-            describedBy="model-help"
+    <div className="two task-model-fields">
+      <div>
+        <Field id="model" label="Model">
+          <AsyncControl
+            loading={workersLoading || (settingsLoading && !selectedModel)}
+            label="Loading model defaults and available models"
+          >
+            <ModelAutocomplete
+              models={workerInfo?.models ?? []}
+              policy={workerInfo?.policy}
+              placeholder={
+                settingsReady
+                  ? model || "Worker default"
+                  : pendingPlaceholder(settingsLoading)
+              }
+              describedBy="model-help"
+              disabled={!settingsReady || !workersReady}
+            />
+          </AsyncControl>
+        </Field>
+      </div>
+      <div>
+        <Field id="reasoning-effort" label="Reasoning">
+          <FormSelect
+            control={control}
+            name="reasoning_effort"
+            id="reasoning-effort"
+            label="Reasoning"
             disabled={!settingsReady || !workersReady}
+            loading={
+              workersLoading ||
+              (settingsLoading &&
+                (!selectedEffort || selectedEffort === "default"))
+            }
+            loadingLabel="Loading reasoning options"
+            placeholder={
+              !settingsReady && !selectedEffort
+                ? pendingPlaceholder(settingsLoading)
+                : undefined
+            }
+            rules={{ validate: (value) => validateReasoning(value, resolved) }}
+            options={[
+              {
+                value: "default",
+                label: reasoning ? `Use default (${reasoning})` : "Use default",
+              },
+              // Stable options preserve the draft when switching providers or correcting an effort.
+              ...reasoningLevels.map((level) => ({
+                value: level,
+                label: supported.some((item) => item === level)
+                  ? level
+                  : `${level} (unsupported by ${provider})`,
+              })),
+            ]}
           />
-        </AsyncControl>
-        <p id="model-help" className="help">
-          Leave blank to use {model || "the worker's default"}. Choose a model
-          from the list or enter a model ID or alias.
-          {workerInfo?.model_discovery_error &&
-            ` ${workerInfo.model_discovery_error}`}
-          {(!metadata ||
-            (metadata.supportsEffort !== false &&
-              metadata.supportedEffortLevels === undefined)) &&
-            " Reasoning support for this model is unknown."}
-        </p>
-      </Field>
-      <Field id="reasoning-effort" label="Reasoning effort">
-        <FormSelect
-          control={control}
-          name="reasoning_effort"
-          id="reasoning-effort"
-          label="Reasoning effort"
-          disabled={!settingsReady || !workersReady}
-          loading={
-            workersLoading ||
-            (settingsLoading &&
-              (!selectedEffort || selectedEffort === "default"))
-          }
-          loadingLabel="Loading reasoning options"
-          placeholder={
-            !settingsReady && !selectedEffort
-              ? pendingPlaceholder(settingsLoading)
-              : undefined
-          }
-          rules={{ validate: (value) => validateReasoning(value, resolved) }}
-          options={[
-            {
-              value: "default",
-              label: reasoning ? `Use default (${reasoning})` : "Use default",
-            },
-            // Stable options preserve the draft when switching providers or correcting an effort.
-            ...reasoningLevels.map((level) => ({
-              value: level,
-              label: supported.some((item) => item === level)
-                ? level
-                : `${level} (unsupported by ${provider})`,
-            })),
-          ]}
-        />
-      </Field>
-    </>
+        </Field>
+      </div>
+      <p id="model-help" className="help">
+        Leave blank to use {model || "the worker's default"}. Choose a model
+        from the list or enter a model ID or alias.
+        {workerInfo?.model_discovery_error &&
+          ` ${workerInfo.model_discovery_error}`}
+        {(!metadata ||
+          (metadata.supportsEffort !== false &&
+            metadata.supportedEffortLevels === undefined)) &&
+          " Reasoning support for this model is unknown."}
+      </p>
+    </div>
   );
 }

@@ -11,6 +11,8 @@ import {
 export const claudeStartOptionsSchema = z.strictObject({
   permission_mode: permissionModeSchema.optional(),
   approval_decider: approvalDeciderSchema.optional(),
+  /** Runs Bash in Claude Code's sandbox. Unset uses the setting. */
+  sandbox: z.boolean().optional(),
 });
 
 /**
@@ -31,7 +33,7 @@ export type ClaudeEffectiveSettings = z.infer<
 export const claudeTaskOptionsSchema = z.strictObject({
   permission_mode: claudePermissionModeSchema,
   approval_decider: approvalDeciderSchema,
-  permission_source: z.enum(["task", "setting"]),
+  permission_source: z.enum(["task", "profile", "setting"]),
   claude_policy: claudePolicySchema,
   effective: claudeEffectiveSettingsSchema.optional(),
 });

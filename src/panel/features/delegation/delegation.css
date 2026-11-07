@@ -5,3 +5,49 @@
 .notice.workspace-note p {
   margin: 0;
 }
+
+/*
+ * The mode's label and help span the row. The sandbox switch and its label
+ * sit beside the select, centered on it.
+ */
+.permission-row {
+  display: grid;
+}
+.permission-row:has(> .sandbox-toggle) {
+  grid-template-columns: 1fr auto;
+  column-gap: 16px;
+}
+.permission-row > label[for="permission-mode"],
+.permission-row > .help {
+  grid-column: 1 / -1;
+}
+.permission-row > .sandbox-toggle {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.task-model-fields {
+  row-gap: 0;
+  overflow-wrap: anywhere;
+}
+.task-model-fields > .help {
+  grid-column: 1 / -1;
+}
+
+.task-budget-fields {
+  margin: 12px 0;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.task-budget-fields > .setting-row {
+  padding: 6px 0;
+  border: 0;
+}
+.task-budget-fields > .help {
+  margin: 4px 0 6px;
+}
+.task-budget-fields > .help:empty {
+  display: none;
+}

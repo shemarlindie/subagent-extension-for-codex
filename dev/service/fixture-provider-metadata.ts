@@ -16,7 +16,7 @@ export const fixtureModels: ModelChoice[] = [
   {
     value: "fixture-fast",
     displayName: "Fixture Fast",
-    description: "A fake model that does not expose reasoning effort.",
+    description: "A fake model that does not expose reasoning options.",
     supportsEffort: false,
   },
 ];

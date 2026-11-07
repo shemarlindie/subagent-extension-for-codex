@@ -1,5 +1,4 @@
 const compactPermissionLabels: Record<string, string> = {
-  "Read only": "Read",
   "Ask for approval": "Ask",
   "Accept edits": "Edits",
   "Bypass permission prompts": "Bypass",

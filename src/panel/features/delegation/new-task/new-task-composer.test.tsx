@@ -152,7 +152,6 @@ test("a draft's blocked mode shows and sends as the fallback", async () => {
             managed: true,
             blocked: [
               {
-                setting: "permission_mode",
                 value: "auto",
                 reason: "Turned off by your organization",
               },
@@ -183,8 +182,6 @@ test("the profile's settings collapse into a summary that expands for editing", 
   const toggle = view.getByRole("button", { name: /^Edit .* · Accept edits$/ });
 
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  // The visible line abbreviates; the label above keeps the full names.
-  assert.match(toggle.textContent ?? "", / · Edits$/);
   await user.click(toggle);
 
   const controls = toggle.getAttribute("aria-controls")?.split(" ") ?? [];
@@ -193,18 +190,12 @@ test("the profile's settings collapse into a summary that expands for editing", 
 
   for (const id of controls) expect(document.getElementById(id)).not.toBeNull();
   assert.ok(view.getByRole("combobox", { name: /^Model: / }));
-  assert.ok(view.getByRole("combobox", { name: "Reasoning effort: Default" }));
+  assert.ok(view.getByRole("combobox", { name: "Reasoning: Default" }));
 
-  await user.click(
+  assert.ok(
     view.getByRole("combobox", { name: "Permission mode: Accept edits" }),
   );
 
-  // The menu names the mode in full; the chip shortens it.
-  await user.click(
-    await view.findByRole("option", { name: /ask for approval/i }),
-  );
-
-  assert.ok(view.getByRole("combobox", { name: "Permission mode: Ask" }));
   await user.click(view.getByRole("button", { name: "Hide profile settings" }));
 
   expect(view.queryByRole("combobox", { name: /^Model/ })).toBeNull();
@@ -227,7 +218,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 
   await user.click(view.getByRole("button", { name: /^Edit / }));
-  await user.click(view.getByRole("combobox", { name: /^Reasoning effort/ }));
+  await user.click(view.getByRole("combobox", { name: /^Reasoning/ }));
   await user.click(await view.findByRole("option", { name: "High" }));
 
   expect(saveProfileSetting.mock.calls).toEqual([
@@ -238,9 +229,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   await user.click(await view.findByRole("option", { name: "Implementer" }));
 
   // Default clears the profile's setting, so it names the provider's.
-  await user.click(
-    view.getByRole("combobox", { name: /^Reasoning effort: Low/ }),
-  );
+  await user.click(view.getByRole("combobox", { name: /^Reasoning: Low/ }));
 
   assert.ok(await view.findByRole("option", { name: "Default (medium)" }));
   await user.keyboard("{Escape}");
@@ -259,20 +248,39 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
-test("a read-only profile replaces the permission choice with Read only", async () => {
-  const { view, user } = setup();
+test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
+  const { view, user, start } = setup();
 
   await user.click(view.getByRole("combobox", { name: "Profile: General" }));
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
 
-  assert.ok(view.getByRole("button", { name: /· Read only$/ }));
+  assert.ok(view.getByRole("button", { name: /· Plan$/ }));
   await user.click(view.getByRole("button", { name: /^Edit / }));
 
-  const permission = await view.findByRole("combobox", {
-    name: "Permission mode: Read only",
-  });
+  await user.click(
+    await view.findByRole("combobox", { name: "Permission mode: Plan" }),
+  );
 
-  assert.equal(permission.getAttribute("data-disabled"), "");
+  await user.click(
+    await view.findByRole("option", { name: "Default — ask for approval" }),
+  );
+
+  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
+
+  await user.click(
+    await view.findByRole("option", { name: "Security reviewer" }),
+  );
+
+  assert.ok(view.getByRole("combobox", { name: "Permission mode: Plan" }));
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Review it{Enter}",
+  );
+
+  await waitFor(() =>
+    assert.equal(start.mock.calls[0]?.[0].permission_mode, "plan"),
+  );
 });
 
 test("Escape in an empty composer returns to the task list", async () => {

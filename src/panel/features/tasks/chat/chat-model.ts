@@ -37,7 +37,7 @@ export function spentBudget(task: Task): SpentBudget | undefined {
 
   const cost = task.cost_usd ?? 0,
     minutes = task.runtime_ms / 60000,
-    failed = task.status === "failed" && /budget/i.test(task.error ?? ""),
+    failed = task.status === "failed",
     budgetRaise =
       task.budget_raised_for_turn?.turn === task.turn
         ? task.budget_raised_for_turn
@@ -46,12 +46,16 @@ export function spentBudget(task: Task): SpentBudget | undefined {
   const spent: SpentBudget = {
     ...(max_cost_usd !== null &&
     (cost >= max_cost_usd ||
-      (failed && !budgetRaise?.cost && /cost|usd/i.test(task.error ?? "")))
+      (failed &&
+        !budgetRaise?.cost &&
+        task.error_code === "cost_budget_exhausted"))
       ? { cost: { used: cost, allowed: max_cost_usd } }
       : {}),
     ...(max_runtime_minutes !== null &&
     (minutes >= max_runtime_minutes ||
-      (failed && !budgetRaise?.runtime && /runtime/i.test(task.error ?? "")))
+      (failed &&
+        !budgetRaise?.runtime &&
+        task.error_code === "runtime_budget_exhausted"))
       ? {
           runtime: {
             usedMinutes: minutes,

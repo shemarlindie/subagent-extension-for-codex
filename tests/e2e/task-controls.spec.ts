@@ -167,14 +167,14 @@ test("exhaust the runtime budget, apply a higher limit and continue after reload
   await page.getByRole("button", { name: "Start task", exact: true }).click();
 
   const history = page.getByRole("region", { name: "Chat history" });
-  await expect(history).toContainText("Runtime budget exhausted");
+  await expect(history).toContainText("Runtime limit reached.");
 
   await expect(history.getByRole("status")).toContainText(
     "Runtime limit reached",
   );
 
   await page.reload();
-  await expect(history).toContainText("Runtime budget exhausted");
+  await expect(history).toContainText("Runtime limit reached.");
 
   const budget = page.getByRole("group", {
     name: "Raise runtime limit",
@@ -202,7 +202,7 @@ test("exhaust the runtime budget, apply a higher limit and continue after reload
     .press("Enter");
 
   await expect(history).toContainText("Fixture session turn: 2.");
-  await expect(history).toContainText("Runtime budget exhausted");
+  await expect(history).toContainText("Runtime limit reached.");
 });
 
 test("a dependent task waits across reload and runs after its prerequisite completes", async ({

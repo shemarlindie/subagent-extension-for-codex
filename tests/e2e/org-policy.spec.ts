@@ -6,7 +6,6 @@ const orgPolicy: ProviderPolicy = {
   managed: true,
   blocked: [
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
     },
@@ -95,6 +94,16 @@ test("a model an organization excludes later gives way to the default, and the p
     dialog.getByText("Your organization doesn't allow this model."),
   ).toBeVisible();
 
+  // A mode policy turns off stays listed, locked with the reason.
+  await dialog
+    .getByRole("combobox", { name: "Permission mode", exact: true })
+    .click();
+
+  const locked = page.getByRole("option", { name: /Bypass/ });
+  await expect(locked).toHaveAttribute("aria-disabled", "true");
+  await expect(locked).toContainText("Turned off by your organization");
+  await page.keyboard.press("Escape");
+
   await page.keyboard.press("Escape");
 
   // The composer shows and runs the default, and says why.
@@ -107,12 +116,6 @@ test("a model an organization excludes later gives way to the default, and the p
     page.getByText("Your organization limits these models."),
   ).toBeVisible();
 
-  await page.keyboard.press("Escape");
-
-  await page.getByRole("combobox", { name: /^Permission mode: / }).click();
-  const locked = page.getByRole("option", { name: /Bypass/ });
-  await expect(locked).toHaveAttribute("aria-disabled", "true");
-  await expect(locked).toContainText("Turned off by your organization");
   await page.keyboard.press("Escape");
 
   await page.getByRole("textbox", { name: "Task message" }).fill("Second task");

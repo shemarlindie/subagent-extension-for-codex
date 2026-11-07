@@ -63,7 +63,6 @@ export interface FixtureScenarios {
   streamLifecycle: boolean;
   activities: FixtureActivityScenario[];
   streams: FixtureStreamScenario[];
-  restrictions: string[];
 }
 
 const defaultScenarios = (): FixtureScenarios => ({
@@ -89,7 +88,6 @@ const defaultScenarios = (): FixtureScenarios => ({
   streamLifecycle: false,
   activities: [],
   streams: [],
-  restrictions: [],
 });
 
 function parseValue(value: string): unknown {
@@ -258,12 +256,6 @@ export function readScenarios(
       scenarios.late = true;
     } else if (kind === "session" && field(args, "state") === "invalid") {
       scenarios.invalidateSession = true;
-    } else if (kind === "restriction") {
-      const name = field(args, "name");
-
-      if (name && /^[A-Za-z][A-Za-z0-9_-]{0,49}$/.test(name)) {
-        scenarios.restrictions.push(name);
-      }
     } else if (kind === "activity") {
       const type = field(args, "type");
 

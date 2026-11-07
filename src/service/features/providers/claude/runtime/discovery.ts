@@ -50,7 +50,6 @@ async function blockedModes(session: Query, policy: Settings | undefined) {
       if (!/permission mode/i.test(String(error))) throw error;
 
       blocked.push({
-        setting: "permission_mode",
         value,
         reason: policyBlocksMode(value, policy)
           ? MODE_TURNED_OFF_BY_ORG
@@ -60,40 +59,6 @@ async function blockedModes(session: Query, policy: Settings | undefined) {
   }
 
   return blocked;
-}
-
-/** The sandbox choices a task would fail on. See `sandboxBlock`. */
-function blockedSandboxes(policy: Settings): ProviderPolicy["blocked"] {
-  const block = (value: string, reason: string) => ({
-    setting: "sandbox" as const,
-    value,
-    reason,
-  });
-
-  if (policy.sandbox?.enabled === false) {
-    const reason = "Your organization turned off the sandbox";
-
-    return [block("extension", reason), block("extension_locked", reason)];
-  }
-
-  if (
-    policy.sandbox?.allowUnsandboxedCommands ||
-    policy.sandbox?.failIfUnavailable === false
-  ) {
-    const reason = "Your organization's policy changes how the sandbox runs";
-
-    return [block("extension", reason), block("extension_locked", reason)];
-  }
-
-  return policy.sandbox?.network?.allowManagedDomainsOnly ||
-    policy.parentSettingsBehavior === "merge"
-    ? []
-    : [
-        block(
-          "extension_locked",
-          "Your organization's policy doesn't let the extension lock the network",
-        ),
-      ];
 }
 
 function policyNotes(policy: Settings) {
@@ -151,7 +116,7 @@ async function policyFrom(
   return {
     managed: true,
     ...(source ? { source } : {}),
-    blocked: [...modes, ...blockedSandboxes(policy)],
+    blocked: modes,
     ...(policy.availableModels
       ? {
           available_models: policy.availableModels,
@@ -175,9 +140,7 @@ async function readPolicy(
     settings_read: !!settings,
     managed: settings ? (found?.managed ?? false) : undefined,
     source: found?.source,
-    blocked: found?.blocked
-      .map(({ setting, value }) => `${setting}:${value}`)
-      .join(","),
+    blocked: found?.blocked.map(({ value }) => value).join(","),
     available_models: found?.available_models?.join(","),
   });
 

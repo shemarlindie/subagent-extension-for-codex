@@ -5,7 +5,7 @@ import type { Provider } from "../../providers/types.js";
 type ModelEffort = Pick<Task, "model" | "reasoning_effort">;
 
 /**
- * The model known not to support the chosen reasoning effort, if any. Unknown or
+ * The model known not to support the chosen reasoning, if any. Unknown or
  * unavailable metadata leaves final validation to the provider.
  */
 export async function modelRejectingEffort(
@@ -25,7 +25,7 @@ export async function modelRejectingEffort(
     : undefined;
 }
 
-/** Rejects a reasoning effort the chosen model is known not to support. */
+/** Rejects reasoning the chosen model is known not to support. */
 export async function assertModelEffort(
   provider: Provider,
   request: ModelEffort,
@@ -35,7 +35,7 @@ export async function assertModelEffort(
 
   if (model) {
     throw new Error(
-      `Model ${model} does not support reasoning effort ${request.reasoning_effort}`,
+      `Model ${model} does not support ${request.reasoning_effort} reasoning`,
     );
   }
 }

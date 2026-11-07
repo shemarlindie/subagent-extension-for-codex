@@ -67,7 +67,7 @@ const modelScope = (label: string) =>
     .strictObject({
       model: modelNameSchema.meta({ title: `${label} model` }).default(""),
       reasoning_effort: reasoningSchema
-        .meta({ title: `${label} reasoning effort` })
+        .meta({ title: `${label} reasoning` })
         .default("default"),
     })
     .prefault({});
@@ -168,7 +168,7 @@ export const settingsSchema = z.strictObject({
         .meta({
           title: "Execution approval mode",
           description:
-            "Default for execution providers: ask user, delegate to the parent agent, auto-approve within the sandbox, or deny execution requests. Native permission settings are independent. Read-only profiles and sandbox limits remain enforced.",
+            "Default for execution providers: ask user, delegate to the parent agent, auto-approve within the sandbox, or deny execution requests. Native permission settings are independent.",
         })
         .default("ask_user"),
     })

@@ -1,6 +1,6 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
-import { scalarText } from "../../text.js";
+import { failureMessage } from "../failure.js";
 import type { Task } from "../model.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
@@ -103,7 +103,7 @@ function note(e: Event): ChatNote | undefined {
     return {
       ...base,
       note: "failure",
-      text: `Task failed: ${scalarText(failed.error, "Unknown error")}`,
+      text: `Task failed: ${failureMessage(failed) ?? "Unknown error"}`,
     };
   }
 
@@ -172,7 +172,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       failedOutcome = outcome.outcome === "failed" ? outcome : undefined;
     } else if (eventPayload(e, "task.failed")) {
       if (failedOutcome) {
-        failedOutcome.error = scalarText(eventPayload(e, "task.failed")?.error);
+        failedOutcome.error = failureMessage(eventPayload(e, "task.failed")!);
 
         // A read after the outcome row gets it again, with its error.
         failedOutcome.event_id = e.id;

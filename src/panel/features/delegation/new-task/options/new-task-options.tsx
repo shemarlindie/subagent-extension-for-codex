@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../../../shared/providers/claude/permissions";
 import { providerMetadata } from "../../../../../shared/providers/metadata";
 import {
   allowedPermissionMode,
@@ -59,8 +58,7 @@ function policyOptions(
 
   return {
     model: model && modelAllowed(policy, models, model) ? model : undefined,
-    permissions:
-      permissions && withBlockedOptions(permissions, policy, "permission_mode"),
+    permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
 
@@ -72,7 +70,7 @@ function resolvedOptions(
   model: string,
   mode: string,
 ) {
-  const { provider, profile } = workerChoice(worker),
+  const { provider } = workerChoice(worker),
     resolved = newTask.defaults
       ? modelDefaults(newTask.defaults, state.workers, worker, model)
       : undefined;
@@ -87,10 +85,9 @@ function resolvedOptions(
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
     modelsFooter: modelsFooter(workerInfo),
-    // The chips edit the profile's settings, so Default clears them and
-    // inherits the provider's.
+    // The model and reasoning chips edit the profile's settings, so Default
+    // clears them and inherits the provider's.
     ...policyOptions(provider, workerInfo, models, providerModel),
-    readOnly: Boolean(profile && readOnlyProfile(profile)),
   };
 }
 
@@ -107,11 +104,7 @@ function settingsSummary(
     supportsReasoning = resolved.supported.length > 0,
     reasoningShort = compactReasoningLabel(reasoning, resolved.reasoning),
     reasoningText = reasoningChipLabel(reasoning, resolved.reasoning),
-    permissionText = permissionChipLabel(
-      resolved.permissions,
-      permission,
-      resolved.readOnly,
-    ),
+    permissionText = permissionChipLabel(resolved.permissions, permission),
     line = (parts: (string | false | undefined)[]) =>
       parts.filter(Boolean).join(" · ");
 
@@ -131,8 +124,9 @@ function settingsSummary(
 }
 
 /**
- * The composer's options. The profile leads; the model, reasoning and
- * permission it sets collapse into a summary that expands for editing.
+ * The composer's options. The profile leads, and the model, reasoning and
+ * permission mode it sets collapse into a summary that expands for editing.
+ * More options sets the sandbox.
  */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
   const { control, getValues, setValue } = useFormContext<DelegateValues>(),
@@ -216,7 +210,6 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           />
           <PermissionChip
             options={resolved.permissions}
-            readOnly={resolved.readOnly}
             loading={loading}
             disabled={disabled}
           />

@@ -3,6 +3,7 @@ import type { Event } from "../../events/types.js";
 import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
 import { scalarText } from "../../text.js";
+import { failureMessage } from "../failure.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
 
@@ -195,7 +196,7 @@ export function failureSummary(event: Event) {
   const textOutput = contentText(tool?.content ?? opaqueData.content);
 
   return [
-    taskFailure?.error,
+    taskFailure ? failureMessage(taskFailure) : undefined,
     interrupted?.error,
     taskCompleted?.error,
     agent?.result,

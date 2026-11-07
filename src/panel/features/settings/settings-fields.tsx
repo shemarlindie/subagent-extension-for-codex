@@ -85,12 +85,14 @@ export function Help({ id, parts }: { id: string; parts?: HelpPart[] }) {
 
 // Booleans live in form state as "true"/"false" strings.
 function SettingSwitch({
+  id,
   name,
   labelId,
   describedBy,
   control,
   loading,
 }: {
+  id: string;
   name: string;
   labelId: string;
   describedBy?: string;
@@ -103,6 +105,7 @@ function SettingSwitch({
       name={name}
       render={({ field }) => (
         <FormSwitch
+          id={id}
           checked={field.value === "true"}
           onCheckedChange={(checked) => field.onChange(String(checked))}
           onBlur={field.onBlur}
@@ -235,10 +238,21 @@ export function SettingRowView({
 
   return (
     <div className="setting-row setting-row-inline">
+      {/* A switch's own label toggles it. A budget's names its amount too. */}
       {text(
-        <span id={`${id}-label`} className="setting-label">
-          <SettingsSearchHighlight text={row.label} />
-        </span>,
+        row.kind === "budget" ? (
+          <span id={`${id}-label`} className="setting-label">
+            <SettingsSearchHighlight text={row.label} />
+          </span>
+        ) : (
+          <label
+            id={`${id}-label`}
+            htmlFor={`${id}-switch`}
+            className="setting-label"
+          >
+            <SettingsSearchHighlight text={row.label} />
+          </label>
+        ),
       )}
       <div className="setting-control">
         {/* Turning the limit back on restores its remembered amount. */}
@@ -278,6 +292,7 @@ export function SettingRowView({
           </span>
         )}
         <SettingSwitch
+          id={`${id}-switch`}
           name={enabledName ?? name}
           labelId={`${id}-label`}
           describedBy={describedByWithError}

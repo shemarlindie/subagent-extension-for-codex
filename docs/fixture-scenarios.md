@@ -21,7 +21,6 @@ package.
 | `[fixture:assistant-error type=rate_limit]`        | Show an SDK assistant error without failing the turn.                  |
 | `[fixture:change]`                                 | Write and record a sample file. Requires a worktree task.              |
 | `[fixture:subagent count=2]`                       | Show child-worker lifecycles. Add `outcome=error` for failed children. |
-| `[fixture:restriction name=path_guard]`            | Show a synthetic restriction denial.                                   |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |
 | `[fixture:stream]`                                 | Show a complete streaming-message lifecycle.                           |
 | `[fixture:reply lines=40 pace=30]`                 | Add reply paragraphs and stream each word after `pace` ms.             |
@@ -75,20 +74,20 @@ successful subtype and an error flag.
 
 ## Permission and worker-policy scenarios
 
-Choose the task's simulated permission mode and approval decision maker in the
-ordinary task form, then use `[fixture:permission]`:
+Choose the task's simulated permission mode and approval decision maker in
+**Advanced task**, then use `[fixture:permission]`:
 
 | Mode                        | Simulated behavior                                            |
 | --------------------------- | ------------------------------------------------------------- |
 | `inherit`                   | Resolve the saved `providers.claude.permission_mode`.         |
-| `default`                   | Follow the fixture execution approval mode.                   |
-| `plan`, `dontAsk`           | Deny.                                                         |
+| `default`, `plan`           | Follow the fixture execution approval mode.                   |
+| `dontAsk`                   | Deny.                                                         |
 | `acceptEdits`               | Allow edit tools. Use the execution approval mode for others. |
 | `auto`, `bypassPermissions` | Allow.                                                        |
 
 Set `providers.claude.subagents` to `false` to check the blocked subagent path.
-Select a read-only worker profile to check its policy. These checks cover
-routing and presentation only. Use the
+A read-only worker profile starts in `plan`. These checks cover routing and
+presentation only. Use the
 [live Claude checks](claude-verification.md#live-claude-checks) for native
 permission and sandbox behavior.
 
@@ -137,9 +136,9 @@ decides the order of messages within a task.
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Readiness          | Set readiness to `unavailable` or `error`. Discovery reports the problem and task creation rejects before persistence. Add a delay to inspect loading.                                                                        |
 | Model discovery    | Use `empty`, `error` or `error-once` to inspect free-text fallback and retry. `error-once` succeeds on the next lookup.                                                                                                       |
-| Model validation   | Choose `fixture-fast` with effort `high`. Creation rejects because that model has no effort support.                                                                                                                          |
+| Model validation   | Choose `fixture-fast` with reasoning `high`. Creation rejects because that model has no reasoning support.                                                                                                                    |
 | Failure boundaries | Use `[fixture:fail stage=start]`, `before-input`, `after-input`, `after-tools` or `before-reply`. The selected boundary ends the turn as failed.                                                                              |
-| Runtime budget     | Set a `0.01` minute budget and `[fixture:wait ms=60000]`. The service aborts with `Runtime budget exhausted`.                                                                                                                 |
+| Runtime budget     | Set a `0.01` minute budget and `[fixture:wait ms=60000]`. The task fails with `Runtime limit reached.`                                                                                                                        |
 | Cost budget        | Set a small cost limit and `[fixture:cost usd=0.25]`, then continue. The service rejects continuation once stored cost reaches the limit. Use `error_max_budget_usd` as a completion subtype to preview the SDK-native error. |
 | Workspace setup    | A nonexistent worktree revision fails during workspace creation. A non-`HEAD` revision for `current_repo` rejects at submission.                                                                                              |
 | Session recovery   | Complete `[fixture:session state=invalid]`, then continue. The task starts a fresh session. Restarting the demo exercises process-local session loss.                                                                         |

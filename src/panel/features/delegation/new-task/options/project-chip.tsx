@@ -47,7 +47,7 @@ export function ProjectChip({
     <ChipSelect
       id="new-task-project"
       label="Project"
-      placeholder="Choose a project"
+      placeholder="Choose project"
       value={field.value}
       onValueChange={field.onChange}
       loading={loading}

@@ -7,9 +7,7 @@ import {
 } from "./task-options.js";
 
 const policy = {
-  sandbox: "extension_locked",
-  tools: "restricted",
-  path_guard: true,
+  sandbox: true,
   subagents: false,
   settings_files: true,
   user_mcp: true,
@@ -37,7 +35,7 @@ test("a stored task rejects missing state, an unresolved permission mode or an u
   for (const options of [
     {},
     { ...stored, permission_mode: "inherit" },
-    { ...stored, permission_source: "user_config" },
+    { ...stored, permission_source: "default" },
   ]) {
     expect(claudeTaskOptionsSchema.safeParse(options).success).toBe(false);
   }
@@ -75,9 +73,8 @@ test("keeps policy validation and nested unknown-field stripping", () => {
   ).toEqual(stored);
 
   for (const claude_policy of [
-    { ...policy, tools: "profile" },
-    { ...policy, sandbox: "disabled" },
-    { ...policy, sandbox: false },
+    { ...policy, sandbox: "extension" },
+    { ...policy, subagents: "on" },
   ]) {
     expect(
       claudeTaskOptionsSchema.safeParse({ ...stored, claude_policy }).success,

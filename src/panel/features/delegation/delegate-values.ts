@@ -2,6 +2,8 @@
 export type DelegateValues = {
   permission_mode: string;
   approval_decider: string;
+  /** Whether the task's Bash runs in the provider's sandbox. */
+  sandbox: "on" | "off";
   repository: string;
   description: string;
   worker: string;

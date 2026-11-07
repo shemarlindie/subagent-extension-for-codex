@@ -14,6 +14,8 @@ export interface ProviderMetadata {
     /** The settings path of the saved native permission mode. */
     permissionSetting: string;
     approvalDeciderOption?: string;
+    /** A Bash sandbox toggle: its task option, settings path and help. */
+    sandbox?: { option: string; setting: string; help: string };
     options: { value: string; label: string }[];
     formTitle?: string;
     formHelp?: string;
@@ -34,6 +36,11 @@ export const claudeMetadata: ProviderMetadata = {
     permissionOption: "permission_mode",
     permissionSetting: "providers.claude.permission_mode",
     approvalDeciderOption: "approval_decider",
+    sandbox: {
+      option: "sandbox",
+      setting: "providers.claude.sandbox",
+      help: "Runs this task's Bash commands in Claude Code's sandbox. Starts from your setting.",
+    },
     formTitle: "Claude permission mode",
     formHelp:
       'Claude Code\'s permission mode. "Use extension setting" uses your saved default.',

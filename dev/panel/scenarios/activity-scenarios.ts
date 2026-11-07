@@ -606,7 +606,7 @@ export const activityTasks: Task[] = [
     description:
       "Convert every test file to the new runner API and run each one after editing it.",
     worker_profile: "implementer",
-    provider_options: settingOptions("implementer"),
+    provider_options: settingOptions(),
     profile_instructions:
       "Run the linter before replying.\nKeep summaries under ten lines.",
     status: "completed",

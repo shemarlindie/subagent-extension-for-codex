@@ -79,7 +79,7 @@ export async function context() {
         permission_mode: "plan",
         approval_decider: "user",
         permission_source: "task",
-        claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
       },
     },
     workspace,
@@ -165,14 +165,8 @@ export async function runWithPolicy(
   return { ...ctx, options: options!, check, decide, asked };
 }
 
-export const parity = {
-  sandbox: "user_config",
-  tools: "all",
-  path_guard: false,
-  subagents: true,
-  settings_files: true,
-  user_mcp: true,
-} as const;
+/** The default settings, which leave the session to the user's Claude Code configuration. */
+export const parity = resolveClaudePolicy(claudeOverrideDefaults);
 
 /** A successful SDK turn that exposes the options passed to each launch. */
 export function captureOptions(
@@ -194,14 +188,7 @@ export function captureOptions(
       {
         close: () => {},
         // The settings Claude Code reports with no org policy.
-        getSettings: async () => ({
-          effective: {
-            sandbox: {
-              ...args.options?.sandbox,
-              ...args.options?.managedSettings?.sandbox,
-            },
-          },
-        }),
+        getSettings: async () => ({ effective: {} }),
       },
     ) as unknown as Query;
   };
