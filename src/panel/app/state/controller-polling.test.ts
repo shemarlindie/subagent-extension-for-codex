@@ -20,7 +20,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
 
     if (phase === "read") {
       transport.handler = (name) =>
-        name === "list_workers" ? gate.promise.then(() => []) : undefined;
+        name === "list_tasks" ? gate.promise.then(() => []) : undefined;
     }
 
     const starting = controller.start();
@@ -161,11 +161,24 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   assert.equal(controller.getSnapshot().error, "");
 });
 
-test("workers are read again each refresh while one can't start tasks, and otherwise each hour", async (t) => {
+test("the task list doesn't wait for workers, whose model discovery can take a while", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  transport.handler = (name) =>
+    name === "list_workers" ? new Promise(() => {}) : undefined;
+
+  await controller.start();
+  assert.equal(controller.getSnapshot().taskListLoading, false);
+  assert.equal(controller.getSnapshot().workersLoaded, false);
+});
+
+test("workers are read again each refresh while one can't start tasks or list models, and otherwise each hour", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
 
   let ready = false;
+  let discoveryFailed = false;
 
   transport.handler = (name) =>
     name === "list_workers"
@@ -177,6 +190,9 @@ test("workers are read again each refresh while one can't start tasks, and other
             readiness: ready
               ? { ready: true, details: {} }
               : { ready: false, message: "Claude Code not found", details: {} },
+            ...(discoveryFailed
+              ? { model_discovery_error: "Model discovery unavailable" }
+              : {}),
           },
         ]
       : undefined;
@@ -189,20 +205,25 @@ test("workers are read again each refresh while one can't start tasks, and other
   assert.equal(workerReads(), 2);
 
   ready = true;
+  discoveryFailed = true;
   await controller.refresh();
   assert.equal(workerReads(), 3);
+
+  discoveryFailed = false;
+  await controller.refresh();
+  assert.equal(workerReads(), 4);
   const [readyWorker] = controller.getSnapshot().workers;
   assert.ok(readyWorker);
   assert.equal(readyWorker.readiness?.ready, true);
 
   await controller.refresh();
-  assert.equal(workerReads(), 3);
+  assert.equal(workerReads(), 4);
 
   // Within the hour, a ready list is reused.
   const start = Date.now();
   const clock = vi.spyOn(Date, "now").mockReturnValue(start + 59 * 60_000);
   await controller.refresh();
-  assert.equal(workerReads(), 3);
+  assert.equal(workerReads(), 4);
   clock.mockRestore();
 
   // A ready list is still read again after an hour, so a runtime that breaks shows.
@@ -210,7 +231,7 @@ test("workers are read again each refresh while one can't start tasks, and other
   vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60_000 + 1000);
   ready = false;
   await controller.refresh();
-  assert.equal(workerReads(), 4);
+  assert.equal(workerReads(), 5);
   const [brokenWorker] = controller.getSnapshot().workers;
   assert.ok(brokenWorker);
   assert.equal(brokenWorker.readiness?.ready, false);
