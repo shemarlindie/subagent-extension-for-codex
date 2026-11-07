@@ -83,7 +83,7 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
       ["none", "minimal"].includes(input.reasoning_effort)
     ) {
       throw new Error(
-        "Claude reasoning effort must be low, medium, high, xhigh or max",
+        "Claude reasoning must be low, medium, high, xhigh or max",
       );
     }
 

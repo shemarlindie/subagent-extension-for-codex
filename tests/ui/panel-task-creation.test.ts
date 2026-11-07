@@ -77,7 +77,7 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   await enterTask(user, "Investigate failing tests");
   await selectOption(user, "Worker", "fixture · reviewer");
   await pasteText(user, screen.getByLabelText("Model"), "selected-model");
-  await selectOption(user, "Reasoning effort", "high");
+  await selectOption(user, "Reasoning", "high");
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 

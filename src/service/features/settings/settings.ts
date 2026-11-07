@@ -179,8 +179,8 @@ export class Settings {
       effortField.description = [
         "Inherit uses the next level, like models.",
         info.levels === undefined
-          ? "Effort support is unknown; the provider checks it when a task starts."
-          : `Supported efforts for ${info.provider} model ${info.effectiveModel}: ${info.levels.length ? info.levels.join(", ") : "provider runtime default only"}.`,
+          ? "Reasoning support is unknown. The provider checks it when a task starts."
+          : `Supported reasoning for ${info.provider} model ${info.effectiveModel}: ${info.levels.length ? info.levels.join(", ") : "provider runtime default only"}.`,
         !info.providerScope && "Applies to every provider.",
         info.unsupported && unsupportedEffortWarning,
       ]

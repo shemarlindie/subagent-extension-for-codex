@@ -250,7 +250,7 @@ test("settings validates hidden budgets, types uncatalogued models, and flags un
 
   // The server flags an unsupported saved effort.
   assert.ok(
-    screen.getByText("The saved effort is not supported by this model."),
+    screen.getByText("The saved reasoning is not supported by this model."),
   );
 
   // A model without discovered choices is typed.

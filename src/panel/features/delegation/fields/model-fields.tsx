@@ -59,12 +59,12 @@ export function ModelFields({
         </Field>
       </div>
       <div>
-        <Field id="reasoning-effort" label="Reasoning effort">
+        <Field id="reasoning-effort" label="Reasoning">
           <FormSelect
             control={control}
             name="reasoning_effort"
             id="reasoning-effort"
-            label="Reasoning effort"
+            label="Reasoning"
             disabled={!settingsReady || !workersReady}
             loading={
               workersLoading ||

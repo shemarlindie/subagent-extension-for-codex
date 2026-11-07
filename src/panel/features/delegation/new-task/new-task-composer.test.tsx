@@ -157,7 +157,7 @@ test("the profile's settings collapse into a summary that expands for editing", 
 
   for (const id of controls) expect(document.getElementById(id)).not.toBeNull();
   assert.ok(view.getByRole("combobox", { name: /^Model: / }));
-  assert.ok(view.getByRole("combobox", { name: "Reasoning effort: Default" }));
+  assert.ok(view.getByRole("combobox", { name: "Reasoning: Default" }));
   expect(view.queryByRole("combobox", { name: /^Permission mode/ })).toBeNull();
   await user.click(view.getByRole("button", { name: "Hide profile settings" }));
 
@@ -181,7 +181,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 
   await user.click(view.getByRole("button", { name: /^Edit / }));
-  await user.click(view.getByRole("combobox", { name: /^Reasoning effort/ }));
+  await user.click(view.getByRole("combobox", { name: /^Reasoning/ }));
   await user.click(await view.findByRole("option", { name: "High" }));
 
   expect(saveProfileSetting.mock.calls).toEqual([
@@ -192,9 +192,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   await user.click(await view.findByRole("option", { name: "Implementer" }));
 
   // Default clears the profile's setting, so it names the provider's.
-  await user.click(
-    view.getByRole("combobox", { name: /^Reasoning effort: Low/ }),
-  );
+  await user.click(view.getByRole("combobox", { name: /^Reasoning: Low/ }));
 
   assert.ok(await view.findByRole("option", { name: "Default (medium)" }));
   await user.keyboard("{Escape}");

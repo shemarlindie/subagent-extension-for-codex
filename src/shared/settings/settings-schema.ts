@@ -67,7 +67,7 @@ const modelScope = (label: string) =>
     .strictObject({
       model: modelNameSchema.meta({ title: `${label} model` }).default(""),
       reasoning_effort: reasoningSchema
-        .meta({ title: `${label} reasoning effort` })
+        .meta({ title: `${label} reasoning` })
         .default("default"),
     })
     .prefault({});

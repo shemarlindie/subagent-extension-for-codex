@@ -337,7 +337,7 @@ test("native model controls scope discovered models and derive reasoning choices
 
   assert.match(
     String(field("models.providers.claude.reasoning_effort").description),
-    /Supported efforts for claude model claude-model/,
+    /Supported reasoning for claude model claude-model/,
   );
 
   assert.match(
@@ -455,7 +455,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
   // description, and the panel gets a flag.
   assert.match(
     String(schemaField(disabled, fixtureEffort).description),
-    /saved effort is not supported/,
+    /saved reasoning is not supported/,
   );
 
   const fixtureScope = disabled.sections

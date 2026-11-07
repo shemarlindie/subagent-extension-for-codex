@@ -99,7 +99,7 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
         Worker: `${task.provider} · ${profileLabel(task.worker_profile)}`,
         ...providerTaskFacts(task),
         Model: task.model || "Worker default",
-        "Reasoning effort": task.reasoning_effort || "Worker default",
+        Reasoning: task.reasoning_effort || "Worker default",
         ...(task.profile_instructions
           ? { "Custom instructions": task.profile_instructions }
           : {}),

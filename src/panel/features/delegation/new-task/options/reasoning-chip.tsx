@@ -23,7 +23,7 @@ export function reasoningChipLabel(value: string, inherited?: string) {
 }
 
 /**
- * Chooses a reasoning effort the selected model supports. Switching to a
+ * Chooses reasoning the selected model supports. Switching to a
  * model without the chosen level returns it to the default.
  */
 export function ReasoningChip({
@@ -44,14 +44,14 @@ export function ReasoningChip({
   return (
     <ChipSelect
       id="new-task-reasoning"
-      label="Reasoning effort"
+      label="Reasoning"
       value={value}
       onValueChange={choose}
       loading={loading}
       disabled={disabled || supported.length === 0}
       title={
         supported.length === 0
-          ? "This model doesn't take a reasoning effort"
+          ? "This model has no reasoning options"
           : undefined
       }
       options={[

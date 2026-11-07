@@ -228,10 +228,10 @@ Tool integrators should see
 
 ## Model and reasoning defaults
 
-The service resolves the model and the reasoning effort separately. Each takes
-the first value set in this order:
+The service resolves the model and reasoning separately. Each takes the first
+value set in this order:
 
-| Scope    | Model                             | Reasoning effort                             |
+| Scope    | Model                             | Reasoning                                    |
 | -------- | --------------------------------- | -------------------------------------------- |
 | Task     | `model`                           | `reasoning_effort`                           |
 | Profile  | `models.profiles.<profile>.model` | `models.profiles.<profile>.reasoning_effort` |
@@ -254,7 +254,7 @@ turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
 runs in the service directory, so project-specific model configuration can
 differ from a task workspace. Custom model IDs work when discovery is
-unavailable, but effort support may then be unknown.
+unavailable, but reasoning support may then be unknown.
 
 ## Custom instructions for worker profiles
 

@@ -315,7 +315,7 @@ test("More options preserves a pending composer draft and fills Advanced task de
     );
 
     expect(
-      dialog.getByRole("combobox", { name: "Reasoning effort" }).textContent,
+      dialog.getByRole("combobox", { name: "Reasoning" }).textContent,
     ).toBe("Use default (high)");
 
     // A read-only profile starts in plan mode, whatever the saved mode.

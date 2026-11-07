@@ -83,7 +83,7 @@ export const startSchema = z.object({
     ),
   reasoning_effort: reasoningSchema
     .optional()
-    .describe("Reasoning effort; default inherits configured defaults."),
+    .describe("Reasoning. The default inherits configured defaults."),
   description: z
     .string()
     .min(1)

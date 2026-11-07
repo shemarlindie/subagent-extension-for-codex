@@ -64,7 +64,7 @@ checks cost after each response, so a response can exceed the limit.
 
 Tasks run on `haiku` at `medium` effort to keep costs low. Set
 `SUBAGENT_EXTENSION_FOR_CODEX_LIVE_MODEL` to a model ID or alias, or
-`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT` to `default` or a reasoning level, to
+`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT` to `default` or a reasoning value, to
 override them. An empty value inherits the Claude Code default:
 
 ```sh

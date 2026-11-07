@@ -37,7 +37,7 @@ export type {
 // Agents read this in an effort field's description; the panel shows it
 // beside a scope flagged `unsupported`.
 export const unsupportedEffortWarning =
-  "The saved effort is not supported by this model.";
+  "The saved reasoning is not supported by this model.";
 
 /** Help parts, with a link to a setting the panel doesn't show as plain text. */
 export const withHelp = (parts: HelpPart[], shown: unknown) =>
@@ -185,7 +185,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       },
       effort: {
         path: info.effortPath,
-        label: `${label} reasoning effort`,
+        label: `${label} reasoning`,
         options: info.effortChoices,
         unsupported: info.unsupported,
       },
@@ -206,7 +206,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       { text: "worker profile", setting: profileModel },
       " defaults override these. Inherit uses ",
       { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning effort. Task choices override all defaults.",
+      ", then the worker's own default. This applies to model and reasoning. Task choices override all defaults.",
     ],
     values,
   );
@@ -217,7 +217,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       { text: "provider", setting: providerModel },
       " default, then ",
       { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning effort. Task choices override profile defaults.",
+      ", then the worker's own default. This applies to model and reasoning. Task choices override profile defaults.",
     ],
     values,
   );

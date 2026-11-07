@@ -36,7 +36,7 @@ const models: SettingRow = {
       },
       effort: {
         path: "models.global.reasoning_effort",
-        label: "Global reasoning effort",
+        label: "Global reasoning",
         options: [
           { value: "default", label: "Inherit" },
           { value: "high", label: "high" },

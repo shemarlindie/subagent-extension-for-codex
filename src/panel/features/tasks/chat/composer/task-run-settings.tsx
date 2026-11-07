@@ -32,7 +32,8 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
     { label: profile, compact: profile },
     { label: model, compact: model },
     {
-      label: reasoning === "default" ? "Default effort" : titleCase(reasoning),
+      label:
+        reasoning === "default" ? "Default reasoning" : titleCase(reasoning),
       compact: compactReasoningLabel(reasoning),
     },
     ...(permission
