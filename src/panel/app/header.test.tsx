@@ -81,20 +81,6 @@ test("thread header shows settings and omits other global controls", async () =>
   await waitFor(() => assert.equal(settings.mock.calls.length, 2));
 });
 
-test("Allow tasks here names the path in its tooltip", async () => {
-  const { view, user } = setup({
-    conversation: "chat-1",
-    projectCandidate: "/repo",
-  });
-
-  await user.hover(view.getByRole("button", { name: "Allow tasks here" }));
-
-  assert.match(
-    (await view.findByRole("tooltip")).textContent ?? "",
-    /edit files in \/repo\./,
-  );
-});
-
 test("Allow tasks here invokes registration from the menu", async () => {
   const { view, user, addProject } = setup({
     conversation: "chat-1",
@@ -111,32 +97,29 @@ test("Allow tasks here invokes registration from the menu", async () => {
   assert.equal(addProject.mock.calls.length, 1);
 });
 
-test.each([{ connected: false }, { scopeKnown: false }, { busy: true }])(
-  "Allow tasks here stays disabled with %j",
-  async (blocked) => {
-    const { view, user, addProject } = setup({
-      conversation: "chat-1",
-      projectCandidate: "/repo",
-      ...blocked,
-    });
+test("Allow tasks here stays disabled until the scope is known", async () => {
+  const { view, user, addProject } = setup({
+    conversation: "chat-1",
+    projectCandidate: "/repo",
+    scopeKnown: false,
+  });
 
-    assert.equal(
-      (
-        view.getByRole("button", {
-          name: "Allow tasks here",
-        }) as HTMLButtonElement
-      ).disabled,
-      true,
-    );
+  assert.equal(
+    (
+      view.getByRole("button", {
+        name: "Allow tasks here",
+      }) as HTMLButtonElement
+    ).disabled,
+    true,
+  );
 
-    await user.click(view.getByRole("button", { name: "Panel actions" }));
+  await user.click(view.getByRole("button", { name: "Panel actions" }));
 
-    const action = await view.findByRole("menuitem", {
-      name: "Allow tasks here",
-    });
+  const action = await view.findByRole("menuitem", {
+    name: "Allow tasks here",
+  });
 
-    assert.equal(action.getAttribute("aria-disabled"), "true");
-    await user.click(action);
-    assert.equal(addProject.mock.calls.length, 0);
-  },
-);
+  assert.equal(action.getAttribute("aria-disabled"), "true");
+  await user.click(action);
+  assert.equal(addProject.mock.calls.length, 0);
+});

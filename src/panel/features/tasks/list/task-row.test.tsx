@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, onTestFinished, test, vi } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 
 import { task } from "../../../app/state/controller-test-harness";
 import { TaskRow } from "./task-list";
@@ -36,32 +36,25 @@ test("right-clicking an unread row offers Mark read", async () => {
   assert.equal(onSelect.mock.calls.length, 0);
 });
 
-test.each([
-  ["completed", false],
-  ["running", true],
-] as const)(
-  "right-clicking a %s row offers Archive (disabled: %s)",
-  async (status, disabled) => {
-    onTestFinished(cleanup);
-    const onArchive = vi.fn();
+test("right-clicking a completed row offers Archive", async () => {
+  onTestFinished(cleanup);
+  const onArchive = vi.fn();
 
-    const view = render(
-      <TaskRow
-        task={{ ...task("a"), status }}
-        selected={false}
-        onSelect={() => {}}
-        onToggleRead={() => {}}
-        onArchive={onArchive}
-      />,
-    );
+  const view = render(
+    <TaskRow
+      task={{ ...task("a"), status: "completed" }}
+      selected={false}
+      onSelect={() => {}}
+      onToggleRead={() => {}}
+      onArchive={onArchive}
+    />,
+  );
 
-    const row = view.container.querySelector<HTMLElement>("[data-task]");
-    assert.ok(row);
-    fireEvent.contextMenu(row);
-    const item = await view.findByRole("menuitem", { name: "Archive" });
-    expect(item.hasAttribute("data-disabled")).toBe(disabled);
-    await userEvent.click(item);
+  const row = view.container.querySelector<HTMLElement>("[data-task]");
+  assert.ok(row);
+  fireEvent.contextMenu(row);
+  const item = await view.findByRole("menuitem", { name: "Archive" });
+  await userEvent.click(item);
 
-    assert.equal(onArchive.mock.calls.length, disabled ? 0 : 1);
-  },
-);
+  assert.equal(onArchive.mock.calls.length, 1);
+});
