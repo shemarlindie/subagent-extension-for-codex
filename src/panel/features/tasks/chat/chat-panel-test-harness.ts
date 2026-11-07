@@ -38,7 +38,7 @@ const base: Task = {
 function setup(
   patch: Partial<Task> = {},
   events: Event[] = [],
-  chatItems: ChatItem[] | null = [],
+  chatItems: ChatItem[] = [],
 ) {
   onTestFinished(cleanup);
   const task = { ...base, ...patch };
@@ -55,11 +55,7 @@ function setup(
   const snapshot = {
     ...controller.getSnapshot(),
     events,
-    chat:
-      chatItems === null
-        ? undefined
-        : { task: task.id, items: chatItems, cursor: chatItems.length },
-    chatHistoryLoading: chatItems === null ? task.id : undefined,
+    chat: { task: task.id, items: chatItems, cursor: chatItems.length },
   };
 
   const getSnapshot = controller.getSnapshot.bind(controller);
