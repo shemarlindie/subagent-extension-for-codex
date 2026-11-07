@@ -46,17 +46,18 @@ for inspection and fixture recording:
 SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs <scenario>
 ```
 
-| Scenario   | Checks                                                                                                                                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `read`     | A reviewer task reads a file with the native Read tool. This is the default scenario.                                                                                                                               |
-| `edits`    | Recorded file edits. See [Edit recording](#edit-recording).                                                                                                                                                         |
-| `folders`  | Folders without Git or commits: edits, the extension sandbox, a blocked outside read, blocked `.git` writes and a resumed session. Run it with `edits` when you qualify a CLI or SDK version.                       |
-| `resume`   | The worker asks a native question, and the session resumes after the answer.                                                                                                                                        |
-| `sandbox`  | The extension sandbox, with only the expected fixture commands approved and a local listener.                                                                                                                       |
-| `mcp`      | A task started and completed through the built stdio MCP server.                                                                                                                                                    |
-| `budget`   | Budget enforcement. The task is expected to fail on its cost limit.                                                                                                                                                 |
-| `parity`   | Claude Code settings loading, with default settings and a project-local skill, `.mcp.json` stdio server and `PreToolUse` hook. It approves only fixture tools and runs a subagent.                                  |
-| `isolated` | Settings loading off excludes the project hook and external MCP servers. A second task keeps settings on with user MCP off, checking that the hook runs while external servers stay absent. Both tasks read a file. |
+| Scenario   | Checks                                                                                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read`     | A reviewer task reads a file with the native Read tool. This is the default scenario.                                                                                                                                             |
+| `edits`    | Recorded file edits. See [Edit recording](#edit-recording).                                                                                                                                                                       |
+| `folders`  | Folders without Git or commits: edits, the extension sandbox, a blocked outside read, blocked `.git` writes and a resumed session. Run it with `edits` when you qualify a CLI or SDK version.                                     |
+| `resume`   | The worker asks a native question, and the session resumes after the answer.                                                                                                                                                      |
+| `sandbox`  | The extension sandbox, with only the expected fixture commands approved and a local listener.                                                                                                                                     |
+| `mcp`      | A task started and completed through the built stdio MCP server.                                                                                                                                                                  |
+| `budget`   | Budget enforcement. The task is expected to fail on its cost limit.                                                                                                                                                               |
+| `parity`   | Claude Code settings loading, with default settings and a project-local skill, `.mcp.json` stdio server and `PreToolUse` hook. It approves only fixture tools and runs a subagent.                                                |
+| `isolated` | Settings loading off excludes the project hook and external MCP servers. A second task keeps settings on with user MCP off, checking that the hook runs while external servers stay absent. Both tasks read a file.               |
+| `token`    | A worktree task in the data directory can't read a fake admin token with the Read tool or `cat`, with the sandbox off and on, or with Python when sandboxed. It still reads its own files. Run it when you qualify a CLI version. |
 
 Each scenario uses a temporary fixture and a small native cost limit. Claude
 checks cost after each response, so a response can exceed the limit.

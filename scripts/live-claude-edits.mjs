@@ -92,7 +92,7 @@ export async function prepareEditsFixture(repo) {
   ]);
 }
 
-async function waitForTask(control, store, task, timeoutMs = 185000) {
+export async function waitForTask(control, store, task, timeoutMs = 185000) {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {

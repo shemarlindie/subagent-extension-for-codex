@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, symlink } from "node:fs/promises";
+import { mkdir, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
+import { adminTokenRule } from "../configuration/admin-token.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import {
   captureOptions,
@@ -54,7 +55,7 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
     agent_id: "child-agent",
   };
 
-  expect(options.settings).toEqual({ bashEditDiffEnabled: true });
+  expect(options.settings).toMatchObject({ bashEditDiffEnabled: true });
 
   expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
     {},
@@ -75,6 +76,68 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
   expect(await hook(input, input.tool_use_id, { signal: c.signal })).toEqual(
     {},
   );
+});
+
+test("every task denies the admin token, and its hook denies file tools on it", async () => {
+  const { c } = await context();
+  const data = await realpath(process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA!);
+  const token = join(data, "admin-token");
+  await writeFile(token, "token");
+  // Worktrees live in the data directory.
+  const workspace = join(data, "worktrees", "task-test");
+  await mkdir(workspace, { recursive: true });
+  await writeFile(join(workspace, "own.txt"), "own");
+  await symlink(token, join(workspace, "link"));
+  c.task.workspace = workspace;
+  c.task.worker_profile = "implementer";
+
+  setClaudeOptions(c.task, {
+    permission_mode: "default",
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+  });
+
+  const options = await claudeTurnOptions(
+    c,
+    fakeClaudePath,
+    new AbortController(),
+  );
+
+  expect(options.settings).toMatchObject({
+    permissions: { deny: [`Read(/${token})`] },
+  });
+
+  assert.equal(
+    adminTokenRule("C:\\data\\admin-token"),
+    "Read(//c/data/admin-token)",
+  );
+
+  const hook = preToolUseHook(options);
+
+  const decision = async (tool: string, input: object) =>
+    (
+      (await hook(
+        {
+          hook_event_name: "PreToolUse",
+          tool_name: tool,
+          tool_input: input,
+          session_id: "x",
+          transcript_path: "x",
+          cwd: workspace,
+          tool_use_id: "x",
+        },
+        "x",
+        { signal: c.signal },
+      )) as any
+    ).hookSpecificOutput?.permissionDecision;
+
+  assert.equal(await decision("Read", { file_path: token }), "deny");
+  assert.equal(await decision("Read", { file_path: "link" }), "deny");
+  assert.equal(await decision("Write", { file_path: token }), "deny");
+  assert.equal(await decision("Grep", { pattern: "x", path: data }), "deny");
+  assert.equal(await decision("Glob", { pattern: "*", path: data }), "deny");
+  assert.equal(await decision("Read", { file_path: "own.txt" }), undefined);
+  assert.equal(await decision("Edit", { file_path: "own.txt" }), undefined);
+  assert.equal(await decision("Grep", { pattern: "x" }), undefined);
 });
 
 test("PostToolUse flags a command in a task whose folder has no Git", async () => {

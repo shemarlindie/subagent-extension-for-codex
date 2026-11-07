@@ -5,6 +5,9 @@ import { join } from "node:path";
 // Generated tokens are 43 characters; overrides must be comparably unguessable.
 const minimumTokenLength = 32;
 
+/** The file that holds the generated admin token. */
+export const adminTokenPath = (data: string) => join(data, "admin-token");
+
 export function adminToken(data: string, env = process.env) {
   const override = env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN;
 
@@ -18,7 +21,7 @@ export function adminToken(data: string, env = process.env) {
     return override;
   }
 
-  const path = join(data, "admin-token");
+  const path = adminTokenPath(data);
   let token: string | undefined;
 
   try {

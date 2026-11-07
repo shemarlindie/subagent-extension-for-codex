@@ -8,6 +8,11 @@ import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/ta
 import type { Task } from "../../../../../shared/tasks/model.js";
 import type { RunContext } from "../../types.js";
 import {
+  adminTokenRule,
+  claudeAdminToken,
+  touchesAdminToken,
+} from "../configuration/admin-token.js";
+import {
   claudeEnvironment,
   claudeSandbox,
 } from "../configuration/execution-environment.js";
@@ -99,6 +104,7 @@ export async function claudeTurnOptions(
   const nativeMode = taskOptions.permission_mode;
 
   const workspace = c.task.workspace!;
+  const adminToken = await claudeAdminToken();
   const restricted = policy.tools === "restricted";
 
   const readOnly =
@@ -158,7 +164,11 @@ export async function claudeTurnOptions(
     // final message ends, the last moment a steer the turn won't take can
     // be withdrawn.
     includePartialMessages: true,
-    settings: { bashEditDiffEnabled: true },
+    settings: {
+      bashEditDiffEnabled: true,
+      // Inside the sandbox, Claude Code applies it to every program.
+      permissions: { deny: [adminTokenRule(adminToken)] },
+    },
     ...settingsOptions(policy),
     permissionMode: nativeMode,
     ...(nativeMode === "bypassPermissions"
@@ -217,6 +227,12 @@ export async function claudeTurnOptions(
                   permissionDecisionReason: reason,
                 },
               });
+
+              if (
+                await touchesAdminToken(adminToken, tool, params, workspace)
+              ) {
+                return deny("The admin token is off limits");
+              }
 
               // Enabled restrictions deny before settings rules or modes can approve.
               // Skills stay available; the tools they call are checked individually.

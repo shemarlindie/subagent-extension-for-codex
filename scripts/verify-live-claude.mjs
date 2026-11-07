@@ -16,6 +16,7 @@ import {
   runFoldersScenario,
 } from "./live-claude-edits.mjs";
 import { runIsolatedScenario } from "./live-claude-isolated.mjs";
+import { runTokenScenario } from "./live-claude-token.mjs";
 
 /** A task's latest reply text, or "" before it has replied. */
 const latestReply = (store, id) =>
@@ -23,7 +24,7 @@ const latestReply = (store, id) =>
 
 if (process.env.SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY !== "1") {
   console.error(
-    "Set SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity or folders, or $1.50 for edits. The edits scenario runs four tasks, and folders runs two. A response can exceed the budget before work stops.",
+    "Set SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 to opt into authenticated Claude model calls. Each task configures a native cost budget of at most $0.25, $0.50 for parity or folders, or $1.50 for edits. The edits scenario runs four tasks, and folders and token run two. A response can exceed the budget before work stops.",
   );
 
   process.exit(1);
@@ -43,8 +44,9 @@ assert.ok(
     "isolated",
     "edits",
     "folders",
+    "token",
   ].includes(scenario),
-  "Choose read, resume, sandbox, mcp, budget, parity, isolated, edits, or folders",
+  "Choose read, resume, sandbox, mcp, budget, parity, isolated, edits, folders, or token",
 );
 
 // Every task runs on this model and effort; an empty value inherits the CLI default.
@@ -190,7 +192,11 @@ const control = new Control(
   new Map([["claude", provider()]]),
 );
 
-if (scenario === "isolated") {
+if (scenario === "token") {
+  // Worktrees live in the data directory, beside the admin token.
+  process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA = root;
+  await runTokenScenario({ control, store, root, taskBase });
+} else if (scenario === "isolated") {
   await runIsolatedScenario({ control, store, repo, root, taskBase });
 } else if (scenario === "folders") {
   await runFoldersScenario({ control, store, root, taskBase });
