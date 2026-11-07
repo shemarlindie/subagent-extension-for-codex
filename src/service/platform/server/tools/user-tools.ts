@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  CHAT_EVENTS,
-  chatItems,
-} from "../../../../shared/tasks/conversation/chat.js";
+import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
@@ -102,7 +99,7 @@ export function userTools(
       }),
       run: (a) => {
         const t = c.store.get(a.task_id, owner);
-        const events = c.store.chatEvents(t.id, CHAT_EVENTS);
+        const events = c.store.chatEvents(t.id);
 
         return {
           items: chatItems(t, events).filter(

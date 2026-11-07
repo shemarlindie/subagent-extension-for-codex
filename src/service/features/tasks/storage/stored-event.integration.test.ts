@@ -42,6 +42,7 @@ test("decodes event rows without changing metadata or arbitrary JSON fields", (t
   const {
     original_response: _capture,
     response_ref: _id,
+    chat: _chat,
     ...row
   } = storedEvent(t);
 

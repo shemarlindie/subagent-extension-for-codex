@@ -7,7 +7,6 @@ import {
   lte,
   notExists,
   type SQL,
-  sql,
 } from "drizzle-orm";
 
 import type { Event } from "../../../../shared/events/types.js";
@@ -80,10 +79,7 @@ export class ParentSeenStore {
       .where(
         and(
           eq(tasks.owner, owner),
-          eq(
-            sql`json_extract(${tasks.body}, '$.conversation_id')`,
-            conversation,
-          ),
+          eq(tasks.conversation_id, conversation),
           isNull(taskArchive.task_id),
           inArray(events.type, PARENT_UPDATE_EVENTS),
           notExists(

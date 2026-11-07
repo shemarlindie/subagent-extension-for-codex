@@ -1,7 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
-import { and, desc, eq, gt, inArray, lt, lte, max, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  lt,
+  lte,
+  max,
+  sql,
+} from "drizzle-orm";
 
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import type {
@@ -9,11 +20,7 @@ import type {
   HasNoPayload,
 } from "../../../../shared/events/event-types.js";
 import type { Event } from "../../../../shared/events/types.js";
-import {
-  isUnread,
-  READ_EVENTS,
-  type ReadState,
-} from "../../../../shared/tasks/conversation/unread.js";
+import type { ReadState } from "../../../../shared/tasks/conversation/unread.js";
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
@@ -30,13 +37,19 @@ import { EventStorageMetrics } from "./event-storage-metrics.js";
 import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
-import { decodeEvent, decodeTask } from "./stored.js";
+import { decodeEvent } from "./stored.js";
+import {
+  latestEvents,
+  readStates,
+  readTasks,
+  type TaskFilters,
+  taskFilters,
+} from "./task-rows.js";
+
+const newest = desc(tasks.created_at);
 
 /** The 1,000-event page that event reads return at most. */
 const PAGE = 1000;
-
-const toTask = (row: { id: string; body: string }) =>
-  decodeTask(row.id, row.body);
 
 /**
  * Task and event persistence, and the bus that announces committed changes:
@@ -183,16 +196,37 @@ export class Store {
     return `${this.bootId}:${count}`;
   }
 
-  /** An owner's tasks, or every task without one, newest first. */
-  all(owner?: string): Task[] {
+  /**
+   * An owner's tasks, newest first, in a conversation or repository when
+   * given.
+   */
+  list(owner: string, filters: TaskFilters): Task[] {
     return this.reads.rows("task_list", () =>
-      this.orm
-        .select({ id: tasks.id, body: tasks.body })
-        .from(tasks)
-        .where(owner ? eq(tasks.owner, owner) : undefined)
-        .all()
-        .map(toTask)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      readTasks(this.orm, taskFilters(owner, filters), newest),
+    );
+  }
+
+  /** Every owner's tasks, newest first. */
+  all(): Task[] {
+    return readTasks(this.orm, undefined, newest);
+  }
+
+  /** An owner's newest task in a conversation. */
+  latestInConversation(owner: string, conversation: string): Task | undefined {
+    return readTasks(
+      this.orm,
+      taskFilters(owner, { conversation }),
+      newest,
+      1,
+    )[0];
+  }
+
+  /** Every owner's tasks with one of `statuses`, oldest first. */
+  withStatus(statuses: readonly Task["status"][]): Task[] {
+    return readTasks(
+      this.orm,
+      inArray(tasks.status, statuses),
+      asc(tasks.created_at),
     );
   }
 
@@ -205,13 +239,10 @@ export class Store {
 
   /** An owner's task, or undefined when it has none with this id. */
   find(id: string, owner: string): Task | undefined {
-    const row = this.orm
-      .select({ id: tasks.id, body: tasks.body })
-      .from(tasks)
-      .where(and(eq(tasks.id, id), eq(tasks.owner, owner)))
-      .get();
-
-    return row && toTask(row);
+    return readTasks(
+      this.orm,
+      and(eq(tasks.id, id), eq(tasks.owner, owner)),
+    )[0];
   }
 
   event<K extends EventType, D extends EventPayloadMap[K] = EventPayloadMap[K]>(
@@ -331,22 +362,12 @@ export class Store {
    * request they haven't read, and the newest event they had read.
    */
   readState(id: string): ReadState {
-    const mark = this.orm
-      .select({ through: taskRead.through, unread: taskRead.unread })
-      .from(taskRead)
-      .where(eq(taskRead.task_id, id))
-      .get();
+    return readStates(this.orm, eq(tasks.id, id)).get(id)!;
+  }
 
-    const latest = this.orm
-      .select({ id: max(events.id) })
-      .from(events)
-      .where(and(eq(events.task_id, id), inArray(events.type, READ_EVENTS)))
-      .get();
-
-    return {
-      unread: isUnread(latest?.id ?? 0, mark),
-      through: mark?.through ?? 0,
-    };
+  /** The read state of each of an owner's tasks matching `filters`, by id. */
+  readStates(owner: string, filters: TaskFilters): Map<string, ReadState> {
+    return readStates(this.orm, taskFilters(owner, filters));
   }
 
   /**
@@ -488,6 +509,11 @@ export class Store {
     return row && decodeEvent(row);
   }
 
+  /** The latest event of `type` in each of an owner's tasks matching `filters`. */
+  latestEvents(owner: string, type: string, filters: TaskFilters) {
+    return latestEvents(this.orm, taskFilters(owner, filters), type);
+  }
+
   /** Every event of the given types for a task, in order, with no page limit. */
   eventsOfTypes(id: string, types: string[]): Event[] {
     return this.orm
@@ -499,12 +525,14 @@ export class Store {
       .map(decodeEvent);
   }
 
-  /**
-   * The events Chat is built from: those of the given types, and context
-   * compactions, which Claude reports among its other system messages.
-   */
-  chatEvents(id: string, types: string[]): Event[] {
-    return this.reads.rows("chat", () => chatEvents(this.orm, id, types));
+  /** The events Chat shows, in order. */
+  chatEvents(id: string): Event[] {
+    return this.reads.rows("chat", () => chatEvents(this.orm, id));
+  }
+
+  /** A task's Chat events of `types`, in order, for its conversation. */
+  conversationEvents(id: string, types: readonly string[]): Event[] {
+    return chatEvents(this.orm, id, types);
   }
 
   close() {

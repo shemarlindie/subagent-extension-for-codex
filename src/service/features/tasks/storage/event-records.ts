@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { decodedEvent } from "../../../../shared/events/decode.js";
+import { isChatEvent } from "../../../../shared/tasks/conversation/chat.js";
 import { now } from "../../../../shared/time.js";
 import type { Database } from "../../../platform/database/database.js";
 import type { EventStorageMetrics } from "./event-storage-metrics.js";
@@ -67,6 +68,7 @@ export function insertEvent(
       data: stored.serialized,
       response_ref: stored.response?.id,
       original_response: stored.response?.body,
+      chat: isChatEvent(type, stored.data),
     })
     .returning({ id: events.id })
     .get();

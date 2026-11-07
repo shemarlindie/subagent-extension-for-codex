@@ -76,7 +76,7 @@ export async function pollMessages(
 function read(store: Store, owner: string, id: string, after: number) {
   const task = store.get(id, owner);
 
-  const events = store.eventsOfTypes(id, [
+  const events = store.conversationEvents(id, [
     ...MESSAGE_EVENTS,
     "task.turn_ended",
     "agent.input_required",

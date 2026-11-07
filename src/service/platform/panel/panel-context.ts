@@ -60,7 +60,7 @@ export async function resolvePanelContext(
       : (args.conversation_id ?? target?.conversation_id ?? null);
 
   const latest = conversationId
-    ? c.store.all(owner).find((t) => t.conversation_id === conversationId)
+    ? c.store.latestInConversation(owner, conversationId)
     : undefined;
 
   const source = target ?? latest;
@@ -137,17 +137,16 @@ export function openingTasks(
   conversationId?: string,
 ) {
   const archived = c.archive.times(owner);
+  const filters = { conversation: conversationId || undefined };
+  const reads = c.store.readStates(owner, filters);
 
-  return c.store
-    .all(owner)
-    .filter((t) => !conversationId || t.conversation_id === conversationId)
-    .map((t) => {
-      const archivedAt = archived.get(t.id);
+  return c.store.list(owner, filters).map((t) => {
+    const archivedAt = archived.get(t.id);
 
-      return {
-        ...t,
-        ...readFields(c.store.readState(t.id)),
-        ...(archivedAt ? { archived_at: archivedAt } : {}),
-      };
-    });
+    return {
+      ...t,
+      ...readFields(reads.get(t.id)),
+      ...(archivedAt ? { archived_at: archivedAt } : {}),
+    };
+  });
 }

@@ -22,6 +22,16 @@ export const CHAT_EVENTS = [
   "agent.input_required",
 ];
 
+/**
+ * Whether Chat shows an event: one of `CHAT_EVENTS`, or a context compaction,
+ * which Claude reports among its other activity. Stored events keep the answer
+ * in their `chat` column, so changing it needs a migration that updates them.
+ */
+export const isChatEvent = (type: string, data: Record<string, unknown>) =>
+  CHAT_EVENTS.includes(type) ||
+  (type === "claude.activity" &&
+    (data.subtype === "compact_boundary" || data.compact_result === "failed"));
+
 /** How a turn ended, for its outcome row. */
 export type TurnOutcome = {
   kind: "outcome";

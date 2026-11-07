@@ -199,7 +199,7 @@ Records exclude message text and repository paths.
 | `send_storage`          | Storing an accepted message                                                | `send_ref`                               |
 | `repository_validation` | Checking the approved repository for a follow-up send or a turn            | `send_ref` for a send                    |
 | `interrupt_shutdown`    | Stopping a running turn until its end is recorded                          |                                          |
-| `scheduler_scan`        | One scheduling pass                                                        | `task_count`, `scanned_count`            |
+| `scheduler_scan`        | One scheduling pass over queued and waiting tasks                          | `task_count`, `scanned_count`            |
 | `queue_wait`            | Waiting to start the next turn                                             | See [queue waits](#queue-waits)          |
 | `workspace_preparation` | Creating, recreating or reusing the workspace, including Git worktree work | `workspace_strategy`, `workspace_action` |
 | `session_selection`     | Choosing to resume or start a session, then marking the turn running       | `session`, `new_session_reason`          |

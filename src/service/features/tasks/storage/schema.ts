@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -7,12 +8,37 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-/** Tasks keep their state as a JSON body; `owner` scopes every lookup. */
-export const tasks = sqliteTable("tasks", {
-  id: text().primaryKey(),
-  owner: text().notNull(),
-  body: text().notNull(),
-});
+/** A virtual column holding a field of the task's JSON body. */
+const bodyField = (field: string) =>
+  text().generatedAlwaysAs(sql.raw(`json_extract(body, '$.${field}')`), {
+    mode: "virtual",
+  });
+
+/**
+ * Tasks keep their state as a JSON body; `owner` scopes every lookup. The
+ * body fields that task reads filter and sort on are indexed generated
+ * columns.
+ */
+export const tasks = sqliteTable(
+  "tasks",
+  {
+    id: text().primaryKey(),
+    owner: text().notNull(),
+    body: text().notNull(),
+    status: bodyField("status"),
+    created_at: bodyField("created_at"),
+    conversation_id: bodyField("conversation_id"),
+  },
+  (t) => [
+    index("tasks_owner_created").on(t.owner, t.created_at),
+    index("tasks_owner_conversation").on(
+      t.owner,
+      t.conversation_id,
+      t.created_at,
+    ),
+    index("tasks_status").on(t.status),
+  ],
+);
 
 export const events = sqliteTable(
   "events",
@@ -26,9 +52,13 @@ export const events = sqliteTable(
     data: text().notNull(),
     response_ref: text(),
     original_response: text(),
+    /** Whether Chat shows the event, as `isChatEvent` decides. */
+    chat: integer({ mode: "boolean" }).notNull().default(false),
   },
   (t) => [
     index("events_task").on(t.task_id, t.id),
+    index("events_task_type").on(t.task_id, t.type, t.id),
+    index("events_task_chat").on(t.task_id, t.chat, t.id),
     uniqueIndex("events_response").on(t.response_ref),
   ],
 );

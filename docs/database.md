@@ -24,15 +24,37 @@ before any feature reads it.
 - Query failures expose SQLite's underlying error. Keep SQL parameters and
   stored values out of API errors and logs.
 
+## Indexed reads
+
+Queries block the service's event loop while they run. Keep reads on request and
+scheduling paths indexed, so their cost grows with the rows a request needs.
+
+- When a query filters or sorts on a field of a JSON body, declare a virtual
+  generated column with `generatedAlwaysAs` and index it. `tasks` does this for
+  `status`, `created_at` and `conversation_id`. SQLite computes these columns
+  from the body, so writes need no change. A body that isn't valid JSON then
+  fails to write.
+- Check a new query's plan with `EXPLAIN QUERY PLAN`.
+  `store.integration.test.ts` asserts the plans of the task store's list and
+  typed event reads.
+- `PRAGMA optimize` runs at each open so the planner has statistics for new
+  indexes.
+
 ## Change a schema
 
-1. Edit the owning feature's Drizzle schema.
+1. Edit the owning feature's Drizzle schema, or add one and collect it in
+   `src/service/platform/database/schema.ts`.
 2. Run `npm run db:generate -- --name <change>` and review the SQL. SQLite
-   rebuilds a table for many column changes. For a data backfill, write a custom
-   migration with `npx drizzle-kit generate --custom --name <change>`.
-3. Run the focused database tests and the affected feature tests.
+   rebuilds a table for many column changes.
+3. Keep all of a change's schema edits in this one generated migration, whether
+   they change existing tables or add new ones, and plan it that way.
+4. Write any data change, such as a backfill, in one custom migration from
+   `npx drizzle-kit generate --custom --name <change>`. Keeping it out of the
+   generated SQL shows reviewers which SQL is hand-written. It runs after the
+   generated migration, in the same transaction.
+5. Run the focused database tests and the affected feature tests.
 
-Commit the new folder under `migrations/` with the change. Never edit a
+Commit the new folders under `migrations/` with the change. Never edit a
 committed migration.
 
 ## Migration application
