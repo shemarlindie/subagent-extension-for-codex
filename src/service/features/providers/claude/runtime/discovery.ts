@@ -24,6 +24,7 @@ import { claudeEnvironment } from "../configuration/execution-environment.js";
 import {
   policyBlocksMode,
   policySettings,
+  READ_TIMEOUT_MS,
   readSessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
@@ -286,11 +287,13 @@ export class ClaudeDiscovery {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     try {
+      // Claude Code answers only once its org policy fetch settles, so this
+      // waits as long as a task would.
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           abortController.abort();
           reject(new Error("Claude model discovery timed out"));
-        }, 10000);
+        }, READ_TIMEOUT_MS);
       });
 
       const models = await Promise.race([session.supportedModels(), timeout]);

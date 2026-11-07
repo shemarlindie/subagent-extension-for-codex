@@ -26,13 +26,17 @@ function discovery({
   policy,
   rejected = [],
   resolved = [],
+  modelsAfter = 0,
 }: {
   policy?: object;
   rejected?: string[];
   resolved?: object[];
+  /** How long Claude Code takes to answer, in milliseconds. */
+  modelsAfter?: number;
 }) {
   const launch = () => ({
-    supportedModels: async () => models,
+    supportedModels: () =>
+      new Promise((resolve) => setTimeout(() => resolve(models), modelsAfter)),
     setPermissionMode: async (mode: string) => {
       if (rejected.includes(mode)) throw new Error(REJECTIONS[mode]);
     },
@@ -67,6 +71,19 @@ const blockedValues = (
 
 test("no policy reports nothing, so nothing reads as allowed by an organization", async () => {
   assert.equal(await discovery({}).policy(), undefined);
+});
+
+test("discovery outlasts Claude Code's wait for a hung org policy fetch", async () => {
+  vi.useFakeTimers();
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const read = discovery({ modelsAfter: 30_000 }).models();
+  await vi.advanceTimersByTimeAsync(30_000);
+
+  assert.deepEqual(await read, models);
 });
 
 test("modes the session rejects are blocked, naming the organization when its policy did it", async () => {
