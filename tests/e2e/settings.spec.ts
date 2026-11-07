@@ -759,3 +759,38 @@ test("clearing settings search restores browsing position and expanded drafts", 
     expect(bounds.tabsTop).toBeGreaterThanOrEqual(bounds.searchBottom);
   }).toPass();
 });
+
+test.describe(() => {
+  // Without reduced motion, the prompt takes focus once its expansion ends.
+  test.use({ reducedMotion: "no-preference" });
+
+  test("saving from the discard prompt closes it, and later edits leave freely", async ({
+    consolePage: page,
+  }) => {
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+    const prefix = page.getByRole("textbox", {
+      name: "Worktree branch prefix",
+      exact: true,
+    });
+
+    const leave = page
+      .getByRole("alert")
+      .filter({ hasText: "Discard unsaved changes?" });
+
+    await prefix.fill("saved/");
+    await page.getByRole("button", { name: "Tasks", exact: true }).click();
+
+    await expect(
+      leave.getByRole("button", { name: "Keep editing", exact: true }),
+    ).toBeFocused();
+
+    await page
+      .getByRole("button", { name: "Save 1 change", exact: true })
+      .click();
+
+    await expect(leave).toHaveCount(0);
+    await prefix.fill("unsaved/");
+    await expect(leave).toHaveCount(0);
+  });
+});
