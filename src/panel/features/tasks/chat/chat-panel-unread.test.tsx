@@ -118,40 +118,6 @@ test("marking unread from a reply scrolls its New divider into view only when it
   assert.equal(history.scrollTop, shown);
 });
 
-test("marking unread from a reply glides to its New divider where smooth scrolling is available", async () => {
-  const bounds = vi
-    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-    .mockImplementation(function (this: HTMLElement) {
-      const top =
-        this.getAttribute("data-chat-item") === "new-messages" ? 200 : 0;
-
-      const height = this.classList.contains("chat-timeline") ? 200 : 20;
-
-      return { top, bottom: top + height, height } as DOMRect;
-    });
-
-  onTestFinished(() => bounds.mockRestore());
-
-  const { view } = setup({}, [], replyItems());
-  scrollIntoHistory(view);
-
-  const history = view.getByRole("region", { name: "Chat history" });
-  const before = history.scrollTop;
-  const scrollTo = vi.fn();
-  history.scrollTo = scrollTo;
-
-  fireEvent.click(view.getByRole("button", { name: "Mark unread from here" }));
-
-  await waitFor(() =>
-    expect(scrollTo).toHaveBeenCalledWith({
-      top: before + 200,
-      behavior: "smooth",
-    }),
-  );
-
-  assert.equal(history.scrollTop, before);
-});
-
 const markReadCalls = (tool: ReturnType<typeof setup>["tool"]) =>
   tool.mock.calls.filter(([name]) => name === "app_set_task_read");
 

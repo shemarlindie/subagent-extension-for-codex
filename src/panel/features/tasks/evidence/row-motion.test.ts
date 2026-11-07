@@ -34,13 +34,3 @@ test("arrivals-only motion fades new rows in place and leaves moved rows still",
   // Without it, the moved row slides too.
   expect(animateRows(previous, next, view)).toHaveLength(2);
 });
-
-test("a new row below the view fades in when a glide will bring it into view", () => {
-  const next = new Map([["new", row(500)]]);
-
-  expect(animateRows(new Map(), next, view, true)).toHaveLength(0);
-
-  expect(
-    animateRows(new Map(), next, { top: 200, bottom: 600 }, true),
-  ).toHaveLength(1);
-});

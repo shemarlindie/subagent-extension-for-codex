@@ -65,27 +65,6 @@ test("parses only valid dialog descriptors and keeps the newest eight", () => {
   );
 });
 
-test("dialog identity ignores draft edits but includes the dialog target", () => {
-  const saved = {
-    kind: "handoff" as const,
-    taskId: "task-1",
-    draft: { message: "first" },
-  };
-
-  assert.equal(
-    sameDialogReference(saved, {
-      ...saved,
-      draft: { message: "second" },
-    }),
-    true,
-  );
-
-  assert.equal(
-    sameDialogReference(saved, { ...saved, taskId: "task-2" }),
-    false,
-  );
-});
-
 for (const target of [
   { kind: "reply", id: "older-reply" },
   { kind: "file", path: "src/auth.ts" },

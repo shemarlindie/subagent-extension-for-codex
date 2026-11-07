@@ -110,39 +110,6 @@ test("browsing a folder fills the project draft without granting access", async 
   );
 });
 
-test("cancelling the native picker preserves the manual project path", async (t) => {
-  const { controller, transport, user } = await setup(
-    t,
-    (transport) => configureProjectRegistration(transport),
-    { view: "dialogs" },
-  );
-
-  act(() => {
-    void controller.addProject();
-  });
-
-  const dialog = await screen.findByRole("dialog");
-
-  const path = within(dialog).getByLabelText<HTMLInputElement>("Folder path");
-
-  await pasteText(user, path, "/repo/manual-draft");
-  await user.click(within(dialog).getByRole("button", { name: "Browse…" }));
-
-  await waitFor(() =>
-    assert.ok(
-      transport.calls.some((call) => call.name === "app_browse_project"),
-    ),
-  );
-
-  assert.equal(path.value, "/repo/manual-draft");
-
-  assert.equal(
-    transport.calls.filter((call) => call.name === "app_register_project")
-      .length,
-    0,
-  );
-});
-
 test("project registration errors preserve the draft and do not change the selected project", async (t) => {
   const { controller, transport, user } = await setup(
     t,

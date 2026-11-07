@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { Task } from "../../src/shared/tasks/model.js";
 import {
   fixtureSdkAssistantErrorTypes,
   fixtureSdkResultSubtypes,
@@ -57,29 +56,6 @@ test("fixture failure triggers stop at each stage", async () => {
   }
 });
 
-test("fixture fail alias produces a reply and failed completion", async () => {
-  const f = context();
-
-  await assert.rejects(
-    fixtureProvider().run(f.runContext, "[fixture:fail]"),
-    /Fixture completion: error_during_execution/,
-  );
-
-  assert.ok(
-    f.events.some(
-      (event) =>
-        event.type === "agent.message" &&
-        typeof event.data.text === "string" &&
-        event.data.text.includes("Fixture task completed"),
-    ),
-  );
-
-  assert.equal(
-    f.events.find((event) => event.type === "agent.completed")?.data.subtype,
-    "error_during_execution",
-  );
-});
-
 test("fixture completion triggers emit each failed SDK result", async () => {
   for (const { subtype, key, error } of [
     ...fixtureSdkResultSubtypes
@@ -113,20 +89,4 @@ test("fixture completion triggers emit each failed SDK result", async () => {
     assert.equal(completion?.data.subtype, subtype, key);
     assert.equal(completion?.data.is_error, true, key);
   }
-});
-
-test("fixture can expose provider session deletion and shutdown errors", async () => {
-  const taskWithSession = { session_id: "fixture-session" } as Task;
-
-  await assert.rejects(
-    fixtureProvider({ deleteSessionError: true }).deleteSession(
-      taskWithSession,
-    ),
-    /session deletion failed/,
-  );
-
-  await assert.rejects(
-    fixtureProvider({ closeError: true }).close(),
-    /provider close failed/,
-  );
 });

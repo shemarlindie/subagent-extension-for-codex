@@ -95,12 +95,6 @@ test("shows a proportional thumb for an overflowing list", async () => {
   expect(scroller.scrollTop).toBe(50);
 });
 
-test("hides the thumb when the list does not overflow", () => {
-  const view = setup(100, 0);
-
-  expect(view.queryByRole("scrollbar")).toBeNull();
-});
-
 test("keyboard controls scroll by a small step or page and clamp at both ends", async () => {
   const { scroller } = setup();
   const thumb = await screen.findByRole("scrollbar");

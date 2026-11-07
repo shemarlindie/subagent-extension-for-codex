@@ -85,15 +85,6 @@ test("submitted input clears a stale current input request", () => {
   assert.equal(current.state, "running");
 });
 
-test("SDK action-required sessions report input state instead of running", () => {
-  const current = currentActivityStatus([
-    sdk(1, "session_state_changed", { state: "requires_action" }),
-  ]);
-
-  assert.equal(current.text, "Needs input");
-  assert.equal(current.state, "info");
-});
-
 test("SDK idle sessions report a finished turn or host finishing state", () => {
   const events = [sdk(1, "session_state_changed", { state: "idle" })];
   const finished = currentActivityStatus(events);

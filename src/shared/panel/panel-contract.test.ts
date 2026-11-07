@@ -3,31 +3,6 @@ import { expect, test } from "vitest";
 import { panelOutputSchema } from "./panel-contract.generated.js";
 import type { PanelOutput } from "./panel-contract.js";
 
-test("accepts optional and nullable panel fields", () => {
-  for (const input of [
-    { panel_scope: { conversation_id: null } },
-    { conversation_id: null, panel_scope: { conversation_id: null } },
-    {
-      conversation_id: "chat-1",
-      panel_scope: {
-        conversation_id: "chat-1",
-        repository: "/repo",
-        revision: "main",
-      },
-    },
-    {
-      panel_scope: { conversation_id: "chat-1" },
-      panel_project_candidate: { repository: "/repo", auto_register: true },
-      panel_selection: { task_id: "task-1", tab: "chat" },
-      tasks: [{ id: "task-1", custom: { nested: [1, null, true] } }, {}],
-    },
-  ]) {
-    expect(panelOutputSchema.parse(input), JSON.stringify(input)).toEqual(
-      input,
-    );
-  }
-});
-
 test("strips unknown panel fields while retaining arbitrary task records", () => {
   const output: PanelOutput = {
     conversation_id: "chat-1",

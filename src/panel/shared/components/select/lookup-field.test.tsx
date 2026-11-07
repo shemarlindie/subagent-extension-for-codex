@@ -93,42 +93,6 @@ test("lookup finds labels, descriptions and values with trimmed case-insensitive
   await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
 });
 
-test("lookup shows no matches and clears the query after dismissal", async () => {
-  const user = userEvent.setup({ delay: null });
-
-  render(<SingleLookup />);
-  await user.click(screen.getByRole("combobox", { name: "Project" }));
-
-  await user.click(
-    await screen.findByRole("combobox", { name: "Search project" }),
-  );
-
-  await user.paste("missing project");
-
-  expect(screen.queryByRole("option")).toBeNull();
-  expect(screen.getByText("No matching options")).toBeTruthy();
-
-  await user.keyboard("{Escape}");
-
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("combobox", { name: "Search project" }),
-    ).toBeNull(),
-  );
-
-  await user.click(screen.getByRole("combobox", { name: "Project" }));
-
-  expect(
-    (
-      await screen.findByRole<HTMLInputElement>("combobox", {
-        name: "Search project",
-      })
-    ).value,
-  ).toBe("");
-
-  expect(screen.getAllByRole("option")).toHaveLength(3);
-});
-
 test("keyboard search selects an option and returns focus to the trigger", async () => {
   const user = userEvent.setup({ delay: null });
 

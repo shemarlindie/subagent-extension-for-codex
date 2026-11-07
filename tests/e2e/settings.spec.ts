@@ -39,6 +39,11 @@ test("settings reject invalid values, reset sections and confirm discarding edit
   await workspace.click();
   await page.getByRole("option", { name: "Isolated worktree" }).click();
 
+  // The section's tab counts its unsaved edits.
+  await expect(page.getByRole("tab", { name: /^Task defaults/ })).toContainText(
+    "2 changed",
+  );
+
   await page
     .getByRole("button", { name: "Save 2 changes", exact: true })
     .click();
@@ -69,10 +74,14 @@ test("settings reject invalid values, reset sections and confirm discarding edit
     .getByRole("alert")
     .filter({ hasText: "Discard unsaved changes?" });
 
-  await leave
-    .getByRole("button", { name: "Keep editing", exact: true })
-    .click();
+  const keepEditing = leave.getByRole("button", {
+    name: "Keep editing",
+    exact: true,
+  });
 
+  await expect(keepEditing).toBeFocused();
+  await keepEditing.click();
+  await expect(leave).toHaveCount(0);
   await expect(prefix).toHaveValue("draft/");
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await leave.getByRole("button", { name: "Discard", exact: true }).click();

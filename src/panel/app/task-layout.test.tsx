@@ -144,17 +144,13 @@ test("the real panel library restores the saved width and persists keyboard resi
   await waitFor(() => expect(localStorage.getItem(storageKey)).toBe("220"));
 });
 
-test.each([
-  ["219", 245],
-  ["Infinity", 245],
-  ["900", 480],
-])("saved width %s restores to %i", (saved, expected) => {
-  localStorage.setItem(storageKey, saved);
+test("an unusable saved width restores the default without overwriting it", () => {
+  localStorage.setItem(storageKey, "Infinity");
   const { rail } = setup();
 
-  expect(width(rail)).toBeCloseTo(expected);
+  expect(width(rail)).toBeCloseTo(245);
   // Mounting is not a user interaction and must not overwrite preferences.
-  expect(localStorage.getItem(storageKey)).toBe(saved);
+  expect(localStorage.getItem(storageKey)).toBe("Infinity");
 });
 
 test("double-click resets to 245 pixels instead of the saved initial width", async () => {

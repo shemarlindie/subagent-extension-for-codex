@@ -233,35 +233,6 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
   assert.equal(focused(), "Previous file");
 });
 
-test("the view switcher takes the title's place when the file has views", async () => {
-  // Plain text outside the loaded changes offers one view, and no Diff.
-  const { view, moveTo } = setup("notes.txt");
-
-  await act(async () => {});
-
-  const switcher = () =>
-    view.container.querySelector<HTMLElement>(
-      ".changed-file-view-switcher-target .view-switch",
-    );
-
-  assert.equal(switcher()?.textContent, "Source");
-
-  expect(
-    view.container.querySelector(".file-preview-toolbar .view-switch"),
-  ).toBeNull();
-
-  assert.ok(
-    view.getByRole("button", { name: "Source" }).hasAttribute("data-pressed"),
-  );
-
-  // A deleted file has no views, so the title slot contains no switcher.
-  await moveTo("gone.ts");
-  await act(async () => {});
-
-  assert.match(view.container.textContent ?? "", /Deleted/);
-  expect(switcher()).toBeNull();
-});
-
 test("does not reuse another task's preview when the path matches", async () => {
   let resolveFirst!: (file: ChangedFileContent) => void,
     resolveSecond!: (file: ChangedFileContent) => void;

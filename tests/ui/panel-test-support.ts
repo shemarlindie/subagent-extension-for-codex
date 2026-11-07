@@ -643,7 +643,6 @@ export const scope = (
   path: string,
   label: string,
   options?: { value: string; label: string; description?: string }[],
-  unsupported = false,
 ) => ({
   id: path.split(".").at(-1)!,
   label,
@@ -652,7 +651,7 @@ export const scope = (
     path: `${path}.reasoning_effort`,
     label: `${label} effort`,
     options: effortOptions,
-    unsupported,
+    unsupported: false,
   },
 });
 
@@ -672,7 +671,6 @@ export {
   screen,
   SKIPPED_ANSWER,
   test,
-  userEvent,
   vi,
   waitFor,
   within,

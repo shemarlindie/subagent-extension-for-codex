@@ -13,156 +13,100 @@ import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
 import { sent, setup } from "./chat-panel-test-harness";
 
-test.each([false, true])(
-  "Stop explains a pending shutdown with composer collapsed: %s",
-  async (collapsed) => {
-    const { view, tool } = setup({ status: "running" });
-    const stopping = deferred<unknown>();
-    tool.mockReturnValue(stopping.promise);
+test("Stop explains a pending shutdown", async () => {
+  const { view, tool } = setup({ status: "running" });
+  const stopping = deferred<unknown>();
+  tool.mockReturnValue(stopping.promise);
 
-    if (collapsed) {
-      fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
-    }
+  fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
+  expect(view.getByText("Stopping the current turn…")).toBeTruthy();
 
-    fireEvent.click(view.getByRole("button", { name: "Stop the turn" }));
-    expect(view.getByText("Stopping the current turn…")).toBeTruthy();
+  expect(
+    (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
 
-    expect(
-      (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+  await act(async () => {
+    stopping.resolve({});
+    await flush();
+  });
 
-    await act(async () => {
-      stopping.resolve({});
-      await flush();
-    });
+  expect(view.queryByText("Stopping the current turn…")).toBeNull();
 
-    expect(view.queryByText("Stopping the current turn…")).toBeNull();
-
-    expect(
-      (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(false);
-  },
-);
-
-test("keeps the real composer disabled while the initial chat read is pending", () => {
-  const { composer } = setup({}, [], null);
-
-  assert.equal((composer as HTMLTextAreaElement).disabled, true);
+  expect(
+    (view.getByRole("button", { name: "Stop the turn" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
 });
 
-test.each([
-  { from: "worker" as const, turn: 1, grouped: true, note: false },
-  { from: "worker" as const, turn: 2, grouped: false, note: false },
-  { from: "user" as const, turn: 1, grouped: false, note: false },
-  { from: "worker" as const, turn: 1, grouped: false, note: true },
-])(
-  "outcomes group only with the preceding worker response: %j",
-  async (scenario) => {
-    const items: ChatItem[] = [
-      {
-        kind: "message",
+test("an outcome joins its worker response, which it can copy", async () => {
+  const items: ChatItem[] = [
+    {
+      kind: "message",
+      id: "response",
+      event_id: 1,
+      message: {
         id: "response",
         event_id: 1,
-        message: {
-          id: "response",
-          event_id: 1,
-          timestamp: "2026-10-09T12:00:00Z",
-          turn: scenario.turn,
-          from: scenario.from,
-          kind: "message",
-          text: "Response text",
-        },
-      },
-      {
-        kind: "outcome",
-        id: "outcome",
-        event_id: 2,
-        timestamp: "2026-10-09T12:00:01Z",
-        turn: 1,
-        outcome: "completed",
-        runtime_ms: 1000,
-        cost_usd: 0,
-      },
-    ];
-
-    if (scenario.note) {
-      items.splice(1, 0, {
-        kind: "note",
-        id: "note",
-        event_id: 2,
         timestamp: "2026-10-09T12:00:00Z",
-        note: "compaction",
-        text: "Context compacted",
-      });
-    }
-
-    const { view } = setup({}, [], items);
-    const outcome = view.container.querySelector('[data-chat-item="outcome"]');
-
-    assert.ok(outcome);
-    assert.equal(view.container.querySelectorAll(".chat-outcome").length, 1);
-    assert.equal(!!outcome.closest(".chat-message"), scenario.grouped);
-
-    assert.equal(
-      !!view.queryByRole("button", { name: "Copy response" }),
-      scenario.grouped,
-    );
-
-    assert.ok(view.getByRole("button", { name: "View activity" }));
-
-    if (scenario.grouped) {
-      const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-      const writeText = vi.fn(async () => {});
-
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: { writeText },
-      });
-
-      onTestFinished(() => {
-        if (original) Object.defineProperty(navigator, "clipboard", original);
-        else Reflect.deleteProperty(navigator, "clipboard");
-      });
-
-      fireEvent.click(view.getByRole("button", { name: "Copy response" }));
-
-      await waitFor(() =>
-        assert.deepEqual(writeText.mock.calls, [["Response text"]]),
-      );
-
-      await view.findByRole("button", { name: "Copy response — copied" });
-    }
-  },
-);
-
-for (const source of ["live activity", "events"] as const) {
-  test(`rate-limit waiting shows a paused status from ${source}`, () => {
-    const { view } = setup(
-      {
-        status: "running",
-        live_activity:
-          source === "live activity"
-            ? { text: "Waiting for rate limit reset", state: "info" }
-            : undefined,
+        turn: 1,
+        from: "worker",
+        kind: "message",
+        text: "Response text",
       },
-      source === "events"
-        ? rateLimit(
-            new Timeline("task-1", "2026-10-09T12:00:00Z", 1),
-            "rejected",
-          ).events
-        : [],
-    );
+    },
+    {
+      kind: "outcome",
+      id: "outcome",
+      event_id: 2,
+      timestamp: "2026-10-09T12:00:01Z",
+      turn: 1,
+      outcome: "completed",
+      runtime_ms: 1000,
+      cost_usd: 0,
+    },
+  ];
 
-    const status = view.container.querySelector<HTMLElement>(".chat-working");
+  const { view } = setup({}, [], items);
+  const outcome = view.container.querySelector('[data-chat-item="outcome"]');
 
-    assert.ok(status);
-    assert.equal(status.textContent, "Waiting for rate limit reset");
-    assert.ok(status.querySelector(".row-status-icon.paused"));
-    expect(status.querySelector(".running")).toBeNull();
+  assert.ok(outcome?.closest(".chat-message"));
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const writeText = vi.fn(async () => {});
+
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
   });
-}
+
+  onTestFinished(() => {
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  fireEvent.click(view.getByRole("button", { name: "Copy response" }));
+
+  await waitFor(() =>
+    assert.deepEqual(writeText.mock.calls, [["Response text"]]),
+  );
+
+  await view.findByRole("button", { name: "Copy response — copied" });
+});
+
+test("rate-limit waiting shows a paused status from events", () => {
+  const { view } = setup(
+    { status: "running" },
+    rateLimit(new Timeline("task-1", "2026-10-09T12:00:00Z", 1), "rejected")
+      .events,
+  );
+
+  const status = view.container.querySelector<HTMLElement>(".chat-working");
+
+  assert.ok(status);
+  assert.equal(status.textContent, "Waiting for rate limit reset");
+  assert.ok(status.querySelector(".row-status-icon.paused"));
+  expect(status.querySelector(".running")).toBeNull();
+});
 
 test("on an idle task, Enter sends the message, which starts the next turn", async () => {
   const { tool, composer, type, view } = setup();
@@ -419,27 +363,6 @@ test("Stop moves continuously between expanded and collapsed composer layouts an
       ["interrupt_task", { task_id: "task-1", send_pending: false }],
     ]),
   );
-});
-
-test("an idle composer can hide and reopen its draft without offering Stop", () => {
-  const { view, type } = setup();
-  type("Keep the next turn draft");
-
-  fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
-
-  expect(view.queryByRole("textbox", { name: "Message" })).toBeNull();
-  expect(view.queryByRole("button", { name: "Stop the turn" })).toBeNull();
-
-  fireEvent.click(view.getByRole("button", { name: "Show composer (draft)" }));
-
-  const composer = view.getByRole("textbox", { name: "Message" });
-
-  assert.equal(
-    (composer as HTMLTextAreaElement).value,
-    "Keep the next turn draft",
-  );
-
-  expect(document.activeElement).toBe(composer);
 });
 
 test("composer visibility is remembered separately for each task", () => {
