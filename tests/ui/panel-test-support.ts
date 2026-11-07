@@ -671,7 +671,6 @@ export {
   screen,
   SKIPPED_ANSWER,
   test,
-  userEvent,
   vi,
   waitFor,
   within,
