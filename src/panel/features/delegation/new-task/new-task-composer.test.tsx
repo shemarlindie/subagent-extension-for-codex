@@ -139,14 +139,47 @@ test("an excluded model saved for the provider reads as the default", async () =
   assert.ok(await view.findByRole("button", { name: /^Edit Default model/ }));
 });
 
+test("a draft's blocked mode shows and sends as the fallback", async () => {
+  const { view, user, start } = setup(
+    ready,
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [
+              {
+                value: "auto",
+                reason: "Turned off by your organization",
+              },
+            ],
+            notes: [],
+          },
+        },
+      ],
+    },
+    { permission_mode: "auto" },
+  );
+
+  assert.ok(await view.findByRole("button", { name: /^Edit .*Ask/ }));
+  await user.click(view.getByRole("textbox"));
+  await user.paste("Do it");
+  await user.keyboard("{Enter}");
+
+  await waitFor(() =>
+    assert.equal(start.mock.calls[0]?.[0].permission_mode, "default"),
+  );
+});
+
 test("the profile's settings collapse into a summary that expands for editing", async () => {
   const { view, user } = setup();
 
   expect(view.queryByRole("combobox", { name: /^Model/ })).toBeNull();
 
-  const toggle = view.getByRole("button", {
-    name: "Edit Default model · Default",
-  });
+  const toggle = view.getByRole("button", { name: /^Edit .* · Accept edits$/ });
 
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   await user.click(toggle);
@@ -158,7 +191,11 @@ test("the profile's settings collapse into a summary that expands for editing", 
   for (const id of controls) expect(document.getElementById(id)).not.toBeNull();
   assert.ok(view.getByRole("combobox", { name: /^Model: / }));
   assert.ok(view.getByRole("combobox", { name: "Reasoning: Default" }));
-  expect(view.queryByRole("combobox", { name: /^Permission mode/ })).toBeNull();
+
+  assert.ok(
+    view.getByRole("combobox", { name: "Permission mode: Accept edits" }),
+  );
+
   await user.click(view.getByRole("button", { name: "Hide profile settings" }));
 
   expect(view.queryByRole("combobox", { name: /^Model/ })).toBeNull();
@@ -211,11 +248,30 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
-test("a read-only profile starts in plan mode", async () => {
+test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
   const { view, user, start } = setup();
 
   await user.click(view.getByRole("combobox", { name: "Profile: General" }));
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
+
+  assert.ok(view.getByRole("button", { name: /· Plan$/ }));
+  await user.click(view.getByRole("button", { name: /^Edit / }));
+
+  await user.click(
+    await view.findByRole("combobox", { name: "Permission mode: Plan" }),
+  );
+
+  await user.click(
+    await view.findByRole("option", { name: "Default — ask for approval" }),
+  );
+
+  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
+
+  await user.click(
+    await view.findByRole("option", { name: "Security reviewer" }),
+  );
+
+  assert.ok(view.getByRole("combobox", { name: "Permission mode: Plan" }));
 
   await user.type(
     view.getByRole("textbox", { name: "Task message" }),
@@ -224,29 +280,6 @@ test("a read-only profile starts in plan mode", async () => {
 
   await waitFor(() =>
     assert.equal(start.mock.calls[0]?.[0].permission_mode, "plan"),
-  );
-});
-
-test("a draft's plan mode from a read-only profile gives way to a write profile's saved mode", async () => {
-  const { view, user, start } = setup(
-    ready,
-    {},
-    {
-      worker: "claude:reviewer",
-      permission_mode: "plan",
-    },
-  );
-
-  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
-  await user.click(await view.findByRole("option", { name: "General" }));
-
-  await user.type(
-    view.getByRole("textbox", { name: "Task message" }),
-    "Ship it{Enter}",
-  );
-
-  await waitFor(() =>
-    assert.equal(start.mock.calls[0]?.[0].permission_mode, "acceptEdits"),
   );
 });
 

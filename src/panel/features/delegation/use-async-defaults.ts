@@ -31,30 +31,38 @@ export function useAsyncDefaults(
 }
 
 /**
- * Keeps an untouched permission mode on the selected profile's default: plan
- * mode for a read-only profile, the saved mode for others. Runs after
- * `useAsyncDefaults`, which fills in the saved mode.
+ * Keeps the permission mode on the selected profile's default: plan mode for a
+ * read-only profile, the saved mode for others. Switching profiles resets a
+ * chosen mode, as it resets model and reasoning. Otherwise a chosen or drafted
+ * mode stays. Runs after `useAsyncDefaults`, which fills in the saved mode.
  */
 export function useProfileMode(
   form: UseFormReturn<DelegateValues>,
   savedMode: string,
   saved: Partial<DelegateValues>,
 ) {
-  const worker = useWatch({ control: form.control, name: "worker" });
+  const worker = useWatch({ control: form.control, name: "worker" }),
+    previousWorker = useRef(worker);
 
   const mode = readOnlyProfile(workerChoice(worker).profile ?? "")
     ? "plan"
     : savedMode;
 
   useEffect(() => {
+    // A blank worker is a placeholder until settings load, not a profile.
+    const switched =
+      previousWorker.current !== "" && previousWorker.current !== worker;
+
+    previousWorker.current = worker;
+
     const field = form.getFieldState("permission_mode");
 
-    // Drafts record what this sets too, so a saved default isn't a choice.
+    // Drafts record what this sets too, so the saved mode isn't a choice.
     const chosen =
       saved.permission_mode !== undefined &&
-      !["plan", savedMode].includes(saved.permission_mode);
+      saved.permission_mode !== savedMode;
 
-    if (chosen || field.isDirty || field.isTouched) return;
+    if (!switched && (chosen || field.isDirty || field.isTouched)) return;
 
     if (form.getValues("permission_mode") !== mode) {
       form.setValue("permission_mode", mode, { shouldDirty: false });

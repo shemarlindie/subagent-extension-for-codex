@@ -244,7 +244,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
     "Plan — read only",
   );
 
-  // An untouched mode follows the profile: a write profile takes the saved one.
+  // Switching profiles resets the mode: a write profile takes the saved one.
   await selectOption(user, "Worker", "claude · general");
 
   assert.equal(
