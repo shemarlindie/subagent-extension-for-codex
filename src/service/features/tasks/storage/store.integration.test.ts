@@ -696,6 +696,17 @@ test("task and typed event reads search indexes instead of scanning tasks or eve
       [/tasks_status/],
     ],
     ["chatEvents", () => store.chatEvents(task.id), [/events_task_chat/]],
+    [
+      "readStates",
+      () => store.readStates(task.owner, {}),
+      [/tasks_owner_/, /events_task_type/],
+    ],
+    [
+      "latestEvents",
+      () =>
+        store.latestEvents(task.owner, "agent.reply", { conversation: "c" }),
+      [/tasks_owner_conversation/, /events_task_type/],
+    ],
   ];
 
   for (const [name, read, indexes] of reads) {

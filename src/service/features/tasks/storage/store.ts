@@ -20,11 +20,7 @@ import type {
   HasNoPayload,
 } from "../../../../shared/events/event-types.js";
 import type { Event } from "../../../../shared/events/types.js";
-import {
-  isUnread,
-  READ_EVENTS,
-  type ReadState,
-} from "../../../../shared/tasks/conversation/unread.js";
+import type { ReadState } from "../../../../shared/tasks/conversation/unread.js";
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
@@ -42,7 +38,13 @@ import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
 import { decodeEvent } from "./stored.js";
-import { readTasks, type TaskFilters, taskFilters } from "./task-rows.js";
+import {
+  latestEvents,
+  readStates,
+  readTasks,
+  type TaskFilters,
+  taskFilters,
+} from "./task-rows.js";
 
 const newest = desc(tasks.created_at);
 
@@ -360,22 +362,12 @@ export class Store {
    * request they haven't read, and the newest event they had read.
    */
   readState(id: string): ReadState {
-    const mark = this.orm
-      .select({ through: taskRead.through, unread: taskRead.unread })
-      .from(taskRead)
-      .where(eq(taskRead.task_id, id))
-      .get();
+    return readStates(this.orm, eq(tasks.id, id)).get(id)!;
+  }
 
-    const latest = this.orm
-      .select({ id: max(events.id) })
-      .from(events)
-      .where(and(eq(events.task_id, id), inArray(events.type, READ_EVENTS)))
-      .get();
-
-    return {
-      unread: isUnread(latest?.id ?? 0, mark),
-      through: mark?.through ?? 0,
-    };
+  /** The read state of each of an owner's tasks matching `filters`, by id. */
+  readStates(owner: string, filters: TaskFilters): Map<string, ReadState> {
+    return readStates(this.orm, taskFilters(owner, filters));
   }
 
   /**
@@ -515,6 +507,11 @@ export class Store {
       .get();
 
     return row && decodeEvent(row);
+  }
+
+  /** The latest event of `type` in each of an owner's tasks matching `filters`. */
+  latestEvents(owner: string, type: string, filters: TaskFilters) {
+    return latestEvents(this.orm, taskFilters(owner, filters), type);
   }
 
   /** Every event of the given types for a task, in order, with no page limit. */

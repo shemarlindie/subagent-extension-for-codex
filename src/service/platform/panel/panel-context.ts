@@ -137,16 +137,16 @@ export function openingTasks(
   conversationId?: string,
 ) {
   const archived = c.archive.times(owner);
+  const filters = { conversation: conversationId || undefined };
+  const reads = c.store.readStates(owner, filters);
 
-  return c.store
-    .list(owner, { conversation: conversationId || undefined })
-    .map((t) => {
-      const archivedAt = archived.get(t.id);
+  return c.store.list(owner, filters).map((t) => {
+    const archivedAt = archived.get(t.id);
 
-      return {
-        ...t,
-        ...readFields(c.store.readState(t.id)),
-        ...(archivedAt ? { archived_at: archivedAt } : {}),
-      };
-    });
+    return {
+      ...t,
+      ...readFields(reads.get(t.id)),
+      ...(archivedAt ? { archived_at: archivedAt } : {}),
+    };
+  });
 }

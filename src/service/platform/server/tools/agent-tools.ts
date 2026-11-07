@@ -139,18 +139,23 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       run: (a) => {
         const archived = c.archive.times(owner);
 
+        const filters = {
+          conversation: a.conversation_id || undefined,
+          repository: a.repository || undefined,
+        };
+
+        const replies = c.store.latestEvents(owner, "agent.reply", filters);
+        const reads = c.store.readStates(owner, filters);
+
         return c.store
-          .list(owner, {
-            conversation: a.conversation_id || undefined,
-            repository: a.repository || undefined,
-          })
+          .list(owner, filters)
           .map((t) =>
             listedTask(
               t,
               t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
-              c.store.latestEvent(t.id, "agent.reply"),
+              replies.get(t.id),
               c.drafts.get(t.id),
-              c.store.readState(t.id),
+              reads.get(t.id),
               archived.get(t.id),
             ),
           );

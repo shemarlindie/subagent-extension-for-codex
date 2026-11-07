@@ -140,3 +140,42 @@ test("deleting a task deletes what the user saw of it", (t) => {
     [],
   );
 });
+
+test("list state gives each listed task its own read state and latest reply", (t) => {
+  const { store, task } = fixture(t);
+
+  const save = (id: string, owner: string, conversation_id: string) => {
+    const saved = { ...task, id, owner, conversation_id };
+    store.save(saved);
+
+    return saved;
+  };
+
+  const replied = save("replied", "alice", "one");
+  const first = store.event(replied, "agent.reply", { text: "One", turn: 1 });
+  store.event(replied, "agent.reply", { text: "Two", turn: 1 });
+  store.markRead(replied, first.id);
+  store.markUnread(save("marked", "alice", "two"));
+
+  store.event(save("other", "bob", "one"), "agent.reply", {
+    text: "Bob",
+    turn: 1,
+  });
+
+  const ids = ["read", "replied", "marked"];
+
+  assert.deepEqual(
+    store.readStates("alice", {}),
+    new Map(ids.map((id) => [id, store.readState(id)])),
+  );
+
+  assert.deepEqual(
+    [...store.readStates("alice", { conversation: "one" }).keys()],
+    ["replied"],
+  );
+
+  assert.deepEqual(
+    store.latestEvents("alice", "agent.reply", {}),
+    new Map([["replied", store.latestEvent("replied", "agent.reply")]]),
+  );
+});
