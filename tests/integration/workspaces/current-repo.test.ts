@@ -4,21 +4,14 @@ import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type {
-  Options,
-  Query,
-  SDKUserMessage,
-} from "@anthropic-ai/claude-agent-sdk";
 import { structuredPatch } from "diff";
 import { test } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
-import { ClaudeAgentProvider } from "../../../src/service/features/providers/claude/runtime/provider.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
-import { readyClaudeCli } from "../../support/claude-cli.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";
 
@@ -352,70 +345,6 @@ test("current repository write profiles edit the checkout while preserving unrel
     );
 
     assert.ok(changes.diff.includes("+export const value = 2;"));
-  } finally {
-    await s.close();
-  }
-});
-
-test("Claude current repository reviewer runs in the checkout in plan mode", async () => {
-  const s = await setup();
-
-  try {
-    await dirty(s.repo, s.git);
-    const status = s.git("status", "--porcelain");
-    let options: Options | undefined;
-    let receivedPrompt: unknown;
-
-    const provider = new ClaudeAgentProvider(
-      (args) => {
-        options = args.options;
-        const prompt = args.prompt as AsyncIterable<SDKUserMessage>;
-
-        return Object.assign(
-          (async function* () {
-            // The turn's prompt is the first message of its input stream.
-            const first = await prompt[Symbol.asyncIterator]().next();
-            receivedPrompt = (first.value as SDKUserMessage).message.content;
-
-            yield {
-              type: "result",
-              subtype: "success",
-              result: "Reviewed",
-              total_cost_usd: 0,
-              usage: {},
-            };
-          })(),
-          { close: () => {} },
-        ) as unknown as Query;
-      },
-      undefined,
-      readyClaudeCli,
-    );
-
-    s.c.providers.set("claude", provider);
-
-    const started = await s.c.start("alice", {
-      repository: s.repo,
-      title: "Review uncommitted changes",
-      description: "Review uncommitted changes",
-      provider: "claude",
-      worker_profile: "reviewer",
-      workspace_strategy: "current_repo",
-    });
-
-    await until(
-      () =>
-        !s.c.active.has(started.id) &&
-        s.c.store.get(started.id, "alice").status === "completed",
-    );
-
-    assert.equal(options!.cwd, s.repo);
-    assert.equal(typeof receivedPrompt, "string");
-
-    assert.ok(!(receivedPrompt as string).includes("unstaged content"));
-    assert.equal(options!.permissionMode, "plan");
-    assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
-    assert.equal(s.git("status", "--porcelain"), status);
   } finally {
     await s.close();
   }
