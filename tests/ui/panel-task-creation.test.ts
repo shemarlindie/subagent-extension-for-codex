@@ -231,7 +231,7 @@ test("project folder selection locks revision to HEAD and submits the checkout s
   assert.equal(call.args.repository, "/repo/a");
 });
 
-test("delegation starts a read-only profile in plan mode, keeps a chosen mode and separately selects the approval decision maker", async (t) => {
+test("delegation starts a read-only profile in plan mode, keeps a chosen mode and separately selects the approval decision maker and sandbox", async (t) => {
   const { user, transport } = await setupDelegate(t, (transport) =>
     writingWorker(transport, ["reviewer", "general"]),
   );
@@ -255,6 +255,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
   await selectOption(user, "Worker", "claude · reviewer");
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");
+  await selectOption(user, "Bash sandbox", "On");
   await enterTask(user, "Review authentication with parent approvals");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
@@ -270,6 +271,12 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
     (transport.calls.find((call) => call.name === "start_task")?.args as any)
       .provider_options.claude.permission_mode,
     "acceptEdits",
+  );
+
+  assert.equal(
+    (transport.calls.find((call) => call.name === "start_task")?.args as any)
+      .provider_options.claude.sandbox,
+    true,
   );
 });
 

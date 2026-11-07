@@ -5,11 +5,12 @@ import { test } from "vitest";
 import type { DelegateValues } from "./delegate-values";
 import { startTaskArguments } from "./start-task";
 
-test("a blocked mode submits as the fallback", () => {
+test("a blocked mode submits as the fallback, and the sandbox as a boolean", () => {
   const input = startTaskArguments(
     {
       permission_mode: "bypassPermissions",
       approval_decider: "user",
+      sandbox: "on",
       worker: "claude:implementer",
       model: "",
       context: "",
@@ -38,4 +39,5 @@ test("a blocked mode submits as the fallback", () => {
   );
 
   assert.equal(input.provider_options?.claude?.permission_mode, "default");
+  assert.equal(input.provider_options?.claude?.sandbox, true);
 });

@@ -14,7 +14,7 @@ type ProfileSettingsToggleProps = {
 };
 
 /**
- * Collapsed, previews the model, reasoning and permission the profile sets
+ * Collapsed, previews the model and reasoning the profile sets
  * and opens them for editing. Expanded, it shrinks to a caret that closes them.
  */
 export function ProfileSettingsToggle({

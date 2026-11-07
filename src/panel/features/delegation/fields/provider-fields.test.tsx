@@ -174,18 +174,23 @@ test("permission fields stay unresolved until worker metadata arrives", (t) => {
   assert.doesNotMatch(view.container.textContent ?? "", /Inherit|Parent agent/);
 });
 
-test("provider option defaults read the provider's permission setting and the shared decider", () => {
+test("provider option defaults read the provider's permission and sandbox settings and the shared decider", () => {
   const nativePermissions = {
     permissionOption: "mode",
     permissionSetting: "providers.new_built_in.mode",
     approvalDeciderOption: "decider",
+    sandbox: {
+      option: "sandbox",
+      setting: "providers.new_built_in.sandbox",
+      help: "Sandbox.",
+    },
     options: [{ value: "locked", label: "Locked" }],
     help: "Provider permissions.",
     approvalDecider: true,
   };
 
   const settings = {
-    providers: { new_built_in: { mode: "locked" } },
+    providers: { new_built_in: { mode: "locked", sandbox: true } },
     approvals: { decider: "parent_agent" },
   };
 
@@ -195,20 +200,29 @@ test("provider option defaults read the provider's permission setting and the sh
       { displayName: "New built-in", nativePermissions },
       settings,
     ),
-    { permission_mode: "locked", approval_decider: "parent_agent" },
+    {
+      permission_mode: "locked",
+      sandbox: "on",
+      approval_decider: "parent_agent",
+    },
   );
 
-  // Providers without approval delegation keep the user as decider.
+  // Providers without approval delegation keep the user as decider, and
+  // those without a sandbox leave it off.
   assert.deepEqual(
     providerOptionDefaults(
       "new-built-in",
       {
         displayName: "New built-in",
-        nativePermissions: { ...nativePermissions, approvalDecider: false },
+        nativePermissions: {
+          ...nativePermissions,
+          approvalDecider: false,
+          sandbox: undefined,
+        },
       },
       settings,
     ),
-    { permission_mode: "locked", approval_decider: "user" },
+    { permission_mode: "locked", sandbox: "off", approval_decider: "user" },
   );
 });
 

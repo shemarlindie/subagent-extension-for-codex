@@ -12,6 +12,7 @@ import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import type { DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
+import { SandboxField } from "./sandbox-field";
 
 interface ApprovalFieldProps {
   workers: Worker[];
@@ -99,6 +100,12 @@ export function ApprovalField({
           </p>
         </Field>
       </Presence>
+      <SandboxField
+        permissions={permissions}
+        unresolved={unresolved}
+        disabled={disabled}
+        loading={loading}
+      />
     </>
   );
 }

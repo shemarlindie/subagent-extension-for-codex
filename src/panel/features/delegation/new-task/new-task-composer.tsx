@@ -43,8 +43,8 @@ function readFailure(errors: NewTaskState["errors"]) {
 
 /**
  * Starts a task from a first message. Enter sends; the chips below the
- * message choose the project, profile, model, reasoning and permission
- * mode, and **More options** opens the Advanced task dialog with them.
+ * message choose the project, profile, model and reasoning, and **More
+ * options** opens the Advanced task dialog with them.
  */
 export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   const controller = useController(),
