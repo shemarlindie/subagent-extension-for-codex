@@ -22,6 +22,12 @@ and register the provider in `src/service/features/providers/config.ts`.
 success and throws on failure or interruption. Only successful turns record a
 reply.
 
+Throw `RunError(code, details?)` for a failure with a machine-readable code.
+Budget failures use `cost_budget_exhausted` or `runtime_budget_exhausted`. The
+task and its `task.failed` event retain `error_code` and any raw provider
+details in `error`. Clients map the code to display text. Failures without
+details save only the code.
+
 The task conversation layer builds the prompt. A new session receives the
 original request, workspace and dependency context, and bounded conversation
 history. A resumed session receives unsent messages and any workspace reminder.

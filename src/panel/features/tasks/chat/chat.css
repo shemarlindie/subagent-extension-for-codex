@@ -754,12 +754,12 @@ body[data-expanded-panel="true"]
   gap: 8px 12px;
 }
 .chat-budget-switch-control {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   color: var(--muted);
-  font-size: 11px;
   white-space: nowrap;
+}
+.chat-budget-switch-control .form-switch-label {
+  gap: 6px;
+  font-size: 11px;
 }
 .chat-budget-limit-input {
   display: flex;

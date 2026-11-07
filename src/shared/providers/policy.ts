@@ -42,24 +42,19 @@ export function modelAllowed(
   );
 }
 
-/** Why policy rules out a choice for a setting, if it does. */
+/** Why policy rules out a permission mode, if it does. */
 export const blockedReason = (
   policy: ProviderPolicy | undefined,
-  setting: ProviderPolicy["blocked"][number]["setting"],
-  value: string,
-) =>
-  policy?.blocked.find(
-    (item) => item.setting === setting && item.value === value,
-  )?.reason;
+  mode: string,
+) => policy?.blocked.find((item) => item.value === mode)?.reason;
 
-/** A setting's choices, with those policy rules out locked and explained. */
+/** Permission mode choices, with those policy rules out locked and explained. */
 export function withBlockedOptions<O extends { value: string }>(
   options: O[],
   policy: ProviderPolicy | undefined,
-  setting: ProviderPolicy["blocked"][number]["setting"],
 ) {
   return options.map((option) => {
-    const reason = blockedReason(policy, setting, option.value);
+    const reason = blockedReason(policy, option.value);
 
     return reason ? { ...option, disabled: true, description: reason } : option;
   });
@@ -72,4 +67,4 @@ export function withBlockedOptions<O extends { value: string }>(
 export const allowedPermissionMode = (
   policy: ProviderPolicy | undefined,
   mode: string,
-) => (blockedReason(policy, "permission_mode", mode) ? "default" : mode);
+) => (blockedReason(policy, mode) ? "default" : mode);

@@ -9,7 +9,7 @@ import { base, sent, setup } from "./chat-panel-test-harness";
 test("runtime limits above 120 minutes preserve an existing composer draft", async () => {
   const { tool, view, composer, type, updateTask } = setup({
     status: "failed",
-    error: "Runtime budget exhausted",
+    error_code: "runtime_budget_exhausted",
     budget: { ...base.budget, max_cost_usd: null },
     runtime_ms: 22 * 60_000,
     cost_usd: 0.44,
@@ -73,7 +73,6 @@ test("runtime limits above 120 minutes preserve an existing composer draft", asy
 test("combined budget notice prompts after both spent dimensions are raised", async () => {
   const { tool, view, composer, updateTask } = setup({
     status: "failed",
-    error: "Cost and runtime budget exhausted",
     cost_usd: 5.02,
     runtime_ms: 22 * 60_000,
   });
@@ -134,7 +133,7 @@ test("combined budget notice prompts after both spent dimensions are raised", as
 test("a runtime limit below the current budget shows validation feedback", () => {
   const { view } = setup({
     status: "failed",
-    error: "Runtime budget exhausted",
+    error_code: "runtime_budget_exhausted",
     budget: { ...base.budget, max_cost_usd: null },
     runtime_ms: 22 * 60_000,
     cost_usd: 0.44,
@@ -163,7 +162,7 @@ test("a runtime limit below the current budget shows validation feedback", () =>
 test("budget controls lock while a limit update is in flight", async () => {
   const { tool, view, composer, updateTask } = setup({
     status: "failed",
-    error: "Claude result: error_max_budget_usd",
+    error_code: "cost_budget_exhausted",
     cost_usd: 5.02,
   });
 
@@ -206,7 +205,7 @@ test("budget controls lock while a limit update is in flight", async () => {
 test("a failed limit update does not prompt to continue", async () => {
   const { tool, view, composer } = setup({
     status: "failed",
-    error: "Claude result: error_max_budget_usd",
+    error_code: "cost_budget_exhausted",
     cost_usd: 5.02,
   });
 
@@ -231,7 +230,7 @@ test("a failed limit update does not prompt to continue", async () => {
 test("a successful limit update opens and focuses a collapsed composer", async () => {
   const { tool, view, updateTask } = setup({
     status: "failed",
-    error: "Claude result: error_max_budget_usd",
+    error_code: "cost_budget_exhausted",
     cost_usd: 5.02,
   });
 

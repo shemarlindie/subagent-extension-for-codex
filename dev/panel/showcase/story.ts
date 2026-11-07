@@ -211,7 +211,14 @@ const storyTask: Task = {
   title: "Review the logging design",
   description: brief,
   worker_profile: "reviewer",
-  provider_options: settingOptions("reviewer"),
+  // A read-only profile starts in plan mode.
+  provider_options: {
+    claude: {
+      ...settingOptions().claude,
+      permission_mode: "plan",
+      permission_source: "profile",
+    },
+  },
   model: "opus",
   reasoning_effort: "medium",
   created_by: "parent",

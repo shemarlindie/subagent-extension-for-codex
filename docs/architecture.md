@@ -68,7 +68,7 @@ features and limits.
 | `src/service/features/tasks`             | Task lifecycle, scheduling, draft delivery, input and storage                |
 | `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
 | `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
-| `src/service/features/workspaces`        | Git worktree lifecycle and prompt snapshots                                  |
+| `src/service/features/workspaces`        | Git worktree lifecycle and hardened service Git commands                     |
 | `src/service/features/changes`           | Recorded edits, running task and turn diffs, and change inspection           |
 | `src/service/features/settings`          | User defaults and settings document                                          |
 | `src/service/platform/server`            | HTTP and MCP authentication, transport and tool dispatch                     |
@@ -156,8 +156,8 @@ annotations say.
 The service distinguishes user actions from parent and model calls. Model calls
 can't raise approval authority or relax configured provider restrictions.
 Provider settings and task policy decide which controls apply to each task:
-provider-native permissions, tool and profile restrictions, path guards and
-sandbox choices. See [Provider contract](provider-contract.md).
+provider-native permissions, profile default modes and sandbox choices. See
+[Provider contract](provider-contract.md).
 
 The embedded panel uses the authenticated MCP bridge. The standalone console
 uses service HTTP endpoints and session authentication. Keep service bearer

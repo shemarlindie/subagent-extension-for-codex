@@ -20,7 +20,8 @@ type ProfileChipProps = {
 
 /**
  * Chooses the worker profile. A profile works as a preset: choosing one
- * returns model and reasoning to that profile's saved settings.
+ * returns model and reasoning to that profile's saved settings, and
+ * `useProfileMode` returns the permission mode to its default.
  */
 export function ProfileChip({
   workers,

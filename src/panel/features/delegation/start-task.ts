@@ -37,6 +37,9 @@ export function startTaskArguments(
         ...(permissions.approvalDeciderOption
           ? { [permissions.approvalDeciderOption]: values.approval_decider }
           : {}),
+        ...(permissions.sandbox
+          ? { [permissions.sandbox.option]: values.sandbox === "on" }
+          : {}),
       }
     : undefined;
 
@@ -53,7 +56,6 @@ export function startTaskArguments(
     revision: strategy === "current_repo" ? "HEAD" : values.revision,
     workspace_strategy: strategy,
     conversation_id: conversation ?? null,
-    context: values.context.trim() ? [values.context] : [],
     depends_on: values.deps,
     budget: {
       max_runtime_minutes:

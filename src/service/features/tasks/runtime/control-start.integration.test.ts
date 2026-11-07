@@ -85,7 +85,7 @@ test("discovery and effort validation use each owner's current settings", async 
 
     await assert.rejects(
       c.start("bob", request),
-      /does not support reasoning effort high/,
+      /does not support high reasoning/,
     );
 
     c.settings.update("alice", {
@@ -94,7 +94,7 @@ test("discovery and effort validation use each owner's current settings", async 
 
     await assert.rejects(
       c.start("alice", request),
-      /does not support reasoning effort high/,
+      /does not support high reasoning/,
     );
 
     assert.equal(store.all().length, 1);
@@ -178,7 +178,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
   try {
     await assert.rejects(
       c.start("alice", { ...input(repo), reasoning_effort: "high" }),
-      /does not support reasoning effort high/,
+      /does not support high reasoning/,
     );
 
     assert.equal(store.all().length, 0);
@@ -186,7 +186,7 @@ test("known model effort metadata rejects invalid work before queueing while unk
     for (const model of ["no-effort", "limited-effort"]) {
       await assert.rejects(
         c.start("alice", { ...input(repo), model, reasoning_effort: "high" }),
-        /does not support reasoning effort high/,
+        /does not support high reasoning/,
       );
 
       assert.equal(store.all().length, 0);
@@ -251,7 +251,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
           provider: "claude",
           reasoning_effort,
         }),
-        /Claude reasoning effort/,
+        /Claude reasoning/,
       );
 
       c.settings.update("alice", {
@@ -260,7 +260,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
 
       await assert.rejects(
         c.start("alice", { ...input(repo), provider: "claude" }),
-        /Claude reasoning effort/,
+        /Claude reasoning/,
       );
 
       assert.equal(store.all().length, 0);
@@ -496,7 +496,6 @@ const orgPolicy: ProviderPolicy = {
   managed: true,
   blocked: [
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
     },
@@ -530,6 +529,8 @@ async function underPolicy(
       context.c.start("alice", {
         ...input(context.repo),
         provider: "claude",
+        // A write profile, so tasks start in the saved mode.
+        worker_profile: "implementer",
         ...extra,
       }),
   };
@@ -594,7 +595,7 @@ test("a saved effort the default can't run gives way with the saved model", asyn
 
   await assert.rejects(
     start({ reasoning_effort: "xhigh" }),
-    /does not support reasoning effort xhigh/,
+    /does not support xhigh reasoning/,
   );
 });
 

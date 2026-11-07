@@ -587,9 +587,7 @@ test("run emits result accounting exactly once for success and failure", async (
           approval_decider: "user",
           permission_source: "task",
           claude_policy: {
-            sandbox: "user_config",
-            tools: "restricted",
-            path_guard: true,
+            sandbox: false,
             subagents: true,
             settings_files: true,
             user_mcp: true,
@@ -631,7 +629,10 @@ test("run emits result accounting exactly once for success and failure", async (
     );
 
     if (failed) {
-      await assert.rejects(provider.run(context, "Review"), /error_max_turns/);
+      await assert.rejects(provider.run(context, "Review"), {
+        code: "error_max_turns",
+        message: "Stopped",
+      });
     } else {
       assert.equal((await provider.run(context, "Review")).reply, "Finished");
     }

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
@@ -92,7 +94,7 @@ export async function prepareEditsFixture(repo) {
   ]);
 }
 
-async function waitForTask(control, store, task, timeoutMs = 185000) {
+export async function waitForTask(control, store, task, timeoutMs = 185000) {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
@@ -101,15 +103,17 @@ async function waitForTask(control, store, task, timeoutMs = 185000) {
     if (current.pending_input) {
       const request = current.pending_input;
 
-      const allowed = [
-        "Read",
-        "Write",
-        "Edit",
-        "NotebookEdit",
-        "Bash",
-        "Agent",
-        "Task",
-      ].includes(request.tool);
+      // A command retried outside the sandbox stays denied.
+      const allowed =
+        [
+          "Read",
+          "Write",
+          "Edit",
+          "NotebookEdit",
+          "Bash",
+          "Agent",
+          "Task",
+        ].includes(request.tool) && !request.input.dangerouslyDisableSandbox;
 
       control.input(
         "verification",
@@ -522,16 +526,18 @@ Then reply DONE.`);
 
 /**
  * Folders without Git or commits, through the real control plane: tool and
- * command edits under the extension sandbox, a blocked read outside the folder
+ * command edits in Claude Code's sandbox, a blocked write outside the folder
  * and a resumed session. Locks in the Claude Code behavior the design relies on.
  */
 export async function runFoldersScenario({ control, store, root, taskBase }) {
   control.settings.update("verification", {
-    set: { providers: { claude: { sandbox: "extension", path_guard: "on" } } },
+    set: { providers: { claude: { sandbox: true } } },
   });
 
-  const outside = join(root, "outside.txt");
-  await writeFile(outside, "SECRET-OUTSIDE\n");
+  // Claude Code's sandbox lets commands write to the temporary directory,
+  // which holds this run's folders, so the outside file is in home.
+  const outside = join(homedir(), `.subagent-folders-probe-${randomUUID()}`);
+  await writeFile(outside, "OUTSIDE\n");
 
   try {
     for (const name of ["plain", "no-commits"]) {
@@ -550,7 +556,7 @@ export async function runFoldersScenario({ control, store, root, taskBase }) {
         description: `Perform exactly these steps in order using the named tools, one tool call per step. Do not use other tools.
 1. Write: create note.txt containing alpha.
 2. Bash: run exactly: printf 'beta\\n' > bash.txt
-3. Bash: run exactly: cat ${outside}
+3. Bash: run exactly: printf 'changed\\n' > ${outside}
 4. Bash: run exactly: printf 'gitdir: evil\\n' > .git
 5. Bash: run exactly: mkdir -p evil/hooks
 6. Bash: run exactly: mkdir -p .git/hooks
@@ -576,14 +582,10 @@ Steps 3, 4 and 6 may fail. Continue past them without retrying. Then remember th
         );
       }
 
-      const denied = store
-        .events(task.id, "verification")
-        .map((event) => JSON.stringify(event.data))
-        .join("\n");
-
-      assert.ok(
-        !denied.includes("SECRET-OUTSIDE"),
-        `${name}: the sandbox blocks a read outside the folder`,
+      assert.equal(
+        await readFile(outside, "utf8"),
+        "OUTSIDE\n",
+        `${name}: the sandbox blocks a write outside the folder`,
       );
 
       const changes = await recordedChanges(control, task.id);
@@ -632,6 +634,7 @@ Steps 3, 4 and 6 may fail. Continue past them without retrying. Then remember th
       );
     }
   } finally {
+    await rm(outside, { force: true });
     await control.close();
   }
 }

@@ -18,7 +18,7 @@ import {
 } from "./claude-test-harness.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
-test("Claude SDK query uses native harness, resume, a plain reply, remaining budget and profile restrictions", async () => {
+test("Claude SDK query uses native harness, resume, a plain reply, remaining budget and the task's mode", async () => {
   const { c, events, sessions } = await context();
   c.task.budget.max_cost_usd = 5;
   let options: Options | undefined;
@@ -75,10 +75,6 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   assert.equal(options!.cwd, c.task.workspace);
   assert.equal(options!.resume, "existing-session");
   assert.equal(options!.maxBudgetUsd, 4);
-
-  assert.ok(
-    options!.tools instanceof Array && !options!.tools.includes("Bash"),
-  );
 
   assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
   assert.equal(options!.strictMcpConfig, undefined);
@@ -205,7 +201,7 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
   }
 });
 
-test("a refusal shows Claude Code's own text, and other failures keep their prefix", async () => {
+test("a refusal shows Claude Code's own text, and result failures retain codes and diagnostics", async () => {
   const run = async (result: Record<string, unknown>) => {
     const { c } = await context();
     setClaudeOptions(c.task, { permission_mode: "default" });
@@ -234,13 +230,18 @@ test("a refusal shows Claude Code's own text, and other failures keep their pref
 
   await assert.rejects(
     run({ startup_failure_reason: "org_pin_api_key_conflict" }),
-    (error: Error) => error.message === "Sign in with your organization.",
+    { message: "Sign in with your organization." },
   );
 
-  await assert.rejects(
-    run({}),
-    /^Error: Claude result: error_during_execution: Sign in with your organization\.$/,
-  );
+  await assert.rejects(run({}), {
+    code: "error_during_execution",
+    message: "Sign in with your organization.",
+  });
+
+  await assert.rejects(run({ subtype: "error_max_budget_usd", errors: [] }), {
+    code: "cost_budget_exhausted",
+    message: "",
+  });
 });
 
 test("Claude asks for a plain reply before the custom instructions, with no structured output tool", async () => {
@@ -334,7 +335,7 @@ test("an unsupported Claude CLI fails the turn and model discovery without launc
   const { c } = await context();
 
   setClaudeOptions(c.task, {
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   });
 
   const message = "Claude Code 2.0.0 at /bin/claude is older than supported.";
@@ -375,4 +376,43 @@ test("an unsupported Claude CLI fails the turn and model discovery without launc
   await assert.rejects(provider.run(c, "Implement"), { message });
   await assert.rejects(provider.models(), { message });
   assert.equal(launches, 0);
+});
+
+test("a turn interrupted before its prompt sends nothing and holds the prompt", async () => {
+  const { c } = await context();
+  const controller = new AbortController();
+  const sent: unknown[] = [];
+  let held = 0;
+  c.signal = controller.signal;
+
+  c.promptHeld = () => {
+    held += 1;
+  };
+
+  const provider = new ClaudeAgentProvider(
+    (args) => {
+      controller.abort();
+
+      // Ends once the input does, without a result.
+      return {
+        [Symbol.asyncIterator]: () => ({
+          next: async () => {
+            for await (const message of args.prompt as AsyncIterable<unknown>) {
+              sent.push(message);
+            }
+
+            return { done: true, value: undefined };
+          },
+        }),
+        close: () => {},
+        interrupt: async () => {},
+      } as unknown as Query;
+    },
+    undefined,
+    readyClaudeCli,
+  );
+
+  await assert.rejects(provider.run(c, "Implement"), /without a result/);
+  assert.deepEqual(sent, []);
+  assert.equal(held, 1);
 });

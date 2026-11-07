@@ -6,6 +6,18 @@ import type { GitState } from "../../../shared/tasks/model.js";
 
 const exec = promisify(execFile);
 
+/**
+ * Turns off hooks and fsmonitor, which run programs from repository config.
+ * The service runs Git unsandboxed and unprompted, and a folder copied with
+ * its `.git` can carry that config.
+ */
+const SAFE_CONFIG = [
+  "-c",
+  "core.hooksPath=/dev/null",
+  "-c",
+  "core.fsmonitor=false",
+];
+
 /** Runs Git in `cwd`, optionally writing `input` to its standard input. */
 export async function git(
   cwd: string,
@@ -14,7 +26,7 @@ export async function git(
   input?: string,
   timeoutMs?: number,
 ) {
-  const run = exec("git", ["-C", cwd, ...args], {
+  const run = exec("git", [...SAFE_CONFIG, "-C", cwd, ...args], {
     // Diffs are returned whole, however large.
     maxBuffer: 1024 * 1024 * 1024,
     ...(timeoutMs

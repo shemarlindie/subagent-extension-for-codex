@@ -13,7 +13,6 @@ type FixturePolicy = ReturnType<typeof readFixtureTaskOptions>["claude_policy"];
 
 export function emitFixturePrelude(
   scenarios: FixtureScenarios,
-  policy: FixturePolicy,
   events: FixtureRunEvents,
   actions: string[],
 ) {
@@ -48,19 +47,6 @@ export function emitFixturePrelude(
     for (const stream of scenarios.streams) {
       events.emitStream(stream.frame, stream.fields);
     }
-  }
-
-  for (const restriction of scenarios.restrictions) {
-    const configured =
-      policy?.[restriction as keyof NonNullable<FixturePolicy>];
-
-    events.emitActivity("permission_denied", {
-      tool_name: restriction,
-      message: `Fixture simulated ${restriction} restriction (${String(configured ?? "configured")}).`,
-      reason: "Synthetic restriction scenario; no host security was applied.",
-    });
-
-    actions.push(`Emitted a simulated ${restriction} restriction outcome.`);
   }
 }
 

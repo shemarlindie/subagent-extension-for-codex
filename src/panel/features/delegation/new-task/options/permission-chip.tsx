@@ -5,15 +5,13 @@ import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
 
 type PermissionChipProps = {
-  /** The provider's native permission modes; absent when it has none. */
+  /** The provider's native permission modes, absent when it has none. */
   options?: { value: string; label: string; disabled?: boolean }[];
-  /** Read-only profiles inspect only, whatever the mode. */
-  readOnly: boolean;
   loading: boolean;
   disabled: boolean;
 };
 
-// The chip itself shortens the longest modes; its menu keeps their names.
+// The chip shortens the longest modes, and its menu keeps their full names.
 const chipWords: Record<string, string> = {
   "Ask for approval": "Ask",
   "Bypass permission prompts": "Bypass",
@@ -27,10 +25,7 @@ function chipText(label: string) {
 export function permissionChipLabel(
   options: PermissionChipProps["options"],
   value: string,
-  readOnly: boolean,
 ) {
-  if (readOnly) return "Read only";
-
   const option = options?.find((candidate) => candidate.value === value);
 
   return option && shortPermissionLabel(option.label);
@@ -39,7 +34,6 @@ export function permissionChipLabel(
 /** Chooses the provider's native permission mode for the task. */
 export function PermissionChip({
   options,
-  readOnly,
   loading,
   disabled,
 }: PermissionChipProps) {
@@ -53,23 +47,14 @@ export function PermissionChip({
     <ChipSelect
       id="new-task-permission"
       label="Permission mode"
-      value={readOnly ? "read-only" : field.value}
+      value={field.value}
       onValueChange={field.onChange}
       loading={loading}
-      disabled={disabled || readOnly}
-      title={
-        readOnly
-          ? "Read-only profiles inspect without editing files or running commands"
-          : undefined
-      }
-      options={
-        readOnly
-          ? [{ value: "read-only", label: "Read only" }]
-          : (options ?? []).map((option) => ({
-              ...option,
-              chipLabel: chipText(shortPermissionLabel(option.label)),
-            }))
-      }
+      disabled={disabled}
+      options={(options ?? []).map((option) => ({
+        ...option,
+        chipLabel: chipText(shortPermissionLabel(option.label)),
+      }))}
     />
   );
 }

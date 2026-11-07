@@ -22,7 +22,7 @@ const FACTS = [
     valueKind: "medium",
   },
   { label: "Model", labelSize: "small", valueKind: "medium" },
-  { label: "Reasoning effort", labelSize: "medium", valueKind: "medium" },
+  { label: "Reasoning", labelSize: "medium", valueKind: "medium" },
   { label: "Workspace", labelSize: "small", valueKind: "long" },
   { label: "Changes", labelSize: "small", valueKind: "changes" },
   { label: "Repository", labelSize: "small", valueKind: "long" },

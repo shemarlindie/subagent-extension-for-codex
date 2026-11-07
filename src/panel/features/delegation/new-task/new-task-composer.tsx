@@ -23,7 +23,7 @@ import { workerChoices } from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
 import { projectGit, workerChoice } from "../delegation";
 import { WorkspaceNoteView } from "../fields/workspace-note-view";
-import { useAsyncDefaults } from "../use-async-defaults";
+import { useAsyncDefaults, useProfileMode } from "../use-async-defaults";
 import { workspaceNote } from "../workspace-note";
 import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
 import { NewTaskOptions } from "./options/new-task-options";
@@ -42,7 +42,7 @@ function readFailure(errors: NewTaskState["errors"]) {
 }
 
 /**
- * Starts a task from a first message. Enter sends; the chips below the
+ * Starts a task from a first message, sent with Enter. The chips below the
  * message choose the project, profile, model, reasoning and permission
  * mode, and **More options** opens the Advanced task dialog with them.
  */
@@ -64,6 +64,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     [error, setError] = useState<string>();
 
   useAsyncDefaults(form, initialValues, savedAtMount);
+  useProfileMode(form, initialValues.permission_mode, savedAtMount);
 
   // Keep the message and changed options in session memory until sent.
   useEffect(() => {

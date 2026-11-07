@@ -1,15 +1,5 @@
-import {
-  access,
-  copyFile,
-  mkdir,
-  mkdtemp,
-  opendir,
-  realpath,
-  rm,
-  stat,
-  utimes,
-} from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { access, mkdir, opendir, realpath, stat } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
 import {
@@ -92,111 +82,6 @@ export class Workspaces {
     public allowedRoots: string[],
     public exactRoots: string[] = [],
   ) {}
-
-  /**
-   * Records a checkout's files, as `git add -A` would stage them, as a tree
-   * id. A temporary index in the extension's directory keeps the checkout's
-   * own index and files untouched. `.gitignore` applies. New content is
-   * written to the object store as unreferenced blobs, which `git gc` prunes
-   * after its grace period.
-   */
-  async snapshot(cwd: string) {
-    await mkdir(this.root, { recursive: true, mode: 0o700 });
-    const dir = await mkdtemp(join(this.root, ".snapshot-"));
-    const index = join(dir, "index");
-
-    // Settings for the temporary index only. A split index would write shared
-    // index files into the repository, so the copy is written whole. The
-    // copy's file system monitor data belongs to the real index, so Git
-    // checks file stats itself, which costs a stat per file, not a hash.
-    const run = (args: string[], input?: string) =>
-      git(
-        cwd,
-        [
-          "-c",
-          "core.splitIndex=false",
-          "-c",
-          "core.fsmonitor=false",
-          // Otherwise Git would trust every cached entry, as assume-unchanged.
-          "-c",
-          "core.ignoreStat=false",
-          ...args,
-        ],
-        { GIT_INDEX_FILE: index },
-        input,
-      );
-
-    try {
-      // Starting from a copy of the checkout's own index lets `add -A` reuse
-      // its cached file stats and hash only files that changed. The tree is
-      // the same as from HEAD, since `add -A` stages the working tree either
-      // way (and in a sparse checkout leaves files outside the sparse set as
-      // committed). The copy is never written back.
-      if (await this.copyIndex(cwd, index)) {
-        try {
-          // `add -A` skips files marked assume-unchanged, so the copy drops
-          // the mark; `ls-files -v` tags them with a lowercase letter.
-          // Skip-worktree files (sparse checkouts) stay as they are.
-          const assumed = (await run(["ls-files", "-v", "-z"]))
-            .split("\0")
-            .filter((entry) => /^[a-z] /.test(entry))
-            .map((entry) => entry.slice(2));
-
-          // Paths go on standard input, so any number of them fits.
-          if (assumed.length) {
-            await run(
-              ["update-index", "--no-assume-unchanged", "-z", "--stdin"],
-              assumed.join("\0"),
-            );
-          }
-
-          await run(["add", "-A"]);
-
-          return (await run(["write-tree"])).trim();
-        } catch {
-          // Not expected: `add -A` also resolves unmerged entries left by a
-          // merge conflict. A failure here still gets a snapshot, from HEAD.
-          await rm(index, { force: true });
-        }
-      }
-
-      // Used when the checkout has no index file, or the copy failed above.
-      // The tree is the same; starting from HEAD only costs a hash of every
-      // tracked file.
-      await run(["read-tree", "HEAD"]);
-      await run(["add", "-A"]);
-
-      return (await run(["write-tree"])).trim();
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  }
-
-  /**
-   * Copies a checkout's index to `target`; false when it has none. Git
-   * replaces the index by renaming a finished file, so a copy is never torn.
-   */
-  private async copyIndex(cwd: string, target: string) {
-    const path = resolve(
-      cwd,
-      (await git(cwd, ["rev-parse", "--git-path", "index"])).trim(),
-    );
-
-    try {
-      const { atime, mtime } = await stat(path);
-      await copyFile(path, target);
-      // Git distrusts cached stats of files modified no earlier than the
-      // index itself ("racily clean") and hashes those instead. That test
-      // reads the index file's mtime, so the copy keeps the original's;
-      // a new one would hide a same-size edit made just after the index
-      // was written.
-      await utimes(target, atime, mtime);
-
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
   async repository(path: string) {
     const actual = await accessibleRealpath(path);
@@ -396,10 +281,5 @@ export class Workspaces {
       () => true,
       () => false,
     );
-  }
-
-  /** The diff between two trees or commits, as one text. */
-  async diff(cwd: string, from: string, to: string) {
-    return git(cwd, ["diff", "--no-ext-diff", "--no-color", from, to, "--"]);
   }
 }

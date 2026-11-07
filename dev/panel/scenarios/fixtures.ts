@@ -126,7 +126,6 @@ export const previewEvents: Event[] = [
     "preview-long-chat",
     "preview-live-streaming",
     "preview-policy-limited",
-    "preview-policy-blocked",
   ].flatMap((id) => timelinesById.get(id)!.events),
   ...liveTimelines
     .filter((timeline) => timeline.taskId !== "preview-live-streaming")

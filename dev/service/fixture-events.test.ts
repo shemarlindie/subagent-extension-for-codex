@@ -38,7 +38,6 @@ test("fixture prompt keys parse every bounded provider, stream, and failure scen
       "[fixture:content type=tool_use role=user outcome=running name=Read]",
       "[fixture:thinking]",
       "[fixture:change]",
-      "[fixture:restriction name=subagents]",
       "[fixture:activity type=rate_limit_event rate_limit_info.status=rejected]",
       "[fixture:stream]",
       "[fixture:stream frame=content_block_delta delta=thinking text=Fixture%20thought]",
@@ -66,7 +65,6 @@ test("fixture prompt keys parse every bounded provider, stream, and failure scen
 
   assert.equal(scenarios.thinking, true);
   assert.equal(scenarios.change, true);
-  assert.deepEqual(scenarios.restrictions, ["subagents"]);
 
   assert.deepEqual(scenarios.activities, [
     {

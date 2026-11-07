@@ -23,6 +23,11 @@ export function providerOptionDefaults(
           ),
         )
       : "inherit",
+    sandbox:
+      permissions?.sandbox &&
+      settingAt(settings, permissions.sandbox.setting) === true
+        ? ("on" as const)
+        : ("off" as const),
     // One shared setting answers for every provider with native permissions.
     approval_decider: permissions?.approvalDecider
       ? scalarText(settingAt(settings, "approvals.decider"), "user")

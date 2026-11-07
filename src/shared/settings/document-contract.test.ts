@@ -16,7 +16,7 @@ const scope: ModelScope = {
   model: { path: "models.global.model", label: "Global model" },
   effort: {
     path: "models.global.reasoning_effort",
-    label: "Global reasoning effort",
+    label: "Global reasoning",
     options: [option],
     unsupported: false,
   },

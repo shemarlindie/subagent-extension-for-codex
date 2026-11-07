@@ -26,11 +26,12 @@ import { BudgetFields } from "./fields/budget-fields";
 import { DependencyField } from "./fields/dependency-field";
 import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
-import { WorkerFields } from "./fields/worker-fields";
+import { RevisionField } from "./fields/revision-field";
+import { WorkerField } from "./fields/worker-field";
 import { WorkspaceField } from "./fields/workspace-field";
 import { WorkspaceNoteView } from "./fields/workspace-note-view";
 import { startTaskArguments } from "./start-task";
-import { useAsyncDefaults } from "./use-async-defaults";
+import { useAsyncDefaults, useProfileMode } from "./use-async-defaults";
 import { workspaceNote } from "./workspace-note";
 
 interface DelegateFormProps {
@@ -57,6 +58,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   );
 
   useAsyncDefaults(form, initialValues, persistedDraft.current);
+  useProfileMode(form, initialValues.permission_mode, persistedDraft.current);
 
   const [repository, selectedWorker] = useWatch({
     control: form.control,
@@ -151,6 +153,9 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     wasInPlace.current = inPlace;
   }, [inPlace, strategy, savedStrategy, form]);
 
+  // The project folder runs on its checkout, so only a worktree takes a revision.
+  const revisionShown = !inPlace && strategy !== "current_repo";
+
   const conversation = useRef(state.conversation).current;
 
   return (
@@ -207,11 +212,30 @@ function DelegateForm({ dialog }: DelegateFormProps) {
             {...form.register("description", { required: true })}
           />
         </Field>
-        <WorkspaceField
-          settingsReady={statuses.settings === "ready"}
-          settingsLoading={statuses.settings === "loading"}
-          inPlace={inPlace}
-        />
+        <div
+          className={revisionShown ? "two task-workspace-fields" : undefined}
+        >
+          <div>
+            <WorkspaceField
+              settingsReady={statuses.settings === "ready"}
+              settingsLoading={statuses.settings === "loading"}
+              inPlace={inPlace}
+            />
+          </div>
+          {revisionShown && (
+            <div>
+              <RevisionField
+                disabled={
+                  statuses.context !== "ready" || statuses.settings !== "ready"
+                }
+                loading={
+                  statuses.context === "loading" ||
+                  statuses.settings === "loading"
+                }
+              />
+            </div>
+          )}
+        </div>
         <WorkspaceNoteView
           note={workspaceNote({
             git,
@@ -220,6 +244,25 @@ function DelegateForm({ dialog }: DelegateFormProps) {
               workerChoice(selectedWorker).profile ?? "",
             ),
           })}
+        />
+        <WorkerField
+          workers={state.workers}
+          loading={
+            statuses.workers === "loading" ||
+            (statuses.settings === "loading" && !selectedWorker)
+          }
+          error={errors?.workers}
+          disabled={
+            statuses.workers !== "ready" || statuses.settings !== "ready"
+          }
+        />
+        <ModelFields
+          defaults={defaults}
+          workers={state.workers}
+          settingsReady={statuses.settings === "ready"}
+          workersReady={statuses.workers === "ready"}
+          settingsLoading={statuses.settings === "loading"}
+          workersLoading={statuses.workers === "loading"}
         />
         <ApprovalField
           workers={state.workers}
@@ -230,40 +273,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
             statuses.workers === "loading" || statuses.settings === "loading"
           }
         />
-        <WorkerFields
-          workers={state.workers}
-          loading={
-            statuses.workers === "loading" ||
-            (statuses.settings === "loading" && !selectedWorker)
-          }
-          error={errors?.workers}
-          disabled={
-            statuses.workers !== "ready" || statuses.settings !== "ready"
-          }
-          revisionDisabled={
-            statuses.context !== "ready" || statuses.settings !== "ready"
-          }
-          revisionLoading={
-            statuses.context === "loading" || statuses.settings === "loading"
-          }
-          revisionHidden={inPlace}
-        />
-        <ModelFields
-          defaults={defaults}
-          workers={state.workers}
-          settingsReady={statuses.settings === "ready"}
-          workersReady={statuses.workers === "ready"}
-          settingsLoading={statuses.settings === "loading"}
-          workersLoading={statuses.workers === "loading"}
-        />
-        <Field id="context" label="Context to include (optional)">
-          <textarea
-            id="context"
-            maxLength={20000}
-            placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."
-            {...form.register("context")}
-          />
-        </Field>
         <BudgetFields
           workers={state.workers}
           settingsReady={statuses.settings === "ready"}

@@ -92,7 +92,7 @@ export function ChipSelect({
         )}
         <span className="chip-select-value">{loading ? label : text}</span>
         <span className="chip-select-caret" aria-hidden="true">
-          {loading ? <LoadingSpinner /> : <Chevron />}
+          {loading ? <LoadingSpinner /> : <Chevron size={10} />}
         </span>
       </Select.Trigger>
       <SelectOptions options={options} action={action} footer={footer} />

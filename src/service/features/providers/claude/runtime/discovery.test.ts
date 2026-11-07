@@ -61,13 +61,8 @@ function discovery({
   );
 }
 
-const blockedValues = (
-  policy: Awaited<ReturnType<ClaudeDiscovery["policy"]>>,
-  setting: string,
-) =>
-  policy?.blocked
-    .filter((item) => item.setting === setting)
-    .map((item) => item.value);
+const blockedModes = (policy: Awaited<ReturnType<ClaudeDiscovery["policy"]>>) =>
+  policy?.blocked.map((item) => item.value);
 
 test("no policy reports nothing, so nothing reads as allowed by an organization", async () => {
   assert.equal(await discovery({}).policy(), undefined);
@@ -92,10 +87,7 @@ test("modes the session rejects are blocked, naming the organization when its po
     rejected: ["bypassPermissions", "auto"],
   }).policy();
 
-  assert.deepEqual(blockedValues(policy, "permission_mode"), [
-    "auto",
-    "bypassPermissions",
-  ]);
+  assert.deepEqual(blockedModes(policy), ["auto", "bypassPermissions"]);
 
   assert.equal(policy?.blocked[0]?.reason, "Turned off by your organization");
   assert.equal(policy?.managed, true);
@@ -190,7 +182,6 @@ test("a mode blocked outside policy doesn't name the organization", async () => 
     managed: false,
     blocked: [
       {
-        setting: "permission_mode",
         value: "auto",
         reason: "Not available with your Claude Code setup",
       },
@@ -213,34 +204,6 @@ test("policy only the session sees is the console's, and policy on this computer
       }).policy()
     )?.source,
     "device",
-  );
-});
-
-test("sandbox choices are blocked by what policy leaves in place", async () => {
-  const blocked = async (policy: object) =>
-    blockedValues(await discovery({ policy }).policy(), "sandbox");
-
-  for (const sandbox of [
-    { enabled: false },
-    { allowUnsandboxedCommands: true },
-    { failIfUnavailable: false },
-  ]) {
-    assert.deepEqual(await blocked({ sandbox }), [
-      "extension",
-      "extension_locked",
-    ]);
-  }
-
-  assert.deepEqual(
-    await blocked({ sandbox: { allowUnsandboxedCommands: false } }),
-    ["extension_locked"],
-  );
-
-  assert.deepEqual(await blocked({ parentSettingsBehavior: "merge" }), []);
-
-  assert.deepEqual(
-    await blocked({ sandbox: { network: { allowManagedDomainsOnly: true } } }),
-    [],
   );
 });
 

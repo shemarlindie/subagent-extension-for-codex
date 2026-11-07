@@ -26,7 +26,7 @@ const researcher: ModelScope = {
   },
   effort: {
     path: "models.profiles.researcher.reasoning_effort",
-    label: "Researcher reasoning effort",
+    label: "Researcher reasoning",
     options: [],
     unsupported: false,
   },

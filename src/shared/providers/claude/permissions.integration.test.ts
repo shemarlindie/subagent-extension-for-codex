@@ -400,14 +400,14 @@ test("native unresolved approvals honor their decision setting independently of 
   );
 });
 
-test("Claude tasks snapshot session restrictions from settings and ignore task arguments", async (t) => {
+test("Claude tasks keep their session settings, and read-only profiles start in plan mode", async (t) => {
   const { c, store, request } = await setup(t);
 
   c.settings.update("alice", {
     set: {
       providers: {
         claude: {
-          sandbox: "extension_locked",
+          sandbox: true,
           subagents: false,
           settings_files: false,
           user_mcp: false,
@@ -416,19 +416,12 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     },
   });
 
-  // Provider-owned resolved restrictions cannot be supplied by the caller.
+  // Provider-owned resolved settings cannot be supplied by the caller.
   await assert.rejects(
     c.start(
       "alice",
       withClaudeOptions(request, {
-        claude_policy: {
-          sandbox: "user_config",
-          tools: "all",
-          path_guard: false,
-          subagents: true,
-          settings_files: true,
-          user_mcp: true,
-        },
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
       }),
       "parent",
     ),
@@ -438,9 +431,7 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
   const write = await c.start("alice", request, "parent");
 
   assert.deepEqual(taskOptions(store.get(write.id, "alice")).claude_policy, {
-    sandbox: "extension_locked",
-    tools: "all",
-    path_guard: false,
+    sandbox: true,
     subagents: false,
     settings_files: false,
     user_mcp: false,
@@ -451,27 +442,60 @@ test("Claude tasks snapshot session restrictions from settings and ignore task a
     worker_profile: "reviewer",
   });
 
-  assert.equal(taskOptions(review).claude_policy.tools, "restricted");
-  assert.equal(taskOptions(review).claude_policy.path_guard, true);
+  assert.equal(taskOptions(review).permission_mode, "plan");
 
   // A later settings change does not alter started tasks.
   c.settings.update("alice", {
     set: {
       providers: {
-        claude: { tools: "restricted", settings_files: true, user_mcp: true },
+        claude: { sandbox: false, settings_files: true, user_mcp: true },
       },
     },
   });
 
-  const storedPolicy = taskOptions(store.get(write.id, "alice")).claude_policy;
-  assert.equal(storedPolicy.tools, "all");
-  assert.equal(storedPolicy.settings_files, false);
-  assert.equal(storedPolicy.user_mcp, false);
+  assert.deepEqual(taskOptions(store.get(write.id, "alice")).claude_policy, {
+    sandbox: true,
+    subagents: false,
+    settings_files: false,
+    user_mcp: false,
+  });
 
   const bob = await c.start("bob", request);
 
   assert.deepEqual(
     taskOptions(bob).claude_policy,
-    resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+    resolveClaudePolicy(claudeOverrideDefaults),
   );
+});
+
+test("a task's sandbox option overrides the setting, and only the user can turn it off", async (t) => {
+  const { c, request } = await setup(t);
+  const sandbox = (task: Task) => taskOptions(task).claude_policy.sandbox;
+
+  const on = await c.start(
+    "alice",
+    withClaudeOptions(request, { sandbox: true }),
+    "parent",
+  );
+
+  assert.equal(sandbox(on), true);
+  assert.equal(sandbox(await c.start("alice", request, "parent")), false);
+
+  c.settings.update("alice", {
+    set: { providers: { claude: { sandbox: true } } },
+  });
+
+  assert.equal(sandbox(await c.start("alice", request, "parent")), true);
+
+  await assert.rejects(
+    c.start("alice", withClaudeOptions(request, { sandbox: false }), "parent"),
+    /Only the user can turn off the sandbox/,
+  );
+
+  const off = await c.start(
+    "alice",
+    withClaudeOptions(request, { sandbox: false }),
+  );
+
+  assert.equal(sandbox(off), false);
 });

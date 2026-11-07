@@ -23,6 +23,7 @@ import { now } from "../../../../shared/time.js";
 import { logError } from "../../../platform/logging/logger.js";
 import { Changes } from "../../changes/changes.js";
 import { Projects } from "../../projects/projects.js";
+import { RunError } from "../../providers/run-error.js";
 import { type Provider, type RunContext } from "../../providers/types.js";
 import { Settings } from "../../settings/settings.js";
 import { Workspaces } from "../../workspaces/workspace.js";
@@ -118,7 +119,7 @@ export class Control {
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );
 
-    this.prompts = new SessionPrompts(store, workspaces, this.changes);
+    this.prompts = new SessionPrompts(store, this.changes);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }
@@ -134,6 +135,7 @@ export class Control {
         delete t.waiting_reason;
 
         t.error = "Service restarted; send a message to continue.";
+        delete t.error_code;
         t.completed_at = now();
         // Steers still inside the provider were lost with it, so they wait
         // at the front of the queue, which pauses as after any interrupt.
@@ -399,8 +401,8 @@ export class Control {
       if (remaining !== Infinity) {
         timer = setTimeout(() => {
           t.status = "failed";
-          t.error = "Runtime budget exhausted";
-          a.abort.abort(new Error(t.error));
+          t.error_code = "runtime_budget_exhausted";
+          a.abort.abort(new RunError(t.error_code));
         }, remaining);
       }
 
@@ -420,21 +422,20 @@ export class Control {
       signal.throwIfAborted();
       this.recordReply(t, output.reply, signal);
       t.status = "completed";
-    } catch (error) {
+    } catch (caught) {
+      const error: unknown = signal.aborted ? signal.reason : caught;
+
       if (!a.stopStatus && !signal.aborted) {
         logError("task.execution_failed", error, { turn: t.turn });
       }
 
-      if (a.stopStatus) {
-        t.status = a.stopStatus;
-        delete t.error;
-        delete t.pending_input;
-        delete t.waiting_reason;
-      } else if (t.status !== "interrupted") {
+      if (!a.stopStatus && t.status !== "interrupted") {
         t.status = "failed";
 
-        t.error =
-          t.error ?? (error instanceof Error ? error.message : String(error));
+        t.error ??=
+          (error instanceof Error ? error.message : String(error)) || undefined;
+
+        if (error instanceof RunError) t.error_code ??= error.code;
       }
     } finally {
       clearTimeout(timer);
@@ -575,6 +576,7 @@ export class Control {
     if (a.stopStatus) {
       t.status = a.stopStatus;
       delete t.error;
+      delete t.error_code;
     }
 
     delete t.pending_input;

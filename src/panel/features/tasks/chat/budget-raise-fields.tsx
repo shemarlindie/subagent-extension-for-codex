@@ -1,10 +1,10 @@
-import { Switch } from "@base-ui/react/switch";
 import { useState } from "react";
 
 import type { BudgetRaise } from "../../../../shared/tasks/model";
 import { useSnapshot } from "../../../app/state/controller-context";
 import { Button } from "../../../shared/components/button/button";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
+import { FormSwitch } from "../../../shared/forms/form-switch";
 import { formatCost, type SpentBudget } from "./chat-model";
 
 type BudgetField = "cost" | "runtime";
@@ -178,16 +178,13 @@ function BudgetRaiseField({
           />
         </div>
         <span className="chat-budget-switch-control">
-          <Switch.Root
-            className="switch"
-            aria-label={isCost ? "Cost limit" : "Runtime limit"}
+          <FormSwitch
+            label={enabled ? "Enabled" : "Disabled"}
+            ariaLabel={isCost ? "Cost limit" : "Runtime limit"}
             checked={enabled}
             disabled={busy}
             onCheckedChange={updateEnabled}
-          >
-            <Switch.Thumb className="switch-thumb" />
-          </Switch.Root>
-          <span>{enabled ? "Enabled" : "Disabled"}</span>
+          />
         </span>
         <Button
           variant="primary"

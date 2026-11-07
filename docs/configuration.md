@@ -96,9 +96,8 @@ first commit takes effect without adding it again:
 | `none`       | Not inside a work tree    | No        | No                  |
 
 Without Git, only the exact approved folder can run tasks. A subfolder of it
-can't, and parent approvals permit only Git roots. Under the `extension`
-sandboxes, a worker can't create `.git`, so run `git init` yourself.
-Registration rejects:
+can't, and parent approvals permit only Git roots. With the sandbox on, a worker
+can't create `.git`, so run `git init` yourself. Registration rejects:
 
 - a folder inside a Git repository, and the error names the root to add
 - the filesystem root, the home directory and its ancestors
@@ -229,10 +228,10 @@ Tool integrators should see
 
 ## Model and reasoning defaults
 
-The service resolves the model and the reasoning effort separately. Each takes
-the first value set in this order:
+The service resolves the model and reasoning separately. Each takes the first
+value set in this order:
 
-| Scope    | Model                             | Reasoning effort                             |
+| Scope    | Model                             | Reasoning                                    |
 | -------- | --------------------------------- | -------------------------------------------- |
 | Task     | `model`                           | `reasoning_effort`                           |
 | Profile  | `models.profiles.<profile>.model` | `models.profiles.<profile>.reasoning_effort` |
@@ -255,7 +254,7 @@ turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
 runs in the service directory, so project-specific model configuration can
 differ from a task workspace. Custom model IDs work when discovery is
-unavailable, but effort support may then be unknown.
+unavailable, but reasoning support may then be unknown.
 
 ## Custom instructions for worker profiles
 
@@ -266,7 +265,7 @@ characters.
 A new task keeps a copy of its profile's instructions and shows it in Details.
 Later edits apply only to new tasks. Claude receives the instructions at the end
 of its system prompt, after the extension's own rules. They can't lift
-permission, sandbox or read-only limits, which are enforced outside the prompt.
+permission or sandbox limits, which are enforced outside the prompt.
 
 ## Claude permissions
 
@@ -278,15 +277,17 @@ inherited either.
 - `providers.claude.permission_mode` sets the default for new tasks.
 - `provider_options.claude.permission_mode` overrides it for one task. `inherit`
   uses the saved setting.
-- Each task stores its resolved mode and whether it came from the task or the
-  setting.
+- The read-only profiles, `researcher`, `reviewer` and `security_reviewer`,
+  start in `plan` unless the task names another mode.
+- Each task stores its resolved mode and whether it came from the task, the
+  profile or the setting.
 
 | Mode                | Behavior                                                |
 | ------------------- | ------------------------------------------------------- |
 | `inherit`           | Task option only. Use the saved Claude permission mode. |
 | `default`           | Standard native permission checks.                      |
 | `acceptEdits`       | Approve file edits automatically.                       |
-| `plan`              | Plan and inspect without ordinary mutating tools.       |
+| `plan`              | Plan and inspect. Edits ask the approver first.         |
 | `dontAsk`           | Deny actions that need permission instead of prompting. |
 | `auto`              | Let the native classifier decide permissions.           |
 | `bypassPermissions` | Skip ordinary native approval checks.                   |
@@ -315,31 +316,28 @@ A native allow or deny rule may decide a call before the extension sees it.
 Delegated sessions receive the service's environment variables, except
 `SUBAGENT_EXTENSION_FOR_CODEX_*` and `OPENAI_*`.
 
-These user-only settings under `providers.claude` restrict delegated sessions.
-Each task stores its resolved restrictions, so later changes never broaden an
-existing task.
+These user-only settings under `providers.claude` apply to delegated sessions.
+Each task keeps the values it started with.
 
-| Setting          | Default       | Choices                                                                                                                                                                                                                                                                                                                 |
-| ---------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sandbox`        | `user_config` | `user_config` uses your Claude Code sandbox settings. `extension` limits Bash writes to the workspace, protects Git metadata, blocks reads of home, the data directory and sibling worktrees, blocks the network, and never runs Bash unsandboxed. `extension_locked` also ignores network domains your settings allow. |
-| `tools`          | `profile`     | `all` offers every native tool. `restricted` offers file, search, Bash, question, skill and MCP tools, and gives read-only work only read, question and skill tools. `profile` restricts read-only profiles only.                                                                                                       |
-| `path_guard`     | `profile`     | `on` keeps file tools inside the workspace and out of Git metadata. `off` relies on native rules. `profile` turns the guard on for read-only profiles.                                                                                                                                                                  |
-| `subagents`      | `true`        | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                                                                                                                                 |
-| `settings_files` | `true`        | `false` loads no user, project or local settings files, so their instructions, skills, hooks, permission rules, sandbox settings and MCP servers don't apply. With `sandbox: user_config`, the sandbox then follows Claude Code's defaults.                                                                             |
-| `user_mcp`       | `true`        | `false` ignores MCP servers from your Claude Code configuration, including `.mcp.json`, user-scope and plugin servers. `settings_files: false` does the same.                                                                                                                                                           |
+| Setting          | Default | Choices                                                                                                                                                                                                         |
+| ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sandbox`        | `false` | `true` runs Bash in Claude Code's sandbox, and a task stops when the sandbox can't run. Your Claude Code settings and org policy decide the rest, such as allowed paths and domains. `false` leaves it to them. |
+| `subagents`      | `true`  | `false` blocks the Agent tool and its legacy Task name.                                                                                                                                                         |
+| `settings_files` | `true`  | `false` loads no user, project or local settings files, so their instructions, skills, hooks, permission rules, sandbox settings and MCP servers don't apply.                                                   |
+| `user_mcp`       | `true`  | `false` ignores MCP servers from your Claude Code configuration, including `.mcp.json`, user-scope and plugin servers. `settings_files: false` does the same.                                                   |
 
-The read-only profiles are `researcher`, `reviewer` and `security_reviewer`.
+Codex can turn the sandbox on for one task. Only you can turn it off when the
+setting is on. See [Task tools](mcp-reference.md#task-tools).
 
-Sandboxed tasks fail to start when sandbox dependencies are missing or the
-platform is unsupported. Claude Code sandbox list settings, such as excluded
-commands and allowed domains, add to the extension sandbox. `extension_locked`
-blocks this for network domains only.
+Every task is denied the service's admin token. With the sandbox on, that covers
+every command. Without it, a script can still read the token, as it can read
+your other credentials.
 
 On Linux, the sandbox uses bubblewrap, which needs unprivileged user namespaces.
 Ubuntu 24.04 blocks them by default. A sandboxed task then fails to start or
-every Bash command in it fails, and nothing runs unsandboxed. To use the
-extension sandbox there, install `bubblewrap` and `socat`, then allow user
-namespaces, for example with an AppArmor profile for `bwrap` or by setting
+every Bash command in it fails, and nothing runs unsandboxed. To use the sandbox
+there, install `bubblewrap` and `socat`, then allow user namespaces, for example
+with an AppArmor profile for `bwrap` or by setting
 `kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
 every program on the computer.
 
@@ -355,24 +353,20 @@ applies, under the same rules as a task, so an API key on a custom
 `ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The result
 is cached for five minutes.
 
-| Policy                                                                                                  | New tasks                                                        | Panel                                                                      |
-| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `permissions.disableBypassPermissionsMode`, `disableAutoMode`                                           | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
-| `availableModels`                                                                                       | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
-| `deniedModels`                                                                                          | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
-| `sandbox.enabled: false`, `sandbox.allowUnsandboxedCommands: true`, `sandbox.failIfUnavailable: false`  | `extension` and `extension_locked` fail before the prompt.       | Both are locked, with the reason.                                          |
-| Any admin policy without `sandbox.network.allowManagedDomainsOnly` or `parentSettingsBehavior: "merge"` | `extension_locked` fails before the prompt.                      | It's locked, with the reason.                                              |
-| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                              | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
+| Policy                                                        | New tasks                                                        | Panel                                                                      |
+| ------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `permissions.disableBypassPermissionsMode`, `disableAutoMode` | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
+| `availableModels`                                             | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
+| `deniedModels`                                                | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
+| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`    | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
 
 A saved choice that policy now blocks stays saved, with a warning on its row,
 and applies again if the policy lifts. Locks are a convenience: importing
 settings can still save a blocked value, and the checks above stop it from
 taking effect.
 
-The sandbox and model are checked before every turn, because policy can change
-while a task runs. A model it now excludes gives way to Default, with a note. If
-Claude Code can't report its settings, a sandboxed task fails without running.
-`user_config` tasks have nothing to check.
+The model is checked before every turn, because policy can change while a task
+runs. A model it now excludes gives way to Default, with a note.
 
 Limits:
 

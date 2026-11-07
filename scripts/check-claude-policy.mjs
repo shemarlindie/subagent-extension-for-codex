@@ -15,7 +15,6 @@ const policy = {
   availableModels: ["haiku"],
   disableAutoMode: "disable",
   permissions: { disableBypassPermissionsMode: "disable" },
-  sandbox: { enabled: false },
 };
 
 const failures = [];
@@ -57,7 +56,6 @@ async function idleSession(cached, read) {
       mcpServers: {},
       permissionMode: "default",
       allowDangerouslySkipPermissions: true,
-      sandbox: { enabled: true, failIfUnavailable: true },
       env: {
         PATH: process.env.PATH,
         HOME: home,
@@ -106,21 +104,11 @@ if (!open) {
 
   check(true, "Query.getSettings exists");
 
-  check(
-    open.settings.effective.sandbox?.enabled === true,
-    "effective.sandbox reports the sandbox an SDK option asks for",
-  );
-
   check(!open.bypass && !open.auto, "no policy: Bypass and Auto are accepted");
 
   check(
     limited.settings.sources?.some(({ source }) => source === "policySettings"),
     "policy: sources lists policySettings",
-  );
-
-  check(
-    limited.settings.effective.sandbox?.enabled === false,
-    "policy: effective.sandbox reports the sandbox turned off",
   );
 
   check(

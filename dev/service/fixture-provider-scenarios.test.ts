@@ -122,31 +122,11 @@ test("fixture tool and content scenarios produce representative synthetic events
   assert.ok(opaqueBlocks.some((content) => content.type === "custom_block"));
 });
 
-test("fixture restrictions and child workers follow configured policy", async () => {
+test("fixture child workers follow the subagents setting", async () => {
   const provider = fixtureProvider();
   const f = context();
 
-  const restrictions = ["sandbox", "tools", "path_guard", "subagents"];
-
-  await provider.run(
-    f.runContext,
-    [
-      ...restrictions.map((name) => `[fixture:restriction name=${name}]`),
-      "[fixture:subagent count=2 outcome=error]",
-    ].join(" "),
-  );
-
-  for (const name of restrictions) {
-    assert.ok(
-      f.events.some(
-        (event) =>
-          event.type === "claude.activity" &&
-          event.data.type === "permission_denied" &&
-          event.data.tool_name === name,
-      ),
-      name,
-    );
-  }
+  await provider.run(f.runContext, "[fixture:subagent count=2 outcome=error]");
 
   assert.equal(
     f.events.filter(
@@ -162,9 +142,7 @@ test("fixture restrictions and child workers follow configured policy", async ()
     fixture: {
       ...blocked.runContext.task.provider_options?.fixture,
       claude_policy: {
-        sandbox: "extension",
-        tools: "restricted",
-        path_guard: true,
+        sandbox: false,
         subagents: false,
         settings_files: true,
         user_mcp: true,

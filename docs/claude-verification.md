@@ -26,8 +26,8 @@ these checks. Run them when you update the SDK or change the minimum:
 3. In a live task from the panel, steer, interrupt and answer a question.
 4. Run `npm run check:claude-policy`. It makes no model calls and needs no org.
    The org policy checks rely on `getSettings`, which the SDK doesn't declare,
-   and on how Claude Code words a rejected permission mode. If it fails,
-   sandboxed tasks refuse to start, or the panel stops locking blocked modes.
+   and on how Claude Code words a rejected permission mode. If it fails, the
+   panel stops locking blocked modes.
 
 Keep the minimum at or below the SDK's paired version, `claudeCodeVersion` in
 the SDK's `package.json`. Check the current stable and latest releases with
@@ -46,24 +46,25 @@ for inspection and fixture recording:
 SUBAGENT_EXTENSION_FOR_CODEX_LIVE_VERIFY=1 npx tsx scripts/verify-live-claude.mjs <scenario>
 ```
 
-| Scenario   | Checks                                                                                                                                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `read`     | A reviewer task reads a file with the native Read tool. This is the default scenario.                                                                                                                               |
-| `edits`    | Recorded file edits. See [Edit recording](#edit-recording).                                                                                                                                                         |
-| `folders`  | Folders without Git or commits: edits, the extension sandbox, a blocked outside read, blocked `.git` writes and a resumed session. Run it with `edits` when you qualify a CLI or SDK version.                       |
-| `resume`   | The worker asks a native question, and the session resumes after the answer.                                                                                                                                        |
-| `sandbox`  | The extension sandbox, with only the expected fixture commands approved and a local listener.                                                                                                                       |
-| `mcp`      | A task started and completed through the built stdio MCP server.                                                                                                                                                    |
-| `budget`   | Budget enforcement. The task is expected to fail on its cost limit.                                                                                                                                                 |
-| `parity`   | Claude Code settings loading, with default settings and a project-local skill, `.mcp.json` stdio server and `PreToolUse` hook. It approves only fixture tools and runs a subagent.                                  |
-| `isolated` | Settings loading off excludes the project hook and external MCP servers. A second task keeps settings on with user MCP off, checking that the hook runs while external servers stay absent. Both tasks read a file. |
+| Scenario   | Checks                                                                                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read`     | A reviewer task reads a file with the native Read tool. This is the default scenario.                                                                                                                                             |
+| `edits`    | Recorded file edits. See [Edit recording](#edit-recording).                                                                                                                                                                       |
+| `folders`  | Folders without Git or commits: edits in Claude Code's sandbox, a blocked outside write, blocked `.git` writes and a resumed session. Run it with `edits` when you qualify a CLI or SDK version.                                  |
+| `resume`   | The worker asks a native question, and the session resumes after the answer.                                                                                                                                                      |
+| `sandbox`  | Claude Code's sandbox with the sandbox setting on: a workspace write runs, and writes to home and `.git/hooks` and a local listener are blocked. Unsandboxed retries are denied.                                                  |
+| `mcp`      | A task started and completed through the built stdio MCP server.                                                                                                                                                                  |
+| `budget`   | Budget enforcement. The task is expected to fail on its cost limit.                                                                                                                                                               |
+| `parity`   | Claude Code settings loading, with default settings and a project-local skill, `.mcp.json` stdio server and `PreToolUse` hook. It approves only fixture tools and runs a subagent.                                                |
+| `isolated` | Settings loading off excludes the project hook and external MCP servers. A second task keeps settings on with user MCP off, checking that the hook runs while external servers stay absent. Both tasks read a file.               |
+| `token`    | A worktree task in the data directory can't read a fake admin token with the Read tool or `cat`, with the sandbox off and on, or with Python when sandboxed. It still reads its own files. Run it when you qualify a CLI version. |
 
 Each scenario uses a temporary fixture and a small native cost limit. Claude
 checks cost after each response, so a response can exceed the limit.
 
 Tasks run on `haiku` at `medium` effort to keep costs low. Set
 `SUBAGENT_EXTENSION_FOR_CODEX_LIVE_MODEL` to a model ID or alias, or
-`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT` to `default` or a reasoning level, to
+`SUBAGENT_EXTENSION_FOR_CODEX_LIVE_EFFORT` to `default` or a reasoning value, to
 override them. An empty value inherits the Claude Code default:
 
 ```sh

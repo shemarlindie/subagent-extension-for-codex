@@ -17,7 +17,7 @@ function failedBudgetTask(patch: Partial<Task> = {}): Task {
     owner: "owner",
     created_by: "user",
     status: "failed",
-    error: "Cost and runtime budget exhausted",
+    error_code: "cost_budget_exhausted",
     created_at: "",
     updated_at: "",
     instructions: [],
@@ -33,33 +33,32 @@ function failedBudgetTask(patch: Partial<Task> = {}): Task {
 
 test("budget usage handles completed tasks, provider failures and spent limits", () => {
   assert.equal(
-    spentBudget(
-      failedBudgetTask({
-        status: "completed",
-        error: undefined,
-      }),
-    ),
+    spentBudget(failedBudgetTask({ status: "completed" })),
     undefined,
   );
 
-  assert.deepEqual(
-    spentBudget(
-      failedBudgetTask({
-        error: "Claude result: error_max_budget_usd",
-        cost_usd: 1.97,
-      }),
-    ),
-    { cost: { used: 1.97, allowed: 2 } },
-  );
+  assert.deepEqual(spentBudget(failedBudgetTask({ cost_usd: 1.97 })), {
+    cost: { used: 1.97, allowed: 2 },
+  });
 
   assert.deepEqual(
     spentBudget(
       failedBudgetTask({
-        error: "Runtime budget exhausted",
+        error_code: "runtime_budget_exhausted",
         runtime_ms: 20 * 60_000,
       }),
     ),
     { runtime: { usedMinutes: 20, allowedMinutes: 20 } },
+  );
+
+  assert.equal(
+    spentBudget(
+      failedBudgetTask({
+        error_code: undefined,
+        error: "Could not read the cost budget configuration.",
+      }),
+    ),
+    undefined,
   );
 
   assert.equal(
@@ -73,9 +72,7 @@ test("a raised budget clears only its matching failure for that turn", () => {
     budget_raised_for_turn: { turn: 2, cost: true },
   });
 
-  assert.deepEqual(spentBudget(updated), {
-    runtime: { usedMinutes: 10, allowedMinutes: 20 },
-  });
+  assert.equal(spentBudget(updated), undefined);
 
   const runtimeRaised = failedBudgetTask({
     budget_raised_for_turn: { turn: 2, runtime: true },
@@ -91,17 +88,16 @@ test("a raised budget clears only its matching failure for that turn", () => {
 
   assert.deepEqual(spentBudget(laterTurn), {
     cost: { used: 1, allowed: 2 },
-    runtime: { usedMinutes: 10, allowedMinutes: 20 },
   });
 
   const overNewLimit = failedBudgetTask({
-    budget: { max_cost_usd: 2, max_runtime_minutes: 20 },
     budget_raised_for_turn: { turn: 2, cost: true },
     cost_usd: 2.5,
+    runtime_ms: 22 * 60_000,
   });
 
   assert.deepEqual(spentBudget(overNewLimit), {
     cost: { used: 2.5, allowed: 2 },
-    runtime: { usedMinutes: 10, allowedMinutes: 20 },
+    runtime: { usedMinutes: 22, allowedMinutes: 20 },
   });
 });
