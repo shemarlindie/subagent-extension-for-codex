@@ -273,14 +273,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
             statuses.workers === "loading" || statuses.settings === "loading"
           }
         />
-        <Field id="context" label="Context to include (optional)">
-          <textarea
-            id="context"
-            maxLength={20000}
-            placeholder="Relevant files, constraints, or prior findings. Conversation context is not attached automatically."
-            {...form.register("context")}
-          />
-        </Field>
         <BudgetFields
           workers={state.workers}
           settingsReady={statuses.settings === "ready"}

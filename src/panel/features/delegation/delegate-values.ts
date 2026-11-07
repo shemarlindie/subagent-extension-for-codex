@@ -11,7 +11,6 @@ export type DelegateValues = {
   reasoning_effort: string;
   revision: string;
   workspace_strategy: "" | "worktree" | "current_repo";
-  context: string;
   runtimeMode: string;
   runtime: number | "";
   costMode: string;

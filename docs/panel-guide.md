@@ -243,14 +243,13 @@ setting and names the provider or global default it then inherits. A failed save
 shows an error below the composer, and the choice still applies to the task.
 Workspace, revision, budgets and the Bash sandbox use your settings defaults.
 
-**More options…** carries the draft into **Advanced task**, which adds explicit
-context, workspace and revision, approval decision maker, Bash sandbox,
-dependencies and budgets. The mode and sandbox apply to this task only. Saving
-them would change later tasks, including those agents start, so change the
-defaults in **Settings**. **Wait for tasks** searches titles or IDs in the
-selected project and accepts several dependencies. The form blocks unsupported
-cost budgets and notes that Claude checks cost after each response, so a
-response can exceed the limit.
+**More options…** carries the draft into **Advanced task**, which adds workspace
+and revision, approval decision maker, Bash sandbox, dependencies and budgets.
+The mode and sandbox apply to this task only. Saving them would change later
+tasks, including those agents start, so change the defaults in **Settings**.
+**Wait for tasks** searches titles or IDs in the selected project and accepts
+several dependencies. The form blocks unsupported cost budgets and notes that
+Claude checks cost after each response, so a response can exceed the limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.

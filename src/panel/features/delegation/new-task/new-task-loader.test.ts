@@ -22,7 +22,6 @@ const values: DelegateValues = {
   reasoning_effort: "default",
   revision: "HEAD",
   workspace_strategy: "current_repo",
-  context: "",
   runtimeMode: "none",
   runtime: "",
   costMode: "none",
