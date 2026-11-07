@@ -1,10 +1,10 @@
-import type { Task } from "../../tasks/model.js";
+import type { TaskView } from "../../tasks/model.js";
 import { optionsForProvider } from "../options.js";
 import { type ClaudePermissionMode, permissionLabel } from "./permissions.js";
 import { claudeTaskOptionsSchema } from "./task-options.js";
 
 /** A task's native permission facts, or none when its stored options are invalid. */
-export const claudeTaskFacts = (task: Task): Record<string, string> => {
+export const claudeTaskFacts = (task: TaskView): Record<string, string> => {
   const parsed = claudeTaskOptionsSchema.safeParse(
     optionsForProvider(task.provider_options, "claude"),
   );

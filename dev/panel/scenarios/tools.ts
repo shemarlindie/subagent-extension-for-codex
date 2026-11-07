@@ -13,7 +13,7 @@ import {
   roles,
   type Task,
 } from "../../../src/shared/tasks/model";
-import { listedTask, readFields } from "../../../src/shared/tasks/task-list";
+import { panelTask, readFields } from "../../../src/shared/tasks/task-list";
 import {
   PREVIEW_ARCHIVE_TOOLS,
   previewArchivedAt,
@@ -431,12 +431,12 @@ export function previewTool(
     ),
     get_panel_context: panelContext(args, options),
     list_projects: projectsWith(options),
-    list_tasks: newestFirst(tasks)
+    app_list_tasks: newestFirst(tasks)
       .filter((task) => inScope(task, args))
       .map((task) => {
         const events = lightEventsFor(task.id);
 
-        return listedTask(
+        return panelTask(
           taskFor(task),
           events.slice(-200),
           events.findLast((event) => event.type === "agent.reply"),

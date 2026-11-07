@@ -248,7 +248,7 @@ test("activity labels reserve one line without moving the conversation", async (
   // Vary only activity, keeping the real fixture conversation unchanged.
   let activity: string | undefined;
 
-  await page.route("**/api/tools/list_tasks", async (route) => {
+  await page.route("**/api/tools/app_list_tasks", async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as { result: Task[] };
 

@@ -29,6 +29,8 @@ To delegate a task:
    **Browse** or the projects CLI and wait for registration.
 3. Read replies with `list_messages`, which supports long polling. Read recorded
    edits with `get_changes`, using `scope: "turn"` for the latest turn.
+   `list_tasks` returns summaries and leaves out archived tasks unless
+   `include_archived` is true. Read a task's full state with `get_task`.
 4. Continue with `send_message`. Inspect pending input before answering it with
    `submit_input` and its request ID.
 
@@ -138,7 +140,9 @@ schema. App-only tools carry user authority:
 | `app_mark_updates_seen`                                                 | [Pending updates](panel-guide.md#pending-worker-updates) Codex hasn't read |
 | `app_steer_queued_message`                                              | Moving a queued message into the running turn                              |
 
-Other `app_` tools serve panel reads and controls.
+Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
+panel's tasks, archived ones included with `archived_at`, without their
+conversation and context.
 
 `app_get_original_response` reads an original response saved with
 [full-event recording](configuration.md#environment-variables). Pass `task_id`
@@ -169,8 +173,8 @@ need the panel's **Approve** or **Deny** buttons. Questions accept model-visible
 answers. The service checks task ownership and the request ID for every answer.
 
 Project rename and removal use the saved canonical path, so they work after the
-directory is gone. `list_tasks` reports `archived_at` for archived tasks. Read
-points belong to the user and drive unread status and Chat's **New** divider.
+directory is gone. Read points belong to the user and drive unread status and
+Chat's **New** divider.
 
 `app_steer_queued_message` keeps the message's ID, text and sender. The worker
 must have no pending input request. If the turn can no longer accept the steer,

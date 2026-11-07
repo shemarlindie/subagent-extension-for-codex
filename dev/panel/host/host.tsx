@@ -73,7 +73,7 @@ const fixtureReadTools = new Set([
   "app_get_chat",
   "app_get_turn_activity",
   "list_projects",
-  "list_tasks",
+  "app_list_tasks",
   "list_workers",
   "app_wait_for_updates",
 ]);
@@ -132,7 +132,7 @@ function hostContext(settings: Settings): McpUiHostContext {
 }
 
 const fixtureThreads = threadsOf(
-  previewTool("list_tasks", { conversation_id: null }) as Task[],
+  previewTool("app_list_tasks", { conversation_id: null }) as Task[],
 );
 
 // The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
@@ -309,7 +309,7 @@ export function Host() {
       void service()
         .then((connection) =>
           connection.callTool({
-            name: "list_tasks",
+            name: "app_list_tasks",
             arguments: { conversation_id: null },
           }),
         )

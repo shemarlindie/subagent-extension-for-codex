@@ -544,7 +544,7 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      const next = await this.tool<Task[]>("list_tasks", {
+      const next = await this.tool<Task[]>("app_list_tasks", {
         conversation_id: conversation ?? null,
         ...(repository ? { repository } : {}),
       });

@@ -56,7 +56,7 @@ test("a task-list read predating project removal never publishes its deleted tas
   let reads = 0;
 
   transport.handler = (name) => {
-    if (name === "list_tasks" && reads++ === 0) return tasksRead.promise;
+    if (name === "app_list_tasks" && reads++ === 0) return tasksRead.promise;
 
     if (name === "app_remove_project") {
       transport.projects = [{ repository: "/repo/b", kind: "repository" }];

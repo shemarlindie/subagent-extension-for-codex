@@ -26,7 +26,6 @@ const task = (patch: Partial<Task>): Task => ({
   status: "running",
   created_at: "",
   updated_at: "",
-  instructions: [],
   created_by: "user",
   instructions_sent: 0,
   pending_steers: [],

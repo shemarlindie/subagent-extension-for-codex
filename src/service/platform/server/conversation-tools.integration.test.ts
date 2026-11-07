@@ -11,7 +11,10 @@ import { copyCommittedRepository } from "../../../../tests/support/repository-te
 import { until } from "../../../../tests/support/until.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
-import type { ListedTask } from "../../../shared/tasks/task-list.js";
+import type {
+  PanelTask,
+  TaskSummary,
+} from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { sendRef } from "../../features/tasks/runtime/timing.js";
@@ -158,13 +161,28 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.deepEqual(quiet.messages, []);
     assert.equal(quiet.next_cursor, all.next_cursor);
 
-    const listedArchive = async () =>
+    const listed = async (args: Record<string, unknown> = {}) =>
       (
-        await parent<ListedTask[]>("list_tasks", { conversation_id: null })
-      ).find((task) => task.id === t.id)?.archived_at;
+        await parent<TaskSummary[]>("list_tasks", {
+          conversation_id: null,
+          ...args,
+        })
+      ).find((task) => task.id === t.id);
 
+    // The list leaves archived tasks out unless asked, and the panel's list
+    // keeps them.
     await user("app_set_tasks_archived", { task_ids: [t.id], archived: true });
-    assert.ok(await listedArchive());
+    assert.equal(await listed(), undefined);
+    assert.ok((await listed({ include_archived: true }))?.archived_at);
+
+    const [panelTask] = await user<PanelTask[]>("app_list_tasks", {
+      conversation_id: null,
+    });
+
+    assert.ok(panelTask?.archived_at);
+    assert.equal(panelTask.description, "Review the parser");
+    const json = JSON.parse(JSON.stringify(panelTask)) as Partial<Task>;
+    assert.ok(!("instructions" in json) && !("context" in json));
 
     const sent = await parent<{ message_id: string; state: string }>(
       "send_message",
@@ -172,7 +190,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     );
 
     assert.equal(sent.state, "started");
-    assert.equal(await listedArchive(), undefined);
+    assert.equal((await listed())?.archived_at, undefined);
 
     const next = await parent<Messages>("list_messages", {
       task_id: t.id,
@@ -190,22 +208,26 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     // The task and list show the turn, queue and latest reply.
     await until(() => store.get(t.id, "alice").status === "completed");
 
-    const task = await parent<Task & { reply: { turn: number; text: string } }>(
-      "get_task",
-      { task_id: t.id },
-    );
+    const task = await parent<
+      Omit<Task, "instructions"> & { reply: { turn: number; text: string } }
+    >("get_task", { task_id: t.id });
 
     assert.equal(task.turn, 2);
     assert.deepEqual(task.queue, []);
     assert.equal(task.reply.turn, 2);
+    assert.ok(!("instructions" in task));
 
-    const [listed] = await parent<
-      (Task & { reply: unknown; queued_messages: number })[]
-    >("list_tasks", {});
-
-    assert.ok(listed);
-    assert.deepEqual(listed.reply, task.reply);
-    assert.equal(listed.queued_messages, 0);
+    // A summary leaves out the request, context and conversation.
+    assert.deepEqual(await listed(), {
+      id: t.id,
+      title: t.title,
+      status: "completed",
+      repository: t.repository,
+      worker_profile: t.worker_profile,
+      turn: 2,
+      reply: task.reply,
+      queued_messages: 0,
+    } satisfies TaskSummary);
   } finally {
     await c.close();
   }

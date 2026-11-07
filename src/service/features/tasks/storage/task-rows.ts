@@ -10,13 +10,15 @@ import {
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Database } from "../../../platform/database/database.js";
 import { eventColumns } from "./event-records.js";
-import { events, taskRead, tasks } from "./schema.js";
+import { events, taskArchive, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
-/** Narrows an owner's tasks to a conversation or repository. */
+/** Narrows an owner's tasks to a conversation, a repository or unarchived tasks. */
 export interface TaskFilters {
   conversation?: string;
   repository?: string;
+  /** Leaves out tasks the user archived. */
+  unarchived?: boolean;
 }
 
 /** The condition for an owner's tasks that match `filters`. */
@@ -32,6 +34,9 @@ export const taskFilters = (owner: string, filters: TaskFilters) =>
           sql`json_extract(${tasks.body}, '$.repository')`,
           filters.repository,
         ),
+    filters.unarchived
+      ? sql`not exists (select 1 from ${taskArchive} where ${taskArchive.task_id} = ${tasks.id})`
+      : undefined,
   );
 
 /** The decoded tasks matching `where`, in `order`, up to `limit`. */

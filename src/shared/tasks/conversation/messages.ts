@@ -1,6 +1,6 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
-import type { Delivery, Sender, Task } from "../model.js";
+import type { Delivery, Sender, TaskView } from "../model.js";
 
 /** Events a conversation is derived from, besides the task's own request. */
 export const MESSAGE_EVENTS = [
@@ -70,7 +70,7 @@ function queueState(
  * message takes that message's place and id, so it doesn't show twice.
  */
 export function conversation(
-  task: Task,
+  task: TaskView,
   events: Event[],
 ): [ConversationMessage, ...ConversationMessage[]] {
   const pending = new Set(task.pending_steers.map((m) => m.id));

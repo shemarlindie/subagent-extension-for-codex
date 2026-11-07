@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { liveConversationSnapshot } from "../../dev/panel/scenarios/live-conversation";
 import { chatItems } from "../../src/shared/tasks/conversation/chat";
-import { listedTask } from "../../src/shared/tasks/task-list";
+import { panelTask } from "../../src/shared/tasks/task-list";
 
 /** Replays cycling fixture reads against an existing console task. */
 export async function installChatCycle(
@@ -29,11 +29,11 @@ export async function installChatCycle(
 
   // The console uses its documented listed-task draft fallback here. Real SSE
   // delivery and following are covered by chat-reading.spec.ts.
-  await page.route("**/api/tools/list_tasks", (route) =>
+  await page.route("**/api/tools/app_list_tasks", (route) =>
     route.fulfill({
       json: {
         result: [
-          listedTask(
+          panelTask(
             task(),
             events(),
             undefined,

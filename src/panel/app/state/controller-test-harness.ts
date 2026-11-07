@@ -58,14 +58,12 @@ export function task(
     title: "Review",
     description: "Review",
     depends_on: [],
-    context: [],
     workspace_strategy: "worktree",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     owner: "owner",
     status: "running",
     created_at: "",
     updated_at: "",
-    instructions: [],
     created_by: "user",
     instructions_sent: 0,
     pending_steers: [],
@@ -114,7 +112,7 @@ export class FakeTransport implements Transport {
       list_workers: [
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
-      list_tasks: this.tasks,
+      app_list_tasks: this.tasks,
       app_get_activity: { events: [] },
       app_record_timing: {},
       app_get_change_counts: {

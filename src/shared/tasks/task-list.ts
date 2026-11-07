@@ -4,12 +4,33 @@ import { currentActivityStatus } from "./activity/activity-status.js";
 import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
 import type { ReadState } from "./conversation/unread.js";
-import type { Task } from "./model.js";
+import type { Task, TaskView } from "./model.js";
 
 /** The start of a task's latest reply, so a list can be scanned without opening each task. */
 export type ReplyExcerpt = { turn: number; text: string };
 
-export type ListedTask = Task & {
+/** What a parent agent needs to find a task and decide whether to read it. */
+export type TaskSummary = Pick<
+  Task,
+  | "id"
+  | "title"
+  | "status"
+  | "repository"
+  | "conversation_id"
+  | "worker_profile"
+  | "turn"
+  | "error"
+  | "error_code"
+> & {
+  /** The kind of request waiting for an answer. */
+  pending_input?: "question" | "permission";
+  reply?: ReplyExcerpt;
+  queued_messages: number;
+  archived_at?: string;
+};
+
+/** A task as the panel lists it. Chat reads the conversation through its own tool. */
+export type PanelTask = TaskView & {
   live_activity?: ReturnType<typeof currentActivityStatus>;
   reply?: ReplyExcerpt;
   queued_messages?: number;
@@ -42,19 +63,51 @@ export function readFields(read?: ReadState) {
     : {};
 }
 
+/** A task as `list_tasks` returns it to a parent agent. */
+export function taskSummary(
+  task: Task,
+  reply?: Event,
+  archivedAt?: string,
+): TaskSummary {
+  const excerpt = replyFrom(reply);
+
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    repository: task.repository,
+    ...(task.conversation_id ? { conversation_id: task.conversation_id } : {}),
+    worker_profile: task.worker_profile,
+    turn: task.turn,
+    ...(task.error ? { error: task.error } : {}),
+    ...(task.error_code ? { error_code: task.error_code } : {}),
+    ...(task.pending_input ? { pending_input: task.pending_input.kind } : {}),
+    ...(excerpt ? { reply: excerpt } : {}),
+    queued_messages: task.queue.length,
+    ...(archivedAt ? { archived_at: archivedAt } : {}),
+  };
+}
+
+/**
+ * Fields the panel's list leaves out. Undefined fields drop out of the sent
+ * result, which costs less than copying each task without them.
+ */
+const unsent = { instructions: undefined, context: undefined };
+
 /** Activity summaries are derived for the list, never persisted as task state. */
-export function listedTask(
+export function panelTask(
   task: Task,
   events: Event[],
   reply?: Event,
   draft?: Draft,
   read?: ReadState,
   archivedAt?: string,
-): ListedTask {
+): PanelTask {
   const excerpt = replyFrom(reply);
 
   return {
     ...task,
+    ...unsent,
     ...(task.status === "running"
       ? { live_activity: currentActivityStatus(events, task) }
       : {}),
