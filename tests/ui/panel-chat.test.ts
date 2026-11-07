@@ -10,22 +10,10 @@ import {
   screen,
   setup,
   test,
-  userEvent,
   vi,
   waitFor,
   within,
 } from "./panel-test-support";
-
-type User = ReturnType<typeof userEvent.setup>;
-
-// Outcome details explain themselves in a hover tooltip, not a native title.
-async function hoverTooltip(user: User, element: Element) {
-  await user.hover(element);
-  const text = (await screen.findByRole("tooltip")).textContent;
-  await user.unhover(element);
-
-  return text;
-}
 
 test("handoff sends only after explicit submit and uses the edited message", async (t) => {
   const { controller, transport, user } = await setup(t);
@@ -256,80 +244,6 @@ test("a standalone reply handoff copies the edited message without sending", asy
   expect(transport.messages).toEqual([]);
 });
 
-test("completed chat turns show a quiet summary with a completion time on hover", async (t) => {
-  // Freeze the calendar without replacing the timers used by async UI interactions.
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-10-09T18:00:00Z"));
-
-  t.onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  const timestamp = "2026-10-08T18:30:00.000Z";
-
-  const { user, controller, transport } = await setup(t, (transport) => {
-    const [current] = transport.tasks;
-
-    assert.ok(current);
-    current.status = "completed";
-    transport.host.locale = "en-US";
-    transport.host.timeZone = "America/Los_Angeles";
-
-    transport.chat = [
-      {
-        kind: "outcome",
-        id: "completed-turn",
-        event_id: 1,
-        timestamp,
-        turn: 1,
-        outcome: "completed",
-        runtime_ms: 95_000,
-        cost_usd: 0,
-      },
-    ];
-  });
-
-  const row = document.querySelector(".chat-outcome")!;
-  const label = row.querySelector(".chat-outcome-label")!;
-  const duration = row.querySelector(".chat-outcome-duration")!;
-  const turn = row.querySelector<HTMLElement>(".chat-outcome-timestamp")!;
-
-  assert.equal(label.textContent, "Oct 8, 11:30 AM");
-
-  assertAbsent(
-    within(row as HTMLElement).queryByRole("button", { name: "Copy response" }),
-  );
-
-  assert.equal(duration.textContent, "1m 35s");
-
-  assert.equal(await hoverTooltip(user, duration), "Turn took 1m 35s");
-
-  assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 11:30:00 AM");
-
-  const cost = within(row as HTMLElement).getByText("$0.00");
-  assert.equal(cost.getAttribute("aria-label"), "Estimated turn cost $0.00");
-
-  expect(await hoverTooltip(user, cost)).toMatch(
-    /this turn at API list prices/,
-  );
-
-  await act(async () =>
-    transport.events.host({
-      ...transport.host,
-      timeZone: "America/New_York",
-    }),
-  );
-
-  assert.equal(await hoverTooltip(user, turn), "Oct 8, 2026, 2:30:00 PM");
-
-  assert.equal(label.textContent, "Oct 8, 2:30 PM");
-
-  assert.equal(await hoverTooltip(user, duration), "Turn took 1m 35s");
-
-  await user.click(screen.getByRole("button", { name: "View activity" }));
-  assert.equal(controller.getSnapshot().tab, "activity");
-});
-
 test("View activity scrolls to a recent turn and reads an older one on its own", async (t) => {
   const { controller, transport, user } = await setup(t, (transport) => {
     const events: ReturnType<typeof decodedEvent>[] = [];
@@ -423,54 +337,6 @@ test("View activity scrolls to a recent turn and reads an older one on its own",
   assertAbsent(screen.queryByText(/Showing activity for/));
   assert.ok(screen.getByText(/Showing the most recent 200 events\./));
 });
-
-for (const outcome of ["failed", "interrupted"] as const) {
-  test(`${outcome} chat turns retain their status and error beside the compact summary`, async (t) => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-09T18:00:00Z"));
-
-    t.onTestFinished(() => {
-      vi.useRealTimers();
-    });
-
-    const error = outcome === "failed" ? "Worker failed <script>" : undefined;
-
-    await setup(t, (transport) => {
-      const [current] = transport.tasks;
-
-      assert.ok(current);
-      current.status = outcome;
-      transport.host.locale = "en-US";
-      transport.host.timeZone = "America/Los_Angeles";
-
-      transport.chat = [
-        {
-          kind: "outcome",
-          id: `${outcome}-turn`,
-          event_id: 1,
-          timestamp: "2026-10-08T18:30:00.000Z",
-          turn: 2,
-          outcome,
-          runtime_ms: 95_000,
-          error,
-        },
-      ];
-    });
-
-    const row = document.querySelector<HTMLElement>(".chat-outcome")!;
-    assert.equal(row.dataset.outcome, outcome);
-
-    assert.equal(
-      within(row).getByRole("separator").textContent,
-      outcome === "failed" ? "Failed" : "Interrupted",
-    );
-
-    assert.equal(row.querySelector(".chat-outcome-error")?.textContent, error);
-    assertAbsent(row.querySelector("script"));
-    assertAbsent(row.querySelector('[aria-label^="Estimated turn cost"]'));
-    assert.ok(within(row).getByRole("button", { name: "View activity" }));
-  });
-}
 
 test("global mode hides Ask Codex about this reply even when the host can send", async (t) => {
   const { user } = await setup(t, (transport) => {

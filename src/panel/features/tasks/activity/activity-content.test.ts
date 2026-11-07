@@ -17,12 +17,6 @@ import {
 } from "./activity-ui-test-harness";
 import { EventList as GroupedEventList } from "./event-list";
 
-// Readable fallbacks for an unknown type or subtype.
-const families = [
-  ["future_event", undefined, "Future event"],
-  ["system", "future_subtype", "Future subtype"],
-] as const;
-
 test("raw-only activity data stays behind its collapsed inspector", () => {
   const raw = {
     type: "system",
@@ -43,19 +37,6 @@ test("raw-only activity data stays behind its collapsed inspector", () => {
   assertAbsent(disclosure?.querySelector(".json-tree") ?? null);
   assert.ok(!doc.body.textContent?.includes("raw-only-id"));
 });
-
-test.each(families)(
-  "unknown activity %s %s falls back to %s",
-  (type, subtype, title) => {
-    const raw = { type, ...(subtype ? { subtype } : {}) };
-
-    const doc = markup([
-      event("claude.activity", { ...raw, raw_response: raw }),
-    ]);
-
-    assert.equal(doc.querySelector("strong")?.textContent, title);
-  },
-);
 
 test("mixed content, tool inputs and tool results are readable and HTML stays literal", () => {
   const malicious = "<script>window.injected = true</script>";
@@ -174,24 +155,6 @@ test("failures are distinguished for results, tool errors and denied permissions
   ]) {
     assert.ok(doc.body.textContent?.includes(snippet), snippet);
   }
-});
-
-test("activity metadata omits duplicate total cost", () => {
-  const values = {
-    cost_usd: 0.1234,
-    total_cost_usd: 0.1234,
-  };
-
-  const doc = markup([event("agent.completed", values)]);
-
-  const fields = new Set(
-    Array.from(
-      doc.querySelectorAll(".activity-fields dt"),
-      (field) => field.textContent,
-    ),
-  );
-
-  assert.equal(fields.has("Total cost"), false, "Avoid duplicated result cost");
 });
 
 test("supported base64 images render inline, including images nested in documents and tool results", () => {

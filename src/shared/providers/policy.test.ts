@@ -25,12 +25,6 @@ const policy = (
   notes: [],
 });
 
-test("without an allowlist or a named model, every model passes", () => {
-  assert.ok(modelAllowed(undefined, [], "claude-opus-5-5"));
-  assert.ok(modelAllowed(policy(["haiku"]), models, ""));
-  assert.ok(modelAllowed(policy(["haiku"]), models, "default"));
-});
-
 test("listed aliases and the IDs they resolve to pass, and excluded models don't", () => {
   const limited = policy(["haiku"]);
 

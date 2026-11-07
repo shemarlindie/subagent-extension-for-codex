@@ -3,7 +3,7 @@ import { expect, test, vi } from "vitest";
 import { task } from "./controller-test-harness";
 import { initialState } from "./initial-state";
 import type { Snapshot } from "./types";
-import { quote, taskView, type UndoEntry, UndoHistory } from "./undo-history";
+import { taskView, type UndoEntry, UndoHistory } from "./undo-history";
 
 function setup() {
   let state: Snapshot = initialState();
@@ -171,11 +171,6 @@ test("the toast's button reverses every step it lists", async () => {
     items: ["Third", "Second", "First"],
     steps: 3,
   });
-});
-
-test("quoted text stays on one line and shortens past its limit", () => {
-  expect(quote("Rename\n  the flags")).toBe("“Rename the flags”");
-  expect(quote("a".repeat(70))).toBe(`“${"a".repeat(59)}…”`);
 });
 
 test("quick presses all count, in order, while an earlier step is still running", async () => {

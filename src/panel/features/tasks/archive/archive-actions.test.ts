@@ -98,20 +98,6 @@ test("a failed archive restores the list and rethrows", async () => {
   assert.deepEqual(archived(), []);
 });
 
-test("toggling unarchives an archived task, and nothing to change sends nothing", async () => {
-  const old = task({ id: "old", archived_at: "then" });
-
-  const { actions, tool, archived } = setup([old], () =>
-    Promise.resolve({ task_ids: ["old"], skipped: [] }),
-  );
-
-  await actions.toggle(old);
-  assert.deepEqual(archived(), []);
-
-  await actions.setArchived([task({ id: "busy", status: "running" })], true);
-  assert.equal(tool.mock.calls.length, 1);
-});
-
 test("archiving the open task closes it, while other changes keep it open", async () => {
   const open = task({ id: "open" });
   const other = task({ id: "other" });

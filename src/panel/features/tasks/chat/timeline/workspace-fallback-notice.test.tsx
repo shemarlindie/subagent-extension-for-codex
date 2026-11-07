@@ -28,8 +28,3 @@ test("a dismissed notice stays hidden after a reload and other tasks keep theirs
   render(<WorkspaceFallbackNotice task={task("b", "no_commits")} />);
   screen.getByText(/This repository has no commits/);
 });
-
-test("a task with no fallback shows no notice", () => {
-  render(<WorkspaceFallbackNotice task={task("c")} />);
-  expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
-});

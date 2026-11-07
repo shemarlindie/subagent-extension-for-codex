@@ -577,34 +577,6 @@ test("operation failure messages remain visible outside collapsed debug details"
   assert.match(doc.body.textContent ?? "", /Visible tool error/);
 });
 
-// activity-timeline's tests cover which terminal operations stay neutral.
-test("neutral terminal operations never display Done badges", () => {
-  const events = [
-    event(
-      "claude.activity",
-      { type: "system", subtype: "hook_started", hook_id: "cancel-hook" },
-      "cancel-hook-start",
-    ),
-    event(
-      "claude.activity",
-      {
-        type: "system",
-        subtype: "hook_response",
-        hook_id: "cancel-hook",
-        outcome: "cancelled",
-      },
-      "cancel-hook-finish",
-    ),
-  ];
-
-  const doc = parseHtml(
-    renderToStaticMarkup(createElement(GroupedEventList, { events })),
-  );
-
-  assert.equal(doc.querySelectorAll(".activity-group").length, 1);
-  assert.equal(doc.querySelectorAll(".activity-badge").length, 0);
-});
-
 test("tool result image previews and individual responses mount on first debug activation", (t) => {
   t.onTestFinished(cleanup);
 

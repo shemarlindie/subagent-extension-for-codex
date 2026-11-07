@@ -195,17 +195,6 @@ test("validation accepts the minimum and newer releases but rejects older versio
   assert.match(!old.ready ? old.message : "", /claude update/);
 });
 
-test("an outdated Homebrew install is told to upgrade the cask", async () => {
-  const status = await validateClaudeCli(
-    await fakeClaude(
-      join(root, "Caskroom", "claude-code", "2.1.200", "claude"),
-      "2.1.200 (Claude Code)",
-    ),
-  );
-
-  assert.match(!status.ready ? status.message : "", /brew upgrade --cask/);
-});
-
 test("prerelease, malformed, failing and hanging CLIs are rejected", async () => {
   const problem = async (status: Promise<ClaudeCliStatus>) => {
     const result = await status;

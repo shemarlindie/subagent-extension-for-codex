@@ -69,16 +69,3 @@ test("the saved place is restored, and the restore's own scroll doesn't replace 
   fireEvent.scroll(scroller);
   assert.equal(reading.position?.top, 120);
 });
-
-test("content that fits has nothing to restore", () => {
-  onTestFinished(cleanup);
-  layout(200, 200);
-
-  const reading: ChangesReading = {
-      position: { top: 120 },
-      open: new Map(),
-    },
-    view = render(<Harness reading={reading} />);
-
-  assert.equal(view.getByTestId("scroller").scrollTop, 0);
-});

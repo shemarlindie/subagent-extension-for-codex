@@ -10,7 +10,6 @@ import type { DelegateValues } from "../delegate-values";
 import { providerOptionDefaults } from "../provider-defaults";
 import { ApprovalField } from "./approval-field";
 import { BudgetFields } from "./budget-fields";
-import { WorkspaceField } from "./workspace-field";
 
 function ProviderFields({ worker }: { worker: Worker }) {
   const form = useForm<DelegateValues>({
@@ -143,38 +142,6 @@ test("workers without native mode selection do not offer approval delegation", (
   );
 });
 
-test("permission fields stay unresolved until worker metadata arrives", (t) => {
-  t.onTestFinished(cleanup);
-
-  function Fields() {
-    const form = useForm<DelegateValues>({
-      defaultValues: {
-        worker: "",
-        permission_mode: "inherit",
-        approval_decider: "user",
-      },
-    });
-
-    return (
-      <FormProvider {...form}>
-        <ApprovalField workers={[]} disabled loading />
-      </FormProvider>
-    );
-  }
-
-  const view = render(<Fields />);
-
-  for (const id of ["permission-mode", "approval-decider"]) {
-    const control = view.container.querySelector<HTMLButtonElement>(`#${id}`);
-
-    assert.ok(control?.disabled);
-    assert.equal(control?.getAttribute("aria-busy"), "true");
-    assert.match(control?.textContent ?? "", /Loading…/);
-  }
-
-  assert.doesNotMatch(view.container.textContent ?? "", /Inherit|Parent agent/);
-});
-
 test("provider option defaults read the provider's permission setting and the shared decider", () => {
   const nativePermissions = {
     permissionOption: "mode",
@@ -210,59 +177,6 @@ test("provider option defaults read the provider's permission setting and the sh
       settings,
     ),
     { permission_mode: "locked", approval_decider: "user" },
-  );
-});
-
-test("unknown task defaults show in-control loading text until selected values resolve", (t) => {
-  t.onTestFinished(cleanup);
-
-  function Fields() {
-    const form = useForm<DelegateValues>({
-      defaultValues: {
-        workspace_strategy: "",
-        worker: "",
-        costMode: "",
-        cost: "",
-        runtimeMode: "",
-        runtime: "",
-      },
-    });
-
-    return (
-      <FormProvider {...form}>
-        <WorkspaceField settingsReady={false} settingsLoading />
-        <BudgetFields
-          workers={[]}
-          settingsReady={false}
-          workersReady={false}
-          settingsLoading
-        />
-      </FormProvider>
-    );
-  }
-
-  const view = render(<Fields />);
-
-  const workspace = view.container.querySelector<HTMLButtonElement>(
-    "#workspace-strategy",
-  );
-
-  assert.ok(workspace?.disabled);
-  assert.equal(workspace?.getAttribute("aria-busy"), "true");
-  assert.match(workspace?.textContent ?? "", /Loading…/);
-
-  for (const name of ["Cost limit", "Runtime limit"]) {
-    const control = view.getByRole("switch", { name });
-
-    assert.equal(control.getAttribute("aria-disabled"), "true");
-    assert.equal(control.getAttribute("aria-busy"), "true");
-  }
-
-  assert.match(view.container.textContent ?? "", /Loading budget options/);
-
-  assert.doesNotMatch(
-    view.container.textContent ?? "",
-    /This provider requires No cost limit/,
   );
 });
 

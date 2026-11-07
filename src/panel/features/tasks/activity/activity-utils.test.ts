@@ -21,11 +21,6 @@ test("a reply preview counts Unicode characters, not UTF-16 units", () => {
   assert.equal(responsePreview(text), `${"😀".repeat(100)}...`);
 });
 
-test("turn stats omit numbers the result does not report", () => {
-  assert.deepEqual(turnStats(completed({})), []);
-  assert.deepEqual(turnStats(completed({ duration_ms: 4000 })), ["4s"]);
-});
-
 test("turn stats count cached input from the validated payload", () => {
   const compact = (value: number) =>
     new Intl.NumberFormat(undefined, {

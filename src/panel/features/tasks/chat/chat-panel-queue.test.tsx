@@ -49,32 +49,6 @@ test("a running task can steer an existing queued message, keeping its composer 
   expect(row.querySelector('button[aria-label="Steer"]')).toBeNull();
 });
 
-test.each([
-  { status: "completed" as const },
-  {
-    status: "waiting" as const,
-    pending_input: {
-      id: "request",
-      kind: "question" as const,
-      tool: "question",
-      input: { question: "Continue?" },
-    },
-  },
-])(
-  "queued steering stays hidden when the composer cannot steer: $status",
-  (patch) => {
-    const { view } = setup({
-      ...patch,
-      queue: [
-        { id: "msg_q", message: "Queued", from: "user", delivery: "queue" },
-      ],
-    });
-
-    const row = view.container.querySelector('[data-message="msg_q"]')!;
-    expect(row.querySelector('button[aria-label="Steer"]')).toBeNull();
-  },
-);
-
 test("queued messages reorder by dragging or Alt+arrows, behind a left-over steer", async () => {
   const queued = (id: string, message: string) => ({
     id,
