@@ -42,13 +42,19 @@ scheduling paths indexed, so their cost grows with the rows a request needs.
 
 ## Change a schema
 
-1. Edit the owning feature's Drizzle schema.
+1. Edit the owning feature's Drizzle schema, or add one and collect it in
+   `src/service/platform/database/schema.ts`.
 2. Run `npm run db:generate -- --name <change>` and review the SQL. SQLite
-   rebuilds a table for many column changes. For a data backfill, write a custom
-   migration with `npx drizzle-kit generate --custom --name <change>`.
-3. Run the focused database tests and the affected feature tests.
+   rebuilds a table for many column changes.
+3. Keep all of a change's schema edits in this one generated migration, whether
+   they change existing tables or add new ones, and plan it that way.
+4. Write any data change, such as a backfill, in one custom migration from
+   `npx drizzle-kit generate --custom --name <change>`. Keeping it out of the
+   generated SQL shows reviewers which SQL is hand-written. It runs after the
+   generated migration, in the same transaction.
+5. Run the focused database tests and the affected feature tests.
 
-Commit the new folder under `migrations/` with the change. Never edit a
+Commit the new folders under `migrations/` with the change. Never edit a
 committed migration.
 
 ## Migration application
