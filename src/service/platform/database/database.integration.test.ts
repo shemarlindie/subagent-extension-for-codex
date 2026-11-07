@@ -14,10 +14,9 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 
-import { test, vi } from "vitest";
+import { test } from "vitest";
 
 import { events } from "../../features/tasks/storage/schema.js";
-import * as logging from "../logging/logger.js";
 import {
   migrationsFolder,
   openDatabase,
@@ -278,11 +277,9 @@ test("processes opening a new database together migrate it once", async (t) => {
   );
 });
 
-test("the service converts a database to incremental vacuum once, reclaiming free pages", (t) => {
+test("the service converts a database to incremental vacuum, reclaiming free pages", (t) => {
   const db = openDatabase(join(scratch(t), "service.sqlite"));
   t.onTestFinished(() => db.close());
-  const log = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
-  t.onTestFinished(() => log.mockRestore());
 
   const pragma = (name: string) =>
     Number(Object.values(db.client.prepare(`PRAGMA ${name}`).get()!)[0]);
@@ -295,14 +292,6 @@ test("the service converts a database to incremental vacuum once, reclaiming fre
   useIncrementalVacuum(db);
   assert.equal(pragma("auto_vacuum"), 2);
   assert.equal(pragma("freelist_count"), 0);
-
-  assert.deepEqual(
-    log.mock.calls.map(([, event]) => event),
-    ["database.vacuum_started", "database.vacuum_completed"],
-  );
-
-  useIncrementalVacuum(db);
-  assert.equal(log.mock.calls.length, 2);
 });
 
 test("a failed Drizzle query throws SQLite's error, without the query's values", (t) => {

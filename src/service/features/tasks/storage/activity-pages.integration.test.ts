@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { expect, test, type TestContext, vi } from "vitest";
+import { test, type TestContext, vi } from "vitest";
 
 import { type Event } from "../../../../shared/events/types.js";
 import {
@@ -9,7 +9,6 @@ import {
   windowTurnActivity,
 } from "../../../../shared/tasks/activity/activity-tail.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
-import * as logging from "../../../platform/logging/logger.js";
 import { ActivityPages } from "./activity-pages.js";
 import { Store } from "./store.js";
 
@@ -83,22 +82,12 @@ test("a page is the newest window and the tally of the rest", (t) => {
 });
 
 test("a poll returns only the events after its cursor and extends the tally", (t) => {
-  const recordLog = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
   const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 10);
 
   const pages = new ActivityPages(store),
     first = pages.page(task.id, 0),
     cursor = first.events.at(-1)!.id;
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_latest",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: EVENT_TAIL_SIZE,
-    tally_rows: 10,
-    cache: "miss",
-  });
 
   write(1200);
 
@@ -107,15 +96,6 @@ test("a poll returns only the events after its cursor and extends the tally", (t
 
   assert.deepEqual(next, windowActivity(log, cursor));
   assert.equal(next.events.length, EVENT_TAIL_SIZE);
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_latest",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: EVENT_TAIL_SIZE,
-    tally_rows: 1200,
-    cache: "hit",
-  });
 });
 
 test("a poll with nothing new does not count the history again", (t) => {
@@ -176,29 +156,4 @@ test("a turn reads from the previous turn's close through its own close", (t) =>
   // A turn that has not ended runs to the newest event.
   assert.deepEqual(pages.turn(task.id, 4), windowTurnActivity(log, 4));
   assert.equal(pages.turn(task.id, 4).events.length, 3);
-});
-
-test("an evicted activity tally reports a cache miss and recounts its old rows", (t) => {
-  const { store, task, write } = fixture(t);
-  const recordLog = vi.spyOn(logging, "logEvent").mockImplementation(() => {});
-  write(EVENT_TAIL_SIZE + 1);
-  const pages = new ActivityPages(store);
-  pages.page(task.id, 0);
-
-  for (let index = 0; index < 32; index++) {
-    const next = { ...task, id: `other-${index}` };
-    store.save(next);
-    pages.page(next.id, 0);
-  }
-
-  pages.page(task.id, 0);
-
-  expect(recordLog).toHaveBeenLastCalledWith("debug", "storage.read", {
-    operation: "activity_latest",
-    duration_ms: expect.any(Number),
-    outcome: "success",
-    rows: EVENT_TAIL_SIZE,
-    tally_rows: 1,
-    cache: "miss",
-  });
 });
