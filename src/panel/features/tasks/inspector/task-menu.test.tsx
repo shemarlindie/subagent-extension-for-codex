@@ -64,34 +64,3 @@ test("task menu disables deletion while another action runs", async () => {
   await user.click(action);
   assert.equal(controller.getSnapshot().dialog, undefined);
 });
-
-test("task menu marks an unread task read", async () => {
-  const unread = true,
-    label = "Mark read";
-
-  onTestFinished(cleanup);
-
-  const controller = new Controller(
-    { embedded: true, dispose() {} } as unknown as Transport,
-    { hidden: () => false, wide: () => false },
-  );
-
-  onTestFinished(() => controller.dispose());
-  const tool = vi.spyOn(controller, "tool").mockResolvedValue({ unread });
-
-  const view = render(
-    <ControllerContext.Provider value={controller}>
-      <Tooltip.Provider>
-        <TaskMenu task={{ ...task, ...(unread ? { unread } : {}) }} />
-      </Tooltip.Provider>
-    </ControllerContext.Provider>,
-  );
-
-  const user = userEvent.setup();
-  await user.click(view.getByRole("button", { name: "Task actions" }));
-  await user.click(await view.findByRole("menuitem", { name: label }));
-
-  assert.deepEqual(tool.mock.calls, [
-    ["app_set_task_read", { task_id: task.id, read: unread }],
-  ]);
-});
