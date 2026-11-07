@@ -16,7 +16,10 @@ import { pathToFileURL } from "node:url";
 
 import { test } from "vitest";
 
+import { isChatEvent } from "../../../shared/tasks/conversation/chat.js";
+import { startSchema, type Task } from "../../../shared/tasks/model.js";
 import { events } from "../../features/tasks/storage/schema.js";
+import { Store } from "../../features/tasks/storage/store.js";
 import {
   migrationsFolder,
   openDatabase,
@@ -285,7 +288,7 @@ test("the service converts a database to incremental vacuum, reclaiming free pag
     Number(Object.values(db.client.prepare(`PRAGMA ${name}`).get()!)[0]);
 
   db.client.exec(
-    "INSERT INTO tasks VALUES('a','alice',''); UPDATE tasks SET body = printf('%.*c', 500000, 'x'); DELETE FROM tasks",
+    "INSERT INTO tasks(id,owner,body) VALUES('a','alice',json_object('x',printf('%.*c', 500000, 'x'))); DELETE FROM tasks",
   );
 
   assert.ok(pragma("freelist_count") > 0);
@@ -312,5 +315,89 @@ test("a failed Drizzle query throws SQLite's error, without the query's values",
     (error: Error) =>
       error.message === "FOREIGN KEY constraint failed" &&
       !error.message.includes("secret-timestamp"),
+  );
+});
+
+test("migrating existing tasks indexes their status, conversation, creation order and Chat events", (t) => {
+  const dir = scratch(t);
+  const path = join(dir, "service.sqlite");
+  const folder = join(dir, "migrations");
+  const [initial] = readdirSync(migrationsFolder).sort();
+
+  cpSync(join(migrationsFolder, initial!), join(folder, initial!), {
+    recursive: true,
+  });
+
+  const before = openDatabase(path, folder);
+
+  const task = (id: string, status: Task["status"], conversation: string) =>
+    ({
+      ...startSchema.parse({ repository: "/repo", description: id }),
+      title: id,
+      id,
+      owner: "alice",
+      conversation_id: conversation,
+      status,
+      created_at: `2026-01-0${id.at(-1)}T00:00:00.000Z`,
+      updated_at: "2026-01-01T00:00:00.000Z",
+      instructions: [],
+      created_by: "user",
+      instructions_sent: 0,
+      pending_steers: [],
+      queue: [],
+      turn: 1,
+      runtime_ms: 0,
+    }) satisfies Task;
+
+  const stored = [
+    task("task_2", "completed", "one"),
+    task("task_1", "queued", "two"),
+    task("task_3", "queued", "one"),
+  ];
+
+  for (const row of stored) {
+    before.client
+      .prepare("INSERT INTO tasks VALUES(?,?,?)")
+      .run(row.id, row.owner, JSON.stringify(row));
+  }
+
+  const written: [string, Record<string, unknown>][] = [
+    ["task.started", { turn: 1 }],
+    ["claude.activity", { subtype: "compact_boundary" }],
+    ["claude.activity", { subtype: "status", compact_result: "failed" }],
+    ["claude.activity", { subtype: "status", status: "compacting" }],
+    ["task.queue_changed", { queue: [], paused: false }],
+    ["agent.reply", { text: "Done", turn: 1 }],
+  ];
+
+  for (const [type, data] of written) {
+    before.client
+      .prepare(
+        "INSERT INTO events(task_id,type,timestamp,data) VALUES('task_1',?,'',?)",
+      )
+      .run(type, JSON.stringify(data));
+  }
+
+  before.close();
+  const store = new Store(path);
+  t.onTestFinished(() => store.close());
+  const ids = (tasks: Task[]) => tasks.map((task) => task.id);
+
+  assert.deepEqual(ids(store.list("alice", {})), [
+    "task_3",
+    "task_2",
+    "task_1",
+  ]);
+
+  assert.deepEqual(ids(store.list("alice", { conversation: "one" })), [
+    "task_3",
+    "task_2",
+  ]);
+
+  assert.deepEqual(ids(store.withStatus(["queued"])), ["task_1", "task_3"]);
+
+  assert.deepEqual(
+    store.chatEvents("task_1").map((e) => [e.type, e.data]),
+    written.filter(([type, data]) => isChatEvent(type, data)),
   );
 });

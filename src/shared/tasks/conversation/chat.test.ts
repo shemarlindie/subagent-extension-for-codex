@@ -61,7 +61,7 @@ test("stored Chat events include compaction failures and exclude ordinary status
     },
   });
 
-  assert.deepEqual(store.chatEvents(task.id, CHAT_EVENTS), [failure]);
+  assert.deepEqual(store.chatEvents(task.id), [failure]);
 });
 
 test("Chat shows a compaction failure between replies without ending the turn", () => {

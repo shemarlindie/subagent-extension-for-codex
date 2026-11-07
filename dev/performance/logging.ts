@@ -132,8 +132,8 @@ async function sample(
     let page: ActivityPage = { events: [] };
 
     for (let index = 0; index < POLLS; index++) {
-      store.all(recorded.task.owner);
-      store.chatEvents(recorded.task.id, ["agent.message", "agent.content"]);
+      store.list(recorded.task.owner, {});
+      store.chatEvents(recorded.task.id);
       page = pages.page(recorded.task.id, 0);
     }
 

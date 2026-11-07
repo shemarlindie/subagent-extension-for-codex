@@ -133,7 +133,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
       /not found on the service/,
     );
 
-    assert.deepEqual(store.all("alice"), []);
+    assert.deepEqual(store.list("alice", {}), []);
 
     provider.readiness = async () => ({ ready: true, details: {} });
 

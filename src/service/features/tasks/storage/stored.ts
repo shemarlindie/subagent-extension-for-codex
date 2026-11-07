@@ -20,6 +20,7 @@ import { events } from "./schema.js";
 const eventRowSchema = createSelectSchema(events).omit({
   response_ref: true,
   original_response: true,
+  chat: true,
 });
 
 const eventDataSchema = z.record(z.string(), z.unknown());

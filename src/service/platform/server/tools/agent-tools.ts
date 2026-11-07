@@ -140,12 +140,10 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         const archived = c.archive.times(owner);
 
         return c.store
-          .all(owner)
-          .filter(
-            (t) =>
-              (!a.conversation_id || t.conversation_id === a.conversation_id) &&
-              (!a.repository || t.repository === a.repository),
-          )
+          .list(owner, {
+            conversation: a.conversation_id || undefined,
+            repository: a.repository || undefined,
+          })
           .map((t) =>
             listedTask(
               t,
@@ -252,7 +250,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
 
         const message = conversation(
           task,
-          c.store.eventsOfTypes(task.id, MESSAGE_EVENTS),
+          c.store.conversationEvents(task.id, MESSAGE_EVENTS),
         ).find((m) => m.id === a.message_id);
 
         if (!message) throw new Error("Message not found");

@@ -247,7 +247,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     await c.interrupt("alice", follower.id);
     await c.delete("alice", [kept.id, follower.id]);
     assert.deepEqual(sessions, [t.id]);
-    assert.deepEqual(store.all("alice"), []);
+    assert.deepEqual(store.list("alice", {}), []);
   } finally {
     await c.close();
   }

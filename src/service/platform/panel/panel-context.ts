@@ -60,7 +60,7 @@ export async function resolvePanelContext(
       : (args.conversation_id ?? target?.conversation_id ?? null);
 
   const latest = conversationId
-    ? c.store.all(owner).find((t) => t.conversation_id === conversationId)
+    ? c.store.latestInConversation(owner, conversationId)
     : undefined;
 
   const source = target ?? latest;
@@ -139,8 +139,7 @@ export function openingTasks(
   const archived = c.archive.times(owner);
 
   return c.store
-    .all(owner)
-    .filter((t) => !conversationId || t.conversation_id === conversationId)
+    .list(owner, { conversation: conversationId || undefined })
     .map((t) => {
       const archivedAt = archived.get(t.id);
 

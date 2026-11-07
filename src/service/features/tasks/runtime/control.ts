@@ -78,7 +78,7 @@ import {
 import { workerStatus } from "./worker-status.js";
 
 /** Statuses in which a task has a turn running, starting or about to. */
-const BUSY = ["queued", "starting", "running", "waiting"];
+const BUSY: Task["status"][] = ["queued", "starting", "running", "waiting"];
 
 export class Control {
   changes: Changes;
@@ -125,7 +125,7 @@ export class Control {
   }
 
   async recover() {
-    for (const t of this.store.all()) {
+    for (const t of this.store.withStatus(BUSY)) {
       if (
         ["starting", "running", "waiting"].includes(t.status) &&
         t.waiting_reason !== "waiting_for_dependency"
@@ -148,7 +148,7 @@ export class Control {
             reason: "service_restart",
           }),
         );
-      } else if (BUSY.includes(t.status)) {
+      } else {
         this.queueWaits.queued(t.id, "recovery");
       }
     }
@@ -166,12 +166,8 @@ export class Control {
       !this.scheduling &&
       !this.active.size &&
       !this.store
-        .all()
-        .some(
-          (t) =>
-            BUSY.includes(t.status) &&
-            t.waiting_reason !== "waiting_for_dependency",
-        )
+        .withStatus(BUSY)
+        .some((t) => t.waiting_reason !== "waiting_for_dependency")
     );
   }
 
@@ -276,7 +272,7 @@ export class Control {
     let scannedCount = 0;
 
     try {
-      const tasks = this.store.all().reverse();
+      const tasks = this.store.withStatus(["queued", "waiting"]);
       taskCount = tasks.length;
 
       for (const t of tasks) {
@@ -728,7 +724,7 @@ export class Control {
       this.mutableTask(owner, id),
     );
 
-    const ordered = deletionBatch(this.store.all(owner), batch);
+    const ordered = deletionBatch(this.store.list(owner, {}), batch);
     const doomed = ordered.map((t) => t.id);
     for (const id of doomed) this.deleting.add(id);
 

@@ -160,6 +160,9 @@ export function openDatabase(
     client.exec("PRAGMA foreign_keys=ON");
 
     migrate(client, migrations, path);
+    // Gives the query planner statistics for new indexes. Running it at each
+    // open covers services that stop without closing the connection.
+    client.exec("PRAGMA optimize=0x10002");
   } catch (error) {
     client.close();
     throw error;

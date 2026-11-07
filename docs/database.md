@@ -24,6 +24,22 @@ before any feature reads it.
 - Query failures expose SQLite's underlying error. Keep SQL parameters and
   stored values out of API errors and logs.
 
+## Indexed reads
+
+Queries block the service's event loop while they run. Keep reads on request and
+scheduling paths indexed, so their cost grows with the rows a request needs.
+
+- When a query filters or sorts on a field of a JSON body, declare a virtual
+  generated column with `generatedAlwaysAs` and index it. `tasks` does this for
+  `status`, `created_at` and `conversation_id`. SQLite computes these columns
+  from the body, so writes need no change. A body that isn't valid JSON then
+  fails to write.
+- Check a new query's plan with `EXPLAIN QUERY PLAN`.
+  `store.integration.test.ts` asserts the plans of the task store's list and
+  typed event reads.
+- `PRAGMA optimize` runs at each open so the planner has statistics for new
+  indexes.
+
 ## Change a schema
 
 1. Edit the owning feature's Drizzle schema.
