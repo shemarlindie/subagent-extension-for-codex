@@ -11,7 +11,6 @@
     "dev/panel/host/showcase.ts",
     "dev/panel/fixture-service/service.ts",
     "dev/service/demo-service.ts",
-    "dev/performance/logging.ts",
     "src/service/features/providers/claude/events/sdk-message-coverage.ts",
     "scripts/*.mjs"
   ],
