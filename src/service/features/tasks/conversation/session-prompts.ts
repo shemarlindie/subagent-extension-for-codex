@@ -63,7 +63,6 @@ export class SessionPrompts {
     return [
       t.description,
       ...(workspaceContext ? [workspaceContext] : []),
-      ...t.context,
       ...dependencyContext,
       ...(transcript ? [transcript] : []),
       ...t.instructions.slice(t.instructions_sent).map((m) => m.message),

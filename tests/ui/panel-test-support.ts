@@ -129,7 +129,6 @@ export function task(id = "one", repository = "/repo/a"): Task {
     title: "Review authentication",
     description: "Review authentication and report relevant findings.",
     depends_on: [],
-    context: [],
     workspace_strategy: "worktree",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     owner: "owner",

@@ -332,7 +332,7 @@ test("invalid descriptions cannot persist or execute a task", async () => {
       { description: undefined },
       { description: "" },
       { description: " \n\t " },
-      { description: "x".repeat(20001) },
+      { description: "x".repeat(420_001) },
     ];
 
     for (const invalid of cases) {

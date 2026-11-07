@@ -58,7 +58,6 @@ export function task(
     title: "Review",
     description: "Review",
     depends_on: [],
-    context: [],
     workspace_strategy: "worktree",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     owner: "owner",

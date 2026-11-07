@@ -18,7 +18,6 @@ const base: Task = {
   title: "Implement",
   description: "Implement the change",
   depends_on: [],
-  context: [],
   workspace_strategy: "worktree",
   budget: { max_runtime_minutes: 20, max_cost_usd: 5 },
   owner: "owner",

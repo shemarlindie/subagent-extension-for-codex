@@ -6,7 +6,6 @@
     "repository": "/demo/project",
     "revision": "HEAD",
     "depends_on": [],
-    "context": [],
     "workspace_strategy": "current_repo",
     "budget": {
       "max_runtime_minutes": 1,

@@ -30,8 +30,8 @@ workspace.
 The default `current_repo` workspace sees uncommitted changes and edits the
 user's checkout directly. Use `worktree` for isolated or parallel edits. A
 worktree starts from a committed revision, so to review uncommitted work there,
-pass the relevant diff and file excerpts in `context` or say which commit is
-under review.
+include the relevant diff and file excerpts in `description` or say which commit
+is under review.
 
 ## Write the request
 

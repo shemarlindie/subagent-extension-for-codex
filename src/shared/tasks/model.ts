@@ -87,8 +87,12 @@ export const startSchema = z.object({
   description: z
     .string()
     .min(1)
-    .max(20000)
-    .describe("The full task instructions and details for the worker."),
+    // The former description and 20 context excerpts of 20,000 characters
+    // each, so requests that used to fit still do.
+    .max(420_000)
+    .describe(
+      "The full task instructions and details for the worker, including excerpts it needs, such as a diff or file sections. Conversation history is not copied.",
+    ),
   repository: z
     .string()
     .min(1)
@@ -102,13 +106,6 @@ export const startSchema = z.object({
     .max(50)
     .default([])
     .describe("Task IDs that must finish before this task starts."),
-  context: z
-    .array(z.string().max(20000))
-    .max(20)
-    .default([])
-    .describe(
-      "Bounded excerpts the worker needs, such as a diff or file sections. Conversation history is not copied.",
-    ),
   workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .default("current_repo")

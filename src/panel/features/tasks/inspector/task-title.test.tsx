@@ -20,7 +20,6 @@ const task: Task = {
   title: "Review",
   description: "Review the full authentication workflow.",
   depends_on: [],
-  context: [],
   workspace_strategy: "worktree",
   budget: { max_runtime_minutes: 20, max_cost_usd: null },
   owner: "owner",

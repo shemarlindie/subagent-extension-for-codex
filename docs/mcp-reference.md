@@ -32,8 +32,9 @@ To delegate a task:
 4. Continue with `send_message`. Inspect pending input before answering it with
    `submit_input` and its request ID.
 
-Put the full worker request in `description`. The service generates the task
-title from its first line or sentence.
+Put the full worker request in `description`, including any excerpts the worker
+needs, such as a diff or file sections. The service generates the task title
+from its first line or sentence.
 
 The default `workspace_strategy: "current_repo"` uses the approved checkout with
 its existing changes. `workspace_strategy: "worktree"` starts a task branch from
