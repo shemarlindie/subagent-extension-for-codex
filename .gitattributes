@@ -1,3 +1,7 @@
 # Check out text files with LF everywhere. Builds and checks expect LF, and Git
 # for Windows would otherwise convert them to CRLF.
 * text=auto eol=lf
+
+# Drizzle writes a full schema snapshot with each migration. GitHub collapses
+# them in diffs so reviews show the SQL.
+migrations/**/snapshot.json linguist-generated=true
