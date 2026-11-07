@@ -107,8 +107,7 @@ the user asks. Skip small changes that tests cover.
 ### Large changes
 
 - Before building on an external behavior or an unproven approach, confirm it
-  with a small probe or prototype. Keep it only when later verification will
-  reuse it.
+  with a small probe or prototype.
 - Plan a verification checklist of expected behaviors with IDs, and list
   accepted limits separately. In the plan, have each planned commit name the IDs
   it verifies. Evidence can be a new or existing test or a browser check. Keep
