@@ -20,7 +20,7 @@ const toolPath = (input: Record<string, unknown>, workspace: string) =>
  * task without the sandbox it runs in.
  */
 export async function claudeAdminToken() {
-  return adminTokenPath(await realpath(dataDirectory()));
+  return adminTokenPath(await actualPath(dataDirectory()));
 }
 
 /**
