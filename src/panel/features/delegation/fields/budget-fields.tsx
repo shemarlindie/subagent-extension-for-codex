@@ -64,7 +64,7 @@ export function BudgetFields({
   const workerResolved = Boolean(worker && provider);
 
   return (
-    <>
+    <div className="task-budget-fields" role="group" aria-label="Task limits">
       <div className="setting-row setting-row-inline">
         <span id="cost-mode-label" className="setting-label">
           Cost limit
@@ -127,9 +127,6 @@ export function BudgetFields({
           />
         </div>
       </div>
-      <p id="cost-note" className="help">
-        {costNote(provider, workerResolved, workersReady, mode)}
-      </p>
       <div className="setting-row setting-row-inline">
         <span id="runtime-mode-label" className="setting-label">
           Runtime limit
@@ -188,11 +185,14 @@ export function BudgetFields({
           />
         </div>
       </div>
+      <p id="cost-note" className="help">
+        {costNote(provider, workerResolved, workersReady, mode)}
+      </p>
       <div id="budget-error" className="form-error" role="alert">
         {errors.costMode?.message ??
           errors.runtime?.message ??
           errors.cost?.message}
       </div>
-    </>
+    </div>
   );
 }
