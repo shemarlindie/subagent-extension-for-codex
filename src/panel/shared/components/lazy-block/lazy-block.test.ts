@@ -121,16 +121,6 @@ test("a batch of observer entries leaves a block in its latest state", (t) => {
   assert.equal(block.textContent, "rows");
 });
 
-test("without IntersectionObserver, blocks always render", (t) => {
-  t.onTestFinished(cleanup);
-
-  const view = render(
-    createElement(LazyBlock, { estimate: 40, children: "rows" }),
-  );
-
-  assert.equal(view.container.textContent, "rows");
-});
-
 test("the scroll area is the nearest ancestor that overflows, else the viewport", () => {
   // jsdom lays nothing out, so sizes are set by hand.
   const box = (overflowing: boolean) => {

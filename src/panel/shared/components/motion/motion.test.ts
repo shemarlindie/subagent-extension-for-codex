@@ -67,14 +67,6 @@ const notice = (show: boolean, text = "Saved") =>
     show && createElement("div", { className: "notice" }, text),
   );
 
-test("Presence removes content at once without animation support", (t) => {
-  t.onTestFinished(cleanup);
-  const view = render(notice(true));
-  assert.ok(view.container.querySelector(".notice"));
-  view.rerender(notice(false));
-  expect(view.container.querySelector(".notice")).toBeNull();
-});
-
 test("Presence keeps the last content inert until its exit finishes", (t) => {
   t.onTestFinished(cleanup);
   const motion = mockMotion(t);

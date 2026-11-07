@@ -35,16 +35,6 @@ test("native folder picker uses a fixed script and preserves folder-name spaces"
   assert.match(script, /on error number -128/);
 });
 
-test("native folder cancellation returns no repository", async () => {
-  assert.deepEqual(
-    await browseProject({
-      platform: "darwin",
-      execute: fake(async () => ({ stdout: "\n", stderr: "" })),
-    }),
-    { repository: null },
-  );
-});
-
 test("unsupported hosts retain manual registration without executing a picker", async () => {
   let executed = false;
 

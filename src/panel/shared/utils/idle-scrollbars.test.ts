@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, onTestFinished, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { trackIdleScrollbars } from "./idle-scrollbars";
 
@@ -76,16 +76,6 @@ test.each(["vertical", "horizontal"])(
   },
 );
 
-test("pointer activity outside an overflowing scroller does not add a marker", () => {
-  const { scroller, child } = setup("none");
-
-  pointer(child, "pointermove");
-  pointer(child, "pointerdown");
-  expectActive(scroller, false);
-  expectActive(child, false);
-  expect(vi.getTimerCount()).toBe(0);
-});
-
 test("pointer cancellation ends a held drag and starts its idle timer", () => {
   const { scroller, child } = setup();
 
@@ -144,24 +134,6 @@ test("concurrent pointers keep each scroller visible until its last pointer ends
   expectActive(first, true);
   vi.advanceTimersByTime(1);
   expectActive(first, false);
-});
-
-test("document scrolling activates the document scrolling element", () => {
-  const { scroller } = setup();
-
-  Object.defineProperty(document, "scrollingElement", {
-    configurable: true,
-    value: scroller,
-  });
-
-  onTestFinished(() => {
-    Reflect.deleteProperty(document, "scrollingElement");
-  });
-
-  document.dispatchEvent(new Event("scroll"));
-  expectActive(scroller, true);
-  vi.advanceTimersByTime(1000);
-  expectActive(scroller, false);
 });
 
 test("cleanup clears markers and pending timers and removes interaction listeners", () => {

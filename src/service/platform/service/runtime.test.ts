@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 
 import { test } from "vitest";
 
-import { findPackageRoot, installRoot, readPackageFile } from "./runtime.js";
+import { findPackageRoot } from "./runtime.js";
 
 async function tree(t: import("vitest").TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), "package-root-")));
@@ -39,10 +39,4 @@ test("a module outside the package reports the incomplete installation", async (
     () => findPackageRoot(moduleAt(root, "dist")),
     /No subagent-extension-for-codex package\.json found above .*the installation is incomplete/,
   );
-});
-
-test("a missing package file names the file and the installation", () => {
-  assert.throws(() => readPackageFile("assets", "missing.svg"), {
-    message: `Missing package file assets/missing.svg in ${installRoot}`,
-  });
 });

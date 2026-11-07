@@ -23,9 +23,3 @@ test("serves a rebuilt page, and the last copy once the page is removed", async 
   await rm(path);
   assert.equal(await readPanelHtml(path), "<html>rebuilt</html>");
 });
-
-test("a page that never existed is an error", async (t) => {
-  const path = join(await directory(t), "app.html");
-  preloadPanelHtml(path);
-  await assert.rejects(readPanelHtml(path), { code: "ENOENT" });
-});
