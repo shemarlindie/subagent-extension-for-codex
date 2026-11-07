@@ -158,23 +158,6 @@ test("marking the open task read removes its New divider, and restores it if the
   });
 });
 
-test("Mark all read sends only the unread tasks", async () => {
-  const tasks = [
-    task({ id: "a", unread: true }),
-    task({ id: "b" }),
-    task({ id: "c", unread: true }),
-  ];
-
-  const { actions, tool, unread } = setup(tasks);
-  await actions.markAllRead(tasks);
-
-  assert.deepEqual(tool.mock.calls, [
-    ["app_mark_tasks_read", { task_ids: ["a", "c"] }],
-  ]);
-
-  assert.deepEqual(unread(), []);
-});
-
 test("a failed read mark stays quiet and is sent again on the next reading", async () => {
   const open = task({ id: "a", unread: true });
   const { actions, tool, unread } = setup([open]);

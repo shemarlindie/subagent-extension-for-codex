@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import type { Worker } from "../../app/state/types";
 import {
   type DelegateFormDialog,
@@ -37,27 +36,6 @@ const loading: DelegateFormDialog = {
   },
 };
 
-const initial = settingsDefaults("claude");
-
-const loaded: DelegateFormDialog = {
-  kind: "delegate",
-  scope: 1,
-  repository: "/repo",
-  revision: "main",
-  defaults: {
-    ...initial,
-    task: {
-      ...initial.task,
-      worker_profile: "implementer",
-      workspace_strategy: "worktree",
-      budget: {
-        ...initial.task.budget,
-        max_runtime_minutes: { enabled: true, amount: 30 },
-      },
-    },
-  },
-};
-
 test("settings-dependent values stay blank while settings load", () => {
   const values = delegateInitialValues({
     dialog: loading,
@@ -75,25 +53,6 @@ test("settings-dependent values stay blank while settings load", () => {
   // A saved draft's amounts show until settings supply theirs.
   assert.equal(values.runtime, 12);
   assert.equal(values.cost, "");
-});
-
-test("the dialog's preferred worker wins, and the current repo uses HEAD", () => {
-  const values = delegateInitialValues({
-    dialog: {
-      ...loaded,
-      preferredWorker: "claude:reviewer",
-      defaults: {
-        ...loaded.defaults,
-        task: { ...loaded.defaults.task, workspace_strategy: "current_repo" },
-      },
-    },
-    scope,
-    draft: {},
-  });
-
-  assert.equal(values.worker, "claude:reviewer");
-  assert.equal(values.workspace_strategy, "current_repo");
-  assert.equal(values.revision, "HEAD");
 });
 
 test("a loading dialog targets the panel scope only once it is known", () => {

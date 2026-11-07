@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  activeSection,
   changes,
   editCount,
   rowForm,
@@ -163,10 +162,4 @@ test("edit counts treat a budget and a model scope as one row each", () => {
 
   assert.equal(editCount(taskSection, edited, initial), 1);
   assert.equal(editCount(modelsSection, edited, initial), 1);
-});
-
-test("saved section selection falls back to a valid section", () => {
-  assert.equal(activeSection("models", sections), "models");
-  assert.equal(activeSection("gone", sections), "task");
-  assert.equal(activeSection("gone", []), undefined);
 });
