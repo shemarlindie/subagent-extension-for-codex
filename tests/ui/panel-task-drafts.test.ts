@@ -318,9 +318,10 @@ test("More options preserves a pending composer draft and fills Advanced task de
       dialog.getByRole("combobox", { name: "Reasoning effort" }).textContent,
     ).toBe("Use default (high)");
 
+    // A read-only profile starts in plan mode, whatever the saved mode.
     expect(
       dialog.getByRole("combobox", { name: "Permission mode" }).textContent,
-    ).toBe("Accept edits");
+    ).toBe("Plan — read only");
   });
 
   expect(description.value).toBe(
@@ -343,7 +344,7 @@ test("More options preserves a pending composer draft and fills Advanced task de
       worker_profile: "reviewer",
       reasoning_effort: "default",
       provider_options: {
-        claude: { permission_mode: "acceptEdits", approval_decider: "user" },
+        claude: { permission_mode: "plan", approval_decider: "user" },
       },
     });
   });

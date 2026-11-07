@@ -57,11 +57,7 @@ export function PermissionChip({
       onValueChange={field.onChange}
       loading={loading}
       disabled={disabled || readOnly}
-      title={
-        readOnly
-          ? "Read-only profiles inspect without editing files or running commands"
-          : undefined
-      }
+      title={readOnly ? "Read-only profiles start in plan mode" : undefined}
       options={
         readOnly
           ? [{ value: "read-only", label: "Read only" }]

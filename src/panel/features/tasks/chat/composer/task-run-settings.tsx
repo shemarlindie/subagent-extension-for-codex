@@ -1,7 +1,4 @@
-import {
-  readOnlyProfile,
-  shortPermissionLabel,
-} from "../../../../../shared/providers/claude/permissions";
+import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { titleCase } from "../../../../../shared/text";
@@ -24,9 +21,7 @@ type RunSetting = { label: string; compact?: string };
 function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
   const facts = providerTaskFacts(task),
     native = facts["Permission mode"],
-    permission = readOnlyProfile(task.worker_profile)
-      ? "Read only"
-      : native && shortPermissionLabel(native),
+    permission = native && shortPermissionLabel(native),
     reasoning = task.reasoning_effort || "default",
     profile = titleCase(task.worker_profile),
     // Named as the composer names it, when the provider still lists the model.

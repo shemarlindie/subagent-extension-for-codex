@@ -305,7 +305,6 @@ test("settings shows an organization's limits and warns on saved choices they bl
               managed: true,
               blocked: [
                 {
-                  setting: "permission_mode",
                   value: "bypassPermissions",
                   reason: "Turned off by your organization",
                 },

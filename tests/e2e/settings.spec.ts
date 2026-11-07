@@ -114,7 +114,7 @@ test("advanced task options set the task's model and permission policy", async (
 
   await dialog
     .getByLabel("Description", { exact: true })
-    .fill("Plan only [fixture:permission tool=Bash]");
+    .fill("Ask nothing [fixture:permission tool=Bash]");
 
   await dialog.getByRole("combobox", { name: "Model", exact: true }).click();
   await page.getByRole("option", { name: /Fixture Fast/ }).click();
@@ -123,10 +123,10 @@ test("advanced task options set the task's model and permission policy", async (
     .getByRole("combobox", { name: "Permission mode", exact: true })
     .click();
 
-  await page.getByRole("option", { name: /^Plan/ }).click();
+  await page.getByRole("option", { name: /^Don't ask/ }).click();
   await dialog.getByRole("button", { name: "Start task", exact: true }).click();
 
-  // Plan mode denies the tool without asking.
+  // Don't ask mode denies the tool without asking.
   const history = page.getByRole("region", { name: "Chat history" });
   await expect(history).toContainText("Fixture Bash request denied");
   await expect(page.getByRole("button", { name: "Deny" })).toHaveCount(0);

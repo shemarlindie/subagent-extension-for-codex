@@ -496,7 +496,6 @@ const orgPolicy: ProviderPolicy = {
   managed: true,
   blocked: [
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
     },
@@ -530,6 +529,8 @@ async function underPolicy(
       context.c.start("alice", {
         ...input(context.repo),
         provider: "claude",
+        // A write profile, so tasks start in the saved mode.
+        worker_profile: "implementer",
         ...extra,
       }),
   };

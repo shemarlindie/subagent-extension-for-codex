@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import {
-  claudeOverrideDefaults,
-  exceedsPermission,
-  resolveClaudePolicy,
-} from "./permissions.js";
+import { exceedsPermission, resolveClaudePermission } from "./permissions.js";
 
 test("model-selected modes cannot exceed the concrete extension setting", () => {
   for (const mode of ["plan", "dontAsk", "default"] as const) {
@@ -21,44 +17,25 @@ test("model-selected modes cannot exceed the concrete extension setting", () => 
   assert.equal(exceedsPermission("auto", "acceptEdits"), true);
 });
 
-test("profile restriction values restrict read-only profiles and explicit values apply to all", () => {
-  const profile = {
-    ...claudeOverrideDefaults,
-    tools: "profile",
-    path_guard: "profile",
-  } as const;
-
+test("read-only profiles default to plan mode, and a task's own mode wins", () => {
   for (const role of ["researcher", "reviewer", "security_reviewer"]) {
-    assert.deepEqual(
-      [
-        resolveClaudePolicy(profile, role).tools,
-        resolveClaudePolicy(profile, role).path_guard,
-      ],
-      ["restricted", true],
-    );
+    assert.deepEqual(resolveClaudePermission({}, "acceptEdits", role), {
+      mode: "plan",
+      source: "profile",
+    });
   }
 
-  for (const role of [
-    "general",
-    "implementer",
-    "debugger",
-    "test_engineer",
-    "refactorer",
-  ]) {
-    assert.deepEqual(
-      [
-        resolveClaudePolicy(profile, role).tools,
-        resolveClaudePolicy(profile, role).path_guard,
-      ],
-      ["all", false],
-    );
-  }
+  assert.deepEqual(resolveClaudePermission({}, "acceptEdits", "implementer"), {
+    mode: "acceptEdits",
+    source: "setting",
+  });
 
-  const loosened = resolveClaudePolicy(
-    { ...profile, tools: "all", path_guard: "off" },
-    "reviewer",
+  assert.deepEqual(
+    resolveClaudePermission(
+      { permission_mode: "default" },
+      "acceptEdits",
+      "reviewer",
+    ),
+    { mode: "default", source: "task" },
   );
-
-  assert.equal(loosened.tools, "all");
-  assert.equal(loosened.path_guard, false);
 });

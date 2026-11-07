@@ -6,9 +6,7 @@
         "approval_decider": "user",
         "permission_source": "task",
         "claude_policy": {
-          "sandbox": "user_config",
-          "tools": "all",
-          "path_guard": false,
+          "sandbox": false,
           "subagents": true,
           "settings_files": true,
           "user_mcp": true

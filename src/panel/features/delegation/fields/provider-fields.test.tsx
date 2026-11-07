@@ -42,7 +42,6 @@ test("a blocked mode left in the form becomes the mode that would run", async (t
       managed: true,
       blocked: [
         {
-          setting: "permission_mode",
           value: "auto",
           reason: "Turned off by your organization",
         },

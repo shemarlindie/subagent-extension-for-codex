@@ -1,15 +1,19 @@
 import { realpath } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
+import { scalarText } from "../../../../../shared/text.js";
 import { dataDirectory } from "../../../../platform/service/runtime.js";
 import { adminTokenPath } from "../../../../platform/service/token.js";
 import { within } from "../../../workspaces/workspace.js";
-import { toolPath } from "./tool-policy.js";
 
 /** File tools that name a single file. */
 const fileTools = ["Read", "Edit", "Write", "NotebookEdit"];
 /** Search tools that name a folder, which may hold the token. */
 const searchTools = ["Grep", "Glob"];
+
+/** The path a file or search tool names. Search tools default to the workspace. */
+const toolPath = (input: Record<string, unknown>, workspace: string) =>
+  scalarText(input.file_path ?? input.notebook_path ?? input.path, workspace);
 
 /**
  * The admin token's real path. With it, a worker could ask the service for a

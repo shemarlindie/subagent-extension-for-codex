@@ -72,7 +72,7 @@ async function context() {
         permission_mode: "plan",
         approval_decider: "user",
         permission_source: "task",
-        claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
       },
     },
   };

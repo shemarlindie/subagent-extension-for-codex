@@ -38,7 +38,7 @@ export function task(id = "task_fixture"): Task {
         permission_mode: "default",
         approval_decider: "user",
         permission_source: "setting",
-        claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "reviewer"),
+        claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
       },
     },
   };

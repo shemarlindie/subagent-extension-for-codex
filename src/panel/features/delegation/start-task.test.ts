@@ -26,7 +26,6 @@ test("a blocked mode submits as the fallback", () => {
           managed: true,
           blocked: [
             {
-              setting: "permission_mode",
               value: "bypassPermissions",
               reason: "Turned off by your organization",
             },

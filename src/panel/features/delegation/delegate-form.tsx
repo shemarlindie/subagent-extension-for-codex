@@ -30,7 +30,7 @@ import { WorkerFields } from "./fields/worker-fields";
 import { WorkspaceField } from "./fields/workspace-field";
 import { WorkspaceNoteView } from "./fields/workspace-note-view";
 import { startTaskArguments } from "./start-task";
-import { useAsyncDefaults } from "./use-async-defaults";
+import { useAsyncDefaults, useProfileMode } from "./use-async-defaults";
 import { workspaceNote } from "./workspace-note";
 
 interface DelegateFormProps {
@@ -57,6 +57,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   );
 
   useAsyncDefaults(form, initialValues, persistedDraft.current);
+  useProfileMode(form, initialValues.permission_mode, persistedDraft.current);
 
   const [repository, selectedWorker] = useWatch({
     control: form.control,

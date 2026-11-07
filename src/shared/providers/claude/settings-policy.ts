@@ -8,46 +8,34 @@ import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
 
-/** A row with what policy rules out locked, and a warning if it's the saved choice. */
+/** The mode row with modes policy rules out locked, and a warning if it's the saved one. */
 function withPolicy(
   row: SettingRow,
   policy: ProviderPolicy,
   values: unknown,
 ): SettingRow {
-  if (row.kind !== "select") return row;
+  if (
+    row.kind !== "select" ||
+    row.path !== "providers.claude.permission_mode"
+  ) {
+    return row;
+  }
 
   const saved = String(settingAt(values, row.path));
+  const reason = blockedReason(policy, saved);
 
-  const lock = (
-    setting: ProviderPolicy["blocked"][number]["setting"],
-    warning: (reason: string) => string,
-  ) => {
-    const reason = blockedReason(policy, setting, saved);
-
-    return {
-      ...row,
-      options: withBlockedOptions(row.options, policy, setting),
-      ...(reason ? { warning: warning(reason) } : {}),
-    };
+  return {
+    ...row,
+    options: withBlockedOptions(row.options, policy),
+    ...(reason
+      ? {
+          warning:
+            reason === MODE_TURNED_OFF_BY_ORG
+              ? `Your saved mode, ${permissionModeName(saved)}, is turned off by your organization. New tasks ask for approval.`
+              : `Your saved mode, ${permissionModeName(saved)}, isn't available. New tasks ask for approval.`,
+        }
+      : {}),
   };
-
-  if (row.path === "providers.claude.permission_mode") {
-    return lock("permission_mode", (reason) =>
-      reason === MODE_TURNED_OFF_BY_ORG
-        ? `Your saved mode, ${permissionModeName(saved)}, is turned off by your organization. New tasks ask for approval.`
-        : `Your saved mode, ${permissionModeName(saved)}, isn't available. New tasks ask for approval.`,
-    );
-  }
-
-  if (row.path === "providers.claude.sandbox") {
-    return lock(
-      "sandbox",
-      (reason) =>
-        `${reason}, so tasks can't start with your saved choice. Choose another option or ask your admin.`,
-    );
-  }
-
-  return row;
 }
 
 const SOURCE_HELP = {
@@ -57,14 +45,9 @@ const SOURCE_HELP = {
 
 /** What the panel shows about an organization's policy. */
 function policyFacts(policy: ProviderPolicy) {
-  const blocked = (setting: ProviderPolicy["blocked"][number]["setting"]) =>
-    policy.blocked.filter((item) => item.setting === setting);
-
-  const modes = blocked("permission_mode")
+  const modes = policy.blocked
     .filter(({ reason }) => reason === MODE_TURNED_OFF_BY_ORG)
     .map(({ value }) => permissionModeName(value));
-
-  const sandbox = [...new Set(blocked("sandbox").map(({ reason }) => reason))];
 
   return [
     ...(modes.length
@@ -75,10 +58,6 @@ function policyFacts(policy: ProviderPolicy) {
           },
         ]
       : []),
-    ...sandbox.map((reason) => ({
-      label: "Bash sandbox",
-      detail: `${reason}.`,
-    })),
     ...(policy.available_models
       ? [
           {

@@ -152,7 +152,6 @@ test("a draft's blocked mode shows and sends as the fallback", async () => {
             managed: true,
             blocked: [
               {
-                setting: "permission_mode",
                 value: "auto",
                 reason: "Turned off by your organization",
               },
@@ -259,8 +258,8 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
-test("a read-only profile replaces the permission choice with Read only", async () => {
-  const { view, user } = setup();
+test("a read-only profile replaces the permission choice with Read only and starts in plan mode", async () => {
+  const { view, user, start } = setup();
 
   await user.click(view.getByRole("combobox", { name: "Profile: General" }));
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
@@ -273,6 +272,39 @@ test("a read-only profile replaces the permission choice with Read only", async 
   });
 
   assert.equal(permission.getAttribute("data-disabled"), "");
+  await user.keyboard("{Escape}");
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Review it{Enter}",
+  );
+
+  await waitFor(() =>
+    assert.equal(start.mock.calls[0]?.[0].permission_mode, "plan"),
+  );
+});
+
+test("a draft's plan mode from a read-only profile gives way to a write profile's saved mode", async () => {
+  const { view, user, start } = setup(
+    ready,
+    {},
+    {
+      worker: "claude:reviewer",
+      permission_mode: "plan",
+    },
+  );
+
+  await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
+  await user.click(await view.findByRole("option", { name: "General" }));
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Ship it{Enter}",
+  );
+
+  await waitFor(() =>
+    assert.equal(start.mock.calls[0]?.[0].permission_mode, "acceptEdits"),
+  );
 });
 
 test("Escape in an empty composer returns to the task list", async () => {

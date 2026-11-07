@@ -64,7 +64,6 @@ export function ApprovalField({
           options={withBlockedOptions(
             fallbackPermissions(permissions?.options, unresolved),
             info?.policy,
-            "permission_mode",
           )}
         />
         <p className="help">

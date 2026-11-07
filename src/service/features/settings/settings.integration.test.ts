@@ -820,14 +820,7 @@ test("removed providers fall back on effective reads without rewriting saved def
 test("Claude session restrictions are scalar user-only settings with stored defaults", async (t) => {
   const f = await fixture(t);
 
-  const keys = [
-    "sandbox",
-    "tools",
-    "path_guard",
-    "subagents",
-    "settings_files",
-    "user_mcp",
-  ] as const;
+  const keys = ["sandbox", "subagents", "settings_files", "user_mcp"] as const;
 
   const before = f.settings.values("alice");
 
@@ -841,7 +834,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   for (const key of keys) {
     const field = schemaField(read, `providers.claude.${key}`);
-    assert.ok(["string", "boolean"].includes(String(field.type)), key);
+    assert.equal(field.type, "boolean", key);
     assert.equal(Object.hasOwn(field, "default"), false, key);
   }
 
@@ -856,8 +849,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     set: {
       providers: {
         claude: {
-          sandbox: "extension_locked",
-          tools: "all",
+          sandbox: true,
           subagents: true,
           settings_files: false,
           user_mcp: false,
@@ -868,8 +860,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   f.reopen();
   const after = f.settings.values("alice");
-  assert.equal(after.providers.claude.sandbox, "extension_locked");
-  assert.equal(after.providers.claude.tools, "all");
+  assert.equal(after.providers.claude.sandbox, true);
   assert.equal(after.providers.claude.subagents, true);
   assert.equal(after.providers.claude.settings_files, false);
   assert.equal(after.providers.claude.user_mcp, false);
@@ -877,7 +868,7 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   assert.throws(() =>
     f.settings.update("alice", {
-      set: { providers: { claude: { tools: "none" } } },
+      set: { providers: { claude: { sandbox: "extension" } } },
     }),
   );
 });

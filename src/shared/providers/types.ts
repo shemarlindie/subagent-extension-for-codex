@@ -43,12 +43,8 @@ export interface ProviderPolicy {
   managed: boolean;
   /** Where the organization's policy comes from, when that can be told. */
   source?: "console" | "device";
-  /** Choices ruled out, each with the reason to show. */
-  blocked: {
-    setting: "permission_mode" | "sandbox";
-    value: string;
-    reason: string;
-  }[];
+  /** Permission modes ruled out, each with the reason to show. */
+  blocked: { value: string; reason: string }[];
   /** The model allowlist, for checking typed model IDs. */
   available_models?: string[];
   available_models_match?: "prefix" | "exact";

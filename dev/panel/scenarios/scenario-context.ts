@@ -65,7 +65,7 @@ export const taskBase = {
       permission_mode: "plan",
       permission_source: "task",
       approval_decider: "user",
-      claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "researcher"),
+      claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
     },
   },
   conversation_id: PREVIEW_THREAD,
@@ -85,12 +85,12 @@ export const taskBase = {
 };
 
 /** Claude options for a task that took its permissions from settings. */
-export const settingOptions = (profile: string) => ({
+export const settingOptions = () => ({
   claude: {
     permission_mode: "default",
     permission_source: "setting",
     approval_decider: "user",
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, profile),
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   },
 });
 

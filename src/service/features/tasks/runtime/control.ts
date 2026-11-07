@@ -118,7 +118,7 @@ export class Control {
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );
 
-    this.prompts = new SessionPrompts(store, workspaces, this.changes);
+    this.prompts = new SessionPrompts(store, this.changes);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }

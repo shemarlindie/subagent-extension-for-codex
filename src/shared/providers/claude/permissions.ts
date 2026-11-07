@@ -23,21 +23,9 @@ export const permissionModeSchema = z.enum([
 
 export type PermissionMode = z.infer<typeof permissionModeSchema>;
 
-// Optional restrictions on delegated Claude sessions. "profile" applies the
-// worker profile's bundle: read-only profiles restrict, write profiles don't.
-export const claudeSandboxSchema = z.enum([
-  "user_config",
-  "extension",
-  "extension_locked",
-]);
-
-export const claudeToolsSchema = z.enum(["profile", "all", "restricted"]);
-export const claudePathGuardSchema = z.enum(["profile", "on", "off"]);
-
 export type ClaudeOverrides = {
-  sandbox: z.infer<typeof claudeSandboxSchema>;
-  tools: z.infer<typeof claudeToolsSchema>;
-  path_guard: z.infer<typeof claudePathGuardSchema>;
+  /** Runs Bash in Claude Code's sandbox. Off leaves it to Claude Code settings. */
+  sandbox: boolean;
   subagents: boolean;
   settings_files: boolean;
   user_mcp: boolean;
@@ -46,37 +34,10 @@ export type ClaudeOverrides = {
 // Other Claude Code configuration loads by default; the extension owns the
 // session's native permission mode.
 export const claudeOverrideDefaults: ClaudeOverrides = {
-  sandbox: "user_config",
-  tools: "profile",
-  path_guard: "profile",
+  sandbox: false,
   subagents: true,
   settings_files: true,
   user_mcp: true,
-};
-
-/** Labels for each choice of the non-switch overrides. */
-type ClaudeOverrideLabels = {
-  [
-    K in keyof ClaudeOverrides as ClaudeOverrides[K] extends string ? K : never
-  ]: Record<Extract<ClaudeOverrides[K], string>, string>;
-};
-
-export const claudeOverrideLabels: ClaudeOverrideLabels = {
-  sandbox: {
-    user_config: "Your Claude Code settings",
-    extension: "Extension sandbox",
-    extension_locked: "Extension sandbox with locked network",
-  },
-  tools: {
-    profile: "By worker profile",
-    all: "All tools",
-    restricted: "Restricted set",
-  },
-  path_guard: {
-    profile: "By worker profile",
-    on: "On",
-    off: "Off",
-  },
 };
 
 const permissionLabels: Partial<
@@ -126,12 +87,21 @@ const permissionRank: Partial<Record<ClaudePermissionMode, number>> = {
 export const readOnlyProfile = (role: string) =>
   ["researcher", "reviewer", "security_reviewer"].includes(role);
 
+/**
+ * A task's mode: the one it asks for, else `plan` for a read-only profile,
+ * else the saved setting.
+ */
 export function resolveClaudePermission(
   input: { permission_mode?: PermissionMode },
   configured: ClaudePermissionMode,
+  workerProfile: string,
 ) {
   if (input.permission_mode && input.permission_mode !== "inherit") {
     return { mode: input.permission_mode, source: "task" as const };
+  }
+
+  if (readOnlyProfile(workerProfile)) {
+    return { mode: "plan" as const, source: "profile" as const };
   }
 
   return { mode: configured, source: "setting" as const };
@@ -155,9 +125,7 @@ export function exceedsPermission(
 }
 
 export const claudePolicySchema = z.object({
-  sandbox: claudeSandboxSchema,
-  tools: z.enum(["all", "restricted"]),
-  path_guard: z.boolean(),
+  sandbox: z.boolean(),
   subagents: z.boolean(),
   /** Load the user's, project's and local Claude Code settings. */
   settings_files: z.boolean(),
@@ -167,31 +135,13 @@ export const claudePolicySchema = z.object({
 
 export type ClaudePolicy = z.infer<typeof claudePolicySchema>;
 
-function resolveTools(
-  setting: ClaudeOverrides["tools"],
-  readOnly: boolean,
-): ClaudePolicy["tools"] {
-  if (setting !== "profile") return setting;
-
-  return readOnly ? "restricted" : "all";
-}
-
-/** Settings choose each restriction; "profile" restricts read-only profiles only. */
-export function resolveClaudePolicy(
+/** The settings a task keeps, with the sandbox it asked for, if any. */
+export const resolveClaudePolicy = (
   overrides: ClaudeOverrides,
-  workerProfile: string,
-): ClaudePolicy {
-  const readOnly = readOnlyProfile(workerProfile);
-
-  return {
-    sandbox: overrides.sandbox,
-    tools: resolveTools(overrides.tools, readOnly),
-    path_guard:
-      overrides.path_guard === "profile"
-        ? readOnly
-        : overrides.path_guard === "on",
-    subagents: overrides.subagents,
-    settings_files: overrides.settings_files,
-    user_mcp: overrides.user_mcp,
-  };
-}
+  sandbox = overrides.sandbox,
+): ClaudePolicy => ({
+  sandbox,
+  subagents: overrides.subagents,
+  settings_files: overrides.settings_files,
+  user_mcp: overrides.user_mcp,
+});

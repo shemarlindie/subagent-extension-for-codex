@@ -231,16 +231,28 @@ test("project folder selection locks revision to HEAD and submits the checkout s
   assert.equal(call.args.repository, "/repo/a");
 });
 
-test("delegation starts from the saved permission setting and separately selects the approval decision maker", async (t) => {
-  const { user, transport } = await setupDelegate(t);
+test("delegation starts a read-only profile in plan mode, keeps a chosen mode and separately selects the approval decision maker", async (t) => {
+  const { user, transport } = await setupDelegate(t, (transport) =>
+    writingWorker(transport, ["reviewer", "general"]),
+  );
+
   await screen.findByRole("dialog");
 
-  // The fake service saves Claude's initial Default permission mode.
+  // The fake service's default profile, reviewer, is read-only.
+  assert.equal(
+    screen.getByRole("combobox", { name: "Permission mode" }).textContent,
+    "Plan — read only",
+  );
+
+  // An untouched mode follows the profile: a write profile takes the saved one.
+  await selectOption(user, "Worker", "claude · general");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
     "Default — ask for approval",
   );
 
+  await selectOption(user, "Worker", "claude · reviewer");
   await selectOption(user, "Permission mode", "Accept edits");
   await selectOption(user, "Approval decision maker", "Parent agent");
   await enterTask(user, "Review authentication with parent approvals");
@@ -264,6 +276,7 @@ test("delegation starts from the saved permission setting and separately selects
 /** Serves a profile that can write, since read-only tasks lose no isolation. */
 function writingWorker(
   transport: Parameters<typeof configureModelDefaults>[0],
+  profiles = ["general"],
 ) {
   const { tool } = transport;
 
@@ -274,7 +287,7 @@ function writingWorker(
       name === "list_workers"
         ? (result as { profiles: string[] }[]).map((worker) => ({
             ...worker,
-            profiles: ["general"],
+            profiles,
           }))
         : result
     ) as T;

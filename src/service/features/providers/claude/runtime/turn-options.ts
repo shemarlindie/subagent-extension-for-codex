@@ -1,9 +1,6 @@
 import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
-import {
-  type ClaudePolicy,
-  readOnlyProfile,
-} from "../../../../../shared/providers/claude/permissions.js";
+import type { ClaudePolicy } from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
 import type { Task } from "../../../../../shared/tasks/model.js";
 import type { RunContext } from "../../types.js";
@@ -12,25 +9,14 @@ import {
   claudeAdminToken,
   touchesAdminToken,
 } from "../configuration/admin-token.js";
-import {
-  claudeEnvironment,
-  claudeSandbox,
-} from "../configuration/execution-environment.js";
-import {
-  approvalTool,
-  inWorkspace,
-  pathTools,
-  readTools,
-  toolPath,
-  writeTools,
-} from "../configuration/tool-policy.js";
+import { claudeEnvironment } from "../configuration/execution-environment.js";
 import { recordClaudeFileEdits } from "./file-edits.js";
 
 /** The reason shown when a permission prompt is denied without a message. */
 function defaultDenialMessage(tool: string) {
   if (tool === "Bash") return "Command denied";
 
-  return writeTools.includes(tool) ? "Edit denied" : "Tool call denied";
+  return ["Edit", "Write"].includes(tool) ? "Edit denied" : "Tool call denied";
 }
 
 /** Which Claude Code settings a session loads, and whether their MCP servers join the extension's. */
@@ -56,7 +42,7 @@ function workspaceRule(task: Task) {
 }
 
 /** The task's role and workspace rules, then the user's custom instructions. */
-function systemPromptAppend(c: RunContext, readOnly: boolean) {
+function systemPromptAppend(c: RunContext) {
   const role =
     c.task.worker_profile === "general"
       ? "coding agent"
@@ -64,9 +50,7 @@ function systemPromptAppend(c: RunContext, readOnly: boolean) {
 
   const rules = [
     "Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left.",
-    readOnly
-      ? "Inspect only; you cannot edit files or run shell commands."
-      : "Follow the configured native permission mode for tool execution.",
+    "Follow the configured native permission mode for tool execution.",
     workspaceRule(c.task),
   ];
 
@@ -88,10 +72,9 @@ function systemPromptAppend(c: RunContext, readOnly: boolean) {
 
 /**
  * The SDK options for one turn of a task: its workspace, session, model and
- * budget, and the task's resolved permission policy. Restricted tools and
- * the path guard are enforced twice: a PreToolUse hook denies before settings
- * rules or modes can approve, and \`canUseTool\` checks again before asking the
- * task's approver.
+ * budget, and the task's settings. The admin token is denied twice: a
+ * settings rule, which the sandbox applies to every program, and a PreToolUse
+ * hook for file tools, since an org can drop the rule.
  */
 export async function claudeTurnOptions(
   c: RunContext,
@@ -105,48 +88,6 @@ export async function claudeTurnOptions(
 
   const workspace = c.task.workspace!;
   const adminToken = await claudeAdminToken();
-  const restricted = policy.tools === "restricted";
-
-  const readOnly =
-    restricted &&
-    (readOnlyProfile(c.task.worker_profile) || nativeMode === "plan");
-
-  const guarded = (tool: string) =>
-    policy.path_guard && pathTools.includes(tool);
-
-  const restrictedDenial = (tool: string) => {
-    if (
-      !restricted ||
-      tool === "AskUserQuestion" ||
-      tool === "Skill" ||
-      readTools.includes(tool)
-    ) {
-      return undefined;
-    }
-
-    if (readOnly) return "Read-only worker profile";
-
-    return approvalTool(tool) || writeTools.includes(tool)
-      ? undefined
-      : "Tool not permitted";
-  };
-
-  const sandbox =
-    policy.sandbox === "user_config"
-      ? {}
-      : {
-          sandbox: await claudeSandbox(c.task),
-          ...(policy.sandbox === "extension_locked"
-            ? {
-                // Policy-tier lock: settings files cannot add network domains.
-                // An admin policy drops this tier unless it allows merging,
-                // so the provider confirms the lock before each turn.
-                managedSettings: {
-                  sandbox: { network: { allowManagedDomainsOnly: true } },
-                },
-              }
-            : {}),
-        };
 
   return {
     pathToClaudeCodeExecutable: executable,
@@ -156,7 +97,10 @@ export async function claudeTurnOptions(
       ? { effort: c.task.reasoning_effort as Options["effort"] }
       : {}),
     env: claudeEnvironment(process.env),
-    ...sandbox,
+    // Settings and org policy decide the rest of the sandbox.
+    ...(policy.sandbox
+      ? { sandbox: { enabled: true, failIfUnavailable: true } }
+      : {}),
     abortController,
     persistSession: true,
     resume: c.task.session_id,
@@ -174,14 +118,7 @@ export async function claudeTurnOptions(
     ...(nativeMode === "bypassPermissions"
       ? { allowDangerouslySkipPermissions: true }
       : {}),
-    tools: restricted
-      ? [
-          ...readTools,
-          ...(readOnly ? [] : [...writeTools, "Bash"]),
-          "AskUserQuestion",
-          "Skill",
-        ]
-      : { type: "preset", preset: "claude_code" },
+    tools: { type: "preset", preset: "claude_code" },
     disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
     ...(c.task.budget.max_cost_usd === null
       ? {}
@@ -191,7 +128,7 @@ export async function claudeTurnOptions(
     systemPrompt: {
       type: "preset",
       preset: "claude_code",
-      append: systemPromptAppend(c, readOnly),
+      append: systemPromptAppend(c),
     },
     hooks: {
       PostToolUse: [
@@ -217,36 +154,21 @@ export async function claudeTurnOptions(
           hooks: [
             async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
-              const tool = input.tool_name;
-              const params = input.tool_input as Record<string, unknown>;
 
-              const deny = (reason: string): HookJSONOutput => ({
-                hookSpecificOutput: {
-                  hookEventName: "PreToolUse",
-                  permissionDecision: "deny",
-                  permissionDecisionReason: reason,
-                },
-              });
-
-              if (
-                await touchesAdminToken(adminToken, tool, params, workspace)
-              ) {
-                return deny("The admin token is off limits");
-              }
-
-              // Enabled restrictions deny before settings rules or modes can approve.
-              // Skills stay available; the tools they call are checked individually.
-              const denial = restrictedDenial(tool);
-              if (denial) return deny(denial);
-
-              if (
-                guarded(tool) &&
-                !(await inWorkspace(workspace, toolPath(params, workspace)))
-              ) {
-                return deny("Path outside task workspace or Git metadata");
-              }
-
-              return {};
+              return (await touchesAdminToken(
+                adminToken,
+                input.tool_name,
+                input.tool_input as Record<string, unknown>,
+                workspace,
+              ))
+                ? {
+                    hookSpecificOutput: {
+                      hookEventName: "PreToolUse",
+                      permissionDecision: "deny",
+                      permissionDecisionReason: "The admin token is off limits",
+                    },
+                  }
+                : {};
             },
           ],
         },
@@ -259,20 +181,6 @@ export async function claudeTurnOptions(
         return answer.approved
           ? { behavior: "allow", updatedInput: { ...input, ...answer.input } }
           : { behavior: "deny", message: answer.message ?? "User declined" };
-      }
-
-      const denial = restrictedDenial(tool);
-      if (denial) return { behavior: "deny", message: denial };
-
-      if (guarded(tool)) {
-        if (!(await inWorkspace(workspace, toolPath(input, workspace)))) {
-          return { behavior: "deny", message: "Path outside task workspace" };
-        }
-
-        // Guarded reads stay inside the workspace, so they need no prompt.
-        if (readTools.includes(tool)) {
-          return { behavior: "allow", updatedInput: input };
-        }
       }
 
       // Calls not already approved by settings or the permission mode ask the task's approver.

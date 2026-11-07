@@ -56,7 +56,7 @@ export const startSchema = z.object({
   provider_options: providerOptionsSchema
     .optional()
     .describe(
-      "Provider-owned options, isolated under the selected provider ID and validated by that provider.",
+      "Provider-owned options, isolated under the selected provider ID and validated by that provider. Claude takes permission_mode, approval_decider and sandbox. sandbox true runs Bash in Claude Code's sandbox. Only the user can set it false when settings turn it on.",
     ),
   approval_mode: approvalModeSchema
     .optional()
@@ -74,7 +74,7 @@ export const startSchema = z.object({
     .enum(roles)
     .default("reviewer")
     .describe(
-      "reviewer, researcher and security_reviewer are read-only in either workspace. Other profiles can edit their workspace.",
+      "reviewer, researcher and security_reviewer start in plan mode, which asks before editing, unless provider_options.claude.permission_mode names another mode. Other profiles can edit their workspace.",
     ),
   model: modelNameSchema
     .optional()

@@ -678,7 +678,9 @@ if (scenario === "token") {
   }
 } else {
   const { createServer } = await import("node:http");
-  const { readFile, symlink, access } = await import("node:fs/promises");
+  const { readFile, access, rm } = await import("node:fs/promises");
+  const { homedir } = await import("node:os");
+  const { randomUUID } = await import("node:crypto");
   let hits = 0;
 
   const listener = createServer((_req, res) => {
@@ -688,19 +690,21 @@ if (scenario === "token") {
 
   await new Promise((r) => listener.listen(0, "127.0.0.1", r));
   const port = listener.address().port;
-  const marker = join(repo, ".git", "blocked-native-proof");
+  const marker = join(repo, ".git", "hooks", "blocked-native-proof");
+  // Claude Code's sandbox lets commands write to the temporary directory,
+  // which holds this run's folders, so the outside write targets home.
+  const outside = join(homedir(), `.subagent-sandbox-probe-${randomUUID()}`);
 
   const commands = [
     "printf 'SCOPED-OK\\n' > proof.txt",
-    "/usr/bin/touch ../blocked-write.txt",
+    `/usr/bin/touch '${outside}'`,
     `/usr/bin/touch '${marker}'`,
-    "/bin/cat escape.txt",
     `/usr/bin/curl --noproxy '*' --connect-timeout 2 --max-time 3 http://127.0.0.1:${port}`,
   ];
 
   // The sandbox is opt-in; default parity leaves Bash to the user's settings.
   control.settings.update("verification", {
-    set: { providers: { claude: { sandbox: "extension", path_guard: "on" } } },
+    set: { providers: { claude: { sandbox: true } } },
   });
 
   const task = await control.start("verification", {
@@ -708,7 +712,7 @@ if (scenario === "token") {
     worker_profile: "test_engineer",
     // Fixture writes stay out of the primary checkout.
     workspace_strategy: "worktree",
-    // Ask for every command so only the exact fixture commands are approved.
+    // Sandboxed commands may run unasked. Any other command asks first.
     provider_options: { claude: { permission_mode: "default" } },
     description:
       "Run each of these exact Bash commands once, sequentially. Do not change, combine or retry the commands; do not use other tools. Expected permission failures are evidence, not errors in this verification. Report which commands succeeded or were blocked in your reply. Commands: " +
@@ -717,8 +721,6 @@ if (scenario === "token") {
   });
 
   console.log(JSON.stringify({ phase: "started", root, task_id: task.id }));
-  let provisioned = false;
-  const approved = [];
 
   try {
     const deadline = Date.now() + 125000;
@@ -726,73 +728,53 @@ if (scenario === "token") {
     while (Date.now() < deadline) {
       const current = store.get(task.id, "verification");
 
-      if (current.workspace && !provisioned) {
-        const outside = join(
-          current.workspace,
-          "..",
-          "private-native-marker.txt",
-        );
-
-        await writeFile(outside, "SYNTHETIC-PRIVATE-MARKER");
-        await symlink(outside, join(current.workspace, "escape.txt"));
-        provisioned = true;
-      }
-
+      // Only an exact command that keeps the sandbox on is approved, so a
+      // retry outside the sandbox never runs.
       if (current.pending_input) {
         const request = current.pending_input;
-        const command = String(request.input.command ?? "").trim();
 
         const permitted =
-          request.tool === "Bash" && command === commands[approved.length];
+          request.tool === "Bash" &&
+          commands.includes(String(request.input.command ?? "").trim()) &&
+          !request.input.dangerouslyDisableSandbox;
 
-        if (!permitted) {
-          control.input(
-            "verification",
-            task.id,
-            request.id,
-            false,
-            undefined,
-            "Only the next exact fixture verification command is approved",
-          );
+        control.input(
+          "verification",
+          task.id,
+          request.id,
+          permitted,
+          undefined,
+          permitted
+            ? undefined
+            : "Only the exact fixture commands, in the sandbox, are approved",
+        );
 
-          console.log(
-            JSON.stringify({
-              phase: "unexpected_command_denied",
-              tool: request.tool,
-            }),
-          );
-        } else {
-          approved.push(command);
-          control.input("verification", task.id, request.id, true);
-
-          console.log(
-            JSON.stringify({
-              phase: "fixture_command_approved",
-              index: approved.length,
-            }),
-          );
-        }
+        console.log(JSON.stringify({ phase: "request_answered", permitted }));
       }
 
       if (["completed", "failed", "interrupted"].includes(current.status)) {
         assert.equal(current.status, "completed", current.error);
-        assert.equal(approved.length, commands.length);
+        const events = store.events(task.id, "verification");
+
+        const ran = events
+          .filter((e) => e.type === "tool.started" && e.data.name === "Bash")
+          .map((e) => String(e.data.input?.command ?? "").trim());
+
+        for (const command of commands) {
+          assert.ok(ran.includes(command), `ran: ${command}`);
+        }
 
         assert.equal(
           (await readFile(join(current.workspace, "proof.txt"), "utf8")).trim(),
           "SCOPED-OK",
         );
 
-        await assert.rejects(
-          access(join(current.workspace, "..", "blocked-write.txt")),
-        );
+        await assert.rejects(access(outside));
 
         await assert.rejects(access(marker));
         assert.equal(hits, 0);
 
-        const results = store
-          .events(task.id, "verification")
-          .filter((e) => e.type === "tool.completed");
+        const results = events.filter((e) => e.type === "tool.completed");
 
         console.log(
           JSON.stringify({
@@ -813,12 +795,6 @@ if (scenario === "token") {
           ),
         );
 
-        assert.ok(
-          !results.some((e) =>
-            JSON.stringify(e.data.content).includes("SYNTHETIC-PRIVATE-MARKER"),
-          ),
-        );
-
         assert.equal(
           execFileSync("git", ["-C", repo, "status", "--porcelain"], {
             encoding: "utf8",
@@ -829,11 +805,9 @@ if (scenario === "token") {
         console.log(
           JSON.stringify({
             phase: "verified",
-            approved_commands: approved.length,
             workspace_write: true,
             outside_write_blocked: true,
             git_metadata_write_blocked: true,
-            symlink_marker_not_read: true,
             network_hits: hits,
             cost_usd: current.cost_usd,
             primary_clean: true,
@@ -852,6 +826,7 @@ if (scenario === "token") {
       "Native sandbox verification timed out",
     );
   } finally {
+    await rm(outside, { force: true });
     await control.close();
     listener.closeAllConnections();
     await new Promise((r) => listener.close(r));

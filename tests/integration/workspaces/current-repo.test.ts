@@ -114,7 +114,7 @@ test("current repository rejects a non-HEAD revision without altering the checko
   }
 });
 
-test("current repository review receives the working tree diff in its provider prompt", async () => {
+test("current repository review prompts leave out the working tree diff", async () => {
   const s = await setup();
 
   try {
@@ -146,12 +146,14 @@ test("current repository review receives the working tree diff in its provider p
         s.c.store.get(started.id, "alice").status === "completed",
     );
 
+    assert.match(receivedPrompt, /Preserve unrelated uncommitted changes/);
+
     for (const content of [
       "staged content",
       "unstaged content",
       "untracked content",
     ]) {
-      assert.ok(receivedPrompt.includes(content), content);
+      assert.ok(!receivedPrompt.includes(content), content);
     }
 
     const completed = s.c.store.get(started.id, "alice");
@@ -355,7 +357,7 @@ test("current repository write profiles edit the checkout while preserving unrel
   }
 });
 
-test("Claude current repository reviewer runs in the checkout and its mandatory hook denies edits", async () => {
+test("Claude current repository reviewer runs in the checkout in plan mode", async () => {
   const s = await setup();
 
   try {
@@ -410,65 +412,9 @@ test("Claude current repository reviewer runs in the checkout and its mandatory 
     assert.equal(options!.cwd, s.repo);
     assert.equal(typeof receivedPrompt, "string");
 
-    assert.ok((receivedPrompt as string).includes("unstaged content"));
-    assert.ok((receivedPrompt as string).includes("untracked content"));
-    assert.ok(Array.isArray(options!.tools));
-
-    for (const tool of ["Edit", "Write", "Bash"]) {
-      assert.ok(!options!.tools.includes(tool));
-    }
-
-    const [matcher] = options!.hooks!.PreToolUse!;
-
-    assert.ok(matcher);
-    const [hook] = matcher.hooks;
-    assert.ok(hook);
-    const signal = new AbortController().signal;
-
-    for (const tool of ["Edit", "Write", "Bash"]) {
-      const decision = await hook(
-        {
-          hook_event_name: "PreToolUse",
-          tool_name: tool,
-          tool_input: {
-            file_path: join(s.repo, "tracked.txt"),
-            command: "echo edit > tracked.txt",
-          },
-          session_id: "test",
-          transcript_path: "test",
-          cwd: s.repo,
-          tool_use_id: tool,
-        },
-        tool,
-        { signal },
-      );
-
-      assert.equal(
-        (decision as any).hookSpecificOutput?.permissionDecision,
-        "deny",
-        tool,
-      );
-    }
-
-    const read = await hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: "Read",
-        tool_input: { file_path: join(s.repo, "tracked.txt") },
-        session_id: "test",
-        transcript_path: "test",
-        cwd: s.repo,
-        tool_use_id: "Read",
-      },
-      "Read",
-      { signal },
-    );
-
-    assert.equal(
-      (read as any).hookSpecificOutput?.permissionDecision,
-      undefined,
-    );
-
+    assert.ok(!(receivedPrompt as string).includes("unstaged content"));
+    assert.equal(options!.permissionMode, "plan");
+    assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
     assert.equal(s.git("status", "--porcelain"), status);
   } finally {
     await s.close();

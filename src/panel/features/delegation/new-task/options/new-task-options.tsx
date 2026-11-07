@@ -59,8 +59,7 @@ function policyOptions(
 
   return {
     model: model && modelAllowed(policy, models, model) ? model : undefined,
-    permissions:
-      permissions && withBlockedOptions(permissions, policy, "permission_mode"),
+    permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
 

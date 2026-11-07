@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { mkdir, realpath, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { type Options } from "@anthropic-ai/claude-agent-sdk";
@@ -93,7 +92,7 @@ test("every task denies the admin token, and its hook denies file tools on it", 
 
   setClaudeOptions(c.task, {
     permission_mode: "default",
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   });
 
   const options = await claudeTurnOptions(
@@ -168,76 +167,12 @@ test("PostToolUse flags a command in a task whose folder has no Git", async () =
   expect(c.editUnrecorded).toHaveBeenCalledWith(undefined, "command");
 });
 
-test("Claude read-only profile bundle denies outside paths, symlink escapes, Git metadata and disallowed tools", async () => {
-  const { c, workspace } = await context();
-  await symlink(tmpdir(), join(workspace, "escape"));
-  let options: Options | undefined;
-
-  const provider = new ClaudeAgentProvider(
-    captureOptions((value) => {
-      options = value;
-    }),
-    undefined,
-    readyClaudeCli,
-  );
-
-  await provider.run(c, "Review");
-  const hook = preToolUseHook(options);
-
-  const check = async (tool: string, input: object) => {
-    const r = await hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: tool,
-        tool_input: input,
-        session_id: "x",
-        transcript_path: "x",
-        cwd: workspace,
-        tool_use_id: "x",
-      },
-      "x",
-      { signal: c.signal },
-    );
-
-    return (r as any).hookSpecificOutput?.permissionDecision;
-  };
-
-  assert.equal(
-    await check("Read", { file_path: join(tmpdir(), "secret") }),
-    "deny",
-  );
-
-  assert.equal(
-    await check("Read", { file_path: join(workspace, "escape", "secret") }),
-    "deny",
-  );
-
-  await mkdir(join(workspace, "vendor/.git"), { recursive: true });
-
-  assert.equal(
-    await check("Read", { file_path: join(workspace, "vendor/.git/config") }),
-    "deny",
-  );
-
-  assert.equal(
-    await check("Read", { file_path: join(workspace, ".git") }),
-    "deny",
-  );
-
-  assert.equal(await check("Bash", { command: "pwd" }), "deny");
-  assert.equal(await check("Write", { file_path: "a.ts" }), "deny");
-  assert.equal(await check("Agent", {}), "deny");
-  assert.equal(await check("mcp__server__tool", {}), "deny");
-  assert.equal(await check("Skill", { skill: "review" }), undefined);
-  assert.equal(await check("Read", { file_path: "a.ts" }), undefined);
-});
-
 test("write-profile shell commands require human decision and cannot use edited approval payloads", async () => {
   const { c } = await context();
   c.task.worker_profile = "implementer";
 
   setClaudeOptions(c.task, {
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   });
 
   setClaudeOptions(c.task, { permission_mode: "default" });
@@ -289,23 +224,11 @@ test("write-profile shell commands require human decision and cannot use edited 
 });
 
 test("Claude forwards each native permission mode and reserves bypass opt-in for bypassPermissions", async () => {
-  const { c, workspace } = await context();
+  const { c } = await context();
   c.task.worker_profile = "implementer";
 
   setClaudeOptions(c.task, {
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
-  });
-
-  // Restrictions enabled in settings apply in every native mode.
-  setClaudeOptions(c.task, {
-    claude_policy: {
-      sandbox: "extension",
-      tools: "restricted",
-      path_guard: true,
-      subagents: false,
-      settings_files: true,
-      user_mcp: true,
-    },
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   });
 
   let options: Options | undefined;
@@ -335,67 +258,36 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
       mode === "bypassPermissions" ? true : undefined,
     );
 
-    const hook = preToolUseHook(options);
-
     assert.equal(options!.allowedTools, undefined);
-
-    const decision = await hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: "Bash",
-        tool_input: { command: "pwd" },
-        session_id: "x",
-        transcript_path: "x",
-        cwd: workspace,
-        tool_use_id: "x",
-      },
-      "x",
-      { signal: c.signal },
-    );
-
-    assert.equal(
-      (decision as any).hookSpecificOutput?.permissionDecision,
-      mode === "plan" ? "deny" : undefined,
-    );
-
-    const outside = await hook(
-      {
-        hook_event_name: "PreToolUse",
-        tool_name: "Write",
-        tool_input: { file_path: join(tmpdir(), "forbidden") },
-        session_id: "x",
-        transcript_path: "x",
-        cwd: workspace,
-        tool_use_id: "x",
-      },
-      "x",
-      { signal: c.signal },
-    );
-
-    assert.equal(
-      (outside as any).hookSpecificOutput?.permissionDecision,
-      "deny",
-    );
   }
+});
 
-  c.task.worker_profile = "reviewer";
-  setClaudeOptions(c.task, { permission_mode: "bypassPermissions" });
-  await provider.run(c, "Review");
+test("every profile gets the full tool preset and no prompt rule against editing", async () => {
+  const { c } = await context();
+  let options: Options | undefined;
 
-  assert.ok(
-    options!.tools instanceof Array &&
-      !options!.tools.includes("Write") &&
-      !options!.tools.includes("Bash"),
+  setClaudeOptions(c.task, {
+    permission_mode: "plan",
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
+  });
+
+  const provider = new ClaudeAgentProvider(
+    captureOptions((value) => {
+      options = value;
+    }),
+    undefined,
+    readyClaudeCli,
   );
 
-  assert.equal(
-    (await options!.canUseTool!(
-      "Write",
-      { file_path: "a.ts" },
-      { signal: c.signal, toolUseID: "write", requestId: "request" },
-    ))!.behavior,
-    "deny",
-  );
+  for (const profile of ["reviewer", "implementer"] as const) {
+    c.task.worker_profile = profile;
+    await provider.run(c, "Work");
+    assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
+
+    const prompt = options!.systemPrompt as { append: string };
+    assert.match(prompt.append, /Follow the configured native permission mode/);
+    assert.doesNotMatch(prompt.append, /cannot edit|Inspect only/);
+  }
 });
 
 test("unresolved SDK edits ask the configured decision maker and preserve the original input", async () => {
@@ -403,7 +295,7 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
   c.task.worker_profile = "implementer";
 
   setClaudeOptions(c.task, {
-    claude_policy: resolveClaudePolicy(claudeOverrideDefaults, "implementer"),
+    claude_policy: resolveClaudePolicy(claudeOverrideDefaults),
   });
 
   setClaudeOptions(c.task, { permission_mode: "default" });

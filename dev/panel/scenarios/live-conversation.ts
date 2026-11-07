@@ -21,7 +21,7 @@ export const liveConversationTask: Task = {
   description:
     "Watch thinking, tool activity and streamed replies cycle through Chat.",
   worker_profile: "implementer",
-  provider_options: settingOptions("implementer"),
+  provider_options: settingOptions(),
   status: "running",
   workspace_strategy: "current_repo",
   budget: { max_runtime_minutes: null, max_cost_usd: null },

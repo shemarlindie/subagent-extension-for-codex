@@ -38,24 +38,12 @@ const previewOrgPolicy = (
   source,
   blocked: [
     {
-      setting: "permission_mode",
       value: "auto",
       reason: "Turned off by your organization",
     },
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
-    },
-    {
-      setting: "sandbox",
-      value: "extension",
-      reason: "Your organization turned off the sandbox",
-    },
-    {
-      setting: "sandbox",
-      value: "extension_locked",
-      reason: "Your organization turned off the sandbox",
     },
   ],
   available_models: ["sonnet", "haiku"],

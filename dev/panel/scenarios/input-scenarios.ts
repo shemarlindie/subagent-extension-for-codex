@@ -135,7 +135,7 @@ export const inputTasks: Task[] = [
     description:
       "Move the config loader to a typed schema and keep backwards compatibility.",
     worker_profile: "implementer",
-    provider_options: settingOptions("implementer"),
+    provider_options: settingOptions(),
     status: "waiting",
     waiting_reason: "waiting_for_user",
     runtime_ms: 120000,
@@ -174,7 +174,7 @@ export const inputTasks: Task[] = [
     description:
       "Trace the session expiry regression and identify the first incorrect state transition.",
     worker_profile: "debugger",
-    provider_options: settingOptions("debugger"),
+    provider_options: settingOptions(),
     status: "waiting",
     waiting_reason: "waiting_for_permission",
     pending_input: {

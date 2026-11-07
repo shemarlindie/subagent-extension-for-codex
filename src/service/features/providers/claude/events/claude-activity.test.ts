@@ -587,9 +587,7 @@ test("run emits result accounting exactly once for success and failure", async (
           approval_decider: "user",
           permission_source: "task",
           claude_policy: {
-            sandbox: "user_config",
-            tools: "restricted",
-            path_guard: true,
+            sandbox: false,
             subagents: true,
             settings_files: true,
             user_mcp: true,

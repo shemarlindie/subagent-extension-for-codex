@@ -26,7 +26,6 @@ import {
   type TurnOutput,
 } from "../../types.js";
 import { ClaudeCli } from "../configuration/executable.js";
-import { sandboxBlock } from "../configuration/sandbox-check.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
@@ -220,11 +219,9 @@ export class ClaudeAgentProvider implements Provider {
     let started = false;
 
     try {
-      const blocked = await sandboxBlock(stream, options);
-
       // With no prompt sent, ending the input ends the session before any
       // model call, and whatever the CLI still has to say arrives below.
-      if (blocked || c.signal.aborted) {
+      if (c.signal.aborted) {
         c.promptHeld();
         inbox.end();
       } else {
@@ -383,14 +380,6 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         break;
-      }
-
-      if (blocked) {
-        logEvent("warn", "provider.sandbox_blocked", {
-          reason: blocked.message,
-        });
-
-        throw blocked;
       }
 
       if (reply === undefined) throw new Error("Claude ended without a result");

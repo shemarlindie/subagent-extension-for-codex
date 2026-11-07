@@ -207,12 +207,16 @@ test("fixture permission modes simulate allow, deny, ask, and approval authority
       return { ...task(), ...prepared };
     };
 
-    for (const mode of ["plan", "dontAsk"]) {
-      assert.equal(
-        provider.taskPolicy.decideInput(prepare(mode), "Bash"),
-        false,
-      );
-    }
+    assert.equal(
+      provider.taskPolicy.decideInput(prepare("dontAsk"), "Bash"),
+      false,
+    );
+
+    // Plan mode asks, as Claude Code does.
+    assert.equal(
+      provider.taskPolicy.decideInput(prepare("plan"), "Write"),
+      undefined,
+    );
 
     for (const mode of ["auto", "bypassPermissions"]) {
       assert.equal(

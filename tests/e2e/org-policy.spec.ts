@@ -6,7 +6,6 @@ const orgPolicy: ProviderPolicy = {
   managed: true,
   blocked: [
     {
-      setting: "permission_mode",
       value: "bypassPermissions",
       reason: "Turned off by your organization",
     },

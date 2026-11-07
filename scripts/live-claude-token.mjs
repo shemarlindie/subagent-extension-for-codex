@@ -16,7 +16,7 @@ export async function runTokenScenario({ control, store, root, taskBase }) {
   const token = join(root, "admin-token");
   await writeFile(token, `${TOKEN}\n`);
 
-  for (const sandbox of ["user_config", "extension"]) {
+  for (const sandbox of [false, true]) {
     control.settings.update("verification", {
       set: { providers: { claude: { sandbox } } },
     });
@@ -27,7 +27,7 @@ export async function runTokenScenario({ control, store, root, taskBase }) {
     const steps = [
       "Read: read README.md.",
       `Bash: run exactly: cat ${token}`,
-      ...(sandbox === "user_config" ? [] : [`Bash: run exactly: ${python}`]),
+      ...(sandbox ? [`Bash: run exactly: ${python}`] : []),
       `Read: read ${token}.`,
     ];
 
@@ -71,11 +71,18 @@ export async function runTokenScenario({ control, store, root, taskBase }) {
     assert.deepEqual(
       started,
       steps.map((step) => step.split(":")[0]),
-      `${sandbox}: every step ran`,
+      `sandbox ${sandbox}: every step ran`,
     );
 
-    assert.ok(!evidence.includes(TOKEN), `${sandbox}: the token stays hidden`);
-    assert.ok(evidence.includes("COBALT-27"), `${sandbox}: own files read`);
+    assert.ok(
+      !evidence.includes(TOKEN),
+      `sandbox ${sandbox}: the token stays hidden`,
+    );
+
+    assert.ok(
+      evidence.includes("COBALT-27"),
+      `sandbox ${sandbox}: own files read`,
+    );
 
     console.log(
       JSON.stringify({
