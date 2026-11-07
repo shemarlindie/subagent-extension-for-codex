@@ -200,12 +200,11 @@ test("zero runtime and cost budgets cannot launch a task", async (t) => {
   );
 });
 
-test("project folder selection locks revision to HEAD and submits the checkout strategy", async (t) => {
+test("project folder selection hides the revision and submits HEAD with the checkout strategy", async (t) => {
   const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
-  const revision = screen.getByLabelText<HTMLInputElement>("Revision");
-  assert.equal(revision.value, "HEAD");
-  assert.equal(revision.readOnly, true);
+  const revision = () => screen.queryByLabelText<HTMLInputElement>("Revision");
+  assert.equal(revision(), null);
 
   assert.match(
     screen.getByRole("combobox", { name: "Workspace" }).textContent ?? "",
@@ -213,15 +212,13 @@ test("project folder selection locks revision to HEAD and submits the checkout s
   );
 
   await selectOption(user, "Workspace", "Isolated worktree");
-  assert.equal(revision.readOnly, false);
-  await user.clear(revision);
-  await pasteText(user, revision, "feature-branch");
+  await user.clear(revision()!);
+  await pasteText(user, revision()!, "feature-branch");
   await enterTask(user, "Review my uncommitted edits");
 
   await selectOption(user, "Workspace", "Project folder (uncommitted changes)");
 
-  await waitFor(() => assert.equal(revision.value, "HEAD"));
-  assert.equal(revision.readOnly, true);
+  await waitFor(() => assert.equal(revision(), null));
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
   const call = await startedTask(transport);

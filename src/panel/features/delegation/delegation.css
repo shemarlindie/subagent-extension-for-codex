@@ -27,8 +27,12 @@
   align-self: center;
 }
 
+/* Paired fields stack with the form's usual spacing on narrow panels. */
+.task-workspace-fields,
 .task-model-fields {
   row-gap: 0;
+}
+.task-model-fields {
   overflow-wrap: anywhere;
 }
 .task-model-fields > .help {
