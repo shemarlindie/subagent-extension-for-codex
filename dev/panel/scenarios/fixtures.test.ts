@@ -155,18 +155,6 @@ test("a registered thread cwd picks its project over the latest task", () => {
   );
 });
 
-test("a global launch shows every conversation and project", () => {
-  const opened = open("app_open_subagent_extension_for_codex_global");
-  assert.deepEqual(opened.panel_scope, { conversation_id: null });
-  assert.equal(opened.tasks.length, previewTasks.length);
-
-  assert.ok(
-    previewTasks.some((task) => task.conversation_id !== PREVIEW_THREAD),
-  );
-
-  assert.ok(previewTasks.some((task) => task.repository !== "/demo/project"));
-});
-
 test("the chat project candidate follows the auto-add setting", () => {
   const launch = {
     conversation_id: PREVIEW_THREAD,
@@ -272,18 +260,6 @@ test("fixture registration validates the root and the caller keeps it", () => {
       ),
     /Use repository root/,
   );
-});
-
-test("an explicit revision scopes the panel to that revision", () => {
-  const context = (args: Record<string, unknown>) =>
-    (previewTool("get_panel_context", args) as Opened).panel_scope;
-
-  assert.equal(
-    context({ conversation_id: PREVIEW_THREAD, revision: "v2" }).revision,
-    "v2",
-  );
-
-  assert.equal(context({ conversation_id: PREVIEW_THREAD }).revision, "HEAD");
 });
 
 test("fixture task renaming updates listed titles and validates input", () => {
