@@ -1,5 +1,6 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
+import { failureMessage, isBudgetFailure } from "../failure.js";
 import type { Task } from "../model.js";
 import { replyExcerpt } from "./reply.js";
 
@@ -64,12 +65,13 @@ export function parentUpdate(
   const failed = eventPayload(e, "task.failed");
 
   if (failed) {
-    const error = failed.error ?? "The task failed.";
-
     return {
       ...base,
-      kind: /budget/i.test(error) ? "budget" : "failed",
-      text: replyExcerpt(error, SNIPPET_CHARS),
+      kind: isBudgetFailure(failed.error_code) ? "budget" : "failed",
+      text: replyExcerpt(
+        failureMessage(failed) ?? "The task failed.",
+        SNIPPET_CHARS,
+      ),
     };
   }
 

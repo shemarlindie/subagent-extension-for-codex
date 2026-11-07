@@ -20,6 +20,7 @@ import {
 import type { SettingsValues } from "../../../../../shared/settings/settings-schema.js";
 import { type Task } from "../../../../../shared/tasks/model.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
+import { RunError } from "../../run-error.js";
 import {
   type Provider,
   type RunContext,
@@ -360,8 +361,11 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         if (m.subtype !== "success") {
-          throw new Error(
-            `Claude result: ${m.subtype}${"errors" in m ? ": " + m.errors.join("; ") : ""}`,
+          throw new RunError(
+            m.subtype === "error_max_budget_usd"
+              ? "cost_budget_exhausted"
+              : m.subtype,
+            m.errors.join("; "),
           );
         }
 

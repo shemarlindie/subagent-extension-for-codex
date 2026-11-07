@@ -22,6 +22,7 @@ export function commitSend(
     status: task.status,
     queue_paused: task.queue_paused,
     error: task.error,
+    error_code: task.error_code,
     completed_at: task.completed_at,
     updated_at: task.updated_at,
   };

@@ -163,7 +163,12 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
   store.save(spent);
   await c.send("alice", t.id, "More", "user");
   await until(() => store.get(t.id, "alice").status === "failed");
-  assert.match(store.get(t.id, "alice").error!, /Cost budget exhausted/);
+  assert.equal(store.get(t.id, "alice").error, undefined);
+  assert.equal(store.get(t.id, "alice").error_code, "cost_budget_exhausted");
+
+  assert.deepEqual(eventData(store, t.id, "task.failed"), [
+    { error_code: "cost_budget_exhausted" },
+  ]);
 
   // A limit can only go up.
   await assert.rejects(
@@ -180,6 +185,8 @@ test("a turn stopped by its budget resumes after a follow-up raises it", async (
   });
 
   await until(() => store.get(t.id, "alice").status === "completed");
+
+  assert.equal(store.get(t.id, "alice").error_code, undefined);
 
   assert.deepEqual(store.get(t.id, "alice").budget, {
     max_cost_usd: 2,
@@ -290,7 +297,8 @@ test("runtime budget stops a worker waiting for input", async () => {
   });
 
   await until(() => store.get(t.id, "alice").status === "failed");
-  assert.match(store.get(t.id, "alice").error!, /Runtime budget/);
+  assert.equal(store.get(t.id, "alice").error, undefined);
+  assert.equal(store.get(t.id, "alice").error_code, "runtime_budget_exhausted");
   await c.close();
 });
 
@@ -533,7 +541,7 @@ test("runtime budget expiry retains recorded edits", async () => {
     await until(() => !c.active.has(task.id));
     const stopped = store.get(task.id, "alice");
     assert.equal(stopped.status, "failed");
-    assert.match(stopped.error!, /Runtime budget exhausted/);
+    assert.equal(stopped.error_code, "runtime_budget_exhausted");
     assert.deepEqual(eventData(store, task.id, "agent.reply"), []);
 
     assert.deepEqual(

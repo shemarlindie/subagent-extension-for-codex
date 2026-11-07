@@ -201,7 +201,7 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
   }
 });
 
-test("a refusal shows Claude Code's own text, and other failures keep their prefix", async () => {
+test("a refusal shows Claude Code's own text, and result failures retain codes and diagnostics", async () => {
   const run = async (result: Record<string, unknown>) => {
     const { c } = await context();
     setClaudeOptions(c.task, { permission_mode: "default" });
@@ -230,13 +230,18 @@ test("a refusal shows Claude Code's own text, and other failures keep their pref
 
   await assert.rejects(
     run({ startup_failure_reason: "org_pin_api_key_conflict" }),
-    (error: Error) => error.message === "Sign in with your organization.",
+    { message: "Sign in with your organization." },
   );
 
-  await assert.rejects(
-    run({}),
-    /^Error: Claude result: error_during_execution: Sign in with your organization\.$/,
-  );
+  await assert.rejects(run({}), {
+    code: "error_during_execution",
+    message: "Sign in with your organization.",
+  });
+
+  await assert.rejects(run({ subtype: "error_max_budget_usd", errors: [] }), {
+    code: "cost_budget_exhausted",
+    message: "",
+  });
 });
 
 test("Claude asks for a plain reply before the custom instructions, with no structured output tool", async () => {

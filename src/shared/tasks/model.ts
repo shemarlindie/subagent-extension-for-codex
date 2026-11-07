@@ -249,7 +249,10 @@ export interface Task extends Start {
    * resumed session's next report includes.
    */
   session_cost_usd?: number;
+  /** Raw failure details, when available. Known codes supply their display text. */
   error?: string;
+  /** Machine-readable turn failure, independent of the displayed message. */
+  error_code?: string;
   pending_input?: {
     id: string;
     tool: string;

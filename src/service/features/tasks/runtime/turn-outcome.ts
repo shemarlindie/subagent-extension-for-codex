@@ -14,6 +14,7 @@ export function recordStatusEvent(store: Store, t: Task) {
   if (t.status === "failed") {
     return store.event(t, "task.failed", {
       ...(t.error ? { error: t.error } : {}),
+      ...(t.error_code ? { error_code: t.error_code } : {}),
     });
   }
 

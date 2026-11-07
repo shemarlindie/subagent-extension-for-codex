@@ -55,6 +55,7 @@ const taskInterruptedPayloadSchema = z.object({
 
 const taskFailedPayloadSchema = z.object({
   error: z.string().optional(),
+  error_code: z.string().optional(),
 });
 
 const taskWaitingPayloadSchema = z.object({

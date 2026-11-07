@@ -4,6 +4,7 @@ import {
   type Start,
   type Task,
 } from "../../../../shared/tasks/model.js";
+import { RunError } from "../../providers/run-error.js";
 import type { Provider } from "../../providers/types.js";
 
 type Budget = Start["budget"];
@@ -110,13 +111,15 @@ export function remainingRuntime(task: Task) {
       ? Infinity
       : task.budget.max_runtime_minutes * 60000 - task.runtime_ms;
 
-  if (remaining <= 0) throw new Error("Runtime budget exhausted");
+  if (remaining <= 0) {
+    throw new RunError("runtime_budget_exhausted");
+  }
 
   if (
     task.budget.max_cost_usd !== null &&
     (task.cost_usd ?? 0) >= task.budget.max_cost_usd
   ) {
-    throw new Error("Cost budget exhausted");
+    throw new RunError("cost_budget_exhausted");
   }
 
   return remaining;

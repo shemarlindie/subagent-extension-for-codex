@@ -327,11 +327,7 @@ budgetTask.result({
 
 budgetTask.turnEnded(1, "failed", 302000, 2.04);
 
-budgetTask.add(
-  "task.failed",
-  { error: "Claude result: error_max_budget_usd" },
-  200,
-);
+budgetTask.add("task.failed", { error_code: "cost_budget_exhausted" }, 200);
 
 // A runtime-only limit failure, with its control in the warning notice.
 const runtimeBudgetTask = new Timeline("preview-runtime-budget", at(127), 2050);
@@ -348,7 +344,7 @@ runtimeBudgetTask.turnEnded(1, "failed", 22 * 60000, 0.44);
 
 runtimeBudgetTask.add(
   "task.failed",
-  { error: "Runtime budget exhausted" },
+  { error_code: "runtime_budget_exhausted" },
   200,
 );
 
@@ -441,7 +437,7 @@ export const conversationTasks: Task[] = [
       "Move the date helpers into their own module and update imports.",
     worker_profile: "implementer",
     status: "failed",
-    error: "Claude result: error_max_budget_usd",
+    error_code: "cost_budget_exhausted",
     budget: { max_runtime_minutes: 20, max_cost_usd: 2 },
     runtime_ms: 302000,
     cost_usd: 2.04,
@@ -469,7 +465,7 @@ export const conversationTasks: Task[] = [
     description: "Finish moving date helpers and update every call site.",
     worker_profile: "implementer",
     status: "failed",
-    error: "Runtime budget exhausted",
+    error_code: "runtime_budget_exhausted",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     runtime_ms: 22 * 60000,
     cost_usd: 0.44,

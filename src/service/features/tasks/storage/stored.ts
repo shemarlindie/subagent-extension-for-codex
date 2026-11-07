@@ -66,6 +66,7 @@ const storedTaskSchema = z.looseObject({
     .optional(),
   created_by: sender,
   status: z.enum(statuses),
+  error_code: z.string().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   pending_input: z

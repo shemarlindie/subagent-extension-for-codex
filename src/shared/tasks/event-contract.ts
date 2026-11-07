@@ -42,6 +42,7 @@ interface TaskInterruptedPayload {
 
 interface TaskFailedPayload {
   error?: string;
+  error_code?: string;
 }
 
 interface TaskWaitingPayload {

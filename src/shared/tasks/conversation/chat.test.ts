@@ -132,7 +132,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       runtime_ms: 2000,
       cost_usd: 0.2,
     }),
-    event(10, "task.failed", { error: "Cost budget exhausted" }),
+    event(10, "task.failed", { error_code: "cost_budget_exhausted" }),
   ]);
 
   assert.deepEqual(
@@ -154,7 +154,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       ["note", "session"],
       ["note", "compaction"],
       // A read after the outcome row gets it again, with the error.
-      ["outcome", 2, "failed", "Cost budget exhausted", 10],
+      ["outcome", 2, "failed", "Cost limit reached.", 10],
     ],
   );
 });

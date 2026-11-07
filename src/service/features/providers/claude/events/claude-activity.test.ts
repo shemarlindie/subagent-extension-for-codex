@@ -629,7 +629,10 @@ test("run emits result accounting exactly once for success and failure", async (
     );
 
     if (failed) {
-      await assert.rejects(provider.run(context, "Review"), /error_max_turns/);
+      await assert.rejects(provider.run(context, "Review"), {
+        code: "error_max_turns",
+        message: "Stopped",
+      });
     } else {
       assert.equal((await provider.run(context, "Review")).reply, "Finished");
     }

@@ -359,7 +359,7 @@ test("an interrupt ends the turn through the query, cancelling queued messages, 
       ctx.c,
       "Prompt",
     ),
-    /error_during_execution/,
+    { code: "error_during_execution", message: "aborted" },
   );
 
   assert.deepEqual(interrupts, [{ cancelQueued: true }]);
@@ -394,7 +394,7 @@ test("an interrupt that fails stops the process instead", async () => {
       ctx.c,
       "Prompt",
     ),
-    /error_during_execution/,
+    { code: "error_during_execution", message: "aborted" },
   );
 
   assert.equal(query.options().abortController!.signal.aborted, true);

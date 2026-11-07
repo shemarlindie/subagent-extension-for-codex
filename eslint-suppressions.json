@@ -69,11 +69,6 @@
       "count": 1
     }
   },
-  "src/panel/features/tasks/chat/chat-model.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/panel/features/tasks/chat/composer/composer.tsx": {
     "complexity": {
       "count": 1

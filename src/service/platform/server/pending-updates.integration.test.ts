@@ -96,8 +96,12 @@ test("message reads record the updates they return as seen", async () => {
 test("pending updates cover replies, failures, budget stops and routed requests", async () => {
   const { store, save, user, pending } = await setup();
   const failed = save("failed");
-  store.event(failed, "task.failed", { error: "Tests failed" });
-  store.event(failed, "task.failed", { error: "Budget exceeded: $1.00" });
+
+  store.event(failed, "task.failed", {
+    error: "Could not read the cost budget configuration",
+  });
+
+  store.event(failed, "task.failed", { error_code: "cost_budget_exhausted" });
 
   const question = {
     id: "q",
@@ -166,8 +170,8 @@ test("pending updates cover replies, failures, budget stops and routed requests"
     [
       "failed",
       [
-        ["budget", "Budget exceeded: $1.00"],
-        ["failed", "Tests failed"],
+        ["budget", "Cost limit reached."],
+        ["failed", "Could not read the cost budget configuration"],
       ],
     ],
   ]);
