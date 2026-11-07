@@ -21,7 +21,6 @@ package.
 | `[fixture:assistant-error type=rate_limit]`        | Show an SDK assistant error without failing the turn.                  |
 | `[fixture:change]`                                 | Write and record a sample file. Requires a worktree task.              |
 | `[fixture:subagent count=2]`                       | Show child-worker lifecycles. Add `outcome=error` for failed children. |
-| `[fixture:restriction name=path_guard]`            | Show a synthetic restriction denial.                                   |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |
 | `[fixture:stream]`                                 | Show a complete streaming-message lifecycle.                           |
 | `[fixture:reply lines=40 pace=30]`                 | Add reply paragraphs and stream each word after `pace` ms.             |
@@ -75,20 +74,20 @@ successful subtype and an error flag.
 
 ## Permission and worker-policy scenarios
 
-Choose the task's simulated permission mode and approval decision maker in the
-ordinary task form, then use `[fixture:permission]`:
+Choose the task's simulated permission mode and approval decision maker in
+**Advanced task**, then use `[fixture:permission]`:
 
 | Mode                        | Simulated behavior                                            |
 | --------------------------- | ------------------------------------------------------------- |
 | `inherit`                   | Resolve the saved `providers.claude.permission_mode`.         |
-| `default`                   | Follow the fixture execution approval mode.                   |
-| `plan`, `dontAsk`           | Deny.                                                         |
+| `default`, `plan`           | Follow the fixture execution approval mode.                   |
+| `dontAsk`                   | Deny.                                                         |
 | `acceptEdits`               | Allow edit tools. Use the execution approval mode for others. |
 | `auto`, `bypassPermissions` | Allow.                                                        |
 
 Set `providers.claude.subagents` to `false` to check the blocked subagent path.
-Select a read-only worker profile to check its policy. These checks cover
-routing and presentation only. Use the
+A read-only worker profile starts in `plan`. These checks cover routing and
+presentation only. Use the
 [live Claude checks](claude-verification.md#live-claude-checks) for native
 permission and sandbox behavior.
 

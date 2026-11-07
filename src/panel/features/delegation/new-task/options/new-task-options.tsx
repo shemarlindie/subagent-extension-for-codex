@@ -91,7 +91,7 @@ function settingsSummary(
 }
 
 /**
- * The composer's options. The profile leads; the model and reasoning it sets
+ * The composer's options. The profile leads, and the model and reasoning it sets
  * collapse into a summary that expands for editing. More options sets the
  * permission mode and sandbox.
  */
