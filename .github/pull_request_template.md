@@ -4,7 +4,16 @@
 
 ## What it looks like
 
-<!-- Show visible UI changes with screenshots or video. Delete this section if there are none. -->
+<!-- Show visible UI changes with screenshots or video. Delete this section if there are none.
+
+- One screenshot: a plain image. Give a tall one width="50%" so it fits on screen.
+- Several: a two-column table, with a one-line caption above each image.
+
+<table><tr>
+<td width="50%" valign="top"><b>Area:</b> what changed.<br><br><img src="…" alt="…"></td>
+<td width="50%" valign="top"><b>Area:</b> what changed.<br><br><img src="…" alt="…"></td>
+</tr></table>
+-->
 
 ## How you checked it
 
