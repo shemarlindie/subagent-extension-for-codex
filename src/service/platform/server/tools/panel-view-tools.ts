@@ -6,13 +6,11 @@ import { waitForUpdates } from "../../../features/tasks/conversation/updates.js"
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { panelTaskList } from "../../panel/panel-context.js";
 import type { activityTools } from "./activity-tools.js";
-import type { agentTools } from "./agent-tools.js";
 import { archivedFilter, taskId, tool } from "./definition.js";
 import type { pendingUpdateTools } from "./pending-update-tools.js";
 
 /** The other tools a panel view reads through. */
 type ViewReads = {
-  projects: ReturnType<typeof agentTools>["list_projects"];
   activity: ReturnType<typeof activityTools>["app_get_activity"];
   pending: ReturnType<typeof pendingUpdateTools>["app_list_pending_updates"];
 };
@@ -66,17 +64,18 @@ export function panelViewTools(c: Control, owner: string, reads: ViewReads) {
   });
 
   /**
-   * Projects can read Git state, so they come first. The other parts read
-   * in one synchronous section, so they match each other and the revision.
+   * Git state is read first, since it waits on Git. Everything else, the
+   * project list included, reads in one synchronous section, so it matches
+   * the revision.
    */
   const readView = async (parts: z.output<typeof view>) => {
-    const projects = await reads.projects.run({});
+    const known = (await c.projects?.listWithGit()) ?? [];
     const owned = (id: string) => !!c.store.find(id, owner);
 
     return () =>
       c.store.reads.measure("view", (work) => {
         const read = {
-          projects,
+          projects: c.projects?.withKnownGit(known) ?? [],
           list: list.run(parts.list),
           // A selected task that is gone or not the owner's has no details.
           ...(parts.chat &&

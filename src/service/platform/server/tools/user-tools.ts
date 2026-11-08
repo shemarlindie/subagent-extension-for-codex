@@ -90,7 +90,6 @@ export function userTools(
       },
     }),
     ...panelViewTools(c, owner, {
-      projects: tools.list_projects,
       activity: activity.app_get_activity,
       pending: pending.app_list_pending_updates,
     }),
