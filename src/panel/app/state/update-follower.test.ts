@@ -158,7 +158,15 @@ test("a view request goes with each wait, and its view applies before the draft"
     list: { conversation_id: null, include: [], include_read_completed: false },
   };
 
-  setRequest({ args, scope: 1, projects: 0, selection: 1, tab: 0 });
+  setRequest({
+    args,
+    draftRead: 1,
+    scope: 1,
+    projects: 0,
+    selection: 1,
+    tab: 0,
+  });
+
   setTarget({ task_id: "a", message_id: "m", after_length: 3 });
   follower.follow("boot:1");
   await vi.advanceTimersByTimeAsync(0);

@@ -37,6 +37,8 @@ export type UpdateRead = {
  */
 export type ViewRequest = {
   args: ViewArgs;
+  /** The draft follower's number for this view's Chat read. */
+  draftRead: number;
   scope: number;
   projects: number;
   selection: number;

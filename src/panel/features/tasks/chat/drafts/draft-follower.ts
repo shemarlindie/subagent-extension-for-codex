@@ -64,8 +64,11 @@ export class DraftFollower {
     return ++this.reads;
   }
 
-  /** Holds a disappearing listed-task draft until the next Chat read settles. */
-  retainListed(task?: Task): Snapshot["draft"] {
+  /**
+   * Holds a disappearing listed-task draft until the Chat read numbered
+   * `read`, from the same view as the list, settles it.
+   */
+  retainListed(task: Task | undefined, read: number): Snapshot["draft"] {
     const snapshot = this.context.snapshot();
     if (task && snapshot.draft?.task === task.id) return snapshot.draft;
     const previous = selectedTask(snapshot);
@@ -79,11 +82,11 @@ export class DraftFollower {
       return undefined;
     }
 
-    // The list updates before Chat is fetched. Use the same handoff boundary
-    // as a streamed clear, while the refresh already in progress reads Chat.
+    // The service reads a view's list and Chat in one snapshot, so the
+    // view's own Chat read already follows this completion.
     this.completed = {
       message_id: previous.draft.message_id,
-      reads: this.reads,
+      reads: read - 1,
     };
 
     return { task: task.id, ...previous.draft };

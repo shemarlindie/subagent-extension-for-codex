@@ -76,6 +76,7 @@ export function task(
 export class FakeTransport implements Transport {
   embedded = true;
   streamsChanges?: boolean;
+  streamsDrafts?: boolean;
   send?: Transport["send"];
   events!: TransportEvents;
   calls: { name: string; args: Record<string, unknown> }[] = [];

@@ -211,3 +211,94 @@ test("the activity view shows the service's window and its tally, and polls for 
 
   assert.equal(controller.getSnapshot().events.length, 200);
 });
+
+/** Chat as the service returns it once the worker's reply `id` is stored. */
+const storedReply = (id: string, text: string) => ({
+  items: [
+    {
+      kind: "message",
+      id,
+      event_id: 3,
+      message: {
+        id,
+        event_id: 3,
+        timestamp: "",
+        turn: 1,
+        from: "worker",
+        kind: "reply",
+        text,
+      },
+    },
+  ],
+  next_cursor: 3,
+});
+
+test("a draft cleared while a view is in flight stays until a later view's Chat holds its message", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.streamsDrafts = true;
+  transport.tasks = [task("a")];
+  await controller.start();
+
+  transport.events.draft({
+    task_id: "a",
+    message_id: "m",
+    offset: 0,
+    text: "Hello",
+  });
+
+  const older = deferred<unknown>(),
+    later = deferred<unknown>(),
+    chats = [older.promise, later.promise];
+
+  transport.handler = (name) =>
+    name === "app_get_chat" ? chats.shift() : undefined;
+
+  const refreshing = controller.refresh();
+  await flush();
+  transport.events.draft({ task_id: "a", message_id: "m", cleared: true });
+
+  // Read before the message was stored, so it can't settle the clear.
+  older.resolve({ items: [], next_cursor: 0 });
+  await refreshing;
+  await flush();
+  assert.equal(controller.getSnapshot().draft?.text, "Hello");
+
+  later.resolve(storedReply("m", "Hello"));
+  await flush();
+  assert.equal(controller.getSnapshot().draft, undefined);
+
+  assert.deepEqual(
+    controller.getSnapshot().chat?.items.map((item) => item.id),
+    ["m"],
+  );
+});
+
+test.for(["stored", "never stored"] as const)(
+  "a listed draft whose turn ends is settled by its own view's Chat when the message is %s",
+  async (outcome, t) => {
+    const { controller, transport } = setup(true);
+    t.onTestFinished(() => controller.dispose());
+    transport.streamsDrafts = true;
+
+    transport.tasks = [
+      { ...task("a"), draft: { message_id: "listed", text: "Complete reply" } },
+    ];
+
+    await controller.start();
+    transport.tasks = [{ ...task("a"), status: "completed" }];
+
+    transport.handler = (name) =>
+      name === "app_get_chat" && outcome === "stored"
+        ? storedReply("listed", "Complete reply")
+        : undefined;
+
+    await controller.refresh();
+    assert.equal(controller.getSnapshot().draft, undefined);
+
+    assert.deepEqual(
+      controller.getSnapshot().chat?.items.map((item) => item.id),
+      outcome === "stored" ? ["listed"] : [],
+    );
+  },
+);

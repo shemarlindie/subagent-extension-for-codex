@@ -300,7 +300,8 @@ retries.
   separately from stored messages. `DraftFollower` keeps completed streamed and
   task-list drafts shown until Chat holds the stored message, or until a Chat
   read that started later finds none, so a finished reply never disappears in
-  between.
+  between. A view's list and Chat come from one service snapshot, so the Chat in
+  the view whose list ends a draft already counts as later.
 - **Settings:** the service supplies typed sections and rows. Save only changed
   fields, preserve disabled budget amounts, and keep section drafts during
   navigation and validation. Search and browsing share mounted controls to

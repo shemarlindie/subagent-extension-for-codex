@@ -528,6 +528,7 @@ export class Controller {
   private viewRequest(): ViewRequest {
     return {
       args: viewArgs(this.state, this.restoredView?.selected),
+      draftRead: this.draftFollower.reading(),
       scope: this.state.scopeVersion,
       projects: this.projectGeneration,
       selection: this.generation,
@@ -666,19 +667,13 @@ export class Controller {
         return "rejected";
       }
 
-      const { pending, chat } = request.args;
+      const { pending } = request.args;
 
       if (pending && view.pending) {
         this.pendingUpdates.show(pending.conversation_id, view.pending.tasks);
       }
 
-      return this.detailLoader.merge(
-        { task: chat?.task_id, generation: request.selection },
-        view.chat,
-        view.activity,
-      )
-        ? "merged"
-        : "stale";
+      return this.detailLoader.merge(request, view) ? "merged" : "stale";
     });
 
     if (merged === "rejected") return false;
@@ -806,7 +801,7 @@ export class Controller {
   private acceptTaskList(
     tasks: Task[],
     readCompleted: TaskList["read_completed"],
-    intent: Pick<ViewRequest, "tab" | "selection">,
+    intent: Pick<ViewRequest, "tab" | "selection" | "draftRead">,
   ) {
     const taskDialog = this.state.dialog;
 
@@ -846,6 +841,7 @@ export class Controller {
       readCompleted: unloadedCounts(readCompleted),
       draft: this.draftFollower.retainListed(
         tasks.find((task) => task.id === selected),
+        intent.draftRead,
       ),
       taskListLoading: false,
       selected,

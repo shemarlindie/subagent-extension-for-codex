@@ -1,14 +1,12 @@
-import type {
-  ActivityPage,
-  TurnActivityPage,
-} from "../../../shared/tasks/activity/activity-tail";
+import type { TurnActivityPage } from "../../../shared/tasks/activity/activity-tail";
+import type { PanelView, ViewRequest } from "../../app/state/panel-view";
 import type { Snapshot } from "../../app/state/types";
 import {
   activityCursor,
   mergeActivity,
   turnStart,
 } from "./activity/event-history";
-import { type ChatRead, mergeChat } from "./chat/chat-state";
+import { mergeChat } from "./chat/chat-state";
 import type { DraftFollower } from "./chat/drafts/draft-follower";
 import type { TimingReporter } from "./controls/timing-reporter";
 
@@ -21,7 +19,7 @@ interface TaskDetailContext {
   patch(patch: Partial<Snapshot>): void;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
   setTab(tab: Snapshot["tab"]): void;
-  drafts: Pick<DraftFollower, "reading" | "show">;
+  drafts: Pick<DraftFollower, "show">;
 }
 
 /** The `app_get_chat` and `app_get_activity` arguments for the selected task. */
@@ -46,27 +44,25 @@ export class TaskDetailLoader {
   constructor(private context: TaskDetailContext) {}
 
   /**
-   * Merges Chat and Activity read for `read.task` in selection `generation`.
+   * Merges the Chat and Activity a view read for its request's selection.
    * Returns false when the selection has changed since, so the read is
    * stale and the selected task's details are still to read.
    */
   merge(
-    read: { task?: string; generation: number },
-    chat?: ChatRead,
-    activity?: ActivityPage,
+    { args, selection, draftRead }: ViewRequest,
+    { chat, activity }: PanelView,
   ) {
     const current = this.context.snapshot(),
       id = current.selected;
 
     if (!id || this.context.closed()) return true;
 
-    if (read.task !== id || read.generation !== this.context.generation()) {
+    if (args.chat?.task_id !== id || selection !== this.context.generation()) {
       return false;
     }
 
     // A read that left out the details found no task to show them for.
     if (!chat || !activity) return true;
-    const drafts = this.context.drafts.reading();
 
     const events = mergeActivity(
       { events: current.events, dropped: current.droppedEvents },
@@ -88,7 +84,7 @@ export class TaskDetailLoader {
           : current.chatHistoryLoading,
     });
 
-    this.context.drafts.show(drafts);
+    this.context.drafts.show(draftRead);
 
     return true;
   }
