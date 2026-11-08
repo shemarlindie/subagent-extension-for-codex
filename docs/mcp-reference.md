@@ -29,8 +29,8 @@ To delegate a task:
    **Browse** or the projects CLI and wait for registration.
 3. Read replies with `list_messages`, which supports long polling. Read recorded
    edits with `get_changes`, using `scope: "turn"` for the latest turn.
-   `list_tasks` returns summaries and leaves out archived tasks unless
-   `include_archived` is true. Read a task's full state with `get_task`.
+   `list_tasks` returns summaries, without archived tasks unless `archived` asks
+   for them. Read a task's full state with `get_task`.
 4. Continue with `send_message`. Inspect pending input before answering it with
    `submit_input` and its request ID.
 
@@ -141,9 +141,12 @@ schema. App-only tools carry user authority:
 | `app_steer_queued_message`                                              | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
-panel's tasks as `{ tasks }`, without their conversation and context. Archived
-tasks carry `archived_at`. `archived: false` leaves them out, `archived: true`
-lists only them, and `include` names tasks to list whatever the filters say.
+panel's tasks as `{ tasks }`, without their conversation and context. `include`
+names tasks to list whatever the filters say.
+
+`list_tasks` and `app_list_tasks` take the same `archived` filter: `exclude`
+(the default) leaves archived tasks out, `include` lists them too and `only`
+lists just them. Archived tasks carry `archived_at`.
 
 `app_get_original_response` reads an original response saved with
 [full-event recording](configuration.md#environment-variables). Pass `task_id`

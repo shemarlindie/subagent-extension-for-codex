@@ -556,7 +556,6 @@ export class Controller {
         {
           conversation_id: conversation ?? null,
           ...(repository ? { repository } : {}),
-          archived: false,
           include: [...include].filter(Boolean),
         },
       );

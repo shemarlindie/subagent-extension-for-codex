@@ -58,7 +58,6 @@ test("browser view state seeds the first render, restores a task, and persists l
     {
       conversation_id: null,
       repository: "/repo/b",
-      archived: false,
       include: ["b"],
     },
   );

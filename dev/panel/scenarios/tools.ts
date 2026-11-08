@@ -58,8 +58,8 @@ const inScope = (
 const listed = (task: Task, args: Record<string, unknown>) =>
   (Array.isArray(args.include) && args.include.includes(task.id)) ||
   (inScope(task, args) &&
-    (typeof args.archived !== "boolean" ||
-      args.archived === Boolean(previewArchivedAt(task.id))));
+    (args.archived === "include" ||
+      (args.archived === "only") === Boolean(previewArchivedAt(task.id))));
 
 const previewClaudeDetails = { supported_versions: "2.1.285+" };
 
@@ -267,7 +267,6 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
             .filter((task) =>
               listed(task, {
                 ...context.panel_scope,
-                archived: false,
                 include: [context.panel_selection?.task_id],
               }),
             )

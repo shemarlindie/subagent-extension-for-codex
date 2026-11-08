@@ -49,10 +49,9 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
         ? {
             conversation_id: "chat-a",
             repository: "/repo/a",
-            archived: false,
             include: [],
           }
-        : { conversation_id: null, archived: false, include: [] },
+        : { conversation_id: null, include: [] },
     );
 
     assert.deepEqual(
@@ -188,7 +187,6 @@ test("All chats preserves repository and discards a delayed conversation respons
     {
       conversation_id: null,
       repository: "/repo/a",
-      archived: false,
       include: [],
     },
   );

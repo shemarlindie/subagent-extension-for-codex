@@ -87,7 +87,7 @@ export function delegationPanel(
                   conversation:
                     resolved.panel_scope.conversation_id ?? undefined,
                   repository: resolved.panel_scope.repository,
-                  archived: false,
+                  archived: "exclude",
                   include: selected ? [selected] : [],
                 }),
               }

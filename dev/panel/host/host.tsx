@@ -133,7 +133,10 @@ function hostContext(settings: Settings): McpUiHostContext {
 
 const fixtureThreads = threadsOf(
   (
-    previewTool("app_list_tasks", { conversation_id: null }) as {
+    previewTool("app_list_tasks", {
+      conversation_id: null,
+      archived: "include",
+    }) as {
       tasks: Task[];
     }
   ).tasks,
@@ -314,7 +317,7 @@ export function Host() {
         .then((connection) =>
           connection.callTool({
             name: "app_list_tasks",
-            arguments: { conversation_id: null },
+            arguments: { conversation_id: null, archived: "include" },
           }),
         )
         .then((result) =>

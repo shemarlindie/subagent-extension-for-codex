@@ -13,12 +13,15 @@ import { eventColumns } from "./event-records.js";
 import { events, taskArchive, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
+/** Which tasks a list takes by archive state. */
+export const archivedFilters = ["exclude", "include", "only"] as const;
+
 /** Narrows an owner's tasks by conversation, repository and archive state. */
 export interface TaskFilters {
   conversation?: string;
   repository?: string;
-  /** Only archived tasks when true, only unarchived ones when false. */
-  archived?: boolean;
+  /** Leaves archived tasks out, lists them too or lists only them. Omitted includes them. */
+  archived?: (typeof archivedFilters)[number];
   /** Tasks to return whatever the other filters say. */
   include?: readonly string[];
 }
@@ -37,8 +40,8 @@ export function taskFilters(owner: string, filters: TaskFilters) {
           sql`json_extract(${tasks.body}, '$.repository')`,
           filters.repository,
         ),
-    filters.archived === true ? archived : undefined,
-    filters.archived === false ? not(archived) : undefined,
+    filters.archived === "only" ? archived : undefined,
+    filters.archived === "exclude" ? not(archived) : undefined,
   );
 
   return and(

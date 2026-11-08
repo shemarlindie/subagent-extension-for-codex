@@ -177,21 +177,20 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
         })
       ).tasks.map((task) => task.id);
 
-    // Both lists leave archived tasks out unless asked. The panel's also
-    // keeps tasks it names.
+    // Both lists share one archive filter that leaves archived tasks out by
+    // default. The panel's also keeps tasks it names.
     await user("app_set_tasks_archived", { task_ids: [t.id], archived: true });
     assert.equal(await listed(), undefined);
-    assert.ok((await listed({ include_archived: true }))?.archived_at);
-    assert.deepEqual(await panelList({ archived: false }), []);
+    assert.ok((await listed({ archived: "include" }))?.archived_at);
+    assert.ok((await listed({ archived: "only" }))?.archived_at);
+    assert.deepEqual(await panelList({}), []);
 
-    assert.deepEqual(await panelList({ archived: false, include: [t.id] }), [
-      t.id,
-    ]);
+    assert.deepEqual(await panelList({ include: [t.id] }), [t.id]);
 
     const [panelTask] = (
       await user<{ tasks: PanelTask[] }>("app_list_tasks", {
         conversation_id: null,
-        archived: true,
+        archived: "only",
       })
     ).tasks;
 

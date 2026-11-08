@@ -14,7 +14,12 @@ import {
 } from "../mentions.js";
 import { activityTools } from "./activity-tools.js";
 import type { agentTools } from "./agent-tools.js";
-import { taskId, tool, type ToolContext } from "./definition.js";
+import {
+  archivedFilter,
+  taskId,
+  tool,
+  type ToolContext,
+} from "./definition.js";
 import { panelTimingTool } from "./panel-timing-tool.js";
 import { pendingUpdateTools } from "./pending-update-tools.js";
 import { projectTools } from "./project-tools.js";
@@ -94,11 +99,11 @@ export function userTools(
     app_list_tasks: tool({
       readOnly: true,
       description:
-        "User interface only: { tasks }, the tasks the panel lists, newest first. Each has its full state except the conversation and context, with its latest reply excerpt, live activity, draft, read state and archive time. archived true lists only archived tasks and false leaves them out. include names tasks to list whatever the filters say.",
+        "User interface only: { tasks }, the tasks the panel lists, newest first. Each has its full state except the conversation and context, with its latest reply excerpt, live activity, draft, read state and archive time. include names tasks to list whatever the filters say.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
-        archived: z.boolean().optional(),
+        archived: archivedFilter,
         include: z.array(z.string()).max(10).optional(),
       }),
       run: (a) => ({
