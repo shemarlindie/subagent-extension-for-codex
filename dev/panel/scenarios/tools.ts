@@ -10,6 +10,7 @@ import {
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
 import { budgetRaiseSchema, roles } from "../../../src/shared/tasks/model";
 import { panelTask, readFields } from "../../../src/shared/tasks/task-list";
+import { previewAbout } from "./about";
 import {
   PREVIEW_ARCHIVE_TOOLS,
   previewArchivedAt,
@@ -22,6 +23,10 @@ import {
   withoutOriginalResponses,
 } from "./original-response-tools";
 import { previewMarkSeen, previewPendingUpdates } from "./pending-update-tools";
+import {
+  previewClaudeReady,
+  previewClaudeUnavailable,
+} from "./preview-claude-readiness";
 import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import { lightList, listed, newestFirst } from "./task-list-tools";
@@ -39,29 +44,6 @@ const previewSettingsDefaults = (() => {
 
   return { ...defaults, models: { ...defaults.models, providers: { claude } } };
 })();
-
-const previewClaudeDetails = { supported_versions: "2.1.300+" };
-
-const previewClaudeReady = {
-  ready: true,
-  details: {
-    executable: "/opt/homebrew/Caskroom/claude-code/2.1.290/claude",
-    version: "2.1.290",
-    ...previewClaudeDetails,
-  },
-};
-
-/** A Homebrew install older than the supported range, worded as the service words it. */
-const previewClaudeUnavailable = {
-  ready: false,
-  message:
-    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.300+. Update it with brew upgrade --cask claude-code (Homebrew installs don't update themselves), or set SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH to a supported copy.",
-  details: {
-    executable: "/opt/homebrew/Caskroom/claude-code/2.1.200/claude",
-    version: "2.1.200",
-    ...previewClaudeDetails,
-  },
-};
 
 /** Settings the dev host controls; the service reads them from user settings. */
 export type PreviewOptions = {
@@ -454,6 +436,9 @@ export function previewTool(
     withoutOriginalResponses(eventsFor(id));
 
   const fixtures: Record<string, unknown> = {
+    app_get_about: options.claudeUnavailable
+      ? previewAbout(previewClaudeUnavailable, true)
+      : previewAbout(previewClaudeReady, false),
     open_subagent_extension_for_codex: openPanel(args, options),
     app_open_subagent_extension_for_codex_global: openPanel(
       { conversation_id: null },

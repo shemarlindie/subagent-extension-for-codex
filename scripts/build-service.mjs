@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { build } from "esbuild";
 
+import { collectBuildInfo } from "../src/service/platform/service/build-info.ts";
 import { testModule } from "./lint/source-boundaries.mjs";
 import { writeThirdPartyNotices } from "./third-party-notices.mjs";
 
@@ -37,6 +38,12 @@ const result = await build({
   target: "node24",
   format: "esm",
   splitting: true,
+  define: {
+    __EXTENSION_BUILD_INFO__: JSON.stringify({
+      ...collectBuildInfo(process.cwd()),
+      built_at: new Date().toISOString(),
+    }),
+  },
   // Bundled CommonJS (express, body-parser, debug) requires built-ins, which ESM output can only do through a real require.
   banner: {
     js: 'import { createRequire as __bundleCreateRequire } from "node:module"; const require = __bundleCreateRequire(import.meta.url);',

@@ -41,6 +41,28 @@ The service runs `claude --version` before it opens a session and caches the
 result for five minutes. Replacing or updating the executable triggers a new
 check. Running sessions keep their process.
 
+### Upgrade guidance
+
+In **Settings > About**, the upgrade icon beside the Claude Code CLI version
+expands update guidance and **Recheck version**. The icon is muted once the CLI
+reaches the release the bundled Agent SDK pairs with. A warning icon marks a CLI
+older than the supported minimum. Recognized macOS and Linux installs get a
+copyable terminal command. Homebrew commands use the matching prefix and
+installed cask, including `claude-code@latest`. Native commands use the standard
+`~/.local/bin/claude` launcher and follow Claude Code's configured release
+channel and policy.
+
+The service checks that its selected launcher points to that installation.
+Custom launchers, version-pinned paths, missing installers, Node packages and
+Windows installs get guidance and a link to the update instructions. A path
+inside `node_modules` does not establish the original package manager, global
+prefix or release channel.
+
+Wait for delegated turns to finish, run the command in a terminal, then choose
+**Recheck version**. Recheck bypasses the version cache and refreshes the
+selected executable and guidance. The panel does not check for available
+releases or run upgrade commands.
+
 ## When the CLI isn't ready
 
 A missing or unsupported CLI blocks new Claude tasks. Projects, task history and

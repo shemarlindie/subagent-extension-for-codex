@@ -15,6 +15,7 @@ import { settingsSearch } from "./search/settings-search";
 import { SettingsSearchContext } from "./search/settings-search-context";
 import { SettingsSearchSummary } from "./search/settings-search-summary";
 import { useSettingsSearchView } from "./search/use-settings-search-view";
+import { aboutSection } from "./settings-about";
 import { SettingsContext } from "./settings-fields";
 import {
   activeSection,
@@ -295,6 +296,8 @@ export function SettingsForm({
       />
     ),
   });
+
+  sectionViews.push(aboutSection(search, selectedSection, !loading));
 
   const activeSectionId = activeSection(selectedSection, sectionViews),
     matchingSections = sectionViews.filter((section) => !section.hidden),

@@ -85,7 +85,7 @@ export interface Provider {
   metadata?: ProviderMetadata;
   taskPolicy: ProviderTaskPolicy;
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
-  readiness?(): Promise<ProviderReadiness>;
+  readiness?(options?: { refresh?: boolean }): Promise<ProviderReadiness>;
   models?(settings?: SettingsValues): Promise<ModelChoice[]>;
   /** What org policy limits for new tasks. Nothing means nothing known. */
   policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
