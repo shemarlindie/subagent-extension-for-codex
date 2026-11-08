@@ -5,13 +5,12 @@ import { isAbsolute, join, win32 } from "node:path";
 import { promisify } from "node:util";
 
 /**
- * Minimum Claude Code release qualified against the bundled Agent SDK.
- * Newer releases are accepted without an upper bound; re-qualify compatibility
- * whenever the SDK version changes.
+ * Supported minimum Claude Code release and bundled Agent SDK version.
+ * Newer CLI releases are accepted without an upper bound.
  */
 export const claudeCliSupport = {
-  sdk: "0.3.318",
-  minimum: "2.1.285",
+  sdk: "0.3.319",
+  minimum: "2.1.300",
 } as const;
 
 /** Names an explicit Claude Code executable, which replaces the PATH lookup. */

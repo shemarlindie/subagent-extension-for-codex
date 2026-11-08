@@ -52,7 +52,7 @@ covers this kind of individual use.
 
 You need:
 
-- [Claude Code](https://code.claude.com/docs/en/setup) 2.1.285 or later, signed
+- [Claude Code](https://code.claude.com/docs/en/setup) 2.1.300 or later, signed
   in. Run `claude` once and complete sign-in. See
   [Claude Code CLI](docs/claude-cli.md) for how the extension finds it.
 - Node.js 24 or later, with npm, on the `PATH` Codex starts with. Codex

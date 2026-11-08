@@ -524,7 +524,7 @@ describe("packed artifact", () => {
       "an unsupported or missing Claude Code blocks Claude tasks and nothing else",
       async () => {
         const bin = join(root, "claude-versions");
-        const supported = await fakeClaude(join(bin, "supported"), "2.1.293");
+        const supported = await fakeClaude(join(bin, "supported"), "2.1.300");
         const old = await fakeClaude(join(bin, "old"), "2.0.0");
         const newer = await fakeClaude(join(bin, "newer"), "9.0.0");
         // The override is a symlink, as installers make, retargeted between checks.
@@ -547,7 +547,7 @@ describe("packed artifact", () => {
 
           assert.deepEqual(worker.readiness.details, {
             executable: supported,
-            version: "2.1.293",
+            version: "2.1.300",
             supported_versions: worker.readiness.details.supported_versions,
           });
 
@@ -573,7 +573,7 @@ describe("packed artifact", () => {
           worker = await claudeWorker(client);
           assert.equal(worker.readiness.ready, true);
           assert.equal(worker.readiness.details.version, "9.0.0");
-          assert.equal(worker.readiness.details.supported_versions, "2.1.285+");
+          assert.equal(worker.readiness.details.supported_versions, "2.1.300+");
 
           // A configured path that stops resolving is an error, not a PATH fallback.
           await unlink(link);

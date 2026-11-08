@@ -9,10 +9,10 @@ readiness, see [Claude Code CLI](claude-cli.md).
 
 `claudeCliSupport` in
 `src/service/features/providers/claude/configuration/executable.ts` pairs the
-minimum CLI version with the Agent SDK version it was qualified against. Newer
-CLI releases are accepted without an upper limit. A test fails when the
-installed SDK no longer matches the recorded version, so every SDK update needs
-these checks. Run them when you update the SDK or change the minimum:
+minimum CLI version with the bundled Agent SDK version. Newer CLI releases are
+accepted without an upper limit. A test fails when the installed SDK no longer
+matches the recorded version, so every SDK update needs these checks. Run them
+when you update the SDK or change the minimum:
 
 1. Run `npm test`, which includes type checks. Recorded fixtures cover the SDK
    message mapping. The packed-artifact suite checks model discovery when a

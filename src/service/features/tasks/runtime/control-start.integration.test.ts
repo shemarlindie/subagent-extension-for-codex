@@ -116,7 +116,7 @@ test("an unready provider blocks task starts and model discovery but stays liste
   provider.readiness = async () => ({
     ready: false,
     message: "Claude Code was not found on the service's PATH.",
-    details: { supported_versions: "2.1.285+" },
+    details: { supported_versions: "2.1.300+" },
   });
 
   const { c, store, repo } = await setup(provider);

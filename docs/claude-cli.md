@@ -10,9 +10,9 @@ the [Claude Code setup guide](https://code.claude.com/docs/en/setup).
 
 ## Supported versions
 
-The service requires Claude Code 2.1.285 or newer, with no upper limit. It
-rejects older versions and prereleases. Agent SDK 0.3.318 is the qualification
-baseline. A newer CLI release is accepted without being verified. See
+The service requires Claude Code 2.1.300 or newer, with no upper limit. It
+rejects older versions and prereleases. It bundles Agent SDK 0.3.319. A newer
+CLI release is accepted without being verified. See
 [Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions).
 
 The version policy lives in
