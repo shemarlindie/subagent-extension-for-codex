@@ -43,10 +43,14 @@ import {
   tasksInScope,
 } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
-import { filterCounts, selectedTask, showsReadCompleted } from "./selectors";
+import { availableFilter, selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
-import { taskListArgs, unloadedCounts } from "./task-list-read";
+import {
+  lacksNewSelection,
+  taskListArgs,
+  unloadedCounts,
+} from "./task-list-read";
 import type {
   DialogState,
   Filter,
@@ -75,13 +79,6 @@ const READS_STOPPED = {
   chatHistoryLoading: undefined,
   activityHistoryLoading: undefined,
 } satisfies Partial<Snapshot>;
-
-function availableFilter(state: Snapshot, filter: Filter | null) {
-  if (!filter || filter === "all") return filter;
-
-  // Search may have no matches while its chosen status remains valid in scope.
-  return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
-}
 
 /** How long a ready worker list is reused before it is read again. */
 const WORKERS_FRESH_MS = 60 * 60_000;
@@ -525,7 +522,7 @@ export class Controller {
 
       const projectGeneration = this.projectGeneration;
       const projects = await this.readProjects();
-      if (this.staleProjectRead(version, projectGeneration)) return;
+      if (this.staleListRead(version, projectGeneration)) return;
 
       const projectUpdate = this.reconcileProjects(projects);
       if (projectUpdate.reset) version = this.state.scopeVersion;
@@ -546,12 +543,12 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      const list = await this.tool<TaskList>(
-        "app_list_tasks",
-        taskListArgs(this.state, this.restoredView?.selected),
-      );
+      const args = taskListArgs(this.state, this.restoredView?.selected);
+      const list = await this.tool<TaskList>("app_list_tasks", args);
 
-      if (this.staleProjectRead(version, projectGeneration)) {
+      const lacking = lacksNewSelection(args, list, this.state.selected);
+
+      if (this.staleListRead(version, projectGeneration, lacking)) {
         this.timing.observe("task_list", "merge", 0, { stale_count: 1 });
 
         return;
@@ -615,10 +612,10 @@ export class Controller {
     }
   }
 
-  /** A project write invalidates list reads even when the panel keeps its scope. */
-  private staleProjectRead(scope: number, generation: number) {
+  /** Project writes, and a newer selection a read lacks, make list reads stale. */
+  private staleListRead(scope: number, generation: number, lacking = false) {
     if (this.stale(scope)) return true;
-    if (generation === this.projectGeneration) return false;
+    if (generation === this.projectGeneration && !lacking) return false;
     this.rerun = true;
 
     return true;

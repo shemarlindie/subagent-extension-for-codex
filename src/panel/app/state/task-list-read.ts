@@ -1,5 +1,5 @@
 import { showsReadCompleted } from "./selectors";
-import type { Snapshot } from "./types";
+import type { Snapshot, Task } from "./types";
 
 /**
  * The `app_list_tasks` arguments for the panel's list. It leaves archived
@@ -25,6 +25,19 @@ export const projectTaskArgs = (
   repository,
   include_read_completed: true,
 });
+
+/**
+ * Whether a list read lacks a task selected after it began, which it must
+ * not drop.
+ */
+export const lacksNewSelection = (
+  args: { include: unknown[] },
+  list: { tasks: Task[] },
+  selected?: string,
+) =>
+  Boolean(selected) &&
+  !args.include.includes(selected) &&
+  !list.tasks.some((task) => task.id === selected);
 
 /** Read completed task counts a list read left out, or none when it left none out. */
 export function unloadedCounts(counts: unknown) {

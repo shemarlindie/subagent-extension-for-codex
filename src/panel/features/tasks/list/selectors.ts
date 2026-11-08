@@ -163,6 +163,14 @@ export function filterCounts(state: Snapshot) {
   ) as Record<Filter, number>;
 }
 
+/** A restored filter, or none when it no longer holds tasks in scope. */
+export function availableFilter(state: Snapshot, filter: Filter | null) {
+  if (!filter || filter === "all") return filter;
+
+  // Search may have no matches while its chosen status remains valid in scope.
+  return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
+}
+
 /**
  * Whether the list shows completed tasks the user has read, which load on
  * demand. The default filter is unknown while nothing is listed. A scope with
