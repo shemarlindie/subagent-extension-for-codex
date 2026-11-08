@@ -205,49 +205,6 @@ test("exhaust the runtime budget, apply a higher limit and continue after reload
   await expect(history).toContainText("Runtime limit reached.");
 });
 
-test("a dependent task waits across reload and runs after its prerequisite completes", async ({
-  consolePage: page,
-}) => {
-  const prerequisite = "Prepare dependency [fixture:question]";
-  await startTask(page, prerequisite);
-
-  await expect(
-    page.getByRole("button", { name: "Respond", exact: true }),
-  ).toBeVisible();
-
-  await openAdvancedTask(page, "Run after the prerequisite");
-
-  await page
-    .getByRole("combobox", { name: "Wait for tasks (optional)" })
-    .click();
-
-  await page.getByRole("option", { name: prerequisite, exact: true }).click();
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Start task", exact: true }).click();
-  const history = page.getByRole("region", { name: "Chat history" });
-  await expect(history).toContainText("Waiting on dependency");
-  await expect(history).not.toContainText("Fixture session turn:");
-  await page.reload();
-  await expect(history).toContainText("Waiting on dependency");
-  const tasks = page.getByRole("complementary", { name: "Delegated tasks" });
-
-  await tasks.getByRole("button", { name: /Prepare dependency/ }).click();
-
-  await page
-    .getByRole("textbox", { name: "Which fixture path should be used? (1/1)" })
-    .fill("Release the dependent task");
-
-  await page.getByRole("button", { name: "Respond", exact: true }).click();
-  await expect(history).toContainText("Fixture session turn: 1.");
-
-  await tasks
-    .getByRole("button", { name: /Run after the prerequisite/ })
-    .click();
-
-  await expect(history).toContainText("Fixture session turn: 1.");
-  await expect(history).not.toContainText("Waiting on dependency");
-});
-
 heldTest(
   "steer a running turn, interrupt to send a steer now, and clear a paused queue",
   async ({ consolePage: page, firstTurn }) => {

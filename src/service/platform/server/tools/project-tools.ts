@@ -44,7 +44,7 @@ export function projectTools(c: Control, owner: string) {
     }),
     app_remove_project: tool({
       description:
-        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees/branches; checkout files and provider sessions stay intact. External dependent tasks block deletion.",
+        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees/branches; checkout files and provider sessions stay intact.",
       schema: z.strictObject({
         repository: z.string().min(1).max(4096),
         delete_tasks: z.boolean().default(false),

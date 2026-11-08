@@ -74,30 +74,23 @@ async function removalFixture(t: import("vitest").TestContext) {
   control.stopped = true;
   t.onTestFinished(() => control.close());
 
-  const task = (
-    depends_on: string[] = [],
-    root = repository,
-    owner = "owner",
-  ) =>
-    control.start(owner, {
+  const task = () =>
+    control.start("owner", {
       provider: provider.id,
       description: "Preserved task data",
-      repository: root,
-      depends_on,
+      repository,
     });
 
   return { ...f, control, repository, task };
 }
 
-test("removing project task data deletes dependency leaves before their prerequisites", async (t) => {
+test("removing project task data deletes its tasks, history and approval", async (t) => {
   const f = await removalFixture(t);
-  const prerequisite = await f.task();
-  const dependent = await f.task([prerequisite.id]);
-  const leaf = await f.task([dependent.id]);
+  const first = await f.task();
+  const second = await f.task();
   const discarded: string[] = [];
 
   vi.spyOn(f.workspaces, "discard").mockImplementation(async (task) => {
-    assert.equal(f.store.get(task.id, "owner").id, task.id);
     discarded.push(task.id);
   });
 
@@ -109,38 +102,19 @@ test("removing project task data deletes dependency leaves before their prerequi
     "user",
   );
 
-  assert.deepEqual(discarded, [leaf.id, dependent.id, prerequisite.id]);
+  assert.deepEqual(discarded.sort(), [first.id, second.id].sort());
   assert.deepEqual(f.store.all(), []);
   assert.deepEqual(f.projects.list(), []);
-  assert.throws(() => f.store.events(leaf.id, "owner"), /Task not found/);
-});
-
-test("an outside-project dependent blocks project task removal before changing data", async (t) => {
-  const f = await removalFixture(t);
-  const outside = await f.repo("outside");
-  await f.projects.register(outside);
-  const prerequisite = await f.task();
-  const dependent = await f.task([prerequisite.id], outside);
-  const before = f.store.all();
-  const discard = vi.spyOn(f.workspaces, "discard");
-
-  await assert.rejects(
-    f.control.removeProject("owner", f.repository, true),
-    new RegExp(`${dependent.id}.*another project.*depends`),
-  );
-
-  assert.equal(discard.mock.calls.length, 0);
-  assert.deepEqual(f.store.all(), before);
-  assert.equal(await f.projects.resolve(f.repository), f.repository);
+  assert.throws(() => f.store.events(first.id, "owner"), /Task not found/);
 });
 
 test("failed project cleanup keeps approval and remaining tasks and reports partial deletion", async (t) => {
   const f = await removalFixture(t);
-  const prerequisite = await f.task();
-  const dependent = await f.task([prerequisite.id]);
+  const kept = await f.task();
+  await f.task();
 
   vi.spyOn(f.workspaces, "discard").mockImplementation(async (task) => {
-    if (task.id === prerequisite.id) throw new Error("Worktree cleanup failed");
+    if (task.id === kept.id) throw new Error("Worktree cleanup failed");
   });
 
   await assert.rejects(
@@ -148,22 +122,19 @@ test("failed project cleanup keeps approval and remaining tasks and reports part
     /approval is retained.*Some extension task data may already be removed.*Worktree cleanup failed/,
   );
 
-  assert.throws(() => f.store.get(dependent.id, "owner"), /not found/i);
-  assert.equal(f.store.get(prerequisite.id, "owner").id, prerequisite.id);
+  assert.equal(f.store.get(kept.id, "owner").id, kept.id);
   assert.equal(await f.projects.resolve(f.repository), f.repository);
-  f.control.rename("owner", prerequisite.id, "Retry cleanup");
+  f.control.rename("owner", kept.id, "Retry cleanup");
   vi.mocked(f.workspaces.discard).mockResolvedValue(undefined);
   await f.control.removeProject("owner", f.repository, true);
   assert.deepEqual(f.store.all(), []);
   assert.deepEqual(f.projects.list(), []);
 });
 
-test("project removal locks new tasks, dependencies, and every batch member during cleanup", async (t) => {
+test("project removal locks new tasks and every batch member during cleanup", async (t) => {
   const f = await removalFixture(t);
-  const outside = await f.repo("outside");
-  await f.projects.register(outside);
-  const prerequisite = await f.task();
-  const dependent = await f.task([prerequisite.id]);
+  const first = await f.task();
+  const second = await f.task();
   let release!: () => void;
   let entered!: () => void;
 
@@ -188,12 +159,7 @@ test("project removal locks new tasks, dependencies, and every batch member duri
   try {
     await assert.rejects(f.task(), /being (?:removed|deleted)/);
 
-    await assert.rejects(
-      f.task([prerequisite.id], outside),
-      /being (?:removed|deleted)/,
-    );
-
-    for (const task of [prerequisite, dependent]) {
+    for (const task of [first, second]) {
       assert.throws(
         () => f.control.rename("owner", task.id, "Changed"),
         /being (?:removed|deleted)/,
@@ -222,11 +188,7 @@ test("project removal locks new tasks, dependencies, and every batch member duri
   }
 
   assert.deepEqual(f.store.all(), []);
-
-  assert.deepEqual(
-    f.projects.list().map((project) => project.repository),
-    [outside],
-  );
+  assert.deepEqual(f.projects.list(), []);
 });
 
 test("project registration requires user authority and grants live persistent access only after submission", async (t) => {

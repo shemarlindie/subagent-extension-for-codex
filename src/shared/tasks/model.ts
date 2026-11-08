@@ -97,11 +97,6 @@ export const startSchema = z.object({
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
-  depends_on: z
-    .array(z.string())
-    .max(50)
-    .default([])
-    .describe("Task IDs that must finish before this task starts."),
   context: z
     .array(z.string().max(20000))
     .max(20)
@@ -220,8 +215,6 @@ export interface Task extends Start {
     runtime?: true;
   };
   waiting_reason?: string;
-  /** The dependency a task waiting for one waits on. */
-  waiting_for?: string;
   created_at: string;
   updated_at: string;
   started_at?: string;

@@ -27,10 +27,6 @@ export const terminal = (task: Task) =>
 export const statusLabel = (task: Task) => {
   if (task.pending_input) return "Needs input";
 
-  if (task.waiting_reason === "waiting_for_dependency") {
-    return "Waiting on dependency";
-  }
-
   return task.status.charAt(0).toUpperCase() + task.status.slice(1);
 };
 

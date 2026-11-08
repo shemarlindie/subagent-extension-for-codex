@@ -225,18 +225,9 @@ and tool durations stay in `service.jsonl`.
 A queue wait starts when a task becomes ready for its next turn. `cause` is
 `start`, `followup`, `queued_message`, `interrupt_send`, `resume` or `recovery`.
 Messages queued behind a running turn and a paused queue are not timed until the
-task becomes ready. The wait ends with `success` when its turn starts, `error`
-when a dependency failed and `aborted` when the task was interrupted or deleted.
-
-- `capacity_ms` is the part of the wait when every execution slot was in use.
-- `dependency_observation_span_ms` spans the first to the latest scheduler scan
-  that found an unfinished dependency.
-- `since_dependency_observed_ms` runs from that first scan to the end of the
-  wait.
-
-The scheduler stops scanning once every slot is in use, so a dependency can
-finish or change between scans. The dependency fields are observations. They can
-overlap `capacity_ms` and do not split the wait into causes.
+task becomes ready. The wait ends with `success` when its turn starts and
+`aborted` when the task was interrupted or deleted. `capacity_ms` is the part of
+the wait when every execution slot was in use.
 
 Waits are tracked in memory. A `recovery` wait starts when the service starts,
 and a wait still open at shutdown has no record.

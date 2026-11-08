@@ -175,6 +175,5 @@ export function delegateInitialValues({
       ? budget.max_cost_usd.amount
       : draftAmount(draft, "cost"),
     reasoning_effort: settingsReady ? "default" : "",
-    deps: [],
   };
 }

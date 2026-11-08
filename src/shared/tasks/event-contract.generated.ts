@@ -58,11 +58,6 @@ const taskFailedPayloadSchema = z.object({
   error_code: z.string().optional(),
 });
 
-const taskWaitingPayloadSchema = z.object({
-  reason: z.string().optional(),
-  dependency_id: z.string().optional(),
-});
-
 const taskWorktreeRemovedPayloadSchema = z.object({
   path: z.string().optional(),
   branch: z.string().optional(),
@@ -98,7 +93,6 @@ export const taskEventPayloadMapSchema = z.object({
   "task.worktree_recreated": taskWorktreeRecreatedPayloadSchema,
   "task.interrupted": taskInterruptedPayloadSchema,
   "task.failed": taskFailedPayloadSchema,
-  "task.waiting": taskWaitingPayloadSchema,
   "task.worktree_removed": taskWorktreeRemovedPayloadSchema,
   "task.branch_deleted": taskBranchDeletedPayloadSchema,
   "task.control_requested": taskControlRequestedPayloadSchema,

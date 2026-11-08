@@ -128,7 +128,6 @@ export function task(id = "one", repository = "/repo/a"): Task {
     worker_profile: "reviewer",
     title: "Review authentication",
     description: "Review authentication and report relevant findings.",
-    depends_on: [],
     workspace_strategy: "worktree",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     owner: "owner",
@@ -159,8 +158,6 @@ export class FakeTransport implements Transport {
   embedded = true;
   events!: TransportEvents;
   tasks = [task()];
-  /** Read completed tasks app_list_tasks lists only when asked. */
-  readCompleted: Task[] = [];
   /** The events app_get_activity windows and tallies. */
   taskEvents: Record<string, unknown>[] = [];
   /** app_get_chat items. */
@@ -246,19 +243,7 @@ export class FakeTransport implements Transport {
           capabilities: { cost_budget: false },
         },
       ],
-      app_list_tasks: args.include_read_completed
-        ? { tasks: [...this.tasks, ...this.readCompleted] }
-        : {
-            tasks: this.tasks,
-            read_completed: Object.fromEntries(
-              this.readCompleted.map((task) => [
-                task.repository,
-                this.readCompleted.filter(
-                  (other) => other.repository === task.repository,
-                ).length,
-              ]),
-            ),
-          },
+      app_list_tasks: { tasks: this.tasks },
       app_get_chat: { items: this.chat, next_cursor: 0 },
       app_get_change_counts: changeCounts(this.changes[0]),
       get_changes: this.changes[Number(args.cursor ?? 0)],

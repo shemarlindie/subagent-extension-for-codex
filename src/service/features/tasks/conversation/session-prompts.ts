@@ -1,11 +1,8 @@
 import { eventPayload } from "../../../../shared/events/payload.js";
 import type { Task } from "../../../../shared/tasks/model.js";
-import type { Changes } from "../../changes/changes.js";
 import type { Provider } from "../../providers/types.js";
 import type { Store } from "../storage/store.js";
 
-/** Bounds each dependency's diff in a dependent's prompt. */
-const MAX_DEPENDENCY_DIFF_CHARS = 50_000;
 /** Bounds the earlier conversation a new session's prompt carries. */
 const MAX_TRANSCRIPT_CHARS = 50_000;
 
@@ -13,10 +10,7 @@ type NewSessionReason = "no_session" | "session_unavailable";
 
 /** Builds turn prompts and checks whether the provider can resume a session. */
 export class SessionPrompts {
-  constructor(
-    private store: Store,
-    private changes: Changes,
-  ) {}
+  constructor(private store: Store) {}
 
   /**
    * Why a later turn can't resume the task's session: there is none (the
@@ -47,24 +41,14 @@ export class SessionPrompts {
    * A new session's prompt: the first turn's, then, on a later turn, the
    * earlier conversation, then the messages the worker hasn't received.
    */
-  async sessionPrompt(t: Task) {
-    const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
-
+  sessionPrompt(t: Task) {
     const workspaceContext = this.workspaceContext(t);
-
-    const dependencyContext = await Promise.all(
-      deps.map(async (d) =>
-        [this.dependencyReply(d), ...this.dependencyChanges(d)].join("\n"),
-      ),
-    );
-
     const transcript = t.turn > 1 ? this.transcript(t) : "";
 
     return [
       t.description,
       ...(workspaceContext ? [workspaceContext] : []),
       ...t.context,
-      ...dependencyContext,
       ...(transcript ? [transcript] : []),
       ...this.unsent(t),
     ].join("\n\n");
@@ -158,56 +142,5 @@ export class SessionPrompts {
           "The new message follows.",
         ].join("\n\n")
       : "";
-  }
-
-  /** A dependency's latest reply for a dependent's prompt. */
-  private dependencyReply(d: Task) {
-    const reply = this.store.latestEvent(d.id, "agent.reply");
-    const payload = reply ? eventPayload(reply, "agent.reply") : undefined;
-
-    return payload
-      ? `Dependency ${d.id} replied:\n${payload.text}`
-      : `Dependency ${d.id} finished without a reply.`;
-  }
-
-  /**
-   * A dependency's recorded whole-task edits for a dependent's prompt, up to
-   * a bound, in whole files, with notes for edits that weren't recorded.
-   */
-  private dependencyChanges(d: Task) {
-    const changes = this.changes.changes(
-      d,
-      "task",
-      undefined,
-      MAX_DEPENDENCY_DIFF_CHARS,
-    );
-
-    const incomplete = changes.files.filter((file) => file.incomplete),
-      notes = [
-        ...(incomplete.length
-          ? [
-              `Edits to ${incomplete.map((file) => file.path).join(", ")} weren't recorded, so they have no diff.`,
-            ]
-          : []),
-        ...(changes.unrecorded_commands
-          ? [
-              `Commands also ${d.no_git ? "may have changed" : "changed"} files that weren't recorded.`,
-            ]
-          : []),
-      ];
-
-    if (!changes.diff) return notes;
-
-    const shown = changes.diff.slice(0, MAX_DEPENDENCY_DIFF_CHARS),
-      count = changes.files.length;
-
-    return [
-      `Dependency ${d.id}'s recorded edits (${count} ${count === 1 ? "file" : "files"}, +${changes.additions} −${changes.deletions}):`,
-      shown,
-      ...(changes.next_cursor || shown.length < changes.diff.length
-        ? ["… (diff truncated)"]
-        : []),
-      ...notes,
-    ];
   }
 }

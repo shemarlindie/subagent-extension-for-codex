@@ -121,14 +121,13 @@ These scenarios exercise real task controls with the fake worker. See
 | Check              | Procedure and expected result                                                                                                                                                              |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Scheduler capacity | Start the demo with `SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY=1`, then start two tasks with `[fixture:wait ms=15000]`. The second remains queued until capacity opens.                     |
-| Dependencies       | Start B with `depends_on: [A.task_id]` while A waits. A successful turn releases B. `[fixture:fail]` on A fails B. An interrupted A can complete a later turn to release B.                |
 | Queue and steer    | Send messages during a wait. `[fixture:slow]` takes steers at checkpoints. `[fixture:late]` leaves them for the next turn. Unconsumed steers precede queued messages.                      |
 | Pause and resume   | Queue messages, then interrupt. A plain interrupt pauses the queue. **Interrupt and send now** starts the next turn. **Resume**, **Clear**, and a new idle-task message exercise recovery. |
 | Queue editing      | Queue several messages during a wait, then edit, drag or remove them. Once a message starts, the service must reject those actions.                                                        |
 | Pending input      | Use `[fixture:question]` or `[fixture:permission]`. A steer must reject while input is pending. After resolving it, submitting its old request ID must also reject.                        |
 
-Eligibility, dependencies and concurrency decide when tasks run. Queue order
-decides the order of messages within a task.
+Concurrency decides when queued tasks run. Queue order decides the order of
+messages within a task.
 
 ## Provider failure scenarios
 

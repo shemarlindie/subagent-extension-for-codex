@@ -51,7 +51,6 @@ const storedTaskSchema = z.looseObject({
   workspace_strategy: z.enum(["worktree", "current_repo"]),
   no_git: z.literal(true).optional(),
   workspace_fallback: z.enum(["no_git", "no_commits"]).optional(),
-  depends_on: z.array(z.string()),
   context: z.array(z.string()),
   budget: z.looseObject({
     max_runtime_minutes: z.number().nullable(),

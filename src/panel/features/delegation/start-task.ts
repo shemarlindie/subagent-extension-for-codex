@@ -56,7 +56,6 @@ export function startTaskArguments(
     revision: strategy === "current_repo" ? "HEAD" : values.revision,
     workspace_strategy: strategy,
     conversation_id: conversation ?? null,
-    depends_on: values.deps,
     budget: {
       max_runtime_minutes:
         values.runtimeMode === "none" ? null : Number(values.runtime),

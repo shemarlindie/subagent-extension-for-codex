@@ -71,7 +71,6 @@ export const taskBase = {
   conversation_id: PREVIEW_THREAD,
   repository: demoProject.repository,
   revision: "HEAD",
-  depends_on: [],
   context: [],
   workspace_strategy: "worktree" as const,
   budget: { max_runtime_minutes: null, max_cost_usd: null },

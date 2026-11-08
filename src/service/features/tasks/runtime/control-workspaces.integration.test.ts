@@ -184,22 +184,6 @@ test("a task is deleted in any state with everything related to it", async () =>
     assert.match(git("branch", "--list", "agent/*"), new RegExp(t.id));
     assert.equal(git("for-each-ref", "refs/agent-tasks"), "");
 
-    // A task that depends on this one keeps it, whatever its state, since a
-    // follow-up could still resume it.
-    const dependent = await c.start("alice", {
-      ...input(repo, "[input]"),
-      depends_on: [t.id],
-    });
-
-    await until(() => store.get(dependent.id, "alice").status === "waiting");
-    await c.interrupt("alice", dependent.id);
-
-    await assert.rejects(
-      c.delete("alice", t.id),
-      new RegExp(`${dependent.id} depends on this task`),
-    );
-
-    await c.delete("alice", dependent.id);
     await assert.rejects(c.delete("bob", t.id), /not found/);
     assert.deepEqual(sessions, []);
 
@@ -237,15 +221,11 @@ test("a task is deleted in any state with everything related to it", async () =>
     await until(() => !!store.get(kept.id, "alice").pending_input);
     await c.interrupt("alice", kept.id);
 
-    // Deleting a task with its dependent removes the dependent first.
-    const follower = await c.start("alice", {
-      ...input(repo, "[input]"),
-      depends_on: [kept.id],
-    });
-
-    await until(() => store.get(follower.id, "alice").status === "waiting");
-    await c.interrupt("alice", follower.id);
-    await c.delete("alice", [kept.id, follower.id]);
+    // Several tasks delete together.
+    const other = await c.start("alice", input(repo, "[input]"));
+    await until(() => !!store.get(other.id, "alice").pending_input);
+    await c.interrupt("alice", other.id);
+    await c.delete("alice", [kept.id, other.id]);
     assert.deepEqual(sessions, [t.id]);
     assert.deepEqual(store.list("alice", {}), []);
   } finally {
@@ -253,7 +233,7 @@ test("a task is deleted in any state with everything related to it", async () =>
   }
 });
 
-test("deletion locks execution, dependencies and duplicate cleanup until it finishes", async () => {
+test("deletion locks execution and duplicate cleanup until it finishes", async () => {
   const { c, store, repo } = await setup();
   let release!: () => void;
 
@@ -288,11 +268,6 @@ test("deletion locks execution, dependencies and duplicate cleanup until it fini
     await assert.rejects(c.interrupt("alice", task.id), /being deleted/);
 
     await assert.rejects(c.delete("alice", task.id), /being deleted/);
-
-    await assert.rejects(
-      c.start("alice", { ...input(repo), depends_on: [task.id] }),
-      /being deleted/,
-    );
 
     release();
     await deletion;

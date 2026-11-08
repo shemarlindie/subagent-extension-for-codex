@@ -377,16 +377,6 @@ const resumed = lifecycle(
   ["task.completed"],
 );
 
-const dependent = lifecycle(
-  "preview-dependent",
-  95,
-  ["task.queued"],
-  [
-    "task.waiting",
-    { reason: "waiting_for_dependency", dependency_id: "preview-interrupted" },
-  ],
-);
-
 export const lifecycleTasks: Task[] = [
   {
     ...taskBase,
@@ -474,19 +464,6 @@ export const lifecycleTasks: Task[] = [
   },
   {
     ...taskBase,
-    id: "preview-dependent",
-    title: "Review the inspector layout change",
-    description:
-      "Review the inspector layout change once it finishes, checking keyboard navigation.",
-    worker_profile: "reviewer",
-    status: "waiting",
-    waiting_reason: "waiting_for_dependency",
-    waiting_for: "preview-interrupted",
-    depends_on: ["preview-interrupted"],
-    ...timestamps(95, 0),
-  },
-  {
-    ...taskBase,
     id: "preview-build",
     title: "Speed up the production build",
     description: "Cache module compilation across the build's source files.",
@@ -534,7 +511,6 @@ export const lifecycleTimelines = [
   refactor,
   release,
   interrupted,
-  dependent,
   build,
   profile,
   resumed,

@@ -11,11 +11,7 @@ import type { Provider } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
 import { Control } from "./control.js";
-import {
-  DependencyWriter,
-  PromptRecorder,
-  until,
-} from "./control-test-harness.js";
+import { FileWriter, PromptRecorder, until } from "./control-test-harness.js";
 
 /** Approved folders in each Git state, with a provider that records prompts. */
 async function folders<P extends Provider>(provider: P) {
@@ -69,7 +65,7 @@ async function folders<P extends Provider>(provider: P) {
 }
 
 test("a task runs in place in a plain folder and records its edits", async () => {
-  const f = await folders(new DependencyWriter("note.txt", "hello\n"));
+  const f = await folders(new FileWriter("note.txt", "hello\n"));
   const t = await f.finished((await f.start(f.plain)).id);
 
   assert.equal(t.status, "completed", t.error);

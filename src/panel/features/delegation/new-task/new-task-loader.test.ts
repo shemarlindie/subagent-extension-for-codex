@@ -26,7 +26,6 @@ const values: DelegateValues = {
   runtime: "",
   costMode: "none",
   cost: "",
-  deps: [],
 };
 
 async function started(wide = true) {

@@ -117,7 +117,6 @@ export function TaskDetails({ task, counts, preferences }: TaskDetailsProps) {
           ? { "Base commit": task.base_commit ?? task.revision }
           : {}),
         Session: task.session_id ?? "Not started",
-        Dependencies: task.depends_on.join(", ") || "None",
         Turns: task.turn,
         "Runtime used": formatDuration(taskRuntimeMs(task, now)),
         [ESTIMATED_COST_LABEL]:

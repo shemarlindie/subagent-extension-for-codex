@@ -67,7 +67,6 @@ import {
   type SentMessage,
 } from "./send-requests.js";
 import { resolveProjectWorkspace, resolveStart } from "./start-request.js";
-import { deletionBatch, deletionOrder } from "./task-deletion.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
 import {
@@ -119,17 +118,14 @@ export class Control {
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );
 
-    this.prompts = new SessionPrompts(store, this.changes);
+    this.prompts = new SessionPrompts(store);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }
 
   async recover() {
     for (const t of this.store.withStatus(BUSY)) {
-      if (
-        ["starting", "running", "waiting"].includes(t.status) &&
-        t.waiting_reason !== "waiting_for_dependency"
-      ) {
+      if (["starting", "running", "waiting"].includes(t.status)) {
         t.status = "interrupted";
         delete t.pending_input;
         delete t.waiting_reason;
@@ -158,16 +154,13 @@ export class Control {
 
   /**
    * Whether no task is running, starting, queued or waiting, so stopping
-   * interrupts nothing. A dependency wait survives a restart, and a busy
-   * dependency counts on its own.
+   * interrupts nothing.
    */
   idle() {
     return (
       !this.scheduling &&
       !this.active.size &&
-      !this.store
-        .withStatus(BUSY)
-        .some((t) => t.waiting_reason !== "waiting_for_dependency")
+      !this.store.withStatus(BUSY).length
     );
   }
 
@@ -211,18 +204,14 @@ export class Control {
       effortRequested(input),
     );
 
-    for (const id of req.depends_on) this.store.get(id, owner);
-
     const repository = this.projects
       ? await this.projects.resolve(req.repository)
       : await this.workspaces.repository(req.repository);
 
-    // Repository resolution can yield while a dependency is being deleted.
+    // Repository resolution can yield while the project is being deleted.
     if (this.removingProjects.has(repository)) {
       throw new Error("Project task data is being deleted");
     }
-
-    for (const id of req.depends_on) this.mutableTask(owner, id);
 
     const workspace = await resolveProjectWorkspace(
       repository,
@@ -271,7 +260,7 @@ export class Control {
     let scannedCount = 0;
 
     try {
-      const tasks = this.store.withStatus(["queued", "waiting"]);
+      const tasks = this.store.withStatus(["queued"]);
       taskCount = tasks.length;
 
       for (const t of tasks) {
@@ -279,67 +268,6 @@ export class Control {
         if (this.active.size >= this.concurrency) break;
         if (this.deleting.has(t.id)) continue;
 
-        if (
-          t.status !== "queued" &&
-          !(
-            t.status === "waiting" &&
-            t.waiting_reason === "waiting_for_dependency"
-          )
-        ) {
-          continue;
-        }
-
-        const deps = t.depends_on.map((id) => this.store.get(id, t.owner));
-        const failed = deps.find((d) => d.status === "failed");
-
-        if (failed) {
-          t.status = "failed";
-          t.error = `Dependency ${failed.id} failed`;
-          t.completed_at = now();
-          delete t.waiting_reason;
-          delete t.waiting_for;
-
-          this.store.transaction(() => {
-            this.store.save(t);
-            this.store.event(t, "task.failed", { error: t.error });
-          });
-
-          this.queueWaits.ended(t.id, "error");
-          continue;
-        }
-
-        // A dependent starts once its dependency has completed a turn, and
-        // not while the dependency runs another.
-        const pending = deps.find(
-          (d) =>
-            this.active.has(d.id) ||
-            BUSY.includes(d.status) ||
-            !this.store.latestEvent(d.id, "task.completed"),
-        );
-
-        if (pending) {
-          this.queueWaits.dependencyPending(t.id);
-
-          if (t.status !== "waiting" || t.waiting_for !== pending.id) {
-            t.status = "waiting";
-            t.waiting_reason = "waiting_for_dependency";
-            t.waiting_for = pending.id;
-
-            this.store.transaction(() => {
-              this.store.save(t);
-
-              this.store.event(t, "task.waiting", {
-                reason: t.waiting_reason,
-                dependency_id: pending.id,
-              });
-            });
-          }
-
-          continue;
-        }
-
-        delete t.waiting_reason;
-        delete t.waiting_for;
         t.status = "starting";
         t.turn++;
         this.store.save(t);
@@ -714,21 +642,18 @@ export class Control {
    * uncommitted changes included. A running, queued or waiting task is
    * interrupted first, since deleting is the only way to end a task for good.
    * `deleteAgentTask` also deletes the provider's session, which the task
-   * could otherwise continue from. A task others depend on stays until they
-   * are deleted, since a follow-up can still resume them. Several tasks are
-   * deleted dependents first, and a dependent outside them stops them all.
+   * could otherwise continue from.
    */
   async delete(owner: string, ids: string | string[], deleteAgentTask = false) {
     const batch = [...new Set([ids].flat())].map((id) =>
       this.mutableTask(owner, id),
     );
 
-    const ordered = deletionBatch(this.store.list(owner, {}), batch);
-    const doomed = ordered.map((t) => t.id);
+    const doomed = batch.map((t) => t.id);
     for (const id of doomed) this.deleting.add(id);
 
     try {
-      for (const t of ordered) {
+      for (const t of batch) {
         await this.deleteResources(owner, t.id, deleteAgentTask);
       }
     } finally {
@@ -738,7 +663,7 @@ export class Control {
     return { status: "deleted" as const };
   }
 
-  /** Holds the whole batch against scheduling and new dependencies before cleanup yields. */
+  /** Holds the whole batch against scheduling and new tasks before cleanup yields. */
   async removeProject(owner: string, repository: string, deleteTasks = false) {
     if (!this.projects) {
       throw new Error("Project management is unavailable in this service.");
@@ -762,26 +687,11 @@ export class Control {
 
     const ids = new Set(tasks.map((task) => task.id));
 
-    const dependent = this.store
-      .all()
-      .find(
-        (task) =>
-          !ids.has(task.id) && task.depends_on.some((id) => ids.has(id)),
-      );
-
-    if (dependent) {
-      throw new Error(
-        `Task ${dependent.id} in another project depends on this project. Remove it first, or keep task data.`,
-      );
-    }
-
     if (tasks.some((task) => this.deleting.has(task.id))) {
       throw new Error(
         "A project task is already being removed. Wait and retry.",
       );
     }
-
-    const ordered = deletionOrder(tasks);
 
     this.removingProjects.add(repository);
     for (const id of ids) this.deleting.add(id);
@@ -801,7 +711,7 @@ export class Control {
       const failure = stopped.find((result) => result.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
 
-      for (const task of ordered) {
+      for (const task of tasks) {
         await this.deleteResources(owner, task.id, false);
       }
 
@@ -904,7 +814,6 @@ export class Control {
     t.status = "interrupted";
     t.completed_at = now();
     delete t.waiting_reason;
-    delete t.waiting_for;
     const before = queueSnapshot(t);
     if (t.queue.length) t.queue_paused = true;
 

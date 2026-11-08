@@ -27,7 +27,6 @@ const task: Task = {
   worker_profile: "reviewer",
   title: "Review",
   description: "Review",
-  depends_on: [],
   workspace_strategy: "worktree",
   branch: "agent/review",
   workspace: "/repo/worktree",

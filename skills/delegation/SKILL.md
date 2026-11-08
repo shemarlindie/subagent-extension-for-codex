@@ -39,7 +39,8 @@ Pass the user's full request in `description`. Its first line or sentence
 becomes the title. Add bounded context the worker cannot find itself, such as
 decisions from this chat. The worker does not see this conversation.
 
-Use `depends_on` to order dependent tasks and start independent ones together.
+Start independent tasks together. Start a task that needs another task's
+result after that task finishes, and pass the result as `context`.
 
 ## Supervise and report
 

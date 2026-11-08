@@ -19,7 +19,6 @@
     "description": "Use Bash to run `sleep 5; echo one`, then use Bash to run `sleep 5; echo two`. Then reply with both outputs.",
     "repository": "/demo/project",
     "revision": "HEAD",
-    "depends_on": [],
     "context": [],
     "workspace_strategy": "worktree",
     "budget": {

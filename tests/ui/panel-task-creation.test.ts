@@ -106,63 +106,6 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   assert.equal(call.args.reasoning_effort, "high");
 });
 
-test("dependency multiselect retains multiple choices until explicit submission", async (t) => {
-  const { user, transport } = await setupDelegate(t, (transport) => {
-    const second = task("two");
-    second.title = "Review database";
-    transport.tasks.push(second);
-  });
-
-  await screen.findByRole("dialog");
-  await enterTask(user, "Wait for both reviews");
-
-  const dependencies = screen.getByRole("combobox", {
-    name: "Wait for tasks (optional)",
-  });
-
-  await user.click(dependencies);
-
-  await user.click(
-    await screen.findByRole("option", { name: "Review authentication" }),
-  );
-
-  assert.equal(dependencies.getAttribute("aria-expanded"), "true");
-  await user.click(screen.getByRole("option", { name: "Review database" }));
-  await user.keyboard("{Escape}");
-
-  await waitFor(() =>
-    assert.equal(dependencies.getAttribute("aria-expanded"), "false"),
-  );
-
-  assert.ok(screen.getByRole("dialog"));
-  await user.click(screen.getByRole("button", { name: "Start task" }));
-
-  await waitFor(() =>
-    assert.deepEqual(
-      transport.calls.find((call) => call.name === "start_task")?.args
-        .depends_on,
-      ["one", "two"],
-    ),
-  );
-});
-
-test("dependency options include the read completed tasks the list left out", async (t) => {
-  const { user } = await setupDelegate(t, (transport) => {
-    const done = task("done");
-    done.title = "Review database";
-    done.status = "completed";
-    transport.readCompleted = [done];
-  });
-
-  await screen.findByRole("dialog");
-
-  await user.click(
-    screen.getByRole("combobox", { name: "Wait for tasks (optional)" }),
-  );
-
-  assert.ok(await screen.findByRole("option", { name: "Review database" }));
-});
-
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");
