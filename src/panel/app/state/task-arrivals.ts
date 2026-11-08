@@ -23,30 +23,37 @@ export function taskArrivalTarget(state: Snapshot) {
 
 /** Tracks tasks seen in the current scope, including ones temporarily absent. */
 export class TaskArrivals {
-  private listed?: { scope: number; ids: Set<string> };
+  private listed?: { scope: number; ids: Set<string>; newest: string };
 
   update(
     tasks: Task[],
     state: Snapshot,
     intent: { browsing: boolean; changedSelection: boolean },
   ) {
-    const listed =
-      this.listed?.scope === state.scopeVersion ? this.listed.ids : undefined;
+    const seen =
+      this.listed?.scope === state.scopeVersion ? this.listed : undefined;
 
-    // A read completed task appears when Done or All loads it, not because it arrived.
+    // The list always has the newest task, so the older ones that Done and
+    // All load, or that are unarchived, never count as arrivals.
     const arrived =
-      listed &&
+      seen &&
       tasks.find(
         (task) =>
-          !listed.has(task.id) &&
+          !seen.ids.has(task.id) &&
           task.id !== state.selected &&
           !task.archived_at &&
-          (task.status !== "completed" || task.unread),
+          task.created_at >= seen.newest,
       );
 
-    const ids = listed ?? new Set<string>();
-    for (const task of tasks) ids.add(task.id);
-    this.listed = { scope: state.scopeVersion, ids };
+    const ids = seen?.ids ?? new Set<string>();
+    let newest = seen?.newest ?? "";
+
+    for (const task of tasks) {
+      ids.add(task.id);
+      if (task.created_at > newest) newest = task.created_at;
+    }
+
+    this.listed = { scope: state.scopeVersion, ids, newest };
 
     if (
       !canViewTaskArrival(state) ||
