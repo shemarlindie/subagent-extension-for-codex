@@ -90,7 +90,7 @@ test("console requests use browser credentials and required headers for tools an
   await transport.connect(events);
 
   assert.deepEqual(
-    await transport.tool("list_tasks", { conversation_id: null }),
+    await transport.tool("app_list_tasks", { conversation_id: null }),
     { ok: true },
   );
 
@@ -99,7 +99,7 @@ test("console requests use browser credentials and required headers for tools an
   assert.deepEqual(
     calls.map((call) => call.url),
     [
-      "https://console.example/api/tools/list_tasks",
+      "https://console.example/api/tools/app_list_tasks",
       "https://console.example/api/login",
     ],
   );
@@ -126,7 +126,7 @@ test("console requests use browser credentials and required headers for tools an
   });
 
   transport.dispose();
-  await assert.rejects(transport.tool("list_tasks"), /closed/);
+  await assert.rejects(transport.tool("app_list_tasks"), /closed/);
   assert.equal(calls.length, 2);
 });
 
@@ -425,12 +425,12 @@ test("host returns output schema results as sent and unwraps other tools", async
   ]);
 
   assert.deepEqual(
-    await transport.tool("list_tasks", { conversation_id: null }),
+    await transport.tool("app_list_tasks", { conversation_id: null }),
     ["task"],
   );
 
   assert.deepEqual(fake.calls[0], {
-    name: "list_tasks",
+    name: "app_list_tasks",
     arguments: { conversation_id: null },
   });
 
@@ -522,7 +522,7 @@ test("host tool errors and missing structured output surface meaningful failures
   await assert.rejects(transport.tool("list_projects"), /tool failed/);
   fake.respond({ content: [{ type: "text", text: "unstructured" }] });
 
-  await assert.rejects(transport.tool("list_tasks"), /no structured data/);
+  await assert.rejects(transport.tool("app_list_tasks"), /no structured data/);
 
   transport.dispose();
 });
@@ -583,7 +583,7 @@ test("host teardown suppresses subsequent scope delivery and tools", async () =>
   });
 
   assert.deepEqual(observed.scopes, []);
-  await assert.rejects(transport.tool("list_tasks"), /closed/);
+  await assert.rejects(transport.tool("app_list_tasks"), /closed/);
   assert.deepEqual(fake.calls, []);
 });
 
