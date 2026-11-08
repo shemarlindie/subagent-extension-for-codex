@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import compareVersions from "semver/functions/compare.js";
 import { afterEach, beforeEach, test, vi } from "vitest";
 
 import {
@@ -23,7 +24,6 @@ import {
   type ClaudeCliStatus,
   claudeCliSupport,
   claudePathVariable,
-  compareVersions,
   locateClaudeCli,
   parseClaudeVersion,
   validateClaudeCli,
@@ -168,15 +168,6 @@ test("version output is parsed strictly", () => {
   ]) {
     assert.equal(parseClaudeVersion(output), undefined, output);
   }
-
-  assert.ok(compareVersions("2.1.10", "2.1.9") > 0);
-  assert.equal(compareVersions("2.1.9", "2.1.9"), 0);
-  assert.ok(compareVersions("2.0.99", "2.1.0") < 0);
-
-  assert.throws(
-    () => compareVersions("2.1", "2.1.0"),
-    /Invalid Claude Code version/,
-  );
 });
 
 test("validation accepts the minimum and newer releases but rejects older versions", async () => {

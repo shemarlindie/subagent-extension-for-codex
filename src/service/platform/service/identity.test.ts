@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { compareVersions, handoff, type RunningService } from "./identity.js";
+import { handoff, type RunningService } from "./identity.js";
 
 const own = { version: "0.2.0", apiVersion: 2 };
 const origin = "http://127.0.0.1:17317";
@@ -13,20 +13,6 @@ const service = (fields: Partial<RunningService>): RunningService => ({
   launcher: "stdio",
   installed: true,
   ...fields,
-});
-
-test("compares versions by semver precedence", () => {
-  assert.equal(compareVersions("0.10.0", "0.9.9"), 1);
-  assert.equal(compareVersions("1.2", "1.2.0"), 0);
-  assert.equal(compareVersions("1.2.3-beta.1", "1.2.3"), -1);
-  assert.equal(compareVersions("1.2.3", "1.2.3-rc.1"), 1);
-  assert.equal(compareVersions("1.2.3-beta.2", "1.2.3-beta.10"), -1);
-  assert.equal(compareVersions("1.2.3-alpha.1", "1.2.3-beta.1"), -1);
-  assert.equal(compareVersions("1.2.3-beta", "1.2.3-beta.1"), -1);
-  assert.equal(compareVersions("1.2.3-1", "1.2.3-alpha"), -1);
-  assert.equal(compareVersions("1.2.3-beta.1", "1.2.3-beta.1+build"), 0);
-  assert.equal(compareVersions("1.3.0-alpha.1", "1.2.9"), 1);
-  assert.equal(compareVersions("1.2.3", "1.3.0"), -1);
 });
 
 test("replaces an older or uninstalled plugin service, forwarding while it speaks the same API", () => {

@@ -1,3 +1,5 @@
+import compareVersions from "semver/functions/compare.js";
+
 import { installRoot, packageVersion } from "./runtime.js";
 
 /**
@@ -31,53 +33,6 @@ export function serviceIdentity(env = process.env): ServiceIdentity {
     launcher: env[launcherEnv] === "stdio" ? "stdio" : "foreground",
     installRoot,
   };
-}
-
-/**
- * Compares versions by semver precedence: numeric parts first, then a
- * prerelease sorts before its release and prereleases compare by identifier.
- * Build metadata is ignored.
- */
-export function compareVersions(a: string, b: string) {
-  const parse = (version: string) => {
-    const [core = "", ...pre] = version.replace(/\+.*/, "").split("-");
-    const prerelease = pre.join("-");
-
-    return {
-      core: core.split(".").map((part) => Number(part) || 0),
-      prerelease: prerelease ? prerelease.split(".") : [],
-    };
-  };
-
-  const [left, right] = [parse(a), parse(b)];
-
-  for (let i = 0; i < Math.max(left.core.length, right.core.length); i++) {
-    const difference = (left.core[i] ?? 0) - (right.core[i] ?? 0);
-    if (difference) return Math.sign(difference);
-  }
-
-  if (!left.prerelease.length || !right.prerelease.length) {
-    return Math.sign(right.prerelease.length - left.prerelease.length);
-  }
-
-  for (
-    let i = 0;
-    i < Math.max(left.prerelease.length, right.prerelease.length);
-    i++
-  ) {
-    const [x, y] = [left.prerelease[i], right.prerelease[i]];
-    if (x === y) continue;
-    if (x === undefined) return -1;
-    if (y === undefined) return 1;
-
-    const [xNumeric, yNumeric] = [/^\d+$/.test(x), /^\d+$/.test(y)];
-    if (xNumeric && yNumeric) return Math.sign(Number(x) - Number(y));
-    if (xNumeric !== yNumeric) return xNumeric ? -1 : 1;
-
-    return x < y ? -1 : 1;
-  }
-
-  return 0;
 }
 
 /** What a launcher knows about a running service. Fields its /health omits stay unknown. */
