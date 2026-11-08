@@ -75,30 +75,37 @@ test("previously seen, archived and out-of-scope tasks do not produce arrivals",
   expect(controller.getSnapshot().taskArrival).toBeUndefined();
 });
 
-test("choosing Done loads the read completed tasks the list left out, without announcing them", async (t) => {
+test("Done loads the read completed tasks the list left out, by default or when chosen, without announcing them", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
-  const running = task("running");
+  const newest = { ...task("newest"), status: "completed" as const };
   const read = { ...task("read"), status: "completed" as const };
 
   transport.handler = (name, args) => {
     if (name !== "app_list_tasks") return undefined;
 
     return args.include_read_completed
-      ? { tasks: [running, read] }
-      : { tasks: [running], read_completed: { "/repo/a": 1 } };
+      ? { tasks: [newest, read] }
+      : { tasks: [newest], read_completed: { "/repo/a": 1 } };
   };
 
+  const listed = () => controller.getSnapshot().tasks.map((item) => item.id);
+
+  // With nothing unfinished, the default filter is Done, so they load.
   await controller.start();
+  await flush();
+  expect(listed()).toEqual(["newest", "read"]);
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+
+  controller.setFilter("active");
+  await controller.refresh();
+  expect(listed()).toEqual(["newest"]);
   expect(controller.getSnapshot().readCompleted).toEqual({ "/repo/a": 1 });
 
   controller.setFilter("completed");
   await flush();
-
-  const state = controller.getSnapshot();
-  expect(state.tasks.map((item) => item.id)).toEqual(["running", "read"]);
-  expect(state.readCompleted).toBeUndefined();
-  expect(state.taskArrival).toBeUndefined();
+  expect(listed()).toEqual(["newest", "read"]);
+  expect(controller.getSnapshot().readCompleted).toBeUndefined();
 });
 
 for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
