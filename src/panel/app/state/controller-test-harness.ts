@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
+import { composeView } from "./panel-view-test-harness";
 import type {
   Defaults,
   PanelData,
@@ -74,6 +75,7 @@ export function task(
 
 export class FakeTransport implements Transport {
   embedded = true;
+  streamsChanges?: boolean;
   send?: Transport["send"];
   events!: TransportEvents;
   calls: { name: string; args: Record<string, unknown> }[] = [];
@@ -85,6 +87,8 @@ export class FakeTransport implements Transport {
   projects = [{ repository: "/repo/a", kind: "repository" }];
   handler?: (name: string, args: Record<string, unknown>) => unknown;
   shared: Record<string, unknown>[] = [];
+  /** The revision views return. */
+  revision = "boot:1";
   async connect(events: TransportEvents) {
     this.events = events;
     await this.connectGate;
@@ -102,8 +106,19 @@ export class FakeTransport implements Transport {
       return decodePanelToolResult<T>(name, await Promise.resolve(answer));
     }
 
-    // Without a handler, the update wait holds as if nothing changes.
-    if (name === "app_wait_for_updates") return new Promise<T>(() => {});
+    if (name === "app_wait_for_updates") {
+      // A read at once returns the view. One that waits holds as if nothing changes.
+      if (!args.view || (args.after !== undefined && args.wait_ms)) {
+        return new Promise<T>(() => {});
+      }
+
+      return {
+        revision: this.revision,
+        view: await composeView(args.view, (part, partArgs) =>
+          this.tool(part, partArgs),
+        ),
+      } as T;
+    }
 
     const values: Record<string, unknown> = {
       get_panel_context: this.context,

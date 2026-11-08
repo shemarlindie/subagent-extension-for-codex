@@ -3,18 +3,23 @@ import type {
   DraftTarget,
 } from "../../features/tasks/chat/drafts/draft-follower";
 import { CONNECTION, type ConnectionLabel } from "./connection";
+import type { UpdateRead, ViewRequest } from "./panel-view";
 
 interface UpdateContext {
   closed(): boolean;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
   status(text: ConnectionLabel): void;
-  revision(value: string): void;
+  /** The view to ask each wait for, or none while the panel can't use one. */
+  viewRequest(): ViewRequest | undefined;
+  /**
+   * Takes a wait that returned a view or a new revision. `request` is the
+   * view it asked for, if any.
+   */
+  receive(read: UpdateRead, request?: ViewRequest): Promise<void>;
   draftTarget(): DraftTarget | undefined;
   /** Applies the target's draft; returns whether it changed. */
   receiveDraft(target: DraftTarget, read: DraftRead): boolean;
 }
-
-type UpdateRead = { revision: string } & Partial<DraftRead>;
 
 /** How long one wait holds for a change; the service allows up to 25 s. */
 const WAIT_MS = 20000;
@@ -28,17 +33,20 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Follows the service on transports that can't stream changes: one wait at a
- * time returns the revision when it changes, and the shown draft when that
- * changes, so the panel holds a single long poll.
+ * time returns the panel's view when the revision changes or the wait runs
+ * out, and the shown draft when that changes, so the panel holds a single
+ * long poll and needs no read after it returns.
  */
 export class UpdateFollower {
   private following = false;
   private revision?: string;
   constructor(private context: UpdateContext) {}
 
-  follow() {
+  /** Starts following from `revision`, the one the panel last read, if any. */
+  follow(revision?: string) {
     if (this.following) return;
     this.following = true;
+    this.revision = revision;
     void this.loop().finally(() => (this.following = false));
   }
 
@@ -46,8 +54,9 @@ export class UpdateFollower {
     let retryMs = FIRST_RETRY_MS;
 
     while (!this.context.closed()) {
-      // A target chosen while a wait holds is picked up on its next return.
+      // A target or view chosen while a wait holds is picked up on its next return.
       const target = this.context.draftTarget();
+      const request = this.context.viewRequest();
       const started = Date.now();
       let read: UpdateRead;
 
@@ -55,6 +64,7 @@ export class UpdateFollower {
         read = await this.context.tool<UpdateRead>("app_wait_for_updates", {
           ...(this.revision === undefined ? {} : { after: this.revision }),
           ...(target ? { draft: target } : {}),
+          ...(request ? { view: request.args } : {}),
           wait_ms: WAIT_MS,
         });
       } catch {
@@ -70,7 +80,9 @@ export class UpdateFollower {
       this.context.status(CONNECTION.connected);
       let changed = read.revision !== this.revision;
       this.revision = read.revision;
-      this.context.revision(read.revision);
+
+      // The view goes first, so a draft that cleared finds its stored message.
+      if (changed || read.view) await this.context.receive(read, request);
 
       if (target && read.draft !== undefined) {
         const draft = { draft: read.draft, running: read.running ?? false };

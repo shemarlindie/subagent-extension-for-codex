@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 
 import type { DraftTarget } from "../../features/tasks/chat/drafts/draft-follower";
+import type { UpdateRead, ViewRequest } from "./panel-view";
 import { UpdateFollower } from "./update-follower";
 
 function fixture(
@@ -19,8 +20,10 @@ function fixture(
 
   const calls: Record<string, unknown>[] = [];
   const statuses: string[] = [];
-  const revisions: string[] = [];
+  /** What the follower passed on, in order. */
+  const received: string[] = [];
   let target: DraftTarget | undefined;
+  let request: ViewRequest | undefined;
   let drafts = 0;
 
   const follower = new UpdateFollower({
@@ -32,10 +35,15 @@ function fixture(
       return answer(args) as T;
     },
     status: (text) => statuses.push(text),
-    revision: (value) => revisions.push(value),
+    viewRequest: () => request,
+    receive: async (read: UpdateRead, asked?: ViewRequest) => {
+      assert.equal(asked, request);
+      received.push(read.view ? "view" : read.revision);
+    },
     draftTarget: () => target,
     receiveDraft: () => {
       drafts++;
+      received.push("draft");
 
       return true;
     },
@@ -45,14 +53,15 @@ function fixture(
     follower,
     calls,
     statuses,
-    revisions,
+    received,
     drafts: () => drafts,
     setTarget: (next?: DraftTarget) => (target = next),
+    setRequest: (next?: ViewRequest) => (request = next),
   };
 }
 
 test("each wait sends the last revision, and one that returns at once with nothing new pauses", async (t) => {
-  const { follower, calls, statuses, revisions } = fixture(t, () => ({
+  const { follower, calls, statuses, received } = fixture(t, () => ({
     revision: "boot:1",
   }));
 
@@ -72,7 +81,8 @@ test("each wait sends the last revision, and one that returns at once with nothi
   assert.equal(calls.length, 2);
   await vi.advanceTimersByTimeAsync(1);
   assert.equal(calls.length, 3);
-  assert.deepEqual(revisions, ["boot:1", "boot:1", "boot:1"]);
+  // Only the new revision is passed on.
+  assert.deepEqual(received, ["boot:1"]);
   assert.deepEqual(new Set(statuses), new Set(["Connected"]));
 });
 
@@ -131,4 +141,36 @@ test("a failed wait reports reconnecting and retries after 2 s, doubling to 30 s
   }
 
   assert.equal(statuses.at(-1), "Connected");
+});
+
+test("a view request goes with each wait, and its view applies before the draft", async (t) => {
+  const { follower, calls, received, setTarget, setRequest } = fixture(
+    t,
+    (args) => ({
+      revision: "boot:2",
+      ...(args.view ? { view: {} } : {}),
+      draft: null,
+      running: true,
+    }),
+  );
+
+  const args = {
+    list: { conversation_id: null, include: [], include_read_completed: false },
+  };
+
+  setRequest({ args, scope: 1, projects: 0, selection: 1, tab: 0 });
+  setTarget({ task_id: "a", message_id: "m", after_length: 3 });
+  follower.follow("boot:1");
+  await vi.advanceTimersByTimeAsync(0);
+
+  assert.deepEqual(calls, [
+    {
+      after: "boot:1",
+      draft: { task_id: "a", message_id: "m", after_length: 3 },
+      view: args,
+      wait_ms: 20000,
+    },
+  ]);
+
+  assert.deepEqual(received, ["view", "draft"]);
 });

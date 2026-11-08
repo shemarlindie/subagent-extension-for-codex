@@ -91,34 +91,39 @@ export class DraftFollower {
 
   /**
    * The whole message is stored now, or the turn ended without it, so read
-   * Chat. The draft stays shown until Chat holds its stored message, so the
-   * reply never disappears in between.
+   * Chat unless it already holds the message. The draft stays shown until
+   * Chat holds its stored message, so the reply never disappears in between.
    */
   private complete(messageId: string) {
     const draft = this.context.snapshot().draft;
     if (draft?.message_id !== messageId) return;
     this.completed = { message_id: messageId, reads: this.reads };
-    this.context.run(() => this.context.refresh());
+    if (!this.release()) this.context.run(() => this.context.refresh());
   }
 
   /**
    * Removes a completed draft once Chat holds its stored message, or once a
-   * Chat `read` that started after the draft completed finds none.
+   * Chat `read` that started after the draft completed finds none. Returns
+   * whether it did.
    */
   private release(read?: number) {
     const snapshot = this.context.snapshot();
     const draft = snapshot.draft;
     const completed = this.completed;
-    if (!draft || completed?.message_id !== draft.message_id) return;
+    if (!draft || completed?.message_id !== draft.message_id) return false;
 
     const stored =
       snapshot.chat?.task === draft.task &&
       snapshot.chat.items.some((item) => item.id === draft.message_id);
 
-    if (stored || (read !== undefined && read > completed.reads)) {
-      this.completed = undefined;
-      this.context.patch({ draft: undefined });
+    if (!stored && (read === undefined || read <= completed.reads)) {
+      return false;
     }
+
+    this.completed = undefined;
+    this.context.patch({ draft: undefined });
+
+    return true;
   }
 
   /** Reads the selected task's draft in full, after a missed update. */

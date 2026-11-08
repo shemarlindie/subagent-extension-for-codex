@@ -30,6 +30,7 @@ import {
   previewReadState,
   previewUnreadTool,
 } from "./unread-tools";
+import { withPreviewView } from "./view-tools";
 
 // A new user's settings with only Claude enabled, as the service reports them.
 const previewSettingsDefaults = (() => {
@@ -331,6 +332,16 @@ export function previewTool(
   args: Record<string, unknown> = {},
   options: PreviewOptions = {},
 ): unknown {
+  if (name === "app_wait_for_updates" && args.view) {
+    const { view: _view, ...wait } = args;
+
+    return withPreviewView(
+      args,
+      previewTool(name, wait, options) as { revision: string },
+      (part, partArgs) => previewTool(part, partArgs, options),
+    );
+  }
+
   if (name === "app_raise_budget") {
     if (!options.successfulBudgetUpdates) {
       throw new Error(

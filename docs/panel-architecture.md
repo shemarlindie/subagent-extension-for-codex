@@ -53,10 +53,10 @@ Some features have boundaries worth knowing:
 
 `Controller` (`app/state/controller.ts`) owns scope, selection and async
 coordination, and delegates feature work to loaders and actions.
-`TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) reads Chat and
-Activity, including turn history. The controller retains selection generations
-and scope invalidation, which make outdated detail reads obsolete. Components
-use these entry points:
+`TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) merges Chat and
+Activity from the panel's views and reads turn history. The controller retains
+selection generations and scope invalidation, which make outdated detail reads
+obsolete. Components use these entry points:
 
 - `controller.taskActions` runs task mutations.
 - `controller.newTasks` runs the new-task composer.

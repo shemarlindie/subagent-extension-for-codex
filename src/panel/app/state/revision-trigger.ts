@@ -9,10 +9,10 @@ interface RevisionContext {
 const THROTTLE_MS = 100;
 
 /**
- * Turns the service revisions a transport reports into refreshes. A new
+ * Turns the service revisions a transport streams into refreshes. A new
  * revision schedules one refresh, which later changes join until it runs,
  * so a task streaming events still refreshes every `THROTTLE_MS`. A hidden
- * or busy panel keeps the refresh pending until `resume`.
+ * or busy panel keeps a due refresh pending until `resume`.
  */
 export class RevisionTrigger {
   private last?: string;
@@ -28,9 +28,14 @@ export class RevisionTrigger {
 
     this.timer = setTimeout(() => {
       this.timer = undefined;
-      this.pending = true;
-      this.resume();
+      this.due();
     }, THROTTLE_MS);
+  }
+
+  /** Marks a refresh due, which runs once the panel is visible and not busy. */
+  due() {
+    this.pending = true;
+    this.resume();
   }
 
   /** Runs a pending refresh once the panel is visible and not busy. */

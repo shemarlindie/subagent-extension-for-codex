@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { describe, expect, test, type TestContext, vi } from "vitest";
 
 import { defaults } from "../../src/panel/app/state/controller-test-harness";
+import { composeView } from "../../src/panel/app/state/panel-view-test-harness";
 import type {
   HostState,
   Project,
@@ -212,6 +213,20 @@ export class FakeTransport implements Transport {
 
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     this.calls.push({ name, args });
+
+    if (name === "app_wait_for_updates") {
+      // A read at once returns the view. One that waits holds as if nothing changes.
+      if (!args.view || (args.after !== undefined && args.wait_ms)) {
+        return new Promise<T>(() => {});
+      }
+
+      return {
+        revision: "boot:1",
+        view: await composeView(args.view, (part, partArgs) =>
+          this.tool(part, partArgs),
+        ),
+      } as T;
+    }
 
     // Activity fixtures can be large. Decode and window them only for reads
     // that request activity, as the service does.

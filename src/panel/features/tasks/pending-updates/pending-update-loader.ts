@@ -15,7 +15,7 @@ export function pendingUpdates(state: Snapshot) {
   return read && read.conversation === state.conversation ? read.tasks : [];
 }
 
-/** Reads and marks the worker updates Codex hasn't seen in the panel's chat. */
+/** Shows, reads and marks the worker updates Codex hasn't seen in the panel's chat. */
 export class PendingUpdateLoader {
   /** Counts reads, so an older one finishing late never replaces a newer one. */
   private request = 0;
@@ -36,6 +36,15 @@ export class PendingUpdateLoader {
       !this.context.closed() &&
       this.context.snapshot().conversation === conversation
     ) {
+      this.context.patch({ pendingUpdates: { conversation, tasks } });
+    }
+  }
+
+  /** Shows the pending updates a view read for `conversation`, unless the panel moved to another. */
+  show(conversation: string, tasks: PendingTaskUpdates[]) {
+    ++this.request;
+
+    if (this.context.snapshot().conversation === conversation) {
       this.context.patch({ pendingUpdates: { conversation, tasks } });
     }
   }

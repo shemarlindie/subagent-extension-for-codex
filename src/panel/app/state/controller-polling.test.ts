@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
-import { deferred, flush, setup } from "./controller-test-harness";
+import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
 
 for (const phase of ["connect", "read", "poll"] as const) {
@@ -17,6 +17,8 @@ for (const phase of ["connect", "read", "poll"] as const) {
     t.onTestFinished(() => controller.dispose());
     const gate = deferred<void>();
     if (phase === "connect") transport.connectGate = gate.promise;
+    // The console's fallback refresh polls.
+    if (phase === "poll") transport.streamsChanges = true;
 
     if (phase === "read") {
       transport.handler = (name) =>
@@ -63,12 +65,14 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
 
   const { controller, transport, environment } = setup();
   t.onTestFinished(() => controller.dispose());
+  transport.streamsChanges = true;
   await controller.start();
   let hidden = true;
   environment.hidden = () => hidden;
 
   const reads = () =>
-    transport.calls.filter((call) => call.name !== "app_record_timing").length;
+    transport.calls.filter((call) => call.name === "app_wait_for_updates")
+      .length;
 
   const initial = reads();
   vi.advanceTimersByTime(30000);
@@ -83,8 +87,7 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   vi.advanceTimersByTime(30000);
   await flush();
   const pending = reads();
-  // Each refresh reads the project list, then the tasks.
-  assert.equal(pending, initial + 2);
+  assert.equal(pending, initial + 1);
   vi.advanceTimersByTime(60000);
   await flush();
   assert.equal(reads(), pending);
@@ -92,7 +95,7 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   await flush();
   vi.advanceTimersByTime(30000);
   await flush();
-  assert.equal(reads(), pending + 2);
+  assert.equal(reads(), pending + 1);
 });
 
 test("the fallback refresh reports tool failures then retries successfully", async (t) => {
@@ -104,6 +107,7 @@ test("the fallback refresh reports tool failures then retries successfully", asy
 
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
+  transport.streamsChanges = true;
   await controller.start();
   let fails = true;
 
@@ -125,7 +129,7 @@ test("the fallback refresh reports tool failures then retries successfully", asy
   assert.equal(controller.getSnapshot().error, "");
 });
 
-test("embedded startup schedules a retry when its first read fails", async (t) => {
+test("embedded startup retries through its update wait when its first read fails", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
   t.onTestFinished(() => {
@@ -146,13 +150,16 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   assert.match(controller.getSnapshot().error, /temporarily unavailable/);
   assert.equal(transport.watches, 0);
 
+  // The update wait's first try fails too.
+  await flush();
   fails = false;
 
   const previousReads = transport.calls.filter(
     (call) => call.name === "app_list_tasks",
   ).length;
 
-  vi.advanceTimersByTime(30000);
+  // The update wait's first retry returns the view.
+  vi.advanceTimersByTime(2000);
   await flush();
 
   assert.equal(
@@ -215,6 +222,7 @@ test("workers are read again each refresh while one can't start tasks or list mo
 
   discoveryFailed = false;
   await controller.refresh();
+  await flush();
   assert.equal(workerReads(), 4);
   const [readyWorker] = controller.getSnapshot().workers;
   assert.ok(readyWorker);
@@ -235,6 +243,7 @@ test("workers are read again each refresh while one can't start tasks or list mo
   vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60_000 + 1000);
   ready = false;
   await controller.refresh();
+  await flush();
   assert.equal(workerReads(), 5);
   const [brokenWorker] = controller.getSnapshot().workers;
   assert.ok(brokenWorker);
@@ -280,6 +289,7 @@ test("each completed refresh restarts the fallback wait", async (t) => {
 
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
+  transport.streamsChanges = true;
   await controller.start();
 
   const reads = () =>
@@ -313,4 +323,34 @@ test("a refresh leaves the connection status the transport reports", async (t) =
 
   await assert.rejects(controller.refresh(), /temporarily unavailable/);
   assert.equal(controller.getSnapshot().connection, "Connected");
+});
+
+test("a held wait's view older than the one applied is ignored", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("current")];
+  transport.revision = "boot:5";
+  const held = deferred<unknown>();
+
+  transport.handler = (name, args) =>
+    name === "app_wait_for_updates" && args.after ? held.promise : undefined;
+
+  await controller.start();
+
+  // Built before the read the panel already applied.
+  held.resolve({
+    revision: "boot:4",
+    view: {
+      built_at: Date.now(),
+      projects: transport.projects,
+      list: { tasks: [task("older")] },
+    },
+  });
+
+  await flush();
+
+  assert.deepEqual(
+    controller.getSnapshot().tasks.map((item) => item.id),
+    ["current"],
+  );
 });

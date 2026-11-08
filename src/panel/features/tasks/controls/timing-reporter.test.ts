@@ -164,9 +164,9 @@ test("failed aggregates are dropped and their loss is carried by the next batch"
 
   const { reporter } = setup(tool);
 
-  reporter.observe("chat", "fetch", 15, { rows: 2 });
+  reporter.observe("view", "fetch", 15, { rows: 2 });
   await vi.advanceTimersByTimeAsync(5000);
-  reporter.observe("chat", "fetch", 3, { rows: 1 });
+  reporter.observe("view", "fetch", 3, { rows: 1 });
   await vi.advanceTimersByTimeAsync(5000);
 
   expect(tool).toHaveBeenCalledTimes(2);
@@ -174,7 +174,7 @@ test("failed aggregates are dropped and their loss is carried by the next batch"
   expect(tool.mock.calls[1]?.[1]).toEqual({
     records: [
       {
-        operation: "chat",
+        operation: "view",
         phase: "fetch",
         count: 1,
         total_ms: 3,
@@ -202,7 +202,7 @@ test("disposing while a report is held releases waiting work and cannot restart 
   await vi.advanceTimersByTimeAsync(5000);
   reporter.observe("activity_turn", "group", 4, { rows: 50, groups: 8 });
   reporter.dispose();
-  reporter.observe("chat", "merge", 2);
+  reporter.observe("view", "merge", 2);
   reporter.record({ operation: "interrupt_task", duration_ms: 1 });
   release({});
   await vi.advanceTimersByTimeAsync(60_000);

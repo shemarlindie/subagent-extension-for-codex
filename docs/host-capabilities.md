@@ -38,7 +38,9 @@ Codex desktop's fixed sandbox CSP blocks direct connections from the embedded
 panel to the loopback service. The panel sends all reads and writes through the
 authenticated MCP Apps bridge and needs no browser bearer token. It learns of
 changes and streaming replies through one `app_wait_for_updates` long poll at a
-time. The standalone console uses HTTP and SSE.
+time. Each change returns the panel's view with it, so the panel reads nothing
+after the poll returns, and scope or selection changes take one read. The
+standalone console uses HTTP and SSE.
 
 Host support for long-lived MCP calls needs separate verification. See the
 [MCP reference](mcp-reference.md#app-and-user-authority) for the wait contract

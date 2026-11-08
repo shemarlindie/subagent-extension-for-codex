@@ -264,28 +264,34 @@ app-only `app_record_timing` tool. Its own reporting calls are never timed.
   a different call.
 
 Transport duration includes service processing and bridge or HTTP overhead.
-Compare it with service phases. Do not add it to them. The panel and service use
-separate clocks, so compare durations across them and ignore timestamps.
+Compare it with service phases. Do not add it to them. Compare durations across
+the panel and service, and ignore timestamps.
 
-Load diagnostics aggregate by fixed `operation` (`task_list`, `chat`,
-`activity_latest` or `activity_turn`) and `phase`:
+Load diagnostics aggregate by fixed `operation` and `phase`. `view` covers the
+panel views update waits return, `task_list` the lists project archives load,
+and `activity_latest` and `activity_turn` Activity.
 
-| Phase    | Measured boundary                                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `fetch`  | The controller's tool call through transport completion, including service processing, response parsing and any event decoding |
-| `decode` | Activity event-envelope validation in the HTTP or embedded MCP transport                                                       |
-| `merge`  | Accepting a current task list, Chat or Activity result into panel state                                                        |
-| `group`  | Activity grouping and sorting when the list actually runs them                                                                 |
+| Phase     | Measured boundary                                                                                                              |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `fetch`   | The controller's tool call through transport completion, including service processing, response parsing and any event decoding |
+| `deliver` | A view's travel from the end of its service build to the panel, by the shared machine clock                                    |
+| `decode`  | Activity event-envelope validation in the HTTP or embedded MCP transport                                                       |
+| `merge`   | Accepting a current view or turn Activity into panel state                                                                     |
+| `group`   | Activity grouping and sorting when the list actually runs them                                                                 |
 
 Each aggregate includes `count`, `total_ms`, `max_ms`, `rows`, `groups`,
 `stale_count` and `error_count`. Counts describe work in that phase.
-`stale_count` counts responses discarded after selection or scope changed.
-Unused work fields are zero.
+`stale_count` counts responses or view parts discarded after selection or scope
+changed, and views older than one already applied. Unused work fields are zero.
+
+Views from held update waits have no `fetch`, since the hold dominates it. Only
+reads at once, after a scope or selection change or on a console revision,
+record it. `deliver` shows how long the host takes to return a response,
+including for held waits.
 
 `fetch` includes `decode`, and grouping can repeat as the Activity list renders.
 These elapsed spans do not measure isolated CPU work, rendering completion or
-paint. Do not sum overlapping phases as independent costs. Chat arrives as
-conversation data and has no separate Activity event-decoding span.
+paint. Do not sum overlapping phases as independent costs.
 
 The reporter keeps at most one request in flight, 20 pending send or interrupt
 records and one pending aggregate per operation and phase, at most 16. While a

@@ -1,40 +1,60 @@
 import { decodeEventEnvelope } from "../../shared/events/decode.js";
 import {
   type ObservePanelTiming,
+  type PanelLoadOperation,
   panelLoadOperation,
 } from "../../shared/tasks/panel-timing.js";
 
 const eventPageTools = new Set(["app_get_activity", "app_get_turn_activity"]);
 
-/** Revalidates event pages at the browser boundary and leaves other tool data alone. */
+/**
+ * Revalidates event pages at the browser boundary, including a returned
+ * view's Activity, and leaves other tool data alone.
+ */
 export function decodePanelToolResult<T>(
   name: string,
   result: unknown,
   observe?: ObservePanelTiming,
 ): T {
+  if (name === "app_wait_for_updates") {
+    const view = isRecord(result) ? result.view : undefined;
+    if (!isRecord(view) || view.activity === undefined) return result as T;
+
+    return {
+      ...(result as Record<string, unknown>),
+      view: { ...view, activity: decodePage(view.activity, "view", observe) },
+    } as T;
+  }
+
   if (!eventPageTools.has(name)) return result as T;
 
+  return decodePage(result, panelLoadOperation(name)!, observe) as T;
+}
+
+function decodePage(
+  page: unknown,
+  operation: PanelLoadOperation,
+  observe?: ObservePanelTiming,
+) {
   const started = performance.now();
   let rows = 0;
   let outcome: "success" | "error" = "error";
 
   try {
-    if (!isRecord(result) || !Array.isArray(result.events)) {
+    if (!isRecord(page) || !Array.isArray(page.events)) {
       throw new Error("The service returned an invalid activity page");
     }
 
-    const events = result.events.map(decodeEventEnvelope);
+    const events = page.events.map(decodeEventEnvelope);
     rows = events.length;
     outcome = "success";
 
-    return { ...result, events } as T;
+    return { ...page, events };
   } finally {
-    observe?.(
-      panelLoadOperation(name)!,
-      "decode",
-      performance.now() - started,
-      { rows, outcome },
-    );
+    observe?.(operation, "decode", performance.now() - started, {
+      rows,
+      outcome,
+    });
   }
 }
 

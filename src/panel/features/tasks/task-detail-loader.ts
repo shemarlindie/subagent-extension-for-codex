@@ -24,95 +24,73 @@ interface TaskDetailContext {
   drafts: Pick<DraftFollower, "reading" | "show">;
 }
 
-/** Reads the selected task's Chat and Activity without replacing newer views. */
+/** The `app_get_chat` and `app_get_activity` arguments for the selected task. */
+export function detailReads(state: Snapshot) {
+  const id = state.selected;
+  if (!id) return {};
+
+  return {
+    chat: {
+      task_id: id,
+      after: state.chat?.task === id ? state.chat.cursor : 0,
+    },
+    activity: { task_id: id, after: activityCursor(state.events, id) },
+  };
+}
+
+/**
+ * Merges the selected task's Chat and Activity without replacing newer
+ * views, and reads turn history.
+ */
 export class TaskDetailLoader {
   constructor(private context: TaskDetailContext) {}
 
-  private currentSelection(task: string) {
-    const generation = this.context.generation();
+  /**
+   * Merges Chat and Activity read for `read.task` in selection `generation`.
+   * Returns false when the selection has changed since, so the read is
+   * stale and the selected task's details are still to read.
+   */
+  merge(
+    read: { task?: string; generation: number },
+    chat?: ChatRead,
+    activity?: ActivityPage,
+  ) {
+    const current = this.context.snapshot(),
+      id = current.selected;
 
-    return () =>
-      !this.context.closed() &&
-      task === this.context.snapshot().selected &&
-      generation === this.context.generation();
-  }
+    if (!id || this.context.closed()) return true;
 
-  async load() {
-    const state = this.context.snapshot(),
-      id = state.selected;
+    if (read.task !== id || read.generation !== this.context.generation()) {
+      return false;
+    }
 
-    if (!id || this.context.closed()) return;
+    // A read that left out the details found no task to show them for.
+    if (!chat || !activity) return true;
+    const drafts = this.context.drafts.reading();
 
-    const isCurrentRead = this.currentSelection(id);
+    const events = mergeActivity(
+      { events: current.events, dropped: current.droppedEvents },
+      id,
+      activity,
+    );
 
-    const activityRead = this.context
-      .tool<ActivityPage>("app_get_activity", {
-        task_id: id,
-        after: activityCursor(state.events, id),
-      })
-      .then((activity) => {
-        if (!isCurrentRead()) {
-          this.context.timing.observe("activity_latest", "merge", 0, {
-            stale_count: 1,
-          });
+    this.context.patch({
+      events: events.events,
+      droppedEvents: events.dropped,
+      activityHistoryLoading:
+        current.activityHistoryLoading === id
+          ? undefined
+          : current.activityHistoryLoading,
+      chat: mergeChat(current.chat, id, chat),
+      chatHistoryLoading:
+        current.chatHistoryLoading === id
+          ? undefined
+          : current.chatHistoryLoading,
+    });
 
-          return;
-        }
+    this.context.drafts.show(drafts);
 
-        return this.context.timing.merge(
-          "activity_latest",
-          activity.events.length,
-          () => {
-            const current = this.context.snapshot();
-
-            const view = mergeActivity(
-              { events: current.events, dropped: current.droppedEvents },
-              id,
-              activity,
-            );
-
-            this.context.patch({
-              events: view.events,
-              droppedEvents: view.dropped,
-              activityHistoryLoading:
-                current.activityHistoryLoading === id
-                  ? undefined
-                  : current.activityHistoryLoading,
-            });
-          },
-        );
-      });
-
-    const read = this.context.drafts.reading();
-
-    const chatRead = this.context
-      .tool<ChatRead>("app_get_chat", {
-        task_id: id,
-        after: state.chat?.task === id ? state.chat.cursor : 0,
-      })
-      .then((chat) => {
-        if (!isCurrentRead()) {
-          this.context.timing.observe("chat", "merge", 0, { stale_count: 1 });
-
-          return;
-        }
-
-        return this.context.timing.merge("chat", chat.items.length, () => {
-          const current = this.context.snapshot();
-
-          this.context.patch({
-            chat: mergeChat(current.chat, id, chat),
-            chatHistoryLoading:
-              current.chatHistoryLoading === id
-                ? undefined
-                : current.chatHistoryLoading,
-          });
-
-          this.context.drafts.show(read);
-        });
-      });
-
-    await Promise.all([activityRead, chatRead]);
+    return true;
   }
 
   /** Reads a turn's own events when the latest activity no longer holds them. */
