@@ -199,8 +199,10 @@ boot ID changes after a service restart, and the count only grows within a boot,
 so compare counts only between revisions of the same boot. Given `view`, the
 wait also returns the panel's projects, task list, selected task's Chat and
 Activity, and pending updates as of the returned revision, unless only the draft
-changed. Each part takes and returns its own tool's arguments and shape. See
-[Transport](panel-guide.md#transport) for panel refresh behavior.
+changed. The list takes `app_list_tasks` arguments and returns its shape, and
+the projects match `list_projects`. Chat and Activity take the selected
+`task_id` and an `after` cursor, and pending updates take a `conversation_id`.
+See [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See

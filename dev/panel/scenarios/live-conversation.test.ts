@@ -152,10 +152,20 @@ test("preview tools share live cursors and replace a growing draft with stored C
       running: boolean;
     };
 
+  const view = (after = 0) =>
+    (
+      previewTool("app_wait_for_updates", {
+        view: {
+          list: {},
+          chat: { ...args, after },
+          activity: { ...args, after },
+        },
+      }) as { view: { chat: ChatRead; activity: ActivityPage } }
+    ).view;
+
   vi.advanceTimersByTime(4000);
   const first = wait();
-  const chat = previewTool("app_get_chat", args) as ChatRead;
-  const activity = previewTool("app_get_activity", args) as ActivityPage;
+  const { chat, activity } = view();
   const cursor = activity.events.at(-1)!.id;
   expect(first.running).toBe(true);
   expect(first.draft).toBeDefined();
@@ -167,17 +177,12 @@ test("preview tools share live cursors and replace a growing draft with stored C
   expect(growing.draft?.message_id).toBe(first.draft?.message_id);
   expect(growing.draft!.text.length).toBeGreaterThan(first.draft!.text.length);
 
-  expect(
-    previewTool("app_get_activity", { ...args, after: cursor }),
-  ).toMatchObject({ events: [] });
+  expect(view(cursor).activity).toMatchObject({ events: [] });
 
   vi.advanceTimersByTime(3000);
   const stored = wait();
 
-  const delta = previewTool("app_get_chat", {
-    ...args,
-    after: chat.next_cursor,
-  }) as ChatRead;
+  const delta = view(chat.next_cursor).chat;
 
   expect(stored.draft).toBeNull();
   expect(stored.revision).not.toBe(first.revision);

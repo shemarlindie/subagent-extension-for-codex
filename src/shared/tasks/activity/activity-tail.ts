@@ -21,8 +21,8 @@ export type DroppedSummary = {
 };
 
 /**
- * app_get_activity's result: the newest events after a cursor, and a
- * tally of the older events outside the window.
+ * A view's Activity: the newest events after a cursor, and a tally of the
+ * older events outside the window.
  */
 export type ActivityPage = {
   events: Event[];

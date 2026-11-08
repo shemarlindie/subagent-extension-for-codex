@@ -20,8 +20,8 @@ test("a default selection shows history loading until its details arrive", async
   const details = deferred<void>();
 
   const answers: Record<string, unknown> = {
-    app_get_activity: { events: [] },
-    app_get_chat: { items: [], next_cursor: 0 },
+    "view.activity": { events: [] },
+    "view.chat": { items: [], next_cursor: 0 },
   };
 
   transport.handler = (name) =>
@@ -54,12 +54,12 @@ test("returning to a task rejects chat and activity from its previous selection"
 
   transport.handler = (name, args) => {
     if (firstSelection && args.task_id === "a") {
-      if (name === "app_get_activity") return activityRead.promise;
-      if (name === "app_get_chat") return chatRead.promise;
+      if (name === "view.activity") return activityRead.promise;
+      if (name === "view.chat") return chatRead.promise;
     }
 
     // Each read returns what follows its cursor, as the service does.
-    if (name === "app_get_activity") {
+    if (name === "view.activity") {
       return {
         events:
           Number(args.after) < 2
@@ -76,7 +76,7 @@ test("returning to a task rejects chat and activity from its previous selection"
       };
     }
 
-    if (name === "app_get_chat") return { items: [], next_cursor: 2 };
+    if (name === "view.chat") return { items: [], next_cursor: 2 };
 
     return undefined;
   };
@@ -181,7 +181,7 @@ test("the activity view shows the service's window and its tally, and polls for 
   );
 
   transport.handler = (name, args) =>
-    name === "app_get_activity"
+    name === "view.activity"
       ? windowActivity(events, Number(args.after))
       : undefined;
 
@@ -196,7 +196,7 @@ test("the activity view shows the service's window and its tally, and polls for 
 
   assert.deepEqual(
     transport.calls
-      .filter((call) => call.name === "app_get_activity")
+      .filter((call) => call.name === "view.activity")
       .map((call) => call.args.after),
     [0],
   );
@@ -204,8 +204,8 @@ test("the activity view shows the service's window and its tally, and polls for 
   await controller.refresh();
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "app_get_activity").at(-1)
-      ?.args.after,
+    transport.calls.filter((call) => call.name === "view.activity").at(-1)?.args
+      .after,
     1005,
   );
 
@@ -252,7 +252,7 @@ test("a draft cleared while a view is in flight stays until a later view's Chat 
     chats = [older.promise, later.promise];
 
   transport.handler = (name) =>
-    name === "app_get_chat" ? chats.shift() : undefined;
+    name === "view.chat" ? chats.shift() : undefined;
 
   const refreshing = controller.refresh();
   await flush();
@@ -289,7 +289,7 @@ test.for(["stored", "never stored"] as const)(
     transport.tasks = [{ ...task("a"), status: "completed" }];
 
     transport.handler = (name) =>
-      name === "app_get_chat" && outcome === "stored"
+      name === "view.chat" && outcome === "stored"
         ? storedReply("listed", "Complete reply")
         : undefined;
 

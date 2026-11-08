@@ -73,6 +73,11 @@ export function task(
   };
 }
 
+const viewReads: Record<string, string> = {
+  projects: "list_projects",
+  list: "app_list_tasks",
+};
+
 export class FakeTransport implements Transport {
   embedded = true;
   streamsChanges?: boolean;
@@ -113,12 +118,13 @@ export class FakeTransport implements Transport {
         return new Promise<T>(() => {});
       }
 
-      return {
-        revision: this.revision,
-        view: await composeView(args.view, (part, partArgs) =>
-          this.tool(part, partArgs),
-        ),
-      } as T;
+      // The list and projects come from their tools. Tests hold or replace
+      // another part through `view.<part>`.
+      const view = await composeView(args.view, (part, partArgs) =>
+        this.tool(viewReads[part] ?? `view.${part}`, partArgs),
+      );
+
+      return decodePanelToolResult<T>(name, { revision: this.revision, view });
     }
 
     const values: Record<string, unknown> = {
@@ -128,7 +134,7 @@ export class FakeTransport implements Transport {
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
       app_list_tasks: { tasks: this.tasks },
-      app_get_activity: { events: [] },
+      "view.activity": { events: [] },
       app_record_timing: {},
       app_get_change_counts: {
         scope: "task",
@@ -136,8 +142,8 @@ export class FakeTransport implements Transport {
         additions: 0,
         deletions: 0,
       },
-      app_get_chat: { items: [], next_cursor: 0 },
-      app_list_pending_updates: { tasks: [] },
+      "view.chat": { items: [], next_cursor: 0 },
+      "view.pending": { tasks: [] },
       get_message: { message: { id: "parent_1" } },
       get_settings: { values: defaults },
     };

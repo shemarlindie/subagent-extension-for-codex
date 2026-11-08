@@ -22,7 +22,7 @@ interface TaskDetailContext {
   drafts: Pick<DraftFollower, "show">;
 }
 
-/** The `app_get_chat` and `app_get_activity` arguments for the selected task. */
+/** The view's Chat and Activity arguments for the selected task. */
 export function detailReads(state: Snapshot) {
   const id = state.selected;
   if (!id) return {};

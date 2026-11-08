@@ -3,7 +3,7 @@ import type { Task } from "../../../../shared/tasks/model.js";
 import type { Store } from "../storage/store.js";
 
 /**
- * A task's Chat after cursor `after`, as `app_get_chat` returns it. An item
+ * A task's Chat after cursor `after`, as a panel view returns it. An item
  * read again replaces the earlier one with its id, and a cursor of 0 also
  * returns the request.
  */

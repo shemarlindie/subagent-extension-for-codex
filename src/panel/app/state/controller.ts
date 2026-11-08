@@ -21,7 +21,7 @@ import {
 } from "../../features/tasks/controls/handoff-message";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
 import { TimingReporter } from "../../features/tasks/controls/timing-reporter";
-import { PendingUpdateLoader } from "../../features/tasks/pending-updates/pending-update-loader";
+import { PendingUpdateTracker } from "../../features/tasks/pending-updates/pending-update-tracker";
 import { TaskDetailLoader } from "../../features/tasks/task-detail-loader";
 import { errorMessage } from "../../shared/utils/error-message";
 import { sharedRequest } from "../../shared/utils/shared-request";
@@ -221,7 +221,7 @@ export class Controller {
   });
 
   private changeLoader = new ChangeLoader(this.stateContext);
-  readonly pendingUpdates = new PendingUpdateLoader(this.stateContext);
+  readonly pendingUpdates = new PendingUpdateTracker(this.stateContext);
 
   constructor(
     readonly transport: Transport,

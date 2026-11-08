@@ -1,11 +1,8 @@
 import { decodeEventEnvelope } from "../../shared/events/decode.js";
-import {
-  type ObservePanelTiming,
-  type PanelLoadOperation,
-  panelLoadOperation,
+import type {
+  ObservePanelTiming,
+  PanelLoadOperation,
 } from "../../shared/tasks/panel-timing.js";
-
-const eventPageTools = new Set(["app_get_activity", "app_get_turn_activity"]);
 
 /**
  * Revalidates event pages at the browser boundary, including a returned
@@ -26,9 +23,9 @@ export function decodePanelToolResult<T>(
     } as T;
   }
 
-  if (!eventPageTools.has(name)) return result as T;
+  if (name !== "app_get_turn_activity") return result as T;
 
-  return decodePage(result, panelLoadOperation(name)!, observe) as T;
+  return decodePage(result, "activity_turn", observe) as T;
 }
 
 function decodePage(

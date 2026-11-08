@@ -681,7 +681,14 @@ test("an update wait returns the panel view as of its revision, except for draft
   type Update = {
     revision: string;
     draft?: unknown;
-    view?: { built_at: number; list: { tasks: PanelTask[] } };
+    view?: {
+      built_at: number;
+      projects: unknown;
+      list: { tasks: PanelTask[] };
+      chat?: { items: { id: string }[]; next_cursor: number };
+      activity?: { events: { id: number; type: string }[] };
+      pending?: unknown;
+    };
   };
 
   const wait = (args: Record<string, unknown>) =>
@@ -705,19 +712,27 @@ test("an update wait returns the panel view as of its revision, except for draft
       pending: { conversation_id: "chat" },
     };
 
-    // Without after, it returns at once, each part as its own tool reads it.
+    // Without after, it returns at once.
     const first = await wait({ view: parts });
     assert.equal(first.revision, store.revision("alice"));
     const { built_at: builtAt, ...view } = first.view!;
     assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
 
-    assert.deepEqual(view, {
-      projects: await user("list_projects", {}),
-      list: await user("app_list_tasks", parts.list),
-      chat: await user("app_get_chat", parts.chat),
-      activity: await user("app_get_activity", parts.activity),
-      pending: await user("app_list_pending_updates", parts.pending),
-    });
+    assert.deepEqual(view.projects, await user("list_projects", {}));
+    assert.deepEqual(view.list, await user("app_list_tasks", parts.list));
+    assert.deepEqual(view.pending, { tasks: [] });
+
+    assert.deepEqual(
+      view.chat?.items.map((item) => item.id),
+      ["request"],
+    );
+
+    assert.deepEqual(
+      view.activity?.events.map((event) => event.type),
+      ["task.queued", "task.started"],
+    );
+
+    assert.equal(view.chat?.next_cursor, view.activity?.events.at(-1)?.id);
 
     // A wait that runs out returns the view.
     const quiet = await wait({

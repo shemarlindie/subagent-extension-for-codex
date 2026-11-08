@@ -19,7 +19,7 @@ import type {
 } from "../../src/panel/features/changes/types";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
 import { changeCounts } from "../../src/shared/changes/changes.js";
-import type { Event } from "../../src/shared/events/types.js";
+import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
 import { withSetting } from "../../src/shared/settings/settings-schema.js";
 import {
   windowActivity,
@@ -159,9 +159,9 @@ export class FakeTransport implements Transport {
   embedded = true;
   events!: TransportEvents;
   tasks = [task()];
-  /** The events app_get_activity windows and tallies. */
+  /** The events a view's Activity windows and tallies. */
   taskEvents: Record<string, unknown>[] = [];
-  /** app_get_chat items. */
+  /** A view's Chat items. */
   chat: Record<string, unknown>[] = [];
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
@@ -177,7 +177,7 @@ export class FakeTransport implements Transport {
   changedFiles: Record<string, ChangedFileContent> = {};
   shared: Record<string, unknown>[] = [];
   messages: string[] = [];
-  /** app_list_pending_updates tasks. */
+  /** A view's pending update tasks. */
   pendingUpdates: PendingTaskUpdates[] = [];
   async share(data: Record<string, unknown>) {
     this.shared.push(data);
@@ -220,26 +220,25 @@ export class FakeTransport implements Transport {
         return new Promise<T>(() => {});
       }
 
-      return {
-        revision: "boot:1",
-        view: await composeView(args.view, (part, partArgs) =>
-          this.tool(part, partArgs),
-        ),
-      } as T;
+      const view = await composeView(args.view, (part, partArgs) => {
+        if (part === "projects") return this.tool("list_projects");
+        if (part === "list") return this.tool("app_list_tasks", partArgs);
+        if (part === "chat") return { items: this.chat, next_cursor: 0 };
+        if (part === "pending") return { tasks: this.pendingUpdates };
+
+        return windowActivity(
+          this.decodedEvents(),
+          Number(partArgs.after ?? 0),
+        );
+      });
+
+      return decodePanelToolResult<T>(name, { revision: "boot:1", view });
     }
 
-    // Activity fixtures can be large. Decode and window them only for reads
-    // that request activity, as the service does.
-    if (name === "app_get_activity" || name === "app_get_turn_activity") {
-      const events = decodePanelToolResult<{ events: Event[] }>(name, {
-        events: this.taskEvents,
-      }).events;
-
+    if (name === "app_get_turn_activity") {
       return decodePanelToolResult<T>(
         name,
-        name === "app_get_activity"
-          ? windowActivity(events, Number(args.after ?? 0))
-          : windowTurnActivity(events, Number(args.turn)),
+        windowTurnActivity(this.decodedEvents(), Number(args.turn)),
       );
     }
 
@@ -259,19 +258,25 @@ export class FakeTransport implements Transport {
         },
       ],
       app_list_tasks: { tasks: this.tasks },
-      app_get_chat: { items: this.chat, next_cursor: 0 },
       app_get_change_counts: changeCounts(this.changes[0]),
       get_changes: this.changes[Number(args.cursor ?? 0)],
       get_changed_file: this.changedFiles[String(args.path)],
       get_settings: { values: defaults },
       start_task: this.tasks[0],
       submit_input: {},
-      app_list_pending_updates: { tasks: this.pendingUpdates },
     };
 
     assert.ok(name in values, `Unexpected tool ${name}`);
 
     return decodePanelToolResult<T>(name, values[name]);
+  }
+
+  /**
+   * Activity fixtures can be large, so they decode only for reads that
+   * request activity, as the service does.
+   */
+  private decodedEvents() {
+    return this.taskEvents.map(decodeEventEnvelope);
   }
 
   async send(message: string) {

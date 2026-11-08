@@ -2,25 +2,18 @@ import { z } from "zod";
 
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { chatRead } from "../../../features/tasks/conversation/chat-read.js";
+import { pendingUpdates } from "../../../features/tasks/conversation/parent-updates.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { panelTaskList } from "../../panel/panel-context.js";
-import type { activityTools } from "./activity-tools.js";
 import { archivedFilter, taskId, tool } from "./definition.js";
-import type { pendingUpdateTools } from "./pending-update-tools.js";
-
-/** The other tools a panel view reads through. */
-type ViewReads = {
-  activity: ReturnType<typeof activityTools>["app_get_activity"];
-  pending: ReturnType<typeof pendingUpdateTools>["app_list_pending_updates"];
-};
 
 /**
- * App-only reads the panel refreshes from: its task list, Chat, and the
- * update wait, which can return them with projects, Activity and pending
- * updates as one view.
+ * App-only reads the panel refreshes from: its task list, and the update
+ * wait, which can return it with projects, Chat, Activity and pending updates
+ * as one view.
  */
-export function panelViewTools(c: Control, owner: string, reads: ViewReads) {
+export function panelViewTools(c: Control, owner: string) {
   const list = tool({
     readOnly: true,
     description:
@@ -46,21 +39,15 @@ export function panelViewTools(c: Control, owner: string, reads: ViewReads) {
       ),
   });
 
-  const chat = tool({
-    readOnly: true,
-    description:
-      "User interface only: a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. An item read again replaces the earlier one with its id.",
-    schema: taskId.extend({
-      after: z.number().int().nonnegative().default(0),
-    }),
-    run: (a) => chatRead(c.store, c.store.get(a.task_id, owner), a.after),
+  const cursor = taskId.extend({
+    after: z.number().int().nonnegative().default(0),
   });
 
   const view = z.strictObject({
     list: list.schema,
-    chat: chat.schema.optional(),
-    activity: reads.activity.schema.optional(),
-    pending: reads.pending.schema.optional(),
+    chat: cursor.optional(),
+    activity: cursor.optional(),
+    pending: z.strictObject({ conversation_id: z.string().min(1) }).optional(),
   });
 
   /**
@@ -70,21 +57,36 @@ export function panelViewTools(c: Control, owner: string, reads: ViewReads) {
    */
   const readView = async (parts: z.output<typeof view>) => {
     const known = (await c.projects?.listWithGit()) ?? [];
-    const owned = (id: string) => !!c.store.find(id, owner);
+    const { chat, activity, pending } = parts;
 
     return () =>
       c.store.reads.measure("view", (work) => {
+        // A selected task that is gone or not the owner's has no details.
+        const chatTask = chat && c.store.find(chat.task_id, owner);
+        const activityTask = activity && c.store.find(activity.task_id, owner);
+
         const read = {
           projects: c.projects?.withKnownGit(known) ?? [],
           list: list.run(parts.list),
-          // A selected task that is gone or not the owner's has no details.
-          ...(parts.chat &&
-            owned(parts.chat.task_id) && { chat: chat.run(parts.chat) }),
-          ...(parts.activity &&
-            owned(parts.activity.task_id) && {
-              activity: reads.activity.run(parts.activity),
+          ...(chat &&
+            chatTask && { chat: chatRead(c.store, chatTask, chat.after) }),
+          ...(activity &&
+            activityTask && {
+              activity: c.activity.page(activityTask.id, activity.after),
             }),
-          ...(parts.pending && { pending: reads.pending.run(parts.pending) }),
+          ...(pending && {
+            pending: {
+              tasks: pendingUpdates(
+                c.store,
+                c.parentSeen,
+                (t) =>
+                  c.providers.get(t.provider)?.taskPolicy.parentMayApprove(t) ??
+                  false,
+                owner,
+                pending.conversation_id,
+              ),
+            },
+          }),
         };
 
         work.rows = read.list.tasks.length;
@@ -95,10 +97,9 @@ export function panelViewTools(c: Control, owner: string, reads: ViewReads) {
 
   return {
     app_list_tasks: list,
-    app_get_chat: chat,
     app_wait_for_updates: tool({
       readOnly: true,
-      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, which takes each part's own tool arguments (list: app_list_tasks, chat: app_get_chat, activity: app_get_activity, pending: app_list_pending_updates), it also returns view: those parts in their tools' shapes, with projects as list_projects returns them and built_at in epoch milliseconds, all as of the returned revision. It leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
+      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, it also returns view as of the returned revision, with built_at in epoch milliseconds. Its projects are as list_projects returns them, and its list takes app_list_tasks arguments and returns that shape. chat { items, next_cursor } is a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. An item read again replaces the earlier one with its id. activity { events, dropped } holds a task's newest Activity events after a cursor, with a tally of the older events outside the window. pending { tasks } lists the worker updates Codex hasn't seen in a conversation, grouped by task and newest first: turn replies, failures, budget stops and requests Codex may answer, leaving out archived tasks. The wait leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
       schema: z.strictObject({
         after: z.string().max(200).optional(),
         draft: taskId

@@ -6,7 +6,7 @@ import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { formatCount } from "../../../shared/utils/format";
-import { pendingUpdates } from "./pending-update-loader";
+import { pendingUpdates } from "./pending-update-tracker";
 
 /** The count of worker updates Codex hasn't seen. It opens the dialog to send them. */
 export function PendingUpdatesIndicator() {

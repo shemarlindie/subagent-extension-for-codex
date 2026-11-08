@@ -5,7 +5,7 @@ import {
   flush,
   setup,
 } from "../../../app/state/controller-test-harness";
-import { pendingUpdates } from "./pending-update-loader";
+import { pendingUpdates } from "./pending-update-tracker";
 
 const update = (event_id: number) => ({
   task_id: "task-one",
@@ -31,7 +31,7 @@ test.for(["before", "after"] as const)(
     let holding = true;
 
     transport.handler = (name, args) => {
-      if (name === "app_list_pending_updates") return { tasks: pending };
+      if (name === "view.pending") return { tasks: pending };
 
       if (name === "app_mark_updates_seen") {
         return { event_ids: args.event_ids };

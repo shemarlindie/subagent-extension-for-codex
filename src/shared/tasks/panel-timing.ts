@@ -77,8 +77,6 @@ export function panelLoadOperation(
   switch (name) {
     case "app_list_tasks":
       return "task_list";
-    case "app_get_activity":
-      return "activity_latest";
     case "app_get_turn_activity":
       return "activity_turn";
     default:

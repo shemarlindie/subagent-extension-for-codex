@@ -1,3 +1,4 @@
+import type { PanelView } from "../../../src/panel/app/state/panel-view";
 import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
 
 type WaitRead = { revision: string; draft?: Draft | null };
@@ -9,16 +10,19 @@ type ViewParts = {
   pending?: Record<string, unknown>;
 };
 
+/** A part of a view, named as the view names it. */
+export type ViewPart = keyof Omit<PanelView, "built_at">;
+
 /**
- * Adds the view an update wait asked for, built from each part's own fixture
- * tool, as `waitForUpdates` in
+ * Adds the view an update wait asked for, built from each part's fixture
+ * read, as `waitForUpdates` in
  * `src/service/features/tasks/conversation/updates.ts` does. It leaves the
  * view out when only the target draft changed.
  */
 export function withPreviewView(
   args: Record<string, unknown>,
   read: WaitRead,
-  call: (name: string, args: Record<string, unknown>) => unknown,
+  readPart: (part: ViewPart, args: Record<string, unknown>) => unknown,
 ) {
   const view = args.view as ViewParts;
 
@@ -38,15 +42,11 @@ export function withPreviewView(
     ...read,
     view: {
       built_at: Date.now(),
-      projects: call("list_projects", {}),
-      list: call("app_list_tasks", view.list),
-      ...(view.chat && { chat: call("app_get_chat", view.chat) }),
-      ...(view.activity && {
-        activity: call("app_get_activity", view.activity),
-      }),
-      ...(view.pending && {
-        pending: call("app_list_pending_updates", view.pending),
-      }),
+      projects: readPart("projects", {}),
+      list: readPart("list", view.list),
+      ...(view.chat && { chat: readPart("chat", view.chat) }),
+      ...(view.activity && { activity: readPart("activity", view.activity) }),
+      ...(view.pending && { pending: readPart("pending", view.pending) }),
     },
   };
 }

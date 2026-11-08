@@ -18,7 +18,7 @@ export function pendingUpdates(state: Snapshot) {
  * Shows and marks the worker updates Codex hasn't seen in the panel's chat.
  * They arrive only with views, so revisions keep them in order.
  */
-export class PendingUpdateLoader {
+export class PendingUpdateTracker {
   constructor(private context: PendingUpdateContext) {}
 
   /** Shows the pending updates a view read for `conversation`, unless the panel moved to another. */

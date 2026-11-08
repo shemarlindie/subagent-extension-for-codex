@@ -26,9 +26,6 @@ export function userTools(
   { c, owner, hostMeta }: ToolContext,
   tools: ReturnType<typeof agentTools>,
 ) {
-  const activity = activityTools(c, owner);
-  const pending = pendingUpdateTools(c, owner);
-
   return {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
     ...(composerMentionsEnabled
@@ -89,10 +86,7 @@ export function userTools(
         return { budget: task.budget, status: task.status };
       },
     }),
-    ...panelViewTools(c, owner, {
-      activity: activity.app_get_activity,
-      pending: pending.app_list_pending_updates,
-    }),
+    ...panelViewTools(c, owner),
     ...queueTools(c, owner),
     app_submit_input: tool({
       ...tools.submit_input,
@@ -116,9 +110,9 @@ export function userTools(
       run: (a) => c.settings.update(owner, a, "user"),
     }),
     ...settingsTransferTools(c.settings, owner),
-    ...activity,
+    ...activityTools(c, owner),
     app_record_timing: panelTimingTool(),
     ...taskLifecycleTools(c, owner),
-    ...pending,
+    ...pendingUpdateTools(c, owner),
   };
 }

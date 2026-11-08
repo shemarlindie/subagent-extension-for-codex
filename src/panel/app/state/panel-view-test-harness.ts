@@ -9,25 +9,28 @@ type ViewParts = {
   pending?: Record<string, unknown>;
 };
 
+/** A part of a view, named as the view names it. */
+type ViewPart = keyof Omit<PanelView, "built_at">;
+
 /**
- * Answers an update wait's `view` from each part's own tool, as the service
- * builds it, so tests can hold or fail one part's read.
+ * Answers an update wait's `view` from each requested part's own read, as
+ * the service builds it, so tests can hold or fail one part's read.
  */
 export async function composeView(
   view: unknown,
-  tool: (name: string, args: Record<string, unknown>) => Promise<unknown>,
+  read: (part: ViewPart, args: Record<string, unknown>) => unknown,
 ) {
   const parts = view as ViewParts;
 
-  const read = (name: string, args?: Record<string, unknown>) =>
-    args ? tool(name, args) : undefined;
+  const optional = (part: ViewPart, args?: Record<string, unknown>) =>
+    args ? read(part, args) : undefined;
 
   const [projects, list, chat, activity, pending] = await Promise.all([
-    tool("list_projects", {}),
-    tool("app_list_tasks", parts.list),
-    read("app_get_chat", parts.chat),
-    read("app_get_activity", parts.activity),
-    read("app_list_pending_updates", parts.pending),
+    read("projects", {}),
+    read("list", parts.list),
+    optional("chat", parts.chat),
+    optional("activity", parts.activity),
+    optional("pending", parts.pending),
   ]);
 
   return {
