@@ -6,12 +6,20 @@
 
 <!-- Show visible UI changes with screenshots or video. Delete this section if there are none.
 
-- One screenshot: a plain image. Give a tall one width="50%" so it fits on screen.
-- Several: a two-column table, with a one-line caption above each image.
+- One screenshot: a plain image. Put a tall one in the first cell of the table below and leave the second empty so it fits on screen.
+- Several: a two-column table, with a one-line caption above each image. Keep blank lines around each image.
 
 <table><tr>
-<td width="50%" valign="top"><b>Area:</b> what changed.<br><br><img src="…" alt="…"></td>
-<td width="50%" valign="top"><b>Area:</b> what changed.<br><br><img src="…" alt="…"></td>
+<td width="50%" valign="top"><b>Area:</b> what changed.
+
+![…](./first.png)
+
+</td>
+<td width="50%" valign="top"><b>Area:</b> what changed.
+
+![…](./second.png)
+
+</td>
 </tr></table>
 -->
 
