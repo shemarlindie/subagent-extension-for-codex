@@ -961,6 +961,14 @@ test("a held update wait on the user-tools route returns the new revision when a
   c.store.save(task("a", "local"));
 
   try {
+    const { confirmation } = (await userTool(
+      "local",
+      "app_preview_task_deletion",
+      {
+        task_ids: ["a"],
+      },
+    )) as { confirmation: string };
+
     const before = c.store.revision("local");
 
     const waiting = userTool("local", "app_wait_for_updates", {
@@ -977,7 +985,10 @@ test("a held update wait on the user-tools route returns the new revision when a
     const deleting = Date.now();
 
     assert.deepEqual(
-      await userTool("local", "app_delete_tasks", { task_ids: ["a"] }),
+      await userTool("local", "app_delete_tasks", {
+        task_ids: ["a"],
+        confirmation,
+      }),
       { status: "deleted" },
     );
 

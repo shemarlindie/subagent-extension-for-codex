@@ -221,7 +221,7 @@ function fixtureStore() {
   if (current) return current;
   const directory = mkdtempSync(join(tmpdir(), "panel-fixture-service-"));
   const store = new Store(join(directory, "fixtures.sqlite"));
-  const workspaces = new Workspaces(join(directory, "snapshots"), []);
+  const workspaces = new Workspaces(join(directory, "worktrees"), []);
   // No providers: served tools read changes and manage worktrees, and
   // never run a task.
   const control = new Control(store, workspaces, new Map());

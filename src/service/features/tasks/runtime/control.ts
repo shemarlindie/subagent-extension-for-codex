@@ -67,6 +67,12 @@ import {
   type SentMessage,
 } from "./send-requests.js";
 import { resolveProjectWorkspace, resolveStart } from "./start-request.js";
+import {
+  confirmedTaskDeletion,
+  type DeletionVersions,
+  projectDeletionTasks,
+  taskDeletionPreview,
+} from "./task-deletion.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
 import {
@@ -465,8 +471,9 @@ export class Control {
         });
       },
       session: (id, ref) => {
+        if (t.session_id !== id) delete t.session_state_ref;
         t.session_id = id;
-        t.session_state_ref = ref;
+        if (ref) t.session_state_ref = ref;
         t.session_owner = this.ownerWorker;
         this.store.save(t);
       },
@@ -644,17 +651,52 @@ export class Control {
    * `deleteAgentTask` also deletes the provider's session, which the task
    * could otherwise continue from.
    */
-  async delete(owner: string, ids: string | string[], deleteAgentTask = false) {
-    const batch = [...new Set([ids].flat())].map((id) =>
-      this.mutableTask(owner, id),
-    );
-
-    const doomed = batch.map((t) => t.id);
+  async delete(
+    owner: string,
+    ids: string | string[],
+    deleteAgentTask = false,
+    confirmation?: string,
+  ) {
+    const doomed = [...new Set([ids].flat())];
+    for (const id of doomed) this.mutableTask(owner, id);
     for (const id of doomed) this.deleting.add(id);
 
     try {
-      for (const t of batch) {
-        await this.deleteResources(owner, t.id, deleteAgentTask);
+      let versions: Map<string, DeletionVersions> | undefined;
+
+      if (confirmation) {
+        await confirmedTaskDeletion(
+          this,
+          owner,
+          doomed,
+          deleteAgentTask,
+          confirmation,
+        );
+
+        // Stop every selected task, then verify the reviewed list again.
+        for (const id of doomed) {
+          const active = this.active.get(id);
+          if (active) await this.interruptActive(owner, id, active);
+        }
+
+        const prepared = await confirmedTaskDeletion(
+          this,
+          owner,
+          doomed,
+          deleteAgentTask,
+          confirmation,
+        );
+
+        versions = prepared.versions;
+      }
+
+      for (const id of doomed) {
+        await this.deleteResources(
+          owner,
+          id,
+          deleteAgentTask,
+          versions?.get(id),
+        );
       }
     } finally {
       for (const id of doomed) this.deleting.delete(id);
@@ -663,8 +705,23 @@ export class Control {
     return { status: "deleted" as const };
   }
 
+  taskDeletionPreview(
+    owner: string,
+    ids: string[],
+    includeSession: boolean,
+    project?: string,
+  ) {
+    return taskDeletionPreview(this, owner, ids, includeSession, project);
+  }
+
   /** Holds the whole batch against scheduling and new tasks before cleanup yields. */
-  async removeProject(owner: string, repository: string, deleteTasks = false) {
+  async removeProject(
+    owner: string,
+    repository: string,
+    deleteTasks = false,
+    confirmation?: string,
+    deleteAgentTasks = false,
+  ) {
     if (!this.projects) {
       throw new Error("Project management is unavailable in this service.");
     }
@@ -673,17 +730,9 @@ export class Control {
       throw new Error("Project task data is being removed");
     }
 
-    if (!deleteTasks) return this.projects.remove(repository);
+    if (!deleteTasks) return this.projects.remove(repository, true);
 
-    const tasks = this.store
-      .all()
-      .filter((task) => task.repository === repository);
-
-    if (tasks.some((task) => task.owner !== owner)) {
-      throw new Error(
-        "This project has task data owned by another user. Remove those tasks first.",
-      );
-    }
+    const tasks = projectDeletionTasks(this, owner, repository);
 
     const ids = new Set(tasks.map((task) => task.id));
 
@@ -697,6 +746,17 @@ export class Control {
     for (const id of ids) this.deleting.add(id);
 
     try {
+      if (confirmation) {
+        await confirmedTaskDeletion(
+          this,
+          owner,
+          [...ids],
+          deleteAgentTasks,
+          confirmation,
+          repository,
+        );
+      }
+
       // Keep the whole batch locked until every turn has finished stopping.
       const stopped = await Promise.allSettled(
         tasks.map((task) => {
@@ -711,11 +771,27 @@ export class Control {
       const failure = stopped.find((result) => result.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
 
+      const prepared = confirmation
+        ? await confirmedTaskDeletion(
+            this,
+            owner,
+            [...ids],
+            deleteAgentTasks,
+            confirmation,
+            repository,
+          )
+        : undefined;
+
       for (const task of tasks) {
-        await this.deleteResources(owner, task.id, false);
+        await this.deleteResources(
+          owner,
+          task.id,
+          deleteAgentTasks,
+          prepared?.versions.get(task.id),
+        );
       }
 
-      return this.projects.remove(repository);
+      return this.projects.remove(repository, true);
     } catch (error) {
       throw new Error(
         `Project removal stopped; its approval is retained. Some extension task data may already be removed. ${error instanceof Error ? error.message : String(error)}`,
@@ -731,6 +807,7 @@ export class Control {
     owner: string,
     id: string,
     deleteAgentTask: boolean,
+    versions?: DeletionVersions,
   ) {
     try {
       const a = this.active.get(id);
@@ -745,10 +822,10 @@ export class Control {
           throw new Error("Provider session deletion is unavailable");
         }
 
-        await provider.deleteSession(t);
+        await provider.deleteSession(t, versions?.session);
       }
 
-      await this.workspaces.discard(t);
+      await this.workspaces.discard(t, versions?.workspace);
       this.store.delete(id, owner);
       this.queueWaits.ended(id, "aborted");
 

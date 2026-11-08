@@ -1,0 +1,64 @@
+.task-deletion-details {
+  margin-block: 16px;
+}
+
+.task-deletion-targets {
+  max-height: 280px;
+  overflow: auto;
+  padding-left: 20px;
+}
+
+.task-deletion-targets > li + li {
+  margin-top: 16px;
+}
+
+.task-deletion-details code {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.task-deletion-targets ul {
+  padding-left: 16px;
+}
+
+.task-deletion-group {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.task-deletion-targets li {
+  margin-block: 4px;
+}
+
+.task-deletion-path {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.task-deletion-path code {
+  min-width: 0;
+}
+
+.task-deletion-path-info {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+}
+
+.task-deletion-path-note p,
+.task-deletion-path-note dl {
+  margin: 4px 0;
+}
+
+.task-deletion-path-note dd {
+  margin: 0 0 8px;
+}
+
+.task-deletion-path-note code {
+  white-space: normal;
+}

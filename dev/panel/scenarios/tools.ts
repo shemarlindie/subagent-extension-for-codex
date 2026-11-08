@@ -24,6 +24,7 @@ import {
 import { previewMarkSeen, previewPendingUpdates } from "./pending-update-tools";
 import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
+import { previewTaskDeletion } from "./task-deletion-tools";
 import { lightList, listed, newestFirst } from "./task-list-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -454,6 +455,7 @@ export function previewTool(
     withoutOriginalResponses(eventsFor(id));
 
   const fixtures: Record<string, unknown> = {
+    app_preview_task_deletion: previewTaskDeletion(tasks, args),
     open_subagent_extension_for_codex: openPanel(args, options),
     app_open_subagent_extension_for_codex_global: openPanel(
       { conversation_id: null },

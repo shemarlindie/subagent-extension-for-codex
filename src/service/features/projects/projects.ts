@@ -196,8 +196,9 @@ export class Projects {
    * removed. Another spelling of a saved root, such as a symlink, removes the
    * root it resolves to, so a removal never leaves the approval in place.
    * Removing a root that is already gone succeeds.
+   * Exact removal keeps a changed symlink from redirecting a reviewed saved key.
    */
-  remove(repository: string) {
+  remove(repository: string, exact = false) {
     this.gitStates.clear();
 
     const deleted = (path: string) =>
@@ -206,7 +207,7 @@ export class Projects {
         .where(eq(projectRoots.path, path))
         .run().changes;
 
-    if (!deleted(repository)) {
+    if (!deleted(repository) && !exact) {
       try {
         deleted(realpathSync(repository));
       } catch {}

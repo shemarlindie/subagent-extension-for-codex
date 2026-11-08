@@ -182,19 +182,26 @@ A provider that ends a turn before sending its prompt calls
 
 ## Provider lifecycle methods
 
-| Method                | Purpose                                                                                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `capabilities`        | Declares supported task features and limits. The control plane rejects unsupported budgets before execution.                                    |
-| `readiness()`         | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
-| `models(settings)`    | Optional. Supplies model and effort suggestions using the requesting user's settings. Custom model IDs are still accepted.                      |
-| `policy(settings)`    | Optional. What org policy limits for new tasks. Nothing means nothing known, never that everything is allowed, so checks continue as tasks run. |
-| `deleteSession(task)` | Optional. Deletes provider state only when task deletion asks for it.                                                                           |
-| `close()`             | Optional. Releases provider resources during service shutdown.                                                                                  |
+| Method                                 | Purpose                                                                                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities`                         | Declares supported task features and limits. The control plane rejects unsupported budgets before execution.                                    |
+| `readiness()`                          | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
+| `models(settings)`                     | Optional. Supplies model and effort suggestions using the requesting user's settings. Custom model IDs are still accepted.                      |
+| `policy(settings)`                     | Optional. What org policy limits for new tasks. Nothing means nothing known, never that everything is allowed, so checks continue as tasks run. |
+| `deleteSession(task, expectedVersion)` | Optional. Removes the confirmed session resources. Rejects a changed version.                                                                   |
+| `sessionDeletionStatus(task)`          | Required for session deletion. Lists the verified resources and their version for confirmation.                                                 |
+| `close()`                              | Optional. Releases provider resources during service shutdown.                                                                                  |
 
 When the provider creates a native session, it calls
 `RunContext.session(id, stateRef)` so the service stores the session's identity,
-host owner and state reference. Deleting a session that is already gone must
-succeed. A deletion error keeps the local task resources so the user can retry.
+host owner and state reference. Record a state reference only after locating the
+session's data.
+
+Offer session deletion only when the provider can identify the recorded files.
+Show those files before confirmation and reject deletion if their locations or
+identities change. Remove only the confirmed resources, including data left by
+earlier failed attempts. Succeed when those resources are already absent. A
+deletion error keeps the local task resources available for retry.
 
 The development-only fixture provider implements this contract for deterministic
 checks. Production registration and bundles exclude it. See

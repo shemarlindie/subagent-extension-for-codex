@@ -51,12 +51,12 @@ function WorktreeForm({ dialog }: WorktreeFormProps) {
         </>
       ) : (
         <p className="form-note">
-          Delete branch <code>{task.branch}</code> and the commits only it
-          holds? This can't be undone.
+          Delete local branch <code>{task.branch}</code> and the commits only it
+          holds? Remote branches stay. This can't be undone.
         </p>
       )}
       <FormFooter
-        label={remove ? "Discard changes and remove" : "Delete branch"}
+        label={remove ? "Discard changes and remove" : "Delete local branch"}
         dismissLabel="Cancel"
       />
     </form>
@@ -65,6 +65,6 @@ function WorktreeForm({ dialog }: WorktreeFormProps) {
 
 export const worktreeDialog = defineDialog<"worktree">({
   title: ({ action }) =>
-    action === "remove" ? "Remove worktree?" : "Delete branch?",
+    action === "remove" ? "Remove worktree?" : "Delete local branch?",
   render: (dialog) => <WorktreeForm dialog={dialog} />,
 });

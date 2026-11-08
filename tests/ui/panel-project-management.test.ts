@@ -178,7 +178,9 @@ test("removal uses a focused modal, explains folder retention, and resets the op
   await user.click(screen.getByRole("button", { name: "Remove a" }));
   const modal = screen.getByRole("dialog", { name: "Remove project?" });
 
-  expect(modal.textContent).toContain("Your folder and files stay on disk.");
+  expect(modal.textContent).toContain(
+    "Your folder, task data and provider sessions stay.",
+  );
 
   expect(modal.textContent?.toLowerCase()).not.toContain("delete");
   expect(modal.textContent).not.toContain("through an approved parent folder");

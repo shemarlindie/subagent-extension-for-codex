@@ -77,7 +77,7 @@ console.log(
 const edits = scenario === "edits" ? observedEditsProvider(cli) : undefined;
 
 const provider = () =>
-  edits?.provider ?? new ClaudeAgentProvider(undefined, undefined, cli, true);
+  edits?.provider ?? new ClaudeAgentProvider(undefined, cli, true);
 
 const root = await realpath(
   await mkdtemp(join(tmpdir(), "subagent-extension-for-codex-native-proof-")),

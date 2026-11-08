@@ -22,6 +22,7 @@
 @import "../shared/forms/form-switch.css";
 @import "../features/tasks/controls/permission-request.css";
 @import "../features/tasks/controls/questions.css";
+@import "../features/tasks/controls/task-deletion.css";
 @import "../features/settings/settings.css";
 @import "../features/projects/projects.css";
 @import "../features/tasks/archive/archive.css";

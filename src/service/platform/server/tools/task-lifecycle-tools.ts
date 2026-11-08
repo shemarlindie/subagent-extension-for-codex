@@ -74,20 +74,45 @@ export function taskLifecycleTools(c: Control, owner: string) {
       }),
       run: (a) => c.archive.setArchived(owner, a.task_ids, a.archived),
     }),
+    app_preview_task_deletion: tool({
+      readOnly: true,
+      description:
+        "User interface only: list the exact task records, worktrees, branches and optional provider session files selected for deletion. Returns a confirmation tied to those resources. Show the resources to the user before app_delete_tasks.",
+      // Keep an object root so the MCP SDK preserves the tool's input metadata.
+      schema: z
+        .strictObject({
+          task_ids: z.array(z.string()).min(1).max(1000).optional(),
+          repository: z.string().min(1).max(4096).optional(),
+          delete_agent_task: z.boolean().default(false),
+        })
+        .refine(
+          (a) => !!a.task_ids !== !!a.repository,
+          "Choose task IDs or a project, not both.",
+        ),
+      run: (a) =>
+        c.taskDeletionPreview(
+          owner,
+          a.task_ids ?? [],
+          a.delete_agent_task,
+          a.repository,
+        ),
+    }),
     app_delete_tasks: tool({
       destructive: true,
       description:
-        "User interface only: delete stopped tasks with their events, requests, worktrees and branches. With delete_agent_task it also deletes each provider session. This can't be undone.",
+        "User interface only: delete the tasks and resources reviewed with app_preview_task_deletion. Requires its confirmation and the same task IDs and delete_agent_task choice. Changed resources require a new preview. Running work stops first. This can't be undone.",
       schema: z.strictObject({
         task_ids: z.array(z.string()).min(1).max(1000),
         delete_agent_task: z.boolean().default(false),
+        confirmation: z.string().regex(/^[0-9a-f]{64}$/),
       }),
-      run: (a) => c.delete(owner, a.task_ids, a.delete_agent_task),
+      run: (a) =>
+        c.delete(owner, a.task_ids, a.delete_agent_task, a.confirmation),
     }),
     app_delete_branch: tool({
       destructive: true,
       description:
-        "User interface only: delete a stopped worktree task's branch once its worktree is removed.",
+        "User interface only: delete a stopped worktree task's local branch once its worktree is removed. Remote branches are not changed.",
       schema: taskId,
       run: (a) => c.deleteBranch(owner, a.task_id),
     }),

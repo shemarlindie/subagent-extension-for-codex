@@ -24,52 +24,48 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   let options: Options | undefined;
   let closed = false;
 
-  const provider = new ClaudeAgentProvider(
-    (args) => {
-      options = args.options;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
 
-      const messages = (async function* () {
-        yield {
-          type: "system",
-          subtype: "init",
-          session_id: "existing-session",
-          model: "configured-model",
-          tools: ["Read"],
-        };
+    const messages = (async function* () {
+      yield {
+        type: "system",
+        subtype: "init",
+        session_id: "existing-session",
+        model: "configured-model",
+        tools: ["Read"],
+      };
 
-        yield {
-          type: "assistant",
-          message: {
-            content: [
-              { type: "text", text: "Inspecting" },
-              {
-                type: "tool_use",
-                id: "tool-1",
-                name: "Read",
-                input: { file_path: "a.ts" },
-              },
-            ],
-          },
-        };
+      yield {
+        type: "assistant",
+        message: {
+          content: [
+            { type: "text", text: "Inspecting" },
+            {
+              type: "tool_use",
+              id: "tool-1",
+              name: "Read",
+              input: { file_path: "a.ts" },
+            },
+          ],
+        },
+      };
 
-        yield {
-          type: "result",
-          subtype: "success",
-          is_error: false,
-          session_id: "existing-session",
-          result: reply,
-          total_cost_usd: 0.1,
-          usage: {},
-        };
-      })();
+      yield {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "existing-session",
+        result: reply,
+        total_cost_usd: 0.1,
+        usage: {},
+      };
+    })();
 
-      return Object.assign(messages, {
-        close: () => (closed = true),
-      }) as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+    return Object.assign(messages, {
+      close: () => (closed = true),
+    }) as unknown as Query;
+  }, readyClaudeCli);
 
   assert.deepEqual(await provider.run(c, "Review"), { reply });
   assert.equal(options!.cwd, c.task.workspace);
@@ -98,7 +94,6 @@ test("Claude forwards the selected model and effort without changing its resolve
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 
@@ -123,27 +118,23 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   c.task.budget.max_cost_usd = null;
   let options: Options | undefined;
 
-  const provider = new ClaudeAgentProvider(
-    (args) => {
-      options = args.options;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
 
-      const messages = (async function* () {
-        yield {
-          type: "result",
-          subtype: "success",
-          is_error: false,
-          session_id: "existing-session",
-          result: reply,
-          total_cost_usd: 0.1,
-          usage: {},
-        };
-      })();
+    const messages = (async function* () {
+      yield {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "existing-session",
+        result: reply,
+        total_cost_usd: 0.1,
+        usage: {},
+      };
+    })();
 
-      return Object.assign(messages, { close: () => {} }) as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+    return Object.assign(messages, { close: () => {} }) as unknown as Query;
+  }, readyClaudeCli);
 
   assert.deepEqual(await provider.run(c, "Review"), { reply });
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
@@ -223,7 +214,6 @@ test("a refusal shows Claude Code's own text, and result failures retain codes a
 
     return new ClaudeAgentProvider(
       launch as unknown as ConstructorParameters<typeof ClaudeAgentProvider>[0],
-      undefined,
       readyClaudeCli,
     ).run(c, "Work");
   };
@@ -249,26 +239,22 @@ test("Claude asks for a plain reply before the custom instructions, with no stru
   c.task.profile_instructions = "Cite file paths.";
   let options: Options | undefined;
 
-  const provider = new ClaudeAgentProvider(
-    (args) => {
-      options = args.options;
+  const provider = new ClaudeAgentProvider((args) => {
+    options = args.options;
 
-      return Object.assign(
-        (async function* () {
-          yield {
-            type: "result",
-            subtype: "success",
-            result: "Reviewed **a.ts**; one check is missing.",
-            total_cost_usd: 0,
-            usage: {},
-          };
-        })(),
-        { close: () => {} },
-      ) as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+    return Object.assign(
+      (async function* () {
+        yield {
+          type: "result",
+          subtype: "success",
+          result: "Reviewed **a.ts**; one check is missing.",
+          total_cost_usd: 0,
+          usage: {},
+        };
+      })(),
+      { close: () => {} },
+    ) as unknown as Query;
+  }, readyClaudeCli);
 
   assert.deepEqual(await provider.run(c, "Report"), {
     reply: "Reviewed **a.ts**; one check is missing.",
@@ -300,14 +286,10 @@ test("Claude rejects unresolved native task state before launching a harness", a
   const { c } = await context();
   let launched = false;
 
-  const provider = new ClaudeAgentProvider(
-    () => {
-      launched = true;
-      throw new Error("Harness should not launch");
-    },
-    undefined,
-    readyClaudeCli,
-  );
+  const provider = new ClaudeAgentProvider(() => {
+    launched = true;
+    throw new Error("Harness should not launch");
+  }, readyClaudeCli);
 
   for (const field of [
     "claude_policy",
@@ -347,7 +329,6 @@ test("an unsupported Claude CLI fails the turn and model discovery without launc
 
       return {} as Query;
     },
-    undefined,
     {
       status: async () => ({
         ready: false,
@@ -389,28 +370,24 @@ test("a turn interrupted before its prompt sends nothing and holds the prompt", 
     held += 1;
   };
 
-  const provider = new ClaudeAgentProvider(
-    (args) => {
-      controller.abort();
+  const provider = new ClaudeAgentProvider((args) => {
+    controller.abort();
 
-      // Ends once the input does, without a result.
-      return {
-        [Symbol.asyncIterator]: () => ({
-          next: async () => {
-            for await (const message of args.prompt as AsyncIterable<unknown>) {
-              sent.push(message);
-            }
+    // Ends once the input does, without a result.
+    return {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => {
+          for await (const message of args.prompt as AsyncIterable<unknown>) {
+            sent.push(message);
+          }
 
-            return { done: true, value: undefined };
-          },
-        }),
-        close: () => {},
-        interrupt: async () => {},
-      } as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+          return { done: true, value: undefined };
+        },
+      }),
+      close: () => {},
+      interrupt: async () => {},
+    } as unknown as Query;
+  }, readyClaudeCli);
 
   await assert.rejects(provider.run(c, "Implement"), /without a result/);
   assert.deepEqual(sent, []);

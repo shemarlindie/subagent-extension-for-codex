@@ -88,11 +88,12 @@ export function ProjectArchive({
   const unarchive = () =>
     act(() => controller.taskActions.archive.setArchived(targets, false));
 
-  const remove = (deleteAgentTasks: boolean) =>
+  const remove = (deleteAgentTasks: boolean, confirmation: string) =>
     act(async () => {
       await controller.tool("app_delete_tasks", {
         task_ids: targets.map((task) => task.id),
         delete_agent_task: deleteAgentTasks,
+        confirmation,
       });
 
       setConfirming(false);
@@ -162,7 +163,7 @@ export function ProjectArchive({
               </div>
               <Presence show={confirming}>
                 <ArchiveDeleteConfirm
-                  count={targets.length}
+                  taskIds={targets.map((task) => task.id)}
                   pending={disabled}
                   onCancel={() => setConfirming(false)}
                   onConfirm={remove}

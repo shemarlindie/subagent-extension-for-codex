@@ -9,6 +9,7 @@ import {
   gitWorkTreeRoot,
   WORKTREE_NEEDS_GIT,
 } from "./git.js";
+import { branchTip, workspaceDeletion } from "./workspace-deletion.js";
 
 const exists = (path: string) =>
   access(path).then(
@@ -168,6 +169,8 @@ export class Workspaces {
       throw new Error("The worktree was already removed.");
     }
 
+    const resources = await this.managedDeletion(t);
+
     if (!force) {
       // "XY path" entries; a rename or copy is followed by its old path.
       // Ignored files don't block removal.
@@ -190,15 +193,14 @@ export class Workspaces {
       "worktree",
       "remove",
       ...(force ? ["--force"] : []),
-      t.workspace,
+      resources.worktree!,
     ]);
 
     return { status: "removed" as const };
   }
 
   /**
-   * Deletes a worktree task's branch, once its worktree is removed, and its
-   * snapshot refs, since nothing reads its changes after that.
+   * Deletes a worktree task's branch once its worktree is removed.
    */
   async deleteBranch(t: Task) {
     if (t.workspace_strategy !== "worktree" || !t.workspace || !t.branch) {
@@ -209,24 +211,68 @@ export class Workspaces {
       throw new Error("Remove the worktree before deleting its branch.");
     }
 
+    await this.managedDeletion(t);
+
     await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
   }
 
   /**
-   * Removes everything a task left in its repository: a worktree task's
-   * worktree, uncommitted changes included, its branch and its snapshot refs.
-   * A current_repo task's checkout is the user's own and stays as it is.
+   * Removes the task's worktree, including uncommitted files, and its branch.
+   * A current_repo task's checkout stays as it is.
    */
-  async discard(t: Task) {
-    if (t.workspace_strategy === "worktree" && t.workspace) {
-      if (await exists(t.workspace)) {
-        await git(t.repository, ["worktree", "remove", "--force", t.workspace]);
+  async discard(t: Task, expectedVersion?: string) {
+    const resources = await this.deletion(t);
+
+    if (expectedVersion && expectedVersion !== resources.version) {
+      throw new Error(
+        "Worktree or branch changed. Review the deletion details again.",
+      );
+    }
+
+    if (resources.worktree) {
+      await git(t.repository, [
+        "worktree",
+        "remove",
+        "--force",
+        resources.worktree,
+      ]);
+    }
+
+    if (resources.branch) {
+      const tip = await branchTip(t.repository, resources.branch);
+
+      if (tip && tip !== resources.branchTip) {
+        throw new Error(
+          "The branch changed during cleanup. Review the deletion details again.",
+        );
       }
 
-      if (t.branch && (await this.branchExists(t))) {
-        await git(t.repository, ["branch", "-D", "--end-of-options", t.branch]);
+      if (tip) {
+        await git(t.repository, [
+          "branch",
+          "-D",
+          "--end-of-options",
+          resources.branch,
+        ]);
       }
     }
+  }
+
+  deletion(t: Task) {
+    return workspaceDeletion(t, this.root);
+  }
+
+  /** Worktree actions only change a worktree inside the managed folder. */
+  private async managedDeletion(t: Task) {
+    const resources = await this.deletion(t);
+
+    if (resources.retained) {
+      throw new Error(
+        "The recorded worktree is outside this task's managed location.",
+      );
+    }
+
+    return resources;
   }
 
   /** Whether a worktree task's worktree is gone, so its next turn recreates it. */

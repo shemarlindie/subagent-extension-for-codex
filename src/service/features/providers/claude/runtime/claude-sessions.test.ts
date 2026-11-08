@@ -12,95 +12,7 @@ import {
   settingsDefaults,
   withSetting,
 } from "../../../../../shared/settings/settings-schema.js";
-import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
 import { ClaudeAgentProvider } from "./provider.js";
-
-test("Claude session deletion skips absent ids and forwards existing sessions", async () => {
-  const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Delete" }),
-    title: "Delete",
-    id: "delete-task",
-    owner: "alice",
-    status: "completed",
-    created_at: "now",
-    updated_at: "now",
-    created_by: "user",
-    instructions_sent: 0,
-    pending_steers: [],
-    queue: [],
-    turn: 1,
-    runtime_ms: 0,
-  };
-
-  const calls: string[] = [];
-
-  const provider = new ClaudeAgentProvider(
-    undefined,
-    async (id) => {
-      calls.push(id);
-    },
-    readyClaudeCli,
-  );
-
-  await provider.deleteSession(task);
-  assert.deepEqual(calls, []);
-  await provider.deleteSession({ ...task, session_id: "session-one" });
-  assert.deepEqual(calls, ["session-one"]);
-});
-
-test("Claude session deletion only tolerates the SDK's missing-session error", async () => {
-  const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Delete" }),
-    title: "Delete",
-    id: "delete-task",
-    owner: "alice",
-    status: "completed",
-    created_at: "now",
-    updated_at: "now",
-    created_by: "user",
-    instructions_sent: 0,
-    pending_steers: [],
-    queue: [],
-    turn: 1,
-    runtime_ms: 0,
-    session_id: "session-one",
-  };
-
-  const missing = new Error(
-    "Session session-one not found in any project directory",
-  );
-
-  const absent = new ClaudeAgentProvider(
-    undefined,
-    async () => {
-      throw missing;
-    },
-    readyClaudeCli,
-  );
-
-  await absent.deleteSession(task);
-
-  for (const error of [
-    new Error("subagent cleanup failed"),
-    new Error("Session other-session not found in any project directory"),
-    "cleanup failed",
-  ]) {
-    const failed = new ClaudeAgentProvider(
-      undefined,
-      async () => {
-        throw error;
-      },
-      readyClaudeCli,
-    );
-
-    for (const session_state_ref of [undefined, "/missing/transcript.jsonl"]) {
-      await assert.rejects(
-        failed.deleteSession({ ...task, session_state_ref }),
-        (actual: unknown) => actual === error,
-      );
-    }
-  }
-});
 
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
   let time = 1000;
@@ -126,23 +38,19 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
     },
   ];
 
-  const provider = new ClaudeAgentProvider(
-    (args) => {
-      launches++;
-      discoveryPrompt = args.prompt as AsyncIterable<any>;
-      options = args.options;
+  const provider = new ClaudeAgentProvider((args) => {
+    launches++;
+    discoveryPrompt = args.prompt as AsyncIterable<any>;
+    options = args.options;
 
-      return {
-        supportedModels: () => pending,
-        setPermissionMode: async () => {},
-        close: () => {
-          closes++;
-        },
-      } as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+    return {
+      supportedModels: () => pending,
+      setPermissionMode: async () => {},
+      close: () => {
+        closes++;
+      },
+    } as unknown as Query;
+  }, readyClaudeCli);
 
   const first = provider.models();
   void provider.models();
@@ -190,26 +98,22 @@ test("failed Claude model discovery closes the query and retries after a short c
   let attempts = 0;
   let closes = 0;
 
-  const provider = new ClaudeAgentProvider(
-    () => {
-      const attempt = ++attempts;
+  const provider = new ClaudeAgentProvider(() => {
+    const attempt = ++attempts;
 
-      return {
-        supportedModels: async () => {
-          if (attempt === 1) throw new Error("SDK discovery failed");
+    return {
+      supportedModels: async () => {
+        if (attempt === 1) throw new Error("SDK discovery failed");
 
-          return [
-            { value: "retried-model", displayName: "Retried", description: "" },
-          ];
-        },
-        close: () => {
-          closes++;
-        },
-      } as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+        return [
+          { value: "retried-model", displayName: "Retried", description: "" },
+        ];
+      },
+      close: () => {
+        closes++;
+      },
+    } as unknown as Query;
+  }, readyClaudeCli);
 
   await assert.rejects(provider.models(), /SDK discovery failed/);
   assert.equal(closes, 1);
@@ -237,20 +141,16 @@ test("Claude discovery keeps concurrent requests, results and failures separate 
   const releases: ((models: ModelChoice[]) => void)[] = [];
   const failures: ((error: Error) => void)[] = [];
 
-  const provider = new ClaudeAgentProvider(
-    ({ options }) => {
-      launches.push(options!);
+  const provider = new ClaudeAgentProvider(({ options }) => {
+    launches.push(options!);
 
-      const result = new Promise<ModelChoice[]>((resolve, reject) => {
-        releases.push(resolve);
-        failures.push(reject);
-      });
+    const result = new Promise<ModelChoice[]>((resolve, reject) => {
+      releases.push(resolve);
+      failures.push(reject);
+    });
 
-      return { supportedModels: () => result, close() {} } as unknown as Query;
-    },
-    undefined,
-    readyClaudeCli,
-  );
+    return { supportedModels: () => result, close() {} } as unknown as Query;
+  }, readyClaudeCli);
 
   const loaded = provider.models(defaults);
   const unloaded = provider.models(isolated);

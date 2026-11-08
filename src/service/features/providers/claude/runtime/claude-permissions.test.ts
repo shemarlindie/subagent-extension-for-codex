@@ -182,7 +182,6 @@ test("write-profile shell commands require human decision and cannot use edited 
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 
@@ -237,7 +236,6 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 
@@ -275,7 +273,6 @@ test("every profile gets the full tool preset and no prompt rule against editing
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 
@@ -305,7 +302,6 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 
@@ -366,7 +362,6 @@ test("only Claude's own question tool takes answers; other requests stay permiss
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 

@@ -45,7 +45,6 @@ export function observedEditsProvider(cli) {
 
       return query({ ...input, options });
     },
-    undefined,
     cli,
     true,
   );

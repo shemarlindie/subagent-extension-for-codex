@@ -149,11 +149,10 @@ test("a steer goes into the running turn as a priority next message, and is take
     yield result("Done");
   });
 
-  const reply = await new ClaudeAgentProvider(
-    query.launch,
-    undefined,
-    readyClaudeCli,
-  ).run(ctx.c, "Prompt");
+  const reply = await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
 
   assert.deepEqual(reply, { reply: "Done" });
   assert.equal(steerMessage?.priority, "next");
@@ -180,7 +179,7 @@ test("a steer already waiting when the turn starts follows the prompt", async ()
     yield result("Done");
   });
 
-  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+  await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
     ctx.c,
     "Prompt",
   );
@@ -209,7 +208,7 @@ test("only a turn's first start says which mode the task got, since a later one 
     yield result("Done");
   });
 
-  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+  await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
     ctx.c,
     "Prompt",
   );
@@ -241,7 +240,7 @@ test("a steer the turn won't take is withdrawn as the final message ends, and no
     },
   );
 
-  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+  await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
     ctx.c,
     "Prompt",
   );
@@ -267,11 +266,10 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
     { cancelAsyncMessage: async () => false },
   );
 
-  const reply = await new ClaudeAgentProvider(
-    query.launch,
-    undefined,
-    readyClaudeCli,
-  ).run(ctx.c, "Prompt");
+  const reply = await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
+    ctx.c,
+    "Prompt",
+  );
 
   assert.deepEqual(reply, { reply: "Second" });
   assert.deepEqual(ctx.taken, ["msg_late"]);
@@ -286,7 +284,7 @@ const replyTo = async (frames: (uuid: string) => Frame[]) => {
     yield* frames(uuid!);
   });
 
-  return new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+  return new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
     ctx.c,
     "Prompt",
   );
@@ -354,10 +352,7 @@ test("an interrupt ends the turn through the query, cancelling queued messages, 
   );
 
   await assert.rejects(
-    new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
-      ctx.c,
-      "Prompt",
-    ),
+    new ClaudeAgentProvider(query.launch, readyClaudeCli).run(ctx.c, "Prompt"),
     { code: "error_during_execution", message: "aborted" },
   );
 
@@ -389,10 +384,7 @@ test("an interrupt that fails stops the process instead", async () => {
   );
 
   await assert.rejects(
-    new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
-      ctx.c,
-      "Prompt",
-    ),
+    new ClaudeAgentProvider(query.launch, readyClaudeCli).run(ctx.c, "Prompt"),
     { code: "error_during_execution", message: "aborted" },
   );
 
@@ -437,7 +429,7 @@ test("the main worker's text streams as deltas, and other stream frames are left
     yield result("Hello");
   });
 
-  await new ClaudeAgentProvider(query.launch, undefined, readyClaudeCli).run(
+  await new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
     ctx.c,
     "Prompt",
   );
