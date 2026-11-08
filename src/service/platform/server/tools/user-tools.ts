@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
+import { chatRead } from "../../../features/tasks/conversation/chat-read.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
 import { panelTaskList } from "../../panel/panel-context.js";
 import {
@@ -127,18 +127,7 @@ export function userTools(
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
       }),
-      run: (a) => {
-        const t = c.store.get(a.task_id, owner);
-        const events = c.store.chatEvents(t.id);
-
-        return {
-          items: chatItems(t, events).filter(
-            (item) =>
-              item.event_id > a.after || (a.after === 0 && item.event_id === 0),
-          ),
-          next_cursor: Math.max(a.after, events.at(-1)?.id ?? 0),
-        };
-      },
+      run: (a) => chatRead(c.store, c.store.get(a.task_id, owner), a.after),
     }),
     app_wait_for_updates: tool({
       readOnly: true,

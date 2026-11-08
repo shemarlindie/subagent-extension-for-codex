@@ -537,14 +537,14 @@ export class Store {
       .map(decodeEvent);
   }
 
-  /** The events Chat shows, in order. */
-  chatEvents(id: string): Event[] {
-    return this.reads.rows("chat", () => chatEvents(this.orm, id));
+  /** The events Chat shows, in order, or none when none is newer than `after`. */
+  chatEvents(id: string, after = 0): Event[] {
+    return this.reads.rows("chat", () => chatEvents(this.orm, id, after));
   }
 
   /** A task's Chat events of `types`, in order, for its conversation. */
   conversationEvents(id: string, types: readonly string[]): Event[] {
-    return chatEvents(this.orm, id, types);
+    return chatEvents(this.orm, id, 0, types);
   }
 
   close() {
