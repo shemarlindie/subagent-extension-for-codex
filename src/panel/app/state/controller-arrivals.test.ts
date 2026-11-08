@@ -18,8 +18,17 @@ test("a selected arrival does not hide another newly listed task", async (t) => 
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("old")];
   await controller.start();
-  await controller.select("selected-new");
   transport.tasks = [task("selected-new"), task("new-other"), task("old")];
+
+  // The host opens the panel on a task it just started.
+  controller.applyScope(
+    {
+      panel_scope: { conversation_id: null },
+      panel_selection: { task_id: "selected-new" },
+    },
+    false,
+  );
+
   await controller.refresh();
   expect(controller.getSnapshot().selected).toBe("selected-new");
   expect(controller.getSnapshot().taskArrival?.id).toBe("new-other");

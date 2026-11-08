@@ -190,9 +190,9 @@ export class Store {
   }
 
   /**
-   * An opaque token for the state of an owner's tasks and the project list.
-   * It differs whenever either has changed, including across a restart, so
-   * clients compare it only for equality.
+   * A token for the state of an owner's tasks and the project list,
+   * `bootId:count`. It differs whenever either has changed, including across
+   * a restart, and the count only grows within a boot.
    */
   revision(owner: string) {
     const count = (this.revisions.get(owner) ?? 0) + this.projectRevision;
@@ -537,14 +537,14 @@ export class Store {
       .map(decodeEvent);
   }
 
-  /** The events Chat shows, in order. */
-  chatEvents(id: string): Event[] {
-    return this.reads.rows("chat", () => chatEvents(this.orm, id));
+  /** The events Chat shows, in order, or none when none is newer than `after`. */
+  chatEvents(id: string, after = 0): Event[] {
+    return this.reads.rows("chat", () => chatEvents(this.orm, id, after));
   }
 
   /** A task's Chat events of `types`, in order, for its conversation. */
   conversationEvents(id: string, types: readonly string[]): Event[] {
-    return chatEvents(this.orm, id, types);
+    return chatEvents(this.orm, id, 0, types);
   }
 
   close() {

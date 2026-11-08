@@ -30,23 +30,10 @@ export function activityTools(c: Control, owner: string) {
           : { available: true, original };
       },
     }),
-    app_get_activity: tool({
-      readOnly: true,
-      description:
-        "User interface only: a task's activity for the panel's Activity tab: its newest events after a cursor, and a tally of the older events outside the window (the summary's count, timestamps, tool calls, messages, failures and retries).",
-      schema: taskId.extend({
-        after: z.number().int().nonnegative().default(0),
-      }),
-      run: (a) => {
-        c.store.get(a.task_id, owner);
-
-        return c.activity.page(a.task_id, a.after);
-      },
-    }),
     app_get_turn_activity: tool({
       readOnly: true,
       description:
-        "User interface only: one turn's activity for the panel's Activity tab: the events after the previous turn's closing status event through this turn's, or to the newest event while the turn runs. Its newest events come with a tally of the older ones, as app_get_activity gives them.",
+        "User interface only: one turn's activity for the panel's Activity tab: the events after the previous turn's closing status event through this turn's, or to the newest event while the turn runs. Its newest events come with a tally of the older ones, as a view's Activity gives them.",
       schema: taskId.extend({ turn: z.number().int().positive() }),
       run: (a) => {
         c.store.get(a.task_id, owner);

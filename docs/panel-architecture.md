@@ -53,10 +53,10 @@ Some features have boundaries worth knowing:
 
 `Controller` (`app/state/controller.ts`) owns scope, selection and async
 coordination, and delegates feature work to loaders and actions.
-`TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) reads Chat and
-Activity, including turn history. The controller retains selection generations
-and scope invalidation, which make outdated detail reads obsolete. Components
-use these entry points:
+`TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) merges Chat and
+Activity from the panel's views and reads turn history. The controller retains
+selection generations and scope invalidation, which make outdated detail reads
+obsolete. Components use these entry points:
 
 - `controller.taskActions` runs task mutations.
 - `controller.newTasks` runs the new-task composer.
@@ -300,7 +300,8 @@ retries.
   separately from stored messages. `DraftFollower` keeps completed streamed and
   task-list drafts shown until Chat holds the stored message, or until a Chat
   read that started later finds none, so a finished reply never disappears in
-  between.
+  between. A view's list and Chat come from one service snapshot, so the Chat in
+  the view whose list ends a draft already counts as later.
 - **Settings:** the service supplies typed sections and rows. Save only changed
   fields, preserve disabled budget amounts, and keep section drafts during
   navigation and validation. Search and browsing share mounted controls to

@@ -9,7 +9,7 @@ import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
-import { pendingUpdates } from "./pending-update-loader";
+import { pendingUpdates } from "./pending-update-tracker";
 import {
   pendingUpdatesMessage,
   UPDATE_LABELS,

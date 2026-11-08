@@ -883,3 +883,44 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     );
   },
 );
+
+test("known Git state joins the projects as they are now", async (t) => {
+  const f = await fixture(t);
+
+  const kept = await f.repo("kept");
+  const removed = await f.repo("removed");
+  const reregistered = await f.repo("reregistered");
+
+  for (const repository of [kept, removed, reregistered]) {
+    await f.projects.register(repository);
+  }
+
+  const known = await f.projects.listWithGit();
+  assert.ok(known.every((project) => project.git));
+
+  // Changes that land while a view waits on Git.
+  f.projects.rename(kept, "Renamed");
+  f.projects.remove(removed);
+  await f.projects.register(reregistered, "parent");
+  const added = await f.repo("added");
+  await f.projects.register(added);
+
+  assert.deepEqual(
+    f.projects.withKnownGit(known).map(({ repository, name, kind, git }) => ({
+      repository,
+      name,
+      kind,
+      git: !!git,
+    })),
+    [
+      { repository: added, name: "added", kind: "repository", git: false },
+      { repository: kept, name: "Renamed", kind: "repository", git: true },
+      {
+        repository: reregistered,
+        name: "reregistered",
+        kind: "parent",
+        git: false,
+      },
+    ],
+  );
+});

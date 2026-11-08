@@ -248,30 +248,40 @@ test("activity labels reserve one line without moving the conversation", async (
   // Vary only activity, keeping the real fixture conversation unchanged.
   let activity: string | undefined;
 
-  await page.route("**/api/tools/app_list_tasks", async (route) => {
+  await page.route("**/api/tools/app_wait_for_updates", async (route) => {
     const response = await route.fetch();
-    const body = (await response.json()) as { result: { tasks: Task[] } };
 
-    await route.fulfill({
+    const body = (await response.json()) as {
+      result: { view?: { list: { tasks: Task[] }; activity?: unknown } };
+    };
+
+    const { view } = body.result;
+    if (!view) return route.fulfill({ response });
+
+    return route.fulfill({
       response,
       json: {
         ...body,
         result: {
-          tasks: body.result.tasks.map((task) => ({
-            ...task,
-            status: activity ? "running" : "completed",
-            live_activity: activity
-              ? { text: activity, state: "running" }
-              : undefined,
-          })),
+          ...body.result,
+          view: {
+            ...view,
+            list: {
+              ...view.list,
+              tasks: view.list.tasks.map((task) => ({
+                ...task,
+                status: activity ? "running" : "completed",
+                live_activity: activity
+                  ? { text: activity, state: "running" }
+                  : undefined,
+              })),
+            },
+            ...(view.activity ? { activity: { events: [] } } : {}),
+          },
         },
       },
     });
   });
-
-  await page.route("**/api/tools/app_get_activity", (route) =>
-    route.fulfill({ json: { result: { events: [] } } }),
-  );
 
   await page.reload();
   await expect(history).toContainText("Fixture session turn: 1.");

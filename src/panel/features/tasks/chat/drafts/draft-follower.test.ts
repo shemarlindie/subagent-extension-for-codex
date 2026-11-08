@@ -139,16 +139,17 @@ test("a streamed draft stays shown until Chat holds its stored message", () => {
   assert.equal(state().draft, undefined);
 });
 
-test.each(["a later read", "the stored message"] as const)(
+test.each(["its own view's Chat read", "the stored message"] as const)(
   "a listed draft survives an older Chat read and releases after %s",
   (release) => {
     const { follower, state, set, refreshes } = fixture();
     const draft = { message_id: "listed", text: "Complete reply" };
     set({ tasks: [{ ...task("a"), draft }] });
     const inFlight = follower.reading();
+    const view = follower.reading();
     const next = { ...task("a"), status: "completed" as const };
 
-    set({ draft: follower.retainListed(next), tasks: [next] });
+    set({ draft: follower.retainListed(next, view), tasks: [next] });
     follower.show(inFlight);
 
     assert.deepEqual(state().draft, { task: "a", ...draft });
@@ -180,7 +181,7 @@ test.each(["a later read", "the stored message"] as const)(
 
       follower.show(inFlight);
     } else {
-      follower.show(follower.reading());
+      follower.show(view);
     }
 
     assert.equal(state().draft, undefined);
@@ -208,8 +209,9 @@ test("a canonical streamed draft wins when an older listed fallback clears", () 
 
   const canonical = state().draft;
   const next = task("a");
-  set({ draft: follower.retainListed(next), tasks: [next] });
-  follower.show(follower.reading());
+  const view = follower.reading();
+  set({ draft: follower.retainListed(next, view), tasks: [next] });
+  follower.show(view);
 
   assert.equal(state().draft, canonical);
   assert.equal(state().draft?.text, "Current streamed reply");
@@ -224,7 +226,7 @@ test("changing the selected task cannot retain the previous task's draft", () =>
     ],
   });
 
-  assert.equal(follower.retainListed(task("b")), undefined);
+  assert.equal(follower.retainListed(task("b"), follower.reading()), undefined);
 
   follower.apply({
     task_id: "a",
@@ -233,5 +235,5 @@ test("changing the selected task cannot retain the previous task's draft", () =>
     text: "Previous streamed reply",
   });
 
-  assert.equal(follower.retainListed(task("b")), undefined);
+  assert.equal(follower.retainListed(task("b"), follower.reading()), undefined);
 });

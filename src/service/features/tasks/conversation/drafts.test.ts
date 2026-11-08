@@ -37,31 +37,35 @@ test("drafts grow by deltas, start over for another message and publish each cha
   ]);
 });
 
+/** Fails unless `wait` ends well before its 5-second limit. */
+async function promptly(wait: Promise<void>) {
+  const started = Date.now();
+  await wait;
+  assert.ok(Date.now() - started < 1000);
+}
+
 test("a draft read waits for growth or a clear, or times out", async () => {
   const bus = new EventEmitter();
   const drafts = new Drafts(bus);
   drafts.append("alice", "t", "m", "Hi");
 
   // Already ahead of the reader: returns at once.
-  assert.deepEqual(await drafts.wait("t", { length: 0 }, 1000), {
-    message_id: "m",
-    text: "Hi",
-  });
+  assert.ok(drafts.differs("t", { length: 0 }));
+  await promptly(drafts.wait("t", { length: 0 }, 5000));
 
   const grown = drafts.wait("t", { message_id: "m", length: 2 }, 5000);
 
   drafts.append("alice", "t", "m", " there");
-  assert.deepEqual(await grown, { message_id: "m", text: "Hi there" });
+  await promptly(grown);
 
   const cleared = drafts.wait("t", { message_id: "m", length: 8 }, 5000);
 
   drafts.clear("t");
-  assert.equal(await cleared, undefined);
+  await promptly(cleared);
 
   const started = Date.now();
-
-  assert.equal(await drafts.wait("t", { length: 0 }, 50), undefined);
-
+  assert.ok(!drafts.differs("t", { length: 0 }));
+  await drafts.wait("t", { length: 0 }, 50);
   assert.ok(Date.now() - started >= 40);
   assert.equal(bus.listenerCount("draft"), 0);
 });
@@ -75,11 +79,9 @@ test("a draft wait ends when its wake signal aborts", async () => {
   const wake = new AbortController();
   const waiting = drafts.wait("t", known, 5000, wake.signal);
   wake.abort();
-  assert.deepEqual(await waiting, { message_id: "m", text: "Hi" });
+  await promptly(waiting);
   assert.equal(bus.listenerCount("draft"), 0);
 
   // An aborted signal returns at once.
-  const started = Date.now();
-  await drafts.wait("t", known, 5000, wake.signal);
-  assert.ok(Date.now() - started < 1000);
+  await promptly(drafts.wait("t", known, 5000, wake.signal));
 });

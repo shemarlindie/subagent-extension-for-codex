@@ -48,7 +48,7 @@ export function activityCursor(events: Event[], taskId: string) {
 }
 
 /**
- * Merges a page from app_get_activity into the view. The page holds the
+ * Merges a view's Activity page into the panel's. The page holds the
  * newest events after the cursor, so appending them and keeping the last
  * EVENT_TAIL_SIZE matches the service's window. The tally is the service's
  * own, so it replaces the previous one. Unchanged parts keep their identity,

@@ -6,7 +6,7 @@ import { decodedEvent } from "../../../shared/events/decode";
 import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
 import { deferred, flush, setup, task } from "./controller-test-harness";
 
-test("selected activity loading clears independently from chat history", async (t) => {
+test("a default selection shows history loading until its details arrive", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
 
@@ -16,38 +16,31 @@ test("selected activity loading clears independently from chat history", async (
     panel_scope: { conversation_id: "thread-one" },
   };
 
-  const tasksRead = deferred<unknown>();
-  const activityRead = deferred<unknown>();
-  const chatRead = deferred<unknown>();
+  transport.tasks = [selected];
+  const details = deferred<void>();
 
-  transport.handler = (name) => {
-    if (name === "app_list_tasks") return tasksRead.promise;
-    if (name === "app_get_activity") return activityRead.promise;
-    if (name === "app_get_chat") return chatRead.promise;
-
-    return undefined;
+  const answers: Record<string, unknown> = {
+    "view.activity": { events: [] },
+    "view.chat": { items: [], next_cursor: 0 },
   };
+
+  transport.handler = (name) =>
+    name in answers ? details.promise.then(() => answers[name]) : undefined;
 
   assert.equal(controller.getSnapshot().taskListLoading, true);
   const starting = controller.start();
   await flush();
-  assert.equal(controller.getSnapshot().taskListLoading, true);
 
-  tasksRead.resolve({ tasks: [selected] });
-  await flush();
+  // The first view had no selection, so the list chose one to read.
   assert.equal(controller.getSnapshot().taskListLoading, false);
   assert.equal(controller.getSnapshot().selected, selected.id);
   assert.equal(controller.getSnapshot().chatHistoryLoading, selected.id);
   assert.equal(controller.getSnapshot().activityHistoryLoading, selected.id);
 
-  activityRead.resolve({ events: [] });
-  await flush();
-  assert.equal(controller.getSnapshot().activityHistoryLoading, undefined);
-  assert.equal(controller.getSnapshot().chatHistoryLoading, selected.id);
-
-  chatRead.resolve({ items: [], next_cursor: 0 });
+  details.resolve();
   await starting;
   assert.equal(controller.getSnapshot().chatHistoryLoading, undefined);
+  assert.equal(controller.getSnapshot().activityHistoryLoading, undefined);
 });
 
 test("returning to a task rejects chat and activity from its previous selection", async (t) => {
@@ -61,25 +54,29 @@ test("returning to a task rejects chat and activity from its previous selection"
 
   transport.handler = (name, args) => {
     if (firstSelection && args.task_id === "a") {
-      if (name === "app_get_activity") return activityRead.promise;
-      if (name === "app_get_chat") return chatRead.promise;
+      if (name === "view.activity") return activityRead.promise;
+      if (name === "view.chat") return chatRead.promise;
     }
 
-    if (name === "app_get_activity") {
+    // Each read returns what follows its cursor, as the service does.
+    if (name === "view.activity") {
       return {
-        events: [
-          {
-            id: 2,
-            task_id: args.task_id,
-            type: "log",
-            timestamp: "",
-            data: {},
-          },
-        ],
+        events:
+          Number(args.after) < 2
+            ? [
+                {
+                  id: 2,
+                  task_id: args.task_id,
+                  type: "log",
+                  timestamp: "",
+                  data: {},
+                },
+              ]
+            : [],
       };
     }
 
-    if (name === "app_get_chat") return { items: [], next_cursor: 2 };
+    if (name === "view.chat") return { items: [], next_cursor: 2 };
 
     return undefined;
   };
@@ -97,6 +94,7 @@ test("returning to a task rejects chat and activity from its previous selection"
   chatRead.resolve({ items: [], next_cursor: 1 });
 
   await first;
+  await flush();
   assert.equal(controller.getSnapshot().selected, "a");
   assert.equal(controller.getSnapshot().chat?.cursor, 2);
 
@@ -105,15 +103,9 @@ test("returning to a task rejects chat and activity from its previous selection"
     [2],
   );
 
-  expect(timing).toHaveBeenCalledWith("activity_latest", "merge", 0, {
+  expect(timing).toHaveBeenCalledWith("view", "merge", 0, {
     stale_count: 1,
   });
-
-  expect(timing).toHaveBeenCalledWith("chat", "merge", 0, { stale_count: 1 });
-
-  expect(
-    timing.mock.calls.filter((call) => call[3]?.stale_count === 1),
-  ).toHaveLength(2);
 });
 
 for (const transition of [
@@ -189,7 +181,7 @@ test("the activity view shows the service's window and its tally, and polls for 
   );
 
   transport.handler = (name, args) =>
-    name === "app_get_activity"
+    name === "view.activity"
       ? windowActivity(events, Number(args.after))
       : undefined;
 
@@ -204,7 +196,7 @@ test("the activity view shows the service's window and its tally, and polls for 
 
   assert.deepEqual(
     transport.calls
-      .filter((call) => call.name === "app_get_activity")
+      .filter((call) => call.name === "view.activity")
       .map((call) => call.args.after),
     [0],
   );
@@ -212,10 +204,101 @@ test("the activity view shows the service's window and its tally, and polls for 
   await controller.refresh();
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "app_get_activity").at(-1)
-      ?.args.after,
+    transport.calls.filter((call) => call.name === "view.activity").at(-1)?.args
+      .after,
     1005,
   );
 
   assert.equal(controller.getSnapshot().events.length, 200);
 });
+
+/** Chat as the service returns it once the worker's reply `id` is stored. */
+const storedReply = (id: string, text: string) => ({
+  items: [
+    {
+      kind: "message",
+      id,
+      event_id: 3,
+      message: {
+        id,
+        event_id: 3,
+        timestamp: "",
+        turn: 1,
+        from: "worker",
+        kind: "reply",
+        text,
+      },
+    },
+  ],
+  next_cursor: 3,
+});
+
+test("a draft cleared while a view is in flight stays until a later view's Chat holds its message", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.streamsDrafts = true;
+  transport.tasks = [task("a")];
+  await controller.start();
+
+  transport.events.draft({
+    task_id: "a",
+    message_id: "m",
+    offset: 0,
+    text: "Hello",
+  });
+
+  const older = deferred<unknown>(),
+    later = deferred<unknown>(),
+    chats = [older.promise, later.promise];
+
+  transport.handler = (name) =>
+    name === "view.chat" ? chats.shift() : undefined;
+
+  const refreshing = controller.refresh();
+  await flush();
+  transport.events.draft({ task_id: "a", message_id: "m", cleared: true });
+
+  // Read before the message was stored, so it can't settle the clear.
+  older.resolve({ items: [], next_cursor: 0 });
+  await refreshing;
+  await flush();
+  assert.equal(controller.getSnapshot().draft?.text, "Hello");
+
+  later.resolve(storedReply("m", "Hello"));
+  await flush();
+  assert.equal(controller.getSnapshot().draft, undefined);
+
+  assert.deepEqual(
+    controller.getSnapshot().chat?.items.map((item) => item.id),
+    ["m"],
+  );
+});
+
+test.for(["stored", "never stored"] as const)(
+  "a listed draft whose turn ends is settled by its own view's Chat when the message is %s",
+  async (outcome, t) => {
+    const { controller, transport } = setup(true);
+    t.onTestFinished(() => controller.dispose());
+    transport.streamsDrafts = true;
+
+    transport.tasks = [
+      { ...task("a"), draft: { message_id: "listed", text: "Complete reply" } },
+    ];
+
+    await controller.start();
+    transport.tasks = [{ ...task("a"), status: "completed" }];
+
+    transport.handler = (name) =>
+      name === "view.chat" && outcome === "stored"
+        ? storedReply("listed", "Complete reply")
+        : undefined;
+
+    await controller.refresh();
+    assert.equal(controller.getSnapshot().draft, undefined);
+
+    assert.deepEqual(
+      controller.getSnapshot().chat?.items.map((item) => item.id),
+      outcome === "stored" ? ["listed"] : [],
+    );
+  },
+);

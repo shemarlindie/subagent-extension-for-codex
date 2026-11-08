@@ -1,14 +1,12 @@
-import type {
-  ActivityPage,
-  TurnActivityPage,
-} from "../../../shared/tasks/activity/activity-tail";
+import type { TurnActivityPage } from "../../../shared/tasks/activity/activity-tail";
+import type { PanelView, ViewRequest } from "../../app/state/panel-view";
 import type { Snapshot } from "../../app/state/types";
 import {
   activityCursor,
   mergeActivity,
   turnStart,
 } from "./activity/event-history";
-import { type ChatRead, mergeChat } from "./chat/chat-state";
+import { mergeChat } from "./chat/chat-state";
 import type { DraftFollower } from "./chat/drafts/draft-follower";
 import type { TimingReporter } from "./controls/timing-reporter";
 
@@ -21,98 +19,74 @@ interface TaskDetailContext {
   patch(patch: Partial<Snapshot>): void;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
   setTab(tab: Snapshot["tab"]): void;
-  drafts: Pick<DraftFollower, "reading" | "show">;
+  drafts: Pick<DraftFollower, "show">;
 }
 
-/** Reads the selected task's Chat and Activity without replacing newer views. */
+/** The view's Chat and Activity arguments for the selected task. */
+export function detailReads(state: Snapshot) {
+  const id = state.selected;
+  if (!id) return {};
+
+  return {
+    chat: {
+      task_id: id,
+      after: state.chat?.task === id ? state.chat.cursor : 0,
+    },
+    activity: { task_id: id, after: activityCursor(state.events, id) },
+  };
+}
+
+/**
+ * Merges the selected task's Chat and Activity without replacing newer
+ * views, and reads turn history.
+ */
 export class TaskDetailLoader {
   constructor(private context: TaskDetailContext) {}
 
-  private currentSelection(task: string) {
-    const generation = this.context.generation();
+  /**
+   * Merges the Chat and Activity a view read for its request's selection.
+   * Returns false when the selection has changed since, so the read is
+   * stale and the selected task's details are still to read.
+   */
+  merge(
+    { args, selection, draftRead }: ViewRequest,
+    { chat, activity }: PanelView,
+  ) {
+    const current = this.context.snapshot(),
+      id = current.selected;
 
-    return () =>
-      !this.context.closed() &&
-      task === this.context.snapshot().selected &&
-      generation === this.context.generation();
-  }
+    if (!id || this.context.closed()) return true;
 
-  async load() {
-    const state = this.context.snapshot(),
-      id = state.selected;
+    if (args.chat?.task_id !== id || selection !== this.context.generation()) {
+      return false;
+    }
 
-    if (!id || this.context.closed()) return;
+    // A read that left out the details found no task to show them for.
+    if (!chat || !activity) return true;
 
-    const isCurrentRead = this.currentSelection(id);
+    const events = mergeActivity(
+      { events: current.events, dropped: current.droppedEvents },
+      id,
+      activity,
+    );
 
-    const activityRead = this.context
-      .tool<ActivityPage>("app_get_activity", {
-        task_id: id,
-        after: activityCursor(state.events, id),
-      })
-      .then((activity) => {
-        if (!isCurrentRead()) {
-          this.context.timing.observe("activity_latest", "merge", 0, {
-            stale_count: 1,
-          });
+    this.context.patch({
+      events: events.events,
+      droppedEvents: events.dropped,
+      activityHistoryLoading:
+        current.activityHistoryLoading === id
+          ? undefined
+          : current.activityHistoryLoading,
+      chat: mergeChat(current.chat, id, chat),
+      chatHistoryLoading:
+        current.chatHistoryLoading === id
+          ? undefined
+          : current.chatHistoryLoading,
+    });
 
-          return;
-        }
+    this.context.drafts.show(draftRead);
 
-        return this.context.timing.merge(
-          "activity_latest",
-          activity.events.length,
-          () => {
-            const current = this.context.snapshot();
-
-            const view = mergeActivity(
-              { events: current.events, dropped: current.droppedEvents },
-              id,
-              activity,
-            );
-
-            this.context.patch({
-              events: view.events,
-              droppedEvents: view.dropped,
-              activityHistoryLoading:
-                current.activityHistoryLoading === id
-                  ? undefined
-                  : current.activityHistoryLoading,
-            });
-          },
-        );
-      });
-
-    const read = this.context.drafts.reading();
-
-    const chatRead = this.context
-      .tool<ChatRead>("app_get_chat", {
-        task_id: id,
-        after: state.chat?.task === id ? state.chat.cursor : 0,
-      })
-      .then((chat) => {
-        if (!isCurrentRead()) {
-          this.context.timing.observe("chat", "merge", 0, { stale_count: 1 });
-
-          return;
-        }
-
-        return this.context.timing.merge("chat", chat.items.length, () => {
-          const current = this.context.snapshot();
-
-          this.context.patch({
-            chat: mergeChat(current.chat, id, chat),
-            chatHistoryLoading:
-              current.chatHistoryLoading === id
-                ? undefined
-                : current.chatHistoryLoading,
-          });
-
-          this.context.drafts.show(read);
-        });
-      });
-
-    await Promise.all([activityRead, chatRead]);
+    return true;
   }
 
   /** Reads a turn's own events when the latest activity no longer holds them. */

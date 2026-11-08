@@ -58,10 +58,10 @@ async function setup() {
 
   const pending = async () =>
     (
-      (await user("app_list_pending_updates", {
-        conversation_id: "chat",
-      })) as { tasks: PendingTaskUpdates[] }
-    ).tasks;
+      (await user("app_wait_for_updates", {
+        view: { list: {}, pending: { conversation_id: "chat" } },
+      })) as { view: { pending: { tasks: PendingTaskUpdates[] } } }
+    ).view.pending.tasks;
 
   const ids = async () =>
     (await pending()).flatMap((t) => t.updates.map((u) => u.event_id));

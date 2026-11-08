@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
@@ -186,16 +186,14 @@ test("All chats preserves repository and discards a delayed conversation respons
     ["a", "b"],
   );
 
-  assert.deepEqual(
+  expect(
     transport.calls.filter((call) => call.name === "app_list_tasks").at(-1)
       ?.args,
-    {
-      conversation_id: null,
-      repository: "/repo/a",
-      include: [],
-      include_read_completed: false,
-    },
-  );
+  ).toMatchObject({
+    conversation_id: null,
+    repository: "/repo/a",
+    include_read_completed: false,
+  });
 });
 
 test("unrelated tool output leaves scope, selection and the open form intact", async (t) => {

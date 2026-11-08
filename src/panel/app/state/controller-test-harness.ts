@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
+import { composeView } from "./panel-view-test-harness";
 import type {
   Defaults,
   PanelData,
@@ -72,8 +73,15 @@ export function task(
   };
 }
 
+const viewReads: Record<string, string> = {
+  projects: "list_projects",
+  list: "app_list_tasks",
+};
+
 export class FakeTransport implements Transport {
   embedded = true;
+  streamsChanges?: boolean;
+  streamsDrafts?: boolean;
   send?: Transport["send"];
   events!: TransportEvents;
   calls: { name: string; args: Record<string, unknown> }[] = [];
@@ -85,6 +93,8 @@ export class FakeTransport implements Transport {
   projects = [{ repository: "/repo/a", kind: "repository" }];
   handler?: (name: string, args: Record<string, unknown>) => unknown;
   shared: Record<string, unknown>[] = [];
+  /** The revision views return. */
+  revision = "boot:1";
   async connect(events: TransportEvents) {
     this.events = events;
     await this.connectGate;
@@ -102,8 +112,20 @@ export class FakeTransport implements Transport {
       return decodePanelToolResult<T>(name, await Promise.resolve(answer));
     }
 
-    // Without a handler, the update wait holds as if nothing changes.
-    if (name === "app_wait_for_updates") return new Promise<T>(() => {});
+    if (name === "app_wait_for_updates") {
+      // A read at once returns the view. One that waits holds as if nothing changes.
+      if (!args.view || (args.after !== undefined && args.wait_ms)) {
+        return new Promise<T>(() => {});
+      }
+
+      // The list and projects come from their tools. Tests hold or replace
+      // another part through `view.<part>`.
+      const view = await composeView(args.view, (part, partArgs) =>
+        this.tool(viewReads[part] ?? `view.${part}`, partArgs),
+      );
+
+      return decodePanelToolResult<T>(name, { revision: this.revision, view });
+    }
 
     const values: Record<string, unknown> = {
       get_panel_context: this.context,
@@ -112,7 +134,7 @@ export class FakeTransport implements Transport {
         { provider: "claude", profiles: ["reviewer"], capabilities: {} },
       ],
       app_list_tasks: { tasks: this.tasks },
-      app_get_activity: { events: [] },
+      "view.activity": { events: [] },
       app_record_timing: {},
       app_get_change_counts: {
         scope: "task",
@@ -120,8 +142,8 @@ export class FakeTransport implements Transport {
         additions: 0,
         deletions: 0,
       },
-      app_get_chat: { items: [], next_cursor: 0 },
-      app_list_pending_updates: { tasks: [] },
+      "view.chat": { items: [], next_cursor: 0 },
+      "view.pending": { tasks: [] },
       get_message: { message: { id: "parent_1" } },
       get_settings: { values: defaults },
     };

@@ -169,8 +169,9 @@ Resolving it is read-only.
 owns precedence and registration rules. Task selection, forms and polling
 respect the current scope and discard stale responses.
 
-Refresh notifications only tell clients when to refetch durable events and
-messages. The console uses SSE and the embedded panel uses long polling.
+The console's SSE notifications only tell it when to read the panel's view
+again. The embedded panel holds one long poll, which returns that view with each
+change, so a change needs no read after the poll returns.
 
 The parent learns of worker results by polling `list_messages`. The service
 records which updates the parent has read, and the panel can send the rest to

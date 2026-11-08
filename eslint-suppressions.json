@@ -9,11 +9,6 @@
       "count": 1
     }
   },
-  "src/panel/app/state/controller.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "src/panel/features/changes/changed-file-preview.tsx": {
     "complexity": {
       "count": 1

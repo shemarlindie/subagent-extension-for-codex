@@ -701,26 +701,29 @@ for (const channel of ["console", "host"] as const) {
       data: { marker: true },
     };
 
-    respond({ events: [event] });
+    const view = { built_at: 0, projects: [], list: { tasks: [] } };
+
+    respond({
+      revision: "boot:1",
+      view: { ...view, activity: { events: [event] } },
+    });
 
     const clock = vi
       .spyOn(performance, "now")
       .mockReturnValueOnce(10)
       .mockReturnValueOnce(17);
 
-    await transport.tool("app_get_activity");
+    await transport.tool("app_wait_for_updates");
 
-    expect(timing).toHaveBeenCalledExactlyOnceWith(
-      "activity_latest",
-      "decode",
-      7,
-      { rows: 1, outcome: "success" },
-    );
+    expect(timing).toHaveBeenCalledExactlyOnceWith("view", "decode", 7, {
+      rows: 1,
+      outcome: "success",
+    });
 
     clock.mockRestore();
 
-    respond({ items: [], next_cursor: 0 });
-    await transport.tool("app_get_chat");
+    respond({ revision: "boot:1", view });
+    await transport.tool("app_wait_for_updates");
     respond({ recorded: 1 });
     await transport.tool("app_record_timing");
     expect(timing).toHaveBeenCalledOnce();

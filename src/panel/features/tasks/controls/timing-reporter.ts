@@ -8,7 +8,6 @@ import type {
 import {
   PANEL_TIMING_MAX_COUNT,
   PANEL_TIMING_MAX_DURATION_MS,
-  panelLoadOperation,
 } from "../../../../shared/tasks/panel-timing";
 
 interface TimingReporterContext {
@@ -86,8 +85,11 @@ export class TimingReporter {
     this.schedule();
   }
 
-  async fetch<T>(name: string, call: () => Promise<T>): Promise<T> {
-    const operation = panelLoadOperation(name);
+  /** Times a call, when it has an `operation` to report under. */
+  async fetch<T>(
+    operation: PanelLoadOperation | undefined,
+    call: () => Promise<T>,
+  ): Promise<T> {
     if (!operation) return call();
     const started = performance.now();
     let outcome: "success" | "error" = "error";

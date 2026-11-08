@@ -29,66 +29,73 @@ export async function installChatCycle(
 
   // The console uses its documented listed-task draft fallback here. Real SSE
   // delivery and following are covered by chat-reading.spec.ts.
-  await page.route("**/api/tools/app_list_tasks", (route) =>
-    route.fulfill({
-      json: {
-        result: {
-          tasks: [
-            panelTask(
-              task(),
-              events(),
-              undefined,
-              snapshot.draft && {
-                ...snapshot.draft,
-                text: messageText(
-                  snapshot.draft.message_id,
-                  snapshot.draft.text,
-                ),
+  const list = () => ({
+    tasks: [
+      panelTask(
+        task(),
+        events(),
+        undefined,
+        snapshot.draft && {
+          ...snapshot.draft,
+          text: messageText(snapshot.draft.message_id, snapshot.draft.text),
+        },
+      ),
+    ],
+  });
+
+  const chat = (after: number) => ({
+    items: chatItems(task(), events())
+      .filter(
+        (item) => item.event_id > after || (after === 0 && item.event_id === 0),
+      )
+      .map((item) =>
+        item.kind === "message"
+          ? {
+              ...item,
+              message: {
+                ...item.message,
+                text: messageText(item.id, item.message.text),
               },
-            ),
-          ],
-        },
-      },
-    }),
-  );
+            }
+          : item,
+      ),
+    next_cursor: Math.max(after, snapshot.events.at(-1)?.id ?? 0),
+  });
 
-  await page.route("**/api/tools/app_get_chat", (route) => {
-    const { after = 0 } = route.request().postDataJSON() as { after?: number };
+  const activity = (after: number) => ({
+    events: events().filter((event) => event.id > after),
+  });
+
+  type ViewArgs = { chat?: { after?: number }; activity?: { after?: number } };
+
+  // The service answers the rest of the view, such as projects and revision.
+  await page.route("**/api/tools/app_wait_for_updates", async (route) => {
+    const { view } = route.request().postDataJSON() as { view?: ViewArgs };
+    const response = await route.fetch();
+    const body = (await response.json()) as { result: { view?: object } };
+    if (!view || !body.result.view) return route.fulfill({ response });
 
     return route.fulfill({
+      response,
       json: {
         result: {
-          items: chatItems(task(), events())
-            .filter(
-              (item) =>
-                item.event_id > after || (after === 0 && item.event_id === 0),
-            )
-            .map((item) =>
-              item.kind === "message"
-                ? {
-                    ...item,
-                    message: {
-                      ...item.message,
-                      text: messageText(item.id, item.message.text),
-                    },
-                  }
-                : item,
-            ),
-          next_cursor: Math.max(after, snapshot.events.at(-1)?.id ?? 0),
+          ...body.result,
+          view: {
+            ...body.result.view,
+            list: list(),
+            ...(view.chat && { chat: chat(view.chat.after ?? 0) }),
+            ...(view.activity && {
+              activity: activity(view.activity.after ?? 0),
+            }),
+          },
         },
       },
     });
   });
 
-  await page.route("**/api/tools/app_get_activity", (route) => {
-    const { after = 0 } = route.request().postDataJSON() as { after?: number };
-
-    return route.fulfill({
-      json: {
-        result: { events: events().filter((event) => event.id > after) },
-      },
-    });
-  });
+  await page.route("**/api/tools/app_list_tasks", (route) =>
+    route.fulfill({ json: { result: list() } }),
+  );
 
   return {
     get snapshot() {

@@ -1,3 +1,4 @@
+import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
   ChangeScope,
@@ -20,7 +21,7 @@ import {
 } from "../../features/tasks/controls/handoff-message";
 import { TaskActions } from "../../features/tasks/controls/task-actions";
 import { TimingReporter } from "../../features/tasks/controls/timing-reporter";
-import { PendingUpdateLoader } from "../../features/tasks/pending-updates/pending-update-loader";
+import { PendingUpdateTracker } from "../../features/tasks/pending-updates/pending-update-tracker";
 import { TaskDetailLoader } from "../../features/tasks/task-detail-loader";
 import { errorMessage } from "../../shared/utils/error-message";
 import { sharedRequest } from "../../shared/utils/shared-request";
@@ -34,6 +35,13 @@ import { CONNECTION, type ConnectionLabel } from "./connection";
 import { DialogLoader } from "./dialog-loader";
 import { initialState } from "./initial-state";
 import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
+import {
+  olderRevision,
+  type UpdateRead,
+  viewArgs,
+  type ViewRead,
+  type ViewRequest,
+} from "./panel-view";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
 import { persistView } from "./persistence/persisted-view";
 import { RevisionTrigger } from "./revision-trigger";
@@ -46,11 +54,7 @@ import { defaultSelection, selectionPatch } from "./selection";
 import { availableFilter, selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
-import {
-  lacksNewSelection,
-  taskListArgs,
-  unloadedCounts,
-} from "./task-list-read";
+import { lacksNewSelection, unloadedCounts } from "./task-list-read";
 import type {
   DialogState,
   Filter,
@@ -122,7 +126,12 @@ export class Controller {
   private updates = new UpdateFollower({
     ...this.stateContext,
     status: (text) => this.showConnection(text),
-    revision: (value) => this.revisions.report(value),
+    // A hidden panel would drop the view, so it waits for the revision alone.
+    viewRequest: () =>
+      this.state.scopeKnown && !this.environment.hidden()
+        ? this.viewRequest()
+        : undefined,
+    receive: (read, request) => this.receive(read, request),
     draftTarget: () => this.draftFollower.target(),
     receiveDraft: (target, read) => this.draftFollower.receive(target, read),
   });
@@ -139,6 +148,8 @@ export class Controller {
   private rerun = false;
   private generation = 0;
   private projectGeneration = 0;
+  /** The revision of the last view the panel applied. */
+  private viewRevision?: string;
   /** Protects user task and tab choices from late task-list results. */
   private tabIntentRevision = 0;
   private tabIntentRevisionAtSelection = 0;
@@ -210,7 +221,7 @@ export class Controller {
   });
 
   private changeLoader = new ChangeLoader(this.stateContext);
-  readonly pendingUpdates = new PendingUpdateLoader(this.stateContext);
+  readonly pendingUpdates = new PendingUpdateTracker(this.stateContext);
 
   constructor(
     readonly transport: Transport,
@@ -421,16 +432,18 @@ export class Controller {
 
   /** Waits for service changes where the transport doesn't stream them. */
   private followUpdates() {
-    if (!this.transport.streamsChanges) this.updates.follow();
+    if (!this.transport.streamsChanges) this.updates.follow(this.viewRevision);
   }
 
   /**
    * Refreshes after a quiet spell, for writes the service doesn't announce,
    * such as the projects CLI's. Each completed refresh restarts the wait.
+   * Without streamed changes, each update wait that runs out returns a view
+   * instead.
    */
   private schedule() {
     clearTimeout(this.timer);
-    if (this.disposed) return;
+    if (this.disposed || !this.transport.streamsChanges) return;
 
     this.timer = setTimeout(
       () => this.run(() => this.fallbackRefresh()),
@@ -489,10 +502,45 @@ export class Controller {
   async tool<T>(name: string, args: Record<string, unknown> = {}) {
     if (this.disposed) throw new Error("The console has closed.");
 
-    return this.timing.fetch(name, () => this.transport.tool<T>(name, args));
+    return this.timing.fetch(panelLoadOperation(name), () =>
+      this.transport.tool<T>(name, args),
+    );
   }
 
+  /** Reads and applies the panel's view at once. */
   async refresh(): Promise<void> {
+    await this.load();
+  }
+
+  /**
+   * Applies a view a held update wait returned. One the panel can't apply
+   * now, or a wait that returned none, leaves a refresh due instead.
+   */
+  private async receive({ revision, view }: UpdateRead, request?: ViewRequest) {
+    if (!view || !request || this.environment.hidden() || this.state.busy) {
+      this.revisions.due();
+    } else {
+      await this.load({ revision, view, request }).catch(this.report);
+    }
+  }
+
+  /** The view arguments for the panel now, with the counters that guard them. */
+  private viewRequest(): ViewRequest {
+    return {
+      args: viewArgs(this.state, this.restoredView?.selected),
+      draftRead: this.draftFollower.reading(),
+      scope: this.state.scopeVersion,
+      projects: this.projectGeneration,
+      selection: this.generation,
+      tab: this.tabIntentRevision,
+    };
+  }
+
+  /**
+   * Applies `held`, or reads a view at once. Loads run one at a time, and
+   * one asked for meanwhile runs after.
+   */
+  private async load(held?: ViewRead): Promise<void> {
     if (this.disposed || !this.state.connected) return;
 
     if (this.refreshing) {
@@ -502,11 +550,10 @@ export class Controller {
     }
 
     this.refreshing = true;
-    const intent = { tab: this.tabIntentRevision, selection: this.generation };
     let version = this.state.scopeVersion;
 
     try {
-      if (!this.state.scopeKnown) {
+      if (!held && !this.state.scopeKnown) {
         const context = await this.tool<PanelData>("get_panel_context", {
           conversation_id: null,
         });
@@ -520,64 +567,15 @@ export class Controller {
         version = this.state.scopeVersion;
       }
 
-      const projectGeneration = this.projectGeneration;
-      const projects = await this.readProjects();
-      if (this.staleListRead(version, projectGeneration)) return;
+      let read = held ?? (await this.readView());
 
-      const projectUpdate = this.reconcileProjects(projects);
-      if (projectUpdate.reset) version = this.state.scopeVersion;
-
-      if (this.state.conversation && projectUpdate.removed) {
-        const context = await this.tool<PanelData>("get_panel_context", {
-          conversation_id: this.state.conversation,
-        });
-
-        if (this.stale(version)) return;
-
-        this.applyProjectCandidate(context.panel_project_candidate);
+      // Parts that no longer fit are read again at once, in the scope a
+      // project change may have moved to.
+      while (await this.applyView(read)) {
+        version = this.state.scopeVersion;
+        read = await this.readView();
       }
 
-      if (this.restoreProject(projects)) version = this.state.scopeVersion;
-
-      if (this.workersStale()) this.run(() => this.refreshWorkers(version));
-
-      const { conversation, repository } = this.state;
-
-      const args = taskListArgs(this.state, this.restoredView?.selected);
-      const list = await this.tool<TaskList>("app_list_tasks", args);
-
-      const lacking = lacksNewSelection(args, list, this.state.selected);
-
-      if (this.staleListRead(version, projectGeneration, lacking)) {
-        this.timing.observe("task_list", "merge", 0, { stale_count: 1 });
-
-        return;
-      }
-
-      const tasks = tasksInScope(list.tasks, { conversation, repository });
-
-      const accepted = this.timing.merge("task_list", list.tasks.length, () =>
-        this.acceptTaskList(tasks, list.read_completed, intent),
-      );
-
-      if (!accepted) return;
-      this.run(() => this.pendingUpdates.load());
-
-      // Share after fallback selection so the host sees the same task as the panel.
-      if (this.reconcileShare) {
-        await this.share();
-        this.reconcileShare = false;
-      }
-
-      this.dialogs.restore(tasks, version);
-      if (this.stale(version)) return;
-
-      await this.loadDetail();
-      if (this.stale(version)) return;
-      // Prefetch the selected task's change totals for the tab count. Do not hold
-      // up the task list while Git reads in the background.
-      this.run(() => this.changeLoader.loadCountsIfStale());
-      this.run(() => this.changeLoader.loadChangesIfStale());
       if (this.stale(version)) return;
 
       this.patch({
@@ -596,6 +594,115 @@ export class Controller {
     } finally {
       this.finishRefresh(version);
     }
+  }
+
+  private async readView(): Promise<ViewRead> {
+    const request = this.viewRequest();
+
+    const { revision, view } = await this.timing.fetch("view", () =>
+      this.tool<UpdateRead>("app_wait_for_updates", { view: request.args }),
+    );
+
+    if (!view) throw new Error("The service returned no panel view.");
+
+    return { revision, view, request };
+  }
+
+  /**
+   * Applies each part of a view that still fits the panel. Returns true when
+   * parts are still to read: the list after a project change moved the
+   * scope, or the selected task's details. A list that no longer fits leaves
+   * a rerun due instead.
+   */
+  private async applyView({ revision, view, request }: ViewRead) {
+    // Panel and service share the machine's clock.
+    this.timing.observe("view", "deliver", Date.now() - view.built_at);
+
+    // A held wait and an immediate read can return out of order.
+    const older = olderRevision(revision, this.viewRevision);
+
+    if (older || this.staleListRead(request.scope, request.projects)) {
+      this.staleView(!older);
+
+      return false;
+    }
+
+    this.viewRevision = revision;
+    const projectUpdate = this.reconcileProjects(view.projects);
+
+    if (this.state.conversation && projectUpdate.removed) {
+      const scope = this.state.scopeVersion;
+
+      const context = await this.tool<PanelData>("get_panel_context", {
+        conversation_id: this.state.conversation,
+      });
+
+      if (this.stale(scope)) return false;
+
+      this.applyProjectCandidate(context.panel_project_candidate);
+    }
+
+    this.restoreProject(view.projects);
+    const version = this.state.scopeVersion;
+    if (this.workersStale()) this.run(() => this.refreshWorkers(version));
+    if (version !== request.scope) return true;
+
+    const lacking = lacksNewSelection(
+      request.args.list,
+      view.list,
+      this.state.selected,
+    );
+
+    if (this.staleListRead(version, request.projects, lacking)) {
+      this.staleView(true);
+
+      return false;
+    }
+
+    const { conversation, repository } = this.state;
+    const tasks = tasksInScope(view.list.tasks, { conversation, repository });
+
+    const merged = this.timing.merge("view", view.list.tasks.length, () => {
+      if (!this.acceptTaskList(tasks, view.list.read_completed, request)) {
+        return "rejected";
+      }
+
+      const { pending } = request.args;
+
+      if (pending && view.pending) {
+        this.pendingUpdates.show(pending.conversation_id, view.pending.tasks);
+      }
+
+      return this.detailLoader.merge(request, view) ? "merged" : "stale";
+    });
+
+    if (merged === "rejected") return false;
+    if (merged === "stale") this.staleView();
+
+    // Share after fallback selection so the host sees the same task as the panel.
+    if (this.reconcileShare) {
+      await this.share();
+      this.reconcileShare = false;
+    }
+
+    this.dialogs.restore(tasks, version);
+    if (this.stale(version)) return false;
+    if (merged === "stale") return true;
+    // Prefetch the selected task's change totals for the tab count. Do not hold
+    // up the task list while Git reads in the background.
+    this.run(() => this.changeLoader.loadCountsIfStale());
+    this.run(() => this.changeLoader.loadChangesIfStale());
+
+    return false;
+  }
+
+  /**
+   * Counts a dropped view. `reread` asks for one in its place, since the
+   * update wait has moved past the change the dropped view carried.
+   */
+  private staleView(reread = false) {
+    this.timing.observe("view", "merge", 0, { stale_count: 1 });
+    if (reread) this.rerun = true;
   }
 
   /** Every refresh outcome restarts the fallback wait and runs coalesced requests. */
@@ -694,7 +801,7 @@ export class Controller {
   private acceptTaskList(
     tasks: Task[],
     readCompleted: TaskList["read_completed"],
-    intent: { tab: number; selection: number },
+    intent: Pick<ViewRequest, "tab" | "selection" | "draftRead">,
   ) {
     const taskDialog = this.state.dialog;
 
@@ -734,6 +841,7 @@ export class Controller {
       readCompleted: unloadedCounts(readCompleted),
       draft: this.draftFollower.retainListed(
         tasks.find((task) => task.id === selected),
+        intent.draftRead,
       ),
       taskListLoading: false,
       selected,
@@ -828,18 +936,12 @@ export class Controller {
     return { selected, tab, filter, search };
   }
 
-  async loadDetail() {
-    await this.detailLoader.load();
-  }
-
   async select(id: string) {
     this.choose();
     this.restoredView = undefined;
     this.patch(selectionPatch(id, this.tabOf(id)));
 
-    await this.loadDetail();
-    this.run(() => this.changeLoader.loadCountsIfStale());
-    this.run(() => this.changeLoader.loadChangesIfStale());
+    await this.refresh();
     await this.share();
   }
 

@@ -5,6 +5,9 @@ import type {
   DraftUpdate,
 } from "../../../../shared/tasks/conversation/drafts.js";
 
+/** The draft a reader has: its message, and how much of its text. */
+type KnownDraft = { message_id?: string; length: number };
+
 /**
  * Running tasks' drafts, kept in memory only: deltas never reach the event
  * log, and a restart loses only the draft.
@@ -65,28 +68,30 @@ export class Drafts {
   }
 
   /**
-   * Waits until a task's draft differs from what the reader has: it grew
-   * past `length`, became another message, or was cleared. Also returns
-   * when `wake` aborts, or after `waitMs`.
+   * Whether a task's draft differs from what the reader has: it grew past
+   * `length`, became another message, or was cleared.
+   */
+  differs(taskId: string, known: KnownDraft) {
+    const draft = this.drafts.get(taskId);
+
+    return draft
+      ? draft.message_id !== known.message_id ||
+          draft.text.length > known.length
+      : known.message_id !== undefined;
+  }
+
+  /**
+   * Waits until a task's draft `differs` from what the reader has, `wake`
+   * aborts, or `waitMs` passes.
    */
   async wait(
     taskId: string,
-    known: { message_id?: string; length: number },
+    known: KnownDraft,
     waitMs: number,
     wake?: AbortSignal,
   ) {
-    const changed = () => {
-      const draft = this.drafts.get(taskId);
-
-      return draft
-        ? draft.message_id !== known.message_id ||
-            draft.text.length > known.length
-        : known.message_id !== undefined;
-    };
-
-    if (changed() || wake?.aborted || waitMs <= 0) {
-      return this.get(taskId);
-    }
+    const changed = () => this.differs(taskId, known);
+    if (changed() || wake?.aborted || waitMs <= 0) return;
 
     let resolve!: () => void;
     const woken = new Promise<void>((done) => (resolve = done));
@@ -101,8 +106,6 @@ export class Drafts {
 
     try {
       await woken;
-
-      return this.get(taskId);
     } finally {
       clearTimeout(timer);
       this.bus.off("draft", onDraft);

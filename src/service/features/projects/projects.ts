@@ -140,6 +140,25 @@ export class Projects {
     );
   }
 
+  /**
+   * The list now, with each repository's Git state from `known`, an earlier
+   * `listWithGit` result. A project added since has no Git state yet.
+   */
+  withKnownGit(known: { repository: string; git?: GitState }[]) {
+    const states = new Map(
+      known.map((project) => [project.repository, project.git]),
+    );
+
+    return this.list().map((project): typeof project & { git?: GitState } => {
+      const git =
+        project.kind === "repository"
+          ? states.get(project.repository)
+          : undefined;
+
+      return git ? { ...project, git } : project;
+    });
+  }
+
   private async recentGitState(repository: string) {
     const recent = this.gitStates.get(repository);
 

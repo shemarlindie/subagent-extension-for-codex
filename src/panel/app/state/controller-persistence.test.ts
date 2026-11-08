@@ -53,7 +53,8 @@ test("browser view state seeds the first render, restores a task, and persists l
   assert.equal(controller.getSnapshot().tab, "details");
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "app_list_tasks")?.args,
+    // The first view confirms the project, and the next reads its tasks.
+    transport.calls.findLast((call) => call.name === "app_list_tasks")?.args,
     // An archived restored task still opens.
     {
       conversation_id: null,

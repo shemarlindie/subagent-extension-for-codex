@@ -21,7 +21,7 @@ import {
   originalResponseResult,
   withoutOriginalResponses,
 } from "./original-response-tools";
-import { PREVIEW_PENDING_TOOLS, previewPending } from "./pending-update-tools";
+import { previewMarkSeen, previewPendingUpdates } from "./pending-update-tools";
 import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
 import { lightList, listed, newestFirst } from "./task-list-tools";
@@ -30,6 +30,7 @@ import {
   previewReadState,
   previewUnreadTool,
 } from "./unread-tools";
+import { type ViewPart, withPreviewView } from "./view-tools";
 
 // A new user's settings with only Claude enabled, as the service reports them.
 const previewSettingsDefaults = (() => {
@@ -321,6 +322,34 @@ function raisePreviewBudget(taskId: unknown, value: unknown) {
   return { budget: task.budget, status: task.status };
 }
 
+/** A view part, read from the fixtures as the service reads it. */
+function previewViewPart(
+  part: ViewPart,
+  args: Record<string, unknown>,
+  options: PreviewOptions,
+): unknown {
+  if (part === "projects") return previewTool("list_projects", {}, options);
+  if (part === "list") return previewTool("app_list_tasks", args, options);
+
+  if (part === "pending") {
+    return { tasks: previewPendingUpdates(args.conversation_id) };
+  }
+
+  const { taskFor, eventsFor } = options.data ?? livePreview();
+  const events = withoutOriginalResponses(eventsFor(args.task_id));
+  const after = Number(args.after ?? 0);
+  if (part === "activity") return windowActivity(events, after);
+  const task = tasksOf(options).find((task) => task.id === args.task_id);
+  if (!task) return { items: [], next_cursor: 0 };
+
+  return {
+    items: chatItems(taskFor(task), events).filter(
+      (item) => item.event_id > after || (after === 0 && item.event_id === 0),
+    ),
+    next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
+  };
+}
+
 /**
  * Fixture tool results for the panel dev host. Tools in FIXTURE_SERVICE_TOOLS
  * are not here: the dev host sends them to the fixture service
@@ -331,6 +360,16 @@ export function previewTool(
   args: Record<string, unknown> = {},
   options: PreviewOptions = {},
 ): unknown {
+  if (name === "app_wait_for_updates" && args.view) {
+    const { view: _view, ...wait } = args;
+
+    return withPreviewView(
+      args,
+      previewTool(name, wait, options) as { revision: string },
+      (part, partArgs) => previewViewPart(part, partArgs, options),
+    );
+  }
+
   if (name === "app_raise_budget") {
     if (!options.successfulBudgetUpdates) {
       throw new Error(
@@ -386,7 +425,7 @@ export function previewTool(
   }
 
   if (PREVIEW_UNREAD_TOOLS.includes(name)) return previewUnreadTool(name, args);
-  if (PREVIEW_PENDING_TOOLS.includes(name)) return previewPending(name, args);
+  if (name === "app_mark_updates_seen") return previewMarkSeen(args);
 
   if (PREVIEW_ARCHIVE_TOOLS.includes(name)) {
     return previewArchiveTool(previewTasks, args);
@@ -439,20 +478,6 @@ export function previewTool(
         }),
       args,
     ),
-    app_get_chat: (() => {
-      const task = tasks.find((task) => task.id === args.task_id);
-      if (!task) return { items: [], next_cursor: 0 };
-      const after = Number(args.after ?? 0);
-      const events = lightEventsFor(task.id);
-
-      return {
-        items: chatItems(taskFor(task), events).filter(
-          (item) =>
-            item.event_id > after || (after === 0 && item.event_id === 0),
-        ),
-        next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
-      };
-    })(),
     // Activity boundaries refresh persisted reads; draft deltas update between them.
     app_wait_for_updates: (() => {
       const target = args.draft as { task_id?: unknown } | undefined;
@@ -475,10 +500,6 @@ export function previewTool(
     app_get_original_response: originalResponseResult(
       eventsFor(args.task_id),
       args,
-    ),
-    app_get_activity: windowActivity(
-      lightEventsFor(args.task_id),
-      Number(args.after ?? 0),
     ),
     app_get_turn_activity: windowTurnActivity(
       lightEventsFor(args.task_id),
