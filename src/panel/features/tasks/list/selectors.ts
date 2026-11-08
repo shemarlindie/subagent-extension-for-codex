@@ -165,12 +165,12 @@ export function filterCounts(state: Snapshot) {
 
 /**
  * Whether the list shows completed tasks the user has read, which load on
- * demand. The default filter is unknown until the first list read.
+ * demand. The default filter is unknown while nothing is listed. A scope with
+ * tasks always lists its newest.
  */
 export function showsReadCompleted(state: Snapshot) {
   const filter =
-    state.filter ??
-    (state.taskListLoading ? undefined : effectiveFilter(state));
+    state.filter ?? (state.tasks.length ? effectiveFilter(state) : undefined);
 
   return Boolean(state.search) || filter === "completed" || filter === "all";
 }
