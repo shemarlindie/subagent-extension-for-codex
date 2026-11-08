@@ -14,4 +14,6 @@ export interface PanelOutput {
   };
   panel_selection?: { task_id: string; tab: "chat" };
   tasks?: Record<string, unknown>[];
+  /** Completed tasks the user has read that `tasks` leaves out, by repository. */
+  read_completed?: Record<string, number>;
 }

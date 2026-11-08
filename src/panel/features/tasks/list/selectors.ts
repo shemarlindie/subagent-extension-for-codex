@@ -140,15 +140,39 @@ export const groupSignals = (tasks: Task[]) => ({
   needsInput: tasks.some((task) => matchesFilter(task, "attention")),
 });
 
+// Done and All count read completed tasks the list hasn't loaded. A search
+// loads them, so it never counts them unloaded.
 export function filterCounts(state: Snapshot) {
   const scoped = scopedTasks(state);
+
+  const unloaded = state.search
+    ? 0
+    : Object.entries(state.readCompleted ?? {})
+        .filter(
+          ([repository]) =>
+            !state.repository || repository === state.repository,
+        )
+        .reduce((total, [, count]) => total + count, 0);
 
   return Object.fromEntries(
     FILTERS.map((filter) => [
       filter,
-      scoped.filter((task) => matchesFilter(task, filter)).length,
+      scoped.filter((task) => matchesFilter(task, filter)).length +
+        (filter === "completed" || filter === "all" ? unloaded : 0),
     ]),
   ) as Record<Filter, number>;
+}
+
+/**
+ * Whether the list shows completed tasks the user has read, which load on
+ * demand. The default filter is unknown until the first list read.
+ */
+export function showsReadCompleted(state: Snapshot) {
+  const filter =
+    state.filter ??
+    (state.taskListLoading ? undefined : effectiveFilter(state));
+
+  return Boolean(state.search) || filter === "completed" || filter === "all";
 }
 
 export const selectedTask = (state: Snapshot) =>

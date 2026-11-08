@@ -80,3 +80,40 @@ test.each([
     ]);
   },
 );
+
+test("a project's header menu reads the read completed tasks the list left out before archiving", async () => {
+  const { tool, view } = setup({
+    tasks: [task("busy"), done("listed")],
+    readCompleted: { "/repo/a": 1 },
+    filter: "active",
+  });
+
+  tool.mockImplementation((name) =>
+    Promise.resolve(
+      name === "app_list_tasks"
+        ? { tasks: [task("busy"), done("listed"), done("read")] }
+        : { task_ids: [], skipped: [] },
+    ),
+  );
+
+  await openMenu(view, "a");
+
+  await userEvent.click(
+    await view.findByRole("menuitem", { name: "Archive completed" }),
+  );
+
+  assert.deepEqual(tool.mock.calls, [
+    [
+      "app_list_tasks",
+      {
+        conversation_id: null,
+        repository: "/repo/a",
+        include_read_completed: true,
+      },
+    ],
+    [
+      "app_set_tasks_archived",
+      { task_ids: ["listed", "read"], archived: true },
+    ],
+  ]);
+});

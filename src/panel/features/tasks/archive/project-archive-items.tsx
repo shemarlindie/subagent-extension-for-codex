@@ -5,37 +5,56 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import type { Task } from "../../../app/state/types";
+import { projectTaskArgs } from "../../../app/state/task-list-read";
+import type { Task, TaskList } from "../../../app/state/types";
 
 type ProjectArchiveItemsProps = { repository: string };
 
 /**
  * Archives a project's completed tasks, or all its stopped ones, from its
  * header menu in the task list. It acts on every task of the project in the
- * panel's scope, whatever the search or filter shows.
+ * panel's scope, whatever the search or filter shows, reading first the read
+ * completed tasks the list left out.
  */
 export function ProjectArchiveItems({ repository }: ProjectArchiveItemsProps) {
   const controller = useController(),
-    state = useSnapshot();
+    state = useSnapshot(),
+    unloaded = state.readCompleted?.[repository] ?? 0;
 
-  const stopped = state.tasks.filter(
-    (task) =>
-      task.repository === repository && !task.archived_at && archivable(task),
-  );
-
-  const completed = stopped.filter((task) => task.status === "completed");
-
-  const archive = (tasks: Task[]) =>
-    controller.run(() =>
-      controller.taskActions.archive.setArchived(tasks, true),
+  const stoppedIn = (tasks: Task[]) =>
+    tasks.filter(
+      (task) =>
+        task.repository === repository && !task.archived_at && archivable(task),
     );
+
+  const stopped = stoppedIn(state.tasks);
+
+  const completed = (tasks: Task[]) =>
+    tasks.filter((task) => task.status === "completed");
+
+  const archive = (pick: (tasks: Task[]) => Task[]) =>
+    controller.run(async () => {
+      const tasks = unloaded
+        ? (
+            await controller.tool<TaskList>(
+              "app_list_tasks",
+              projectTaskArgs(state, repository),
+            )
+          ).tasks
+        : state.tasks;
+
+      await controller.taskActions.archive.setArchived(
+        pick(stoppedIn(tasks)),
+        true,
+      );
+    });
 
   return (
     <>
       <Menu.Item
         className="menu-item"
         data-action="archive-completed"
-        disabled={!completed.length}
+        disabled={!completed(stopped).length && !unloaded}
         onClick={() => archive(completed)}
       >
         Archive completed
@@ -43,8 +62,8 @@ export function ProjectArchiveItems({ repository }: ProjectArchiveItemsProps) {
       <Menu.Item
         className="menu-item"
         data-action="archive-all"
-        disabled={!stopped.length}
-        onClick={() => archive(stopped)}
+        disabled={!stopped.length && !unloaded}
+        onClick={() => archive((tasks) => tasks)}
       >
         Archive all
       </Menu.Item>

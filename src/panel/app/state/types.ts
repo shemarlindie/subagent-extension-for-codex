@@ -40,6 +40,14 @@ export type PanelData = {
   };
   panel_selection?: { task_id?: string; tab?: string };
   tasks?: Task[];
+  read_completed?: unknown;
+};
+
+/** An `app_list_tasks` read. */
+export type TaskList = {
+  tasks: Task[];
+  /** Completed tasks the user has read that `tasks` leaves out, by repository. */
+  read_completed?: Record<string, number>;
 };
 
 export type DialogReadStatus = "loading" | "ready" | "error";
@@ -171,6 +179,11 @@ export type NewMark = { task: string; through?: number; revision: number };
 export type Snapshot = {
   page: PageId;
   tasks: Task[];
+  /**
+   * Completed tasks the user has read that `tasks` leaves out, by
+   * repository, while the list shows neither Done nor All.
+   */
+  readCompleted?: Record<string, number>;
   workers: Worker[];
   projects: Project[];
   /** True once the project registry has been read successfully. */

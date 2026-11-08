@@ -75,6 +75,32 @@ test("previously seen, archived and out-of-scope tasks do not produce arrivals",
   expect(controller.getSnapshot().taskArrival).toBeUndefined();
 });
 
+test("choosing Done loads the read completed tasks the list left out, without announcing them", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  const running = task("running");
+  const read = { ...task("read"), status: "completed" as const };
+
+  transport.handler = (name, args) => {
+    if (name !== "app_list_tasks") return undefined;
+
+    return args.include_read_completed
+      ? { tasks: [running, read] }
+      : { tasks: [running], read_completed: { "/repo/a": 1 } };
+  };
+
+  await controller.start();
+  expect(controller.getSnapshot().readCompleted).toEqual({ "/repo/a": 1 });
+
+  controller.setFilter("completed");
+  await flush();
+
+  const state = controller.getSnapshot();
+  expect(state.tasks.map((item) => item.id)).toEqual(["running", "read"]);
+  expect(state.readCompleted).toBeUndefined();
+  expect(state.taskArrival).toBeUndefined();
+});
+
 for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
   test(`arrivals stay silent while ${guard} and do not surface after returning`, async (t) => {
     const { controller, transport } = setup(true);

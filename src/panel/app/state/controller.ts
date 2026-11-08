@@ -43,9 +43,10 @@ import {
   tasksInScope,
 } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
-import { filterCounts, selectedTask } from "./selectors";
+import { filterCounts, selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
+import { taskListArgs, unloadedCounts } from "./task-list-read";
 import type {
   DialogState,
   Filter,
@@ -57,6 +58,7 @@ import type {
   Snapshot,
   Tab,
   Task,
+  TaskList,
   Transport,
   UiStatePersistence,
   Worker,
@@ -544,20 +546,9 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      // The list leaves archived tasks out, except an open one or one a restored
-      // URL opens.
-      const include = new Set([
-        this.state.selected,
-        this.restoredView?.selected,
-      ]);
-
-      const { tasks: next } = await this.tool<{ tasks: Task[] }>(
+      const list = await this.tool<TaskList>(
         "app_list_tasks",
-        {
-          conversation_id: conversation ?? null,
-          ...(repository ? { repository } : {}),
-          include: [...include].filter(Boolean),
-        },
+        taskListArgs(this.state, this.restoredView?.selected),
       );
 
       if (this.staleProjectRead(version, projectGeneration)) {
@@ -566,10 +557,10 @@ export class Controller {
         return;
       }
 
-      const tasks = tasksInScope(next, { conversation, repository });
+      const tasks = tasksInScope(list.tasks, { conversation, repository });
 
-      const accepted = this.timing.merge("task_list", next.length, () =>
-        this.acceptTaskList(tasks, intent),
+      const accepted = this.timing.merge("task_list", list.tasks.length, () =>
+        this.acceptTaskList(tasks, list.read_completed, intent),
       );
 
       if (!accepted) return;
@@ -705,6 +696,7 @@ export class Controller {
   /** Publishes a task list with the user's selection intent and restored view. */
   private acceptTaskList(
     tasks: Task[],
+    readCompleted: TaskList["read_completed"],
     intent: { tab: number; selection: number },
   ) {
     const taskDialog = this.state.dialog;
@@ -742,6 +734,7 @@ export class Controller {
     this.patch({
       taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
       tasks: this.taskActions.unread.settle(tasks),
+      readCompleted: unloadedCounts(readCompleted),
       draft: this.draftFollower.retainListed(
         tasks.find((task) => task.id === selected),
       ),
@@ -762,6 +755,8 @@ export class Controller {
     });
 
     this.newTasks.restore(composing);
+    // The default filter can turn out to be Done or All.
+    this.loadReadCompleted();
 
     return true;
   }
@@ -877,10 +872,19 @@ export class Controller {
 
   setSearch(search: string) {
     this.patch({ search });
+    this.loadReadCompleted();
   }
 
   setFilter(filter: Filter) {
     this.patch({ filter });
+    this.loadReadCompleted();
+  }
+
+  /** Reads the list again when it now shows read completed tasks it left out. */
+  private loadReadCompleted() {
+    if (this.state.readCompleted && showsReadCompleted(this.state)) {
+      this.run(() => this.refresh());
+    }
   }
 
   /**
@@ -1006,6 +1010,7 @@ export class Controller {
       ...patch,
       scopeVersion,
       tasks: [],
+      readCompleted: undefined,
       taskListLoading: true,
       newTask: rescopedNewTask(this.state, patch, scopeVersion),
       ...selectionPatch(restoredSelection),
@@ -1092,6 +1097,7 @@ export class Controller {
       // rather than showing the empty inspector until that read returns.
       this.patch({
         tasks: this.taskActions.unread.settle(tasks),
+        readCompleted: unloadedCounts(data.read_completed),
         taskListLoading: false,
         ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
       });

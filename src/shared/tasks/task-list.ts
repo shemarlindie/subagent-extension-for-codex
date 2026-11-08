@@ -44,6 +44,15 @@ export type PanelTask = TaskView & {
   archived_at?: string;
 };
 
+/**
+ * The panel's task list. `read_completed` counts, by repository, the
+ * completed tasks the user has read that it leaves out.
+ */
+export type PanelTaskList = {
+  tasks: PanelTask[];
+  read_completed?: Record<string, number>;
+};
+
 /** A latest `agent.reply` event as a listed task's excerpt. */
 export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   if (!event) return undefined;

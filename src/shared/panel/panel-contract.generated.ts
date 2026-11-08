@@ -24,4 +24,5 @@ export const panelOutputSchema = z.object({
     })
     .optional(),
   tasks: z.array(z.record(z.string(), z.unknown())).optional(),
+  read_completed: z.record(z.string(), z.number()).optional(),
 });

@@ -146,6 +146,23 @@ test("dependency multiselect retains multiple choices until explicit submission"
   );
 });
 
+test("dependency options include the read completed tasks the list left out", async (t) => {
+  const { user } = await setupDelegate(t, (transport) => {
+    const done = task("done");
+    done.title = "Review database";
+    done.status = "completed";
+    transport.readCompleted = [done];
+  });
+
+  await screen.findByRole("dialog");
+
+  await user.click(
+    screen.getByRole("combobox", { name: "Wait for tasks (optional)" }),
+  );
+
+  assert.ok(await screen.findByRole("option", { name: "Review database" }));
+});
+
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");

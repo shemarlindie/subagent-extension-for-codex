@@ -16,6 +16,7 @@ import { definitions, withConversation } from "../server/tools.js";
 import type { AnyTool } from "../server/tools/definition.js";
 import { withHostRepository } from "./host-context.js";
 import {
+  panelTaskList,
   panelTasks,
   resolvePanelContext,
   taskPanelContext,
@@ -517,6 +518,59 @@ test("the panel's opening tasks carry their read state", async (t) => {
   const [opened] = panelTasks(f.c, "alice", {});
   assert.equal(opened?.unread, true);
   assert.equal(opened?.read_through, 0);
+});
+
+test("the task list leaves out read completed tasks unless asked, keeping included ones and the newest", async (t) => {
+  const f = await fixture(t);
+  const a = await f.repo("a");
+  const b = await f.repo("b");
+
+  const completed = (id: string, repository: string, day: number) => {
+    const task = f.seed(id, repository, {
+      status: "completed",
+      created_at: `2026-01-0${day}T00:00:00.000Z`,
+    });
+
+    f.c.store.event(task, "agent.reply", { text: "Done", turn: 1 });
+
+    return task;
+  };
+
+  f.c.store.markRead(completed("read_a", a, 1));
+  f.c.store.markRead(completed("read_b", b, 2));
+  f.c.store.markRead(completed("included", a, 3));
+  completed("unread", a, 4);
+  const marked = completed("marked", b, 5);
+  f.c.store.markRead(marked);
+  f.c.store.markUnread(marked);
+  f.seed("running", b, { created_at: "2026-01-06T00:00:00.000Z" });
+  f.c.store.markRead(completed("newest", a, 7));
+
+  const ids = (includeReadCompleted: boolean) => {
+    const list = panelTaskList(
+      f.c,
+      "alice",
+      { include: ["included"] },
+      includeReadCompleted,
+    );
+
+    return { ...list, tasks: list.tasks.map((task) => task.id) };
+  };
+
+  assert.deepEqual(ids(false), {
+    tasks: ["newest", "running", "marked", "unread", "included"],
+    read_completed: { [a]: 1, [b]: 1 },
+  });
+
+  assert.deepEqual(ids(true).tasks, [
+    "newest",
+    "running",
+    "marked",
+    "unread",
+    "included",
+    "read_b",
+    "read_a",
+  ]);
 });
 
 test("a plain chat folder is a candidate that isn't added automatically", async (t) => {

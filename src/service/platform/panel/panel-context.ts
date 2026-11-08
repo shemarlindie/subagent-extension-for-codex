@@ -128,9 +128,47 @@ export async function resolvePanelContext(
 }
 
 /**
- * The tasks the panel lists, as its opening data and `app_list_tasks` carry
- * them. The opening data has them so a reload can place Chat's "New" divider
- * without waiting for the list fetch.
+ * The panel's task list, as its opening data and `app_list_tasks` carry it.
+ * Unless asked, it leaves out completed tasks the user has read, except
+ * those `filters` includes and the newest task, and counts them by
+ * repository in `read_completed`. Only Done and All show them.
+ */
+export function panelTaskList(
+  c: Control,
+  owner: string,
+  filters: TaskFilters,
+  includeReadCompleted: boolean,
+) {
+  if (includeReadCompleted) return { tasks: panelTasks(c, owner, filters) };
+
+  const rows = c.store.readCompletedFlags(owner, {
+    ...filters,
+    include: undefined,
+  });
+
+  // The default selection falls back to the newest task.
+  const listed = new Set(filters.include);
+  if (rows[0]) listed.add(rows[0].id);
+
+  const counts: Record<string, number> = {};
+
+  for (const row of rows) {
+    if (!row.readCompleted) {
+      listed.add(row.id);
+    } else if (!listed.has(row.id)) {
+      counts[row.repository] = (counts[row.repository] ?? 0) + 1;
+    }
+  }
+
+  return {
+    tasks: panelTasks(c, owner, { ids: [...listed] }),
+    read_completed: counts,
+  };
+}
+
+/**
+ * The tasks the panel lists. The opening data has them so a reload can place
+ * Chat's "New" divider without waiting for the list fetch.
  */
 export function panelTasks(c: Control, owner: string, filters: TaskFilters) {
   const archived = c.archive.times(owner, filters);

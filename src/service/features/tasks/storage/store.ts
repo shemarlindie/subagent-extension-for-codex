@@ -41,6 +41,7 @@ import { events, taskRead, tasks } from "./schema.js";
 import { decodeEvent } from "./stored.js";
 import {
   latestEvents,
+  readCompletedFlags,
   readStates,
   readTasks,
   type TaskFilters,
@@ -207,6 +208,14 @@ export class Store {
     return this.reads.rows("task_list", () =>
       readTasks(this.orm, taskFilters(owner, filters), newest),
     );
+  }
+
+  /**
+   * An owner's tasks matching `filters`, newest first, with their repository
+   * and whether each is a completed task the owner has read.
+   */
+  readCompletedFlags(owner: string, filters: TaskFilters) {
+    return readCompletedFlags(this.orm, taskFilters(owner, filters), newest);
   }
 
   /** Every owner's tasks, newest first. */

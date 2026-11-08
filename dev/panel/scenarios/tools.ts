@@ -8,11 +8,7 @@ import {
   windowTurnActivity,
 } from "../../../src/shared/tasks/activity/activity-tail";
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
-import {
-  budgetRaiseSchema,
-  roles,
-  type Task,
-} from "../../../src/shared/tasks/model";
+import { budgetRaiseSchema, roles } from "../../../src/shared/tasks/model";
 import { panelTask, readFields } from "../../../src/shared/tasks/task-list";
 import {
   PREVIEW_ARCHIVE_TOOLS,
@@ -28,6 +24,7 @@ import {
 import { PREVIEW_PENDING_TOOLS, previewPending } from "./pending-update-tools";
 import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
+import { lightList, listed, newestFirst } from "./task-list-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
   previewReadState,
@@ -41,25 +38,6 @@ const previewSettingsDefaults = (() => {
 
   return { ...defaults, models: { ...defaults.models, providers: { claude } } };
 })();
-
-const newestFirst = (tasks: Task[]) =>
-  [...tasks].sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-const inScope = (
-  task: Task,
-  scope: { conversation_id?: unknown; repository?: unknown },
-) =>
-  (typeof scope.conversation_id !== "string" ||
-    task.conversation_id === scope.conversation_id) &&
-  (typeof scope.repository !== "string" ||
-    task.repository === scope.repository);
-
-/** Mirrors `app_list_tasks`' archive and include filters on top of the scope. */
-const listed = (task: Task, args: Record<string, unknown>) =>
-  (Array.isArray(args.include) && args.include.includes(task.id)) ||
-  (inScope(task, args) &&
-    (args.archived === "include" ||
-      (args.archived === "only") === Boolean(previewArchivedAt(task.id))));
 
 const previewClaudeDetails = { supported_versions: "2.1.285+" };
 
@@ -262,8 +240,8 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
     conversation_id: context.panel_scope.conversation_id,
     ...context,
     ...(!options.deferTaskList
-      ? {
-          tasks: newestFirst(tasksOf(options))
+      ? lightList(
+          newestFirst(tasksOf(options))
             .filter((task) =>
               listed(task, {
                 ...context.panel_scope,
@@ -274,7 +252,8 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
               ...task,
               ...readFields(previewReadState(task.id)),
             })),
-        }
+          { include: [context.panel_selection?.task_id] },
+        )
       : {}),
   };
 }
@@ -443,8 +422,8 @@ export function previewTool(
     ),
     get_panel_context: panelContext(args, options),
     list_projects: projectsWith(options),
-    app_list_tasks: {
-      tasks: newestFirst(tasks)
+    app_list_tasks: lightList(
+      newestFirst(tasks)
         .filter((task) => listed(task, args))
         .map((task) => {
           const events = lightEventsFor(task.id);
@@ -458,7 +437,8 @@ export function previewTool(
             previewArchivedAt(task.id),
           );
         }),
-    },
+      args,
+    ),
     app_get_chat: (() => {
       const task = tasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };

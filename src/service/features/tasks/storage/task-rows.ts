@@ -24,12 +24,26 @@ export interface TaskFilters {
   archived?: (typeof archivedFilters)[number];
   /** Tasks to return whatever the other filters say. */
   include?: readonly string[];
+  /** Only these tasks. */
+  ids?: readonly string[];
 }
+
+/** A task the user archived. */
+const archived = sql`exists (select 1 from ${taskArchive} where ${taskArchive.task_id} = ${tasks.id})`;
+
+const readEventTypes = sql.join(
+  READ_EVENTS.map((type) => sql`${type}`),
+  sql`, `,
+);
+
+/**
+ * A completed task the owner has read, as `isUnread` decides: no
+ * `READ_EVENTS` event after its read mark, and not marked unread.
+ */
+const readCompleted = sql<number>`${tasks.status} = 'completed' and coalesce((select max(read_event.id) from ${events} read_event where read_event.task_id = ${tasks.id} and read_event.type in (${readEventTypes})), 0) <= coalesce((select iif(${taskRead.unread}, -1, ${taskRead.through}) from ${taskRead} where ${taskRead.task_id} = ${tasks.id}), 0)`;
 
 /** The condition for an owner's tasks that match `filters`. */
 export function taskFilters(owner: string, filters: TaskFilters) {
-  const archived = sql`exists (select 1 from ${taskArchive} where ${taskArchive.task_id} = ${tasks.id})`;
-
   const matching = and(
     filters.conversation === undefined
       ? undefined
@@ -42,6 +56,7 @@ export function taskFilters(owner: string, filters: TaskFilters) {
         ),
     filters.archived === "only" ? archived : undefined,
     filters.archived === "exclude" ? not(archived) : undefined,
+    filters.ids === undefined ? undefined : inArray(tasks.id, [...filters.ids]),
   );
 
   return and(
@@ -50,6 +65,27 @@ export function taskFilters(owner: string, filters: TaskFilters) {
       ? or(inArray(tasks.id, filters.include), matching)
       : matching,
   );
+}
+
+/**
+ * Each task matching `where`, in `order`, with its repository and whether
+ * it is a completed task the owner has read. Bodies stay undecoded.
+ */
+export function readCompletedFlags(
+  orm: Database["orm"],
+  where: SQL | undefined,
+  order: SQL,
+) {
+  return orm
+    .select({
+      id: tasks.id,
+      repository: sql<string>`json_extract(${tasks.body}, '$.repository')`,
+      readCompleted: sql<number>`${readCompleted}`.mapWith(Boolean),
+    })
+    .from(tasks)
+    .where(where)
+    .orderBy(order)
+    .all();
 }
 
 /** The decoded tasks matching `where`, in `order`, up to `limit`. */

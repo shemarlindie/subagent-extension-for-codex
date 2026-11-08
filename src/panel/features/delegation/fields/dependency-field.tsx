@@ -4,6 +4,7 @@ import type { Task } from "../../../app/state/types";
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import type { DelegateValues } from "../delegate-values";
+import { useDependencyTasks } from "./use-dependency-tasks";
 
 interface DependencyFieldProps {
   tasks: Task[];
@@ -19,7 +20,8 @@ export function DependencyField({
   disabled = false,
 }: DependencyFieldProps) {
   const { control } = useFormContext<DelegateValues>(),
-    repository = useWatch({ control, name: "repository" });
+    repository = useWatch({ control, name: "repository" }),
+    dependencies = useDependencyTasks(tasks, repository);
 
   return (
     <Field id="deps" label="Wait for tasks (optional)">
@@ -31,17 +33,20 @@ export function DependencyField({
         id="deps"
         label="Wait for tasks (optional)"
         itemsLabel="tasks"
-        disabled={loading || projectsLoading || disabled}
-        loading={loading || projectsLoading}
+        disabled={
+          loading || dependencies.loading || projectsLoading || disabled
+        }
+        loading={loading || dependencies.loading || projectsLoading}
         loadingLabel={
           projectsLoading
             ? "Loading project options for dependencies"
             : "Loading tasks for dependency options"
         }
         placeholder="No dependencies"
-        options={tasks
-          .filter((task) => task.repository === repository && !task.archived_at)
-          .map((task) => ({ value: task.id, label: task.title }))}
+        options={dependencies.options.map((task) => ({
+          value: task.id,
+          label: task.title,
+        }))}
       />
     </Field>
   );

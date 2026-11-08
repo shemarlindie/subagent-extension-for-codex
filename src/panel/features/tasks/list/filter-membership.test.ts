@@ -8,6 +8,7 @@ import {
   filterCounts,
   GROUP_ROW_LIMIT,
   groupRows,
+  showsReadCompleted,
   visibleTasks,
 } from "../../../app/state/selectors";
 import type { Filter, Snapshot, Task } from "../../../app/state/types";
@@ -132,6 +133,46 @@ test("filter counts match each filter's list and follow search and scope", () =>
     failed: 0,
     unread: 0,
   });
+});
+
+test("Done and All count read completed tasks the list left out, and load them once shown", () => {
+  const state = (patch: object) =>
+    ({
+      tasks: [task({ id: "a", status: "running" })],
+      readCompleted: { "/repo": 2, "/elsewhere": 5 },
+      filter: null,
+      search: "",
+      repository: "/repo",
+      taskListLoading: false,
+      ...patch,
+    }) as unknown as Snapshot;
+
+  assert.deepEqual(filterCounts(state({})), {
+    all: 3,
+    active: 1,
+    attention: 0,
+    completed: 2,
+    failed: 0,
+    unread: 0,
+  });
+
+  assert.equal(filterCounts(state({ repository: undefined })).completed, 7);
+  // A search loads them, so it counts only what it matches.
+  assert.equal(filterCounts(state({ search: "t" })).completed, 0);
+
+  assert.equal(showsReadCompleted(state({})), false);
+  assert.equal(showsReadCompleted(state({ filter: "completed" })), true);
+  assert.equal(showsReadCompleted(state({ search: "t" })), true);
+
+  // With nothing else, the default filter is Done, but only once it's known.
+  const onlyUnloaded = { tasks: [] };
+  assert.equal(effectiveFilter(state(onlyUnloaded)), "completed");
+  assert.equal(showsReadCompleted(state(onlyUnloaded)), true);
+
+  assert.equal(
+    showsReadCompleted(state({ ...onlyUnloaded, taskListLoading: true })),
+    false,
+  );
 });
 
 test("the filter follows the first nonempty one in order until chosen", () => {

@@ -33,13 +33,15 @@ export class TaskArrivals {
     const listed =
       this.listed?.scope === state.scopeVersion ? this.listed.ids : undefined;
 
+    // A read completed task appears when Done or All loads it, not because it arrived.
     const arrived =
       listed &&
       tasks.find(
         (task) =>
           !listed.has(task.id) &&
           task.id !== state.selected &&
-          !task.archived_at,
+          !task.archived_at &&
+          (task.status !== "completed" || task.unread),
       );
 
     const ids = listed ?? new Set<string>();

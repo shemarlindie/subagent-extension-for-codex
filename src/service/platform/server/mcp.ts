@@ -8,7 +8,7 @@ import { SendRejectedError } from "../../../shared/tasks/conversation/send-error
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
 import { delegationPanel } from "../panel/panel.js";
-import { panelTasks, resolvePanelContext } from "../panel/panel-context.js";
+import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";
 import { packageVersion } from "../service/runtime.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import {
@@ -127,7 +127,7 @@ export function mcp(
 
   const panel = delegationPanel(
     nativeHtmlPath,
-    (scope) => panelTasks(c, owner, scope),
+    (scope) => panelTaskList(c, owner, scope, false),
     (args) => resolvePanelContext(c, owner, args),
   );
 

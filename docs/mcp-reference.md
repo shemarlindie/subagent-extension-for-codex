@@ -142,7 +142,10 @@ schema. App-only tools carry user authority:
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
 panel's tasks as `{ tasks }`, without their conversation and context. `include`
-names tasks to list whatever the filters say.
+names tasks to list whatever the filters say. Unless `include_read_completed` is
+true, it also leaves out completed tasks the user has read, except included ones
+and the newest, and counts them by repository in `read_completed`. The panel
+loads them for Done, All and search.
 
 `list_tasks` and `app_list_tasks` take the same `archived` filter: `exclude`
 (the default) leaves archived tasks out, `include` lists them too and `only`
