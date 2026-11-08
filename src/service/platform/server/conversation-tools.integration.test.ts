@@ -53,7 +53,7 @@ async function setup(provider: Provider = fixtureProvider()) {
       ...(budget ? { budget } : {}),
     });
 
-  return { c, store, parent, user, start };
+  return { c, store, parent, user, start, repo };
 }
 
 type StreamingOptions = {
@@ -666,6 +666,114 @@ test("an update wait returns once the owner's revision changes, and a change end
     );
   } finally {
     finish();
+    await c.close();
+  }
+});
+
+test("an update wait returns the panel view as of its revision, except for draft growth alone", async () => {
+  const finished = Promise.withResolvers<void>();
+  const growDraft = Promise.withResolvers<void>();
+
+  const { c, store, parent, user, repo } = await setup(
+    new Streaming({ finished: finished.promise, growDraft: growDraft.promise }),
+  );
+
+  type Update = {
+    revision: string;
+    draft?: unknown;
+    view?: { built_at: number; list: { tasks: PanelTask[] } };
+  };
+
+  const wait = (args: Record<string, unknown>) =>
+    user<Update>("app_wait_for_updates", args);
+
+  try {
+    const t = await parent<Task>("start_task", {
+      provider: "fixture",
+      description: "Write",
+      workspace_strategy: "worktree",
+      repository: repo,
+      conversation_id: "chat",
+    });
+
+    await until(() => c.drafts.get(t.id)?.text === "Half ");
+
+    const parts = {
+      list: { conversation_id: "chat" },
+      chat: { task_id: t.id, after: 0 },
+      activity: { task_id: t.id, after: 0 },
+      pending: { conversation_id: "chat" },
+    };
+
+    // Without after, it returns at once, each part as its own tool reads it.
+    const first = await wait({ view: parts });
+    assert.equal(first.revision, store.revision("alice"));
+    const { built_at: builtAt, ...view } = first.view!;
+    assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
+
+    assert.deepEqual(view, {
+      projects: await user("list_projects", {}),
+      list: await user("app_list_tasks", parts.list),
+      chat: await user("app_get_chat", parts.chat),
+      activity: await user("app_get_activity", parts.activity),
+      pending: await user("app_list_pending_updates", parts.pending),
+    });
+
+    // A wait that runs out returns the view.
+    const quiet = await wait({
+      after: first.revision,
+      view: parts,
+      wait_ms: 20,
+    });
+
+    assert.ok(quiet.view);
+
+    // Draft growth alone returns the draft without the view.
+    const growing = wait({
+      after: first.revision,
+      draft: { task_id: t.id, message_id: "msg_live", after_length: 5 },
+      view: parts,
+      wait_ms: 5000,
+    });
+
+    growDraft.resolve();
+
+    assert.deepEqual(await growing, {
+      revision: first.revision,
+      draft: { message_id: "msg_live", text: "Half a reply" },
+      running: true,
+    });
+
+    // A change returns the view as of the new revision.
+    const changing = wait({
+      after: first.revision,
+      view: parts,
+      wait_ms: 5000,
+    });
+
+    await user("app_rename_task", { task_id: t.id, title: "Renamed" });
+    const changed = await changing;
+    assert.equal(changed.revision, store.revision("alice"));
+    assert.equal(changed.view?.list.tasks[0]?.title, "Renamed");
+
+    // A missing selected task leaves its details out and the rest in.
+    const missing = await wait({
+      view: {
+        ...parts,
+        chat: { task_id: "missing" },
+        activity: { task_id: "missing" },
+      },
+    });
+
+    assert.deepEqual(Object.keys(missing.view!).sort(), [
+      "built_at",
+      "list",
+      "pending",
+      "projects",
+    ]);
+  } finally {
+    growDraft.resolve();
+    finished.resolve();
     await c.close();
   }
 });

@@ -190,9 +190,9 @@ export class Store {
   }
 
   /**
-   * An opaque token for the state of an owner's tasks and the project list.
-   * It differs whenever either has changed, including across a restart, so
-   * clients compare it only for equality.
+   * A token for the state of an owner's tasks and the project list,
+   * `bootId:count`. It differs whenever either has changed, including across
+   * a restart, and the count only grows within a boot.
    */
   revision(owner: string) {
     const count = (this.revisions.get(owner) ?? 0) + this.projectRevision;

@@ -1,6 +1,7 @@
 import { logEvent, withLogContext } from "../../../platform/logging/logger.js";
 
-type ReadOperation = "task_list" | "chat" | "activity_latest" | "activity_turn";
+type ReadOperation =
+  "task_list" | "chat" | "activity_latest" | "activity_turn" | "view";
 
 export interface ReadWork {
   rows: number;

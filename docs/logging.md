@@ -140,15 +140,19 @@ threshold.
 ### Storage reads
 
 `storage.read` records individual reads at debug level. `operation` is
-`task_list`, `chat`, `activity_latest` or `activity_turn`. `duration_ms` covers
-SQL retrieval and JSON decoding together. Task-list reads also include sorting.
-Activity reads include finding the window, reading its events and tallying older
-events. Chat measures retrieval of its source events, excluding conversation
-assembly. These boundaries sit inside tool and HTTP durations.
+`task_list`, `chat`, `activity_latest`, `activity_turn` or `view`. `duration_ms`
+covers SQL retrieval and JSON decoding together. Task-list reads also include
+sorting. Activity reads include finding the window, reading its events and
+tallying older events. Chat measures retrieval of its source events, excluding
+conversation assembly. A Chat read with nothing newer than its cursor records
+zero rows. `view` covers the synchronous part of a panel view an update wait
+builds, around the reads it makes, after its projects are read. These boundaries
+sit inside tool and HTTP durations.
 
 Each record has `outcome` (`success` or `error`) and `rows`, the number of
-returned tasks or events. Activity also reports `tally_rows`, the older events
-traversed to build its dropped-event tally, and `cache`:
+returned tasks or events, or the listed tasks for `view`. Activity also reports
+`tally_rows`, the older events traversed to build its dropped-event tally, and
+`cache`:
 
 - `hit` reuses a latest-Activity tally and can still traverse new older rows.
 - `miss` creates or rebuilds a tally, including after cache eviction.

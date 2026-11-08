@@ -194,8 +194,12 @@ to the task lists. `app_clear_queue` takes optional `message_ids` so redo
 removes only the restored messages.
 
 `app_wait_for_updates` returns when the owner's revision or a targeted reply
-draft changes, or after at most 25 seconds. Revision tokens are opaque and
-change after a service restart, so compare them only for equality. See
+draft changes, or after at most 25 seconds. A revision is `bootId:count`. The
+boot ID changes after a service restart, and the count only grows within a boot,
+so compare counts only between revisions of the same boot. Given `view`, the
+wait also returns the panel's projects, task list, selected task's Chat and
+Activity, and pending updates as of the returned revision, unless only the draft
+changed. Each part takes and returns its own tool's arguments and shape. See
 [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
