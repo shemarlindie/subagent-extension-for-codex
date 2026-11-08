@@ -217,6 +217,9 @@ export class ClaudeAgentProvider implements Provider {
     // A steer the CLI runs as its own turn starts again, in whatever mode
     // the first one left, so only the first start says what the task got.
     let started = false;
+    // The session last reported and its transcript, once found.
+    let sessionId: string | undefined;
+    let sessionRef: string | undefined;
 
     try {
       // With no prompt sent, ending the input ends the session before any
@@ -260,10 +263,17 @@ export class ClaudeAgentProvider implements Provider {
           });
         }
 
-        if ("session_id" in m && m.session_id) {
-          const ref = await this.sessionPath(m.session_id);
+        // A new session's transcript may not exist for its first messages,
+        // so the lookup repeats until it finds one.
+        if (
+          "session_id" in m &&
+          m.session_id &&
+          (m.session_id !== sessionId || !sessionRef)
+        ) {
+          sessionId = m.session_id;
+          sessionRef = await this.sessionPath(sessionId);
 
-          c.session(m.session_id, ref);
+          c.session(sessionId, sessionRef);
         }
 
         if ((m as { type: string }).type === "command_lifecycle") {

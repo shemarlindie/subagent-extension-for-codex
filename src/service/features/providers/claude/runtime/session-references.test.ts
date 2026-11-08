@@ -52,16 +52,16 @@ test("session references refresh as the session ID changes", async () => {
     reply: "Reply",
   });
 
-  expect(sessionPath).toHaveBeenCalledWith("session-a");
-  expect(sessionPath).toHaveBeenCalledWith("session-b");
+  // Looks up each ID until its transcript is found, then stops.
+  expect(sessionPath.mock.calls).toEqual([
+    ["session-a"],
+    ["session-a"],
+    ["session-b"],
+  ]);
 
-  expect(sessions[0]).toEqual({
-    id: "session-a",
-    ref: undefined,
-  });
-
-  expect(sessions[1]).toEqual({
-    id: "session-a",
-    ref: "session-path/session-a",
-  });
+  expect(sessions).toEqual([
+    { id: "session-a", ref: undefined },
+    { id: "session-a", ref: "session-path/session-a" },
+    { id: "session-b", ref: "session-path/session-b" },
+  ]);
 });
