@@ -6,7 +6,7 @@
 
 <!-- Show visible UI changes with screenshots or video. Delete this section if there are none.
 
-- One screenshot: a plain image. Put a tall one in one half-width cell like those below so it fits on screen.
+- One screenshot: a plain image. Put a tall one in the first cell of the table below and leave the second empty so it fits on screen.
 - Several: a two-column table, with a one-line caption above each image. Keep blank lines around each image.
 
 <table><tr>
