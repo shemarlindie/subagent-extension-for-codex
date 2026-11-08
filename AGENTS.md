@@ -210,4 +210,4 @@ Apply the [shared level rules](#test-and-documentation-levels) at every level.
   the user explicitly asks.
 - Follow
   [Commits, pull requests and branches](CONTRIBUTING.md#commits-pull-requests-and-branches)
-  for commit subjects, pull request titles and branch names.
+  for commit subjects, pull request titles and descriptions, and branch names.

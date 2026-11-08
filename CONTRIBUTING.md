@@ -56,6 +56,11 @@ title the same form.
 
 Don't hard-wrap lines in pull request descriptions.
 
+Show visible UI changes with screenshots or video, captured as
+[UI verification](docs/ui-verification.md#screenshots) describes. Attach local
+files with `gh pr create --attach` or `gh pr edit --attach`, which uploads them
+and points `![alt](./file.png)` references in the body at the uploads.
+
 Name branches `type/short-description` in kebab case with the same types, such
 as `feat/undo-redo` or `fix/composer-reload-text`. Add the issue number when
 there is one, such as `fix/123-composer-reload-text`.

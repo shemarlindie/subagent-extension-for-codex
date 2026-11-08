@@ -30,6 +30,14 @@ activity row or event kind in its owning scenario module, and register it in
 `dev/panel/scenarios/fixtures.ts`. `preview-sdk-fixtures.test.ts` replays built
 and recorded fixtures through the provider.
 
+## Screenshots
+
+Capture the panel, never the whole dev host page. Screenshot the iframe element
+for context or the changed element, such as a dialog or row, for detail. Use
+both when the change is small within the panel. Use `deviceScaleFactor: 2` for
+screenshots people will see. Add other widths or themes only where they look
+different.
+
 ## Scope and host controls
 
 The dev host saves its settings in browser storage. Changing a setting
