@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import { input, setup, until } from "./control-test-harness.js";
 
@@ -233,6 +233,60 @@ test("a task is deleted in any state with everything related to it", async () =>
   }
 });
 
+test("tasks without a recorded session leave session deletion available for the rest", async () => {
+  const { c, store, repo } = await setup();
+  const sessions: string[] = [];
+  const fixture = c.providers.get("fixture")!;
+  const verify = fixture.sessionDeletionStatus!.bind(fixture);
+
+  fixture.deleteSession = async (t) => {
+    sessions.push(t.id);
+  };
+
+  const stopped = async () => {
+    const task = await c.start("alice", input(repo, "[input]"));
+    await until(() => !!store.get(task.id, "alice").pending_input);
+    await c.interrupt("alice", task.id);
+
+    return store.get(task.id, "alice");
+  };
+
+  try {
+    const recorded = await stopped();
+    const unrecorded = await stopped();
+    delete unrecorded.session_id;
+    store.save(unrecorded);
+    const selection = [recorded.id, unrecorded.id];
+    const preview = await c.taskDeletionPreview("alice", selection, true);
+
+    assert.equal(preview.sessionDeletion.available, true);
+    assert.ok(preview.confirmation);
+
+    const target = (id: string) => preview.tasks.find((task) => task.id === id);
+
+    assert.ok(target(recorded.id)?.session);
+    assert.equal(target(unrecorded.id)?.sessionRecorded, false);
+
+    // An unverified session still blocks the batch and names its task.
+    fixture.sessionDeletionStatus = async (task) =>
+      task.id === recorded.id
+        ? { available: false, message: "Unverified." }
+        : verify(task);
+
+    assert.deepEqual(
+      (await c.taskDeletionPreview("alice", selection, true)).sessionDeletion,
+      { available: false, message: `Unverified. Task: ${recorded.title}` },
+    );
+
+    fixture.sessionDeletionStatus = verify;
+    await c.delete("alice", selection, true, preview.confirmation);
+    assert.deepEqual(sessions, [recorded.id]);
+    assert.deepEqual(store.list("alice", {}), []);
+  } finally {
+    await c.close();
+  }
+});
+
 test("deletion locks execution and duplicate cleanup until it finishes", async () => {
   const { c, store, repo } = await setup();
   let release!: () => void;
@@ -278,28 +332,6 @@ test("deletion locks execution and duplicate cleanup until it finishes", async (
   }
 });
 
-test("provider deletion failures preserve local task resources and release the lock", async () => {
-  const { c, store, repo } = await setup();
-
-  c.providers.get("fixture")!.deleteSession = async () => {
-    throw new Error("cleanup failed");
-  };
-
-  try {
-    const task = await c.start("alice", input(repo, "[input]"));
-    await until(() => !!store.get(task.id, "alice").pending_input);
-    await c.interrupt("alice", task.id);
-    await assert.rejects(c.delete("alice", task.id, true), /cleanup failed/);
-    const kept = store.get(task.id, "alice");
-    assert.equal(existsSync(kept.workspace!), true);
-    assert.ok(store.events(task.id, "alice").length);
-    await c.delete("alice", task.id);
-    assert.throws(() => store.get(task.id, "alice"), /not found/);
-  } finally {
-    await c.close();
-  }
-});
-
 test("a follow-up already awaiting project validation cannot resurrect a deleted task", async () => {
   const { c, store, repo } = await setup();
   let release!: () => void;
@@ -332,6 +364,141 @@ test("a follow-up already awaiting project validation cannot resurrect a deleted
     assert.throws(() => store.get(task.id, "alice"), /not found/);
   } finally {
     release?.();
+    await c.close();
+  }
+});
+
+test("deleting a task keeps a worktree outside the managed folder and its branch", async () => {
+  const { c, store, repo, dir } = await setup();
+
+  try {
+    const task = await c.start("alice", input(repo));
+    await until(() => store.get(task.id, "alice").status === "completed");
+    const moved = store.get(task.id, "alice");
+    const outside = join(dir, "outside-worktree");
+
+    execFileSync("git", [
+      "-C",
+      repo,
+      "worktree",
+      "move",
+      moved.workspace!,
+      outside,
+    ]);
+
+    moved.workspace = outside;
+    store.save(moved);
+
+    const preview = await c.taskDeletionPreview("alice", [task.id], false);
+
+    assert.deepEqual(preview.tasks[0]?.retainedWorktree, {
+      worktree: outside,
+      branch: moved.branch,
+    });
+
+    await c.delete("alice", task.id, false, preview.confirmation);
+    assert.throws(() => store.get(task.id, "alice"), /not found/);
+    assert.equal(existsSync(outside), true);
+    assert.equal(await c.workspaces.branchExists(moved), true);
+  } finally {
+    await c.close();
+  }
+});
+
+test("changed worktree targets refuse reviewed deletion and keep repurposed checkouts", async () => {
+  const { c, store, repo } = await setup();
+
+  try {
+    const task = await c.start("alice", input(repo));
+    await until(() => store.get(task.id, "alice").status === "completed");
+    const stopped = store.get(task.id, "alice");
+    const reviewed = await c.workspaces.deletion(stopped);
+
+    const commit = (message: string) => {
+      execFileSync("git", [
+        "-C",
+        stopped.workspace!,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--allow-empty",
+        "-qm",
+        message,
+      ]);
+    };
+
+    commit("new branch tip");
+
+    await assert.rejects(
+      c.workspaces.discard(stopped, reviewed.version),
+      /Worktree or branch changed/,
+    );
+
+    assert.equal(existsSync(stopped.workspace!), true);
+    assert.equal(await c.workspaces.branchExists(stopped), true);
+
+    execFileSync("git", [
+      "-C",
+      stopped.workspace!,
+      "checkout",
+      "-qb",
+      "user-work",
+    ]);
+
+    await assert.rejects(
+      c.delete("alice", stopped.id),
+      /different branch or repository/,
+    );
+
+    assert.equal(existsSync(store.get(stopped.id, "alice").workspace!), true);
+    assert.equal(await c.workspaces.branchExists(stopped), true);
+
+    assert.equal(
+      execFileSync("git", [
+        "-C",
+        stopped.workspace!,
+        "branch",
+        "--show-current",
+      ])
+        .toString()
+        .trim(),
+      "user-work",
+    );
+
+    execFileSync("git", [
+      "-C",
+      stopped.workspace!,
+      "checkout",
+      "-q",
+      stopped.branch!,
+    ]);
+
+    const approved = await c.workspaces.deletion(stopped);
+    const inspect = c.workspaces.deletion.bind(c.workspaces);
+
+    const inspection = vi
+      .spyOn(c.workspaces, "deletion")
+      .mockImplementationOnce(async (target) => {
+        const resources = await inspect(target);
+        commit("new work during cleanup");
+
+        return resources;
+      });
+
+    try {
+      await assert.rejects(
+        c.workspaces.discard(stopped, approved.version),
+        /branch changed during cleanup/,
+      );
+
+      assert.equal(existsSync(stopped.workspace!), false);
+      assert.equal(await c.workspaces.branchExists(stopped), true);
+    } finally {
+      inspection.mockRestore();
+    }
+  } finally {
     await c.close();
   }
 });

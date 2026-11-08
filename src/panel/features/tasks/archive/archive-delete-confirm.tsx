@@ -1,28 +1,29 @@
-import { Switch } from "@base-ui/react/switch";
 import { useState } from "react";
 
 import { Button } from "../../../shared/components/button/button";
+import { AgentTaskDeletionOption } from "../controls/agent-task-deletion-option";
+import { TaskDeletionDetails } from "../controls/task-deletion-details";
+import { useTaskDeletionPreview } from "../controls/use-task-deletion-preview";
 
 type ArchiveDeleteConfirmProps = {
-  count: number;
+  taskIds: string[];
   pending: boolean;
   onCancel: () => void;
-  onConfirm: (deleteAgentTasks: boolean) => void;
+  onConfirm: (deleteAgentTasks: boolean, confirmation: string) => void;
 };
 
 /** Confirms deleting archived tasks, with a choice to delete their provider sessions too. */
 export function ArchiveDeleteConfirm({
-  count,
+  taskIds,
   pending,
   onCancel,
   onConfirm,
 }: ArchiveDeleteConfirmProps) {
   const [deleteAgentTasks, setDeleteAgentTasks] = useState(false);
+  const count = taskIds.length;
+  const deletion = useTaskDeletionPreview(taskIds, deleteAgentTasks);
 
-  const what =
-    count === 1
-      ? "this task with its conversation, activity, worktree and branch"
-      : `these ${count} tasks with their conversations, activity, worktrees and branches`;
+  const what = count === 1 ? "this task" : `these ${count} tasks`;
 
   return (
     <div
@@ -31,37 +32,34 @@ export function ArchiveDeleteConfirm({
       aria-label="Confirm deletion"
     >
       <p className="form-note">
-        Delete {what}, uncommitted changes included? This can't be undone.
+        Delete {what} and the resources listed below? This can't be undone.
       </p>
-      <div className="delete-option">
-        <div className="delete-option-text">
-          <span id="archive-delete-agent-label">
-            Also delete the agent tasks
-          </span>
-          <span id="archive-delete-agent-help" className="form-note">
-            Deletes the provider sessions they ran in, so they can never be
-            continued or resumed.
-          </span>
-        </div>
-        <Switch.Root
-          className="switch"
-          checked={deleteAgentTasks}
-          disabled={pending}
-          onCheckedChange={setDeleteAgentTasks}
-          aria-labelledby="archive-delete-agent-label"
-          aria-describedby="archive-delete-agent-help"
-        >
-          <Switch.Thumb className="switch-thumb" />
-        </Switch.Root>
-      </div>
+      <AgentTaskDeletionOption
+        id="archive-delete-agent"
+        label="Also delete the agent tasks"
+        checked={deleteAgentTasks}
+        busy={pending}
+        sessionDeletion={deletion.preview?.sessionDeletion}
+        onCheckedChange={setDeleteAgentTasks}
+      />
+      <TaskDeletionDetails
+        preview={deletion.preview}
+        checking={deletion.checking}
+        error={deletion.error}
+        onRefresh={deletion.reload}
+        disabled={pending}
+      />
       <div className="archive-delete-actions">
         <Button disabled={pending} onClick={onCancel}>
           Cancel
         </Button>
         <Button
           className="archive-delete-submit"
-          disabled={pending}
-          onClick={() => onConfirm(deleteAgentTasks)}
+          disabled={pending || deletion.checking || !deletion.confirmation}
+          onClick={() =>
+            deletion.confirmation &&
+            onConfirm(deleteAgentTasks, deletion.confirmation)
+          }
         >
           {count === 1 ? "Delete task" : `Delete ${count} tasks`}
         </Button>

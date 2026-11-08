@@ -1,11 +1,16 @@
-import { Switch } from "@base-ui/react/switch";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 
-import { useController } from "../../../app/state/controller-context";
+import {
+  useController,
+  useSnapshot,
+} from "../../../app/state/controller-context";
 import type { DialogState } from "../../../app/state/types";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
+import { AgentTaskDeletionOption } from "./agent-task-deletion-option";
+import { TaskDeletionDetails } from "./task-deletion-details";
+import { useTaskDeletionPreview } from "./use-task-deletion-preview";
 
 type DeleteTaskFormProps = {
   dialog: Extract<DialogState, { kind: "delete" }>;
@@ -18,10 +23,17 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
   const controller = useController(),
     { task } = dialog;
 
+  const { busy } = useSnapshot();
+
   const { control, handleSubmit } = usePersistedDialogForm<DeleteTaskValues>(
     "delete",
-    { deleteAgentTask: false },
+    {
+      deleteAgentTask: false,
+    },
   );
+
+  const includeSession = useWatch({ control, name: "deleteAgentTask" });
+  const deletion = useTaskDeletionPreview([task.id], includeSession);
 
   return (
     <form
@@ -29,9 +41,14 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
         handleSubmit((values) =>
           controller.submit(
             async () => {
+              if (!deletion.confirmation) {
+                throw new Error("Review the removal list before deleting.");
+              }
+
               await controller.tool("app_delete_tasks", {
                 task_ids: [task.id],
                 delete_agent_task: values.deleteAgentTask,
+                confirmation: deletion.confirmation,
               });
             },
             false,
@@ -41,44 +58,36 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
       )}
     >
       <p className="form-note">
-        {["queued", "starting", "running", "waiting"].includes(task.status)
-          ? "Stop and delete"
-          : "Delete"}{" "}
-        this task with its conversation and activity
-        {task.workspace_strategy === "worktree" && (
-          <>
-            , its worktree (uncommitted changes included) and branch{" "}
-            <code>{task.branch}</code>
-          </>
-        )}
-        ? This can't be undone.
+        Delete this task and the resources listed below? Running work will stop
+        first. This can't be undone.
       </p>
-      <div className="delete-option">
-        <div className="delete-option-text">
-          <span id="delete-agent-task-label">Also delete the agent task</span>
-          <span id="delete-agent-task-help" className="form-note">
-            Deletes the {task.provider} session this task ran in, so it can
-            never be continued or resumed.
-          </span>
-        </div>
-        <Controller
-          control={control}
-          name="deleteAgentTask"
-          render={({ field }) => (
-            <Switch.Root
-              className="switch"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              onBlur={field.onBlur}
-              aria-labelledby="delete-agent-task-label"
-              aria-describedby="delete-agent-task-help"
-            >
-              <Switch.Thumb className="switch-thumb" />
-            </Switch.Root>
-          )}
-        />
-      </div>
-      <FormFooter label="Delete task" dismissLabel="Cancel" />
+      <Controller
+        control={control}
+        name="deleteAgentTask"
+        render={({ field }) => (
+          <AgentTaskDeletionOption
+            id="delete-agent-task"
+            label="Also delete the agent task"
+            checked={field.value}
+            busy={busy}
+            sessionDeletion={deletion.preview?.sessionDeletion}
+            onCheckedChange={field.onChange}
+            onBlur={field.onBlur}
+          />
+        )}
+      />
+      <TaskDeletionDetails
+        preview={deletion.preview}
+        checking={deletion.checking}
+        error={deletion.error}
+        onRefresh={deletion.reload}
+        disabled={busy}
+      />
+      <FormFooter
+        label="Delete task"
+        dismissLabel="Cancel"
+        disabled={deletion.checking || !deletion.confirmation}
+      />
     </form>
   );
 }

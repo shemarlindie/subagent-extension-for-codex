@@ -16,6 +16,7 @@ import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { until } from "../../../../tests/support/until.js";
+import { taskDeletionPreviewSchema } from "../../../shared/tasks/deletion-contract.generated.js";
 import { callTool, isUserTool } from "../../platform/server/tools.js";
 import { executionTaskPolicy } from "../providers/task-policy.js";
 import { PendingInput } from "../tasks/input/pending-input.js";
@@ -87,6 +88,19 @@ async function removalFixture(t: import("vitest").TestContext) {
 test("removing project task data deletes its tasks, history and approval", async (t) => {
   const f = await removalFixture(t);
   const first = await f.task();
+
+  const review = async () =>
+    taskDeletionPreviewSchema.parse(
+      await callTool(
+        f.control,
+        "owner",
+        "app_preview_task_deletion",
+        { repository: f.repository },
+        "user",
+      ),
+    );
+
+  const earlier = await review();
   const second = await f.task();
   const discarded: string[] = [];
 
@@ -94,11 +108,33 @@ test("removing project task data deletes its tasks, history and approval", async
     discarded.push(task.id);
   });
 
+  await assert.rejects(
+    f.control.removeProject("owner", f.repository, true, earlier.confirmation),
+    /Deletion details changed/,
+  );
+
+  assert.deepEqual(discarded, []);
+
+  assert.deepEqual(
+    f.store
+      .all()
+      .map((task) => task.id)
+      .sort(),
+    [first.id, second.id].sort(),
+  );
+
+  assert.equal(await f.projects.resolve(f.repository), f.repository);
+  const current = await review();
+
   await callTool(
     f.control,
     "owner",
     "app_remove_project",
-    { repository: f.repository, delete_tasks: true },
+    {
+      repository: f.repository,
+      delete_tasks: true,
+      confirmation: current.confirmation,
+    },
     "user",
   );
 
@@ -106,6 +142,54 @@ test("removing project task data deletes its tasks, history and approval", async
   assert.deepEqual(f.store.all(), []);
   assert.deepEqual(f.projects.list(), []);
   assert.throws(() => f.store.events(first.id, "owner"), /Task not found/);
+});
+
+test("project removal deletes reviewed agent sessions with task data", async (t) => {
+  const f = await removalFixture(t);
+  const task = await f.task();
+  const saved = f.store.get(task.id, "owner");
+  saved.session_id = "session";
+  saved.session_owner = f.control.ownerWorker;
+  f.store.save(saved);
+  const provider = f.control.providers.get(saved.provider)!;
+  const deleted: string[] = [];
+
+  provider.sessionDeletionStatus = async () => ({
+    available: true,
+    resources: [],
+    version: "verified",
+  });
+
+  provider.deleteSession = async (session) => {
+    deleted.push(session.id);
+  };
+
+  const preview = taskDeletionPreviewSchema.parse(
+    await callTool(
+      f.control,
+      "owner",
+      "app_preview_task_deletion",
+      { repository: f.repository, delete_agent_task: true },
+      "user",
+    ),
+  );
+
+  await callTool(
+    f.control,
+    "owner",
+    "app_remove_project",
+    {
+      repository: f.repository,
+      delete_tasks: true,
+      delete_agent_task: true,
+      confirmation: preview.confirmation,
+    },
+    "user",
+  );
+
+  assert.deepEqual(deleted, [task.id]);
+  assert.deepEqual(f.store.all(), []);
+  assert.deepEqual(f.projects.list(), []);
 });
 
 test("failed project cleanup keeps approval and remaining tasks and reports partial deletion", async (t) => {
@@ -392,12 +476,20 @@ test("project removal is idempotent even after its directory disappears", async 
   assert.deepEqual(f.workspaces.allowedRoots, [retained]);
 });
 
-test("removing a saved root by another spelling revokes it", async (t) => {
+test("saved-root removal resolves aliases only when exact matching is disabled", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("linked/repo");
   await f.projects.register(repository);
   const alias = join(f.dir, "alias");
   await symlink(repository, alias);
+  f.projects.remove(alias, true);
+
+  assert.deepEqual(
+    f.projects.list().map((project) => project.repository),
+    [repository],
+  );
+
+  assert.equal(await f.projects.resolve(repository), repository);
   f.projects.remove(alias);
 
   assert.deepEqual(f.projects.list(), []);

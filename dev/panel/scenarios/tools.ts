@@ -29,6 +29,7 @@ import {
 } from "./preview-claude-readiness";
 import { previewCatalog } from "./preview-models";
 import { PREVIEW_QUEUE_TOOLS, previewQueueTool } from "./queue-tools";
+import { previewTaskDeletion } from "./task-deletion-tools";
 import { lightList, listed, newestFirst } from "./task-list-tools";
 import {
   PREVIEW_UNREAD_TOOLS,
@@ -439,6 +440,7 @@ export function previewTool(
     app_get_about: options.claudeUnavailable
       ? previewAbout(previewClaudeUnavailable, true)
       : previewAbout(previewClaudeReady, false),
+    app_preview_task_deletion: previewTaskDeletion(tasks, args),
     open_subagent_extension_for_codex: openPanel(args, options),
     app_open_subagent_extension_for_codex_global: openPanel(
       { conversation_id: null },

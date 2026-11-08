@@ -85,7 +85,7 @@ test("a task-list read predating project removal never publishes its deleted tas
   assert.equal(reads, 1);
 
   assert.equal(
-    await controller.manageProject("/repo/a", undefined, true),
+    await controller.manageProject("/repo/a", undefined, { deleteTasks: true }),
     true,
   );
 

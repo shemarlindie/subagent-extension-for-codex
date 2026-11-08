@@ -623,7 +623,6 @@ test("run emits result accounting exactly once for success and failure", async (
           })(),
           { close() {} },
         ) as unknown as Query,
-      undefined,
       readyClaudeCli,
     );
 

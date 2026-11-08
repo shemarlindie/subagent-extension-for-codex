@@ -246,22 +246,22 @@ test("review recorded worktree edits and retain them after removing the worktree
   await expect(confirmation).toHaveCount(0);
 
   await expect(
-    page.getByRole("button", { name: "Delete branch", exact: true }),
+    page.getByRole("button", { name: "Delete local branch", exact: true }),
   ).toBeEnabled();
 
   await page
-    .getByRole("button", { name: "Delete branch", exact: true })
+    .getByRole("button", { name: "Delete local branch", exact: true })
     .click();
 
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Delete branch", exact: true })
+    .getByRole("button", { name: "Delete local branch", exact: true })
     .click();
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   await expect(
-    page.getByRole("button", { name: "Delete branch", exact: true }),
+    page.getByRole("button", { name: "Delete local branch", exact: true }),
   ).toHaveCount(0);
 
   await expect(

@@ -56,14 +56,17 @@ unless you remove them from that setting.
 
 **Also remove extension task data**, off by default, stops and removes every
 task with that exact repository path across all chats. This includes
-conversations, activity, requests, and task worktrees and branches with
-uncommitted changes. Checkout files and provider sessions remain. Removing a
-parent approval leaves descendant repositories' tasks in place.
+conversations, activity, requests, and task worktrees and local branches with
+uncommitted changes. Checkout files remain. Turn on **Also delete the agent
+tasks** to remove their provider sessions too. Removing a parent approval leaves
+descendant repositories' tasks in place.
 
 - Dependent tasks in the same repository are removed first.
 - Dependent tasks in other projects block removal before cleanup starts.
 - If cleanup fails, the approval and remaining tasks stay available for retry.
   The error warns that earlier removals cannot be undone.
+- The confirmation lists the project registration and each task resource it will
+  remove. If tasks or resources change, refresh the list and review it again.
 
 Removing the selected project returns the task list to **All projects**.
 
@@ -460,7 +463,7 @@ commands.
 
 - **Remove worktree** keeps the branch and asks before discarding uncommitted
   changes.
-- **Delete branch** asks separately after removal.
+- **Delete local branch** asks separately after removal. Remote branches stay.
 
 These actions are disabled while the task works or while change reads are
 loading or failed. A later message recreates the worktree from its branch, or
@@ -492,11 +495,23 @@ copy instead.
 
 **Task actions** in the task heading includes handoff and deletion. **Delete
 task** stops running, queued or waiting work, then removes the task's history,
-requests, recorded edits, worktree and branch. Files in the project folder stay
-intact.
+requests, recorded edits, worktree and local branch. Files in the project folder
+and remote branches stay intact.
 
 - **Also delete the agent task**, off by default, also removes the provider
-  session. If that fails, the local task stays for retry.
+  session. It is unavailable when the service cannot verify where the session
+  files are. With several tasks selected, one unverified session makes it
+  unavailable for all of them, and the note names that task. Tasks without a
+  recorded session don't block it. You can still delete the extension's task
+  record and leave the provider session alone. If session cleanup fails, the
+  local task stays for retry.
+- The confirmation lists each selected task, worktree, local branch and optional
+  session files. Folder removal includes all contents. If a listed resource
+  changes, refresh the removal list and review it again before deleting. An info
+  icon beside a path identifies symbolic links. Hover or activate it to see each
+  link and its resolved target.
+- A worktree outside the managed worktree folder and its local branch stay. The
+  confirmation lists them under **Will remain**.
 - A later cleanup failure can leave earlier resources removed.
 
 ## Transport

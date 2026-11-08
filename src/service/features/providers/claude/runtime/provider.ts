@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { access, readdir } from "node:fs/promises";
+import { readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
-  deleteSession,
   type Query,
   query,
   type SDKMessage,
@@ -33,6 +32,10 @@ import { claudeMessageNormalizer } from "../events/normalize.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
+import {
+  claudeSessionDeletionStatus,
+  deleteClaudeSession,
+} from "./session-cleanup.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
 /**
@@ -81,7 +84,6 @@ export class ClaudeAgentProvider implements Provider {
 
   constructor(
     private launch: typeof query = query,
-    private removeSession: typeof deleteSession = deleteSession,
     private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
     private fullEvents = false,
   ) {}
@@ -105,22 +107,14 @@ export class ClaudeAgentProvider implements Provider {
         };
   }
 
-  async deleteSession(task: Task) {
+  async deleteSession(task: Task, expectedVersion?: string) {
     if (!task.session_id) return;
 
-    try {
-      await this.removeSession(task.session_id);
-    } catch (error) {
-      // The SDK reports absence with this message; filesystem/cleanup failures
-      // must propagate even when it already removed the main transcript.
-      if (
-        !(error instanceof Error) ||
-        error.message !==
-          `Session ${task.session_id} not found in any project directory`
-      ) {
-        throw error;
-      }
-    }
+    await deleteClaudeSession(task, expectedVersion);
+  }
+
+  sessionDeletionStatus(task: Task) {
+    return claudeSessionDeletionStatus(task);
   }
 
   models(settings?: SettingsValues): Promise<ModelChoice[]> {
@@ -267,7 +261,7 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         if ("session_id" in m && m.session_id) {
-          const ref = await this.sessionPath(m.session_id, c.task.workspace!);
+          const ref = await this.sessionPath(m.session_id);
 
           c.session(m.session_id, ref);
         }
@@ -402,9 +396,11 @@ export class ClaudeAgentProvider implements Provider {
     }
   }
 
-  async sessionPath(id: string, workspace: string) {
+  async sessionPath(id: string) {
     const root = join(
-      process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+      (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
+        "NFC",
+      ),
       "projects",
     );
 
@@ -413,13 +409,11 @@ export class ClaudeAgentProvider implements Provider {
         const p = join(root, d, `${id}.jsonl`);
 
         try {
-          await access(p);
-
-          return p;
+          return await realpath(p);
         } catch {}
       }
     } catch {}
 
-    return join(root, workspace.replace(/[^a-zA-Z0-9]/g, "-"), `${id}.jsonl`);
+    return undefined;
   }
 }

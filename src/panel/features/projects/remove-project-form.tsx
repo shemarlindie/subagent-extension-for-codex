@@ -5,6 +5,9 @@ import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { DialogState } from "../../app/state/types";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../shared/forms/form-footer";
+import { AgentTaskDeletionOption } from "../tasks/controls/agent-task-deletion-option";
+import { TaskDeletionDetails } from "../tasks/controls/task-deletion-details";
+import { useTaskDeletionPreview } from "../tasks/controls/use-task-deletion-preview";
 import { projectApproved } from "./selectors";
 
 type RemoveProjectFormProps = {
@@ -16,7 +19,14 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
   const state = useSnapshot();
   // A reopened confirmation always starts with task records retained.
   const [removeTasks, setRemoveTasks] = useState(false);
+  const [deleteAgentTasks, setDeleteAgentTasks] = useState(false);
   const { project } = dialog;
+
+  const deletion = useTaskDeletionPreview(
+    { repository: project.repository },
+    deleteAgentTasks,
+    removeTasks,
+  );
 
   // Only another parent registration survives removal of this entry.
   const hasParentRegistration = projectApproved(
@@ -27,14 +37,30 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
     project.repository,
   );
 
-  useLayoutEffect(() => setRemoveTasks(false), [dialog]);
+  useLayoutEffect(() => {
+    setRemoveTasks(false);
+    setDeleteAgentTasks(false);
+  }, [dialog]);
+
+  const toggleRemoveTasks = (checked: boolean) => {
+    setRemoveTasks(checked);
+    if (!checked) setDeleteAgentTasks(false);
+  };
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!state.busy && dialog.scope === state.scopeVersion) {
+    if (
+      !state.busy &&
+      dialog.scope === state.scopeVersion &&
+      (!removeTasks || deletion.confirmation)
+    ) {
       controller.run(() =>
-        controller.manageProject(project.repository, undefined, removeTasks),
+        controller.manageProject(project.repository, undefined, {
+          deleteTasks: removeTasks,
+          deleteAgentTasks,
+          confirmation: deletion.confirmation,
+        }),
       );
     }
   };
@@ -47,8 +73,9 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
       </p>
       <code className="managed-project-path">{project.repository}</code>
       <p className="form-note">
-        Only the project registration is removed. Your folder and files stay on
-        disk. Task data is kept by default.
+        {removeTasks
+          ? "The listed task data will also be removed. Your project folder stays."
+          : "Only the project registration is removed. Your folder, task data and provider sessions stay."}
       </p>
       <div className="delete-option">
         <div className="delete-option-text">
@@ -57,21 +84,40 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
           </span>
           <span id="remove-project-tasks-help" className="form-note">
             Stops this project's tasks across all chats and removes their
-            extension records, worktrees and branches, including uncommitted
-            changes. Provider sessions are kept. This can't be undone.
+            extension records, worktrees and local branches, including
+            uncommitted changes. This can't be undone.
           </span>
         </div>
         <Switch.Root
           className="switch"
           checked={removeTasks}
           disabled={state.busy}
-          onCheckedChange={setRemoveTasks}
+          onCheckedChange={toggleRemoveTasks}
           aria-labelledby="remove-project-tasks-label"
           aria-describedby="remove-project-tasks-help"
         >
           <Switch.Thumb className="switch-thumb" />
         </Switch.Root>
       </div>
+      {removeTasks && (
+        <>
+          <AgentTaskDeletionOption
+            id="remove-project-agent-tasks"
+            label="Also delete the agent tasks"
+            checked={deleteAgentTasks}
+            busy={state.busy}
+            sessionDeletion={deletion.preview?.sessionDeletion}
+            onCheckedChange={setDeleteAgentTasks}
+          />
+          <TaskDeletionDetails
+            preview={deletion.preview}
+            checking={deletion.checking}
+            error={deletion.error}
+            onRefresh={deletion.reload}
+            disabled={state.busy}
+          />
+        </>
+      )}
       <p className="form-note">
         {hasParentRegistration &&
           "This project may still be registered through an approved parent folder. "}
@@ -81,6 +127,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
       </p>
       <FormFooter
         label={removeTasks ? "Remove project and task data" : "Remove project"}
+        disabled={removeTasks && (deletion.checking || !deletion.confirmation)}
       />
     </form>
   );

@@ -10,6 +10,7 @@ import type { ProviderMetadata } from "../../src/shared/providers/metadata.js";
 import type {
   ModelChoice,
   ProviderReadiness,
+  SessionDeletionStatus,
 } from "../../src/shared/providers/types.js";
 import type { Task } from "../../src/shared/tasks/model.js";
 import {
@@ -31,6 +32,7 @@ export interface FixtureProviderOptions {
   modelsDelayMs?: number;
   modelChoices?: ModelChoice[];
   deleteSessionError?: boolean;
+  sessionDeletionUnavailable?: boolean;
   closeError?: boolean;
   /** Org policy as discovery would report it, read each time it's needed. */
   policy?: Provider["policy"];
@@ -139,7 +141,39 @@ export class FixtureProvider implements Provider {
     return this.modelChoices.map(cloneFixtureModel);
   }
 
-  async deleteSession(task: Task) {
+  async sessionDeletionStatus(task: Task): Promise<SessionDeletionStatus> {
+    const session = task.session_id
+      ? this.runState.sessions.get(task.session_id)
+      : undefined;
+
+    if (
+      this.runOptions.sessionDeletionUnavailable ||
+      !session ||
+      session.stateRef !== task.session_state_ref
+    ) {
+      return {
+        available: false,
+        message: "The session location could not be verified.",
+      };
+    }
+
+    return {
+      available: true,
+      resources: [{ path: session.stateRef, kind: "file" }],
+      version: JSON.stringify([task.session_id, session.stateRef]),
+    };
+  }
+
+  async deleteSession(task: Task, expectedVersion?: string) {
+    if (
+      expectedVersion &&
+      expectedVersion !== (await this.sessionDeletionStatus(task)).version
+    ) {
+      throw new Error(
+        "Fixture session changed. Review the deletion details again.",
+      );
+    }
+
     if (this.deleteSessionError) {
       throw new Error("Fixture session deletion failed.");
     }

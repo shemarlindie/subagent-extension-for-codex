@@ -13,6 +13,10 @@ import {
   renamedProject,
   withoutProject,
 } from "../../features/projects/project-list";
+import {
+  mutateProject,
+  type ProjectRemoval,
+} from "../../features/projects/project-mutation";
 import { projectUndoSteps } from "../../features/projects/project-undo";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
 import {
@@ -1358,10 +1362,9 @@ export class Controller {
   async manageProject(
     repository: string,
     name?: string,
-    deleteTasks = false,
+    removal: ProjectRemoval = { deleteTasks: false },
   ): Promise<boolean> {
-    const scope = this.state.scopeVersion;
-    const dialog = this.state.dialog;
+    const { scopeVersion: scope, dialog } = this.state;
 
     if (!this.canManageProject(repository, name)) return false;
 
@@ -1377,15 +1380,8 @@ export class Controller {
     const before = this.state.projects.find((p) => p.repository === repository);
 
     try {
-      const result = await this.tool<{ name?: string }>(
-        name === undefined ? "app_remove_project" : "app_rename_project",
-        {
-          repository,
-          ...(name === undefined ? { delete_tasks: deleteTasks } : { name }),
-        },
-      );
+      const result = await mutateProject(this, repository, name, removal);
 
-      ++this.projectGeneration;
       if (!active()) return false;
 
       this.patch({
@@ -1401,11 +1397,11 @@ export class Controller {
 
       succeeded = true;
       if (dialog) this.closeDialog();
-      const change = this.projectUndo.change(before, name, deleteTasks);
+      const change = this.projectUndo.change(before, name, removal.deleteTasks);
       if (change) this.undo.record(change);
 
       if (name === undefined) {
-        this.reconcileProjectRemoval(repository, deleteTasks);
+        this.reconcileProjectRemoval(repository, removal.deleteTasks);
       }
     } catch (error) {
       if (active()) {

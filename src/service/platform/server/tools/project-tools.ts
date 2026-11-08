@@ -44,17 +44,37 @@ export function projectTools(c: Control, owner: string) {
     }),
     app_remove_project: tool({
       description:
-        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees/branches; checkout files and provider sessions stay intact.",
-      schema: z.strictObject({
-        repository: z.string().min(1).max(4096),
-        delete_tasks: z.boolean().default(false),
-      }),
+        "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees and local branches, and with delete_agent_task their provider sessions. Checkout files stay intact.",
+      schema: z
+        .strictObject({
+          repository: z.string().min(1).max(4096),
+          delete_tasks: z.boolean().default(false),
+          delete_agent_task: z.boolean().default(false),
+          confirmation: z
+            .string()
+            .regex(/^[0-9a-f]{64}$/)
+            .optional(),
+        })
+        .refine(
+          (a) => !a.delete_tasks || !!a.confirmation,
+          "Review the task removal list before deleting project task data.",
+        )
+        .refine(
+          (a) => a.delete_tasks || !a.delete_agent_task,
+          "Provider sessions are removed only with project task data.",
+        ),
       run: (a) => {
         if (!c.projects) {
           throw new Error("Project management is unavailable in this service.");
         }
 
-        return c.removeProject(owner, a.repository, a.delete_tasks);
+        return c.removeProject(
+          owner,
+          a.repository,
+          a.delete_tasks,
+          a.confirmation,
+          a.delete_agent_task,
+        );
       },
     }),
   };

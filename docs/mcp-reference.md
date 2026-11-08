@@ -125,18 +125,18 @@ Model-visible tools may read settings and change ordinary defaults.
 `get_settings` marks user-only setting groups with `userOnly: true` in its
 schema. App-only tools carry user authority:
 
-| Tool                                                                    | User authority                                                             |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `app_start_task`                                                        | Task overrides                                                             |
-| `app_submit_input`                                                      | Answers to permissions routed to the user                                  |
-| `app_update_settings`, `app_import_settings`                            | Sensitive settings                                                         |
-| `app_raise_budget`                                                      | Budget increases on existing tasks                                         |
-| `app_register_project`, `app_browse_project`                            | Direct registration and folder browsing                                    |
-| `app_rename_project`, `app_remove_project`                              | [Project management](panel-guide.md#manage-projects)                       |
-| `app_set_tasks_archived`, `app_delete_tasks`                            | [Archive](panel-guide.md#archive-tasks) and deletion                       |
-| `app_set_task_read`, `app_mark_tasks_read`, `app_mark_task_unread_from` | [Read state](panel-guide.md#read-and-unread-tasks)                         |
-| `app_mark_updates_seen`                                                 | [Pending updates](panel-guide.md#pending-worker-updates) Codex hasn't read |
-| `app_steer_queued_message`                                              | Moving a queued message into the running turn                              |
+| Tool                                                                      | User authority                                                             |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `app_start_task`                                                          | Task overrides                                                             |
+| `app_submit_input`                                                        | Answers to permissions routed to the user                                  |
+| `app_update_settings`, `app_import_settings`                              | Sensitive settings                                                         |
+| `app_raise_budget`                                                        | Budget increases on existing tasks                                         |
+| `app_register_project`, `app_browse_project`                              | Direct registration and folder browsing                                    |
+| `app_rename_project`, `app_remove_project`                                | [Project management](panel-guide.md#manage-projects)                       |
+| `app_set_tasks_archived`, `app_preview_task_deletion`, `app_delete_tasks` | [Archive](panel-guide.md#archive-tasks) and deletion                       |
+| `app_set_task_read`, `app_mark_tasks_read`, `app_mark_task_unread_from`   | [Read state](panel-guide.md#read-and-unread-tasks)                         |
+| `app_mark_updates_seen`                                                   | [Pending updates](panel-guide.md#pending-worker-updates) Codex hasn't read |
+| `app_steer_queued_message`                                                | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
 panel's tasks as `{ tasks }`, without their conversation and context. `include`
@@ -144,6 +144,14 @@ names tasks to list whatever the filters say. Unless `include_read_completed` is
 true, it also leaves out completed tasks the user has read, except included ones
 and the newest, and counts them by repository in `read_completed`. The panel
 loads them for Done, All and search.
+
+Before deleting tasks, show the resources from `app_preview_task_deletion`. Send
+its `confirmation` to `app_delete_tasks` with the same task IDs and
+`delete_agent_task` choice. Changed resources require a fresh preview. For
+project task cleanup, preview with `repository` and send the confirmation to
+`app_remove_project` with `delete_tasks: true` and the same `delete_agent_task`
+choice. This removes only the saved registration with that exact repository
+path.
 
 `list_tasks` and `app_list_tasks` take the same `archived` filter: `exclude`
 (the default) leaves archived tasks out, `include` lists them too and `only`

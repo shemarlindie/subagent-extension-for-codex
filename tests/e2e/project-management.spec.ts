@@ -169,7 +169,7 @@ test("rename a project and remove its approval while retaining task history and 
   ).not.toBe("");
 });
 
-test("remove project task data and worktrees while preserving checkout files across reload", async ({
+test("remove project task data, worktrees and agent sessions while preserving checkout files across reload", async ({
   consolePage: page,
   consoleService,
   repository,
@@ -179,7 +179,9 @@ test("remove project task data and worktrees while preserving checkout files acr
   await writeFile(checkoutFile, "Keep my checkout notes\n");
   await createProjectWorktree(page, title);
   const worktrees = join(consoleService.directory, "worktrees");
-  expect(await readdir(worktrees)).toHaveLength(1);
+  const savedWorktrees = await readdir(worktrees);
+  expect(savedWorktrees).toHaveLength(1);
+  const taskId = savedWorktrees[0]!;
 
   await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });
@@ -196,6 +198,38 @@ test("remove project task data and worktrees while preserving checkout files acr
   await confirmation
     .getByRole("switch", { name: "Also remove extension task data" })
     .check();
+
+  const details = confirmation.getByRole("region", {
+    name: "Removal details",
+  });
+
+  await expect(details).toContainText(
+    `The saved project registration will be removed: ${repository}`,
+  );
+
+  await expect(details).toContainText(title);
+  await expect(details).toContainText(taskId);
+
+  await expect(details).toContainText(
+    "Worktree folder and all contents, including uncommitted files:",
+  );
+
+  await expect(details).toContainText(join(worktrees, taskId));
+  await expect(details).toContainText(`Local Git branch: agent/${taskId}`);
+
+  await expect(
+    details.getByRole("list", { name: "Will remain" }),
+  ).toContainText("Provider session");
+
+  await confirmation
+    .getByRole("switch", { name: "Also delete the agent tasks" })
+    .check();
+
+  await expect(details).toContainText("Session transcript:");
+
+  await expect(
+    details.getByRole("list", { name: "Will remain" }),
+  ).not.toContainText("Provider session");
 
   await confirmation
     .getByRole("button", { name: "Remove project and task data", exact: true })

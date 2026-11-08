@@ -10,6 +10,7 @@ import type {
   ModelChoice,
   ProviderPolicy,
   ProviderReadiness,
+  SessionDeletionStatus,
 } from "../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
 import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
@@ -56,7 +57,7 @@ export interface RunContext {
   emit: EventEmitter;
   /** Explicit escape path for provider-owned or future event names. */
   emitOpaque: OpaqueEventEmitter;
-  session: (id: string, stateRef: string) => void;
+  session: (id: string, stateRef?: string) => void;
   /**
    * Stores what the session runs with where it differs from the task's request,
    * under `provider_options.<id>.effective`. Replaces the earlier values.
@@ -91,6 +92,8 @@ export interface Provider {
   policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
-  deleteSession?(task: Task): Promise<void>;
+  deleteSession?(task: Task, expectedVersion?: string): Promise<void>;
+  /** Checks whether this task's provider session has a known cleanup location. */
+  sessionDeletionStatus?(task: Task): Promise<SessionDeletionStatus>;
   close?(): Promise<void>;
 }

@@ -130,7 +130,6 @@ export async function runWithPolicy(
     captureOptions((value) => {
       options = value;
     }),
-    undefined,
     readyClaudeCli,
   );
 

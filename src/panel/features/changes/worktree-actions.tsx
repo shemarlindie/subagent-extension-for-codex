@@ -18,7 +18,7 @@ type WorktreeActionsProps = {
 const ACTIVE = ["queued", "starting", "running", "waiting"];
 
 /**
- * Remove worktree, then Delete branch once it is gone, for a worktree task.
+ * Remove worktree, then Delete local branch once it is gone, for a worktree task.
  * Task lifecycle metadata determines which action is available.
  */
 export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
@@ -48,7 +48,7 @@ export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
             controller.open({ kind: "worktree", action: "delete-branch", task })
           }
         >
-          Delete branch
+          Delete local branch
         </Button>
       ) : (
         <Button

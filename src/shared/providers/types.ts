@@ -33,6 +33,11 @@ export interface ProviderReadiness {
   details: Record<string, string>;
 }
 
+export type {
+  SessionDeletionResource,
+  SessionDeletionStatus,
+} from "./session-deletion-contract.js";
+
 /**
  * What policy limits for new tasks, in terms the panel can show. Absent means
  * nothing known, never that the organization allows everything, so tasks are

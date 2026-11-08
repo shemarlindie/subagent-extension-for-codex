@@ -5,7 +5,7 @@ import { context } from "./claude-test-harness.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 test("session references refresh as the session ID changes", async () => {
-  const { c, sessions, workspace } = await context();
+  const { c, sessions } = await context();
 
   const launch = (() =>
     Object.assign(
@@ -41,23 +41,23 @@ test("session references refresh as the session ID changes", async () => {
       { close() {} },
     )) as unknown as ConstructorParameters<typeof ClaudeAgentProvider>[0];
 
-  const provider = new ClaudeAgentProvider(launch, undefined, readyClaudeCli);
+  const provider = new ClaudeAgentProvider(launch, readyClaudeCli);
 
   const sessionPath = vi
     .spyOn(provider, "sessionPath")
     .mockImplementation(async (id) => `session-path/${id}`)
-    .mockResolvedValueOnce("guessed-session-path");
+    .mockResolvedValueOnce(undefined);
 
   expect(await provider.run(c, "Prompt")).toEqual({
     reply: "Reply",
   });
 
-  expect(sessionPath).toHaveBeenCalledWith("session-a", workspace);
-  expect(sessionPath).toHaveBeenCalledWith("session-b", workspace);
+  expect(sessionPath).toHaveBeenCalledWith("session-a");
+  expect(sessionPath).toHaveBeenCalledWith("session-b");
 
   expect(sessions[0]).toEqual({
     id: "session-a",
-    ref: "guessed-session-path",
+    ref: undefined,
   });
 
   expect(sessions[1]).toEqual({
