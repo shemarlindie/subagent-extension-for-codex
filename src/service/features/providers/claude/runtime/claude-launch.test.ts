@@ -355,7 +355,7 @@ test("an unsupported Claude CLI fails the turn and model discovery without launc
         message,
         path: "/bin/claude",
         version: "2.0.0",
-        supported: "2.1.285+",
+        supported: "2.1.300+",
       }),
       executable: async () => {
         throw new Error(message);
@@ -369,7 +369,7 @@ test("an unsupported Claude CLI fails the turn and model discovery without launc
     details: {
       executable: "/bin/claude",
       version: "2.0.0",
-      supported_versions: "2.1.285+",
+      supported_versions: "2.1.300+",
     },
   });
 

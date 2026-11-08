@@ -40,7 +40,7 @@ afterEach(async () => {
 });
 
 /** A fake `claude` that prints the given `--version` output. */
-async function fakeClaude(path: string, output = "2.1.293 (Claude Code)") {
+async function fakeClaude(path: string, output = "2.1.300 (Claude Code)") {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `#!/bin/sh\necho '${output}'\n`);
   await chmod(path, 0o755);
@@ -189,7 +189,7 @@ test("validation accepts the minimum and newer releases but rejects older versio
     assert.equal(status.version, version);
   }
 
-  const old = await check("2.1.284");
+  const old = await check("2.1.299");
   assert.equal(old.ready, false);
   assert.equal(!old.ready && old.problem, "too_old");
   assert.match(!old.ready ? old.message : "", /claude update/);
