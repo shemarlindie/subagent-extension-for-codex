@@ -141,8 +141,9 @@ schema. App-only tools carry user authority:
 | `app_steer_queued_message`                                              | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
-panel's tasks, archived ones included with `archived_at`, without their
-conversation and context.
+panel's tasks as `{ tasks }`, without their conversation and context. Archived
+tasks carry `archived_at`. `archived: false` leaves them out, `archived: true`
+lists only them, and `include` names tasks to list whatever the filters say.
 
 `app_get_original_response` reads an original response saved with
 [full-event recording](configuration.md#environment-variables). Pass `task_id`

@@ -24,8 +24,8 @@ type ProjectArchiveProps = {
 /**
  * A project's archived tasks from every chat, newest archive first. The user
  * unarchives or deletes the selected tasks, or all of them when none are
- * selected. It reads its own list because the task list may be scoped to
- * another project.
+ * selected. It reads its own list because the task list leaves archived
+ * tasks out and may be scoped to another project.
  */
 export function ProjectArchive({
   repository,
@@ -40,14 +40,14 @@ export function ProjectArchive({
     [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
-    const listed = await controller.tool<Task[]>("app_list_tasks", {
-      conversation_id: null,
-      repository,
-    });
+    const { tasks: listed } = await controller.tool<{ tasks: Task[] }>(
+      "app_list_tasks",
+      { conversation_id: null, repository, archived: true },
+    );
 
-    const archived = listed
-      .filter((task) => task.archived_at)
-      .sort((a, b) => b.archived_at!.localeCompare(a.archived_at!));
+    const archived = listed.sort((a, b) =>
+      b.archived_at!.localeCompare(a.archived_at!),
+    );
 
     setTasks(archived);
 

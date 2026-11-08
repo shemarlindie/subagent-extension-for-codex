@@ -12,9 +12,9 @@ import type { Event } from "../events/types.js";
 import { type PanelTask, panelTask } from "./task-list.js";
 
 test("preview task listing exposes the latest rate limit and provider failure summaries", () => {
-  const tasks = previewTool("app_list_tasks", {
+  const { tasks } = previewTool("app_list_tasks", {
     conversation_id: null,
-  }) as PanelTask[];
+  }) as { tasks: PanelTask[] };
 
   for (const [title, expected] of [
     [

@@ -119,7 +119,7 @@ test("a delayed arrival preserves a selection made after its read started", asyn
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("old"), task("other")];
   await controller.start();
-  const pending = deferred<ReturnType<typeof task>[]>();
+  const pending = deferred<{ tasks: ReturnType<typeof task>[] }>();
 
   transport.handler = (name) =>
     name === "app_list_tasks" ? pending.promise : undefined;
@@ -128,7 +128,7 @@ test("a delayed arrival preserves a selection made after its read started", asyn
   await flush();
   await controller.select("other");
   transport.tasks = [task("new"), task("old"), task("other")];
-  pending.resolve(transport.tasks);
+  pending.resolve({ tasks: transport.tasks });
   await refresh;
   expect(controller.getSnapshot().selected).toBe("other");
   expect(controller.getSnapshot().taskArrival).toBeUndefined();

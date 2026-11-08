@@ -273,7 +273,9 @@ test("fixture task renaming updates listed titles and validates input", () => {
       title: "  Renamed task  ",
     });
 
-    const tasks = previewTool("app_list_tasks") as typeof previewTasks;
+    const { tasks } = previewTool("app_list_tasks") as {
+      tasks: typeof previewTasks;
+    };
 
     assert.equal(
       tasks.find((entry) => entry.id === task.id)?.title,
@@ -302,7 +304,7 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
     original = structuredClone(task.queue);
 
   const order = () =>
-    (previewTool("app_list_tasks") as Task[])
+    (previewTool("app_list_tasks") as { tasks: Task[] }).tasks
       .find((entry) => entry.id === task.id)!
       .queue.map((m) => m.id);
 
@@ -451,9 +453,9 @@ test("successful budget updates can be enabled for preview fixtures", () => {
       assert.deepEqual(result.budget, { ...originalBudget, ...raise });
       assert.deepEqual(task.budget_raised_for_turn, raised);
 
-      const listed = (previewTool("app_list_tasks") as Task[]).find(
-        (candidate) => candidate.id === id,
-      );
+      const listed = (
+        previewTool("app_list_tasks") as { tasks: Task[] }
+      ).tasks.find((candidate) => candidate.id === id);
 
       assert.deepEqual(listed?.budget, task.budget);
 

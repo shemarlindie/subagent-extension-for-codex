@@ -37,6 +37,7 @@ type PanelContext = {
     repository?: string;
     revision?: string;
   };
+  panel_selection?: { task_id: string };
 } & Record<string, unknown>;
 
 export function delegationPanel(
@@ -67,6 +68,9 @@ export function delegationPanel(
         ? await context(args)
         : { panel_scope: { conversation_id: args.conversation_id ?? null } };
 
+      // A task the host opens stays listed even when it's archived.
+      const selected = resolved.panel_selection?.task_id;
+
       return {
         content: [
           {
@@ -83,6 +87,8 @@ export function delegationPanel(
                   conversation:
                     resolved.panel_scope.conversation_id ?? undefined,
                   repository: resolved.panel_scope.repository,
+                  archived: false,
+                  include: selected ? [selected] : [],
                 }),
               }
             : {}),

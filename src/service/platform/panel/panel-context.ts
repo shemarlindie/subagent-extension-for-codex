@@ -133,7 +133,7 @@ export async function resolvePanelContext(
  * without waiting for the list fetch.
  */
 export function panelTasks(c: Control, owner: string, filters: TaskFilters) {
-  const archived = c.archive.times(owner);
+  const archived = c.archive.times(owner, filters);
   const replies = c.store.latestEvents(owner, "agent.reply", filters);
   const reads = c.store.readStates(owner, filters);
 

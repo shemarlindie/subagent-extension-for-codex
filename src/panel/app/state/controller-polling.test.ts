@@ -20,7 +20,9 @@ for (const phase of ["connect", "read", "poll"] as const) {
 
     if (phase === "read") {
       transport.handler = (name) =>
-        name === "app_list_tasks" ? gate.promise.then(() => []) : undefined;
+        name === "app_list_tasks"
+          ? gate.promise.then(() => ({ tasks: [] }))
+          : undefined;
     }
 
     const starting = controller.start();
@@ -30,7 +32,9 @@ for (const phase of ["connect", "read", "poll"] as const) {
       await starting;
 
       transport.handler = (name) =>
-        name === "app_list_tasks" ? gate.promise.then(() => []) : undefined;
+        name === "app_list_tasks"
+          ? gate.promise.then(() => ({ tasks: [] }))
+          : undefined;
 
       vi.advanceTimersByTime(30000);
       await flush();
@@ -71,7 +75,7 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   await flush();
   assert.equal(reads(), initial);
   hidden = false;
-  const gate = deferred<Task[]>();
+  const gate = deferred<{ tasks: Task[] }>();
 
   transport.handler = (name) =>
     name === "app_list_tasks" ? gate.promise : undefined;
@@ -84,7 +88,7 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   vi.advanceTimersByTime(60000);
   await flush();
   assert.equal(reads(), pending);
-  gate.resolve([]);
+  gate.resolve({ tasks: [] });
   await flush();
   vi.advanceTimersByTime(30000);
   await flush();

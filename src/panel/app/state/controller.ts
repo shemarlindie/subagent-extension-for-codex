@@ -544,10 +544,22 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      const next = await this.tool<Task[]>("app_list_tasks", {
-        conversation_id: conversation ?? null,
-        ...(repository ? { repository } : {}),
-      });
+      // The list leaves archived tasks out, except an open one or one a restored
+      // URL opens.
+      const include = new Set([
+        this.state.selected,
+        this.restoredView?.selected,
+      ]);
+
+      const { tasks: next } = await this.tool<{ tasks: Task[] }>(
+        "app_list_tasks",
+        {
+          conversation_id: conversation ?? null,
+          ...(repository ? { repository } : {}),
+          archived: false,
+          include: [...include].filter(Boolean),
+        },
+      );
 
       if (this.staleProjectRead(version, projectGeneration)) {
         this.timing.observe("task_list", "merge", 0, { stale_count: 1 });

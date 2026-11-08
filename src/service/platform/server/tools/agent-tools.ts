@@ -141,11 +141,11 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         const filters = {
           conversation: a.conversation_id || undefined,
           repository: a.repository || undefined,
-          unarchived: !a.include_archived,
+          archived: a.include_archived ? undefined : false,
         };
 
         const archived = a.include_archived
-          ? c.archive.times(owner)
+          ? c.archive.times(owner, filters)
           : new Map<string, string>();
 
         const replies = c.store.latestEvents(owner, "agent.reply", filters);

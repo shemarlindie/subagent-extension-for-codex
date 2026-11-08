@@ -94,16 +94,21 @@ export function userTools(
     app_list_tasks: tool({
       readOnly: true,
       description:
-        "User interface only: the tasks the panel lists, newest first, archived ones included. Each has its full state except the conversation and context, with its latest reply excerpt, live activity, draft, read state and archive time.",
+        "User interface only: { tasks }, the tasks the panel lists, newest first. Each has its full state except the conversation and context, with its latest reply excerpt, live activity, draft, read state and archive time. archived true lists only archived tasks and false leaves them out. include names tasks to list whatever the filters say.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
+        archived: z.boolean().optional(),
+        include: z.array(z.string()).max(10).optional(),
       }),
-      run: (a) =>
-        panelTasks(c, owner, {
+      run: (a) => ({
+        tasks: panelTasks(c, owner, {
           conversation: a.conversation_id || undefined,
           repository: a.repository || undefined,
+          archived: a.archived,
+          include: a.include,
         }),
+      }),
     }),
     app_get_chat: tool({
       readOnly: true,
