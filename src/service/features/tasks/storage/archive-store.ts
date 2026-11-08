@@ -8,6 +8,7 @@ import type { Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import { taskArchive, tasks } from "./schema.js";
 import type { Store } from "./store.js";
+import { type TaskFilters, taskFilters } from "./task-rows.js";
 
 /**
  * Which tasks the user archived, and when. Archiving changes only what the
@@ -20,13 +21,13 @@ export class ArchiveStore {
     return this.store.database.orm;
   }
 
-  /** When each of an owner's archived tasks was archived, by task id. */
-  times(owner: string): Map<string, string> {
+  /** When each of an owner's archived tasks matching `filters` was archived, by task id. */
+  times(owner: string, filters: TaskFilters): Map<string, string> {
     const rows = this.orm
       .select({ id: taskArchive.task_id, at: taskArchive.archived_at })
       .from(taskArchive)
       .innerJoin(tasks, eq(tasks.id, taskArchive.task_id))
-      .where(eq(tasks.owner, owner))
+      .where(taskFilters(owner, filters))
       .all();
 
     return new Map(rows.map((row) => [row.id, row.at]));

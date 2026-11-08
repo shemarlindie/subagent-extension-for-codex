@@ -46,8 +46,12 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
     assert.deepEqual(
       transport.calls.find((call) => call.name === "app_list_tasks")?.args,
       explicit
-        ? { conversation_id: "chat-a", repository: "/repo/a" }
-        : { conversation_id: null },
+        ? {
+            conversation_id: "chat-a",
+            repository: "/repo/a",
+            include: [],
+          }
+        : { conversation_id: null, include: [] },
     );
 
     assert.deepEqual(
@@ -61,11 +65,11 @@ test("a project switch rejects an old list response and refreshes the current sc
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   await controller.start();
-  const gate = deferred<Task[]>();
+  const gate = deferred<{ tasks: Task[] }>();
 
   transport.handler = (name, args) => {
     if (name === "app_list_tasks" && args.repository === "/repo/b") {
-      return [task("new", "/repo/b")];
+      return { tasks: [task("new", "/repo/b")] };
     }
 
     if (name === "app_list_tasks") return gate.promise;
@@ -76,7 +80,7 @@ test("a project switch rejects an old list response and refreshes the current sc
   const oldRefresh = controller.refresh();
   await flush();
   await controller.changeProject("/repo/b");
-  gate.resolve([task("stale")]);
+  gate.resolve({ tasks: [task("stale")] });
   await oldRefresh;
   await flush();
 
@@ -142,7 +146,7 @@ test("All chats preserves repository and discards a delayed conversation respons
 
   controller.setFilter("attention");
   controller.setSearch("old search");
-  const gate = deferred<Task[]>();
+  const gate = deferred<{ tasks: Task[] }>();
 
   transport.handler = (name, args) => {
     if (name === "app_list_tasks" && args.conversation_id === "chat-a") {
@@ -150,7 +154,9 @@ test("All chats preserves repository and discards a delayed conversation respons
     }
 
     if (name === "app_list_tasks") {
-      return [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")];
+      return {
+        tasks: [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")],
+      };
     }
 
     return undefined;
@@ -159,7 +165,7 @@ test("All chats preserves repository and discards a delayed conversation respons
   const oldRefresh = controller.refresh();
   await flush();
   await controller.allChats();
-  gate.resolve([task("stale", "/repo/a", "chat-a")]);
+  gate.resolve({ tasks: [task("stale", "/repo/a", "chat-a")] });
   await oldRefresh;
   await flush();
   const state = controller.getSnapshot();
@@ -178,7 +184,11 @@ test("All chats preserves repository and discards a delayed conversation respons
   assert.deepEqual(
     transport.calls.filter((call) => call.name === "app_list_tasks").at(-1)
       ?.args,
-    { conversation_id: null, repository: "/repo/a" },
+    {
+      conversation_id: null,
+      repository: "/repo/a",
+      include: [],
+    },
   );
 });
 
@@ -239,7 +249,7 @@ test("opening data selects the default task before the task-list read returns", 
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());
 
-  const listRead = deferred<Task[]>();
+  const listRead = deferred<{ tasks: Task[] }>();
 
   transport.handler = (name) =>
     name === "app_list_tasks" ? listRead.promise : undefined;
@@ -267,7 +277,7 @@ test("opening data selects the default task before the task-list read returns", 
   assert.equal(snapshot.selected, "waiting");
   assert.equal(snapshot.chatHistoryLoading, "waiting");
 
-  listRead.resolve([done, waiting]);
+  listRead.resolve({ tasks: [done, waiting] });
   await flush();
   assert.equal(controller.getSnapshot().selected, "waiting");
 });

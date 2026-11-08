@@ -132,7 +132,14 @@ function hostContext(settings: Settings): McpUiHostContext {
 }
 
 const fixtureThreads = threadsOf(
-  previewTool("app_list_tasks", { conversation_id: null }) as Task[],
+  (
+    previewTool("app_list_tasks", {
+      conversation_id: null,
+      archived: "include",
+    }) as {
+      tasks: Task[];
+    }
+  ).tasks,
 );
 
 // The only export, so Fast Refresh can swap it in place. main.tsx mounts it.
@@ -310,14 +317,16 @@ export function Host() {
         .then((connection) =>
           connection.callTool({
             name: "app_list_tasks",
-            arguments: { conversation_id: null },
+            arguments: { conversation_id: null, archived: "include" },
           }),
         )
         .then((result) =>
           setLiveThreads(
             threadsOf(
-              (result.structuredContent as { result?: Task[] } | undefined)
-                ?.result ?? [],
+              (
+                result.structuredContent as
+                  { result?: { tasks: Task[] } } | undefined
+              )?.result?.tasks ?? [],
             ),
           ),
         )

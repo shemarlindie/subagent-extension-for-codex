@@ -244,7 +244,7 @@ export class FakeTransport implements Transport {
           capabilities: { cost_budget: false },
         },
       ],
-      app_list_tasks: this.tasks,
+      app_list_tasks: { tasks: this.tasks },
       app_get_chat: { items: this.chat, next_cursor: 0 },
       app_get_change_counts: changeCounts(this.changes[0]),
       get_changes: this.changes[Number(args.cursor ?? 0)],

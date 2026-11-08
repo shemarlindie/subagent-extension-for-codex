@@ -2,6 +2,7 @@ import {
   archivable,
   type ArchiveResult,
 } from "../../../../shared/tasks/archive.js";
+import { tasksInScope } from "../../../app/state/scope-reconciliation";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { quote, type UndoRecorder } from "../../../app/state/undo-history";
 
@@ -74,6 +75,7 @@ export class ArchiveActions {
         ...(ids.length > 1 ? { items: titles(changing, ids) } : {}),
         undo: async () => {
           const reverted = await changed();
+          if (archived) this.relist(changing, reverted);
           await this.apply(reverted, !archived);
 
           // Only a task the current scope lists can open.
@@ -137,6 +139,30 @@ export class ArchiveActions {
       this.show(new Map(shown.map((task) => [task.id, task.archived_at])));
       throw error;
     }
+  }
+
+  /**
+   * Lists archived tasks again, still archived, once a refresh has dropped
+   * them, so unarchiving shows them at once.
+   */
+  private relist(tasks: Task[], ids: string[]) {
+    if (this.context.closed()) return;
+    const state = this.context.snapshot();
+
+    const dropped = tasksInScope(tasks, state).filter(
+      (task) =>
+        ids.includes(task.id) && !state.tasks.some((t) => t.id === task.id),
+    );
+
+    if (!dropped.length) return;
+    const at = new Date().toISOString();
+
+    this.context.patch({
+      tasks: [
+        ...state.tasks,
+        ...dropped.map((task) => ({ ...task, archived_at: at })),
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    });
   }
 
   /** Replaces the listed tasks' archive times; undefined unarchives. */

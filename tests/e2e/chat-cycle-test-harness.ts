@@ -32,17 +32,22 @@ export async function installChatCycle(
   await page.route("**/api/tools/app_list_tasks", (route) =>
     route.fulfill({
       json: {
-        result: [
-          panelTask(
-            task(),
-            events(),
-            undefined,
-            snapshot.draft && {
-              ...snapshot.draft,
-              text: messageText(snapshot.draft.message_id, snapshot.draft.text),
-            },
-          ),
-        ],
+        result: {
+          tasks: [
+            panelTask(
+              task(),
+              events(),
+              undefined,
+              snapshot.draft && {
+                ...snapshot.draft,
+                text: messageText(
+                  snapshot.draft.message_id,
+                  snapshot.draft.text,
+                ),
+              },
+            ),
+          ],
+        },
       },
     }),
   );

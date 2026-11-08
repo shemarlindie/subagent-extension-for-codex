@@ -189,7 +189,7 @@ test("preview tools share live cursors and replace a growing draft with stored C
   expect(wait()).toMatchObject({ running: false, draft: null });
   vi.advanceTimersByTime(4000);
   expect(wait()).toMatchObject({ running: true, draft: null });
-  const listed = previewTool("app_list_tasks") as Task[];
+  const { tasks: listed } = previewTool("app_list_tasks") as { tasks: Task[] };
 
   expect(listed.find((task) => task.id === taskId)).toMatchObject({
     status: "running",

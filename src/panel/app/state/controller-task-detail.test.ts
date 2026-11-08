@@ -33,7 +33,7 @@ test("selected activity loading clears independently from chat history", async (
   await flush();
   assert.equal(controller.getSnapshot().taskListLoading, true);
 
-  tasksRead.resolve([selected]);
+  tasksRead.resolve({ tasks: [selected] });
   await flush();
   assert.equal(controller.getSnapshot().taskListLoading, false);
   assert.equal(controller.getSnapshot().selected, selected.id);

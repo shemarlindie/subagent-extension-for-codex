@@ -678,6 +678,11 @@ test("task and typed event reads search indexes instead of scanning tasks or eve
     ],
     ["list", () => store.list(task.owner, {}), [/tasks_owner_created/]],
     [
+      "list without archived tasks",
+      () => store.list(task.owner, { archived: "exclude", include: [task.id] }),
+      [/tasks_owner_created/, /task_archive/],
+    ],
+    [
       "list in a conversation",
       () => store.list(task.owner, { conversation: "chat", repository: "/r" }),
       [/tasks_owner_conversation/],

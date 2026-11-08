@@ -89,7 +89,7 @@ test("a task-list read predating project removal never publishes its deleted tas
     true,
   );
 
-  tasksRead.resolve([task("deleted", "/repo/a"), survivor]);
+  tasksRead.resolve({ tasks: [task("deleted", "/repo/a"), survivor] });
   await refresh;
   await flush();
 

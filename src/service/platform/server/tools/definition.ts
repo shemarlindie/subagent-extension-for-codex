@@ -6,8 +6,16 @@ import {
   type InputAuthority,
 } from "../../../../shared/tasks/model.js";
 import { Control } from "../../../features/tasks/runtime/control.js";
+import { archivedFilters } from "../../../features/tasks/storage/task-rows.js";
 
 export const taskId = z.object({ task_id: z.string() });
+
+export const archivedFilter = z
+  .enum(archivedFilters)
+  .default("exclude")
+  .describe(
+    "exclude (default) leaves archived tasks out, include lists them too and only lists just them. Archived tasks carry archived_at.",
+  );
 
 export const queuedMessage = taskId.extend({ message_id: z.string().max(200) });
 

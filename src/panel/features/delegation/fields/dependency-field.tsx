@@ -40,7 +40,7 @@ export function DependencyField({
         }
         placeholder="No dependencies"
         options={tasks
-          .filter((task) => task.repository === repository)
+          .filter((task) => task.repository === repository && !task.archived_at)
           .map((task) => ({ value: task.id, label: task.title }))}
       />
     </Field>

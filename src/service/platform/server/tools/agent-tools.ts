@@ -25,6 +25,7 @@ import {
   resolvePanelContext,
 } from "../../panel/panel-context.js";
 import {
+  archivedFilter,
   messageInput,
   queuedMessage,
   taskId,
@@ -131,22 +132,20 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       readOnly: true,
       conversation: "chat",
       description:
-        "List your tasks as summaries, newest first, optionally filtered by conversation and repository. null conversation_id means all conversations. Each summary has the task's status, turn, the kind of any pending_input, error, queued message count and an excerpt of its latest reply. Read a task's full state with get_task and its conversation with list_messages. Archived tasks are left out unless include_archived is true, and then carry archived_at.",
+        "List your tasks as summaries, newest first, optionally filtered by conversation and repository. null conversation_id means all conversations. Each summary has the task's status, turn, the kind of any pending_input, error, queued message count and an excerpt of its latest reply. Read a task's full state with get_task and its conversation with list_messages.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
-        include_archived: z.boolean().default(false),
+        archived: archivedFilter,
       }),
       run: (a) => {
         const filters = {
           conversation: a.conversation_id || undefined,
           repository: a.repository || undefined,
-          unarchived: !a.include_archived,
+          archived: a.archived,
         };
 
-        const archived = a.include_archived
-          ? c.archive.times(owner)
-          : new Map<string, string>();
+        const archived = c.archive.times(owner, filters);
 
         const replies = c.store.latestEvents(owner, "agent.reply", filters);
 

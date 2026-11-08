@@ -54,6 +54,13 @@ const inScope = (
   (typeof scope.repository !== "string" ||
     task.repository === scope.repository);
 
+/** Mirrors `app_list_tasks`' archive and include filters on top of the scope. */
+const listed = (task: Task, args: Record<string, unknown>) =>
+  (Array.isArray(args.include) && args.include.includes(task.id)) ||
+  (inScope(task, args) &&
+    (args.archived === "include" ||
+      (args.archived === "only") === Boolean(previewArchivedAt(task.id))));
+
 const previewClaudeDetails = { supported_versions: "2.1.285+" };
 
 const previewClaudeReady = {
@@ -257,7 +264,12 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
     ...(!options.deferTaskList
       ? {
           tasks: newestFirst(tasksOf(options))
-            .filter((task) => inScope(task, context.panel_scope))
+            .filter((task) =>
+              listed(task, {
+                ...context.panel_scope,
+                include: [context.panel_selection?.task_id],
+              }),
+            )
             .map((task) => ({
               ...task,
               ...readFields(previewReadState(task.id)),
@@ -431,20 +443,22 @@ export function previewTool(
     ),
     get_panel_context: panelContext(args, options),
     list_projects: projectsWith(options),
-    app_list_tasks: newestFirst(tasks)
-      .filter((task) => inScope(task, args))
-      .map((task) => {
-        const events = lightEventsFor(task.id);
+    app_list_tasks: {
+      tasks: newestFirst(tasks)
+        .filter((task) => listed(task, args))
+        .map((task) => {
+          const events = lightEventsFor(task.id);
 
-        return panelTask(
-          taskFor(task),
-          events.slice(-200),
-          events.findLast((event) => event.type === "agent.reply"),
-          draftFor(task.id),
-          previewReadState(task.id),
-          previewArchivedAt(task.id),
-        );
-      }),
+          return panelTask(
+            taskFor(task),
+            events.slice(-200),
+            events.findLast((event) => event.type === "agent.reply"),
+            draftFor(task.id),
+            previewReadState(task.id),
+            previewArchivedAt(task.id),
+          );
+        }),
+    },
     app_get_chat: (() => {
       const task = tasks.find((task) => task.id === args.task_id);
       if (!task) return { items: [], next_cursor: 0 };

@@ -44,17 +44,21 @@ test("archive times are scoped to the owner and go with a deleted task", (t) => 
 
   archive.setArchived("alice", ["mine"], true);
   archive.setArchived("bob", ["theirs"], true);
-  assert.deepEqual([...archive.times("alice").keys()], ["mine"]);
+  assert.deepEqual([...archive.times("alice", {}).keys()], ["mine"]);
 
   store.database.client
     .prepare("UPDATE task_archive SET archived_at = ? WHERE task_id = ?")
     .run("2000-01-01T00:00:00.000Z", "mine");
 
   archive.setArchived("alice", ["mine"], true);
-  assert.equal(archive.times("alice").get("mine"), "2000-01-01T00:00:00.000Z");
+
+  assert.equal(
+    archive.times("alice", {}).get("mine"),
+    "2000-01-01T00:00:00.000Z",
+  );
 
   store.delete("mine", "alice");
-  assert.equal(archive.times("alice").size, 0);
+  assert.equal(archive.times("alice", {}).size, 0);
 });
 
 test("archiving skips tasks that could still need the user", (t) => {

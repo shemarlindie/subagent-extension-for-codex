@@ -250,19 +250,21 @@ test("activity labels reserve one line without moving the conversation", async (
 
   await page.route("**/api/tools/app_list_tasks", async (route) => {
     const response = await route.fetch();
-    const body = (await response.json()) as { result: Task[] };
+    const body = (await response.json()) as { result: { tasks: Task[] } };
 
     await route.fulfill({
       response,
       json: {
         ...body,
-        result: body.result.map((task) => ({
-          ...task,
-          status: activity ? "running" : "completed",
-          live_activity: activity
-            ? { text: activity, state: "running" }
-            : undefined,
-        })),
+        result: {
+          tasks: body.result.tasks.map((task) => ({
+            ...task,
+            status: activity ? "running" : "completed",
+            live_activity: activity
+              ? { text: activity, state: "running" }
+              : undefined,
+          })),
+        },
       },
     });
   });

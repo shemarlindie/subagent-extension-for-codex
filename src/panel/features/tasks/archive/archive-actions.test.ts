@@ -60,7 +60,13 @@ function setup(
     archived,
     shown,
     leaveSelection,
+    select,
     entries,
+    /** Replaces the list, as a refresh does. */
+    list: (tasks: Task[]) => {
+      snapshot = { ...snapshot, tasks };
+    },
+    listed: () => snapshot.tasks.map((task) => task.id),
   };
 }
 
@@ -136,6 +142,27 @@ test("undo and redo change only the tasks the service archived", async () => {
       { task_ids: ["done"], archived: true },
     ],
   );
+});
+
+test("undo lists an archived task again after a refresh dropped it, and reopens it", async () => {
+  const older = task({ id: "older", created_at: "2026-01-01T00:00:00.000Z" });
+  const open = task({ id: "open", created_at: "2026-01-02T00:00:00.000Z" });
+  const newer = task({ id: "newer", created_at: "2026-01-03T00:00:00.000Z" });
+
+  const { actions, entries, archived, select, list, listed } = setup(
+    [newer, open, older],
+    () => Promise.resolve({ task_ids: ["open"], skipped: [] }),
+    "open",
+  );
+
+  await actions.toggle(open);
+  // The list leaves archived tasks out.
+  list([newer, older]);
+  await entries[0]!.undo();
+
+  assert.deepEqual(listed(), ["newer", "open", "older"]);
+  assert.deepEqual(archived(), []);
+  assert.deepEqual(select.mock.calls, [["open"]]);
 });
 
 test("an archive the service skips entirely leaves nothing to undo", async () => {

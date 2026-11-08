@@ -1,4 +1,4 @@
-import { and, eq, inArray, max, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, max, not, or, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
 import type { Event } from "../../../../shared/events/types.js";
@@ -13,18 +13,24 @@ import { eventColumns } from "./event-records.js";
 import { events, taskArchive, taskRead, tasks } from "./schema.js";
 import { decodeEvent, decodeTask } from "./stored.js";
 
-/** Narrows an owner's tasks to a conversation, a repository or unarchived tasks. */
+/** Which tasks a list takes by archive state. */
+export const archivedFilters = ["exclude", "include", "only"] as const;
+
+/** Narrows an owner's tasks by conversation, repository and archive state. */
 export interface TaskFilters {
   conversation?: string;
   repository?: string;
-  /** Leaves out tasks the user archived. */
-  unarchived?: boolean;
+  /** Leaves archived tasks out, lists them too or lists only them. Omitted includes them. */
+  archived?: (typeof archivedFilters)[number];
+  /** Tasks to return whatever the other filters say. */
+  include?: readonly string[];
 }
 
 /** The condition for an owner's tasks that match `filters`. */
-export const taskFilters = (owner: string, filters: TaskFilters) =>
-  and(
-    eq(tasks.owner, owner),
+export function taskFilters(owner: string, filters: TaskFilters) {
+  const archived = sql`exists (select 1 from ${taskArchive} where ${taskArchive.task_id} = ${tasks.id})`;
+
+  const matching = and(
     filters.conversation === undefined
       ? undefined
       : eq(tasks.conversation_id, filters.conversation),
@@ -34,10 +40,17 @@ export const taskFilters = (owner: string, filters: TaskFilters) =>
           sql`json_extract(${tasks.body}, '$.repository')`,
           filters.repository,
         ),
-    filters.unarchived
-      ? sql`not exists (select 1 from ${taskArchive} where ${taskArchive.task_id} = ${tasks.id})`
-      : undefined,
+    filters.archived === "only" ? archived : undefined,
+    filters.archived === "exclude" ? not(archived) : undefined,
   );
+
+  return and(
+    eq(tasks.owner, owner),
+    matching && filters.include?.length
+      ? or(inArray(tasks.id, filters.include), matching)
+      : matching,
+  );
+}
 
 /** The decoded tasks matching `where`, in `order`, up to `limit`. */
 export function readTasks(
