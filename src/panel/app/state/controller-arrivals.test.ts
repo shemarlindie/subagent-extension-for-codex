@@ -122,7 +122,7 @@ test("a delayed arrival preserves a selection made after its read started", asyn
   const pending = deferred<ReturnType<typeof task>[]>();
 
   transport.handler = (name) =>
-    name === "list_tasks" ? pending.promise : undefined;
+    name === "app_list_tasks" ? pending.promise : undefined;
 
   const refresh = controller.refresh();
   await flush();

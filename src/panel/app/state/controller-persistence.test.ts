@@ -53,7 +53,7 @@ test("browser view state seeds the first render, restores a task, and persists l
   assert.equal(controller.getSnapshot().tab, "details");
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "list_tasks")?.args,
+    transport.calls.find((call) => call.name === "app_list_tasks")?.args,
     { conversation_id: null, repository: "/repo/b" },
   );
 

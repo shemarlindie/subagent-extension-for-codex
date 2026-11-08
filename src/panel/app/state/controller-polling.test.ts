@@ -20,7 +20,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
 
     if (phase === "read") {
       transport.handler = (name) =>
-        name === "list_tasks" ? gate.promise.then(() => []) : undefined;
+        name === "app_list_tasks" ? gate.promise.then(() => []) : undefined;
     }
 
     const starting = controller.start();
@@ -30,7 +30,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
       await starting;
 
       transport.handler = (name) =>
-        name === "list_tasks" ? gate.promise.then(() => []) : undefined;
+        name === "app_list_tasks" ? gate.promise.then(() => []) : undefined;
 
       vi.advanceTimersByTime(30000);
       await flush();
@@ -46,7 +46,7 @@ for (const phase of ["connect", "read", "poll"] as const) {
     assert.equal(transport.calls.length, calls);
     assert.equal(transport.watches, phase === "poll" ? 1 : 0);
     assert.equal(transport.disposals, 1);
-    await assert.rejects(controller.tool("list_tasks"), /closed/);
+    await assert.rejects(controller.tool("app_list_tasks"), /closed/);
   });
 }
 
@@ -74,7 +74,7 @@ test("the fallback refresh skips hidden panels and waits for a pending refresh",
   const gate = deferred<Task[]>();
 
   transport.handler = (name) =>
-    name === "list_tasks" ? gate.promise : undefined;
+    name === "app_list_tasks" ? gate.promise : undefined;
 
   vi.advanceTimersByTime(30000);
   await flush();
@@ -104,7 +104,7 @@ test("the fallback refresh reports tool failures then retries successfully", asy
   let fails = true;
 
   transport.handler = (name) =>
-    name === "list_tasks" && fails
+    name === "app_list_tasks" && fails
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
 
@@ -133,7 +133,7 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   let fails = true;
 
   transport.handler = (name) =>
-    name === "list_tasks" && fails
+    name === "app_list_tasks" && fails
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
 
@@ -145,14 +145,14 @@ test("embedded startup schedules a retry when its first read fails", async (t) =
   fails = false;
 
   const previousReads = transport.calls.filter(
-    (call) => call.name === "list_tasks",
+    (call) => call.name === "app_list_tasks",
   ).length;
 
   vi.advanceTimersByTime(30000);
   await flush();
 
   assert.equal(
-    transport.calls.filter((call) => call.name === "list_tasks").length,
+    transport.calls.filter((call) => call.name === "app_list_tasks").length,
     previousReads + 1,
   );
 
@@ -249,7 +249,7 @@ test("a new revision refreshes a visible panel, and a hidden one once it is show
   await controller.start();
 
   const reads = () =>
-    transport.calls.filter((call) => call.name === "list_tasks").length;
+    transport.calls.filter((call) => call.name === "app_list_tasks").length;
 
   const initial = reads();
   transport.events.revision("boot:1");
@@ -279,7 +279,7 @@ test("each completed refresh restarts the fallback wait", async (t) => {
   await controller.start();
 
   const reads = () =>
-    transport.calls.filter((call) => call.name === "list_tasks").length;
+    transport.calls.filter((call) => call.name === "app_list_tasks").length;
 
   const initial = reads();
   vi.advanceTimersByTime(20000);
@@ -303,7 +303,7 @@ test("a refresh leaves the connection status the transport reports", async (t) =
   assert.equal(controller.getSnapshot().connection, "Connected");
 
   transport.handler = (name) =>
-    name === "list_tasks"
+    name === "app_list_tasks"
       ? Promise.reject(new Error("Host temporarily unavailable"))
       : undefined;
 

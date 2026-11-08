@@ -75,7 +75,7 @@ export function panelLoadOperation(
   name: string,
 ): PanelLoadOperation | undefined {
   switch (name) {
-    case "list_tasks":
+    case "app_list_tasks":
       return "task_list";
     case "app_get_chat":
       return "chat";

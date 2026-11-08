@@ -16,7 +16,7 @@ import { definitions, withConversation } from "../server/tools.js";
 import type { AnyTool } from "../server/tools/definition.js";
 import { withHostRepository } from "./host-context.js";
 import {
-  openingTasks,
+  panelTasks,
   resolvePanelContext,
   taskPanelContext,
 } from "./panel-context.js";
@@ -515,7 +515,7 @@ test("the panel's opening tasks carry their read state", async (t) => {
   f.c.store.event(task, "agent.reply", { text: "Done", turn: 1 });
 
   // A reload opens the panel from these tasks, before its list read returns.
-  const [opened] = openingTasks(f.c, "alice");
+  const [opened] = panelTasks(f.c, "alice", {});
   assert.equal(opened?.unread, true);
   assert.equal(opened?.read_through, 0);
 });

@@ -44,7 +44,7 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
     }
 
     assert.deepEqual(
-      transport.calls.find((call) => call.name === "list_tasks")?.args,
+      transport.calls.find((call) => call.name === "app_list_tasks")?.args,
       explicit
         ? { conversation_id: "chat-a", repository: "/repo/a" }
         : { conversation_id: null },
@@ -64,11 +64,11 @@ test("a project switch rejects an old list response and refreshes the current sc
   const gate = deferred<Task[]>();
 
   transport.handler = (name, args) => {
-    if (name === "list_tasks" && args.repository === "/repo/b") {
+    if (name === "app_list_tasks" && args.repository === "/repo/b") {
       return [task("new", "/repo/b")];
     }
 
-    if (name === "list_tasks") return gate.promise;
+    if (name === "app_list_tasks") return gate.promise;
 
     return undefined;
   };
@@ -145,11 +145,11 @@ test("All chats preserves repository and discards a delayed conversation respons
   const gate = deferred<Task[]>();
 
   transport.handler = (name, args) => {
-    if (name === "list_tasks" && args.conversation_id === "chat-a") {
+    if (name === "app_list_tasks" && args.conversation_id === "chat-a") {
       return gate.promise;
     }
 
-    if (name === "list_tasks") {
+    if (name === "app_list_tasks") {
       return [task("a", "/repo/a", "chat-a"), task("b", "/repo/a", "chat-b")];
     }
 
@@ -176,7 +176,8 @@ test("All chats preserves repository and discards a delayed conversation respons
   );
 
   assert.deepEqual(
-    transport.calls.filter((call) => call.name === "list_tasks").at(-1)?.args,
+    transport.calls.filter((call) => call.name === "app_list_tasks").at(-1)
+      ?.args,
     { conversation_id: null, repository: "/repo/a" },
   );
 });
@@ -224,7 +225,7 @@ test("malformed scope data is rejected and the task list waits for a valid scope
   transport.context = { panel_scope: { conversation_id: 42 } };
   await controller.start();
   assert.equal(controller.getSnapshot().scopeKnown, false);
-  assert.ok(!transport.calls.some((call) => call.name === "list_tasks"));
+  assert.ok(!transport.calls.some((call) => call.name === "app_list_tasks"));
 
   assert.equal(
     controller.applyScope({ panel_scope: { conversation_id: "chat" } }, false),
@@ -241,7 +242,7 @@ test("opening data selects the default task before the task-list read returns", 
   const listRead = deferred<Task[]>();
 
   transport.handler = (name) =>
-    name === "list_tasks" ? listRead.promise : undefined;
+    name === "app_list_tasks" ? listRead.promise : undefined;
 
   const done: Task = {
       ...task("done", "/repo/a", "chat"),

@@ -285,6 +285,9 @@ export interface Task extends Start {
   cost_usd?: number;
 }
 
+/** A task without its stored conversation and context, as the panel lists it. */
+export type TaskView = Omit<Task, "instructions" | "context">;
+
 export function pendingInputKind(input: { kind: "question" | "permission" }) {
   return input.kind;
 }

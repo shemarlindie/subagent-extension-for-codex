@@ -21,7 +21,7 @@ test("selected activity loading clears independently from chat history", async (
   const chatRead = deferred<unknown>();
 
   transport.handler = (name) => {
-    if (name === "list_tasks") return tasksRead.promise;
+    if (name === "app_list_tasks") return tasksRead.promise;
     if (name === "app_get_activity") return activityRead.promise;
     if (name === "app_get_chat") return chatRead.promise;
 

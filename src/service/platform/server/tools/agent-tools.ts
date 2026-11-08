@@ -6,7 +6,7 @@ import {
 } from "../../../../shared/tasks/conversation/messages.js";
 import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../../shared/tasks/model.js";
-import { listedTask, replyFrom } from "../../../../shared/tasks/task-list.js";
+import { replyFrom, taskSummary } from "../../../../shared/tasks/task-list.js";
 import {
   autoRegisterChatProject,
   currentChatProject,
@@ -113,10 +113,13 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     get_task: tool({
       readOnly: true,
       description:
-        "Read a task's full state: status, turn (the number of turns started), pending input, draft (the message being written), pending steers not yet taken, queue (messages waiting for their own turn, and whether an interrupt paused it), branch for worktree tasks and an excerpt of the latest reply.",
+        "Read a task's full state: status, turn (the number of turns started), pending input, draft (the message being written), pending steers not yet taken, queue (messages waiting for their own turn, and whether an interrupt paused it), branch for worktree tasks and an excerpt of the latest reply. Read the conversation with list_messages.",
       schema: taskId,
       run: (a) => {
-        const t = c.store.get(a.task_id, owner);
+        const { instructions: _instructions, ...t } = c.store.get(
+          a.task_id,
+          owner,
+        );
 
         const draft = c.drafts.get(t.id);
 
@@ -131,34 +134,28 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       readOnly: true,
       conversation: "chat",
       description:
-        "List your tasks, optionally filtered by conversation and repository. null conversation_id means all conversations. Each task includes an excerpt of its latest reply, its queued message count, unread: true when the user hasn't seen its latest update in the panel, read_through (the newest event they read) and archived_at when archived.",
+        "List your tasks as summaries, newest first, optionally filtered by conversation and repository. null conversation_id means all conversations. Each summary has the task's status, turn, the kind of any pending_input, error, queued message count and an excerpt of its latest reply. Read a task's full state with get_task and its conversation with list_messages. Archived tasks are left out unless include_archived is true, and then carry archived_at.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
+        include_archived: z.boolean().default(false),
       }),
       run: (a) => {
-        const archived = c.archive.times(owner);
-
         const filters = {
           conversation: a.conversation_id || undefined,
           repository: a.repository || undefined,
+          unarchived: !a.include_archived,
         };
 
+        const archived = a.include_archived
+          ? c.archive.times(owner)
+          : new Map<string, string>();
+
         const replies = c.store.latestEvents(owner, "agent.reply", filters);
-        const reads = c.store.readStates(owner, filters);
 
         return c.store
           .list(owner, filters)
-          .map((t) =>
-            listedTask(
-              t,
-              t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
-              replies.get(t.id),
-              c.drafts.get(t.id),
-              reads.get(t.id),
-              archived.get(t.id),
-            ),
-          );
+          .map((t) => taskSummary(t, replies.get(t.id), archived.get(t.id)));
       },
     }),
     list_workers: tool({

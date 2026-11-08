@@ -9,12 +9,12 @@ import {
 import { previewTool } from "../../../dev/panel/scenarios/tools";
 import { decodedEvent } from "../events/decode.js";
 import type { Event } from "../events/types.js";
-import { type ListedTask, listedTask } from "./task-list.js";
+import { type PanelTask, panelTask } from "./task-list.js";
 
 test("preview task listing exposes the latest rate limit and provider failure summaries", () => {
-  const tasks = previewTool("list_tasks", {
+  const tasks = previewTool("app_list_tasks", {
     conversation_id: null,
-  }) as ListedTask[];
+  }) as PanelTask[];
 
   for (const [title, expected] of [
     [
@@ -47,7 +47,7 @@ test("list summaries recover after subsequent work and disappear when the task s
     const task = previewTasks.find((task) => task.title === title);
     assert.ok(task);
     const events = previewEvents.filter((event) => event.task_id === task.id);
-    const before = listedTask(task, events);
+    const before = panelTask(task, events);
     assert.ok(before.live_activity);
     assert.notEqual(before.live_activity.state, "running");
 
@@ -59,7 +59,7 @@ test("list summaries recover after subsequent work and disappear when the task s
       data: { turn: 2 },
     });
 
-    assert.deepEqual(listedTask(task, [...events, continued]).live_activity, {
+    assert.deepEqual(panelTask(task, [...events, continued]).live_activity, {
       text: "Working",
       state: "running",
     });
@@ -71,7 +71,7 @@ test("list summaries recover after subsequent work and disappear when the task s
       "failed",
     ] as const) {
       assert.equal(
-        listedTask({ ...task, status }, events).live_activity,
+        panelTask({ ...task, status }, events).live_activity,
         undefined,
       );
     }

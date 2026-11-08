@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import type { PanelOutput } from "../../../shared/panel/panel-contract.js";
 import type { Task } from "../../../shared/tasks/model.js";
-import { readFields } from "../../../shared/tasks/task-list.js";
+import { panelTask } from "../../../shared/tasks/task-list.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
+import type { TaskFilters } from "../../features/tasks/storage/task-rows.js";
 import {
   hostProjectCandidate,
   isGitRoot,
@@ -127,26 +128,25 @@ export async function resolvePanelContext(
 }
 
 /**
- * The tasks the panel's opening data carries, with their read and archive state. Chat
- * takes its "New" divider when a task opens, so a reload must not wait for
- * the list fetch to learn the task is unread.
+ * The tasks the panel lists, as its opening data and `app_list_tasks` carry
+ * them. The opening data has them so a reload can place Chat's "New" divider
+ * without waiting for the list fetch.
  */
-export function openingTasks(
-  c: Control,
-  owner: string,
-  conversationId?: string,
-) {
+export function panelTasks(c: Control, owner: string, filters: TaskFilters) {
   const archived = c.archive.times(owner);
-  const filters = { conversation: conversationId || undefined };
+  const replies = c.store.latestEvents(owner, "agent.reply", filters);
   const reads = c.store.readStates(owner, filters);
 
-  return c.store.list(owner, filters).map((t) => {
-    const archivedAt = archived.get(t.id);
-
-    return {
-      ...t,
-      ...readFields(reads.get(t.id)),
-      ...(archivedAt ? { archived_at: archivedAt } : {}),
-    };
-  });
+  return c.store
+    .list(owner, filters)
+    .map((t) =>
+      panelTask(
+        t,
+        t.status === "running" ? c.store.recentEvents(t.id, owner) : [],
+        replies.get(t.id),
+        c.drafts.get(t.id),
+        reads.get(t.id),
+        archived.get(t.id),
+      ),
+    );
 }

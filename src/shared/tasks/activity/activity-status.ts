@@ -1,7 +1,7 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
-import type { Task } from "../model.js";
+import type { TaskView } from "../model.js";
 import {
   activityFailed,
   activityKind,
@@ -17,7 +17,7 @@ import { groupActivity } from "./activity-timeline.js";
 /** Authoritative task state takes precedence over a retained tail's stale progress. */
 export function currentActivityStatus(
   events: Event[],
-  task?: Task,
+  task?: TaskView,
 ): { text: string; state: ActivityState } {
   if (task) {
     if (task.status === "failed") return { text: "Failed", state: "failed" };

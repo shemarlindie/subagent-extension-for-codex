@@ -5,6 +5,7 @@ import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { waitForUpdates } from "../../../features/tasks/conversation/updates.js";
+import { panelTasks } from "../../panel/panel-context.js";
 import {
   composerMentionsEnabled,
   mentionSearchSchema,
@@ -89,6 +90,20 @@ export function userTools(
 
         return { budget: task.budget, status: task.status };
       },
+    }),
+    app_list_tasks: tool({
+      readOnly: true,
+      description:
+        "User interface only: the tasks the panel lists, newest first, archived ones included. Each has its full state except the conversation and context, with its latest reply excerpt, live activity, draft, read state and archive time.",
+      schema: z.object({
+        conversation_id: z.string().nullable().optional(),
+        repository: z.string().optional(),
+      }),
+      run: (a) =>
+        panelTasks(c, owner, {
+          conversation: a.conversation_id || undefined,
+          repository: a.repository || undefined,
+        }),
     }),
     app_get_chat: tool({
       readOnly: true,
