@@ -29,9 +29,10 @@ when you update the SDK or change the minimum:
    and on how Claude Code words a rejected permission mode. If it fails, the
    panel stops locking blocked modes.
 
-Keep the minimum at or below the SDK's paired version, `claudeCodeVersion` in
-the SDK's `package.json`. Check the current stable and latest releases with
-`npm view @anthropic-ai/claude-code dist-tags`.
+Record the SDK's paired version, `claudeCodeVersion` in the SDK's
+`package.json`, as `paired`, and keep the minimum at or below it. About mutes
+its upgrade icon for CLIs at or above `paired`. Check the current stable and
+latest releases with `npm view @anthropic-ai/claude-code dist-tags`.
 
 ## Live Claude checks
 

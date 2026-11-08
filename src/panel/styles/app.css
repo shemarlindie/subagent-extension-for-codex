@@ -23,6 +23,7 @@
 @import "../features/tasks/controls/permission-request.css";
 @import "../features/tasks/controls/questions.css";
 @import "../features/settings/settings.css";
+@import "../features/settings/settings-about.css";
 @import "../features/projects/projects.css";
 @import "../features/tasks/archive/archive.css";
 @import "../features/tasks/pending-updates/pending-updates.css";

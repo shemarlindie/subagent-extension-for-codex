@@ -1,5 +1,8 @@
+import { z } from "zod";
+
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
+import { aboutInfo } from "../../service/about.js";
 import {
   composerMentionsEnabled,
   mentionSearchSchema,
@@ -27,6 +30,13 @@ export function userTools(
   tools: ReturnType<typeof agentTools>,
 ) {
   return {
+    app_get_about: tool({
+      readOnly: true,
+      description:
+        "User interface only: extension build, SDK versions and local runtime diagnostics.",
+      schema: z.object({ refresh: z.boolean().default(false) }),
+      run: ({ refresh }) => aboutInfo(c, refresh),
+    }),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
     ...(composerMentionsEnabled
       ? {

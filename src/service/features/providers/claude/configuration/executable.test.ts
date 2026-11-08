@@ -64,7 +64,7 @@ test("the override wins over PATH and is resolved through symlinks", async () =>
     await locateClaudeCli(
       posix({ PATH: dirname(onPath), [claudePathVariable]: link }),
     ),
-    { path: target },
+    { path: target, launcher: link },
   );
 });
 
@@ -103,7 +103,10 @@ test("PATH lookup takes the first executable claude, resolved through symlinks",
     dirname(later),
   ].join(":");
 
-  assert.deepEqual(await locateClaudeCli(posix({ PATH })), { path: target });
+  assert.deepEqual(await locateClaudeCli(posix({ PATH })), {
+    path: target,
+    launcher: linked,
+  });
 });
 
 test("a missing CLI names the install step and the override", async () => {
@@ -144,10 +147,12 @@ test("Windows finds claude.exe, or the binary behind npm's launchers", async () 
 
   assert.deepEqual(await locateClaudeCli(windows(`${npm};${native}`)), {
     path: exe,
+    launcher: exe,
   });
 
   assert.deepEqual(await locateClaudeCli(windows(`${native};${npm}`)), {
     path: join(native, "claude.exe"),
+    launcher: join(native, "claude.exe"),
   });
 });
 
@@ -192,7 +197,6 @@ test("validation accepts the minimum and newer releases but rejects older versio
   const old = await check("2.1.299");
   assert.equal(old.ready, false);
   assert.equal(!old.ready && old.problem, "too_old");
-  assert.match(!old.ready ? old.message : "", /claude update/);
 });
 
 test("prerelease, malformed, failing and hanging CLIs are rejected", async () => {
@@ -258,6 +262,9 @@ test("validation is reused until the binary is replaced", async () => {
   assert.equal(await cli.executable(), path);
   assert.equal(validated.length, 1);
 
+  await cli.status({ refresh: true });
+  assert.equal(validated.length, 2);
+
   // An auto-update swaps the file under the same name.
   const replacement = await fakeClaude(
     join(root, "staging", "claude"),
@@ -267,7 +274,7 @@ test("validation is reused until the binary is replaced", async () => {
   await rename(replacement, path);
 
   await assert.rejects(cli.executable(), /older than the supported/);
-  assert.equal(validated.length, 2);
+  assert.equal(validated.length, 3);
 });
 
 test("a failed check is retried sooner than a passing one is", async () => {
@@ -337,7 +344,9 @@ test("the minimum was qualified against the bundled SDK and accepts its paired C
     "The SDK changed; re-qualify Claude Code compatibility",
   );
 
+  assert.equal(sdk.claudeCodeVersion, claudeCliSupport.paired);
+
   assert.ok(
-    compareVersions(sdk.claudeCodeVersion, claudeCliSupport.minimum) >= 0,
+    compareVersions(claudeCliSupport.paired, claudeCliSupport.minimum) >= 0,
   );
 });
