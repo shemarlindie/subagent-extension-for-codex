@@ -182,7 +182,7 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     assert.ok(panelTask?.archived_at);
     assert.equal(panelTask.description, "Review the parser");
     const json = JSON.parse(JSON.stringify(panelTask)) as Partial<Task>;
-    assert.ok(!("instructions" in json) && !("context" in json));
+    assert.ok(!("context" in json));
 
     const sent = await parent<{ message_id: string; state: string }>(
       "send_message",
@@ -208,14 +208,14 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
     // The task and list show the turn, queue and latest reply.
     await until(() => store.get(t.id, "alice").status === "completed");
 
-    const task = await parent<
-      Omit<Task, "instructions"> & { reply: { turn: number; text: string } }
-    >("get_task", { task_id: t.id });
+    const task = await parent<Task & { reply: { turn: number; text: string } }>(
+      "get_task",
+      { task_id: t.id },
+    );
 
     assert.equal(task.turn, 2);
     assert.deepEqual(task.queue, []);
     assert.equal(task.reply.turn, 2);
-    assert.ok(!("instructions" in task));
 
     // A summary leaves out the request, context and conversation.
     assert.deepEqual(await listed(), {

@@ -470,10 +470,6 @@ const manyTurnFollowUp = (turn: number): TaskMessage => ({
   from: "user",
 });
 
-const manyTurnFollowUps = Array.from({ length: 14 }, (_, i) =>
-  manyTurnFollowUp(i + 2),
-);
-
 const manyTurns = new Timeline("preview-many-turns", at(112), 4000);
 begin(manyTurns, ["Read", "Edit", "Bash"]);
 
@@ -576,13 +572,6 @@ export const activityTasks: Task[] = [
     repository: WEBSITE,
     status: "completed",
     turn: 2,
-    instructions: [
-      {
-        id: "msg_preview_blocks_1",
-        message: "Also check the vendored icons.",
-        from: "user",
-      },
-    ],
     instructions_sent: 1,
     model: "opus",
     reasoning_effort: "high",
@@ -611,13 +600,6 @@ export const activityTasks: Task[] = [
       "Run the linter before replying.\nKeep summaries under ten lines.",
     status: "completed",
     turn: 2,
-    instructions: [
-      {
-        id: "msg_preview_long_1",
-        message: longFollowUp,
-        from: "user",
-      },
-    ],
     instructions_sent: 1,
     runtime_ms: 540000,
     cost_usd: 2.37,
@@ -632,8 +614,7 @@ export const activityTasks: Task[] = [
     worker_profile: "implementer",
     status: "completed",
     turn: 15,
-    instructions: manyTurnFollowUps,
-    instructions_sent: manyTurnFollowUps.length,
+    instructions_sent: manyTurnModules.length - 1,
     runtime_ms: 1290000,
     cost_usd: 1.95,
     ...timestamps(112, 30),

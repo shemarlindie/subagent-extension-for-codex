@@ -215,8 +215,6 @@ const callersQuestion: TaskMessage = {
   from: "parent",
 };
 
-const conversationMessages = [fileTypeRequest, callersQuestion];
-
 const sizeLimitReply = `Added a size limit to the upload endpoint: requests over **10 MB** now get \`413 Payload Too Large\` before the body is read.
 
 - \`server/upload.ts\`: checks \`content-length\` first, then counts bytes as they stream.
@@ -363,10 +361,6 @@ const longChatMessage = (turn: number): TaskMessage => ({
   from: turn % 4 === 0 ? "parent" : "user",
 });
 
-const longChatMessages = Array.from({ length: longChatTurns - 1 }, (_, index) =>
-  longChatMessage(index + 2),
-);
-
 for (let turn = 1; turn <= longChatTurns; turn++) {
   if (turn > 1) followUp(longChat, turn, longChatMessage(turn));
 
@@ -387,7 +381,6 @@ export const conversationTasks: Task[] = [
     repository: WEBSITE,
     status: "running",
     runtime_ms: 0,
-    instructions: [steeringMessages.taken],
     instructions_sent: 1,
     pending_steers: [steeringMessages.pending],
     queue: steeringMessages.queued,
@@ -423,7 +416,6 @@ export const conversationTasks: Task[] = [
     workspace_strategy: "current_repo",
     status: "completed",
     turn: 3,
-    instructions: conversationMessages,
     instructions_sent: 2,
     runtime_ms: 271000,
     cost_usd: 1.08,
@@ -452,7 +444,6 @@ export const conversationTasks: Task[] = [
     worker_profile: "implementer",
     status: "completed",
     turn: longChatTurns,
-    instructions: longChatMessages,
     instructions_sent: longChatTurns - 1,
     runtime_ms: longChatTurns * 40000,
     cost_usd: longChatTurns * 0.12,

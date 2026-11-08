@@ -116,10 +116,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         "Read a task's full state: status, turn (the number of turns started), pending input, draft (the message being written), pending steers not yet taken, queue (messages waiting for their own turn, and whether an interrupt paused it), branch for worktree tasks and an excerpt of the latest reply. Read the conversation with list_messages.",
       schema: taskId,
       run: (a) => {
-        const { instructions: _instructions, ...t } = c.store.get(
-          a.task_id,
-          owner,
-        );
+        const t = c.store.get(a.task_id, owner);
 
         const draft = c.drafts.get(t.id);
 

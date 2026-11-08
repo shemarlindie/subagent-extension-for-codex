@@ -36,7 +36,6 @@ async function setup() {
       status: "completed",
       created_at: "now",
       updated_at: "now",
-      instructions: [],
       created_by: "parent",
       instructions_sent: 0,
       pending_steers: [],

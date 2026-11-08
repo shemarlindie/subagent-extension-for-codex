@@ -51,7 +51,6 @@ export function task(status: Task["status"]): Task {
     status,
     created_at: "",
     updated_at: "",
-    instructions: [],
     created_by: "user",
     instructions_sent: 0,
     pending_steers: [],

@@ -92,7 +92,7 @@ export function taskSummary(
  * Fields the panel's list leaves out. Undefined fields drop out of the sent
  * result, which costs less than copying each task without them.
  */
-const unsent = { instructions: undefined, context: undefined };
+const unsent = { context: undefined };
 
 /** Activity summaries are derived for the list, never persisted as task state. */
 export function panelTask(

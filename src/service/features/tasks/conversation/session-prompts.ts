@@ -66,7 +66,7 @@ export class SessionPrompts {
       ...t.context,
       ...dependencyContext,
       ...(transcript ? [transcript] : []),
-      ...t.instructions.slice(t.instructions_sent).map((m) => m.message),
+      ...this.unsent(t),
     ].join("\n\n");
   }
 
@@ -85,11 +85,16 @@ export class SessionPrompts {
     return "This task runs in the current repository, including staged, unstaged and untracked files. Write profiles edit this checkout directly. Preserve unrelated uncommitted changes.";
   }
 
+  /** The messages the worker's session hasn't received, in order. */
+  private unsent(t: Task) {
+    return this.store.messages
+      .list(t.id, t.instructions_sent)
+      .map((m) => m.message);
+  }
+
   /** A resumed session's prompt: only the messages it hasn't received. */
   resumedPrompt(t: Task) {
-    const unsent = t.instructions
-      .slice(t.instructions_sent)
-      .map((m) => m.message);
+    const unsent = this.unsent(t);
 
     return [
       ...(t.workspace_strategy === "current_repo"
@@ -108,7 +113,7 @@ export class SessionPrompts {
    */
   private transcript(t: Task) {
     const received = new Set(
-      t.instructions.slice(0, t.instructions_sent).map((m) => m.id),
+      this.store.messages.list(t.id, 0, t.instructions_sent).map((m) => m.id),
     );
 
     const entries: string[] = [];

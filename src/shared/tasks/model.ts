@@ -262,11 +262,9 @@ export interface Task extends Start {
   };
   /** A copy of its profile's custom instructions when the task started. */
   profile_instructions?: string;
-  /** Messages delivered or about to be, in the order the worker gets them. */
-  instructions: TaskMessage[];
   /**
-   * How many of `instructions` the worker's session has received; a resumed
-   * session gets only the rest.
+   * How many of the task's stored messages the worker's session has received;
+   * a resumed session gets only the rest.
    */
   instructions_sent: number;
   /**
@@ -285,8 +283,8 @@ export interface Task extends Start {
   cost_usd?: number;
 }
 
-/** A task without its stored conversation and context, as the panel lists it. */
-export type TaskView = Omit<Task, "instructions" | "context">;
+/** A task without its context, as the panel lists it. */
+export type TaskView = Omit<Task, "context">;
 
 export function pendingInputKind(input: { kind: "question" | "permission" }) {
   return input.kind;

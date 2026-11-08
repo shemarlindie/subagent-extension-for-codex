@@ -26,7 +26,6 @@ const task = {
   session_owner: "Someones-Mac.local",
   session_state_ref: `${home}/.claude/projects/${workspace.replace(/[^a-zA-Z0-9]/g, "-")}/real-session.jsonl`,
   created_by: "user",
-  instructions: [{ id: "msg_1", message: "Carry on", from: "parent" }],
   instructions_sent: 1,
   pending_steers: [],
   queue: [],

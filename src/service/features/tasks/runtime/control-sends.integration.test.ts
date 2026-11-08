@@ -125,7 +125,7 @@ test("send retries coalesce before repository validation and rollback receipts",
     release();
     const results = await Promise.all([first, second]);
     assert.equal(results[0].message_id, results[1].message_id);
-    assert.equal(store.get(task.id, "owner").instructions.length, 1);
+    assert.equal(store.messages.count(task.id), 1);
 
     store.database.client.exec(
       "CREATE TRIGGER fail_send BEFORE INSERT ON task_send_receipts BEGIN SELECT RAISE(ABORT, 'receipt failed'); END",
@@ -227,9 +227,13 @@ test("different requests recheck task state after delayed validation", async () 
     assert.equal(results[0].state, "started");
     assert.equal(results[1].state, "queued");
     const stored = store.get(task.id, "owner");
-    assert.equal(stored.instructions.length, 1);
+
+    assert.deepEqual(
+      store.messages.list(task.id).map((m) => m.message),
+      ["First"],
+    );
+
     assert.equal(stored.queue.length, 1);
-    assert.equal(stored.instructions[0]!.message, "First");
     assert.equal(stored.queue[0]!.message, "Second");
   } finally {
     await c.close();
