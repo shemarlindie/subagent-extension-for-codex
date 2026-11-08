@@ -78,7 +78,7 @@ export async function claudeUpgradeInfo(
     return {
       installation,
       command: `${quote(manager)} upgrade --cask ${cask}`,
-      note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel. Recheck afterward.",
+      note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel.",
     };
   }
 
@@ -96,7 +96,7 @@ export async function claudeUpgradeInfo(
     return {
       installation: "Native installer",
       command: `${quote(launcher)} update`,
-      note: "Run in a terminal after delegated turns finish. Claude's updater follows its configured release channel and policy. Recheck afterward.",
+      note: "Run in a terminal after delegated turns finish. Claude's updater follows its configured release channel and policy.",
     };
   }
 

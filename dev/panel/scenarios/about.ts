@@ -28,6 +28,6 @@ export const previewAbout = (
   claude_upgrade: {
     installation: "Homebrew (stable)",
     command: "'/opt/homebrew/bin/brew' upgrade --cask claude-code",
-    note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel. Recheck afterward.",
+    note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel.",
   },
 });
