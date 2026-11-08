@@ -6,11 +6,13 @@ import { promisify } from "node:util";
 
 /**
  * Supported minimum Claude Code release and bundled Agent SDK version.
- * Newer CLI releases are accepted without an upper bound.
+ * `paired` is the SDK's own `claudeCodeVersion`. Newer CLI releases are
+ * accepted without an upper bound.
  */
 export const claudeCliSupport = {
   sdk: "0.3.319",
   minimum: "2.1.300",
+  paired: "2.1.319",
 } as const;
 
 /** Names an explicit Claude Code executable, which replaces the PATH lookup. */
@@ -47,8 +49,11 @@ export type ClaudeCliEnvironment = {
 };
 
 type Located =
-  | { path: string }
-  | { problem: "missing" | "invalid_override"; message: string };
+  | { path: string; launcher: string }
+  | {
+      problem: "missing" | "invalid_override";
+      message: string;
+    };
 
 type CacheEntry = {
   identity: string;
@@ -144,7 +149,7 @@ export async function locateClaudeCli(
     }
 
     try {
-      return { path: await realpath(override) };
+      return { path: await realpath(override), launcher: override };
     } catch {
       return {
         problem: "invalid_override",
@@ -162,7 +167,7 @@ export async function locateClaudeCli(
     if (!found) continue;
 
     try {
-      return { path: await realpath(found) };
+      return { path: await realpath(found), launcher: found };
     } catch {}
   }
 
@@ -195,19 +200,6 @@ export function compareVersions(a: string, b: string) {
   return (
     leftMajor - rightMajor || leftMinor - rightMinor || leftPatch - rightPatch
   );
-}
-
-/** The update step for how this copy of Claude Code was installed. */
-function updateStep(path: string) {
-  if (/[\\/]Caskroom[\\/]/.test(path)) {
-    return "brew upgrade --cask claude-code (Homebrew installs don't update themselves)";
-  }
-
-  if (/[\\/]node_modules[\\/]/.test(path)) {
-    return "npm install -g @anthropic-ai/claude-code@stable";
-  }
-
-  return "claude update";
 }
 
 /** The version line `--version` prints, read without a shell and within bounds. */
@@ -262,7 +254,7 @@ export async function validateClaudeCli(
   if (compareVersions(version, claudeCliSupport.minimum) < 0) {
     return failure(
       "too_old",
-      `Claude Code ${version} at ${path} is older than the supported ${supportedRange}. Update it with ${updateStep(path)}, or set ${claudePathVariable} to a supported copy.`,
+      `Claude Code ${version} at ${path} is older than the supported ${supportedRange}. Update it using its original installer (see ${setupDocs}), or set ${claudePathVariable} to a supported copy.`,
       { path, version },
     );
   }
@@ -289,10 +281,12 @@ export class ClaudeCli {
     ) => Promise<ClaudeCliStatus> = validateClaudeCli,
   ) {}
 
-  async status(): Promise<ClaudeCliStatus> {
+  async status({ refresh = false } = {}): Promise<ClaudeCliStatus> {
     const located = await locateClaudeCli(this.environment());
 
-    if (!("path" in located)) return failure(located.problem, located.message);
+    if (!("path" in located)) {
+      return failure(located.problem, located.message);
+    }
 
     let identity: string;
 
@@ -309,7 +303,11 @@ export class ClaudeCli {
 
     const now = Date.now();
 
-    if (this.cache?.identity === identity && this.cache.expires > now) {
+    if (
+      !refresh &&
+      this.cache?.identity === identity &&
+      this.cache.expires > now
+    ) {
       return this.cache.status;
     }
 

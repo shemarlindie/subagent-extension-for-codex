@@ -88,10 +88,11 @@ export class ClaudeAgentProvider implements Provider {
     private fullEvents = false,
   ) {}
 
-  async readiness(): Promise<ProviderReadiness> {
-    const status = await this.cli.status();
+  async readiness(options?: { refresh?: boolean }): Promise<ProviderReadiness> {
+    const status = await this.cli.status(options);
 
     const details = {
+      ...(!status.ready ? { problem: status.problem } : {}),
       ...(status.path ? { executable: status.path } : {}),
       ...(status.version ? { version: status.version } : {}),
       supported_versions: status.supported,
@@ -99,7 +100,11 @@ export class ClaudeAgentProvider implements Provider {
 
     return status.ready
       ? { ready: true, details }
-      : { ready: false, message: status.message, details };
+      : {
+          ready: false,
+          message: status.message,
+          details,
+        };
   }
 
   async deleteSession(task: Task, expectedVersion?: string) {

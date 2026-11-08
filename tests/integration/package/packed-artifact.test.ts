@@ -30,6 +30,7 @@ import {
   type TestContext,
 } from "vitest";
 
+import type { AboutInfo } from "../../../src/shared/about/types.js";
 import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
 import { npmCommand } from "../../support/npm.js";
 import {
@@ -48,6 +49,7 @@ let pkg: string;
 let repository: string;
 /** The paths npm packed, before the tests add their own files to the extracted package. */
 let packedFiles: string[];
+let packedAt: number;
 
 /** The service most tests share; it runs whatever Claude Code the host has. */
 let main: Service;
@@ -147,6 +149,7 @@ beforeAll(async () => {
 
   // Pack the existing build (pretest builds it) instead of rebuilding through prepack.
   await access(resolve("dist/main.js"));
+  packedAt = Date.now();
 
   const { stdout } = await exec(
     ...npmCommand([
@@ -345,6 +348,36 @@ describe("packed artifact", () => {
 
       const html = (await client.readResource({ uri: panel!.uri })).contents[0];
       assert.match(String((html as { text?: string }).text), /<html/i);
+
+      // Bundled diagnostics must work outside the checkout, without node_modules.
+      const token = (
+        await readFile(join(main.data, "admin-token"), "utf8")
+      ).trim();
+
+      const response = await fetch(
+        `http://127.0.0.1:${main.port}/api/user-tools/app_get_about`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "X-Subagent-Extension-For-Codex": "1",
+          },
+          body: JSON.stringify({ refresh: true }),
+        },
+      );
+
+      expect(response.ok).toBe(true);
+
+      const { result: about } = (await response.json()) as {
+        result: AboutInfo;
+      };
+
+      expect(about.installation).toBe("package");
+
+      expect(Date.parse(about.build.built_at ?? "")).toBeLessThanOrEqual(
+        packedAt,
+      );
 
       assert.equal(
         (await client.listTools()).tools.some(

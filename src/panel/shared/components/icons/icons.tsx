@@ -25,6 +25,8 @@ const ICON_NAMES = [
   "more-vertical",
   "more-circle",
   "refresh",
+  "arrow-up-circle",
+  "check-circle",
   "play",
   "pause",
   "check",

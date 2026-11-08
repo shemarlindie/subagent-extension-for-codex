@@ -2,6 +2,64 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "./fixtures";
 
+test("About loads diagnostics on demand and rechecks the CLI", async ({
+  consolePage: page,
+}) => {
+  let requests = 0;
+  const refreshes: boolean[] = [];
+
+  await page.route("**/api/tools/app_get_about", async (route) => {
+    requests++;
+    refreshes.push(route.request().postDataJSON().refresh as boolean);
+
+    if (requests === 1) {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Diagnostics unavailable" }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  expect(requests).toBe(0);
+  await page.getByRole("tab", { name: "About", exact: true }).click();
+
+  await expect(page.getByRole("alert")).toContainText(
+    "Diagnostics unavailable",
+  );
+
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+
+  const upgrade = page.getByRole("button", {
+    name: "CLI upgrade instructions",
+    exact: true,
+  });
+
+  await expect(upgrade).toHaveAttribute("aria-expanded", "false");
+  await upgrade.click();
+  await expect(upgrade).toHaveAttribute("aria-expanded", "true");
+
+  await page
+    .getByRole("button", { name: "Recheck version", exact: true })
+    .click();
+
+  await expect(
+    page.getByRole("button", { name: "Recheck version", exact: true }),
+  ).toBeEnabled();
+
+  expect(refreshes).toEqual([false, true, true]);
+
+  await upgrade.click();
+
+  await expect(
+    page.getByRole("button", { name: "Recheck version", exact: true }),
+  ).toHaveCount(0);
+});
+
 test("settings reject invalid values, reset sections and confirm discarding edits", async ({
   consolePage: page,
 }) => {
