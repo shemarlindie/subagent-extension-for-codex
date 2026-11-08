@@ -136,6 +136,7 @@ const fixtureThreads = threadsOf(
     previewTool("app_list_tasks", {
       conversation_id: null,
       archived: "include",
+      include_read_completed: true,
     }) as {
       tasks: Task[];
     }
@@ -317,7 +318,11 @@ export function Host() {
         .then((connection) =>
           connection.callTool({
             name: "app_list_tasks",
-            arguments: { conversation_id: null, archived: "include" },
+            arguments: {
+              conversation_id: null,
+              archived: "include",
+              include_read_completed: true,
+            },
           }),
         )
         .then((result) =>

@@ -43,9 +43,14 @@ import {
   tasksInScope,
 } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
-import { filterCounts, selectedTask } from "./selectors";
+import { availableFilter, selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
+import {
+  lacksNewSelection,
+  taskListArgs,
+  unloadedCounts,
+} from "./task-list-read";
 import type {
   DialogState,
   Filter,
@@ -57,6 +62,7 @@ import type {
   Snapshot,
   Tab,
   Task,
+  TaskList,
   Transport,
   UiStatePersistence,
   Worker,
@@ -73,13 +79,6 @@ const READS_STOPPED = {
   chatHistoryLoading: undefined,
   activityHistoryLoading: undefined,
 } satisfies Partial<Snapshot>;
-
-function availableFilter(state: Snapshot, filter: Filter | null) {
-  if (!filter || filter === "all") return filter;
-
-  // Search may have no matches while its chosen status remains valid in scope.
-  return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
-}
 
 /** How long a ready worker list is reused before it is read again. */
 const WORKERS_FRESH_MS = 60 * 60_000;
@@ -523,7 +522,7 @@ export class Controller {
 
       const projectGeneration = this.projectGeneration;
       const projects = await this.readProjects();
-      if (this.staleProjectRead(version, projectGeneration)) return;
+      if (this.staleListRead(version, projectGeneration)) return;
 
       const projectUpdate = this.reconcileProjects(projects);
       if (projectUpdate.reset) version = this.state.scopeVersion;
@@ -544,32 +543,21 @@ export class Controller {
 
       const { conversation, repository } = this.state;
 
-      // The list leaves archived tasks out, except an open one or one a restored
-      // URL opens.
-      const include = new Set([
-        this.state.selected,
-        this.restoredView?.selected,
-      ]);
+      const args = taskListArgs(this.state, this.restoredView?.selected);
+      const list = await this.tool<TaskList>("app_list_tasks", args);
 
-      const { tasks: next } = await this.tool<{ tasks: Task[] }>(
-        "app_list_tasks",
-        {
-          conversation_id: conversation ?? null,
-          ...(repository ? { repository } : {}),
-          include: [...include].filter(Boolean),
-        },
-      );
+      const lacking = lacksNewSelection(args, list, this.state.selected);
 
-      if (this.staleProjectRead(version, projectGeneration)) {
+      if (this.staleListRead(version, projectGeneration, lacking)) {
         this.timing.observe("task_list", "merge", 0, { stale_count: 1 });
 
         return;
       }
 
-      const tasks = tasksInScope(next, { conversation, repository });
+      const tasks = tasksInScope(list.tasks, { conversation, repository });
 
-      const accepted = this.timing.merge("task_list", next.length, () =>
-        this.acceptTaskList(tasks, intent),
+      const accepted = this.timing.merge("task_list", list.tasks.length, () =>
+        this.acceptTaskList(tasks, list.read_completed, intent),
       );
 
       if (!accepted) return;
@@ -624,10 +612,10 @@ export class Controller {
     }
   }
 
-  /** A project write invalidates list reads even when the panel keeps its scope. */
-  private staleProjectRead(scope: number, generation: number) {
+  /** Project writes, and a newer selection a read lacks, make list reads stale. */
+  private staleListRead(scope: number, generation: number, lacking = false) {
     if (this.stale(scope)) return true;
-    if (generation === this.projectGeneration) return false;
+    if (generation === this.projectGeneration && !lacking) return false;
     this.rerun = true;
 
     return true;
@@ -705,6 +693,7 @@ export class Controller {
   /** Publishes a task list with the user's selection intent and restored view. */
   private acceptTaskList(
     tasks: Task[],
+    readCompleted: TaskList["read_completed"],
     intent: { tab: number; selection: number },
   ) {
     const taskDialog = this.state.dialog;
@@ -742,6 +731,7 @@ export class Controller {
     this.patch({
       taskArrival: taskArrival?.id === selected ? undefined : taskArrival,
       tasks: this.taskActions.unread.settle(tasks),
+      readCompleted: unloadedCounts(readCompleted),
       draft: this.draftFollower.retainListed(
         tasks.find((task) => task.id === selected),
       ),
@@ -762,6 +752,8 @@ export class Controller {
     });
 
     this.newTasks.restore(composing);
+    // The default filter can turn out to be Done or All.
+    this.loadReadCompleted();
 
     return true;
   }
@@ -877,10 +869,19 @@ export class Controller {
 
   setSearch(search: string) {
     this.patch({ search });
+    this.loadReadCompleted();
   }
 
   setFilter(filter: Filter) {
     this.patch({ filter });
+    this.loadReadCompleted();
+  }
+
+  /** Reads the list again when it now shows read completed tasks it left out. */
+  private loadReadCompleted() {
+    if (this.state.readCompleted && showsReadCompleted(this.state)) {
+      this.run(() => this.refresh());
+    }
   }
 
   /**
@@ -1006,6 +1007,7 @@ export class Controller {
       ...patch,
       scopeVersion,
       tasks: [],
+      readCompleted: undefined,
       taskListLoading: true,
       newTask: rescopedNewTask(this.state, patch, scopeVersion),
       ...selectionPatch(restoredSelection),
@@ -1092,6 +1094,7 @@ export class Controller {
       // rather than showing the empty inspector until that read returns.
       this.patch({
         tasks: this.taskActions.unread.settle(tasks),
+        readCompleted: unloadedCounts(data.read_completed),
         taskListLoading: false,
         ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
       });

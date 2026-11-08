@@ -27,6 +27,7 @@ export const panel = (response: object) =>
         panel_scope?: unknown;
         panel_selection?: unknown;
         tasks?: unknown;
+        read_completed?: unknown;
         result?: unknown;
         conversation_id?: unknown;
       }

@@ -304,10 +304,15 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       conversation_id: null,
     });
 
-    assert.deepEqual(
-      (panel(open)?.tasks as { id: string }[]).map((task) => task.id).sort(),
-      ["current-thread", "other-project", "other-thread", "unscoped"],
-    );
+    // Opening data lists the newest task and counts the read completed rest.
+    const opened = (result: typeof open) => ({
+      tasks: (panel(result)?.tasks as { id: string }[]).map((task) => task.id),
+      counted: Object.values(
+        panel(result)?.read_completed as Record<string, number>,
+      ).reduce((total, count) => total + count, 0),
+    });
+
+    assert.deepEqual(opened(open), { tasks: ["unscoped"], counted: 3 });
 
     assert.ok(globalOpener);
 
@@ -337,12 +342,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       conversation_id: null,
     });
 
-    assert.deepEqual(
-      (panel(globalOpen)?.tasks as { id: string }[])
-        .map((task) => task.id)
-        .sort(),
-      ["current-thread", "other-project", "other-thread", "unscoped"],
-    );
+    assert.deepEqual(opened(globalOpen), { tasks: ["unscoped"], counted: 3 });
 
     const globalContext = await client.callTool({
       name: "get_panel_context",

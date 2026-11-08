@@ -140,15 +140,47 @@ export const groupSignals = (tasks: Task[]) => ({
   needsInput: tasks.some((task) => matchesFilter(task, "attention")),
 });
 
+// Done and All count read completed tasks the list hasn't loaded. A search
+// loads them, so it never counts them unloaded.
 export function filterCounts(state: Snapshot) {
   const scoped = scopedTasks(state);
+
+  const unloaded = state.search
+    ? 0
+    : Object.entries(state.readCompleted ?? {})
+        .filter(
+          ([repository]) =>
+            !state.repository || repository === state.repository,
+        )
+        .reduce((total, [, count]) => total + count, 0);
 
   return Object.fromEntries(
     FILTERS.map((filter) => [
       filter,
-      scoped.filter((task) => matchesFilter(task, filter)).length,
+      scoped.filter((task) => matchesFilter(task, filter)).length +
+        (filter === "completed" || filter === "all" ? unloaded : 0),
     ]),
   ) as Record<Filter, number>;
+}
+
+/** A restored filter, or none when it no longer holds tasks in scope. */
+export function availableFilter(state: Snapshot, filter: Filter | null) {
+  if (!filter || filter === "all") return filter;
+
+  // Search may have no matches while its chosen status remains valid in scope.
+  return filterCounts({ ...state, search: "" })[filter] > 0 ? filter : null;
+}
+
+/**
+ * Whether the list shows completed tasks the user has read, which load on
+ * demand. The default filter is unknown while nothing is listed. A scope with
+ * tasks always lists its newest.
+ */
+export function showsReadCompleted(state: Snapshot) {
+  const filter =
+    state.filter ?? (state.tasks.length ? effectiveFilter(state) : undefined);
+
+  return Boolean(state.search) || filter === "completed" || filter === "all";
 }
 
 export const selectedTask = (state: Snapshot) =>

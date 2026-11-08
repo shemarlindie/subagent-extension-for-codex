@@ -59,6 +59,8 @@ test("browser view state seeds the first render, restores a task, and persists l
       conversation_id: null,
       repository: "/repo/b",
       include: ["b"],
+      // A search loads the read completed tasks the list leaves out.
+      include_read_completed: true,
     },
   );
 

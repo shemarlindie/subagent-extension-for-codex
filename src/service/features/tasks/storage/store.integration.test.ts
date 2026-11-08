@@ -688,6 +688,11 @@ test("task and typed event reads search indexes instead of scanning tasks or eve
       [/tasks_owner_conversation/],
     ],
     [
+      "readCompletedFlags",
+      () => store.readCompletedFlags(task.owner, { archived: "exclude" }),
+      [/tasks_owner_created/, /events_task_type/, /task_read/],
+    ],
+    [
       "latestInConversation",
       () => store.latestInConversation(task.owner, "chat"),
       [/tasks_owner_conversation/],

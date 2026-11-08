@@ -6,7 +6,7 @@ import type {
 import { z } from "zod";
 
 import { panelOutputSchema } from "../../../shared/panel/panel-contract.generated.js";
-import type { PanelTask } from "../../../shared/tasks/task-list.js";
+import type { PanelTaskList } from "../../../shared/tasks/task-list.js";
 import type { TaskFilters } from "../../features/tasks/storage/task-rows.js";
 import { productGlyphIcons } from "../server/product-glyph.js";
 import { type PanelContextInput, panelContextInput } from "./panel-context.js";
@@ -42,7 +42,7 @@ type PanelContext = {
 
 export function delegationPanel(
   htmlPath: string,
-  initialTasks?: (filters: TaskFilters) => PanelTask[],
+  initialTasks?: (filters: TaskFilters) => PanelTaskList,
   context?: (args: PanelContextInput) => Promise<PanelContext>,
 ) {
   preloadPanelHtml(htmlPath);
@@ -82,15 +82,12 @@ export function delegationPanel(
           conversation_id: resolved.panel_scope.conversation_id,
           ...resolved,
           ...(initialTasks
-            ? {
-                tasks: initialTasks({
-                  conversation:
-                    resolved.panel_scope.conversation_id ?? undefined,
-                  repository: resolved.panel_scope.repository,
-                  archived: "exclude",
-                  include: selected ? [selected] : [],
-                }),
-              }
+            ? initialTasks({
+                conversation: resolved.panel_scope.conversation_id ?? undefined,
+                repository: resolved.panel_scope.repository,
+                archived: "exclude",
+                include: selected ? [selected] : [],
+              })
             : {}),
         },
         _meta: { conversation_id: resolved.panel_scope.conversation_id },

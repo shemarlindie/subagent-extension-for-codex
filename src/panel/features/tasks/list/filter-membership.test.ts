@@ -134,6 +134,31 @@ test("filter counts match each filter's list and follow search and scope", () =>
   });
 });
 
+test("Done and All count read completed tasks the list left out", () => {
+  const state = (patch: object) =>
+    ({
+      tasks: [task({ id: "a", status: "running" })],
+      readCompleted: { "/repo": 2, "/elsewhere": 5 },
+      filter: null,
+      search: "",
+      repository: "/repo",
+      ...patch,
+    }) as unknown as Snapshot;
+
+  assert.deepEqual(filterCounts(state({})), {
+    all: 3,
+    active: 1,
+    attention: 0,
+    completed: 2,
+    failed: 0,
+    unread: 0,
+  });
+
+  assert.equal(filterCounts(state({ repository: undefined })).completed, 7);
+  // A search loads them, so it counts only what it matches.
+  assert.equal(filterCounts(state({ search: "t" })).completed, 0);
+});
+
 test("the filter follows the first nonempty one in order until chosen", () => {
   const state = (tasks: Task[], patch: object = {}) =>
     ({

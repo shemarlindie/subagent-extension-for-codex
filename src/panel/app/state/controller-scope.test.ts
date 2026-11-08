@@ -50,8 +50,13 @@ test("panel bootstrap explicitly requests global scope; host scope skips bootstr
             conversation_id: "chat-a",
             repository: "/repo/a",
             include: [],
+            include_read_completed: false,
           }
-        : { conversation_id: null, include: [] },
+        : {
+            conversation_id: null,
+            include: [],
+            include_read_completed: false,
+          },
     );
 
     assert.deepEqual(
@@ -188,6 +193,7 @@ test("All chats preserves repository and discards a delayed conversation respons
       conversation_id: null,
       repository: "/repo/a",
       include: [],
+      include_read_completed: false,
     },
   );
 });
@@ -334,4 +340,33 @@ test("opening data defers to the host selection and to narrow unscoped panels", 
   );
 
   assert.equal(narrow.controller.getSnapshot().selected, undefined);
+});
+
+test("a list read that began before a selection can't drop it", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("listed")];
+  await controller.start();
+
+  const gate = deferred<{ tasks: Task[] }>();
+
+  transport.handler = (name) =>
+    name === "app_list_tasks" ? gate.promise : undefined;
+
+  const refresh = controller.refresh();
+  await flush();
+  // Undo reopens a task the read in flight still lacks.
+  await controller.select("reopened");
+  transport.handler = undefined;
+  transport.tasks = [task("reopened"), task("listed")];
+  gate.resolve({ tasks: [task("listed")] });
+  await refresh;
+  await flush();
+
+  assert.equal(controller.getSnapshot().selected, "reopened");
+
+  assert.deepEqual(
+    controller.getSnapshot().tasks.map((item) => item.id),
+    ["reopened", "listed"],
+  );
 });

@@ -78,12 +78,14 @@ export class ArchiveActions {
           if (archived) this.relist(changing, reverted);
           await this.apply(reverted, !archived);
 
-          // Only a task the current scope lists can open.
-          const listed = this.context
-            .snapshot()
-            .tasks.some((task) => task.id === closed);
+          // Only a task in the current scope can open. A list read in flight
+          // can still lack it, so this doesn't wait for the list.
+          const reopened = tasksInScope(
+            changing.filter((task) => task.id === closed),
+            this.context.snapshot(),
+          );
 
-          if (listed && reverted.includes(closed)) {
+          if (reopened.length && reverted.includes(closed)) {
             await this.context.select(closed);
           }
         },

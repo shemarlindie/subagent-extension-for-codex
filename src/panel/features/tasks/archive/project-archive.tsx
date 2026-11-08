@@ -42,7 +42,12 @@ export function ProjectArchive({
   const load = useCallback(async () => {
     const { tasks: listed } = await controller.tool<{ tasks: Task[] }>(
       "app_list_tasks",
-      { conversation_id: null, repository, archived: "only" },
+      {
+        conversation_id: null,
+        repository,
+        archived: "only",
+        include_read_completed: true,
+      },
     );
 
     const archived = listed.sort((a, b) =>
