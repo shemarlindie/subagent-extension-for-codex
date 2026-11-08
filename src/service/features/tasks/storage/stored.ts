@@ -79,7 +79,6 @@ const storedTaskSchema = z.looseObject({
     })
     .optional(),
   profile_instructions: z.string().optional(),
-  instructions: z.array(message),
   instructions_sent: z.number().int().nonnegative(),
   pending_steers: z.array(message),
   queue: z.array(

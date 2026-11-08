@@ -13,10 +13,10 @@ export function commitSend(
   requestId?: string,
 ) {
   // Sends append messages and change lifecycle fields. Provider state and the
-  // rest of the task remain owned by the running turn.
+  // rest of the task remain owned by the running turn. The transaction rolls
+  // back stored messages.
   const before = {
     queue: [...task.queue],
-    instructions: [...task.instructions],
     pending_steers: [...task.pending_steers],
     budget: { ...task.budget },
     status: task.status,

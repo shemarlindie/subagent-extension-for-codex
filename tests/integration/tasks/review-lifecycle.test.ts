@@ -76,7 +76,6 @@ test(
         status,
         created_at: timestamp,
         updated_at: timestamp,
-        instructions: [],
         created_by: "user",
         instructions_sent: 0,
         pending_steers: [],

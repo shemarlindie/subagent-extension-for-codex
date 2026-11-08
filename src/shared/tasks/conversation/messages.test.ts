@@ -18,7 +18,6 @@ const task: Task = {
   status: "completed",
   created_at: "2026-10-07T10:00:00Z",
   updated_at: "2026-10-07T10:00:00Z",
-  instructions: [],
   instructions_sent: 0,
   pending_steers: [],
   queue: [],

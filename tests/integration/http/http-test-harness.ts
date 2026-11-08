@@ -70,7 +70,6 @@ export async function httpFixture(t: TestContext) {
       queue: [],
       turn: 0,
       runtime_ms: 0,
-      instructions: [],
     });
   };
 

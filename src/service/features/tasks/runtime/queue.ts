@@ -81,7 +81,7 @@ export function recordMessage(
 /** Records a queued message as sent, for the turn it starts. */
 export function deliverQueued(store: Store, t: Task, m: QueuedMessage) {
   if (!m.recorded) recordMessage(store, t, m, m.delivery);
-  t.instructions.push({ id: m.id, message: m.message, from: m.from });
+  store.messages.add(t.id, { id: m.id, message: m.message, from: m.from });
 }
 
 /** Marks a task as having its next turn ready to start. */
@@ -131,8 +131,11 @@ export function steerQueuedMessage(
   t.queue = t.queue.filter((item) => item.id !== messageId);
   if (!t.queue.length) delete t.queue_paused;
   if (active) t.pending_steers.push(m);
-  else t.instructions.push(m);
-  commitQueue(store, t, before, () => recordMessage(store, t, m, "steer"));
+
+  commitQueue(store, t, before, () => {
+    if (!active) store.messages.add(t.id, m);
+    recordMessage(store, t, m, "steer");
+  });
 
   return m;
 }
@@ -291,16 +294,18 @@ export function restoreQueuedMessages(
   busy: boolean,
   record?: () => void,
 ) {
-  const present = new Set(
-    [...t.queue, ...t.pending_steers, ...t.instructions].map((m) => m.id),
-  );
+  const queued = new Set([...t.queue, ...t.pending_steers].map((m) => m.id));
+
+  const removed = placements
+    .map((p) => p.message_id)
+    .filter((id) => !queued.has(id));
+
+  const sent = store.messages.existing(t.id, removed);
 
   const messages = removedMessages(
     store,
     t,
-    new Set(
-      placements.map((p) => p.message_id).filter((id) => !present.has(id)),
-    ),
+    new Set(removed.filter((id) => !sent.has(id))),
   );
 
   const restoring = placements

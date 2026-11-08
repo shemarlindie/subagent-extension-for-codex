@@ -366,7 +366,7 @@ test.each([true, false])(
         context!.steerTaken(selected.message_id);
 
         assert.equal(
-          store.get(task.id, "alice").instructions.at(-1)?.id,
+          store.messages.list(task.id).at(-1)?.id,
           selected.message_id,
         );
       } else {
@@ -434,7 +434,7 @@ test("queued steering before provider startup adds the original message to the f
     assert.equal(updated.queue_paused, undefined);
     assert.deepEqual(updated.pending_steers, []);
 
-    assert.deepEqual(updated.instructions, [
+    assert.deepEqual(store.messages.list(task.id), [
       {
         id: queued.message_id,
         message: "Include this in the prompt",

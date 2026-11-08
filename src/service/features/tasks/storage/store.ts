@@ -34,6 +34,7 @@ import {
   readOriginalResponse,
 } from "./event-records.js";
 import { EventStorageMetrics } from "./event-storage-metrics.js";
+import { MessageStore } from "./message-store.js";
 import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
@@ -61,6 +62,7 @@ const PAGE = 1000;
 export class Store {
   /** The shared connection, which other features' storage also uses. */
   readonly database: Database;
+  readonly messages: MessageStore;
   readonly reads = new ReadMetrics();
   private readonly eventStorage = new EventStorageMetrics();
 
@@ -76,6 +78,7 @@ export class Store {
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
     this.database = openDatabase(path);
+    this.messages = new MessageStore(this.database);
   }
 
   beginEventStorage(taskId: string, turn: number) {

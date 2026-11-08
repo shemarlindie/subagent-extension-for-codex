@@ -20,7 +20,6 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
       status: "completed",
       created_at: "now",
       updated_at: "now",
-      instructions: [],
       created_by: "user",
       instructions_sent: 0,
       pending_steers: [],

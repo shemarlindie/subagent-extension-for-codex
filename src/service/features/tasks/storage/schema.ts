@@ -98,6 +98,24 @@ export const taskArchive = sqliteTable("task_archive", {
   archived_at: text().notNull(),
 });
 
+/**
+ * The messages each task's worker has received or is about to, in the order
+ * it gets them. The task's `instructions_sent` counts those its session has.
+ */
+export const taskMessages = sqliteTable(
+  "task_messages",
+  {
+    task_id: text()
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    seq: integer().notNull(),
+    message_id: text().notNull(),
+    message: text().notNull(),
+    sender: text({ enum: ["user", "parent"] }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.task_id, t.seq] })],
+);
+
 /** Accepted send receipts share the message transaction and survive restart. */
 export const sendReceipts = sqliteTable(
   "task_send_receipts",

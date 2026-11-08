@@ -240,7 +240,6 @@ export class Control {
       owner,
       created_by: authority,
       status: "queued",
-      instructions: [],
       instructions_sent: 0,
       pending_steers: [],
       queue: [],
@@ -405,7 +404,7 @@ export class Control {
       const prompt = await turnPrompt(startup, t, newSession, signal);
       const sentBefore = t.instructions_sent;
       // The session holds these from now on, so a resumed turn gets only later ones.
-      t.instructions_sent = t.instructions.length;
+      t.instructions_sent = this.store.messages.count(t.id);
       this.store.save(t);
 
       const output = await measureTaskWait(
@@ -481,11 +480,11 @@ export class Control {
         const taken = t.pending_steers.find((m) => m.id === id);
         if (!taken) return;
         t.pending_steers.splice(t.pending_steers.indexOf(taken), 1);
-        // The session has it now, like the turn's prompt.
-        t.instructions.push(taken);
-        t.instructions_sent = t.instructions.length;
 
         this.store.transaction(() => {
+          // The session has it now, like the turn's prompt.
+          this.store.messages.add(t.id, taken);
+          t.instructions_sent = this.store.messages.count(t.id);
           this.store.save(t);
           this.store.event(t, "task.steer_taken", { message_id: id });
         });
@@ -622,7 +621,7 @@ export class Control {
     const before = queueSnapshot(t);
 
     if (sendPending && t.pending_steers.length) {
-      t.instructions.push(...t.pending_steers);
+      this.store.messages.add(t.id, ...t.pending_steers);
       t.pending_steers = [];
       requeue(t);
       this.queuedAfterCommit(t, "interrupt_send");
@@ -1029,7 +1028,7 @@ export class Control {
       t,
       () => {
         if (options.budget) raiseBudget(t, options.budget);
-        if (!a) t.instructions.push(m);
+        if (!a) this.store.messages.add(t.id, m);
         else t.pending_steers.push(m);
         recordMessage(this.store, t, m, delivery);
         this.store.save(t);
@@ -1109,7 +1108,7 @@ export class Control {
       this.store,
       t,
       () => {
-        t.instructions.push(m);
+        this.store.messages.add(t.id, m);
         delete t.queue_paused;
         requeue(t);
         this.store.save(t);

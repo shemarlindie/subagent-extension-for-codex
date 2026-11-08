@@ -467,13 +467,6 @@ export const lifecycleTasks: Task[] = [
     provider_options: settingOptions(),
     status: "interrupted",
     turn: 2,
-    instructions: [
-      {
-        id: "msg_preview_interrupted_1",
-        message: "Keep keyboard navigation unchanged.",
-        from: "parent",
-      },
-    ],
     instructions_sent: 1,
     runtime_ms: 125000,
     ...worktree("preview-interrupted"),
@@ -528,13 +521,6 @@ export const lifecycleTasks: Task[] = [
     worker_profile: "test_engineer",
     status: "completed",
     turn: 2,
-    instructions: [
-      {
-        id: "msg_preview_resumed_1",
-        message: "Also cover the timeout path.",
-        from: "user",
-      },
-    ],
     instructions_sent: 1,
     runtime_ms: 186000,
     cost_usd: 0.88,

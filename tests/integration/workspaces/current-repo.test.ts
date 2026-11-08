@@ -63,7 +63,6 @@ function task(repository: string, revision = "HEAD"): Task {
     title: "Review edits",
     owner: "alice",
     status: "queued",
-    instructions: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     created_by: "user",

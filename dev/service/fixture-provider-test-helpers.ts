@@ -29,7 +29,6 @@ export function task(id = "task_fixture"): Task {
     updated_at: "2026-10-10T00:00:00.000Z",
     turn: 1,
     runtime_ms: 0,
-    instructions: [],
     instructions_sent: 0,
     pending_steers: [],
     queue: [],

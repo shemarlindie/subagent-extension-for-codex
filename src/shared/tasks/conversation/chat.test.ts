@@ -20,7 +20,6 @@ const task: Task = {
   status: "failed",
   created_at: "",
   updated_at: "",
-  instructions: [],
   instructions_sent: 0,
   pending_steers: [],
   queue: [],

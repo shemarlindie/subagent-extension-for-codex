@@ -19,7 +19,6 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
     status: "running",
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
-    instructions: [message],
     instructions_sent: 1,
     pending_steers: [message],
     queue: [{ ...message, delivery: "queue" }],
@@ -49,7 +48,6 @@ test("failed send acceptance restores send fields and keeps active references", 
   const before = structuredClone(task);
   const active = { task };
   const { provider_options, pending_input } = task;
-  const instruction = task.instructions[0];
   const steer = task.pending_steers[0];
   const queued = task.queue[0];
   const revision = store.revision(task.owner);
@@ -59,7 +57,6 @@ test("failed send acceptance restores send fields and keeps active references", 
 
   expect(() =>
     commitSend(store, task, () => {
-      task.instructions.push({ id: "new", message: "Continue", from: "user" });
       task.pending_steers.length = 0;
       task.queue.splice(0, 1);
       task.budget.max_runtime_minutes = 20;
@@ -79,7 +76,6 @@ test("failed send acceptance restores send fields and keeps active references", 
   expect(task).toEqual(before);
   expect(task.provider_options).toBe(provider_options);
   expect(task.pending_input).toBe(pending_input);
-  expect(task.instructions[0]).toBe(instruction);
   expect(task.pending_steers[0]).toBe(steer);
   expect(task.queue[0]).toBe(queued);
   expect(store.get(task.id, task.owner)).toEqual(before);

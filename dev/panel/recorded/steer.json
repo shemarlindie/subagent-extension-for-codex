@@ -31,23 +31,6 @@
     "owner": "preview",
     "created_by": "user",
     "status": "completed",
-    "instructions": [
-      {
-        "id": "msg_66e92a4d-2d91-46dd-b5b3-682e2a326392",
-        "message": "Also: end your reply with the word BANANA.",
-        "from": "user"
-      },
-      {
-        "id": "msg_705abb35-db42-4aed-a349-e6f58b853d28",
-        "message": "Use Bash to run `sleep 30; echo slow`, then reply DONE.",
-        "from": "user"
-      },
-      {
-        "id": "msg_0b80f7b8-4b0c-45d4-a64a-625f3ca9c4ee",
-        "message": "Forget that; just reply with the word PEAR.",
-        "from": "parent"
-      }
-    ],
     "instructions_sent": 3,
     "pending_steers": [],
     "queue": [],

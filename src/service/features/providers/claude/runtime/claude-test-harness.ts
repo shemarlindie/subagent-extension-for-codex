@@ -67,7 +67,6 @@ export async function context() {
     status: "running",
     created_at: now(),
     updated_at: now(),
-    instructions: [],
     created_by: "user",
     instructions_sent: 0,
     pending_steers: [],
