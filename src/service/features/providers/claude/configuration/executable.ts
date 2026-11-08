@@ -4,6 +4,8 @@ import { access, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, win32 } from "node:path";
 import { promisify } from "node:util";
 
+import compareVersions from "semver/functions/compare.js";
+
 /**
  * Supported minimum Claude Code release and bundled Agent SDK version.
  * `paired` is the SDK's own `claudeCodeVersion`. Newer CLI releases are
@@ -180,26 +182,6 @@ export async function locateClaudeCli(
 /** A strict `X.Y.Z (Claude Code)` version line; prereleases don't match. */
 export function parseClaudeVersion(output: string) {
   return /^(\d+\.\d+\.\d+) \(Claude Code\)$/.exec(output.trim())?.[1];
-}
-
-function versionParts(version: string) {
-  const [, major, minor, patch] = /^(\d+)\.(\d+)\.(\d+)$/.exec(version) ?? [];
-
-  if (major === undefined || minor === undefined || patch === undefined) {
-    throw new Error(`Invalid Claude Code version: ${version}`);
-  }
-
-  return [Number(major), Number(minor), Number(patch)] as const;
-}
-
-/** Compares two X.Y.Z versions numerically. */
-export function compareVersions(a: string, b: string) {
-  const [leftMajor, leftMinor, leftPatch] = versionParts(a),
-    [rightMajor, rightMinor, rightPatch] = versionParts(b);
-
-  return (
-    leftMajor - rightMajor || leftMinor - rightMinor || leftPatch - rightPatch
-  );
 }
 
 /** The version line `--version` prints, read without a shell and within bounds. */
