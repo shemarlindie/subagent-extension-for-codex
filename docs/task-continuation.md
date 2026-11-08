@@ -53,8 +53,7 @@ token.
 
 Disconnecting a client leaves its tasks running. A service the plugin started
 exits about 15 seconds after its last Codex proxy and console disconnect and its
-tasks finish. A task waiting for input counts as unfinished. A task waiting for
-a dependency doesn't, since the wait resumes after a restart. Services started
+tasks finish. A task waiting for input counts as unfinished. Services started
 another way run until you stop them.
 
 Stopping the service interrupts its active turns. On restart:

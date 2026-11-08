@@ -154,29 +154,3 @@ test("queue waits end once when a waiting task is interrupted or deleted", async
     expect(wait.capacity_ms).toBe(wait.duration_ms);
   }
 });
-
-test("a dependent's queue wait reports when it was seen waiting on a dependency", async () => {
-  const timing = await captureTiming();
-  const provider = new Held();
-  const { c, store, repo } = await setup(provider);
-  const held = await c.start("alice", input(repo, "Hold"));
-
-  const dependent = await c.start("alice", {
-    ...input(repo),
-    depends_on: [held.id],
-  });
-
-  await until(() => store.get(dependent.id, "alice").status === "waiting");
-  await until(() => !!provider.release);
-  provider.release?.();
-  await until(() => store.get(dependent.id, "alice").status === "completed");
-  await c.close();
-
-  const [wait] = (await timing.records("queue_wait")).filter(
-    (r) => r.task_id === dependent.id,
-  );
-
-  expect(wait).toMatchObject({ outcome: "success", capacity_ms: 0 });
-  expect(wait?.dependency_observation_span_ms).toBeGreaterThanOrEqual(0);
-  expect(wait?.since_dependency_observed_ms).toBeGreaterThan(0);
-});

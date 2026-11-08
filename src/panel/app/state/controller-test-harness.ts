@@ -57,7 +57,6 @@ export function task(
     worker_profile: "reviewer",
     title: "Review",
     description: "Review",
-    depends_on: [],
     workspace_strategy: "worktree",
     budget: { max_runtime_minutes: 20, max_cost_usd: null },
     owner: "owner",

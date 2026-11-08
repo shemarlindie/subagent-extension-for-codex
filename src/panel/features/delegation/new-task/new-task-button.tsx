@@ -47,7 +47,7 @@ export function NewTaskButton({ disabled }: NewTaskButtonProps) {
                 <span className="select-item-text">
                   <span>Advanced task…</span>
                   <span className="select-item-description">
-                    Workspace, permissions, budgets and dependencies
+                    Workspace, permissions and budgets
                   </span>
                 </span>
               </Menu.Item>

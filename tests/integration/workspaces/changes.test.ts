@@ -57,7 +57,6 @@ async function setup() {
   const start = async (
     run: (context: RunContext, prompt: string) => Promise<void>,
     workspace_strategy: "current_repo" | "worktree" = "current_repo",
-    depends_on: string[] = [],
   ) => {
     provider.run = async (context, prompt) => {
       await run(context, prompt);
@@ -70,7 +69,6 @@ async function setup() {
       provider: "fixture",
       description: "Edit files",
       workspace_strategy,
-      depends_on,
     });
 
     return done(task.id);
@@ -377,51 +375,6 @@ test("file tools read current disk content, page UTF-8, preview images and restr
         s.tool("get_changed_file", { ...args, path }),
       ).rejects.toThrow(/not among this task's changes/);
     }
-  } finally {
-    await s.close();
-  }
-});
-
-test("dependent prompts include the recorded diff within the existing size limit and note unrecorded edits", async () => {
-  const s = await setup();
-
-  try {
-    const first = await s.start(async (c) => {
-      await edit(c, "large.txt", "", `${"x".repeat(60_000)}\nend-of-diff\n`);
-      c.editUnrecorded(join(c.task.workspace!, "blob.bin"));
-      c.editUnrecorded();
-    }, "worktree");
-
-    await s.c.workspaces.removeWorktree(first, true);
-    await s.c.workspaces.deleteBranch(first);
-    let prompt = "";
-
-    await s.start(
-      async (_c, p) => {
-        prompt = p;
-      },
-      "worktree",
-      [first.id],
-    );
-
-    expect(prompt).toContain(`Dependency ${first.id} replied:\nDone`);
-
-    expect(prompt).toContain(
-      `Dependency ${first.id}'s recorded edits (2 files, +2 −0):`,
-    );
-
-    expect(prompt).toContain(
-      "Edits to blob.bin weren't recorded, so they have no diff.",
-    );
-
-    expect(prompt).toContain(
-      "Commands also changed files that weren't recorded.",
-    );
-
-    expect(prompt).toContain("diff --git a/large.txt b/large.txt");
-    expect(prompt).toContain(`+${"x".repeat(100)}`);
-    expect(prompt).toContain("diff truncated");
-    expect(prompt).not.toContain("end-of-diff");
   } finally {
     await s.close();
   }

@@ -13,7 +13,6 @@ test("a blocked mode submits as the fallback, and the sandbox as a boolean", () 
       sandbox: "on",
       worker: "claude:implementer",
       model: "",
-      deps: [],
       runtimeMode: "none",
       costMode: "none",
     } as unknown as DelegateValues,

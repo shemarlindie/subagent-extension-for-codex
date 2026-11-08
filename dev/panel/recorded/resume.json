@@ -5,7 +5,6 @@
     "description": "Before reading anything, use the native AskUserQuestion tool to ask: May I inspect README now? Offer Proceed and Wait. Wait for the user response before inspecting README. Afterwards report its exact verification marker in your reply.",
     "repository": "/demo/project",
     "revision": "HEAD",
-    "depends_on": [],
     "context": [],
     "workspace_strategy": "current_repo",
     "budget": {

@@ -312,7 +312,6 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       serviceSummary(e) ??
       eventPayload(e, "agent.completed")?.result ??
       eventPayload(e, "task.instruction")?.message ??
-      eventPayload(e, "task.waiting")?.reason ??
       (toolCompleted ? contentText(toolCompleted.content) : undefined) ??
       string(
         d.text ??

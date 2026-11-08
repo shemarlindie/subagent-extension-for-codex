@@ -244,12 +244,11 @@ shows an error below the composer, and the choice still applies to the task.
 Workspace, revision, budgets and the Bash sandbox use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds workspace
-and revision, approval decision maker, Bash sandbox, dependencies and budgets.
-The mode and sandbox apply to this task only. Saving them would change later
-tasks, including those agents start, so change the defaults in **Settings**.
-**Wait for tasks** searches titles or IDs in the selected project and accepts
-several dependencies. The form blocks unsupported cost budgets and notes that
-Claude checks cost after each response, so a response can exceed the limit.
+and revision, approval decision maker, Bash sandbox and budgets. The mode and
+sandbox apply to this task only. Saving them would change later tasks, including
+those agents start, so change the defaults in **Settings**. The form blocks
+unsupported cost budgets and notes that Claude checks cost after each response,
+so a response can exceed the limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.
@@ -484,7 +483,6 @@ intact.
 - **Also delete the agent task**, off by default, also removes the provider
   session. If that fails, the local task stays for retry.
 - A later cleanup failure can leave earlier resources removed.
-- Delete dependent tasks first.
 
 ## Transport
 

@@ -81,8 +81,8 @@ export function eventData(store: Store, id: string, type: string) {
     .map((e) => e.data);
 }
 
-/** Records dependency prompts and the file written by the prerequisite task. */
-export class DependencyWriter extends TestProvider {
+/** Records prompts, and writes a file for a task described as "Write". */
+export class FileWriter extends TestProvider {
   readonly prompts = new Map<string, string>();
 
   constructor(

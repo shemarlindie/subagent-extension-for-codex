@@ -52,11 +52,11 @@ cold service start can't exceed the host's MCP startup timeout.
 
 [Task continuation](task-continuation.md) covers startup and recovery.
 
-| Layer               | Owns                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| Service             | Scheduling, approval authority, dependencies, workspace lifecycle, messages, durable state and results |
-| Claude provider     | Runtime configuration, event translation, session continuation, streaming and interrupts               |
-| Claude Code harness | Tool use and context                                                                                   |
+| Layer               | Owns                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| Service             | Scheduling, approval authority, workspace lifecycle, messages, durable state and results |
+| Claude provider     | Runtime configuration, event translation, session continuation, streaming and interrupts |
+| Claude Code harness | Tool use and context                                                                     |
 
 Claude is the only production provider. Worker discovery lists its supported
 features and limits.
@@ -115,11 +115,10 @@ transport boundaries.
 
 ## Durable tasks and turns
 
-A task fixes its owner, provider, repository, workspace strategy and
-dependencies. It can run multiple turns in one provider session. A follow-up
-message can steer the current turn, queue a later turn, or interrupt and start a
-new one. Task control records delivery and keeps steers the provider didn't
-take.
+A task fixes its owner, provider, repository and workspace strategy. It can run
+multiple turns in one provider session. A follow-up message can steer the
+current turn, queue a later turn, or interrupt and start a new one. Task control
+records delivery and keeps steers the provider didn't take.
 
 Worker replies are plain text or Markdown. Provider activity is a separate event
 stream. Draft deltas are transient, while completed messages and task events
@@ -131,7 +130,7 @@ writes commit in one transaction, and notifications run after commit. See
 [Transactions and notifications](database.md#transactions-and-notifications).
 
 On restart, in-flight turns become interrupted and need a follow-up. Queued
-tasks and dependency waits recover.
+tasks recover.
 
 Session continuation needs the original worker's local session state and a
 stable workspace. When native continuation is unavailable, a new session carries
@@ -149,9 +148,8 @@ and latest-turn diffs. See
 [Recorded changes](mcp-reference.md#recorded-changes).
 
 Approved projects are canonical roots, with explicit parent grants where
-configured. Task arguments never grant access. The server validates
-repositories, task ownership and dependencies whatever the UI shows or tool
-annotations say.
+configured. Task arguments never grant access. The server validates repositories
+and task ownership whatever the UI shows or tool annotations say.
 
 The service distinguishes user actions from parent and model calls. Model calls
 can't raise approval authority or relax configured provider restrictions.

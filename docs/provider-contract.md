@@ -11,10 +11,10 @@ provider owns and how it behaves across a task's lifecycle.
 Implement the `Provider` interface in `src/service/features/providers/types.ts`
 and register the provider in `src/service/features/providers/config.ts`.
 
-| Owner                | Responsibilities                                                                                                                                                 |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared control plane | Scheduling, dependencies, workspaces, recorded diffs, budget checks, task ownership, persistence, conversation messages, steers, drafts and input serialization. |
-| Provider             | Model discovery, native execution, session creation and deletion, and native permissions.                                                                        |
+| Owner                | Responsibilities                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared control plane | Scheduling, workspaces, recorded diffs, budget checks, task ownership, persistence, conversation messages, steers, drafts and input serialization. |
+| Provider             | Model discovery, native execution, session creation and deletion, and native permissions.                                                          |
 
 ## A turn
 
@@ -29,8 +29,8 @@ details in `error`. Clients map the code to display text. Failures without
 details save only the code.
 
 The task conversation layer builds the prompt. A new session receives the
-original request, workspace and dependency context, and bounded conversation
-history. A resumed session receives unsent messages and any workspace reminder.
+original request, workspace context and bounded conversation history. A resumed
+session receives unsent messages and any workspace reminder.
 
 During a turn, the provider must tell accepted steers apart from steers the
 worker actually consumed. Unconsumed steers return to the front of the task's

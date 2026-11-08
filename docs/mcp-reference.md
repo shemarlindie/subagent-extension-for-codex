@@ -77,11 +77,9 @@ after acceptance, so retry them with the original ID.
 ## Recorded changes
 
 `get_changes` reads the task's recorded net edits for `scope: "task"` (the
-default) or `scope: "turn"` (the latest turn). Both workspace strategies, the
-panel and dependency prompts use the same stored diffs. Committing files,
-removing a worktree or deleting its branch leaves a recorded diff unchanged.
-Dependency prompts include these edits up to the prompt limit and note
-incomplete files and unrecorded command changes.
+default) or `scope: "turn"` (the latest turn). Both workspace strategies and the
+panel use the same stored diffs. Committing files, removing a worktree or
+deleting its branch leaves a recorded diff unchanged.
 
 - Every page lists all files, sorted by path. Diff pages split between whole
   files.

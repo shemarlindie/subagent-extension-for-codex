@@ -401,7 +401,7 @@ test("task tools honor defaults and explicit overrides without changing existing
   await c.close();
 });
 
-test("ownership enforced across dependencies, state, events and controls", async () => {
+test("ownership enforced across state, events and controls", async () => {
   const { c, store, repo } = await setup();
   const t = await c.start("alice", input(repo, "[input]"));
   await until(() => store.get(t.id, "alice").status === "waiting");
@@ -412,7 +412,6 @@ test("ownership enforced across dependencies, state, events and controls", async
   await assert.rejects(c.delete("bob", t.id));
   const request = store.get(t.id, "alice").pending_input!;
   assert.throws(() => c.input("bob", t.id, request.id, true));
-  await assert.rejects(c.start("bob", { ...input(repo), depends_on: [t.id] }));
   await c.close();
 });
 

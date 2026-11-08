@@ -23,7 +23,6 @@ import type { DelegateValues } from "./delegate-values";
 import { projectGit, taskProjects, workerChoice } from "./delegation";
 import { ApprovalField } from "./fields/approval-field";
 import { BudgetFields } from "./fields/budget-fields";
-import { DependencyField } from "./fields/dependency-field";
 import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
 import { RevisionField } from "./fields/revision-field";
@@ -121,7 +120,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         repository === resolvedRepository ? resolvedRevision : "HEAD",
       );
 
-      form.setValue("deps", []);
       previous.current = repository;
     }
   }, [repository, form, resolvedRepository, resolvedRevision]);
@@ -278,16 +276,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
           settingsReady={statuses.settings === "ready"}
           workersReady={statuses.workers === "ready"}
           settingsLoading={statuses.settings === "loading"}
-        />
-        <DependencyField
-          tasks={state.tasks}
-          loading={state.taskListLoading}
-          projectsLoading={
-            statuses.projects === "loading" || statuses.context === "loading"
-          }
-          disabled={
-            statuses.projects !== "ready" || statuses.context === "loading"
-          }
         />
         <FormFooter label="Start task" disabled={!canSubmit} />
       </form>

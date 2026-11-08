@@ -16,7 +16,6 @@ import {
   selectOption,
   setup,
   setupDelegate,
-  task,
   test,
   waitFor,
   within,
@@ -95,10 +94,9 @@ test("dialog focuses task, preserves the draft and field node during refresh, an
   );
 });
 
-test("changing projects clears revision and dependencies while retaining the task draft", async (t) => {
+test("changing projects resets the revision while retaining the task draft", async (t) => {
   const { user } = await setupDelegate(t, (transport) => {
     transport.projects.push({ repository: "/repo/b", kind: "repository" });
-    transport.tasks.push(task("two", "/repo/b"));
   });
 
   await screen.findByRole("dialog");
@@ -107,24 +105,6 @@ test("changing projects clears revision and dependencies while retaining the tas
   await selectOption(user, "Workspace", "Isolated worktree");
   await user.clear(screen.getByLabelText("Revision"));
   await pasteText(user, screen.getByLabelText("Revision"), "edited-branch");
-
-  await user.click(
-    screen.getByRole("combobox", { name: "Wait for tasks (optional)" }),
-  );
-
-  const dependencySearch = await screen.findByRole("combobox", {
-    name: "Search wait for tasks (optional)",
-  });
-
-  await pasteText(user, dependencySearch, "AUTHENTICATION");
-  expect(screen.getAllByRole("option")).toHaveLength(1);
-
-  await user.click(
-    screen.getByRole("option", { name: "Review authentication" }),
-  );
-
-  await user.keyboard("{Escape}");
-
   await selectOption(user, "Project", /repo\/b$/);
 
   assert.equal(
@@ -135,20 +115,6 @@ test("changing projects clears revision and dependencies while retaining the tas
   assert.equal(
     screen.getByLabelText<HTMLTextAreaElement>("Description").value,
     "Persistent task",
-  );
-
-  assert.match(
-    screen.getByRole("combobox", { name: "Wait for tasks (optional)" })
-      .textContent ?? "",
-    /No dependencies/,
-  );
-
-  await selectOption(user, "Project", /repo\/a$/);
-
-  assert.match(
-    screen.getByRole("combobox", { name: "Wait for tasks (optional)" })
-      .textContent ?? "",
-    /No dependencies/,
   );
 });
 

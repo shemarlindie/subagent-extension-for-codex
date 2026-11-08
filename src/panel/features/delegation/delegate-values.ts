@@ -15,7 +15,6 @@ export type DelegateValues = {
   runtime: number | "";
   costMode: string;
   cost: number | "";
-  deps: string[];
 };
 
 /** Placeholder for a select whose value is still waiting on settings or workers. */

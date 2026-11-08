@@ -45,11 +45,6 @@ interface TaskFailedPayload {
   error_code?: string;
 }
 
-interface TaskWaitingPayload {
-  reason?: string;
-  dependency_id?: string;
-}
-
 interface TaskWorktreeRemovedPayload {
   path?: string;
   branch?: string;
@@ -86,7 +81,6 @@ export interface TaskEventPayloadMap {
   "task.worktree_recreated": TaskWorktreeRecreatedPayload;
   "task.interrupted": TaskInterruptedPayload;
   "task.failed": TaskFailedPayload;
-  "task.waiting": TaskWaitingPayload;
   "task.worktree_removed": TaskWorktreeRemovedPayload;
   "task.branch_deleted": TaskBranchDeletedPayload;
   "task.control_requested": TaskControlRequestedPayload;

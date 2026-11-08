@@ -19,7 +19,6 @@ const task: Task = {
   worker_profile: "reviewer",
   title: "Review",
   description: "Review the full authentication workflow.",
-  depends_on: [],
   workspace_strategy: "worktree",
   budget: { max_runtime_minutes: 20, max_cost_usd: null },
   owner: "owner",

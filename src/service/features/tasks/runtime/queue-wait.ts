@@ -14,8 +14,6 @@ type Wait = {
   since: number;
   /** The capacity clock when the wait began. */
   capacityAtStart: number;
-  /** The first and latest scans that found an unfinished dependency. */
-  dependency?: { first: number; last: number };
 };
 
 /**
@@ -60,24 +58,15 @@ export class QueueWaits {
     });
   }
 
-  /** A scan found an unfinished dependency. */
-  dependencyPending(taskId: string) {
-    const wait = this.waits.get(taskId);
-    if (!wait) return;
-    const at = performance.now();
-    wait.dependency = { first: wait.dependency?.first ?? at, last: at };
-  }
-
   /**
-   * Records the wait: `success` when its turn starts, `error` when a
-   * dependency failed and `aborted` when it was interrupted or deleted.
+   * Records the wait: `success` when its turn starts and `aborted` when it
+   * was interrupted or deleted.
    */
   ended(taskId: string, outcome: TimingOutcome, turn?: number) {
     const wait = this.waits.get(taskId);
     if (!wait) return;
     this.waits.delete(taskId);
     const at = performance.now();
-    const { dependency } = wait;
 
     recordTaskTiming({
       phase: "queue_wait",
@@ -87,11 +76,6 @@ export class QueueWaits {
       outcome,
       duration_ms: at - wait.since,
       capacity_ms: this.capacityClock(at) - wait.capacityAtStart,
-      // Scans stop at capacity, so dependencies can change unobserved between
-      // them. These are observation spans, which can overlap `capacity_ms`.
-      dependency_observation_span_ms:
-        dependency && dependency.last - dependency.first,
-      since_dependency_observed_ms: dependency && at - dependency.first,
     });
   }
 }

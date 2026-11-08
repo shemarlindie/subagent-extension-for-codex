@@ -77,7 +77,7 @@ export function taskLifecycleTools(c: Control, owner: string) {
     app_delete_tasks: tool({
       destructive: true,
       description:
-        "User interface only: delete stopped tasks with their events, requests, worktrees and branches, dependents first. With delete_agent_task it also deletes each provider session. A task outside them that depends on one stops the whole deletion. This can't be undone.",
+        "User interface only: delete stopped tasks with their events, requests, worktrees and branches. With delete_agent_task it also deletes each provider session. This can't be undone.",
       schema: z.strictObject({
         task_ids: z.array(z.string()).min(1).max(1000),
         delete_agent_task: z.boolean().default(false),

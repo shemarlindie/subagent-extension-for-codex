@@ -29,7 +29,6 @@ const FACTS = [
   { label: "Workspace strategy", labelSize: "medium", valueKind: "medium" },
   { label: "Base commit", labelSize: "small", valueKind: "medium" },
   { label: "Session", labelSize: "small", valueKind: "medium" },
-  { label: "Dependencies", labelSize: "small", valueKind: "medium" },
   { label: "Turns", labelSize: "small", valueKind: "short" },
   { label: "Runtime used", labelSize: "medium", valueKind: "short" },
   { label: "Estimated cost", labelSize: "medium", valueKind: "short" },

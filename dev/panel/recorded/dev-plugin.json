@@ -22,7 +22,6 @@
     "repository": "/demo/project",
     "revision": "HEAD",
     "workspace_strategy": "current_repo",
-    "depends_on": [],
     "context": [
       "Working tree initially clean. Use existing project workflow and canonical local release assembled by scripts/assemble-release.mjs. Codex CLI marketplace upgrade only refreshes Git marketplaces. Earlier tiny probe found local marketplace add repeated is idempotent, but plugin add behavior not established (probe manifest layout was wrong)."
     ],
