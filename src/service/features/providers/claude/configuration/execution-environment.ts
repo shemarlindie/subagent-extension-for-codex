@@ -15,5 +15,7 @@ export function claudeEnvironment(
     ),
     // A refusal otherwise ends with stderr alone, without its reason code.
     CLAUDE_CODE_STARTUP_FAILURE_RESULTS: "1",
+    // Names this client. Replaces the SDK default and any inherited value.
+    CLAUDE_CODE_ENTRYPOINT: "subagent-extension-for-codex",
   };
 }
