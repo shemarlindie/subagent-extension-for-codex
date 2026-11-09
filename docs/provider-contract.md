@@ -33,15 +33,14 @@ original request, workspace context, the task's attachment list and bounded
 conversation history. A resumed session receives unsent messages and any
 workspace reminder.
 
+When present, `RunContext.attachments` is the real path the provider exposes to
+the worker for read-only access without prompts.
+
 During a turn, the provider must tell accepted steers apart from steers the
 worker actually consumed. Unconsumed steers return to the front of the task's
 queue. Claude uses native streaming input and cancels untaken messages at turn
 end, so the CLI cannot run them as an extra turn. An interrupt ends the current
 turn and keeps the session where possible.
-
-`RunContext.attachments` names the real path of the task's attachment folder
-when it has one. The provider lets the worker read it without prompts and keeps
-it from changing the files.
 
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the

@@ -53,12 +53,10 @@ sandbox the settings turn on. See
 ### Attachments
 
 `attachments` gives the worker material it can't find itself, up to 20 items.
-The service snapshots each one into a file when the task starts, and the
-worker's first prompt lists them with their summaries and paths. The worker
-reads them without prompts and can't change them, within the limits in
-[Claude session restrictions](configuration.md#claude-session-restrictions).
-They're deleted with the task. `start_task` no longer takes `context`, and
-rejects it.
+The service snapshots them when the task starts and deletes the snapshots with
+the task. `start_task` rejects the old `context` field. See
+[Claude session restrictions](configuration.md#claude-session-restrictions) for
+worker access rules.
 
 Every item needs a `summary` of one sentence, at most 200 characters. `title`,
 at most 60 characters, replaces the generated label.
@@ -69,10 +67,8 @@ at most 60 characters, replaces the generated label.
 | Diff   | `{ source: "diff", summary, title?, paths? }`                       | The project's uncommitted changes against `HEAD`, untracked files included | "Uncommitted changes", or the path when it's one file |
 | File   | `{ source: "file", path, summary, title?, start_line?, end_line? }` | The file, or lines `start_line` to `end_line`                              | The file name, plus the line range when there is one  |
 
-Prefer references. Anything in the project goes by reference whatever its size,
-which keeps the file contents out of the request. Inline is for short content
-that exists only in the chat, such as decisions, notes or another task's short
-result.
+Use references for project content and inline attachments for short material
+that exists only in the chat, such as decisions or another task's result.
 
 - Inline `format` is `diff`, `code`, `markdown` or `text`. Its `path` is only a
   label that picks highlighting. The service never reads it.
@@ -81,16 +77,16 @@ result.
   outside `.git`. `paths` takes up to 50 paths of at most 1,024 characters,
   matched literally.
 - A diff fails in a folder without Git, in a repository with no commits, and
-  when there are no changes. It compares raw checkout bytes: the repository's
-  external diff, textconv and clean filter commands don't run. Binary changes
-  fail and name the file, so `paths` can leave it out.
+  when there are no changes. It compares raw checkout bytes without running
+  external diff, textconv or clean filter commands. It shows submodule commit
+  changes and skips changes inside submodule working trees. Binary changes fail
+  and name the file, so `paths` can leave it out.
 - File references need a regular UTF-8 text file. Binary files fail.
 - Each reference allows 2 MB, and all attachments together allow 10 MB. Errors
   name the attachment and suggest `paths` or a line range.
 
-The `/mcp` endpoint and the HTTP task-start routes accept requests up to 2 MiB,
-which fits 20 inline items of non-ASCII text. Other HTTP routes keep a 256 KiB
-limit.
+Task-start requests have a 2 MiB HTTP body limit, including requests through
+`/mcp`.
 
 ### Retrying message sends
 

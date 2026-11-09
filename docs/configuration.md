@@ -18,19 +18,19 @@ Checkout commands load an optional `.env`, and shell variables take precedence.
 The packaged stdio launcher uses its MCP environment. To share one service, give
 every client the same absolute data directory.
 
-| Variable                                     | Default                                       | Meaning                                                                                                                                              |
-| -------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SUBAGENT_EXTENSION_FOR_CODEX_DATA`          | `~/.local/share/subagent-extension-for-codex` | Database, approved roots, worktrees, task attachments, logs, service lease and token. A relative path resolves from the command's working directory. |
-| `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` | `[]`                                          | JSON array of parent directories to approve at startup. See [Repository access](#repository-access) for revoking them.                               |
-| `SUBAGENT_EXTENSION_FOR_CODEX_URL`           | Discovered service or port 17317              | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                                          |
-| `SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY`   | `3`                                           | Maximum active tasks, 1 to 20.                                                                                                                       |
-| `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN`         | Generated locally                             | Admin token override, at least 32 characters.                                                                                                        |
-| `SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL`     | `info`                                        | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md).            |
-| `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`   | First `claude` on the service's `PATH`        | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                                 |
-| `SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS`   | Unset                                         | Set to `1` when starting the service to retain original responses for diagnostics and fixture recording.                                             |
-| `SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS` | `15000`                                       | For tests. Milliseconds a plugin service waits unused before it exits.                                                                               |
-| `PORT`                                       | `17317`                                       | Service listener port, on loopback by default.                                                                                                       |
-| `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN`        | `http://127.0.0.1:<PORT>`                     | Standalone origin and CORS allowlist.                                                                                                                |
+| Variable                                     | Default                                       | Meaning                                                                                                                                   |
+| -------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUBAGENT_EXTENSION_FOR_CODEX_DATA`          | `~/.local/share/subagent-extension-for-codex` | Database, approved roots, worktrees, logs, service lease and token. A relative path resolves from the command's working directory.        |
+| `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` | `[]`                                          | JSON array of parent directories to approve at startup. See [Repository access](#repository-access) for revoking them.                    |
+| `SUBAGENT_EXTENSION_FOR_CODEX_URL`           | Discovered service or port 17317              | Plain loopback HTTP origin for the stdio proxy, without `/mcp`. An explicit URL requires a running service.                               |
+| `SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY`   | `3`                                           | Maximum active tasks, 1 to 20.                                                                                                            |
+| `SUBAGENT_EXTENSION_FOR_CODEX_TOKEN`         | Generated locally                             | Admin token override, at least 32 characters.                                                                                             |
+| `SUBAGENT_EXTENSION_FOR_CODEX_LOG_LEVEL`     | `info`                                        | Minimum service log level: `debug`, `info`, `warn` or `error`. Invalid values prevent startup. See [Logging and diagnostics](logging.md). |
+| `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH`   | First `claude` on the service's `PATH`        | Absolute path to the Claude Code executable. See [Claude Code CLI](claude-cli.md#which-claude-runs).                                      |
+| `SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS`   | Unset                                         | Set to `1` when starting the service to retain original responses for diagnostics and fixture recording.                                  |
+| `SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS` | `15000`                                       | For tests. Milliseconds a plugin service waits unused before it exits.                                                                    |
+| `PORT`                                       | `17317`                                       | Service listener port, on loopback by default.                                                                                            |
+| `SUBAGENT_EXTENSION_FOR_CODEX_ORIGIN`        | `http://127.0.0.1:<PORT>`                     | Standalone origin and CORS allowlist.                                                                                                     |
 
 The installed plugin uses the same default data directory as every other way of
 running the service. It avoids the `PLUGIN_DATA` directory Codex gives plugins
@@ -333,11 +333,10 @@ Every task is denied the service's admin token. With the sandbox on, that covers
 every command. Without it, a script can still read the token, as it can read
 your other credentials.
 
-A task with [attachments](mcp-reference.md#attachments) reads them from
-`<data-directory>/attachments/<task id>`, which Claude Code treats as a working
-directory, so reads need no approval. Deny rules, the sandbox's write list and a
-hook on file tools keep the files fixed in every permission mode. Without the
-sandbox, a script can still change them.
+Claude's file tools have read-only access to
+[task attachments](mcp-reference.md#attachments) without approval. The sandbox
+also blocks commands from changing attachments. Scripts running outside the
+sandbox can still change them.
 
 On Linux, the sandbox uses bubblewrap, which needs unprivileged user namespaces.
 Ubuntu 24.04 blocks them by default. A sandboxed task then fails to start or

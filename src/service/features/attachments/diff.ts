@@ -222,6 +222,10 @@ export async function uncommittedDiff(
         "--no-ext-diff",
         "--no-textconv",
         "--no-renames",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        // Inspect submodule commit pointers without running status in them.
+        "--ignore-submodules=dirty",
         "--submodule=short",
         "--numstat",
         "-z",

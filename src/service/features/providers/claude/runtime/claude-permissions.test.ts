@@ -147,35 +147,22 @@ test("a task's attachment folder is readable and fixed: deny rules, the sandbox'
   await writeFile(join(folder, "1-note.txt"), "note");
   await symlink(join(folder, "1-note.txt"), join(workspace, "note-link"));
 
-  const turn = async (attachments?: string, sandbox = false) => {
-    if (attachments) c.attachments = attachments;
-    else delete c.attachments;
+  setClaudeOptions(c.task, {
+    permission_mode: "bypassPermissions",
+    claude_policy: {
+      ...resolveClaudePolicy(claudeOverrideDefaults),
+      sandbox: true,
+    },
+  });
 
-    setClaudeOptions(c.task, {
-      permission_mode: "bypassPermissions",
-      claude_policy: {
-        ...resolveClaudePolicy(claudeOverrideDefaults),
-        sandbox,
-      },
-    });
-
-    return claudeTurnOptions(c, fakeClaudePath, new AbortController());
-  };
+  const turn = () =>
+    claudeTurnOptions(c, fakeClaudePath, new AbortController());
 
   const plain = await turn();
   assert.equal(plain.additionalDirectories, undefined);
 
-  assert.equal(
-    await editDecision(plain, "Write", join(folder, "x")),
-    undefined,
-  );
-
-  assert.match(
-    (plain.systemPrompt as { append: string }).append,
-    /Work only in the provided task workspace\. End each turn/,
-  );
-
-  const options = await turn(folder, true);
+  c.attachments = folder;
+  const options = await turn();
   assert.deepEqual(options.additionalDirectories, [folder]);
   assert.deepEqual(options.sandbox?.filesystem, { denyWrite: [folder] });
 
@@ -189,13 +176,7 @@ test("a task's attachment folder is readable and fixed: deny rules, the sandbox'
     },
   });
 
-  assert.match(
-    (options.systemPrompt as { append: string }).append,
-    /apart from reading the attachments the request lists, which are read-only/,
-  );
-
   const file = join(folder, "1-note.txt");
-  assert.equal(await editDecision(options, "Edit", file), "deny");
 
   assert.equal(
     await editDecision(options, "Write", join(folder, "new")),

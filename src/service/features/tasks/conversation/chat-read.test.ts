@@ -8,8 +8,7 @@ import { Attachments } from "../../attachments/attachments.js";
 import { Store } from "../storage/store.js";
 import { chatRead } from "./chat-read.js";
 
-/** A stored task with nothing in its Chat yet. */
-function storedTask(t: { onTestFinished: (fn: () => void) => void }) {
+test("Chat cursors return the same items as a full read and list attachment metadata once", (t) => {
   const store = new Store(":memory:");
   t.onTestFinished(() => store.close());
   // Listing reads only the database, so the folder is never made.
@@ -33,11 +32,17 @@ function storedTask(t: { onTestFinished: (fn: () => void) => void }) {
 
   store.save(task);
 
-  return { store, attachments, task };
-}
+  const note = {
+    position: 1,
+    title: "Note",
+    summary: "A decision.",
+    format: "text",
+    source: "inline",
+    chars: 6,
+    lines: 1,
+  } as const;
 
-test("a Chat read at any cursor returns what reading all of Chat returns", (t) => {
-  const { store, attachments, task } = storedTask(t);
+  attachments.save(task.id, [{ ...note, file: "1-note.txt" }]);
   const block = { role: "assistant", message_id: "msg_1" } as const;
   store.event(task, "task.started", { turn: 1 });
   // Two text blocks of one message merge into one item at the later event.
@@ -58,6 +63,9 @@ test("a Chat read at any cursor returns what reading all of Chat returns", (t) =
 
   const newest = store.lastEventId(task.id);
   const all = chatItems(task, store.chatEvents(task.id));
+  const [request] = all;
+  assert.equal(request?.kind, "message");
+  request.message.attachments = [note];
   const chatNewest = Math.max(...all.map((item) => item.event_id));
 
   for (let after = 0; after <= newest + 1; after++) {
@@ -73,26 +81,4 @@ test("a Chat read at any cursor returns what reading all of Chat returns", (t) =
       `after ${after}`,
     );
   }
-});
-
-test("the first Chat read lists the request's attachments without their file names", (t) => {
-  const { store, attachments, task } = storedTask(t);
-  store.event(task, "task.started", { turn: 1 });
-
-  const note = {
-    position: 1,
-    title: "Note",
-    summary: "A decision.",
-    format: "text",
-    source: "inline",
-    chars: 6,
-    lines: 1,
-  } as const;
-
-  attachments.save(task.id, [{ ...note, file: "1-note.txt" }]);
-  const [request] = chatRead(store, attachments, task, 0).items;
-  assert.equal(request?.kind, "message");
-  assert.deepEqual(request.message.attachments, [note]);
-  const later = chatRead(store, attachments, task, 1).items;
-  assert.ok(!later.some((item) => item.event_id === 0));
 });

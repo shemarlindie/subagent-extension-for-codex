@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { cleanup, render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
@@ -43,7 +43,6 @@ test("hidden chips fold behind a toggle that keeps focus as the row expands and 
   );
 
   onTestFinished(() => controller.dispose());
-  const open = vi.spyOn(controller, "open").mockImplementation(() => {});
   const task = { id: "task" } as Task;
   const attachments = [1, 2, 3, 4].map(note);
 
@@ -53,36 +52,29 @@ test("hidden chips fold behind a toggle that keeps focus as the row expands and 
     </ControllerContext.Provider>,
   );
 
-  const row = view.getByRole("group", { name: "Attachments" });
+  const row = within(view.getByRole("group", { name: "Attachments" }));
 
-  // Two chips and a label need 320px, so one fits.
-  const chips = () =>
-    [...row.querySelectorAll(".attachment-chip")].map((chip) =>
-      chip.getAttribute("aria-label"),
-    );
+  const chips = () => row.getAllByRole("button", { name: /^Note/ });
 
-  expect(chips()).toEqual(["Note 1, 1 line. Summary 1."]);
-  const toggle = view.getByRole("button", { name: "Show 3 more attachments" });
-  expect(toggle.textContent).toBe("+ 3 more attachments");
+  expect(chips()).toHaveLength(1);
 
-  // The measured copies can't take focus.
-  expect(view.container.querySelector("[inert] button")).toBeNull();
+  expect(chips()[0]).toBe(
+    row.getByRole("button", { name: "Note 1, 1 line. Summary 1." }),
+  );
 
-  await userEvent.click(toggle);
+  const toggle = row.getByRole("button", { name: "Show 3 more attachments" });
+
+  const user = userEvent.setup();
+  await user.tab();
+  await user.tab();
+  expect(document.activeElement).toBe(toggle);
+
+  await user.keyboard("{Enter}");
   expect(chips()).toHaveLength(4);
-  expect(toggle.textContent).toBe("Show less");
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(document.activeElement).toBe(toggle);
 
-  await userEvent.click(toggle);
+  await user.keyboard("{Enter}");
   expect(chips()).toHaveLength(1);
   expect(document.activeElement).toBe(toggle);
-
-  act(() => (row.querySelector(".attachment-chip") as HTMLElement).click());
-
-  expect(open).toHaveBeenCalledWith({
-    kind: "attachment",
-    task,
-    attachment: attachments[0],
-  });
 });

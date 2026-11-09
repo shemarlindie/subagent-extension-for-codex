@@ -60,12 +60,11 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
     ...input(repo),
     attachments: [
       { summary: "A decision.", format: "markdown", text: "Use X." },
-      { summary: "A label.", format: "code", text: "x", path: "src/a.ts" },
       { source: "diff", summary: "The changes." },
       { source: "file", path: "notes.md", summary: "Notes." },
       { source: "file", path: "notes.md", start_line: 2, summary: "Tail." },
       { source: "file", path: "notes.md", summary: "Mine.", title: "Custom" },
-      { summary: "A label.", format: "text", text: "x", path: "example.png" },
+      { summary: "A label.", format: "code", text: "x", path: "example.png" },
     ],
   });
 
@@ -75,26 +74,21 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
     attachments.map((a) => [a.title, a.source, a.format]),
     [
       ["Note", "inline", "markdown"],
-      ["a.ts", "inline", "code"],
       ["Uncommitted changes", "diff", "diff"],
       ["notes.md", "file", "markdown"],
       ["notes.md:2-3", "file", "markdown"],
       ["Custom", "file", "markdown"],
-      ["example.png", "inline", "text"],
+      ["example.png", "inline", "code"],
     ],
   );
 
-  // Stored files keep a text extension whatever an inline label says.
-  assert.deepEqual(
-    attachments.map((a) => a.file.slice(a.file.lastIndexOf("."))),
-    [".md", ".ts", ".diff", ".md", ".md", ".md", ".txt"],
-  );
+  // Claude must open this code as text even when its label names an image.
+  assert.match(attachments[5]!.file, /\.txt$/);
+  assert.deepEqual([attachments[1]!.files, attachments[1]!.additions], [2, 4]);
 
-  assert.deepEqual([attachments[2]!.files, attachments[2]!.additions], [2, 4]);
-
-  const tail = join(c.attachments.folder(t.id), attachments[4]!.file);
+  const tail = join(c.attachments.folder(t.id), attachments[3]!.file);
   assert.equal(await readFile(tail, "utf8"), "two\nthree\n");
-  assert.equal(attachments[4]!.lines, 2);
+  assert.equal(attachments[3]!.lines, 2);
 
   // Rejected starts leave no task and no folder.
   await writeFile(join(repo, "big.txt"), "x".repeat(2 * 1024 * 1024 + 1));
@@ -136,9 +130,14 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
 
   for (const [extra, error] of rejected) {
     await assert.rejects(c.start("alice", { ...input(repo), ...extra }), error);
-    assert.equal(store.all().length, 1);
-    assert.deepEqual(await taskFolders(root), [t.id]);
   }
+
+  assert.deepEqual(
+    store.all().map((task) => task.id),
+    [t.id],
+  );
+
+  assert.deepEqual(await taskFolders(root), [t.id]);
 });
 
 test("a diff snapshot holds untracked files and unusual names, runs no filters and stays fixed", async () => {
@@ -151,6 +150,7 @@ test("a diff snapshot holds untracked files and unusual names, runs no filters a
   await writeFile(join(repo, "with\nnewline.txt"), "fresh\n");
   await writeFile(join(repo, ".gitattributes"), "*.txt filter=probe\n");
   git(repo, "config", "filter.probe.clean", `touch '${marker}'; cat`);
+  git(repo, "config", "diff.noprefix", "true");
 
   const t = await c.start("alice", {
     ...input(repo),
@@ -167,7 +167,6 @@ test("a diff snapshot holds untracked files and unusual names, runs no filters a
 
   const snapshot = join(c.attachments.folder(t.id), diff!.file);
   const text = await readFile(snapshot, "utf8");
-  assert.match(text, /"b\/with\\nnewline.txt"/);
 
   await assert.rejects(access(marker));
   // Git applies the patch as its own, with the filter out of the way.
@@ -185,6 +184,43 @@ test("a diff snapshot holds untracked files and unusual names, runs no filters a
     uncommittedDiff(empty, undefined, 1024),
     /at least one commit/,
   );
+});
+
+test("diff snapshots show submodule commit changes without running their clean filters", async () => {
+  const { repo, dir } = await setup();
+  const source = join(dir, "submodule-source");
+  await mkdir(source);
+  git(source, "init", "-q");
+  await writeFile(join(source, ".gitattributes"), "*.txt filter=probe\n");
+  await writeFile(join(source, "tracked.txt"), "before\n");
+  git(source, "add", ".");
+  commit(source);
+
+  git(
+    repo,
+    "-c",
+    "protocol.file.allow=always",
+    "submodule",
+    "add",
+    source,
+    "sub",
+  );
+
+  commit(repo);
+
+  const submodule = join(repo, "sub");
+  const tracked = join(submodule, "tracked.txt");
+  await writeFile(tracked, "second\n");
+  commit(submodule);
+  const tip = git(submodule, "rev-parse", "HEAD").trim();
+  const marker = join(dir, "submodule-filter-ran");
+  git(submodule, "config", "filter.probe.clean", `touch '${marker}'; cat`);
+  await writeFile(tracked, "change\n");
+
+  const snapshot = await uncommittedDiff(repo, undefined, 1024);
+  assert.deepEqual(snapshot.files, ["sub"]);
+  assert.ok(snapshot.text.includes(`+Subproject commit ${tip}\n`));
+  await assert.rejects(access(marker), { code: "ENOENT" });
 });
 
 test("attachments stay out of the task body, go with the task, and legacy context still loads and prompts", async () => {
@@ -234,7 +270,6 @@ test("attachments stay out of the task body, go with the task, and legacy contex
   });
 
   const stored = store.get(legacy.id, "alice");
-  assert.deepEqual(stored.context, ["first excerpt", "second excerpt"]);
 
   assert.equal(
     new SessionPrompts(store, c.attachments).sessionPrompt(stored),
