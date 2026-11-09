@@ -722,6 +722,19 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
       assert.equal(proxyStarted.isError, false);
 
+      const legacy = await stdio.callTool({
+        name: "start_task",
+        arguments: {
+          description: "Review [input]",
+          provider: "fixture",
+          repository: dir,
+          context: ["excerpt"],
+        },
+      });
+
+      assert.equal(legacy.isError, true);
+      assert.match(JSON.stringify(legacy.content), /replaced by attachments/);
+
       const proxyTask = panel(proxyStarted)?.result as {
         id: string;
       };

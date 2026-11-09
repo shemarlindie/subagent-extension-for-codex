@@ -83,6 +83,18 @@ export function application(
     next();
   });
 
+  // A start can carry about 1 MiB of attachments, and MCP calls name their
+  // tool in the body.
+  app.use(
+    [
+      "/mcp",
+      "/api/tools/start_task",
+      "/api/tools/app_start_task",
+      "/api/user-tools/app_start_task",
+    ],
+    express.json({ limit: "2mb" }),
+  );
+
   app.use(express.json({ limit: "256kb" }));
 
   app.use((req, res, next) => {

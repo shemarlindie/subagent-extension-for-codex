@@ -139,6 +139,97 @@ test("every task denies the admin token, and its hook denies file tools on it", 
   assert.equal(await decision("Grep", { pattern: "x" }), undefined);
 });
 
+test("a task's attachment folder is readable and fixed: deny rules, the sandbox's write list and the hook", async () => {
+  const { c, workspace } = await context();
+  const data = await realpath(process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA!);
+  const folder = join(data, "attachments", c.task.id);
+  await mkdir(folder, { recursive: true });
+  await writeFile(join(folder, "1-note.txt"), "note");
+  await symlink(join(folder, "1-note.txt"), join(workspace, "note-link"));
+
+  const turn = async (attachments?: string, sandbox = false) => {
+    if (attachments) c.attachments = attachments;
+    else delete c.attachments;
+
+    setClaudeOptions(c.task, {
+      permission_mode: "bypassPermissions",
+      claude_policy: {
+        ...resolveClaudePolicy(claudeOverrideDefaults),
+        sandbox,
+      },
+    });
+
+    return claudeTurnOptions(c, fakeClaudePath, new AbortController());
+  };
+
+  const plain = await turn();
+  assert.equal(plain.additionalDirectories, undefined);
+
+  assert.equal(
+    await editDecision(plain, "Write", join(folder, "x")),
+    undefined,
+  );
+
+  assert.match(
+    (plain.systemPrompt as { append: string }).append,
+    /Work only in the provided task workspace\. End each turn/,
+  );
+
+  const options = await turn(folder, true);
+  assert.deepEqual(options.additionalDirectories, [folder]);
+  assert.deepEqual(options.sandbox?.filesystem, { denyWrite: [folder] });
+
+  expect(options.settings).toMatchObject({
+    permissions: {
+      deny: [
+        expect.stringMatching(/^Read/),
+        `Edit(/${folder}/**)`,
+        `Write(/${folder}/**)`,
+      ],
+    },
+  });
+
+  assert.match(
+    (options.systemPrompt as { append: string }).append,
+    /apart from reading the attachments the request lists, which are read-only/,
+  );
+
+  const file = join(folder, "1-note.txt");
+  assert.equal(await editDecision(options, "Edit", file), "deny");
+
+  assert.equal(
+    await editDecision(options, "Write", join(folder, "new")),
+    "deny",
+  );
+
+  assert.equal(await editDecision(options, "NotebookEdit", file), "deny");
+  assert.equal(await editDecision(options, "Edit", "note-link"), "deny");
+  assert.equal(await editDecision(options, "Read", file), undefined);
+  assert.equal(await editDecision(options, "Edit", "a.ts"), undefined);
+});
+
+/** The PreToolUse hook's decision for a file tool, with paths from the workspace. */
+async function editDecision(options: Options, tool: string, path: string) {
+  const input =
+    tool === "NotebookEdit" ? { notebook_path: path } : { file_path: path };
+
+  const output = (await preToolUseHook(options)(
+    {
+      hook_event_name: "PreToolUse",
+      tool_name: tool,
+      tool_input: input,
+      session_id: "x",
+      transcript_path: "x",
+      cwd: options.cwd!,
+      tool_use_id: "x",
+    },
+    "x",
+    { signal: new AbortController().signal },
+  )) as { hookSpecificOutput?: { permissionDecision?: string } };
+
+  return output.hookSpecificOutput?.permissionDecision;
+}
+
 test("PostToolUse flags a command in a task whose folder has no Git", async () => {
   const { c, workspace } = await context();
   c.task.no_git = true;

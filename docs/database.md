@@ -93,6 +93,11 @@ projects CLI never converts it.
    an older build refuses a database with migrations it lacks. To pin a plugin
    version, reinstall it from that release's tag (`@vX.Y.Z`).
 
+Backups hold only the database. Task attachment files stay in
+`<data>/attachments`, so a restored database still finds them, except for tasks
+deleted after the backup. At startup, the service removes attachment folders
+whose task the restored database doesn't have.
+
 ## Transactions and notifications
 
 Write a task change and its events in one `store.transaction(() => …)` so they

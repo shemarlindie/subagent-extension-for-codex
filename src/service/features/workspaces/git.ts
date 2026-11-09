@@ -52,6 +52,30 @@ export async function git(
   return stdout;
 }
 
+/**
+ * Runs Git in `cwd` and returns its output as bytes, for content the caller
+ * must check before decoding. Fails once the output passes `maxBytes`.
+ */
+export async function gitBytes(
+  cwd: string,
+  args: string[],
+  maxBytes: number,
+  timeoutMs: number,
+) {
+  const run = exec("git", [...SAFE_CONFIG, "-C", cwd, ...args], {
+    encoding: "buffer",
+    maxBuffer: maxBytes,
+    timeout: timeoutMs,
+    killSignal: "SIGKILL",
+    // Optional locks would let a read refresh the user's index.
+    env: { ...process.env, LC_ALL: "C", GIT_OPTIONAL_LOCKS: "0" },
+  });
+
+  run.child.stdin?.end();
+
+  return (await run).stdout;
+}
+
 const ROOT_PROBE_TIMEOUT_MS = 5000;
 
 /**

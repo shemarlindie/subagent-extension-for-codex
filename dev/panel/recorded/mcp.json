@@ -5,7 +5,6 @@
     "description": "Read README.md with the native Read tool. Include its exact verification marker in your reply. Do not ask questions, edit files or run commands.",
     "repository": "/demo/project",
     "revision": "HEAD",
-    "context": [],
     "workspace_strategy": "current_repo",
     "budget": {
       "max_runtime_minutes": 1,

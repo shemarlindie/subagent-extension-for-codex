@@ -9,6 +9,10 @@ import {
   claudeAdminToken,
   touchesAdminToken,
 } from "../configuration/admin-token.js";
+import {
+  attachmentRules,
+  editsAttachment,
+} from "../configuration/attachment-access.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import { recordClaudeFileEdits } from "./file-edits.js";
 
@@ -49,7 +53,10 @@ function systemPromptAppend(c: RunContext) {
       : c.task.worker_profile;
 
   const rules = [
-    "Work only in the provided task workspace. End each turn with a plain reply that says what you did, what you found and what is left.",
+    c.attachments
+      ? "Work only in the provided task workspace, apart from reading the attachments the request lists, which are read-only."
+      : "Work only in the provided task workspace.",
+    "End each turn with a plain reply that says what you did, what you found and what is left.",
     "Follow the configured native permission mode for tool execution.",
     workspaceRule(c.task),
   ];
@@ -70,11 +77,24 @@ function systemPromptAppend(c: RunContext) {
   return parts.join("\n\n");
 }
 
+/** A PreToolUse denial with its reason. */
+const denied = (reason: string): HookJSONOutput => ({
+  hookSpecificOutput: {
+    hookEventName: "PreToolUse",
+    permissionDecision: "deny",
+    permissionDecisionReason: reason,
+  },
+});
+
 /**
  * The SDK options for one turn of a task: its workspace, session, model and
  * budget, and the task's settings. The admin token is denied twice: a
  * settings rule, which the sandbox applies to every program, and a PreToolUse
  * hook for file tools, since an org can drop the rule.
+ *
+ * The attachment folder is a working directory, so the worker reads it
+ * without prompts. Deny rules, the sandbox's own write list and the hook
+ * keep it fixed, since each covers a case the others can miss.
  */
 export async function claudeTurnOptions(
   c: RunContext,
@@ -88,6 +108,7 @@ export async function claudeTurnOptions(
 
   const workspace = c.task.workspace!;
   const adminToken = await claudeAdminToken();
+  const attachments = c.attachments;
 
   return {
     pathToClaudeCodeExecutable: executable,
@@ -99,8 +120,18 @@ export async function claudeTurnOptions(
     env: claudeEnvironment(process.env),
     // Settings and org policy decide the rest of the sandbox.
     ...(policy.sandbox
-      ? { sandbox: { enabled: true, failIfUnavailable: true } }
+      ? {
+          sandbox: {
+            enabled: true,
+            failIfUnavailable: true,
+            // Org policy can drop the deny rules, which the sandbox also applies.
+            ...(attachments
+              ? { filesystem: { denyWrite: [attachments] } }
+              : {}),
+          },
+        }
       : {}),
+    ...(attachments ? { additionalDirectories: [attachments] } : {}),
     abortController,
     persistSession: true,
     resume: c.task.session_id,
@@ -111,7 +142,12 @@ export async function claudeTurnOptions(
     settings: {
       bashEditDiffEnabled: true,
       // Inside the sandbox, Claude Code applies it to every program.
-      permissions: { deny: [adminTokenRule(adminToken)] },
+      permissions: {
+        deny: [
+          adminTokenRule(adminToken),
+          ...(attachments ? attachmentRules(attachments) : []),
+        ],
+      },
     },
     ...settingsOptions(policy),
     permissionMode: nativeMode,
@@ -154,20 +190,27 @@ export async function claudeTurnOptions(
           hooks: [
             async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
+              const toolInput = input.tool_input as Record<string, unknown>;
 
-              return (await touchesAdminToken(
-                adminToken,
-                input.tool_name,
-                input.tool_input as Record<string, unknown>,
-                workspace,
-              ))
-                ? {
-                    hookSpecificOutput: {
-                      hookEventName: "PreToolUse",
-                      permissionDecision: "deny",
-                      permissionDecisionReason: "The admin token is off limits",
-                    },
-                  }
+              if (
+                await touchesAdminToken(
+                  adminToken,
+                  input.tool_name,
+                  toolInput,
+                  workspace,
+                )
+              ) {
+                return denied("The admin token is off limits");
+              }
+
+              return attachments &&
+                (await editsAttachment(
+                  attachments,
+                  input.tool_name,
+                  toolInput,
+                  workspace,
+                ))
+                ? denied("Task attachments are read-only")
                 : {};
             },
           ],
