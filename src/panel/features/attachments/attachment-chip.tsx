@@ -13,7 +13,7 @@ export function AttachmentChipContent({
 }: AttachmentChipContentProps) {
   return (
     <>
-      <Icon name={attachmentIcon(attachment)} size={14} />
+      <Icon name={attachmentIcon(attachment)} size={11} />
       <span className="attachment-chip-title">{attachment.title}</span>
       <span className="attachment-chip-size">
         {attachment.source === "diff" ? (

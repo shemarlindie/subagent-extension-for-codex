@@ -5,11 +5,13 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="2"
+  stroke-width="2.4"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
-  <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"></path>
-  <path d="M9 13h6M9 17h4"></path>
+  <path d="M14.4 1.2v4.8a1.2 1.2 0 0 0 1.2 1.2h4.8"></path>
+  <path
+    d="M18 22.8H6a2.4 2.4 0 0 1-2.4-2.4V3.6a2.4 2.4 0 0 1 2.4-2.4h8.4l6 6v13.2a2.4 2.4 0 0 1-2.4 2.4z"
+  ></path>
+  <path d="M8.4 13.2h7.2M8.4 18h4.8"></path>
 </svg>

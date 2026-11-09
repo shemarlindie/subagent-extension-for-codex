@@ -8,6 +8,8 @@ interface IconDefinition {
 }
 
 // Keep the typed icon names aligned with the SVG filenames under assets/icons.
+// Scale each SVG so its stroked artwork fills the 24px viewBox, scaling the
+// stroke width to match, and choose the rendered size at the call site.
 const ICON_NAMES = [
   "plus",
   "worker",

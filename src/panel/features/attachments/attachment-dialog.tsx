@@ -54,7 +54,7 @@ type AttachmentHeaderProps = { attachment: RequestAttachment };
 function AttachmentHeader({ attachment }: AttachmentHeaderProps) {
   return (
     <div className="attachment-header">
-      <Icon name={attachmentIcon(attachment)} size={16} />
+      <Icon name={attachmentIcon(attachment)} size={13} />
       <div>
         <p className="attachment-summary">{attachment.summary}</p>
         <p className="attachment-origin">{attachmentOrigin(attachment)}</p>
