@@ -252,6 +252,15 @@ Activity, and pending updates as of the returned revision, unless only the draft
 changed. The list takes `app_list_tasks` arguments and returns its shape, and
 the projects match `list_projects`. Chat and Activity take the selected
 `task_id` and an `after` cursor, and pending updates take a `conversation_id`.
+Chat at cursor 0 includes the request, whose `attachments` list each
+attachment's metadata without its stored file name. Later reads leave the
+request out, since attachments never change.
+
+`app_get_attachment` reads an attachment by `task_id` and its `position` in the
+request, in pages of at most 512 KiB that end on whole characters. Each page
+returns the attachment's metadata. Pass `next_cursor` for the next page. A
+cursor fails once the stored file's content changes. `state` is `unavailable`
+when the stored file is missing, larger than any attachment or not UTF-8 text.
 See [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone

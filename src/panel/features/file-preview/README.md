@@ -14,7 +14,8 @@ owning format. Keep feature styling in `file-preview.css`.
 ## Formats
 
 `file-format.ts` detects a format from the MIME type, then the extension, and
-lists the views each offers, best first:
+lists the views each offers, best first. A caller that knows the format, such as
+an attachment's, passes it instead, and the path then only picks highlighting:
 
 | Format                   | Views                                                               |
 | ------------------------ | ------------------------------------------------------------------- |

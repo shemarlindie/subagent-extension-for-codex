@@ -119,3 +119,20 @@ export interface TaskAttachment {
   additions?: number;
   deletions?: number;
 }
+
+/** An attachment as Chat lists it under the request, without its private file name. */
+export type RequestAttachment = Omit<TaskAttachment, "file">;
+
+/** The most bytes of content one `app_get_attachment` page holds. */
+export const ATTACHMENT_PAGE_BYTES = 512 * 1024;
+
+/** A page of an attachment's content, as `app_get_attachment` returns it. */
+export interface AttachmentPage {
+  attachment: RequestAttachment;
+  /** "unavailable": the stored file is missing, larger than any attachment or not UTF-8 text. */
+  state: "present" | "unavailable";
+  /** UTF-8 text; this page's part of it. */
+  content?: string;
+  /** Pass back to read the next part; absent on the last one. */
+  next_cursor?: string;
+}

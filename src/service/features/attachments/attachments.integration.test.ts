@@ -6,6 +6,7 @@ import {
   mkdir,
   readdir,
   readFile,
+  rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -13,6 +14,8 @@ import { dirname, join } from "node:path";
 
 import { test } from "vitest";
 
+import type { AttachmentPage } from "../../../shared/attachments/model.js";
+import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";
 import { SessionPrompts } from "../tasks/conversation/session-prompts.js";
 import {
@@ -62,6 +65,7 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
       { source: "file", path: "notes.md", summary: "Notes." },
       { source: "file", path: "notes.md", start_line: 2, summary: "Tail." },
       { source: "file", path: "notes.md", summary: "Mine.", title: "Custom" },
+      { summary: "A label.", format: "text", text: "x", path: "example.png" },
     ],
   });
 
@@ -76,7 +80,14 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
       ["notes.md", "file", "markdown"],
       ["notes.md:2-3", "file", "markdown"],
       ["Custom", "file", "markdown"],
+      ["example.png", "inline", "text"],
     ],
+  );
+
+  // Stored files keep a text extension whatever an inline label says.
+  assert.deepEqual(
+    attachments.map((a) => a.file.slice(a.file.lastIndexOf("."))),
+    [".md", ".ts", ".diff", ".md", ".md", ".md", ".txt"],
   );
 
   assert.deepEqual([attachments[2]!.files, attachments[2]!.additions], [2, 4]);
@@ -292,4 +303,42 @@ test("failed starts and overlapping project removal leave no folder, and the swe
 
   assert.ok(!(await readdir(root)).includes(orphan));
   assert.equal((await taskFolders(root)).length, 1);
+});
+
+test("attachment pages keep characters whole, stay with one version and report a missing file", async () => {
+  const { c, repo } = await setup();
+  // Two-byte characters from byte 1, so the page cap splits one.
+  const text = `a${"é".repeat(300_000)}\n`;
+  await writeFile(join(repo, "long.txt"), text);
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [{ source: "file", path: "long.txt", summary: "Long." }],
+  });
+
+  const read = (owner: string, cursor?: string) =>
+    callTool(
+      c,
+      owner,
+      "app_get_attachment",
+      { task_id: t.id, position: 1, ...(cursor ? { cursor } : {}) },
+      "user",
+    ) as Promise<AttachmentPage>;
+
+  await assert.rejects(read("bob"), /Task not found/);
+  const first = await read("alice");
+  assert.equal(first.attachment.title, "long.txt");
+  assert.ok(!("file" in first.attachment));
+  assert.ok(first.next_cursor);
+  const second = await read("alice", first.next_cursor);
+  assert.equal(`${first.content}${second.content}`, text);
+  assert.equal(second.next_cursor, undefined);
+
+  const [stored] = c.attachments.list(t.id);
+  const file = join(c.attachments.folder(t.id), stored!.file);
+  await writeFile(file, `b${text.slice(1)}`);
+  await assert.rejects(read("alice", first.next_cursor), /changed/);
+
+  await rm(file);
+  assert.equal((await read("alice")).state, "unavailable");
 });

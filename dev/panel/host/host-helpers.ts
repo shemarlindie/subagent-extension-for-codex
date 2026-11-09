@@ -139,6 +139,7 @@ export const FIXTURE_SERVICE_TOOLS: string[] = [
   "get_changed_file",
   "app_remove_worktree",
   "app_delete_branch",
+  "app_get_attachment",
 ];
 
 const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";

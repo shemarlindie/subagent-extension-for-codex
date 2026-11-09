@@ -1,4 +1,5 @@
 import type { DialogState } from "../../app/state/types";
+import { attachmentDialog } from "../../features/attachments/attachment-dialog";
 import { changedFileDialog } from "../../features/changes/changed-file-preview";
 import { worktreeDialog } from "../../features/changes/worktree-form";
 import {
@@ -30,6 +31,7 @@ const registry: { [K in DialogKind]: DialogDefinition<K> } = {
   "pending-updates": pendingUpdatesDialog,
   delete: deleteTaskDialog,
   file: changedFileDialog,
+  attachment: attachmentDialog,
   worktree: worktreeDialog,
 };
 

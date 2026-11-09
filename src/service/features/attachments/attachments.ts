@@ -14,6 +14,7 @@ import {
 import { checkStored } from "../../platform/database/decode.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 import type { Store } from "../tasks/storage/store.js";
+import { attachmentPage } from "./attachment-page.js";
 import { uncommittedDiff } from "./diff.js";
 import { lineCount, readProjectFile } from "./project-file.js";
 import { taskAttachments } from "./schema.js";
@@ -38,11 +39,30 @@ const formatExtension: Record<AttachmentFormat, string> = {
   text: ".txt",
 };
 
-/** The stored file's extension: the path's, so tools pick the right type. */
-function storedExtension(format: AttachmentFormat, path?: string) {
-  const extension = path === undefined ? "" : extname(path);
+/** Extensions Claude Code's Read tool opens as images, PDFs or notebooks. */
+const NOT_TEXT = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".svg",
+  ".pdf",
+  ".ipynb",
+]);
 
-  return format !== "diff" && /^\.[A-Za-z0-9_+-]{1,16}$/.test(extension)
+/**
+ * The stored file's extension, which tells the worker's tools what it holds.
+ * Code keeps its path's extension while that names text. A label is never
+ * read, so other formats take their own.
+ */
+function storedExtension(format: AttachmentFormat, path?: string) {
+  const extension = path === undefined ? "" : extname(path).toLowerCase();
+
+  return format === "code" &&
+    /^\.[a-z0-9_+-]{1,16}$/.test(extension) &&
+    !NOT_TEXT.has(extension)
     ? extension
     : formatExtension[format];
 }
@@ -261,6 +281,15 @@ export class Attachments {
           Object.entries(stored).filter(([, value]) => value !== null),
         ) as unknown as TaskAttachment;
       });
+  }
+
+  /** A page of one of the task's attachments, by its position. */
+  async page(taskId: string, position: number, cursor?: string) {
+    const stored = this.list(taskId).find((a) => a.position === position);
+    if (!stored) throw new Error("Attachment not found");
+    const { file, ...attachment } = stored;
+
+    return attachmentPage(join(this.folder(taskId), file), attachment, cursor);
   }
 
   /**

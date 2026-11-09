@@ -4,11 +4,13 @@
  */
 import { parseDiffFiles } from "./diff/diff-format";
 
-/** A file to preview. Without a MIME type, it comes from the path's extension. */
+/** A file to preview. Without a format or MIME type, it comes from the path's extension. */
 export type PreviewFile = {
   path: string;
   content: string;
   mime_type?: string;
+  /** The format it was sent as, which decides over its MIME type and path. */
+  format?: FileFormat;
 };
 
 /** How a file is rendered; detected from its MIME type, then its extension. */
@@ -132,7 +134,23 @@ export function fileName(path: string) {
   return path.split(/[\\/]/).at(-1) || path;
 }
 
-export function baseMime(file: Pick<PreviewFile, "path" | "mime_type">) {
+/** The MIME type of each format a file can be sent as. */
+const FORMAT_MIMES: Record<FileFormat, string> = {
+  diff: "text/x-diff",
+  json: "application/json",
+  markdown: "text/markdown",
+  csv: "text/csv",
+  image: "image/png",
+  code: "text/plain",
+  text: "text/plain",
+};
+
+export function baseMime(
+  file: Pick<PreviewFile, "path" | "mime_type" | "format">,
+) {
+  // A sent format is text the label can't turn into an image.
+  if (file.format) return FORMAT_MIMES[file.format];
+
   if (file.mime_type) {
     return file.mime_type.replace(/;.*$/s, "").trim().toLowerCase();
   }
@@ -156,6 +174,7 @@ export function pathLanguage(path: string | undefined) {
 }
 
 export function fileFormat(file: PreviewFile): FileFormat {
+  if (file.format) return file.format;
   const mime = baseMime(file);
   const known = MIME_FORMATS[mime];
   if (known) return known;
@@ -297,6 +316,9 @@ export function fileSource(file: PreviewFile) {
       format === "json" && !file.content.slice(0, 2000).includes("\n")
         ? prettyJson(file.content)
         : file.content,
-    language: FORMAT_LANGUAGES[format] ?? pathLanguage(file.path),
+    // Text stays plain, even when its label names a language.
+    language:
+      FORMAT_LANGUAGES[format] ??
+      (format === "text" ? undefined : pathLanguage(file.path)),
   };
 }

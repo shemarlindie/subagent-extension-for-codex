@@ -11,7 +11,7 @@ const CHUNK_BYTES = 64 * 1024;
  * Doesn't follow a link swapped in after the path was resolved, and doesn't
  * wait on a FIFO. Windows has neither flag, which `|` reads as 0.
  */
-const OPEN_FLAGS =
+export const OPEN_FLAGS =
   constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
 
 /** An error the caller names with its attachment. */

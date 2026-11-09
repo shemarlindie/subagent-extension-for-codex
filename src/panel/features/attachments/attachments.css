@@ -1,0 +1,104 @@
+/* The request's attachments: one right-aligned row of chips under its bubble. */
+.request-attachments {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+}
+.request-attachments-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.request-attachments[data-expanded] .request-attachments-row {
+  flex-wrap: wrap;
+}
+.attachment-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.attachment-chip:hover {
+  background: var(--hover);
+}
+.attachment-chip-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attachment-chip-size {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.attachment-added {
+  color: var(--success);
+}
+.attachment-removed {
+  color: var(--danger);
+}
+.request-attachments-toggle {
+  flex: none;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.request-attachments-toggle:hover {
+  text-decoration: underline;
+}
+/* Unshown copies the row measures to decide what fits. */
+.request-attachments-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.request-attachments-measure > div {
+  display: flex;
+  width: max-content;
+}
+
+/* The attachment dialog's summary and origin, above the file viewer. */
+.attachment-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-block-end: 10px;
+}
+.attachment-header > svg {
+  flex: none;
+  margin-block-start: 2px;
+  color: var(--muted);
+}
+.attachment-header p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.attachment-origin {
+  margin-block-start: 2px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

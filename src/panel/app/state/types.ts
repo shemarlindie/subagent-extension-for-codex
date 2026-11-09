@@ -1,4 +1,5 @@
 /* eslint-disable simple-import-sort/exports */
+import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import type { Event } from "../../../shared/events/types.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
 import type { GitState } from "../../../shared/tasks/model.js";
@@ -112,6 +113,13 @@ export type DialogState =
   | { kind: "delete"; task: Task; scope: number }
   // A file the task changed, previewed as it is now and as its diff.
   | { kind: "file"; task: Task; path: string; scope: number }
+  // One of the request's attachments, from its chip. A reload doesn't restore it.
+  | {
+      kind: "attachment";
+      task: Task;
+      attachment: RequestAttachment;
+      scope: number;
+    }
   // Confirms removing a worktree with uncommitted `files`, or deleting a branch.
   | {
       kind: "worktree";

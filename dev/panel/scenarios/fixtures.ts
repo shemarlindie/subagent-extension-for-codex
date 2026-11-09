@@ -9,6 +9,7 @@ import recordedSteer from "../recorded/steer.json";
 import recordedStream from "../recorded/stream.json";
 import type { RecordedFixture } from "../recording/recording";
 import { activityTasks, activityTimelines } from "./activity-scenarios";
+import { attachmentTask, attachmentTimeline } from "./attachment-scenarios";
 import {
   conversationTasks,
   conversationTimelines,
@@ -78,6 +79,7 @@ export const previewTasks: Task[] = [
 ]
   .map((id) => tasksById.get(id)!)
   .concat(
+    attachmentTask,
     editLogTask,
     liveConversationTask,
     statusTasks,
@@ -98,6 +100,7 @@ const timelinesById = new Map(
 );
 
 export const previewEvents: Event[] = [
+  ...attachmentTimeline.events,
   ...editLogTimeline.events,
   ...liveConversationEvents,
   ...[

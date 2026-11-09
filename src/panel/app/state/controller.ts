@@ -1624,6 +1624,7 @@ export class Controller {
           "scope"
         >
       | Omit<Extract<DialogState, { kind: "file" }>, "scope">
+      | Omit<Extract<DialogState, { kind: "attachment" }>, "scope">
       | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">
       | { kind: "pending-updates" },
   ) {
