@@ -2,6 +2,7 @@
  * Format detection and helpers for previewing a file: its MIME type, how it is
  * rendered, the views it offers and the source text it shows.
  */
+import { imageMime } from "../../../shared/changes/changes";
 import { parseDiffFiles } from "./diff/diff-format";
 
 /** A file to preview. Without a format or MIME type, it comes from the path's extension. */
@@ -35,22 +36,20 @@ const MIME_FORMATS: Partial<Record<string, FileFormat>> = {
   "text/tab-separated-values": "csv",
 };
 
-/** MIME types for extensions whose format the MIME type decides. */
+/**
+ * MIME types for extensions whose format the MIME type decides. Raster images
+ * come from the shared `imageMime` list. SVG is here because the service sends
+ * it as text.
+ */
 const EXTENSION_MIMES: Record<string, string> = {
-  bmp: "image/bmp",
   csv: "text/csv",
   diff: "text/x-diff",
-  gif: "image/gif",
-  jpeg: "image/jpeg",
-  jpg: "image/jpeg",
   json: "application/json",
   markdown: "text/markdown",
   md: "text/markdown",
   patch: "text/x-patch",
-  png: "image/png",
   svg: "image/svg+xml",
   tsv: "text/tab-separated-values",
-  webp: "image/webp",
 };
 
 /** File extensions that highlight.js can color, mapped to its language names. */
@@ -155,7 +154,11 @@ export function baseMime(
     return file.mime_type.replace(/;.*$/s, "").trim().toLowerCase();
   }
 
-  return EXTENSION_MIMES[extensionOf(file.path) ?? ""] ?? "text/plain";
+  return (
+    EXTENSION_MIMES[extensionOf(file.path) ?? ""] ??
+    imageMime(file.path) ??
+    "text/plain"
+  );
 }
 
 /** Files known by name rather than extension. */
