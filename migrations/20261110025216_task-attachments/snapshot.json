@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "9f2cf059-37ea-4636-a850-226fede0b762",
+  "id": "7a0580f3-5a0f-46fe-8bc1-fb270da24360",
   "prevIds": [
     "cac9f36d-a89f-4b49-93ae-079059621544"
   ],
@@ -183,6 +183,36 @@
     {
       "table": "task_attachments",
       "name": "deletions",
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "task_attachments",
+      "name": "paths",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "task_attachments",
+      "name": "start_line",
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "task_attachments",
+      "name": "end_line",
       "type": "integer",
       "notNull": false,
       "autoincrement": false,

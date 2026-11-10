@@ -89,9 +89,19 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
         format: "markdown",
         text: "Use X.",
       },
-      { source: "diff", summary: "The changes." },
+      {
+        source: "diff",
+        summary: "The changes.",
+        paths: ["README.md", "notes.md"],
+      },
       { source: "file", path: "notes.md", summary: "Notes." },
-      { source: "file", path: "notes.md", start_line: 2, summary: "Tail." },
+      {
+        source: "file",
+        path: "notes.md",
+        start_line: 2,
+        end_line: 9,
+        summary: "Tail.",
+      },
       { source: "file", path: "notes.md", summary: "Mine.", title: "Custom" },
       {
         source: "inline",
@@ -124,6 +134,14 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   const tail = join(c.attachments.folder(t.id), attachments[3]!.file);
   assert.equal(await readFile(tail, "utf8"), "two\nthree\n");
   assert.equal(attachments[3]!.lines, 2);
+
+  // The saved range is what was copied, ending at the file's last line.
+  assert.deepEqual(
+    [attachments[3]!.start_line, attachments[3]!.end_line],
+    [2, 3],
+  );
+
+  assert.deepEqual(attachments[1]!.paths, ["README.md", "notes.md"]);
 
   // Rejected starts leave no task and no folder.
   await writeFile(join(repo, "big.txt"), "x".repeat(2 * 1024 * 1024 + 1));

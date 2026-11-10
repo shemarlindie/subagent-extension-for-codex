@@ -13,6 +13,9 @@ CREATE TABLE `task_attachments` (
 	`files` integer,
 	`additions` integer,
 	`deletions` integer,
+	`paths` text,
+	`start_line` integer,
+	`end_line` integer,
 	CONSTRAINT `task_attachments_pk` PRIMARY KEY(`task_id`, `position`),
 	CONSTRAINT `fk_task_attachments_task_id_tasks_id_fk` FOREIGN KEY (`task_id`) REFERENCES `tasks`(`id`) ON DELETE CASCADE
 );

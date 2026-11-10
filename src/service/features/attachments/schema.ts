@@ -32,6 +32,11 @@ export const taskAttachments = sqliteTable(
     files: integer(),
     additions: integer(),
     deletions: integer(),
+    /** The paths a diff was limited to. NULL means the whole project. */
+    paths: text({ mode: "json" }).$type<string[]>(),
+    /** A ranged file reference's copied lines. NULL means the whole file. */
+    start_line: integer(),
+    end_line: integer(),
   },
   (t) => [primaryKey({ columns: [t.task_id, t.position] })],
 );

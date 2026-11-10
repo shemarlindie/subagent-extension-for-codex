@@ -4,6 +4,7 @@ import { basename, dirname, extname, join } from "node:path";
 
 import { asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
+import { z } from "zod";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import {
@@ -20,7 +21,9 @@ import { uncommittedDiff } from "./diff.js";
 import { lineCount, readProjectFile } from "./project-file.js";
 import { taskAttachments } from "./schema.js";
 
-const rowSchema = createSelectSchema(taskAttachments);
+const rowSchema = createSelectSchema(taskAttachments, {
+  paths: z.array(z.string()).nullable(),
+});
 
 const MARKDOWN = new Set([".md", ".markdown", ".mdx"]);
 const TEXT = new Set(["", ".txt", ".text", ".log"]);
@@ -113,6 +116,7 @@ async function resolveAttachment(
       format: "diff",
       source: "diff",
       ...(input.paths?.length === 1 ? { path: input.paths[0] } : {}),
+      ...(input.paths ? { paths: input.paths } : {}),
       text: diff.text,
       files: diff.files.length,
       additions: diff.additions,
@@ -127,20 +131,20 @@ async function resolveAttachment(
     input,
   );
 
-  const start = input.start_line;
-  const ranged = start !== undefined || input.end_line !== undefined;
-  const first = start ?? 1;
+  const ranged = input.start_line !== undefined || input.end_line !== undefined;
+  const start = input.start_line ?? 1;
+  // The copied range, which ends early when the file is shorter than end_line.
+  const end = start + lineCount(file.text) - 1;
 
   return {
     title:
       input.title ??
-      (ranged
-        ? `${basename(file.path)}:${first}-${first + lineCount(file.text) - 1}`
-        : basename(file.path)),
+      (ranged ? `${basename(file.path)}:${start}-${end}` : basename(file.path)),
     summary: input.summary,
     format: fileFormat(file.path),
     source: "file",
     path: file.path,
+    ...(ranged ? { start_line: start, end_line: end } : {}),
     text: file.text,
   };
 }

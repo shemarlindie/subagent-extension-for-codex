@@ -119,6 +119,11 @@ export interface TaskAttachment {
   files?: number;
   additions?: number;
   deletions?: number;
+  /** The project paths a diff was limited to. Absent for the whole project. */
+  paths?: string[];
+  /** The lines a ranged file reference copied, from 1. Absent for a whole file. */
+  start_line?: number;
+  end_line?: number;
 }
 
 /** An attachment as Chat lists it under the request, without its private file name. */
