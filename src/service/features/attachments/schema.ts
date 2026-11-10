@@ -19,6 +19,8 @@ export const taskAttachments = sqliteTable(
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade" }),
     position: integer().notNull(),
+    /** The follow-up message it came with. NULL means the task's initial request. */
+    message_id: text(),
     title: text().notNull(),
     summary: text().notNull(),
     format: text({ enum: attachmentFormats }).notNull(),

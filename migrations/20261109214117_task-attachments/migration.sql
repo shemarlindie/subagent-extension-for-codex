@@ -1,6 +1,7 @@
 CREATE TABLE `task_attachments` (
 	`task_id` text NOT NULL,
 	`position` integer NOT NULL,
+	`message_id` text,
 	`title` text NOT NULL,
 	`summary` text NOT NULL,
 	`format` text NOT NULL,

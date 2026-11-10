@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "dcfba163-2d79-4676-a4b5-c564380d2273",
+  "id": "9f2cf059-37ea-4636-a850-226fede0b762",
   "prevIds": [
     "cac9f36d-a89f-4b49-93ae-079059621544"
   ],
@@ -65,6 +65,16 @@
       "name": "position",
       "type": "integer",
       "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "task_attachments",
+      "name": "message_id",
+      "type": "text",
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
