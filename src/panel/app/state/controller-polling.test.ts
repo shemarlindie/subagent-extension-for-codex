@@ -1,9 +1,72 @@
 import assert from "node:assert/strict";
 
-import { test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
+
+test.for(["loads", "fails"] as const)(
+  "startup waits for a scope-triggered refresh that %s before following updates",
+  async (outcome, t) => {
+    const { controller, transport } = setup();
+    transport.tasks = [task("a")];
+    const context = deferred<unknown>();
+    const details = deferred<unknown>();
+
+    t.onTestFinished(() => {
+      controller.dispose();
+      context.resolve({ panel_scope: { conversation_id: null } });
+      details.resolve({ events: [] });
+    });
+
+    transport.handler = (name) => {
+      if (name === "get_panel_context") return context.promise;
+      if (name === "view.activity") return details.promise;
+
+      return undefined;
+    };
+
+    const starting = controller.start();
+    await flush();
+
+    transport.events.scope({
+      panel_scope: { conversation_id: null },
+      panel_selection: { task_id: "a", tab: "activity" },
+    });
+
+    context.resolve({ panel_scope: { conversation_id: null } });
+    await flush();
+
+    const waits = () =>
+      transport.calls.filter(
+        (call) => call.name === "app_wait_for_updates" && call.args.wait_ms,
+      );
+
+    assert.equal(waits().length, 0);
+
+    if (outcome === "loads") {
+      details.resolve({
+        events: [{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }],
+      });
+    } else {
+      details.reject(new Error("Activity unavailable"));
+    }
+
+    await starting;
+
+    assert.equal(waits().length, 1);
+
+    if (outcome === "loads") {
+      expect(waits()[0]?.args).toMatchObject({
+        after: "boot:1",
+        view: { activity: { task_id: "a", after: 1 } },
+      });
+    } else {
+      assert.match(controller.getSnapshot().error, /Activity unavailable/);
+      assert.equal(controller.getSnapshot().connection, "Reconnecting…");
+    }
+  },
+);
 
 for (const phase of ["connect", "read", "poll"] as const) {
   test(`host teardown during ${phase} stops further reads and refreshes`, async (t) => {
@@ -55,6 +118,35 @@ for (const phase of ["connect", "read", "poll"] as const) {
     await assert.rejects(controller.tool("app_list_tasks"), /closed/);
   });
 }
+
+test("a successful queued refresh clears the earlier read's failure", async (t) => {
+  const { controller, transport } = setup();
+  transport.tasks = [task("a")];
+  const first = deferred<unknown>();
+
+  t.onTestFinished(() => {
+    controller.dispose();
+    first.resolve({ tasks: [] });
+  });
+
+  transport.handler = (name) =>
+    name === "app_list_tasks" ? first.promise : undefined;
+
+  const starting = controller.start();
+  await flush();
+  await controller.refresh();
+  transport.handler = undefined;
+  first.reject(new Error("Temporary read failure"));
+  await starting;
+
+  assert.equal(controller.getSnapshot().connection, "Connected");
+  assert.equal(controller.getSnapshot().error, "");
+
+  assert.deepEqual(
+    controller.getSnapshot().tasks.map((item) => item.id),
+    ["a"],
+  );
+});
 
 test("the fallback refresh skips hidden panels and waits for a pending refresh", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });

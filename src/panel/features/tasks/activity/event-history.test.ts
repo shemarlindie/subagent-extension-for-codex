@@ -62,7 +62,7 @@ test("the tally is the service's, and an unchanged one keeps its identity", () =
   const previous = { events: [event(1)], dropped };
 
   const same = mergeActivity(previous, "task", {
-    events: [],
+    events: [event(1)],
     dropped: { ...dropped },
   });
 
@@ -70,6 +70,8 @@ test("the tally is the service's, and an unchanged one keeps its identity", () =
     same.dropped === previous.dropped,
     "Unchanged notes skip rendering",
   );
+
+  assert.equal(same.events, previous.events, "Repeated events skip rendering");
 
   const grown = mergeActivity(previous, "task", {
     events: [],

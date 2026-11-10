@@ -49,22 +49,25 @@ export function activityCursor(events: Event[], taskId: string) {
 
 /**
  * Merges a view's Activity page into the panel's. The page holds the
- * newest events after the cursor, so appending them and keeping the last
- * EVENT_TAIL_SIZE matches the service's window. The tally is the service's
- * own, so it replaces the previous one. Unchanged parts keep their identity,
- * so an unchanged view skips rendering.
+ * newest events after its requested cursor. Overlapping reads can repeat
+ * events already shown, so only events after the current cursor append.
+ * Keeping the last EVENT_TAIL_SIZE matches the service's window. The tally is
+ * the service's own, so it replaces the previous one. Unchanged parts keep
+ * their identity, so an unchanged view skips rendering.
  */
 export function mergeActivity(
   previous: ActivityView,
   taskId: string,
   page: ActivityPage,
 ): ActivityView {
-  const recent = previous.events.filter((event) => event.task_id === taskId);
+  const recent = previous.events.filter((event) => event.task_id === taskId),
+    cursor = recent.at(-1)?.id ?? 0,
+    incoming = page.events.filter((event) => event.id > cursor);
 
   let events = recent;
 
-  if (page.events.length) {
-    events = [...recent, ...page.events].slice(-EVENT_TAIL_SIZE);
+  if (incoming.length) {
+    events = [...recent, ...incoming].slice(-EVENT_TAIL_SIZE);
   } else if (recent.length === previous.events.length) {
     events = previous.events;
   }

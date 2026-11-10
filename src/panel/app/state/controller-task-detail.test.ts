@@ -5,6 +5,7 @@ import { expect, test, vi } from "vitest";
 import { decodedEvent } from "../../../shared/events/decode";
 import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
 import { deferred, flush, setup, task } from "./controller-test-harness";
+import type { UpdateRead } from "./panel-view";
 
 test("a default selection shows history loading until its details arrive", async (t) => {
   const { controller, transport } = setup(true);
@@ -212,6 +213,59 @@ test("the activity view shows the service's window and its tally, and polls for 
   assert.equal(controller.getSnapshot().events.length, 200);
 });
 
+test("a poll overlapping a refresh keeps each activity event once and appends new events", async (t) => {
+  const { controller, transport } = setup(true);
+  transport.tasks = [task("a")];
+  controller.applyScope({ panel_scope: { conversation_id: null } }, false);
+  const held = deferred<UpdateRead>();
+
+  t.onTestFinished(() => {
+    controller.dispose();
+    held.resolve({ revision: "boot:3" });
+  });
+
+  const events = [1, 2, 3].map((id) =>
+    decodedEvent({ id, task_id: "a", type: "log", timestamp: "", data: {} }),
+  );
+
+  let stored = 1;
+
+  transport.handler = (name, args) => {
+    if (name === "view.activity") {
+      return windowActivity(events.slice(0, stored), Number(args.after));
+    }
+
+    if (name === "app_wait_for_updates" && args.wait_ms) {
+      return held.promise;
+    }
+
+    return undefined;
+  };
+
+  await controller.start();
+  stored = 2;
+  transport.revision = "boot:2";
+  await controller.refresh();
+
+  held.resolve({
+    revision: "boot:3",
+    view: {
+      built_at: Date.now(),
+      projects: transport.projects,
+      list: { tasks: transport.tasks },
+      chat: { items: [], next_cursor: 0 },
+      activity: { events: events.slice(1) },
+    },
+  });
+
+  await flush();
+
+  assert.deepEqual(
+    controller.getSnapshot().events.map((event) => event.id),
+    [1, 2, 3],
+  );
+});
+
 /** Chat as the service returns it once the worker's reply `id` is stored. */
 const storedReply = (id: string, text: string) => ({
   items: [
@@ -260,11 +314,11 @@ test("a draft cleared while a view is in flight stays until a later view's Chat 
 
   // Read before the message was stored, so it can't settle the clear.
   older.resolve({ items: [], next_cursor: 0 });
-  await refreshing;
   await flush();
   assert.equal(controller.getSnapshot().draft?.text, "Hello");
 
   later.resolve(storedReply("m", "Hello"));
+  await refreshing;
   await flush();
   assert.equal(controller.getSnapshot().draft, undefined);
 
