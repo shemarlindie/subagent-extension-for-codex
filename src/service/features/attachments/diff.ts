@@ -1,4 +1,4 @@
-import { lstat, readlink } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
@@ -17,7 +17,8 @@ const LIST_BYTES = 1024 * 1024;
 /**
  * Overrides for the content filters the repository's config names. Git runs
  * a clean filter's command when it compares checkout files, so the snapshot
- * compares raw bytes instead.
+ * turns those commands off. Git's built-in line-ending and encoding
+ * conversions still apply.
  */
 async function filterOverrides(project: string) {
   let names: Buffer;
@@ -163,7 +164,7 @@ function trackedChanges(output: Buffer) {
   return { files, additions, deletions, patch: output.subarray(offset) };
 }
 
-/** An untracked file's patch, within `room` bytes. Skips sockets and the like. */
+/** An untracked regular file's patch, within `room` bytes. */
 async function untrackedPatch(
   project: string,
   path: string,
@@ -171,16 +172,11 @@ async function untrackedPatch(
   tooLarge: () => Error,
 ) {
   const info = await lstat(join(project, path));
-
-  if (info.isSymbolicLink()) {
-    return newFilePatch(path, await readlink(join(project, path)), "120000");
-  }
-
   if (!info.isFile()) return undefined;
   if (info.size > room) throw tooLarge();
-  const { text } = await readProjectFile(project, path, room);
+  const { text, mode } = await readProjectFile(project, path, room);
 
-  return newFilePatch(path, text, info.mode & 0o111 ? "100755" : "100644");
+  return newFilePatch(path, text, mode & 0o111 ? "100755" : "100644");
 }
 
 /**

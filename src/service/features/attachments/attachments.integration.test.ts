@@ -7,6 +7,7 @@ import {
   mkdir,
   readdir,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -79,6 +80,7 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   const root = join(dir, "attachments");
   await writeFile(join(repo, "notes.md"), "one\ntwo\nthree\n");
   await writeFile(join(repo, "README.md"), "changed\n");
+  await symlink("notes.md", join(repo, "alias.md"));
 
   const t = await c.start("alice", {
     ...input(repo),
@@ -110,6 +112,7 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
         text: "x",
         path: "example.png",
       },
+      { source: "file", path: "alias.md", summary: "Linked notes." },
     ],
   });
 
@@ -124,8 +127,12 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
       ["notes.md:2-3", "file", "markdown"],
       ["Custom", "file", "markdown"],
       ["example.png", "inline", "code"],
+      ["notes.md", "file", "markdown"],
     ],
   );
+
+  // A link inside the project reads through its resolved path.
+  assert.equal(attachments[6]!.path, "notes.md");
 
   // Claude must open this code as text even when its label names an image.
   assert.match(attachments[5]!.file, /\.txt$/);
@@ -148,6 +155,8 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   await writeFile(join(repo, "image.bin"), Buffer.from([1, 0, 2]));
   await writeFile(join(dir, "outside.txt"), "outside");
   await symlink(join(dir, "outside.txt"), join(repo, "escape.txt"));
+  await mkdir(join(repo, "nested", ".GIT"), { recursive: true });
+  await writeFile(join(repo, "nested", ".GIT", "config"), "[core]\n");
 
   const note = {
     source: "inline",
@@ -186,6 +195,15 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
       },
       /outside the project/,
     ],
+    // Git opens this folder as `.git` on a case-insensitive file system.
+    [
+      {
+        attachments: [
+          { source: "file", path: "nested/.GIT/config", summary: "S." },
+        ],
+      },
+      /Git metadata/,
+    ],
   ];
 
   for (const [extra, error] of rejected) {
@@ -209,14 +227,17 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   assert.deepEqual(await taskFolders(root), [t.id]);
 });
 
-test("a diff snapshot holds untracked files and unusual names, runs no filters and stays fixed", async () => {
-  const { c, repo, dir } = await setup();
+test("a diff snapshot holds untracked regular files and unusual names, runs no filters and stays fixed", async () => {
+  const { c, dir, ...given } = await setup();
+  // Direct reads take the canonical path a task's approved project has.
+  const repo = await realpath(given.repo);
   const marker = join(dir, "filter-ran");
   await writeFile(join(repo, "with\ttab.txt"), "old\n");
   git(repo, "add", ".");
   commit(repo);
   await writeFile(join(repo, "with\ttab.txt"), "new\n");
   await writeFile(join(repo, "with\nnewline.txt"), "fresh\n");
+  await symlink("README.md", join(repo, "untracked-link"));
   await writeFile(join(repo, ".gitattributes"), "*.txt filter=probe\n");
   git(repo, "config", "filter.probe.clean", `touch '${marker}'; cat`);
   git(repo, "config", "diff.noprefix", "true");
@@ -236,6 +257,7 @@ test("a diff snapshot holds untracked files and unusual names, runs no filters a
 
   const snapshot = join(c.attachments.folder(t.id), diff!.file);
   const text = await readFile(snapshot, "utf8");
+  assert.ok(!text.includes("untracked-link"));
 
   await assert.rejects(access(marker));
   // Git applies the patch as its own, with the filter out of the way.

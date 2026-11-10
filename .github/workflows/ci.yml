@@ -46,7 +46,8 @@ jobs:
           if-no-files-found: ignore
 
   # Parts of the suite use POSIX shell fakes, so Windows runs the build and
-  # packaging and settings-file tests until the rest is shown to run there.
+  # packaging, settings-file and project-file tests until the rest is shown to
+  # run there.
   windows:
     name: Packaging (windows-latest)
     runs-on: windows-latest
@@ -61,6 +62,7 @@ jobs:
       - run: npm run build
       - run: npx vitest run tests/integration/package
       - run: npx vitest run src/service/features/settings/settings-file.integration.test.ts
+      - run: npx vitest run src/service/features/attachments/project-file.test.ts
 
   # A pull request that changes the listed version may merge only once that
   # version is published. A release must be published from its head commit,

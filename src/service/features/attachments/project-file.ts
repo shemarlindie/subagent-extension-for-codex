@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
-import { type FileHandle, open } from "node:fs/promises";
-import { resolve } from "node:path";
+import { type FileHandle, open, realpath, stat } from "node:fs/promises";
+import { join } from "node:path";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import { isBinary } from "../../../shared/changes/changes.js";
@@ -9,8 +9,8 @@ import { changePath } from "../changes/paths.js";
 const CHUNK_BYTES = 64 * 1024;
 
 /**
- * Doesn't follow a link swapped in after the path was resolved, and doesn't
- * wait on a FIFO. Windows has neither flag, which `|` reads as 0.
+ * Where supported, refuses a final-component symlink and doesn't wait on a
+ * FIFO. Windows has neither flag, which `|` reads as 0.
  */
 export const OPEN_FLAGS =
   constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
@@ -50,13 +50,44 @@ export function lineCount(text: string) {
 export function projectPath(project: string, path: string) {
   const relative = changePath(project, path);
 
-  if (relative === undefined) {
+  if (
+    relative === undefined ||
+    // Exclude Git metadata regardless of the file system's case rules.
+    relative.split("/").some((part) => part.toLowerCase() === ".git")
+  ) {
     throw new AttachmentError(
       `${path} is outside the project folder or in Git metadata.`,
     );
   }
 
   return relative;
+}
+
+const changed = (relative: string) =>
+  new AttachmentError(`${relative} changed while it was read.`);
+
+/** Opens a canonical project path with best-effort consistency checks. */
+async function openProjectFile(project: string, relative: string) {
+  const path = join(project, relative);
+  const file = await open(path, OPEN_FLAGS);
+
+  try {
+    if ((await realpath(path)) !== path) throw changed(relative);
+
+    const [held, current] = await Promise.all([
+      file.stat({ bigint: true }),
+      stat(path, { bigint: true }),
+    ]);
+
+    if (held.dev !== current.dev || held.ino !== current.ino) {
+      throw changed(relative);
+    }
+
+    return file;
+  } catch (error) {
+    await file.close();
+    throw error;
+  }
 }
 
 /**
@@ -121,8 +152,9 @@ async function readLines(
 }
 
 /**
- * A regular project file's text, or the selected lines. `limit` bounds the
- * bytes read into memory.
+ * A regular project file's text, or the selected lines, and its mode.
+ * `project` is the approved canonical project path. `limit` bounds the bytes
+ * read into memory.
  */
 export async function readProjectFile(
   project: string,
@@ -134,7 +166,7 @@ export async function readProjectFile(
   let file: FileHandle;
 
   try {
-    file = await open(resolve(project, relative), OPEN_FLAGS);
+    file = await openProjectFile(project, relative);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
 
@@ -142,10 +174,7 @@ export async function readProjectFile(
       throw new AttachmentError(`${relative} doesn't exist.`);
     }
 
-    if (code === "ELOOP") {
-      throw new AttachmentError(`${relative} changed while it was read.`);
-    }
-
+    if (code === "ELOOP") throw changed(relative);
     throw error;
   }
 

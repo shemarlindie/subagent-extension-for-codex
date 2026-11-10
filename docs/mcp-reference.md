@@ -62,11 +62,11 @@ Every attachment needs a one-sentence `summary` of at most 200 characters.
 Optionally, specify `title` (up to 60 characters) to replace the generated
 label.
 
-| Kind   | Shape                                                               | Content                                                                    | Generated title                                       |
-| ------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Inline | `{ source: "inline", summary, format, text, title?, path? }`        | `text`, at most 8,000 characters                                           | The file name of `path`, otherwise "Note"             |
-| Diff   | `{ source: "diff", summary, title?, paths? }`                       | The project's uncommitted changes against `HEAD`, untracked files included | "Uncommitted changes", or the path when it's one file |
-| File   | `{ source: "file", path, summary, title?, start_line?, end_line? }` | The file, or lines `start_line` to `end_line`                              | The file name, plus the line range when there is one  |
+| Kind   | Shape                                                               | Content                                                                            | Generated title                                       |
+| ------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Inline | `{ source: "inline", summary, format, text, title?, path? }`        | `text`, at most 8,000 characters                                                   | The file name of `path`, otherwise "Note"             |
+| Diff   | `{ source: "diff", summary, title?, paths? }`                       | The project's uncommitted changes against `HEAD`, untracked regular files included | "Uncommitted changes", or the path when it's one file |
+| File   | `{ source: "file", path, summary, title?, start_line?, end_line? }` | The file, or lines `start_line` to `end_line`                                      | The file name, plus the line range when there is one  |
 
 Use references for project content and inline attachments for short material
 that exists only in the chat, such as decisions or another task's result.
@@ -78,11 +78,15 @@ that exists only in the chat, such as decisions or another task's result.
   and outside `.git`. `paths` takes up to 50 literal paths of at most 1,024
   characters.
 - A diff fails in a folder without Git, in a repository with no commits, and
-  when there are no changes. It compares raw checkout bytes without running
-  external diff, textconv or clean filter commands. It shows submodule commit
-  changes and skips changes inside submodule working trees. Binary changes fail
-  and name the file, so `paths` can leave it out.
-- File references need a regular UTF-8 text file. Binary files fail.
+  when there are no changes. Tracked changes show as `git diff HEAD` shows them,
+  with Git's built-in line-ending and encoding conversions, so a change to line
+  endings alone may not show. External diff, textconv and clean filter commands
+  never run. Untracked regular files show their checkout bytes, and untracked
+  symlinks are left out. It shows submodule commit changes and skips changes
+  inside submodule working trees. Binary changes fail and name the file, so
+  `paths` can leave it out.
+- File references need a regular UTF-8 text file. Binary files fail. Path checks
+  are best-effort and do not provide filesystem isolation.
 - Each reference allows 2 MB, and all attachments together allow 10 MB. Errors
   name the attachment and suggest `paths` or a line range.
 
