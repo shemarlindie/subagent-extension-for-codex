@@ -128,11 +128,6 @@
 .dialog[data-kind="attachment"] .file-preview-toolbar {
   top: calc(var(--attachment-heading-height, 56px) - var(--dialog-pad) - 4px);
 }
-/* The last attachment stays until the next is read, dimmed after a moment. */
-.attachment-preview[data-stale] .file-preview-body {
-  opacity: 0.6;
-  transition: opacity 0.15s 0.15s;
-}
 /* The attachment dialog's summary and origin, above the file viewer. */
 .attachment-header {
   display: flex;

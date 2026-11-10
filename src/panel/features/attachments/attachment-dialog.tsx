@@ -27,8 +27,8 @@ type Read = { position: number } & (
 );
 
 /**
- * Reads the whole attachment at `position`. Stepping to another keeps the last
- * read showing until the next one arrives, so no spinner flashes between them.
+ * Reads the whole attachment at `position`. Returns nothing until that read
+ * settles, so a step never shows the previous attachment's content.
  */
 function useAttachment(task: Task, position: number) {
   const controller = useController(),
@@ -55,7 +55,7 @@ function useAttachment(task: Task, position: number) {
     };
   }, [controller, task.id, position]);
 
-  return read;
+  return read?.position === position ? read : undefined;
 }
 
 type AttachmentHeaderProps = { attachment: RequestAttachment };
@@ -81,8 +81,6 @@ type AttachmentPreviewProps = {
 function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
   const read = useAttachment(task, attachment.position),
     page = read?.status === "ready" ? read.page : undefined,
-    // The previous attachment, still showing while this one is read.
-    stale = read !== undefined && read.position !== attachment.position,
     [wrapLines, setWrapLines] = useState(false),
     [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null),
     root = useRef<HTMLDivElement>(null);
@@ -115,12 +113,7 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
   }, []);
 
   return (
-    <div
-      className="attachment-preview"
-      ref={root}
-      aria-busy={!read || stale}
-      data-stale={stale || undefined}
-    >
+    <div className="attachment-preview" ref={root} aria-busy={!read}>
       {/* Shown in every state, so the heading's controls never shift. */}
       {optionsTarget &&
         createPortal(
@@ -130,7 +123,7 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
           />,
           optionsTarget,
         )}
-      <AttachmentHeader attachment={page?.attachment ?? attachment} />
+      <AttachmentHeader attachment={attachment} />
       {!read && (
         <div
           className="file-preview-loading"
