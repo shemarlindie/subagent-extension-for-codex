@@ -1,8 +1,9 @@
 import { settingsDefaults } from "../../../shared/settings/settings-schema";
 import type {
   Defaults,
+  DelegateDialog,
+  DelegateLoadingDialog,
   DialogReadStatus,
-  DialogState,
   PersistedDialogDraft,
   Snapshot,
   Worker,
@@ -11,9 +12,7 @@ import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";
 
-export type DelegateFormDialog =
-  | Extract<DialogState, { kind: "delegate" }>
-  | Extract<DialogState, { kind: "delegate-loading" }>;
+export type DelegateFormDialog = DelegateDialog | DelegateLoadingDialog;
 
 type DelegateScope = Pick<
   Snapshot,

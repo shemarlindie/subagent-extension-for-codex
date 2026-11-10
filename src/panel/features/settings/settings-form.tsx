@@ -4,7 +4,7 @@ import { flushSync } from "react-dom";
 import { type FieldErrors, useWatch } from "react-hook-form";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
+import type { SettingsPageDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
 import { Notice } from "../../shared/components/notice/notice";
@@ -42,17 +42,13 @@ import { SettingsTransfer } from "./settings-transfer";
 import { useSettingsDiscardPrompt } from "./use-settings-discard-prompt";
 import { useSettingsStickyLayout } from "./use-settings-sticky-layout";
 
-export type SettingsFormDialog =
-  | Extract<DialogState, { kind: "settings" }>
-  | Extract<DialogState, { kind: "settings-loading" }>;
-
 export interface SettingsSaveActionState {
   disabled: boolean;
   label: string;
 }
 
 interface SettingsFormProps {
-  dialog: SettingsFormDialog;
+  dialog: SettingsPageDialog;
   saveActionPlacement?: "header" | "footer";
   onSaveActionChange?: (state: SettingsSaveActionState) => void;
 }
@@ -444,7 +440,7 @@ export function SettingsForm({
 }
 
 const settingsTitle = () => "Settings",
-  renderSettingsDialog = (dialog: SettingsFormDialog) => (
+  renderSettingsDialog = (dialog: SettingsPageDialog) => (
     <SettingsForm dialog={dialog} />
   );
 

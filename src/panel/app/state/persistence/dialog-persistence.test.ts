@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { DialogState } from "../types";
+import type { DeleteDialog, HandoffDialog } from "../types";
 import {
   parsePersistedDialog,
   parsePersistedDialogs,
@@ -16,7 +16,7 @@ test("delete dialogs round-trip their task reference and reject missing targets"
     kind: "delete",
     task: { id: "task-1" },
     scope: 1,
-  } as Extract<DialogState, { kind: "delete" }>;
+  } as DeleteDialog;
 
   const persisted = persistDialog(dialog);
 
@@ -75,7 +75,7 @@ for (const target of [
       task: { id: "task-1" },
       scope: 1,
       target,
-    } as Extract<DialogState, { kind: "handoff" }>;
+    } as HandoffDialog;
 
     const persisted = persistDialog(dialog);
 

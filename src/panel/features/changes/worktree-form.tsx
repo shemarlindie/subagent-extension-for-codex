@@ -1,12 +1,12 @@
 import type { SubmitEvent } from "react";
 
 import { useController } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
+import type { WorktreeDialog } from "../../app/state/types";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../shared/forms/form-footer";
 
 type WorktreeFormProps = {
-  dialog: Extract<DialogState, { kind: "worktree" }>;
+  dialog: WorktreeDialog;
 };
 
 /** Confirms removing a worktree with uncommitted changes, or deleting a branch. */

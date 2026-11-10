@@ -12,16 +12,14 @@ import { errorMessage } from "../../shared/utils/error-message";
 import type {
   Defaults,
   DelegateDialogRead,
+  DelegateLoadingDialog,
   DialogReadStatus,
   DialogState,
   PersistedDialogDraft,
   SettingsDocument,
+  SettingsLoadingDialog,
   Snapshot,
 } from "./types";
-
-type SettingsLoading = Extract<DialogState, { kind: "settings-loading" }>;
-
-type DelegateLoading = Extract<DialogState, { kind: "delegate-loading" }>;
 
 interface DialogLoaderContext extends DelegateReadContext {
   snapshot(): Snapshot;
@@ -45,7 +43,7 @@ export class DialogLoader {
   constructor(private context: DialogLoaderContext) {}
 
   openSettings() {
-    const dialog: SettingsLoading = {
+    const dialog: SettingsLoadingDialog = {
       kind: "settings-loading",
       scope: this.context.snapshot().scopeVersion,
       request: ++this.request,
@@ -65,7 +63,7 @@ export class DialogLoader {
   ) {
     const state = this.context.snapshot();
 
-    const dialog: DelegateLoading = {
+    const dialog: DelegateLoadingDialog = {
       kind: "delegate-loading",
       scope: state.scopeVersion,
       request: ++this.request,
@@ -85,7 +83,7 @@ export class DialogLoader {
     const dialog = this.context.snapshot().dialog;
 
     if (dialog?.kind === "settings-loading" && dialog.status === "error") {
-      const retry: SettingsLoading = {
+      const retry: SettingsLoadingDialog = {
         ...dialog,
         scope: this.context.snapshot().scopeVersion,
         request: ++this.request,
@@ -150,7 +148,7 @@ export class DialogLoader {
     }
   }
 
-  private async loadSettings(dialog: SettingsLoading) {
+  private async loadSettings(dialog: SettingsLoadingDialog) {
     try {
       const settings =
         await this.context.tool<SettingsDocument>("get_settings");
@@ -197,14 +195,14 @@ export class DialogLoader {
   }
 
   /** Starts the New Task dialog's reads that are still loading. */
-  private loadDelegate({ request, statuses }: DelegateLoading) {
+  private loadDelegate({ request, statuses }: DelegateLoadingDialog) {
     startDelegateReads(this.context, statuses, (...update) =>
       this.updateDelegateRead(request, ...update),
     );
   }
 
   /** Replaces a fully read loading dialog with the New Task form. */
-  private finishDelegate(dialog: DelegateLoading, defaults: Defaults) {
+  private finishDelegate(dialog: DelegateLoadingDialog, defaults: Defaults) {
     const state = this.context.snapshot();
 
     try {
@@ -238,7 +236,7 @@ export class DialogLoader {
     }
   }
 
-  private retryDelegate(dialog: DelegateLoading) {
+  private retryDelegate(dialog: DelegateLoadingDialog) {
     const retryContext = dialog.statuses.context === "error";
 
     const retry = {

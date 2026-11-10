@@ -1,3 +1,5 @@
+import type { SettingsPageDialog } from "../state/types";
+
 /** Page identity, availability and lifetime belong to the application. */
 export const PAGES = {
   tasks: {
@@ -36,12 +38,16 @@ type NavigationState = {
   dialog?: { kind: string };
 };
 
+/** Settings keeps its page form in dialog state, though it isn't a modal. */
+export function isSettingsPageDialog(dialog?: {
+  kind: string;
+}): dialog is SettingsPageDialog {
+  return dialog?.kind === "settings" || dialog?.kind === "settings-loading";
+}
+
 export function canNavigate(state: NavigationState, page: PageId): boolean {
-  // Settings uses persisted dialog state for its page form, but is not a modal.
   const settingsPageState =
-    state.page === "settings" &&
-    (state.dialog?.kind === "settings" ||
-      state.dialog?.kind === "settings-loading");
+    state.page === "settings" && isSettingsPageDialog(state.dialog);
 
   if (state.busy || (state.dialog && !settingsPageState)) return false;
 

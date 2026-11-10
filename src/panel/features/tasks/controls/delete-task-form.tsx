@@ -4,7 +4,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import type { DialogState } from "../../../app/state/types";
+import type { DeleteDialog } from "../../../app/state/types";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
@@ -13,7 +13,7 @@ import { TaskDeletionDetails } from "./task-deletion-details";
 import { useTaskDeletionPreview } from "./use-task-deletion-preview";
 
 type DeleteTaskFormProps = {
-  dialog: Extract<DialogState, { kind: "delete" }>;
+  dialog: DeleteDialog;
 };
 
 type DeleteTaskValues = { deleteAgentTask: boolean };

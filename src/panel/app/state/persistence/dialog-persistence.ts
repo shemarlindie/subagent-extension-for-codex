@@ -1,5 +1,6 @@
 import type { HandoffTarget } from "../../../features/tasks/controls/handoff-message";
 import type {
+  AttachmentDialog,
   DialogState,
   PersistedDialog,
   PersistedDialogDraft,
@@ -50,7 +51,7 @@ function draftOf(
 }
 
 /** Dialogs a reload restores; a read-only attachment preview isn't one. */
-type PersistableDialog = Exclude<DialogState, { kind: "attachment" }>;
+type PersistableDialog = Exclude<DialogState, AttachmentDialog>;
 
 /** Store only stable dialog identity and user-entered draft, never server data. */
 export function persistDialog(dialog: PersistableDialog): PersistedDialog {

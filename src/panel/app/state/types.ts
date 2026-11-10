@@ -67,67 +67,134 @@ export type NewTaskState = {
   addedProject?: string;
 };
 
+/** Confirms removing a project from the panel. */
+export type RemoveProjectDialog = {
+  kind: "remove-project";
+  project: Project;
+  scope: number;
+};
+
+/** Adds a project, prefilled with `repository` when given. */
+export type ProjectDialog = {
+  kind: "project";
+  repository?: string;
+  /** Opened from the new-task composer, which selects the added project. */
+  forNewTask?: boolean;
+  scope: number;
+};
+
+/** The settings form. It uses dialog persistence for its page form, not DialogHost. */
+type SettingsDialog = {
+  kind: "settings";
+  settings: SettingsDocument;
+  scope: number;
+};
+
+/** The settings page while its settings read loads or after it fails. */
+export type SettingsLoadingDialog = {
+  kind: "settings-loading";
+  scope: number;
+  request: number;
+  status: DialogReadStatus;
+  error?: string;
+};
+
+/** The Advanced task dialog, which starts a task with explicit options. */
+export type DelegateDialog = {
+  kind: "delegate";
+  defaults: Defaults;
+  preferredWorker?: string;
+  repository?: string;
+  revision: string;
+  scope: number;
+};
+
+/** The Advanced task dialog while its reads load, or after one fails. */
+export type DelegateLoadingDialog = {
+  kind: "delegate-loading";
+  scope: number;
+  request: number;
+  preferredWorker?: string;
+  repository?: string;
+  revision?: string;
+  defaults?: Defaults;
+  statuses: Record<DelegateDialogRead, DialogReadStatus>;
+  errors?: Partial<Record<DelegateDialogRead, string>>;
+  message?: string;
+};
+
+/** Answers the task's pending request for input. */
+type RespondDialog = { kind: "respond"; task: Task; scope: number };
+
+/** Drafts a message about the task for Codex. */
+export type HandoffDialog = {
+  kind: "handoff";
+  task: Task;
+  target?: HandoffTarget;
+  scope: number;
+};
+
+/** Sends worker updates Codex hasn't seen, or marks them seen. */
+type PendingUpdatesDialog = { kind: "pending-updates"; scope: number };
+
+/** Confirms deleting the task and everything related to it. */
+export type DeleteDialog = { kind: "delete"; task: Task; scope: number };
+
+/** A file the task changed, previewed as it is now and as its diff. */
+type FileDialog = {
+  kind: "file";
+  task: Task;
+  path: string;
+  scope: number;
+};
+
+/** One of the request's attachments, from its chip. A reload doesn't restore it. */
+export type AttachmentDialog = {
+  kind: "attachment";
+  task: Task;
+  attachment: RequestAttachment;
+  scope: number;
+};
+
+/** Confirms removing a worktree with uncommitted `files`, or deleting a branch. */
+export type WorktreeDialog = {
+  kind: "worktree";
+  action: "remove" | "delete-branch";
+  task: Task;
+  files?: string[];
+  scope: number;
+};
+
 export type DialogState =
-  | { kind: "remove-project"; project: Project; scope: number }
-  | {
-      kind: "project";
-      repository?: string;
-      /** Opened from the new-task composer, which selects the added project. */
-      forNewTask?: boolean;
-      scope: number;
-    }
-  // Settings use dialog persistence for their page form, not DialogHost.
-  | { kind: "settings"; settings: SettingsDocument; scope: number }
-  | {
-      kind: "settings-loading";
-      scope: number;
-      request: number;
-      status: DialogReadStatus;
-      error?: string;
-    }
-  | {
-      kind: "delegate";
-      defaults: Defaults;
-      preferredWorker?: string;
-      repository?: string;
-      revision: string;
-      scope: number;
-    }
-  | {
-      kind: "delegate-loading";
-      scope: number;
-      request: number;
-      preferredWorker?: string;
-      repository?: string;
-      revision?: string;
-      defaults?: Defaults;
-      statuses: Record<DelegateDialogRead, DialogReadStatus>;
-      errors?: Partial<Record<DelegateDialogRead, string>>;
-      message?: string;
-    }
-  | { kind: "respond"; task: Task; scope: number }
-  | { kind: "handoff"; task: Task; target?: HandoffTarget; scope: number }
-  // Sends worker updates Codex hasn't seen, or marks them seen.
-  | { kind: "pending-updates"; scope: number }
-  // Confirms deleting the task and everything related to it.
-  | { kind: "delete"; task: Task; scope: number }
-  // A file the task changed, previewed as it is now and as its diff.
-  | { kind: "file"; task: Task; path: string; scope: number }
-  // One of the request's attachments, from its chip. A reload doesn't restore it.
-  | {
-      kind: "attachment";
-      task: Task;
-      attachment: RequestAttachment;
-      scope: number;
-    }
-  // Confirms removing a worktree with uncommitted `files`, or deleting a branch.
-  | {
-      kind: "worktree";
-      action: "remove" | "delete-branch";
-      task: Task;
-      files?: string[];
-      scope: number;
-    };
+  | RemoveProjectDialog
+  | ProjectDialog
+  | SettingsDialog
+  | SettingsLoadingDialog
+  | DelegateDialog
+  | DelegateLoadingDialog
+  | RespondDialog
+  | HandoffDialog
+  | PendingUpdatesDialog
+  | DeleteDialog
+  | FileDialog
+  | AttachmentDialog
+  | WorktreeDialog;
+
+/** The settings page's dialog, loaded or still loading. */
+export type SettingsPageDialog = SettingsDialog | SettingsLoadingDialog;
+
+type Unscoped<D> = D extends DialogState ? Omit<D, "scope"> : never;
+
+/** A dialog callers open directly. The controller adds the current scope. */
+export type OpenDialogRequest = Unscoped<
+  | RespondDialog
+  | HandoffDialog
+  | DeleteDialog
+  | FileDialog
+  | AttachmentDialog
+  | WorktreeDialog
+  | PendingUpdatesDialog
+>;
 
 /** Form edits are JSON-safe values keyed by each form's field names. */
 export type PersistedDialogDraft = Record<string, unknown>;

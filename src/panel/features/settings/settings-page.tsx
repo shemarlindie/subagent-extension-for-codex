@@ -1,21 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { PAGES } from "../../app/navigation/pages";
+import { isSettingsPageDialog, PAGES } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
+import type { SettingsPageDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { BackButton } from "../../shared/components/navigation/back-button";
 import { PageFrame } from "../../shared/components/navigation/page-frame";
-import {
-  SettingsForm,
-  type SettingsFormDialog,
-  type SettingsSaveActionState,
-} from "./settings-form";
-
-function isSettingsDialog(dialog?: DialogState): dialog is SettingsFormDialog {
-  return dialog?.kind === "settings" || dialog?.kind === "settings-loading";
-}
+import { SettingsForm, type SettingsSaveActionState } from "./settings-form";
 
 export function SettingsPage() {
   const controller = useController(),
@@ -37,7 +29,7 @@ export function SettingsPage() {
     controller.ensureSettingsLoaded();
   }, [controller, state.connected, state.dialog, state.page]);
 
-  const dialog: SettingsFormDialog = isSettingsDialog(state.dialog)
+  const dialog: SettingsPageDialog = isSettingsPageDialog(state.dialog)
     ? state.dialog
     : {
         kind: "settings-loading",

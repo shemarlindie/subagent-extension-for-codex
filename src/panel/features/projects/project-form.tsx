@@ -1,7 +1,7 @@
 import { type SubmitEvent, useEffect, useRef, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
+import type { ProjectDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { Field } from "../../shared/forms/fields";
@@ -9,7 +9,7 @@ import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogField } from "../../shared/forms/use-persisted-dialog-form";
 
 interface ProjectFormProps {
-  dialog: Extract<DialogState, { kind: "project" }>;
+  dialog: ProjectDialog;
 }
 
 function ProjectForm({ dialog }: ProjectFormProps) {
