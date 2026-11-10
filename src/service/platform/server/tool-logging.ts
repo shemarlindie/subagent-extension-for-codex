@@ -1,5 +1,6 @@
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
+import { WORKTREE_NEEDS_GIT } from "../../features/workspaces/git.js";
 import {
   errorCategory,
   PolicyRejectedError,
@@ -14,6 +15,7 @@ const rejectionMessages = new Set([
   "Repository outside allowed roots (register this repository or approve its parent)",
   "Task belongs to a different conversation",
   "Task belongs to a different repository",
+  WORKTREE_NEEDS_GIT,
 ]);
 
 function rejected(error: unknown) {
