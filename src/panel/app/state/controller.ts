@@ -545,7 +545,7 @@ export class Controller {
 
   /**
    * Applies `held`, or reads a view at once. Loads run one at a time, and
-   * one asked for meanwhile runs after.
+   * the active load awaits any refresh asked for meanwhile.
    */
   private async load(held?: ViewRead): Promise<void> {
     if (this.disposed || !this.state.connected) return;
@@ -590,7 +590,8 @@ export class Controller {
         error: "",
       });
     } catch (error) {
-      if (this.stale(version)) return;
+      // A queued refresh determines the outcome after this read has failed.
+      if (this.stale(version) || this.rerun) return;
       this.contextRead("error", error);
 
       if (!this.transportStatus) {
@@ -599,7 +600,7 @@ export class Controller {
 
       throw error;
     } finally {
-      this.finishRefresh(version);
+      await this.finishRefresh(version);
     }
   }
 
@@ -713,7 +714,7 @@ export class Controller {
   }
 
   /** Every refresh outcome restarts the fallback wait and runs coalesced requests. */
-  private finishRefresh(scope: number) {
+  private async finishRefresh(scope: number) {
     this.refreshing = false;
     if (this.started) this.schedule();
 
@@ -722,7 +723,7 @@ export class Controller {
       (this.rerun || scope !== this.state.scopeVersion)
     ) {
       this.rerun = false;
-      this.run(() => this.refresh());
+      await this.refresh();
     }
   }
 
