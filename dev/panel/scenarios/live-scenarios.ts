@@ -130,7 +130,7 @@ const liveStates: {
   },
 ];
 
-const statusTimelines = liveStates.map((live) => live.timeline);
+export const statusTimelines = liveStates.map((live) => live.timeline);
 
 // --- A reply streaming in: the preview's draft grows with time since load ----
 const streaming = liveTimeline("streaming", 2200).tool(
@@ -139,19 +139,40 @@ const streaming = liveTimeline("streaming", 2200).tool(
   "1\texport const cache = new Map();",
 );
 
-/** The message the streaming fixture's worker is writing. */
-export const previewStreamingDraft = {
-  taskId: streaming.taskId,
-  messageId: "msg_preview_streaming",
-  text: `The cache never evicts entries, which is why memory grows during long sessions.
+// A long reply streaming fast, for checking that Chat follows it smoothly.
+const fastStreaming = liveTimeline("fast-streaming", 2300).tool(
+  "Read",
+  { file_path: "src/cache.ts" },
+  "1\texport const cache = new Map();",
+);
+
+const cacheReply = `The cache never evicts entries, which is why memory grows during long sessions.
 
 I'd fix it in two steps:
 
 1. **Bound the size.** Replace the \`Map\` with a small LRU that keeps the 500 most recent entries.
 2. **Expire stale entries.** Store each entry's write time and drop anything older than ten minutes on read.
 
-The first step alone stops the growth; the second keeps results fresh after the underlying files change. Neither changes the cache's public API, so callers stay as they are.`,
-};
+The first step alone stops the growth; the second keeps results fresh after the underlying files change. Neither changes the cache's public API, so callers stay as they are.`;
+
+/** The messages the streaming fixtures' workers are writing, and how fast. */
+export const previewStreamingDrafts = [
+  {
+    taskId: streaming.taskId,
+    messageId: "msg_preview_streaming",
+    text: cacheReply,
+    charactersPerSecond: 60,
+  },
+  {
+    taskId: fastStreaming.taskId,
+    messageId: "msg_preview_fast_streaming",
+    text: Array.from(
+      { length: 30 },
+      (_, index) => `### Module ${index + 1}\n\n${cacheReply}`,
+    ).join("\n\n"),
+    charactersPerSecond: 1500,
+  },
+];
 
 /** Expected inspector status line for each live task, keyed by task id. */
 export const previewLiveStatus = Object.fromEntries(
@@ -185,6 +206,18 @@ export const liveTasks: Task[] = [
     run_started_at: liveClock(),
     ...timestamps(135, 1),
   },
+  {
+    ...taskBase,
+    id: fastStreaming.taskId,
+    title: "Live: fast streaming reply",
+    description: "Shows a long reply streaming into Chat quickly.",
+    worker_profile: "implementer",
+    status: "running",
+    workspace_strategy: "current_repo",
+    budget: { max_runtime_minutes: null, max_cost_usd: null },
+    run_started_at: liveClock(),
+    ...timestamps(136, 1),
+  },
 ];
 
-export const liveTimelines = [streaming, ...statusTimelines];
+export const liveTimelines = [streaming, fastStreaming, ...statusTimelines];

@@ -4,6 +4,7 @@ import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { blockUserScroll } from "../../../shared/utils/block-user-scroll";
 import { scrollContainer } from "../../../shared/utils/scroll-container";
 import { useContainerScroll } from "../../../shared/utils/use-container-scroll";
+import { followEnd } from "./end-follower";
 import type { ReadingState } from "./reading-state";
 import { animateRows, measureRows, type RowPosition } from "./row-motion";
 import {
@@ -18,6 +19,7 @@ import {
   glideProgress,
   glideTarget,
   jump,
+  pendingScroll,
   restoreReadingAnchor,
 } from "./scroll-geometry";
 
@@ -89,6 +91,12 @@ export function useReadingScroll({
   const glideTimer = useRef<number | undefined>(undefined);
   const releasedTop = useRef<number | undefined>(undefined);
 
+  const endGlide = useCallback(() => {
+    window.clearTimeout(glideTimer.current);
+    glide.current?.follower?.cancel();
+    glide.current = undefined;
+  }, []);
+
   const pin = useCallback((next: boolean) => {
     if (next) releasedTop.current = undefined;
     pinnedRef.current = next;
@@ -126,8 +134,9 @@ export function useReadingScroll({
       const before = container.scrollTop;
 
       // A reader scroll can precede its event; retain that movement during updates.
-      const scrolled =
-        preserveScroll && saved ? container.scrollTop - saved.top : 0;
+      const scrolled = preserveScroll
+        ? pendingScroll(viewport, container, saved, pinnedRef.current)
+        : 0;
 
       if (pinnedRef.current && scrolled) {
         pin(distanceFromEnd(container) <= END_SLACK_PX);
@@ -160,7 +169,7 @@ export function useReadingScroll({
    * Keeps a smooth scroll in progress through a content or size change,
    * returning whether one was. Its movement is not a reader scroll, so it must
    * not unpin. A change that only rerenders must not turn the glide into a
-   * jump. If the timeline changed, a glide to the end follows it smoothly with
+   * jump. If the timeline changed, a glide to the end keeps following with
    * `followSmoothly`. Otherwise it finishes at the new target at once.
    */
   const continueGlide = useCallback(
@@ -177,11 +186,8 @@ export function useReadingScroll({
 
       if (changed && !row && followSmoothly) {
         glide.current.target = target;
-        glide.current.distance = Math.abs(target - container.scrollTop);
-        container.scrollTo({ top: target, behavior: "smooth" });
       } else if (changed) {
-        window.clearTimeout(glideTimer.current);
-        glide.current = undefined;
+        endGlide();
         correctedScrollTop.current = target;
         container.scrollTop = target;
       }
@@ -190,11 +196,13 @@ export function useReadingScroll({
 
       return true;
     },
-    [remember, followSmoothly],
+    [remember, followSmoothly, endGlide],
   );
 
   useLayoutEffect(() => {
     activeRef.current = active;
+    // A hidden view may share its scroller with the shown one.
+    if (!active) endGlide();
     const revealed = active && !wasActive.current;
     wasActive.current = active;
     const viewport = viewportRef.current;
@@ -291,15 +299,7 @@ export function useReadingScroll({
       glide.current = undefined;
       const viewport = viewportRef.current;
       if (!viewport || !activeRef.current) return;
-      const container = scrollContainer(viewport);
-
-      // A busy page can stall a glide to the end. The reader did not take
-      // over, so finish there instead of unpinning them short of it.
-      if (!started.row) {
-        correctedScrollTop.current = jump(container, end(container));
-      }
-
-      judge(viewport, container);
+      judge(viewport, scrollContainer(viewport));
     }, GLIDE_STALL_MS);
   }, [judge]);
 
@@ -308,27 +308,33 @@ export function useReadingScroll({
       const distance = Math.abs(target - container.scrollTop);
       correctedScrollTop.current = undefined;
       glide.current = { target, distance, moved: false, row };
-      container.scrollTo({ top: target, behavior: "smooth" });
-      awaitGlide();
+
+      if (row) {
+        container.scrollTo({ top: target, behavior: "smooth" });
+        awaitGlide();
+      } else {
+        glide.current.follower = followEnd(container, () => {
+          endGlide();
+          correctedScrollTop.current = jump(container, end(container));
+          if (viewportRef.current) remember(viewportRef.current, container);
+        });
+      }
     },
-    [awaitGlide],
+    [awaitGlide, endGlide, remember],
   );
 
   /**
    * With `followSmoothly`, glide on to the end while pinned. Returns whether
    * that kept the reader at the end, so no restore is needed. The ordinary
-   * restore judges a reader scroll still waiting for its event, unless the
-   * previous glide just `ended`.
+   * restore judges a reader scroll still waiting for its event.
    */
   const followLatest = useCallback(
-    (viewport: HTMLElement, container: HTMLElement, ended = false) => {
+    (viewport: HTMLElement, container: HTMLElement) => {
       if (!followSmoothly || !pinnedRef.current || !canGlide(container)) {
         return false;
       }
 
-      if (!ended && reading.position?.top !== container.scrollTop) {
-        return false;
-      }
+      if (reading.position?.top !== container.scrollTop) return false;
 
       if (distanceFromEnd(container) >= 1) {
         startGlide(container, end(container));
@@ -377,8 +383,7 @@ export function useReadingScroll({
       return;
     }
 
-    window.clearTimeout(glideTimer.current);
-    glide.current = undefined;
+    endGlide();
     stopAnimations();
     const before = container.scrollTop;
     const target = glideTarget(container, element);
@@ -406,6 +411,7 @@ export function useReadingScroll({
     active,
     ready,
     itemAttribute,
+    endGlide,
     pin,
     remember,
     stopAnimations,
@@ -448,8 +454,7 @@ export function useReadingScroll({
     const top = container.scrollTop;
     // Cancel the native glide before a resize can restart it over the gesture.
     if (glide.current) container.scrollTop = top;
-    window.clearTimeout(glideTimer.current);
-    glide.current = undefined;
+    endGlide();
     correctedScrollTop.current = top;
     pin(false);
     releasedTop.current = top;
@@ -463,19 +468,7 @@ export function useReadingScroll({
 
       if (event.type === "scrollend") {
         if (!glide.current?.moved) return;
-        const following = !glide.current.row;
         glide.current = undefined;
-
-        // A retarget can end a glide to the end early. A reader scroll would
-        // already have stopped it, so keep following.
-        if (
-          following &&
-          viewport &&
-          activeRef.current &&
-          followLatest(viewport, scrollContainer(viewport), true)
-        ) {
-          return;
-        }
       }
 
       if (!viewport || !activeRef.current || !restored.current) return;
@@ -486,6 +479,10 @@ export function useReadingScroll({
 
       // The browser also emits scroll after our own anchor correction.
       if (corrected !== undefined && Math.abs(top - corrected) < 1) return;
+
+      const follower = glide.current?.follower;
+      if (follower?.holds(top, viewport)) return;
+      if (follower) endGlide();
 
       // A smooth return stays pinned while it closes in. Moving away means the
       // reader took over, so restore ordinary reading-position behavior.
@@ -510,7 +507,7 @@ export function useReadingScroll({
   );
 
   const scrollToLatest = useCallback(() => {
-    window.clearTimeout(glideTimer.current);
+    endGlide();
     stopAnimations();
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -521,20 +518,19 @@ export function useReadingScroll({
     if (Math.abs(container.scrollTop - target) >= 1 && canGlide(container)) {
       startGlide(container, target);
     } else {
-      glide.current = undefined;
       correctedScrollTop.current = jump(container, target);
     }
 
     viewport.focus({ preventScroll: true });
     remember(viewport, container);
-  }, [pin, startGlide, remember, stopAnimations]);
+  }, [endGlide, pin, startGlide, remember, stopAnimations]);
 
   useLayoutEffect(
     () => () => {
-      window.clearTimeout(glideTimer.current);
+      endGlide();
       stopAnimations();
     },
-    [stopAnimations],
+    [endGlide, stopAnimations],
   );
 
   return {

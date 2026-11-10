@@ -1,5 +1,6 @@
 /** Scroll measurements and glide rules for `useReadingScroll`. */
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
+import type { EndFollower } from "./end-follower";
 import type { ReadingPosition } from "./reading-state";
 import type { RowPosition } from "./row-motion";
 
@@ -81,6 +82,38 @@ export function restoreReadingAnchor(
   }
 }
 
+/**
+ * Whether a row in `viewport` is easing to a smaller height. Measuring its new
+ * height lays out the shorter content, which clamps the scroll position before
+ * the animation holds the old height again.
+ */
+export function shrinking(viewport: HTMLElement) {
+  if (typeof viewport.getAnimations !== "function") return false;
+
+  return viewport.getAnimations({ subtree: true }).some((animation) => {
+    const frames = (animation.effect as KeyframeEffect | null)?.getKeyframes();
+    const height = (frame?: Keyframe) => parseFloat(String(frame?.height));
+
+    return height(frames?.[0]) > height(frames?.at(-1));
+  });
+}
+
+/**
+ * How far the reader scrolled from `saved` before the browser delivered the
+ * scroll event. A `pinned` view that drops while a row shrinks was clamped by
+ * layout, so the reader did not move.
+ */
+export function pendingScroll(
+  viewport: HTMLElement,
+  container: HTMLElement,
+  saved: ReadingPosition | undefined,
+  pinned: boolean,
+) {
+  const moved = saved ? container.scrollTop - saved.top : 0;
+
+  return moved < 0 && pinned && shrinking(viewport) ? 0 : moved;
+}
+
 export function canGlide(container: HTMLElement) {
   return typeof container.scrollTo === "function" && !reducedMotion(container);
 }
@@ -91,6 +124,8 @@ export type Glide = {
   distance: number;
   moved: boolean;
   row?: HTMLElement;
+  /** Drives a glide to the end frame by frame. */
+  follower?: EndFollower;
 };
 
 /** How far a glide to the end has left to scroll. */

@@ -245,6 +245,34 @@ test("a pinned reader who scrolls away before its event stops following updates"
   assert.ok(view.getByRole("button", { name: "Scroll to latest message" }));
 });
 
+test("a pinned view stays pinned when a shrinking row clamps its scroll position", () => {
+  const reading: ReadingState = {};
+  const view = render(createElement(Chat, { reading, items }));
+  const viewport = view.getByTestId("chat");
+
+  // Measuring a shrunk row clamps the scroll position before its height
+  // animation holds the old height again.
+  Object.defineProperty(viewport, "getAnimations", {
+    value: () => [
+      {
+        effect: {
+          getKeyframes: () => [{ height: "300px" }, { height: "100px" }],
+        },
+      },
+    ],
+  });
+
+  viewport.scrollTop = 250;
+  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
+
+  assert.equal(viewport.scrollTop, 500);
+  fireEvent.scroll(viewport);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+});
+
 test("a reader scroll to the end before its event repins once the event arrives", () => {
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));
@@ -384,16 +412,42 @@ test("scroll to latest uses the shared inspector scroller", () => {
   assert.equal(inspector.scrollTop, 500);
 });
 
-test("a smooth return stays pinned until the reader takes over", () => {
+/** Runs animation frames on fake timers. `advance` plays `ms` of them. */
+function useFrames(t: { onTestFinished(fn: () => void): void }) {
+  vi.useFakeTimers({
+    toFake: [
+      "setTimeout",
+      "clearTimeout",
+      "requestAnimationFrame",
+      "cancelAnimationFrame",
+      "performance",
+    ],
+  });
+
+  t.onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  return (ms: number) =>
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+}
+
+/** Lets the hook glide, which it does only where smooth scrolling exists. */
+function allowGlides(viewport: HTMLElement) {
+  Object.defineProperty(viewport, "scrollTo", {
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+test("a smooth return stays pinned until the reader takes over", (t) => {
+  const advance = useFrames(t);
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));
   const viewport = view.getByTestId("chat");
-  const scrollTo = vi.fn();
-
-  Object.defineProperty(viewport, "scrollTo", {
-    configurable: true,
-    value: scrollTo,
-  });
+  allowGlides(viewport);
 
   const button = () =>
     view.queryByRole("button", { name: "Scroll to latest message" });
@@ -405,48 +459,24 @@ test("a smooth return stays pinned until the reader takes over", () => {
 
   scrollAt(100);
   fireEvent.click(button()!);
-
-  assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 400, behavior: "smooth" },
-  ]);
-
-  assert.equal(viewport.scrollTop, 100, "The browser owns the glide");
+  advance(100);
+  const gliding = viewport.scrollTop;
+  assert.ok(gliding > 100 && gliding < 400, "The return glides");
+  fireEvent.scroll(viewport);
   expect(button()).toBeNull();
 
-  scrollAt(250);
-  expect(button()).toBeNull();
-  scrollAt(200);
+  scrollAt(gliding - 10);
   assert.ok(button(), "Moving away hands control back to the reader");
-
-  fireEvent.click(button()!);
-  fireEvent(viewport, new Event("scrollend"));
-  expect(button()).toBeNull();
-  scrollAt(300);
-  fireEvent(viewport, new Event("scrollend"));
-  assert.ok(button(), "A glide that stops short is judged where it stopped");
-
-  fireEvent.click(button()!);
-  view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
-
-  assert.equal(
-    viewport.scrollTop,
-    500,
-    "New content finishes at the live edge",
-  );
-
-  expect(button()).toBeNull();
+  advance(100);
+  assert.equal(viewport.scrollTop, gliding - 10);
 });
 
-test("a smooth return that arrives ends pinned and follows later replies", () => {
+test("new content finishes a smooth return at the live edge", (t) => {
+  useFrames(t);
   const reading: ReadingState = {};
   const view = render(createElement(Chat, { reading, items }));
   const viewport = view.getByTestId("chat");
-
-  Object.defineProperty(viewport, "scrollTo", {
-    configurable: true,
-    value: vi.fn(),
-  });
-
+  allowGlides(viewport);
   viewport.scrollTop = 100;
   fireEvent.scroll(viewport);
 
@@ -454,80 +484,134 @@ test("a smooth return that arrives ends pinned and follows later replies", () =>
     view.getByRole("button", { name: "Scroll to latest message" }),
   );
 
-  viewport.scrollTop = 400;
-  fireEvent.scroll(viewport);
-  assert.equal(reading.position?.pinned, true);
   view.rerender(createElement(Chat, { reading, items: [...items, "g"] }));
   assert.equal(viewport.scrollTop, 500);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
 });
 
-test("following smoothly glides to new replies and survives a retarget", () => {
+test("following smoothly glides to new replies and keeps its speed through a retarget", (t) => {
+  const advance = useFrames(t);
   const reading: ReadingState = {};
   const props = { reading, follow: true };
   const view = render(createElement(Chat, { ...props, items }));
   const viewport = view.getByTestId("chat");
-  const scrollTo = vi.fn();
-
-  Object.defineProperty(viewport, "scrollTo", {
-    configurable: true,
-    value: scrollTo,
-  });
-
-  const button = () =>
-    view.queryByRole("button", { name: "Scroll to latest message" });
-
-  const scrollAt = (top: number) => {
-    viewport.scrollTop = top;
-    fireEvent.scroll(viewport);
-  };
+  allowGlides(viewport);
 
   assert.equal(viewport.scrollTop, 400, "The first layout jumps");
   view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
+  assert.equal(viewport.scrollTop, 400, "Following glides");
+  advance(100);
+  const previous = viewport.scrollTop;
+  advance(16);
+  const before = viewport.scrollTop;
+  assert.ok(before > 400 && before < 500);
 
-  assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 500, behavior: "smooth" },
-  ]);
-
-  assert.equal(viewport.scrollTop, 400, "The browser owns the glide");
-  scrollAt(450);
   const more = [...items, "g", "h"];
   view.rerender(createElement(Chat, { ...props, items: more }));
+  advance(16);
 
-  assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 600, behavior: "smooth" },
-  ]);
-
-  // The browser can end the interrupted glide short of the new end.
-  fireEvent(viewport, new Event("scrollend"));
-  expect(button()).toBeNull();
-
-  assert.deepEqual(scrollTo.mock.calls.at(-1), [
-    { top: 600, behavior: "smooth" },
-  ]);
-
-  scrollAt(600);
-  view.rerender(createElement(Chat, { ...props, items: more, active: false }));
-  const calls = scrollTo.mock.calls.length;
-
-  view.rerender(
-    createElement(Chat, { ...props, items: [...more, "i"], active: true }),
+  assert.ok(
+    viewport.scrollTop - before >= before - previous,
+    "A retarget keeps the glide's speed",
   );
 
-  assert.equal(viewport.scrollTop, 700, "A revealed view jumps to its end");
-  assert.equal(scrollTo.mock.calls.length, calls);
+  advance(1000);
+  assert.equal(viewport.scrollTop, 600);
+  fireEvent.scroll(viewport);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+
+  view.rerender(createElement(Chat, { ...props, items: [...more, "i"] }));
+  advance(16);
+
+  view.rerender(
+    createElement(Chat, { ...props, items: [...more, "i"], active: false }),
+  );
+
+  const hidden = viewport.scrollTop;
+  advance(1000);
+  assert.equal(viewport.scrollTop, hidden, "A hidden view stops gliding");
+
+  view.rerender(
+    createElement(Chat, { ...props, items: [...more, "i", "j"], active: true }),
+  );
+
+  assert.equal(viewport.scrollTop, 800, "A revealed view jumps to its end");
 });
 
-test.each(["wheel", "touch", "keyboard"] as const)(
+test("a reader scroll toward the end during a glide keeps their position", (t) => {
+  const advance = useFrames(t);
+  const reading: ReadingState = {};
+  const props = { reading, follow: true };
+  const view = render(createElement(Chat, { ...props, items }));
+  const viewport = view.getByTestId("chat");
+  allowGlides(viewport);
+  const more = [...items, "g", "h", "i"];
+  view.rerender(createElement(Chat, { ...props, items: more }));
+  advance(50);
+  assert.ok(viewport.scrollTop < 600);
+
+  viewport.scrollTop = 650;
+  fireEvent.scroll(viewport);
+  advance(16);
+  assert.ok(viewport.scrollTop >= 650, "The glide continues from the reader");
+  advance(1000);
+  assert.equal(viewport.scrollTop, 700);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+});
+
+test("a shrinking row's clamp during a glide keeps following", (t) => {
+  const advance = useFrames(t);
+  const reading: ReadingState = {};
+  const props = { reading, follow: true };
+  const view = render(createElement(Chat, { ...props, items }));
+  const viewport = view.getByTestId("chat");
+  allowGlides(viewport);
+  view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
+  advance(100);
+  const gliding = viewport.scrollTop;
+
+  Object.defineProperty(viewport, "getAnimations", {
+    configurable: true,
+    value: () => [
+      {
+        effect: {
+          getKeyframes: () => [{ height: "300px" }, { height: "100px" }],
+        },
+      },
+    ],
+  });
+
+  viewport.scrollTop = 0;
+  fireEvent.scroll(viewport);
+  advance(16);
+  assert.ok(viewport.scrollTop > gliding, "The glide undoes the clamp");
+  advance(1000);
+  assert.equal(viewport.scrollTop, 500);
+
+  expect(
+    view.queryByRole("button", { name: "Scroll to latest message" }),
+  ).toBeNull();
+});
+
+test.for(["wheel", "touch", "keyboard"] as const)(
   "%s reading intent releases following before a content resize",
-  (gesture) => {
+  (gesture, t) => {
+    const advance = useFrames(t);
     const reading: ReadingState = {};
     const props = { reading, follow: true };
     const view = render(createElement(Chat, { ...props, items }));
     const viewport = view.getByTestId("chat");
-    const scrollTo = vi.fn();
-    Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+    allowGlides(viewport);
     view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
-    expect(scrollTo).toHaveBeenCalledWith({ top: 500, behavior: "smooth" });
 
     const button = () =>
       view.queryByRole("button", { name: "Scroll to latest message" });
@@ -545,8 +629,8 @@ test.each(["wheel", "touch", "keyboard"] as const)(
 
     expect(button()).not.toBeNull();
     act(() => notifyResize!());
+    advance(1000);
     expect(viewport.scrollTop).toBe(400);
-    expect(scrollTo).toHaveBeenCalledTimes(1);
 
     viewport.scrollTop = 300;
     fireEvent.scroll(viewport);
@@ -560,13 +644,13 @@ test.each(["wheel", "touch", "keyboard"] as const)(
   },
 );
 
-test("an upward scroll still near the end does not resume following", () => {
+test("an upward scroll still near the end does not resume following", (t) => {
+  const advance = useFrames(t);
   const reading: ReadingState = {};
   const props = { reading, follow: true };
   const view = render(createElement(Chat, { ...props, items }));
   const viewport = view.getByTestId("chat");
-  const scrollTo = vi.fn();
-  Object.defineProperty(viewport, "scrollTo", { value: scrollTo });
+  allowGlides(viewport);
 
   const button = () =>
     view.queryByRole("button", { name: "Scroll to latest message" });
@@ -581,79 +665,8 @@ test("an upward scroll still near the end does not resume following", () => {
 
   const more = [...items, "g"];
   view.rerender(createElement(Chat, { ...props, items: more }));
-  expect(scrollTo).not.toHaveBeenCalled();
+  advance(1000);
   expect(viewport.scrollTop).toBe(370);
-});
-
-test("a smooth return that never moves finishes at the end", (t) => {
-  vi.useFakeTimers();
-
-  t.onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  const reading: ReadingState = {};
-  const view = render(createElement(Chat, { reading, items }));
-  const viewport = view.getByTestId("chat");
-
-  Object.defineProperty(viewport, "scrollTo", {
-    configurable: true,
-    value: vi.fn(),
-  });
-
-  viewport.scrollTop = 100;
-  fireEvent.scroll(viewport);
-
-  fireEvent.click(
-    view.getByRole("button", { name: "Scroll to latest message" }),
-  );
-
-  act(() => {
-    vi.advanceTimersByTime(1500);
-  });
-
-  assert.equal(viewport.scrollTop, 400);
-
-  expect(
-    view.queryByRole("button", { name: "Scroll to latest message" }),
-  ).toBeNull();
-});
-
-test("a stalled follow glide finishes at the end and keeps following", (t) => {
-  vi.useFakeTimers();
-
-  t.onTestFinished(() => {
-    vi.useRealTimers();
-  });
-
-  const reading: ReadingState = {};
-  const props = { reading, follow: true };
-  const view = render(createElement(Chat, { ...props, items }));
-  const viewport = view.getByTestId("chat");
-  const scrollTo = vi.fn();
-
-  Object.defineProperty(viewport, "scrollTo", {
-    configurable: true,
-    value: scrollTo,
-  });
-
-  view.rerender(createElement(Chat, { ...props, items: [...items, "g"] }));
-  expect(scrollTo).toHaveBeenCalledWith({ top: 500, behavior: "smooth" });
-  assert.equal(viewport.scrollTop, 400, "The browser never moves");
-
-  act(() => {
-    vi.advanceTimersByTime(1500);
-  });
-
-  assert.equal(viewport.scrollTop, 500);
-
-  expect(
-    view.queryByRole("button", { name: "Scroll to latest message" }),
-  ).toBeNull();
-
-  view.rerender(createElement(Chat, { ...props, items: [...items, "g", "h"] }));
-
-  expect(scrollTo).toHaveBeenLastCalledWith({ top: 600, behavior: "smooth" });
 });
 
 test("reduced motion returns to latest without a smooth glide", () => {

@@ -21,11 +21,16 @@ import {
   liveConversationEvents,
   liveConversationTask,
 } from "./live-conversation";
-import { liveTasks, liveTimelines, statusTasks } from "./live-scenarios";
+import {
+  liveTasks,
+  liveTimelines,
+  statusTasks,
+  statusTimelines,
+} from "./live-scenarios";
 import { orgPolicyTasks, orgPolicyTimelines } from "./org-policy-scenarios";
 import { projectTasks } from "./project-scenarios";
 
-export { previewLiveStatus, previewStreamingDraft } from "./live-scenarios";
+export { previewLiveStatus, previewStreamingDrafts } from "./live-scenarios";
 export { PREVIEW_THREAD, previewProjects } from "./scenario-context";
 
 /**
@@ -76,6 +81,7 @@ export const previewTasks: Task[] = [
   "preview-runtime-budget",
   "preview-long-chat",
   "preview-live-streaming",
+  "preview-live-fast-streaming",
 ]
   .map((id) => tasksById.get(id)!)
   .concat(
@@ -126,10 +132,9 @@ export const previewEvents: Event[] = [
     "preview-runtime-budget",
     "preview-long-chat",
     "preview-live-streaming",
+    "preview-live-fast-streaming",
     "preview-policy-limited",
   ].flatMap((id) => timelinesById.get(id)!.events),
-  ...liveTimelines
-    .filter((timeline) => timeline.taskId !== "preview-live-streaming")
-    .flatMap((timeline) => timeline.events),
+  ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),
 ].map(decodedEvent);
