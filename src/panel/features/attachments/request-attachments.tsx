@@ -38,8 +38,7 @@ function useAttachmentFit(count: number) {
           chips: [...copies.querySelectorAll("[data-chip]")].map(
             (chip) => chip.getBoundingClientRect().width,
           ),
-          label: (hidden, short) =>
-            width(`[data-label="${short ? "short" : "full"}-${hidden}"]`),
+          label: (hidden) => width(`[data-label="${hidden}"]`),
         }),
       );
 
@@ -56,7 +55,7 @@ function useAttachmentFit(count: number) {
 
 /**
  * The request's attachments in one right-aligned row. Chips that don't fit
- * hide behind "+ N more attachments", which expands the row in place.
+ * hide behind "+N more", which expands the row in place.
  */
 export function RequestAttachments({
   task,
@@ -104,11 +103,11 @@ export function RequestAttachments({
             aria-label={
               expanded
                 ? "Show fewer attachments"
-                : `Show ${moreLabel(hidden).slice(2)}`
+                : `Show ${hidden} more ${hidden === 1 ? "attachment" : "attachments"}`
             }
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? "Show less" : moreLabel(hidden, fit.short)}
+            {expanded ? "Show less" : moreLabel(hidden)}
           </button>
         )}
       </div>
@@ -123,17 +122,15 @@ export function RequestAttachments({
               <AttachmentChipContent attachment={attachment} />
             </span>
           ))}
-          {counts.flatMap((hiddenCount) =>
-            [false, true].map((short) => (
-              <span
-                key={`${short}-${hiddenCount}`}
-                className="request-attachments-toggle"
-                data-label={`${short ? "short" : "full"}-${hiddenCount}`}
-              >
-                {moreLabel(hiddenCount, short)}
-              </span>
-            )),
-          )}
+          {counts.map((hiddenCount) => (
+            <span
+              key={hiddenCount}
+              className="request-attachments-toggle"
+              data-label={hiddenCount}
+            >
+              {moreLabel(hiddenCount)}
+            </span>
+          ))}
         </div>
       </div>
     </div>

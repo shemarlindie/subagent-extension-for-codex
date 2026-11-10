@@ -5,32 +5,27 @@ export type FitWidths = {
   gap: number;
   /** Each chip's natural width, in order. */
   chips: number[];
-  /** The overflow label's width for this many hidden chips, full and short. */
-  label: (hidden: number, short: boolean) => number;
+  /** The overflow label's width for this many hidden chips. */
+  label: (hidden: number) => number;
 };
 
 /**
  * How much of the row shows: the first `shown` chips, then the overflow label
  * when some are hidden. `firstMax` truncates the first chip when nothing else
- * fits beside the short label.
+ * fits beside the label.
  */
 export type AttachmentFit = {
   shown: number;
-  short?: boolean;
   firstMax?: number;
 };
 
-/** The overflow label: "+ 3 more attachments", or "+3 more" when short. */
-export const moreLabel = (hidden: number, short = false) =>
-  short
-    ? `+${hidden} more`
-    : `+ ${hidden} more ${hidden === 1 ? "attachment" : "attachments"}`;
+/** The overflow label, such as "+3 more". */
+export const moreLabel = (hidden: number) => `+${hidden} more`;
 
 /**
- * Fits chips in order on one line. The full label wins whenever at least the
- * first chip fits beside it, then the short label, and finally the first
- * chip alone, truncated beside the short label or, as the only chip, to the
- * row.
+ * Fits chips in order on one line, then the label for the rest. When even the
+ * first chip doesn't fit beside the label, it truncates to make room, or, as
+ * the only chip, to the row.
  */
 export function fitAttachments({
   available,
@@ -49,17 +44,14 @@ export function fitAttachments({
   // A lone chip has nothing to hide, so it takes the row.
   if (count === 1) return { shown: 1, firstMax: available };
 
-  for (const short of [false, true]) {
-    for (let shown = count - 1; shown >= 1; shown--) {
-      if (ends[shown - 1]! + gap + label(count - shown, short) <= available) {
-        return { shown, ...(short ? { short } : {}) };
-      }
+  for (let shown = count - 1; shown >= 1; shown--) {
+    if (ends[shown - 1]! + gap + label(count - shown) <= available) {
+      return { shown };
     }
   }
 
   return {
     shown: 1,
-    short: true,
-    firstMax: Math.max(0, available - gap - label(count - 1, true)),
+    firstMax: Math.max(0, available - gap - label(count - 1)),
   };
 }

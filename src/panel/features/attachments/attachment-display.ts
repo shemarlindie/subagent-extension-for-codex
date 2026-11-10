@@ -10,11 +10,43 @@ export function attachmentIcon(attachment: RequestAttachment): IconName {
   return attachment.format === "markdown" ? "file-text" : "file-code";
 }
 
-/** "+12 −3" for a diff, otherwise its line count. */
+/** "+12 −3" for a diff, "lines 44–55" for a line range, otherwise its line count. */
 export function attachmentSize(attachment: RequestAttachment) {
-  return attachment.source === "diff"
-    ? `+${attachment.additions ?? 0} −${attachment.deletions ?? 0}`
-    : `${attachment.lines} ${attachment.lines === 1 ? "line" : "lines"}`;
+  const { start_line: start, end_line: end } = attachment;
+
+  if (attachment.source === "diff") {
+    return `+${attachment.additions ?? 0} −${attachment.deletions ?? 0}`;
+  }
+
+  if (start !== undefined && end !== undefined) {
+    return start === end ? `line ${start}` : `lines ${start}–${end}`;
+  }
+
+  return `${attachment.lines} ${attachment.lines === 1 ? "line" : "lines"}`;
+}
+
+/** A chip's short line range, such as "L44–55". Absent for a whole file. */
+export function attachmentRange({
+  start_line: start,
+  end_line: end,
+}: RequestAttachment) {
+  if (start === undefined || end === undefined) return undefined;
+
+  return start === end ? `L${start}` : `L${start}–${end}`;
+}
+
+/**
+ * The chip's title. A generated title's `:44-55` suffix is left off, since
+ * the chip shows the range beside it.
+ */
+export function chipTitle({ title, start_line, end_line }: RequestAttachment) {
+  const suffix = `:${start_line}-${end_line}`;
+
+  return start_line !== undefined &&
+    title.length > suffix.length &&
+    title.endsWith(suffix)
+    ? title.slice(0, -suffix.length)
+    : title;
 }
 
 /** Where an attachment came from, with its size, for the dialog's header. */
