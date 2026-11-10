@@ -5,10 +5,7 @@ import {
   MESSAGE_EVENTS,
 } from "../../../../shared/tasks/conversation/messages.js";
 import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
-import {
-  startSchema,
-  withoutLegacyContext,
-} from "../../../../shared/tasks/model.js";
+import { startSchema } from "../../../../shared/tasks/model.js";
 import { replyFrom, taskSummary } from "../../../../shared/tasks/task-list.js";
 import {
   autoRegisterChatProject,
@@ -81,9 +78,9 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       panel: true,
       conversation: "chat",
       description:
-        "Start asynchronous work on the full request in description. The service generates the title. Give the worker material it can't find itself in attachments, by reference where it can. Work runs in the current checkout by default, including uncommitted changes. If the result has workspace_fallback, tell the user the task isn't isolated in a worktree and edits apply directly to the project folder. Reopen existing work with open_subagent_extension_for_codex(task_id), never another start_task.",
-      schema: withoutLegacyContext(
-        startSchema.extend({
+        "Start a background task from the user's full request in description. Use attachments for material the worker wouldn't find on its own. If the result has workspace_fallback, tell the user the task runs directly in the project folder without an isolated worktree. To show an existing task, call open_subagent_extension_for_codex(task_id) instead of starting another.",
+      schema: startSchema
+        .extend({
           conversation_id: startSchema.shape.conversation_id.nullable(),
           provider: startSchema.shape.provider.unwrap().optional(),
           worker_profile: startSchema.shape.worker_profile.unwrap().optional(),
@@ -103,8 +100,9 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
                 .optional(),
             })
             .optional(),
-        }),
-      ),
+        })
+        // Passes unknown keys on, so the start rejects a legacy context.
+        .loose(),
       // Null opts out of host correlation; persisted tasks keep the optional string contract.
       run: async (a) => {
         await autoRegisterChatProject(c, owner, hostMeta, a.repository);

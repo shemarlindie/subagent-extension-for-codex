@@ -52,14 +52,15 @@ sandbox the settings turn on. See
 
 ### Attachments
 
-`attachments` gives the worker material it can't find itself, up to 20 items.
-The service snapshots them when the task starts and deletes the snapshots with
-the task. `start_task` rejects the old `context` field. See
+`attachments` gives the worker up to 20 artifacts it can't find itself. The
+service snapshots them when the task starts and deletes the snapshots with the
+task. See
 [Claude session restrictions](configuration.md#claude-session-restrictions) for
 worker access rules.
 
-Every item needs a `summary` of one sentence, at most 200 characters. `title`,
-at most 60 characters, replaces the generated label.
+Every attachment needs a one-sentence `summary` of at most 200 characters.
+Optionally, specify `title` (up to 60 characters) to replace the generated
+label.
 
 | Kind   | Shape                                                               | Content                                                                    | Generated title                                       |
 | ------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -74,8 +75,8 @@ that exists only in the chat, such as decisions or another task's result.
   label that picks highlighting. The service never reads it.
 - References resolve from the task's approved project folder, before any
   worktree exists. A path must stay inside the folder after symlinks resolve,
-  outside `.git`. `paths` takes up to 50 paths of at most 1,024 characters,
-  matched literally.
+  and outside `.git`. `paths` takes up to 50 literal paths of at most 1,024
+  characters.
 - A diff fails in a folder without Git, in a repository with no commits, and
   when there are no changes. It compares raw checkout bytes without running
   external diff, textconv or clean filter commands. It shows submodule commit
@@ -177,11 +178,11 @@ schema. App-only tools carry user authority:
 | `app_steer_queued_message`                                                | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
-panel's tasks as `{ tasks }`, without their conversation and context. `include`
-names tasks to list whatever the filters say. Unless `include_read_completed` is
-true, it also leaves out completed tasks the user has read, except included ones
-and the newest, and counts them by repository in `read_completed`. The panel
-loads them for Done, All and search.
+panel's tasks as `{ tasks }`, without their conversation. `include` names tasks
+to list whatever the filters say. Unless `include_read_completed` is true, it
+also leaves out completed tasks the user has read, except included ones and the
+newest, and counts them by repository in `read_completed`. The panel loads them
+for Done, All and search.
 
 Before deleting tasks, show the resources from `app_preview_task_deletion`. Send
 its `confirmation` to `app_delete_tasks` with the same task IDs and
@@ -248,9 +249,8 @@ Activity, and pending updates as of the returned revision, unless only the draft
 changed. The list takes `app_list_tasks` arguments and returns its shape, and
 the projects match `list_projects`. Chat and Activity take the selected
 `task_id` and an `after` cursor, and pending updates take a `conversation_id`.
-Chat at cursor 0 includes the request, whose `attachments` list each
-attachment's metadata without its stored file name. Later reads leave the
-request out, since attachments never change.
+Only the first Chat read (cursor 0) includes the request. Its `attachments`
+carry each attachment's metadata, minus where the service stores its content.
 
 `app_get_attachment` reads an attachment by `task_id` and its `position` in the
 request, in pages of at most 512 KiB that end on whole characters. Each page

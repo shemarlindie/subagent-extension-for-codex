@@ -130,29 +130,14 @@ export const startSchema = z.object({
 
 export type Start = z.infer<typeof startSchema>;
 
-const LEGACY_CONTEXT =
-  "context was replaced by attachments. Pass project content by reference and chat-only notes inline.";
-
-const hasContext = (input: unknown) =>
-  !!input && typeof input === "object" && Object.hasOwn(input, "context");
-
 /** Rejects `context`, which `attachments` replaced, where a parse would drop it. */
 export function assertNoLegacyContext(input: unknown) {
-  if (hasContext(input)) throw new Error(LEGACY_CONTEXT);
+  if (input && typeof input === "object" && Object.hasOwn(input, "context")) {
+    throw new Error(
+      "context was replaced by attachments. Pass project content by reference and chat-only notes inline.",
+    );
+  }
 }
-
-/**
- * A tool schema that rejects `context` and leaves it out of the published
- * schema. It stays an object schema, the only kind older MCP SDKs list, so
- * other unknown keys pass through for the start's own parse to drop.
- */
-export const withoutLegacyContext = <Shape extends z.ZodRawShape>(
-  schema: z.ZodObject<Shape>,
-) =>
-  schema.loose().refine((input) => !hasContext(input), {
-    message: LEGACY_CONTEXT,
-    path: ["context"],
-  });
 
 export const statuses = [
   "queued",

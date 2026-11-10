@@ -83,8 +83,9 @@ export function application(
     next();
   });
 
-  // A start can carry about 1 MiB of attachments, and MCP calls name their
-  // tool in the body.
+  // A start's inline attachments can reach about 1 MiB as JSON. The service
+  // reads referenced files from disk. MCP calls name their tool in the body,
+  // so all of /mcp gets this limit.
   app.use(
     [
       "/mcp",

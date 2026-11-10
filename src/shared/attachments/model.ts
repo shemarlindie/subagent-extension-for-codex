@@ -97,7 +97,7 @@ export const attachmentsSchema = z
   .max(ATTACHMENT_LIMITS.count)
   .optional()
   .describe(
-    'Material the worker needs, which it reads from files. Prefer references: anything in the project goes as { source: "file", path, start_line?, end_line? } or { source: "diff", paths? }, the uncommitted changes against HEAD including untracked files, whatever its size. Inline { format, text } is only for short content that exists only in this chat, such as decisions or notes. Every item needs a one-sentence summary.',
+    'Material the worker needs, which it reads from files. Prefer references for anything in the project, regardless of size: { source: "file", path, start_line?, end_line? }, or { source: "diff", paths? } for the uncommitted changes against HEAD including untracked files. Inline { format, text } is only for short content that exists only in this chat, such as decisions or notes. Every item needs a one-sentence summary.',
   );
 
 /** A stored attachment's metadata. The content is a file in the task's attachment folder. */
