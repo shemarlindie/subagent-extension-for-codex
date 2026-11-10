@@ -123,6 +123,22 @@ test("source and table rows survive a lazy block boundary", (t) => {
   assert.equal(table.container.querySelectorAll("tbody tr").length, 201);
 });
 
+test("an excerpt numbers its lines from its start line", (t) => {
+  t.onTestFinished(cleanup);
+
+  const { container } = show({
+    path: "notes.txt",
+    content: "one\ntwo\n",
+    start_line: 44,
+  });
+
+  const numbers = [...container.querySelectorAll(".line-number")].map(
+    (number) => number.textContent,
+  );
+
+  assert.deepEqual(numbers, ["44", "45"]);
+});
+
 test("an SVG over 64 KB shows as source with a note, never as an image", (t) => {
   t.onTestFinished(cleanup);
 

@@ -55,5 +55,6 @@ export function attachmentFile(
       attachment.path ?? `${attachment.title}${extensions[attachment.format]}`,
     content,
     format: attachment.format,
+    ...(attachment.start_line ? { start_line: attachment.start_line } : {}),
   };
 }

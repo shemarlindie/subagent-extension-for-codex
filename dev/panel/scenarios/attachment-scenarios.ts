@@ -112,6 +112,8 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       file: "2-session-prompts-ts-44-55.ts",
       chars: code.length,
       lines: lines(code),
+      start_line: 44,
+      end_line: 55,
       content: code,
     },
     {

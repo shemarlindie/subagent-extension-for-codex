@@ -12,6 +12,8 @@ export type PreviewFile = {
   mime_type?: string;
   /** The format it was sent as, which decides over its MIME type and path. */
   format?: FileFormat;
+  /** The first line's number when the content is an excerpt. */
+  start_line?: number;
 };
 
 /** How a file is rendered; detected from its MIME type, then its extension. */
@@ -311,17 +313,17 @@ export function fileViews(file: PreviewFile): FileViews {
 
 /** Source text for the Source view, formatted for its type. */
 export function fileSource(file: PreviewFile) {
-  const format = fileFormat(file);
+  const format = fileFormat(file),
+    // Only minified JSON is reformatted. Pretty-printed JSON is shown as stored.
+    reformat = format === "json" && !file.content.slice(0, 2000).includes("\n");
 
   return {
-    // Only minified JSON is reformatted; pretty-printed JSON is shown as stored.
-    code:
-      format === "json" && !file.content.slice(0, 2000).includes("\n")
-        ? prettyJson(file.content)
-        : file.content,
+    code: reformat ? prettyJson(file.content) : file.content,
     // Text stays plain, even when its label names a language.
     language:
       FORMAT_LANGUAGES[format] ??
       (format === "text" ? undefined : pathLanguage(file.path)),
+    // Reformatted lines no longer match the file's.
+    ...(file.start_line && !reformat ? { startLine: file.start_line } : {}),
   };
 }
