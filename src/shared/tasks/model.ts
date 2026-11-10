@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AttachmentError } from "../attachments/attachment-error.js";
 import { attachmentsSchema } from "../attachments/model.js";
 import { reasoningLevels } from "./reasoning.js";
 
@@ -133,7 +134,7 @@ export type Start = z.infer<typeof startSchema>;
 /** Rejects `context`, which `attachments` replaced, where a parse would drop it. */
 export function assertNoLegacyContext(input: unknown) {
   if (input && typeof input === "object" && Object.hasOwn(input, "context")) {
-    throw new Error(
+    throw new AttachmentError(
       "context was replaced by attachments. Pass project content by reference and chat-only notes inline.",
     );
   }

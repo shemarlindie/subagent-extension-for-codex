@@ -1,9 +1,9 @@
 import { lstat, readlink } from "node:fs/promises";
 import { join } from "node:path";
 
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import { gitBytes, gitState } from "../workspaces/git.js";
 import {
-  AttachmentError,
   decodeText,
   lineCount,
   projectPath,

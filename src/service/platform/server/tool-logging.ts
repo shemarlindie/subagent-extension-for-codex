@@ -1,3 +1,4 @@
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import {
   errorCategory,
@@ -19,6 +20,7 @@ function rejected(error: unknown) {
   return (
     error instanceof SendRejectedError ||
     error instanceof PolicyRejectedError ||
+    error instanceof AttachmentError ||
     (error instanceof Error &&
       (error.name === "ZodError" || rejectionMessages.has(error.message)))
   );

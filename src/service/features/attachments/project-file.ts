@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { type FileHandle, open } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import { isBinary } from "../../../shared/changes/changes.js";
 import { changePath } from "../changes/paths.js";
 
@@ -13,9 +14,6 @@ const CHUNK_BYTES = 64 * 1024;
  */
 export const OPEN_FLAGS =
   constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
-
-/** An error the caller names with its attachment. */
-export class AttachmentError extends Error {}
 
 /** UTF-8 text, keeping any byte order mark, or an error for bytes that aren't text. */
 export function decodeText(bytes: Uint8Array, name: string) {

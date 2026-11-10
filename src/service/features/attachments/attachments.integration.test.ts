@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   access,
+  chmod,
   mkdir,
   readdir,
   readFile,
@@ -12,9 +13,11 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { test } from "vitest";
+import { onTestFinished, test } from "vitest";
 
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import type { AttachmentPage } from "../../../shared/attachments/model.js";
+import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
 import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";
 import { SessionPrompts } from "../tasks/conversation/session-prompts.js";
@@ -40,6 +43,27 @@ const commit = (repo: string) =>
     "-qam",
     "change",
   );
+
+/** Writes service logs under dir for the test, and reads back the records with an event prefix. */
+function captureLogs(dir: string) {
+  const path = join(dir, "service.jsonl");
+  configureLogging(path);
+
+  onTestFinished(async () => {
+    await flushLogs();
+    configureLogging(undefined);
+  });
+
+  return async (prefix: string) => {
+    await flushLogs();
+
+    return (await readFile(path, "utf8"))
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .filter((record) => String(record.event).startsWith(prefix));
+  };
+}
 
 /** The task folders under the attachments root. */
 async function taskFolders(root: string) {
@@ -131,6 +155,15 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   for (const [extra, error] of rejected) {
     await assert.rejects(c.start("alice", { ...input(repo), ...extra }), error);
   }
+
+  // The wrapper keeps the class, so tool logs record a rejection.
+  await assert.rejects(
+    c.start("alice", {
+      ...input(repo),
+      attachments: [{ source: "file", path: "image.bin", summary: "S." }],
+    }),
+    AttachmentError,
+  );
 
   assert.deepEqual(
     store.all().map((task) => task.id),
@@ -377,3 +410,31 @@ test("attachment pages keep characters whole, stay with one version and report a
   await rm(file);
   assert.equal((await read("alice")).state, "unavailable");
 });
+
+test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
+  "the sweep logs a folder it can't remove and goes on to the next",
+  async () => {
+    const { c, dir } = await setup();
+    const logs = captureLogs(dir);
+    const root = join(dir, "attachments");
+    const stuck = `task_${randomUUID()}`;
+    const orphan = `task_${randomUUID()}`;
+    await mkdir(join(root, stuck, "locked"), { recursive: true });
+    await writeFile(join(root, stuck, "locked", "file"), "x");
+    await mkdir(join(root, orphan));
+    await chmod(join(root, stuck, "locked"), 0o500);
+    onTestFinished(() => chmod(join(root, stuck, "locked"), 0o700));
+
+    await c.recover();
+
+    assert.deepEqual(await taskFolders(root), [stuck]);
+
+    assert.deepEqual(
+      (await logs("attachments.")).map((r) => [r.event, r.task_id]).sort(),
+      [
+        ["attachments.orphan_removed", orphan],
+        ["attachments.remove_failed", stuck],
+      ],
+    );
+  },
+);

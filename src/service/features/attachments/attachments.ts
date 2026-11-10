@@ -5,6 +5,7 @@ import { basename, dirname, extname, join } from "node:path";
 import { asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import {
   ATTACHMENT_LIMITS,
   type AttachmentFormat,
@@ -212,7 +213,7 @@ export class Attachments {
           bytes += Buffer.byteLength(text);
 
           if (bytes > ATTACHMENT_LIMITS.taskBytes) {
-            throw new Error(
+            throw new AttachmentError(
               `Attachments are over the ${ATTACHMENT_LIMITS.taskBytes / 1024 / 1024} MB task limit. Pass paths or a line range to attach less.`,
             );
           }
@@ -238,7 +239,11 @@ export class Attachments {
               ? "diff"
               : (input.path ?? "note"));
 
-          throw new Error(
+          // Keeps the class, so logs tell caller mistakes from failures.
+          const Wrapper =
+            error instanceof AttachmentError ? AttachmentError : Error;
+
+          throw new Wrapper(
             `Attachment ${position} (${label}): ${error instanceof Error ? error.message : String(error)}`,
             { cause: error },
           );
@@ -286,21 +291,39 @@ export class Attachments {
   /** A page of one of the task's attachments, by its position. */
   async page(taskId: string, position: number, cursor?: string) {
     const stored = this.list(taskId).find((a) => a.position === position);
-    if (!stored) throw new Error("Attachment not found");
+    if (!stored) throw new AttachmentError("Attachment not found");
     const { file, ...attachment } = stored;
 
-    return attachmentPage(join(this.folder(taskId), file), attachment, cursor);
+    const page = await attachmentPage(
+      join(this.folder(taskId), file),
+      attachment,
+      cursor,
+    );
+
+    // The service wrote the file, so something else removed or changed it.
+    if (page.state === "unavailable") {
+      logEvent("warn", "attachments.unavailable", {
+        task_id: taskId,
+        position,
+      });
+    }
+
+    return page;
   }
 
   /**
-   * Removes the task's folder. A failure is logged, and the startup sweep
-   * removes the folder once its task is gone.
+   * Removes the task's folder and returns whether it succeeded. A failure is
+   * logged, and the startup sweep removes the folder once its task is gone.
    */
   async discard(taskId: string) {
     try {
       await rm(this.folder(taskId), { recursive: true, force: true });
+
+      return true;
     } catch (error) {
       logError("attachments.remove_failed", error, { task_id: taskId });
+
+      return false;
     }
   }
 
@@ -314,8 +337,10 @@ export class Attachments {
     for (const entry of entries) {
       if (!entry.isDirectory() || !TASK_FOLDER.test(entry.name)) continue;
       if (taskExists(entry.name)) continue;
-      await rm(join(this.base(), entry.name), { recursive: true, force: true });
-      logEvent("info", "attachments.orphan_removed", { task_id: entry.name });
+
+      if (await this.discard(entry.name)) {
+        logEvent("info", "attachments.orphan_removed", { task_id: entry.name });
+      }
     }
   }
 }
