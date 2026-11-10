@@ -140,17 +140,19 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
 });
 
-test("The Claude Agent SDK starts Claude Code without private variables", async () => {
+test("The Claude Agent SDK starts Claude Code as the extension, without private variables", async () => {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
   const env = claudeEnvironment({
     PATH: process.env.PATH,
+    CLAUDE_CODE_ENTRYPOINT: "dummy-app",
     USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
     OPENAI_API_KEY: "synthetic-app-key",
     SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "synthetic-service-token",
   });
 
   assert.deepEqual(Object.keys(env).sort(), [
+    "CLAUDE_CODE_ENTRYPOINT",
     "CLAUDE_CODE_STARTUP_FAILURE_RESULTS",
     "PATH",
     "USER_TOOLCHAIN_HOME",
@@ -182,6 +184,7 @@ test("The Claude Agent SDK starts Claude Code without private variables", async 
   assert.ok(spawned);
   assert.equal(spawned.PATH, process.env.PATH);
   assert.equal(spawned.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
+  assert.equal(spawned.CLAUDE_CODE_ENTRYPOINT, "subagent-extension-for-codex");
 
   for (const name of ["SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "OPENAI_API_KEY"]) {
     assert.equal(

@@ -314,7 +314,9 @@ deny rules, MCP servers, connectors, sandbox settings and environment settings.
 A native allow or deny rule may decide a call before the extension sees it.
 
 Delegated sessions receive the service's environment variables, except
-`SUBAGENT_EXTENSION_FOR_CODEX_*` and `OPENAI_*`.
+`SUBAGENT_EXTENSION_FOR_CODEX_*` and `OPENAI_*`. `CLAUDE_CODE_ENTRYPOINT` is
+always `subagent-extension-for-codex`, so transcripts and requests name the
+extension as the client.
 
 These user-only settings under `providers.claude` apply to delegated sessions.
 Each task keeps the values it started with.
