@@ -124,7 +124,7 @@ test("the preview steps through the changed files in order, wrapping at the ends
   await act(async () => {});
 
   const position = () =>
-    view.container.querySelector(".changed-file-position")?.textContent;
+    view.container.querySelector(".step-nav-position")?.textContent;
 
   const previous = view.getByRole("button", { name: "Previous file" }),
     next = view.getByRole("button", { name: "Next file" });

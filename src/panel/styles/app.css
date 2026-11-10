@@ -39,6 +39,7 @@
 @import "../features/tasks/unread/unread.css";
 @import "../features/file-preview/file-preview.css";
 @import "../shared/components/copy-button/copy-button.css";
+@import "../shared/components/step-nav/step-nav.css";
 @import "../features/changes/changes.css";
 @import "../shared/components/command-line/command-line.css";
 @import "../features/tasks/chat/chat.css";

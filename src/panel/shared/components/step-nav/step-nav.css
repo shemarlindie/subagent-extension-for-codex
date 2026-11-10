@@ -1,0 +1,25 @@
+.step-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+.step-nav .step-nav-step {
+  width: 28px;
+  height: 28px;
+}
+.step-nav-step svg {
+  rotate: 90deg;
+}
+.step-nav-step[data-direction="next"] svg {
+  rotate: -90deg;
+}
+.step-nav-position {
+  /* Room for "999 / 999", so stepping doesn't move the buttons. */
+  min-width: 9ch;
+  margin-right: 2px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
