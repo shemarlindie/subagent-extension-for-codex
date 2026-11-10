@@ -1,3 +1,4 @@
+import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
@@ -1660,6 +1661,20 @@ export class Controller {
     if (dialog?.kind !== "file" || dialog.path === path) return;
 
     this.patch({ dialog: { ...dialog, path } });
+  }
+
+  /** Moves the open attachment preview to another of its message's attachments. */
+  showAttachment(attachment: RequestAttachment) {
+    const { dialog } = this.state;
+
+    if (
+      dialog?.kind !== "attachment" ||
+      dialog.attachment.position === attachment.position
+    ) {
+      return;
+    }
+
+    this.patch({ dialog: { ...dialog, attachment } });
   }
 
   /**

@@ -419,17 +419,17 @@
 }
 
 /*
- * The preview modal is wider than form dialogs, for code and diffs. It takes the
- * full available height so switching views never resizes it; only the active
- * view renders, and longer content scrolls inside.
+ * Changes and attachment previews are wider than form dialogs, for code and
+ * diffs. They take the full available height so switching views or files never
+ * resizes them. Only the active view renders, and longer content scrolls inside.
  */
-#dialog.dialog[data-kind="file"] {
+#dialog.dialog:is([data-kind="file"], [data-kind="attachment"]) {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
   height: calc(100dvh - 40px);
 }
-.dialog[data-kind="file"] > .dialog-heading {
+.dialog:is([data-kind="file"], [data-kind="attachment"]) > .dialog-heading {
   flex: none;
 }
 .file-preview-toolbar {

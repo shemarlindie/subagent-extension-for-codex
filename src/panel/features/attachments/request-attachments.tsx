@@ -85,7 +85,12 @@ export function RequestAttachments({
             attachment={attachment}
             maxWidth={!expanded && index === 0 ? fit.firstMax : undefined}
             onOpen={() =>
-              controller.open({ kind: "attachment", task, attachment })
+              controller.open({
+                kind: "attachment",
+                task,
+                attachment,
+                attachments,
+              })
             }
           />
         ))}

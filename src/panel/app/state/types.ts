@@ -153,6 +153,8 @@ export type AttachmentDialog = {
   kind: "attachment";
   task: Task;
   attachment: RequestAttachment;
+  /** All of the message's attachments, to step through in order. */
+  attachments: RequestAttachment[];
   scope: number;
 };
 
