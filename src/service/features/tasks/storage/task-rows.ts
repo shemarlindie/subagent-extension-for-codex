@@ -88,6 +88,15 @@ export function readCompletedFlags(
     .all();
 }
 
+/** Whether any owner has a task with this id. */
+export function taskExists(orm: Database["orm"], id: string) {
+  return !!orm
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(eq(tasks.id, id))
+    .get();
+}
+
 /** The decoded tasks matching `where`, in `order`, up to `limit`. */
 export function readTasks(
   orm: Database["orm"],

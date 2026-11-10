@@ -1,5 +1,6 @@
 import type { HandoffTarget } from "../../../features/tasks/controls/handoff-message";
 import type {
+  AttachmentDialog,
   DialogState,
   PersistedDialog,
   PersistedDialogDraft,
@@ -49,8 +50,11 @@ function draftOf(
   return isRecord(value.draft) ? value.draft : undefined;
 }
 
+/** Dialogs a reload restores; a read-only attachment preview isn't one. */
+type PersistableDialog = Exclude<DialogState, AttachmentDialog>;
+
 /** Store only stable dialog identity and user-entered draft, never server data. */
-export function persistDialog(dialog: DialogState): PersistedDialog {
+export function persistDialog(dialog: PersistableDialog): PersistedDialog {
   switch (dialog.kind) {
     case "remove-project":
       return { kind: dialog.kind, repository: dialog.project.repository };

@@ -4,6 +4,7 @@ import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
 import type { Task } from "../../../../app/state/types";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
+import { RequestAttachments } from "../../../attachments/request-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { AskReplyButton } from "./ask-reply-button";
 import { MarkUnreadButton } from "./mark-unread-button";
@@ -63,6 +64,14 @@ export function ChatMessageView({
         <div className="chat-sender">Parent agent</div>
       )}
       {messageBody(message)}
+      {task && message.kind === "request" && message.attachments?.length ? (
+        // Keyed by task, so another task's row fits and folds afresh.
+        <RequestAttachments
+          key={task.id}
+          task={task}
+          attachments={message.attachments}
+        />
+      ) : undefined}
       {outcome ? (
         <TurnOutcomeRow
           outcome={outcome}

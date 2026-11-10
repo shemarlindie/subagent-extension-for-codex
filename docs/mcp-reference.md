@@ -50,6 +50,49 @@ sandbox the settings turn on. See
 [Claude permissions](configuration.md#claude-permissions) and
 [session restrictions](configuration.md#claude-session-restrictions).
 
+### Attachments
+
+`attachments` gives the worker up to 20 artifacts it can't find itself. The
+service snapshots them when the task starts and deletes the snapshots with the
+task. See
+[Claude session restrictions](configuration.md#claude-session-restrictions) for
+worker access rules.
+
+Every attachment needs a one-sentence `summary` of at most 200 characters.
+Optionally, specify `title` (up to 60 characters) to replace the generated
+label.
+
+| Kind   | Shape                                                               | Content                                                                            | Generated title                                       |
+| ------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Inline | `{ source: "inline", summary, format, text, title?, path? }`        | `text`, at most 8,000 characters                                                   | The file name of `path`, otherwise "Note"             |
+| Diff   | `{ source: "diff", summary, title?, paths? }`                       | The project's uncommitted changes against `HEAD`, untracked regular files included | "Uncommitted changes", or the path when it's one file |
+| File   | `{ source: "file", path, summary, title?, start_line?, end_line? }` | The file, or lines `start_line` to `end_line`                                      | The file name, plus the line range when there is one  |
+
+Use references for project content and inline attachments for short material
+that exists only in the chat, such as decisions or another task's result.
+
+- Inline `format` is `diff`, `code`, `markdown` or `text`. Its `path` is only a
+  label that picks highlighting. The service never reads it.
+- References resolve from the task's approved project folder, before any
+  worktree exists. A path must stay inside the folder after symlinks resolve,
+  and outside `.git`. `paths` takes up to 50 literal paths of at most 1,024
+  characters.
+- A diff fails in a folder without Git, in a repository with no commits, and
+  when there are no changes. Tracked changes show as `git diff HEAD` shows them,
+  with Git's built-in line-ending and encoding conversions, so a change to line
+  endings alone may not show. External diff, textconv and clean filter commands
+  never run. Untracked regular files show their checkout bytes, and untracked
+  symlinks are left out. It shows submodule commit changes and skips changes
+  inside submodule working trees. Binary changes fail and name the file, so
+  `paths` can leave it out.
+- File references need a regular UTF-8 text file. Binary files fail. Path checks
+  are best-effort and do not provide filesystem isolation.
+- Each reference allows 2 MB, and all attachments together allow 10 MB. Errors
+  name the attachment and suggest `paths` or a line range.
+
+Task-start requests have a 2 MiB HTTP body limit, including requests through
+`/mcp`.
+
 ### Retrying message sends
 
 `send_message` and `app_send_message` accept an optional `request_id`. Use a
@@ -139,11 +182,11 @@ schema. App-only tools carry user authority:
 | `app_steer_queued_message`                                                | Moving a queued message into the running turn                              |
 
 Other `app_` tools serve panel reads and controls. `app_list_tasks` returns the
-panel's tasks as `{ tasks }`, without their conversation and context. `include`
-names tasks to list whatever the filters say. Unless `include_read_completed` is
-true, it also leaves out completed tasks the user has read, except included ones
-and the newest, and counts them by repository in `read_completed`. The panel
-loads them for Done, All and search.
+panel's tasks as `{ tasks }`, without their conversation. `include` names tasks
+to list whatever the filters say. Unless `include_read_completed` is true, it
+also leaves out completed tasks the user has read, except included ones and the
+newest, and counts them by repository in `read_completed`. The panel loads them
+for Done, All and search.
 
 Before deleting tasks, show the resources from `app_preview_task_deletion`. Send
 its `confirmation` to `app_delete_tasks` with the same task IDs and
@@ -210,6 +253,14 @@ Activity, and pending updates as of the returned revision, unless only the draft
 changed. The list takes `app_list_tasks` arguments and returns its shape, and
 the projects match `list_projects`. Chat and Activity take the selected
 `task_id` and an `after` cursor, and pending updates take a `conversation_id`.
+Only the first Chat read (cursor 0) includes the request. Its `attachments`
+carry each attachment's metadata, minus where the service stores its content.
+
+`app_get_attachment` reads an attachment by `task_id` and its `position` in the
+request, in pages of at most 512 KiB that end on whole characters. Each page
+returns the attachment's metadata. Pass `next_cursor` for the next page. A
+cursor fails once the stored file's content changes. `state` is `unavailable`
+when the stored file is missing, larger than any attachment or not UTF-8 text.
 See [Transport](panel-guide.md#transport) for panel refresh behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type CSSProperties, useMemo } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
 import { chunks } from "../../../shared/utils/chunks";
@@ -12,21 +12,28 @@ const LINE_HEIGHT = 17.6;
 type CodeViewProps = {
   code: string;
   language?: string;
+  /** The first line's number, for an excerpt of a file. */
+  startLine?: number;
 };
 
 /**
  * Highlighted source text with line numbers. Every line is kept; lines mount
  * in blocks near the visible area, so long files stay light in the DOM.
  */
-export function CodeView({ code, language }: CodeViewProps) {
-  const blocks = useMemo(
-    () =>
-      chunks(highlightLines(code.replace(/\n$/, ""), language), BLOCK_LINES),
-    [code, language],
-  );
+export function CodeView({ code, language, startLine = 1 }: CodeViewProps) {
+  const highlighted = useMemo(
+      () => highlightLines(code.replace(/\n$/, ""), language),
+      [code, language],
+    ),
+    blocks = useMemo(() => chunks(highlighted, BLOCK_LINES), [highlighted]),
+    // The gutter fits the last number, with room for four digits at least.
+    digits = Math.max(4, String(startLine + highlighted.length - 1).length);
 
   return (
-    <div className="code-view hljs">
+    <div
+      className="code-view hljs"
+      style={{ "--line-number-width": `${digits}ch` } as CSSProperties}
+    >
       {blocks.map((lines, block) => (
         <LazyBlock
           key={block}
@@ -36,7 +43,7 @@ export function CodeView({ code, language }: CodeViewProps) {
           {lines.map((html, index) => (
             <div className="code-line" key={index}>
               <span className="line-number" aria-hidden>
-                {block * BLOCK_LINES + index + 1}
+                {startLine + block * BLOCK_LINES + index}
               </span>
               <code dangerouslySetInnerHTML={{ __html: html || " " }} />
             </div>

@@ -29,18 +29,24 @@ workspace.
 
 The default `current_repo` workspace sees uncommitted changes and edits the
 user's checkout directly. Use `worktree` for isolated or parallel edits. A
-worktree starts from a committed revision, so to review uncommitted work there,
-pass the relevant diff and file excerpts in `context` or say which commit is
-under review.
+worktree starts from a committed revision. If the worker needs the original
+checkout’s uncommitted changes, attach `{ source: "diff" }`.
 
 ## Write the request
 
 Pass the user's full request in `description`. Its first line or sentence
-becomes the title. Add bounded context the worker cannot find itself, such as
-decisions from this chat. The worker does not see this conversation.
+becomes the title. The worker does not see this conversation.
+
+Give the worker what it can't find itself in `attachments`. Attach project
+content by reference, regardless of size: `{ source: "file", path }` with an
+optional line range, or `{ source: "diff", paths? }` for uncommitted changes.
+Use inline text, `{ source: "inline", format, text }`, only for short content
+that exists only in this chat, such as decisions or constraints. Write each
+summary as one sentence on what the attachment is and why the worker needs it,
+such as "The failing test's log, which shows the timeout."
 
 Start independent tasks together. Start a task that needs another task's
-result after that task finishes, and pass the result as `context`.
+result after that task finishes, and attach the result inline.
 
 ## Supervise and report
 

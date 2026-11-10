@@ -13,8 +13,8 @@ owning format. Keep feature styling in `file-preview.css`.
 
 ## Formats
 
-`file-format.ts` detects a format from the MIME type, then the extension, and
-lists the views each offers, best first:
+When the caller omits the format, `file-format.ts` checks the MIME type, then
+the extension. The table lists each format's views, best first.
 
 | Format                   | Views                                                               |
 | ------------------------ | ------------------------------------------------------------------- |

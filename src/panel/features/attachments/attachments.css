@@ -1,0 +1,152 @@
+/* The request's attachments in a right-aligned row. Chat sets its width. */
+.request-attachments {
+  position: relative;
+  min-width: 0;
+}
+.request-attachments-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.request-attachments[data-expanded] .request-attachments-row {
+  flex-wrap: wrap;
+}
+.attachment-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.attachment-chip:hover {
+  background: var(--hover);
+}
+/* Long titles stop short of the row, so other chips still fit beside them. */
+.attachment-chip-title {
+  min-width: 0;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A split title truncates its start and keeps its end. */
+.attachment-chip-title[data-split] {
+  display: flex;
+}
+.attachment-chip-title[data-split] > span {
+  flex: none;
+  white-space: pre;
+}
+.attachment-chip-title[data-split] > .attachment-chip-title-start {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A cut-off title shows in full, muted, above the summary every chip shows. */
+.attachment-chip-tooltip-title {
+  display: block;
+  margin-block-end: 2px;
+  color: var(--muted);
+}
+.attachment-chip-size {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.attachment-added {
+  color: var(--success);
+}
+.attachment-removed {
+  color: var(--danger);
+}
+.request-attachments-toggle {
+  flex: none;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.request-attachments-toggle:hover {
+  text-decoration: underline;
+}
+/* Unshown copies the row measures to decide what fits. */
+.request-attachments-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.request-attachments-measure > div {
+  display: flex;
+  width: max-content;
+}
+
+/*
+ * The heading's attachment steps and file preview options, beside the close
+ * button. They move below the title when it would otherwise get too narrow.
+ */
+.dialog[data-kind="attachment"] .dialog-heading {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.dialog[data-kind="attachment"] .dialog-heading > h2 {
+  flex: 1 1 12rem;
+  overflow-wrap: anywhere;
+}
+.attachment-heading-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-block-start: -4px;
+  margin-inline-start: auto;
+}
+.attachment-options-target {
+  display: flex;
+}
+/* The file toolbar pins just under the heading, which grows when it wraps. */
+.dialog[data-kind="attachment"] .file-preview-toolbar {
+  top: calc(var(--attachment-heading-height, 56px) - var(--dialog-pad) - 4px);
+}
+/* The attachment dialog's summary and origin, above the file viewer. */
+.attachment-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-block-end: 10px;
+}
+.attachment-header > svg {
+  flex: none;
+  margin-block-start: 3px;
+  color: var(--muted);
+}
+.attachment-header p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.attachment-origin {
+  margin-block-start: 2px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

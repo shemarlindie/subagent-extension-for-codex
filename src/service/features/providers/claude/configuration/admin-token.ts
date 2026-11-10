@@ -12,7 +12,7 @@ const fileTools = ["Read", "Edit", "Write", "NotebookEdit"];
 const searchTools = ["Grep", "Glob"];
 
 /** The path a file or search tool names. Search tools default to the workspace. */
-const toolPath = (input: Record<string, unknown>, workspace: string) =>
+export const toolPath = (input: Record<string, unknown>, workspace: string) =>
   scalarText(input.file_path ?? input.notebook_path ?? input.path, workspace);
 
 /**
@@ -28,15 +28,20 @@ export async function claudeAdminToken() {
  * matches Windows paths in their POSIX form, `/c/...`.
  */
 export function adminTokenRule(token: string) {
-  const posix = token
+  return `Read(${rulePath(token)})`;
+}
+
+/** An absolute path as a rule writes it. */
+export function rulePath(path: string) {
+  const posix = path
     .replace(/^([A-Za-z]):/, (_, drive: string) => `/${drive.toLowerCase()}`)
     .replaceAll("\\", "/");
 
-  return `Read(/${posix})`;
+  return `/${posix}`;
 }
 
 /** A path with symlinks resolved. A new file resolves through its folder. */
-async function actualPath(path: string) {
+export async function actualPath(path: string) {
   try {
     return await realpath(path);
   } catch {

@@ -339,7 +339,7 @@ body[data-expanded-panel="true"]
   min-width: 0;
   max-width: 100%;
 }
-.changed-file-nav {
+.changed-file-heading-actions > .step-nav {
   margin-left: auto;
 }
 .changed-file-options-target {
@@ -369,34 +369,9 @@ body[data-expanded-panel="true"]
     padding-left: 6px;
     white-space: nowrap;
   }
-  .changed-file-heading-actions .changed-file-position {
+  .changed-file-heading-actions .step-nav-position {
     min-width: 6ch;
   }
-}
-.changed-file-nav {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-  font-size: 12px;
-}
-.changed-file-nav .changed-file-step {
-  width: 28px;
-  height: 28px;
-}
-.changed-file-step svg {
-  rotate: 90deg;
-}
-.changed-file-step[data-direction="next"] svg {
-  rotate: -90deg;
-}
-.changed-file-position {
-  /* Room for "999 / 999", so stepping doesn't move the buttons. */
-  min-width: 9ch;
-  margin-right: 2px;
-  color: var(--muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 /* The last file shows until the next is read; dim it if that takes a moment. */
 .changed-file-preview[data-stale="true"] .file-preview-body {

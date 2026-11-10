@@ -1,26 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
+import { dirname, join } from "node:path";
 
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
-import {
-  assertSelectedProviderOptions,
-  withEffectiveOptions,
-} from "../../../../shared/providers/options.js";
+import { withEffectiveOptions } from "../../../../shared/providers/options.js";
 import {
   type BudgetRaise,
   type InputAuthority,
   pendingInputKind,
   roles,
   type Sender,
-  startSchema,
   type Task,
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import { logError } from "../../../platform/logging/logger.js";
+import { Attachments } from "../../attachments/attachments.js";
 import { Changes } from "../../changes/changes.js";
 import { Projects } from "../../projects/projects.js";
 import { RunError } from "../../providers/run-error.js";
@@ -34,14 +32,15 @@ import { ActivityPages } from "../storage/activity-pages.js";
 import { ArchiveStore } from "../storage/archive-store.js";
 import { ParentSeenStore } from "../storage/parent-seen-store.js";
 import { Store } from "../storage/store.js";
+import { taskExists } from "../storage/task-rows.js";
 import {
   raiseBudget,
   raisedBudget,
   remainingRuntime,
   validateBudgets,
 } from "./budget.js";
-import { logStartLimited, observeExecution } from "./execution-logging.js";
-import { effortRequested } from "./policy-check.js";
+import { observeExecution } from "./execution-logging.js";
+import { ProjectGuard } from "./project-guard.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -66,13 +65,13 @@ import {
   SendRequests,
   type SentMessage,
 } from "./send-requests.js";
-import { resolveProjectWorkspace, resolveStart } from "./start-request.js";
 import {
   confirmedTaskDeletion,
   type DeletionVersions,
   projectDeletionTasks,
   taskDeletionPreview,
 } from "./task-deletion.js";
+import { startTask } from "./task-start.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { type Active, recordStatusEvent } from "./turn-outcome.js";
 import {
@@ -106,7 +105,9 @@ export class Control {
   /** The panel's activity pages, with each task's tally of older events. */
   activity: ActivityPages;
   projects?: Projects;
-  private removingProjects = new Set<string>();
+  /** Snapshots of start_task attachments, beside the worktrees. */
+  attachments: Attachments;
+  private projectGuard = new ProjectGuard();
   constructor(
     public store: Store,
     public workspaces: Workspaces,
@@ -124,12 +125,25 @@ export class Control {
       (id) => providerMetadata(id, providers.get(id)?.metadata),
     );
 
-    this.prompts = new SessionPrompts(store);
+    this.attachments = new Attachments(
+      store,
+      join(dirname(workspaces.root), "attachments"),
+    );
+
+    this.prompts = new SessionPrompts(store, this.attachments);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
   }
 
   async recover() {
+    try {
+      await this.attachments.sweep((id) =>
+        taskExists(this.store.database.orm, id),
+      );
+    } catch (error) {
+      logError("attachments.sweep_failed", error);
+    }
+
     for (const t of this.store.withStatus(BUSY)) {
       if (["starting", "running", "waiting"].includes(t.status)) {
         t.status = "interrupted";
@@ -196,62 +210,7 @@ export class Control {
     input: unknown,
     authority: InputAuthority = "user",
   ) {
-    const parsed = startSchema.parse(this.settings.taskInput(owner, input));
-    assertSelectedProviderOptions(parsed.provider, parsed.provider_options);
-    const provider = this.providers.get(parsed.provider);
-    if (!provider) throw new Error("Provider is not enabled");
-
-    const { req, limited } = await resolveStart(
-      provider,
-      parsed,
-      this.settings.values(owner),
-      authority,
-      !!(input as { model?: unknown }).model,
-      effortRequested(input),
-    );
-
-    const repository = this.projects
-      ? await this.projects.resolve(req.repository)
-      : await this.workspaces.repository(req.repository);
-
-    // Repository resolution can yield while the project is being deleted.
-    if (this.removingProjects.has(repository)) {
-      throw new Error("Project task data is being deleted");
-    }
-
-    const workspace = await resolveProjectWorkspace(
-      repository,
-      req,
-      this.settings.values(owner),
-      (input as { workspace_strategy?: unknown }).workspace_strategy ===
-        "worktree",
-    );
-
-    const t: Task = {
-      ...req,
-      ...workspace,
-      repository,
-      id: `task_${randomUUID()}`,
-      owner,
-      created_by: authority,
-      status: "queued",
-      instructions_sent: 0,
-      pending_steers: [],
-      queue: [],
-      created_at: now(),
-      updated_at: now(),
-      turn: 0,
-      runtime_ms: 0,
-    };
-
-    this.store.transaction(() => {
-      this.store.save(t);
-      this.store.event(t, "task.queued");
-      if (limited) this.store.event(t, "agent.limited", limited);
-    });
-
-    if (limited) logStartLimited(t, limited);
-
+    const t = await startTask(this, this.projectGuard, owner, input, authority);
     this.queueWaits.queued(t.id, "start");
     void this.schedule();
 
@@ -395,6 +354,9 @@ export class Control {
   private runContext(t: Task, a: Active, sentBefore: number): RunContext {
     return {
       task: t,
+      ...(this.attachments.list(t.id).length
+        ? { attachments: this.attachments.folder(t.id) }
+        : {}),
       fileChanged: (edit) => this.changes.record(t, edit),
       editUnrecorded: (path, source) =>
         this.changes.unrecorded(t, path, source),
@@ -726,11 +688,15 @@ export class Control {
       throw new Error("Project management is unavailable in this service.");
     }
 
-    if (this.removingProjects.has(repository)) {
+    if (this.projectGuard.isRemoving(repository)) {
       throw new Error("Project task data is being removed");
     }
 
-    if (!deleteTasks) return this.projects.remove(repository, true);
+    if (!deleteTasks) {
+      this.projectGuard.stopStarts(repository);
+
+      return this.projects.remove(repository, true);
+    }
 
     const tasks = projectDeletionTasks(this, owner, repository);
 
@@ -742,7 +708,7 @@ export class Control {
       );
     }
 
-    this.removingProjects.add(repository);
+    this.projectGuard.beginRemoval(repository);
     for (const id of ids) this.deleting.add(id);
 
     try {
@@ -798,7 +764,7 @@ export class Control {
         { cause: error },
       );
     } finally {
-      this.removingProjects.delete(repository);
+      this.projectGuard.endRemoval(repository);
       for (const id of ids) this.deleting.delete(id);
     }
   }
@@ -828,6 +794,8 @@ export class Control {
       await this.workspaces.discard(t, versions?.workspace);
       this.store.delete(id, owner);
       this.queueWaits.ended(id, "aborted");
+
+      await this.attachments.discard(id);
 
       return { status: "deleted" as const };
     } finally {

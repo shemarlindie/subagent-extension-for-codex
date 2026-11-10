@@ -29,8 +29,12 @@ details in `error`. Clients map the code to display text. Failures without
 details save only the code.
 
 The task conversation layer builds the prompt. A new session receives the
-original request, workspace context and bounded conversation history. A resumed
-session receives unsent messages and any workspace reminder.
+original request, workspace context, the task's attachment list and bounded
+conversation history. A resumed session receives unsent messages and any
+workspace reminder.
+
+When present, `RunContext.attachments` is the real path the provider exposes to
+the worker for read-only access without prompts.
 
 During a turn, the provider must tell accepted steers apart from steers the
 worker actually consumed. Unconsumed steers return to the front of the task's

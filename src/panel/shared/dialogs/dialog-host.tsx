@@ -4,18 +4,12 @@ import {
 } from "@base-ui/react/dialog";
 import { useLayoutEffect, useRef } from "react";
 
+import { isSettingsPageDialog } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
 import { buttonClass } from "../components/button/button";
 import { Icon } from "../components/icons/icons";
 import { useAnimatedHeight } from "../components/motion/use-animated-height";
 import { dialogDefinition } from "./dialog-registry";
-
-function isSettingsPageDialog(
-  dialog?: DialogState,
-): dialog is Extract<DialogState, { kind: "settings" | "settings-loading" }> {
-  return dialog?.kind === "settings" || dialog?.kind === "settings-loading";
-}
 
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController(),

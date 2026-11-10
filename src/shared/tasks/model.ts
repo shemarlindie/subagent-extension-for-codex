@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AttachmentError } from "../attachments/attachment-error.js";
+import { attachmentsSchema } from "../attachments/model.js";
 import { reasoningLevels } from "./reasoning.js";
 
 export const roles = [
@@ -97,13 +99,7 @@ export const startSchema = z.object({
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
-  context: z
-    .array(z.string().max(20000))
-    .max(20)
-    .default([])
-    .describe(
-      "Bounded excerpts the worker needs, such as a diff or file sections. Conversation history is not copied.",
-    ),
+  attachments: attachmentsSchema,
   workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .default("current_repo")
@@ -134,6 +130,15 @@ export const startSchema = z.object({
 });
 
 export type Start = z.infer<typeof startSchema>;
+
+/** Rejects `context`, which `attachments` replaced, where a parse would drop it. */
+export function assertNoLegacyContext(input: unknown) {
+  if (input && typeof input === "object" && Object.hasOwn(input, "context")) {
+    throw new AttachmentError(
+      "context was replaced by attachments. Pass project content by reference and chat-only notes inline.",
+    );
+  }
+}
 
 export const statuses = [
   "queued",
@@ -201,8 +206,11 @@ export interface InputPresentation {
 /** What Git can do for a folder. */
 export type GitState = "ready" | "no_commits" | "none";
 
-export interface Task extends Start {
+/** Attachments live in their own table, so the task body never holds them. */
+export interface Task extends Omit<Start, "attachments"> {
   title: string;
+  /** Excerpts from tasks started before attachments. New tasks have none. */
+  context?: string[];
   id: string;
   owner: string;
   /** Who started the task, and so sent its first message. */

@@ -16,6 +16,7 @@ import {
   previewArchivedAt,
   previewArchiveTool,
 } from "./archive-tools";
+import { requestAttachments } from "./attachment-scenarios";
 import { previewProjects, previewTasks } from "./fixtures";
 import { livePreview, type PreviewData } from "./live-preview";
 import {
@@ -325,12 +326,19 @@ function previewViewPart(
   const task = tasksOf(options).find((task) => task.id === args.task_id);
   if (!task) return { items: [], next_cursor: 0 };
 
-  return {
-    items: chatItems(taskFor(task), events).filter(
-      (item) => item.event_id > after || (after === 0 && item.event_id === 0),
-    ),
-    next_cursor: Math.max(after, events.at(-1)?.id ?? 0),
-  };
+  const items = chatItems(taskFor(task), events).filter(
+    (item) => item.event_id > after || (after === 0 && item.event_id === 0),
+  );
+
+  // As the service does, the first read adds the request's attachments.
+  const request = items[0];
+  const attachments = requestAttachments(task.id);
+
+  if (after === 0 && request?.kind === "message" && attachments) {
+    request.message.attachments = attachments;
+  }
+
+  return { items, next_cursor: Math.max(after, events.at(-1)?.id ?? 0) };
 }
 
 /**

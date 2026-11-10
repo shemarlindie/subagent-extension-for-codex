@@ -335,6 +335,11 @@ Every task is denied the service's admin token. With the sandbox on, that covers
 every command. Without it, a script can still read the token, as it can read
 your other credentials.
 
+Claude's file tools have read-only access to
+[task attachments](mcp-reference.md#attachments) without approval. The sandbox
+also blocks commands from changing attachments. Scripts running outside the
+sandbox can still change them.
+
 On Linux, the sandbox uses bubblewrap, which needs unprivileged user namespaces.
 Ubuntu 24.04 blocks them by default. A sandboxed task then fails to start or
 every Bash command in it fails, and nothing runs unsandboxed. To use the sandbox

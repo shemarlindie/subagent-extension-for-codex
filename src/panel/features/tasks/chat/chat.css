@@ -138,6 +138,7 @@ body[data-expanded-panel="true"]
   outline-offset: 0;
 }
 .chat-message {
+  --bubble-max-width: min(85%, 560px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -148,8 +149,12 @@ body[data-expanded-panel="true"]
 .chat-message:is([data-from="user"], [data-from="parent"]) {
   align-items: flex-end;
 }
+/* Attachment chips take the widest bubble's width, however short the request. */
+.chat-message > .request-attachments {
+  width: var(--bubble-max-width);
+}
 .chat-bubble {
-  max-width: min(85%, 560px);
+  max-width: var(--bubble-max-width);
   margin: 0;
   padding: 8px 12px;
   border-radius: 14px;

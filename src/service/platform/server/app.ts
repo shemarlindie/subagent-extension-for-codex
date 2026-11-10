@@ -83,6 +83,19 @@ export function application(
     next();
   });
 
+  // A start's inline attachments can reach about 1 MiB as JSON. The service
+  // reads referenced files from disk. MCP calls name their tool in the body,
+  // so all of /mcp gets this limit.
+  app.use(
+    [
+      "/mcp",
+      "/api/tools/start_task",
+      "/api/tools/app_start_task",
+      "/api/user-tools/app_start_task",
+    ],
+    express.json({ limit: "2mb" }),
+  );
+
   app.use(express.json({ limit: "256kb" }));
 
   app.use((req, res, next) => {

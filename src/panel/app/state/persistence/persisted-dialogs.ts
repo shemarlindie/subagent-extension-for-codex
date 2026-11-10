@@ -67,6 +67,12 @@ export class PersistedDialogs {
    * starts a new stack.
    */
   shown(previous: DialogState | undefined, dialog: DialogState) {
+    if (dialog.kind === "attachment") {
+      this.dialogs = [];
+
+      return;
+    }
+
     const descriptor = persistDialog(dialog),
       latest = this.latest(),
       finishingDelegateLoad =
@@ -84,6 +90,8 @@ export class PersistedDialogs {
 
   /** Opens `dialog` with a seeded draft, above the open dialog when `stack` is set. */
   seed(dialog: DialogState, draft: PersistedDialogDraft, stack: boolean) {
+    if (dialog.kind === "attachment") return;
+
     this.dialogs = [
       ...(stack ? this.dialogs : []),
       { ...persistDialog(dialog), draft },

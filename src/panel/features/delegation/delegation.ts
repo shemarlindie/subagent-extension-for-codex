@@ -1,7 +1,7 @@
 import { selectedTask } from "../../app/state/selectors";
 import type {
   Defaults,
-  DialogState,
+  DelegateDialog,
   Project,
   Snapshot,
 } from "../../app/state/types";
@@ -50,7 +50,7 @@ export function delegationDialog(
   defaults: Defaults,
   explicitSelection: boolean,
   preferredWorker?: string,
-): Extract<DialogState, { kind: "delegate" }> {
+): DelegateDialog {
   projects = taskProjects(state, projects);
   const choices = projects.filter((project) => project.kind === "repository");
   const task = explicitSelection ? selectedTask(state) : undefined;

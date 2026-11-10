@@ -1,3 +1,4 @@
+import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
@@ -32,6 +33,7 @@ import { sharedRequest } from "../../shared/utils/shared-request";
 import {
   canNavigate,
   DEFAULT_PAGE,
+  isSettingsPageDialog,
   type PageId,
   PAGES,
 } from "../navigation/pages";
@@ -62,6 +64,7 @@ import { lacksNewSelection, unloadedCounts } from "./task-list-read";
 import type {
   DialogState,
   Filter,
+  OpenDialogRequest,
   PanelData,
   PersistedDialog,
   PersistedDialogDraft,
@@ -1097,9 +1100,7 @@ export class Controller {
       currentDialog?.kind === "delegate-loading" && !this.state.scopeKnown;
 
     const scopeSafeDialog =
-      currentDialog?.kind === "settings" ||
-      currentDialog?.kind === "settings-loading" ||
-      resolvingInitialDelegateScope
+      isSettingsPageDialog(currentDialog) || resolvingInitialDelegateScope
         ? { ...currentDialog, scope: scopeVersion }
         : undefined;
 
@@ -1294,12 +1295,7 @@ export class Controller {
     if (this.state.page === "settings" && page !== "settings") {
       if (this.dismissGuard?.() === false) return;
 
-      if (
-        this.state.dialog?.kind === "settings" ||
-        this.state.dialog?.kind === "settings-loading"
-      ) {
-        this.closeDialog();
-      }
+      if (isSettingsPageDialog(this.state.dialog)) this.closeDialog();
     }
 
     this.patch({ page, formError: "", taskArrival: undefined });
@@ -1617,16 +1613,7 @@ export class Controller {
     this.dialogLoader.retry();
   }
 
-  open(
-    dialog:
-      | Omit<
-          Extract<DialogState, { kind: "respond" | "handoff" | "delete" }>,
-          "scope"
-        >
-      | Omit<Extract<DialogState, { kind: "file" }>, "scope">
-      | Omit<Extract<DialogState, { kind: "worktree" }>, "scope">
-      | { kind: "pending-updates" },
-  ) {
+  open(dialog: OpenDialogRequest) {
     if (this.state.dialog || this.state.busy) return;
 
     this.patch({
@@ -1674,6 +1661,20 @@ export class Controller {
     if (dialog?.kind !== "file" || dialog.path === path) return;
 
     this.patch({ dialog: { ...dialog, path } });
+  }
+
+  /** Moves the open attachment preview to another of its message's attachments. */
+  showAttachment(attachment: RequestAttachment) {
+    const { dialog } = this.state;
+
+    if (
+      dialog?.kind !== "attachment" ||
+      dialog.attachment.position === attachment.position
+    ) {
+      return;
+    }
+
+    this.patch({ dialog: { ...dialog, attachment } });
   }
 
   /**

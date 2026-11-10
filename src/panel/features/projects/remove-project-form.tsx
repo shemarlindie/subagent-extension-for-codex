@@ -2,7 +2,7 @@ import { Switch } from "@base-ui/react/switch";
 import { type SubmitEvent, useLayoutEffect, useState } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { DialogState } from "../../app/state/types";
+import type { RemoveProjectDialog } from "../../app/state/types";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { AgentTaskDeletionOption } from "../tasks/controls/agent-task-deletion-option";
@@ -11,7 +11,7 @@ import { useTaskDeletionPreview } from "../tasks/controls/use-task-deletion-prev
 import { projectApproved } from "./selectors";
 
 type RemoveProjectFormProps = {
-  dialog: Extract<DialogState, { kind: "remove-project" }>;
+  dialog: RemoveProjectDialog;
 };
 
 function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {

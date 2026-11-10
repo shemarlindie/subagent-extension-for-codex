@@ -4,12 +4,15 @@ import { test } from "vitest";
 
 import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { Attachments } from "../../attachments/attachments.js";
 import { Store } from "../storage/store.js";
 import { chatRead } from "./chat-read.js";
 
-test("a Chat read at any cursor returns what reading all of Chat returns", (t) => {
+test("Chat cursors return the same items as a full read and list attachment metadata once", (t) => {
   const store = new Store(":memory:");
   t.onTestFinished(() => store.close());
+  // Listing reads only the database, so the folder is never made.
+  const attachments = new Attachments(store, "/unused/attachments");
 
   const task: Task = {
     ...startSchema.parse({ repository: "/repo", description: "Move them" }),
@@ -28,6 +31,18 @@ test("a Chat read at any cursor returns what reading all of Chat returns", (t) =
   };
 
   store.save(task);
+
+  const note = {
+    position: 1,
+    title: "Note",
+    summary: "A decision.",
+    format: "text",
+    source: "inline",
+    chars: 6,
+    lines: 1,
+  } as const;
+
+  attachments.save(task.id, [{ ...note, file: "1-note.txt" }]);
   const block = { role: "assistant", message_id: "msg_1" } as const;
   store.event(task, "task.started", { turn: 1 });
   // Two text blocks of one message merge into one item at the later event.
@@ -48,11 +63,14 @@ test("a Chat read at any cursor returns what reading all of Chat returns", (t) =
 
   const newest = store.lastEventId(task.id);
   const all = chatItems(task, store.chatEvents(task.id));
+  const [request] = all;
+  assert.equal(request?.kind, "message");
+  request.message.attachments = [note];
   const chatNewest = Math.max(...all.map((item) => item.event_id));
 
   for (let after = 0; after <= newest + 1; after++) {
     assert.deepEqual(
-      chatRead(store, task, after),
+      chatRead(store, attachments, task, after),
       {
         items: all.filter(
           (item) =>

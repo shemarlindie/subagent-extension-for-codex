@@ -23,6 +23,7 @@ test("MIME metadata overrides extensions and ignores casing and parameters", () 
   );
 
   assert.equal(baseMime(file("a.PNG")), "image/png");
+  assert.equal(fileFormat(file("a.avif")), "image");
   assert.equal(baseMime(file("a.txt")), "text/plain");
   assert.equal(baseMime(file("a.png", "", "Image/WebP; x=1")), "image/webp");
 });

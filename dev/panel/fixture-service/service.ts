@@ -23,6 +23,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace";
 import { callTool } from "../../../src/service/platform/server/tools";
 import type { Task } from "../../../src/shared/tasks/model";
 import { FIXTURE_SERVICE_TOOLS } from "../host/host-helpers";
+import { previewAttachments } from "../scenarios/attachment-scenarios";
 import {
   type ChangeFixture,
   type Edits,
@@ -216,6 +217,25 @@ function seedChanges(
   }
 }
 
+/** Stores the fixture attachments. One has no file, as if removed by hand. */
+function seedAttachments(control: Control) {
+  for (const [taskId, attachments] of Object.entries(previewAttachments)) {
+    const folder = control.attachments.folder(taskId);
+    mkdirSync(folder, { recursive: true });
+
+    for (const { content, ...attachment } of attachments) {
+      if (content !== undefined) {
+        writeFileSync(join(folder, attachment.file), content);
+      }
+    }
+
+    control.attachments.save(
+      taskId,
+      attachments.map(({ content: _, ...attachment }) => attachment),
+    );
+  }
+}
+
 /** Seed task metadata first, leaving repositories and edit replay until requested. */
 function fixtureStore() {
   if (current) return current;
@@ -229,6 +249,7 @@ function fixtureStore() {
   (globalThis as { __fixtureStore?: FixtureStore }).__fixtureStore = current;
 
   for (const task of previewTasks) store.save(structuredClone(task));
+  seedAttachments(control);
 
   return current;
 }

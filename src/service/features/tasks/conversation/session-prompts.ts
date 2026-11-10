@@ -1,7 +1,19 @@
+import { join } from "node:path";
+
+import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import type { Task } from "../../../../shared/tasks/model.js";
+import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
 import type { Store } from "../storage/store.js";
+
+/** An attachment's size: diff stats, or its line count. */
+function attachmentSize(a: TaskAttachment) {
+  const lines = `${a.lines} ${a.lines === 1 ? "line" : "lines"}`;
+  if (a.source !== "diff") return lines;
+
+  return `${a.files} ${a.files === 1 ? "file" : "files"}, +${a.additions} -${a.deletions}`;
+}
 
 /** Bounds the earlier conversation a new session's prompt carries. */
 const MAX_TRANSCRIPT_CHARS = 50_000;
@@ -10,7 +22,10 @@ type NewSessionReason = "no_session" | "session_unavailable";
 
 /** Builds turn prompts and checks whether the provider can resume a session. */
 export class SessionPrompts {
-  constructor(private store: Store) {}
+  constructor(
+    private store: Store,
+    private attachments: Attachments,
+  ) {}
 
   /**
    * Why a later turn can't resume the task's session: there is none (the
@@ -43,12 +58,14 @@ export class SessionPrompts {
    */
   sessionPrompt(t: Task) {
     const workspaceContext = this.workspaceContext(t);
+    const attachments = this.attachmentList(t);
     const transcript = t.turn > 1 ? this.transcript(t) : "";
 
     return [
       t.description,
       ...(workspaceContext ? [workspaceContext] : []),
-      ...t.context,
+      ...(t.context ?? []),
+      ...(attachments ? [attachments] : []),
       ...(transcript ? [transcript] : []),
       ...this.unsent(t),
     ].join("\n\n");
@@ -67,6 +84,21 @@ export class SessionPrompts {
     }
 
     return "This task runs in the current repository, including staged, unstaged and untracked files. Write profiles edit this checkout directly. Preserve unrelated uncommitted changes.";
+  }
+
+  /** The task's attachments, each with its summary, size and file. */
+  private attachmentList(t: Task) {
+    const attachments = this.attachments.list(t.id);
+    if (!attachments.length) return "";
+    const folder = this.attachments.folder(t.id);
+
+    return [
+      "Attachments, read them as needed:",
+      ...attachments.map(
+        (a) =>
+          `- ${a.title} (${attachmentSize(a)}): ${a.summary}\n  ${join(folder, a.file)}`,
+      ),
+    ].join("\n");
   }
 
   /** The messages the worker's session hasn't received, in order. */

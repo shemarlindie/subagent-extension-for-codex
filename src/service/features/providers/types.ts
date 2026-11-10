@@ -36,6 +36,11 @@ export interface RunContext {
   /** Reports an edit whose diff could not be captured. */
   editUnrecorded(path?: string, source?: FileEdit["source"]): void;
   task: Task;
+  /**
+   * The real path of the task's attachment folder, which the worker reads
+   * and must not change. Absent when the task has no attachments.
+   */
+  attachments?: string;
   /** Aborted to interrupt the turn, which then ends as interrupted. */
   signal: AbortSignal;
   /**

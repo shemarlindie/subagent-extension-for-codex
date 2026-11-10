@@ -219,33 +219,32 @@ export class Projects {
     return { repository };
   }
 
-  async resolve(path: string) {
-    this.refresh();
-    if (!isAbsolute(path)) throw new Error("Use an absolute repository path");
-    const actual = await realpath(path);
+  /** Rejects a folder no stored root approves. Reads the stored roots, which the CLI can change. */
+  assertApproved(actual: string) {
+    const approved = this.list().some((root) =>
+      root.kind === "repository"
+        ? root.repository === actual
+        : within(root.repository, actual),
+    );
 
-    const approved = () =>
-      this.list().some((root) => {
-        if (root.kind === "repository") return root.repository === actual;
-
-        return within(root.repository, actual);
-      });
-
-    if (!approved()) {
+    if (!approved) {
       throw new Error(
         "Repository outside allowed roots (register this repository or approve its parent)",
       );
     }
+  }
+
+  async resolve(path: string) {
+    this.refresh();
+    if (!isAbsolute(path)) throw new Error("Use an absolute repository path");
+    const actual = await realpath(path);
+    this.assertApproved(actual);
 
     // Keep the existing canonical-path containment and Git-root validation too.
     const repository = await this.workspaces.repository(actual);
 
     // Revocation may happen while Git validation yields.
-    if (!approved()) {
-      throw new Error(
-        "Repository outside allowed roots (register this repository or approve its parent)",
-      );
-    }
+    this.assertApproved(actual);
 
     return repository;
   }

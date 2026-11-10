@@ -19,6 +19,7 @@ import {
   challengeHeader,
   healthProof,
 } from "../../../src/service/platform/service/health-proof.js";
+import { serviceIdentity } from "../../../src/service/platform/service/identity.js";
 import { connectService } from "../../../src/service/platform/service/launcher.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort, stopService } from "../../support/service.js";
@@ -32,6 +33,8 @@ const launcher = new URL(
 ).href;
 
 const tsx = import.meta.resolve("tsx");
+/** The API version this build speaks. */
+const { apiVersion } = serviceIdentity();
 
 async function connectProcess(env: NodeJS.ProcessEnv) {
   const clean = { ...process.env };
@@ -230,7 +233,7 @@ async function serviceData(
 test("launcher uses a service it didn't start whatever its version, and never drains it", async (t) => {
   const { origin, drains } = await identified(t, {
     version: "0.0.1",
-    apiVersion: 1,
+    apiVersion,
     launcher: "foreground",
   });
 
@@ -266,7 +269,7 @@ test("launcher refuses an incompatible service it didn't start", async (t) => {
 test("launcher drains an older plugin service and keeps using it while it speaks the same API", async (t) => {
   const { origin, drains } = await identified(t, {
     version: "0.0.1",
-    apiVersion: 1,
+    apiVersion,
     launcher: "stdio",
   });
 
@@ -303,7 +306,7 @@ test(
 
     const health = await (await fetch(`${origin}/health`)).json();
     assert.equal(health.launcher, "stdio");
-    assert.equal(health.apiVersion, 1);
+    assert.equal(health.apiVersion, apiVersion);
 
     const metadata = JSON.parse(
       await readFile(join(dir, "service.json"), "utf8"),
@@ -401,7 +404,7 @@ test("a chosen port another program holds fails with a clear message", async (t)
 
 test("launcher follows newly published metadata when a relocating service holds the lease", async (t) => {
   const { origin } = await identified(t, {
-    apiVersion: 1,
+    apiVersion,
     launcher: "foreground",
   });
 
@@ -500,7 +503,7 @@ test("launcher never sends the token to a listener that can't prove it holds it"
         ? health(req, "guessed-token", {
             service: "subagent-extension-for-codex",
             status: "ok",
-            apiVersion: 1,
+            apiVersion,
           })
         : "{}",
     );
@@ -538,7 +541,7 @@ test("launcher waits for an existing service to finish recovery without spawning
         health(req, "recovery-token", {
           service: "subagent-extension-for-codex",
           status: probes < 3 ? "starting" : "ready",
-          apiVersion: 1,
+          apiVersion,
         }),
       );
     } else {
@@ -580,7 +583,7 @@ test("launcher waits through dropped connections without spawning", async (t) =>
         ? health(req, "dropped-token", {
             service: "subagent-extension-for-codex",
             status: "ok",
-            apiVersion: 1,
+            apiVersion,
           })
         : "{}",
     );

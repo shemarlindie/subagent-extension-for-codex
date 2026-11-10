@@ -1,8 +1,16 @@
 import { Tooltip } from "@base-ui/react/tooltip";
-import { type ReactElement, useCallback, useEffect, useState } from "react";
+import {
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 interface TooltipWrapperProps {
   label: string;
+  /** Formatted popup text, when the plain `label` isn't enough. */
+  content?: ReactNode;
   children: ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -14,6 +22,7 @@ interface TooltipWrapperProps {
 
 export function TooltipWrapper({
   label,
+  content,
   children,
   open: controlledOpen,
   onOpenChange,
@@ -74,7 +83,7 @@ export function TooltipWrapper({
               {arrow && (
                 <Tooltip.Arrow className="tooltip-arrow" aria-hidden="true" />
               )}
-              {label}
+              {content ?? label}
             </Tooltip.Popup>
           </Tooltip.Positioner>
         </Tooltip.Portal>

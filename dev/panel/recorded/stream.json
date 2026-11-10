@@ -6,7 +6,6 @@
     "description": "Without using any tools, write a numbered list of 12 tips for writing clear commit messages, one sentence each.",
     "repository": "/demo/project",
     "revision": "HEAD",
-    "context": [],
     "workspace_strategy": "worktree",
     "budget": {
       "max_runtime_minutes": 3,
