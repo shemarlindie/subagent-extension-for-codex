@@ -1,5 +1,5 @@
 import type { Task } from "../../../src/shared/tasks/model";
-import { previewEvents, previewStreamingDraft } from "./fixtures";
+import { previewEvents, previewStreamingDrafts } from "./fixtures";
 import { liveConversationSnapshot } from "./live-conversation";
 
 const startedAt = Date.now();
@@ -27,10 +27,15 @@ export function livePreview() {
 
   const draftFor = (id: unknown) => {
     if (id === live.task.id) return live.draft;
-    if (id !== previewStreamingDraft.taskId) return undefined;
-    const { messageId, text } = previewStreamingDraft;
-    // The standalone streaming fixture grows at 60 characters per second, then pauses and restarts.
-    const length = (elapsed / 1000) * 60;
+
+    const streaming = previewStreamingDrafts.find(
+      (draft) => draft.taskId === id,
+    );
+
+    if (!streaming) return undefined;
+    const { messageId, text, charactersPerSecond } = streaming;
+    // A standalone streaming fixture grows at its rate, then pauses and restarts.
+    const length = (elapsed / 1000) * charactersPerSecond;
 
     return {
       message_id: messageId,
