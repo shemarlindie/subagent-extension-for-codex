@@ -87,7 +87,7 @@ async function resolveAttachment(
   project: string,
   input: AttachmentInput,
 ): Promise<Resolved> {
-  if (!("source" in input)) {
+  if (input.source === "inline") {
     return {
       title: input.title ?? (input.path ? basename(input.path) : "Note"),
       summary: input.summary,
@@ -235,9 +235,7 @@ export class Attachments {
         } catch (error) {
           const label =
             input.title ??
-            ("source" in input && input.source === "diff"
-              ? "diff"
-              : (input.path ?? "note"));
+            (input.source === "diff" ? "diff" : (input.path ?? "note"));
 
           // Keeps the class, so logs tell caller mistakes from failures.
           const Wrapper =

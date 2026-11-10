@@ -64,7 +64,7 @@ label.
 
 | Kind   | Shape                                                               | Content                                                                    | Generated title                                       |
 | ------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Inline | `{ summary, format, text, title?, path? }`                          | `text`, at most 8,000 characters                                           | The file name of `path`, otherwise "Note"             |
+| Inline | `{ source: "inline", summary, format, text, title?, path? }`        | `text`, at most 8,000 characters                                           | The file name of `path`, otherwise "Note"             |
 | Diff   | `{ source: "diff", summary, title?, paths? }`                       | The project's uncommitted changes against `HEAD`, untracked files included | "Uncommitted changes", or the path when it's one file |
 | File   | `{ source: "file", path, summary, title?, start_line?, end_line? }` | The file, or lines `start_line` to `end_line`                              | The file name, plus the line range when there is one  |
 

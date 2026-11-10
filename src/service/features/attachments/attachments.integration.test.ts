@@ -83,12 +83,23 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   const t = await c.start("alice", {
     ...input(repo),
     attachments: [
-      { summary: "A decision.", format: "markdown", text: "Use X." },
+      {
+        source: "inline",
+        summary: "A decision.",
+        format: "markdown",
+        text: "Use X.",
+      },
       { source: "diff", summary: "The changes." },
       { source: "file", path: "notes.md", summary: "Notes." },
       { source: "file", path: "notes.md", start_line: 2, summary: "Tail." },
       { source: "file", path: "notes.md", summary: "Mine.", title: "Custom" },
-      { summary: "A label.", format: "code", text: "x", path: "example.png" },
+      {
+        source: "inline",
+        summary: "A label.",
+        format: "code",
+        text: "x",
+        path: "example.png",
+      },
     ],
   });
 
@@ -119,12 +130,19 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   await writeFile(join(repo, "image.bin"), Buffer.from([1, 0, 2]));
   await writeFile(join(dir, "outside.txt"), "outside");
   await symlink(join(dir, "outside.txt"), join(repo, "escape.txt"));
-  const note = { summary: "Note.", format: "text", text: "x" };
+
+  const note = {
+    source: "inline",
+    summary: "Note.",
+    format: "text",
+    text: "x",
+  };
 
   const rejected: [object, RegExp][] = [
     [{ attachments: ["text"] }, /Invalid input/],
     [{ context: ["excerpt"] }, /replaced by attachments/],
-    [{ attachments: [{ format: "text", text: "x" }] }, /summary/],
+    [{ attachments: [{ ...note, source: undefined }] }, /source/],
+    [{ attachments: [{ ...note, summary: undefined }] }, /summary/],
     [{ attachments: [{ ...note, summary: "s".repeat(201) }] }, /one sentence/],
     [{ attachments: [{ ...note, title: "t".repeat(61) }] }, /title/],
     [{ attachments: [{ ...note, text: "x".repeat(8001) }] }, /by reference/],
@@ -262,7 +280,14 @@ test("attachments stay out of the task body, go with the task, and legacy contex
 
   const t = await c.start("alice", {
     ...input(repo),
-    attachments: [{ summary: "A decision.", format: "text", text: "Use X." }],
+    attachments: [
+      {
+        source: "inline",
+        summary: "A decision.",
+        format: "text",
+        text: "Use X.",
+      },
+    ],
   });
 
   await until(() => store.get(t.id, "alice").status === "completed");
@@ -318,7 +343,10 @@ test("failed starts and overlapping project removal leave no folder, and the swe
   // A parent approval stays after the project's removal.
   await c.projects.register(dirname(repo), "parent");
   const { repository } = await c.projects.register(repo);
-  const attachments = [{ summary: "Note.", format: "text", text: "x" }];
+
+  const attachments = [
+    { source: "inline", summary: "Note.", format: "text", text: "x" },
+  ];
 
   store.database.client.exec(
     "CREATE TRIGGER reject_queued BEFORE INSERT ON events WHEN NEW.type='task.queued' BEGIN SELECT RAISE(ABORT, 'event write failed'); END",

@@ -40,10 +40,10 @@ becomes the title. The worker does not see this conversation.
 Give the worker what it can't find itself in `attachments`. Attach project
 content by reference, regardless of size: `{ source: "file", path }` with an
 optional line range, or `{ source: "diff", paths? }` for uncommitted changes.
-Use inline text only for short content that exists only in this chat, such as
-decisions or constraints. Write each summary as one sentence on what the
-attachment is and why the worker needs it, such as "The failing test's log,
-which shows the timeout."
+Use inline text, `{ source: "inline", format, text }`, only for short content
+that exists only in this chat, such as decisions or constraints. Write each
+summary as one sentence on what the attachment is and why the worker needs it,
+such as "The failing test's log, which shows the timeout."
 
 Start independent tasks together. Start a task that needs another task's
 result after that task finishes, and attach the result inline.
