@@ -7,7 +7,7 @@ import {
   attachmentIcon,
   attachmentRange,
   attachmentSize,
-  chipTitle,
+  displayTitle,
 } from "./attachment-display";
 
 /** Characters a long title keeps visible at its end, such as its extension. */
@@ -19,7 +19,7 @@ type AttachmentChipContentProps = { attachment: RequestAttachment };
 export function AttachmentChipContent({
   attachment,
 }: AttachmentChipContentProps) {
-  const title = chipTitle(attachment),
+  const title = displayTitle(attachment),
     // A long title truncates in the middle, so its extension stays visible.
     split = title.length > TITLE_END * 2;
 

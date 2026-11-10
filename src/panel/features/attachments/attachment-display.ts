@@ -36,10 +36,14 @@ export function attachmentRange({
 }
 
 /**
- * The chip's title. A generated title's `:44-55` suffix is left off, since
- * the chip shows the range beside it.
+ * The title chips and the dialog show. A generated title's `:44-55` suffix is
+ * left off, since both show the range beside it.
  */
-export function chipTitle({ title, start_line, end_line }: RequestAttachment) {
+export function displayTitle({
+  title,
+  start_line,
+  end_line,
+}: RequestAttachment) {
   const suffix = `:${start_line}-${end_line}`;
 
   return start_line !== undefined &&

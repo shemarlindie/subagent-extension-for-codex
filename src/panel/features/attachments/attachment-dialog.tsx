@@ -17,6 +17,7 @@ import {
   attachmentFile,
   attachmentIcon,
   attachmentOrigin,
+  displayTitle,
 } from "./attachment-display";
 import { readAttachment } from "./read-attachment";
 
@@ -181,7 +182,7 @@ function AttachmentNav({ attachment, attachments }: AttachmentNavProps) {
 }
 
 export const attachmentDialog = defineDialog<"attachment">({
-  title: ({ attachment }) => attachment.title,
+  title: ({ attachment }) => displayTitle(attachment),
   render: ({ task, attachment }) => (
     <AttachmentPreview task={task} attachment={attachment} />
   ),
