@@ -3,6 +3,27 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.3.0
+
+### Features
+
+- Replace start_task context with task attachments (#47)
+- Add an about section with claude upgrade guidance (#42)
+- Remove task dependencies (#39)
+- Return task summaries from list_tasks (#35)
+- Refine session settings to match sdk options (#29)
+- Respect org policy and explain what it changes (#21)
+
+### Fixes
+
+- Prevent duplicate activity rows (#50)
+- Keep chat pinned through fast streaming replies (#49)
+- Identify delegated sessions as the extension (#48)
+- Review deletion targets and finish Claude session cleanup (#44)
+- List models when the org policy fetch hangs (#26)
+- Return plain errors from the stdio proxy (#25)
+- Stop losing replies and error messages (#24)
+
 ## 0.2.0
 
 ### Features
