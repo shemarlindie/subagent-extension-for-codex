@@ -746,83 +746,103 @@ test("settings search groups all matches, explains choices and keeps saved edits
   ).toHaveAccessibleDescription(/Setting: profiles\.researcher\.instructions/);
 });
 
-test("clearing settings search restores browsing position and expanded drafts", async ({
-  consolePage: page,
-}) => {
-  await page.setViewportSize({ width: 1000, height: 430 });
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("tab", { name: "Worker profiles", exact: true }).click();
+test.describe("with motion", () => {
+  // The open instructions panel animates back in after search clears.
+  test.use({ reducedMotion: "no-preference" });
 
-  await page
-    .getByRole("button", {
+  test("clearing settings search restores browsing position and expanded drafts", async ({
+    consolePage: page,
+  }) => {
+    await page.setViewportSize({ width: 1000, height: 430 });
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+    await page
+      .getByRole("tab", { name: "Worker profiles", exact: true })
+      .click();
+
+    await page
+      .getByRole("button", {
+        name: "Researcher custom instructions",
+        exact: true,
+      })
+      .click();
+
+    const instructions = page.getByRole("textbox", {
       name: "Researcher custom instructions",
       exact: true,
-    })
-    .click();
+    });
 
-  const instructions = page.getByRole("textbox", {
-    name: "Researcher custom instructions",
-    exact: true,
+    await expect
+      .poll(() =>
+        page
+          .locator(".profile-instructions", { has: instructions })
+          .evaluate(
+            (panel) =>
+              !panel.hasAttribute("data-starting-style") &&
+              panel.getAnimations().length === 0,
+          ),
+      )
+      .toBe(true);
+
+    await instructions.fill("Preserve this draft.");
+    const pageFrame = page.locator(".settings-page");
+    const search = page.getByRole("searchbox", { name: "Search settings" });
+    await search.focus();
+
+    const focusedPosition = await pageFrame.evaluate(
+      (element) => element.scrollTop,
+    );
+
+    await pageFrame.evaluate((element) => {
+      element.scrollTop += 120;
+    });
+
+    const position = await pageFrame.evaluate((element) => element.scrollTop);
+    expect(position).toBeGreaterThan(focusedPosition);
+    await search.fill("timeout");
+    await expect(instructions).toBeHidden();
+    await search.press("Escape");
+    await expect(search).toBeFocused();
+    await expect(instructions).toHaveValue("Preserve this draft.");
+    await expect(instructions).toBeVisible();
+
+    await expect(
+      page.getByRole("tab", { name: /^Worker profiles/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    await expect
+      .poll(() => pageFrame.evaluate((element) => element.scrollTop))
+      .toBe(position);
+
+    // Sticky controls stay separate with narrow panels and host font sizes.
+    await page.setViewportSize({ width: 360, height: 600 });
+
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--font-text-sm-size", "28px");
+    });
+
+    await pageFrame.evaluate((element) => {
+      element.scrollTop = 300;
+    });
+
+    await expect(async () => {
+      const bounds = await pageFrame.evaluate((element) => ({
+        headerBottom: element
+          .querySelector(".page-frame-heading")!
+          .getBoundingClientRect().bottom,
+        searchTop: element
+          .querySelector(".settings-search")!
+          .getBoundingClientRect().top,
+        searchBottom: element
+          .querySelector(".settings-search")!
+          .getBoundingClientRect().bottom,
+        tabsTop: element
+          .querySelector(".settings-section-tabs-list")!
+          .getBoundingClientRect().top,
+      }));
+
+      expect(bounds.searchTop).toBeGreaterThanOrEqual(bounds.headerBottom);
+      expect(bounds.tabsTop).toBeGreaterThanOrEqual(bounds.searchBottom);
+    }).toPass();
   });
-
-  await instructions.fill("Preserve this draft.");
-  const pageFrame = page.locator(".settings-page");
-  const search = page.getByRole("searchbox", { name: "Search settings" });
-  await search.focus();
-
-  const focusedPosition = await pageFrame.evaluate(
-    (element) => element.scrollTop,
-  );
-
-  await pageFrame.evaluate((element) => {
-    element.scrollTop += 120;
-  });
-
-  const position = await pageFrame.evaluate((element) => element.scrollTop);
-  expect(position).toBeGreaterThan(focusedPosition);
-  await search.fill("timeout");
-  await expect(instructions).toBeHidden();
-  await search.press("Escape");
-  await expect(search).toBeFocused();
-  await expect(instructions).toHaveValue("Preserve this draft.");
-  await expect(instructions).toBeVisible();
-
-  await expect(
-    page.getByRole("tab", { name: /^Worker profiles/ }),
-  ).toHaveAttribute("aria-selected", "true");
-
-  await expect
-    .poll(() => pageFrame.evaluate((element) => element.scrollTop))
-    .toBe(position);
-
-  // Sticky controls stay separate with narrow panels and host font sizes.
-  await page.setViewportSize({ width: 360, height: 600 });
-
-  await page.evaluate(() => {
-    document.documentElement.style.setProperty("--font-text-sm-size", "28px");
-  });
-
-  await pageFrame.evaluate((element) => {
-    element.scrollTop = 300;
-  });
-
-  await expect(async () => {
-    const bounds = await pageFrame.evaluate((element) => ({
-      headerBottom: element
-        .querySelector(".page-frame-heading")!
-        .getBoundingClientRect().bottom,
-      searchTop: element
-        .querySelector(".settings-search")!
-        .getBoundingClientRect().top,
-      searchBottom: element
-        .querySelector(".settings-search")!
-        .getBoundingClientRect().bottom,
-      tabsTop: element
-        .querySelector(".settings-section-tabs-list")!
-        .getBoundingClientRect().top,
-    }));
-
-    expect(bounds.searchTop).toBeGreaterThanOrEqual(bounds.headerBottom);
-    expect(bounds.tabsTop).toBeGreaterThanOrEqual(bounds.searchBottom);
-  }).toPass();
 });

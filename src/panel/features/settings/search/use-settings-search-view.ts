@@ -24,12 +24,53 @@ export function useSettingsSearchView(form: RefObject<HTMLFormElement | null>) {
   };
 
   useLayoutEffect(() => {
-    if (previous.current && !active) {
-      for (const { element, top } of saved.current) element.scrollTop = top;
-    }
-
+    const restoring = previous.current && !active;
     previous.current = active;
-  }, [active]);
+    if (!restoring) return;
+
+    const targets = saved.current;
+    for (const { element, top } of targets) element.scrollTop = top;
+
+    // Panels that search closed animate open again, so the browser clamps the
+    // position until they regain their height. Restore once they settle,
+    // unless the user has scrolled since.
+    const clamped = targets.map(({ element }) => element.scrollTop);
+    let cancelled = false;
+
+    // Wait two frames, so the reopening panels' transitions have started.
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const root = form.current;
+
+        // Looping animations, such as loading indicators, never finish.
+        const animations =
+          root && typeof root.getAnimations === "function"
+            ? root
+                .getAnimations({ subtree: true })
+                .filter(
+                  (animation) =>
+                    animation.effect?.getTiming().iterations !==
+                    Number.POSITIVE_INFINITY,
+                )
+            : [];
+
+        void Promise.allSettled(
+          animations.map((animation) => animation.finished),
+        ).then(() => {
+          if (cancelled) return;
+
+          targets.forEach(({ element, top }, index) => {
+            if (element.scrollTop === clamped[index]) element.scrollTop = top;
+          });
+        });
+      }),
+    );
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [active, form]);
 
   return { query, setQuery };
 }
