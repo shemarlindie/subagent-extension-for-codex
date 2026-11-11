@@ -258,6 +258,14 @@ test.skipIf(process.platform === "win32")(
       ),
       "chore/release-v2.0.0",
     );
+
+    // A squashed release pull request leaves the tag off main.
+    await git("tag", "v2.0.0");
+    await git("switch", "-q", "main");
+    await git("merge", "-q", "--squash", "chore/release-v2.0.0");
+    await git("commit", "-qm", "chore(release): v2.0.0 (#1)");
+
+    assert.equal(await next("fix: a fix"), "chore/release-v2.0.1");
   },
 );
 
@@ -298,6 +306,22 @@ test.skipIf(process.platform === "win32")(
 
     await notes("\n## 0.2.0\n\nNotes.\n");
     assert.match(await refusal("0.2.0"), /Commit or discard/);
+
+    // A newer release tag that main doesn't contain or list.
+    const side = await git(
+      "commit-tree",
+      "HEAD^{tree}",
+      "-p",
+      "HEAD",
+      "-m",
+      "side",
+    );
+
+    await git("tag", "v0.4.0", side.stdout.trim());
+    assert.match(await refusal("0.5.0"), /only local/);
+
+    await git("push", "-q", "origin", "v0.4.0");
+    assert.match(await refusal("0.5.0"), /Check whether/);
 
     assert.equal((await git("branch", "--list", "chore/*")).stdout, "");
   },
