@@ -17,7 +17,7 @@ const values: DelegateValues = {
   sandbox: "off",
   repository: "/repo/a",
   description: "Fix the flaky login test",
-  worker: "claude:general",
+  worker: "claude:implementer",
   model: "",
   reasoning_effort: "default",
   revision: "HEAD",
@@ -117,13 +117,14 @@ test("a profile choice saves as its default and rolls back when saving fails", a
   await flush();
 
   const saved = () =>
-    controller.getSnapshot().newTask?.defaults?.models.profiles.general.model;
+    controller.getSnapshot().newTask?.defaults?.models.profiles.implementer
+      .model;
 
   transport.handler = (name) => (name === "update_settings" ? {} : undefined);
 
   assert.equal(
     await controller.newTasks.saveProfileSetting(
-      "claude:general",
+      "claude:implementer",
       "model",
       "opus",
     ),
@@ -132,7 +133,7 @@ test("a profile choice saves as its default and rolls back when saving fails", a
 
   assert.deepEqual(transport.calls.at(-1), {
     name: "update_settings",
-    args: { set: { models: { profiles: { general: { model: "opus" } } } } },
+    args: { set: { models: { profiles: { implementer: { model: "opus" } } } } },
   });
 
   assert.equal(saved(), "opus");
@@ -144,11 +145,11 @@ test("a profile choice saves as its default and rolls back when saving fails", a
 
   assert.equal(
     await controller.newTasks.saveProfileSetting(
-      "claude:general",
+      "claude:implementer",
       "model",
       "haiku",
     ),
-    "The General profile's default could not be saved: Service unavailable",
+    "The Implementer profile's default could not be saved: Service unavailable",
   );
 
   assert.equal(saved(), "opus");

@@ -2,14 +2,9 @@ import { Icon, type IconName } from "../../../shared/components/icons/icons";
 
 /** Shared profile glyphs used in task rows and worker settings. */
 const WORKER_PROFILE_ICONS = {
-  general: "user-round",
   researcher: "glasses",
   reviewer: "diff-search",
   implementer: "code",
-  debugger: "bug",
-  test_engineer: "flask",
-  refactorer: "arrows-horizontal",
-  security_reviewer: "shield-check",
 } satisfies Record<string, IconName>;
 
 export function workerProfileIconName(profile: string): IconName | undefined {

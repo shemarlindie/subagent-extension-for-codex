@@ -18,7 +18,7 @@ test("model-selected modes cannot exceed the concrete extension setting", () => 
 });
 
 test("read-only profiles default to plan mode, and a task's own mode wins", () => {
-  for (const role of ["researcher", "reviewer", "security_reviewer"]) {
+  for (const role of ["researcher", "reviewer"]) {
     assert.deepEqual(resolveClaudePermission({}, "acceptEdits", role), {
       mode: "plan",
       source: "profile",

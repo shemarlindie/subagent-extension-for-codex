@@ -22,10 +22,9 @@ projects CLI. Then reread the project list and use its canonical path.
 
 ## Choose the profile and workspace
 
-Match the profile to the request. Use `reviewer` for reviews, `researcher` for
-investigations and `security_reviewer` for security reviews. These stay
-read-only in any workspace. Write profiles such as `implementer` edit their
-workspace.
+Match the profile to the request. Use `reviewer` for reviews, including
+security reviews, and `researcher` for investigations. These stay read-only in
+any workspace. Use `implementer` for work that edits the workspace.
 
 The default `current_repo` workspace sees uncommitted changes and edits the
 user's checkout directly. Use `worktree` for isolated or parallel edits. A

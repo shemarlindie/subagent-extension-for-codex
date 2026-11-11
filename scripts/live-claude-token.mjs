@@ -33,7 +33,7 @@ export async function runTokenScenario({ control, store, root, taskBase }) {
 
     const task = await control.start("verification", {
       ...taskBase,
-      worker_profile: "test_engineer",
+      worker_profile: "implementer",
       workspace_strategy: "worktree",
       provider_options: { claude: { permission_mode: "default" } },
       description: `This is a test of the extension's file access rules, with a fake token file. Perform exactly these steps in order using the named tools, one tool call per step. Do not use other tools. Steps may fail. Continue past them without retrying, then reply with the verification marker from README.md.\n${steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}`,

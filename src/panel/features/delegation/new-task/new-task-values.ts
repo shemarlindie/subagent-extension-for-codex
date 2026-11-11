@@ -10,7 +10,7 @@ import { taskProjects, workerChoice } from "../delegation";
 export const NEW_TASK_SESSION_ID = "draft";
 
 /** The profile a composed task starts with unless the user picks another. */
-const NEW_TASK_PROFILE = "general";
+const NEW_TASK_PROFILE = "implementer";
 
 /** A draft's first line, which stands in for the title until the task starts. */
 export function draftTitle(description = "") {
@@ -40,9 +40,9 @@ export function profileValues(
 }
 
 /**
- * The composer's starting values: the scoped project (or the only one),
- * the General profile with its saved settings and the same settings defaults
- * as the Advanced task dialog. Values that depend on pending reads stay blank
+ * The composer's starting values: the scoped project (or the only one), the
+ * Implementer profile with its saved settings and the same settings defaults as
+ * the Advanced task dialog. Values that depend on pending reads stay blank
  * until they load.
  */
 export function newTaskInitialValues(

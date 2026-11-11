@@ -51,6 +51,7 @@ export function ProfileChip({
       onValueChange={choose}
       loading={loading}
       disabled={disabled}
+      iconOnly
       options={workers.flatMap((worker) =>
         worker.profiles.map((profile) => {
           const label = titleCase(profile);

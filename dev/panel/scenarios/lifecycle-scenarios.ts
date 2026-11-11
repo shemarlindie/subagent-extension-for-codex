@@ -384,7 +384,7 @@ export const lifecycleTasks: Task[] = [
     title: "Fix the flaky retry test",
     description:
       "Find why retry.test.ts fails intermittently and propose a fix.",
-    worker_profile: "debugger",
+    worker_profile: "implementer",
     provider_options: settingOptions(),
     status: "failed",
     error: "Worker stopped: reached the maximum number of turns.",
@@ -495,7 +495,7 @@ export const lifecycleTasks: Task[] = [
     title: "Stabilise the retry timer test",
     description:
       "Make the retry test independent of real time so it stops failing on slow machines.",
-    worker_profile: "test_engineer",
+    worker_profile: "implementer",
     status: "completed",
     turn: 2,
     instructions_sent: 1,

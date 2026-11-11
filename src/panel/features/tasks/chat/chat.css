@@ -680,8 +680,8 @@ body[data-expanded-panel="true"]
   min-height: 1lh;
 }
 /*
- * The profile keeps a pill and the rest follow as one abbreviated line, as
- * the new-task composer summarizes them.
+ * The profile shows as its icon and the rest follow as one abbreviated line,
+ * as the new-task composer summarizes them.
  */
 .task-run-settings {
   display: flex;
@@ -701,11 +701,7 @@ body[data-expanded-panel="true"]
   align-items: center;
 }
 .task-run-settings li:first-child {
-  gap: 4px;
   margin-inline-end: 6px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--hover);
 }
 /* The model name is the one that can run long. */
 .task-run-settings li:nth-child(2) {
