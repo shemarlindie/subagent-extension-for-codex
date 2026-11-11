@@ -5,9 +5,9 @@ export function useSettingsStickyLayout(
   form: RefObject<HTMLFormElement | null>,
 ) {
   useLayoutEffect(() => {
-    const page = form.current?.closest<HTMLElement>(".settings-page"),
-      heading = page?.querySelector<HTMLElement>(".page-frame-heading"),
-      search = form.current?.querySelector<HTMLElement>(".settings-search");
+    const page = form.current?.closest<HTMLElement>(".settings-page");
+    const heading = page?.querySelector<HTMLElement>(".page-frame-heading");
+    const search = form.current?.querySelector<HTMLElement>(".settings-search");
 
     if (!page || !heading || !search) return;
 

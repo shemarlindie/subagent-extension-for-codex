@@ -80,10 +80,10 @@ function PendingUpdatesForm() {
       {tasks.length ? (
         <ul className="pending-update-tasks" aria-label="Pending updates">
           {tasks.map((task) => {
-            const taskIds = task.updates.map((u) => u.event_id),
-              count = taskIds.filter((id) => !unchecked.has(id)).length,
-              // The task checkbox alone selects a task's only update.
-              single = taskIds.length === 1;
+            const taskIds = task.updates.map((u) => u.event_id);
+            const count = taskIds.filter((id) => !unchecked.has(id)).length;
+            // The task checkbox alone selects a task's only update.
+            const single = taskIds.length === 1;
 
             return (
               <li key={task.task_id} data-task={task.task_id}>

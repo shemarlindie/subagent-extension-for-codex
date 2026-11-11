@@ -51,8 +51,8 @@ export function ChangedFileTreeItem({
     );
   }
 
-  const { path, status } = node.entry.file,
-    read = isViewed(viewed, node.entry);
+  const { path, status } = node.entry.file;
+  const read = isViewed(viewed, node.entry);
 
   return (
     <li>

@@ -84,11 +84,11 @@ export function LoadingSkeleton({
   blockScroll = false,
   children,
 }: LoadingSkeletonProps) {
-  const rootRef = useRef<HTMLElement | null>(null),
-    parent = useContext(SkeletonVisibilityContext),
-    ownVisible = useLoadingSkeletonDelay(parent === null),
-    visible = parent?.visible ?? ownVisible,
-    loading = parent?.loading ?? true;
+  const rootRef = useRef<HTMLElement | null>(null);
+  const parent = useContext(SkeletonVisibilityContext);
+  const ownVisible = useLoadingSkeletonDelay(parent === null);
+  const visible = parent?.visible ?? ownVisible;
+  const loading = parent?.loading ?? true;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -118,9 +118,9 @@ export function LoadingSkeleton({
 
 /** A decorative shimmer block; its parent provides the accessible label. */
 export function SkeletonShape({ className, measureText }: SkeletonShapeProps) {
-  const parent = useContext(SkeletonVisibilityContext),
-    ownVisible = useLoadingSkeletonDelay(parent === null),
-    visible = parent?.visible ?? ownVisible;
+  const parent = useContext(SkeletonVisibilityContext);
+  const ownVisible = useLoadingSkeletonDelay(parent === null);
+  const visible = parent?.visible ?? ownVisible;
 
   const shape = (
     <span

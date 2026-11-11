@@ -18,17 +18,20 @@ export function SettingsSectionRows({
 }: SettingsSectionRowsProps) {
   const rows = section.rows.map((row) => {
     const scopes =
-        row.kind === "models"
-          ? row.scopes.map((scope) => ({
-              scope,
-              match: search.scopeMatch(section, scope),
-            }))
-          : [],
-      match = row.kind === "models" ? undefined : search.rowMatch(section, row),
-      score =
-        row.kind === "models"
-          ? Math.min(...scopes.map((entry) => entry.match?.score ?? Infinity))
-          : (match?.score ?? Infinity);
+      row.kind === "models"
+        ? row.scopes.map((scope) => ({
+            scope,
+            match: search.scopeMatch(section, scope),
+          }))
+        : [];
+
+    const match =
+      row.kind === "models" ? undefined : search.rowMatch(section, row);
+
+    const score =
+      row.kind === "models"
+        ? Math.min(...scopes.map((entry) => entry.match?.score ?? Infinity))
+        : (match?.score ?? Infinity);
 
     return { row, scopes, match, score };
   });
@@ -91,10 +94,11 @@ export function SettingsSectionRows({
           );
         }
 
-        const explanation = search.active ? match?.explanation : undefined,
-          noteId = explanation
-            ? `settings-match-${fieldName(row.path)}`
-            : undefined;
+        const explanation = search.active ? match?.explanation : undefined;
+
+        const noteId = explanation
+          ? `settings-match-${fieldName(row.path)}`
+          : undefined;
 
         return (
           <div key={row.path} className="settings-search-row" hidden={!match}>

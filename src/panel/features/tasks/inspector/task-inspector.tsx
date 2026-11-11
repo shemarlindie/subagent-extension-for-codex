@@ -131,8 +131,8 @@ function useStackedLayout(taskId?: string) {
   const [stacked, setStacked] = useState(false);
 
   useLayoutEffect(() => {
-    const detail = detailRef.current,
-      header = headerRef.current;
+    const detail = detailRef.current;
+    const header = headerRef.current;
 
     if (!detail || !header || typeof ResizeObserver === "undefined") {
       return setStacked(false);

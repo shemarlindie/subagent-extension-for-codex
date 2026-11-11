@@ -58,8 +58,8 @@ function setup(label: string, command: string) {
 }
 
 test("embedded panels copy the complete value and show compact success feedback", async () => {
-  const label = "Branch",
-    command = `agent/${"long-branch-name".repeat(40)}`;
+  const label = "Branch";
+  const command = `agent/${"long-branch-name".repeat(40)}`;
 
   const writeText = vi.fn(async () => {});
 

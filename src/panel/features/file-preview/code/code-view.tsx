@@ -22,12 +22,13 @@ type CodeViewProps = {
  */
 export function CodeView({ code, language, startLine = 1 }: CodeViewProps) {
   const highlighted = useMemo(
-      () => highlightLines(code.replace(/\n$/, ""), language),
-      [code, language],
-    ),
-    blocks = useMemo(() => chunks(highlighted, BLOCK_LINES), [highlighted]),
-    // The gutter fits the last number, with room for four digits at least.
-    digits = Math.max(4, String(startLine + highlighted.length - 1).length);
+    () => highlightLines(code.replace(/\n$/, ""), language),
+    [code, language],
+  );
+
+  const blocks = useMemo(() => chunks(highlighted, BLOCK_LINES), [highlighted]);
+  // The gutter fits the last number, with room for four digits at least.
+  const digits = Math.max(4, String(startLine + highlighted.length - 1).length);
 
   return (
     <div

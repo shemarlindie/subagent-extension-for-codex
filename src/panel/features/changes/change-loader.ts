@@ -23,8 +23,8 @@ export class ChangeLoader {
 
   /** Reads the selected task's change totals when its status or turn has moved on. */
   async loadCountsIfStale() {
-    const state = this.context.snapshot(),
-      task = selectedTask(state);
+    const state = this.context.snapshot();
+    const task = selectedTask(state);
 
     if (task && changesStale(state.changeCounts, task)) {
       await this.loadCounts();
@@ -33,8 +33,8 @@ export class ChangeLoader {
 
   /** Reads the selected task's full changes while the Changes tab is open. */
   async loadChangesIfStale() {
-    const state = this.context.snapshot(),
-      task = selectedTask(state);
+    const state = this.context.snapshot();
+    const task = selectedTask(state);
 
     if (task && state.tab === "changes" && changesStale(state.changes, task)) {
       await this.loadChanges();
@@ -47,8 +47,8 @@ export class ChangeLoader {
    * opens. A reload keeps the last totals during the read and after failure.
    */
   async loadCounts() {
-    const state = this.context.snapshot(),
-      task = selectedTask(state);
+    const state = this.context.snapshot();
+    const task = selectedTask(state);
 
     if (!task || this.context.closed()) return;
 
@@ -93,8 +93,8 @@ export class ChangeLoader {
    * read and after failure; changing scope clears it.
    */
   async loadChanges(scope?: ChangeScope) {
-    const state = this.context.snapshot(),
-      task = selectedTask(state);
+    const state = this.context.snapshot();
+    const task = selectedTask(state);
 
     if (!task || this.context.closed()) return;
 

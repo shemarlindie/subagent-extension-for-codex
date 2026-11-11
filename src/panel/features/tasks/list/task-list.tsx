@@ -129,16 +129,18 @@ function TaskRowStatus({ task }: { task: Task }) {
 }
 
 function TaskRowRuntime({ task }: { task: Task }) {
-  const status = rowStatus(task),
-    activityLabel =
-      (task.status === "running" &&
-        (status.kind === "failed" ||
-          status.kind === "paused" ||
-          status.kind === "input")) ||
-      Boolean(task.pending_input),
-    live = runtimeLive(task) && !activityLabel,
-    now = useNow(live),
-    runtime = taskRuntimeMs(task, now);
+  const status = rowStatus(task);
+
+  const activityLabel =
+    (task.status === "running" &&
+      (status.kind === "failed" ||
+        status.kind === "paused" ||
+        status.kind === "input")) ||
+    Boolean(task.pending_input);
+
+  const live = runtimeLive(task) && !activityLabel;
+  const now = useNow(live);
+  const runtime = taskRuntimeMs(task, now);
 
   // Attention states and tasks without an active clock use their short label.
   // Finished tasks say their time is final; the status icon says how it ended.

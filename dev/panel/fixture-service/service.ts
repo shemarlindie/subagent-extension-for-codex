@@ -118,8 +118,8 @@ function recordFixtureTurn(
   after: Map<string, string>,
 ) {
   for (const path of new Set([...before.keys(), ...after.keys()])) {
-    const oldText = before.get(path),
-      newText = after.get(path);
+    const oldText = before.get(path);
+    const newText = after.get(path);
 
     if (oldText === newText) continue;
 

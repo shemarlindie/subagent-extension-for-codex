@@ -39,8 +39,8 @@ export function raiseBudget(task: { budget: Budget }, raise: BudgetRaise) {
   const budget = budgetRaiseSchema.parse(raise);
 
   for (const key of ["max_runtime_minutes", "max_cost_usd"] as const) {
-    const next = budget[key],
-      current = task.budget[key];
+    const next = budget[key];
+    const current = task.budget[key];
 
     if (next === undefined) continue;
 
@@ -78,8 +78,8 @@ export function raisedBudget(
   validateBudgets(provider, { budget });
 
   const raisedFrom = (key: "max_runtime_minutes" | "max_cost_usd") => {
-    const next = budget[key],
-      current = original[key];
+    const next = budget[key];
+    const current = original[key];
 
     return next !== null && current !== null && next > current;
   };

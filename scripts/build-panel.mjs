@@ -36,10 +36,10 @@ async function inlineImports(file) {
 }
 
 {
-  const entry = "src/panel/app/app.ts",
-    template = "src/panel/app/app.html",
-    stylesheet = "src/panel/styles/app.css",
-    output = "dist/app.html";
+  const entry = "src/panel/app/app.ts";
+  const template = "src/panel/app/app.html";
+  const stylesheet = "src/panel/styles/app.css";
+  const output = "dist/app.html";
 
   // Ignore vite.config.ts: it configures the dev host, not production bundles.
   const result = await build({

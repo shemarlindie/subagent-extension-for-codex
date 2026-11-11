@@ -30,12 +30,13 @@ export function claudeStartOptions(
     optionsForProvider(input.provider_options, provider),
   );
 
-  const claude = defaults.providers.claude,
-    resolved = resolveClaudePermission(
-      requested,
-      claude.permission_mode,
-      input.worker_profile,
-    );
+  const claude = defaults.providers.claude;
+
+  const resolved = resolveClaudePermission(
+    requested,
+    claude.permission_mode,
+    input.worker_profile,
+  );
 
   if (authority !== "user") {
     if (exceedsPermission(resolved.mode, claude.permission_mode)) {

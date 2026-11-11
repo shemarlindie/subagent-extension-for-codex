@@ -31,8 +31,10 @@ function useSettingsTabOrientation(): Orientation {
   );
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 640px)"),
-      update = () => setOrientation(media.matches ? "horizontal" : "vertical");
+    const media = window.matchMedia("(max-width: 640px)");
+
+    const update = () =>
+      setOrientation(media.matches ? "horizontal" : "vertical");
 
     media.addEventListener("change", update);
 
@@ -53,11 +55,12 @@ export function SettingsSections({
   searching = false,
   onValueChange,
 }: SettingsSectionsProps) {
-  const orientation = useSettingsTabOrientation(),
-    listRef = useActiveTabInView(value, {
-      getTabId: (section) => `settings-tab-${section}`,
-      layoutKey: orientation,
-    });
+  const orientation = useSettingsTabOrientation();
+
+  const listRef = useActiveTabInView(value, {
+    getTabId: (section) => `settings-tab-${section}`,
+    layoutKey: orientation,
+  });
 
   return (
     <Tabs.Root

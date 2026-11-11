@@ -338,10 +338,11 @@ test("a file missing from the diff still has a section to read and mark", () => 
   // The diff has no part for src/b.ts.
   const { view } = setup({ ...loaded, data: { ...twoFiles, diff: data.diff } });
 
-  const sections = view.container.querySelectorAll(".diff-file"),
-    missing = view.container.querySelector<HTMLDetailsElement>(
-      '[data-changed-file="src/b.ts"]',
-    );
+  const sections = view.container.querySelectorAll(".diff-file");
+
+  const missing = view.container.querySelector<HTMLDetailsElement>(
+    '[data-changed-file="src/b.ts"]',
+  );
 
   assert.equal(sections.length, 2);
 

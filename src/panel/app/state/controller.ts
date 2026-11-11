@@ -1520,8 +1520,8 @@ export class Controller {
   }
 
   async registerProject(repository: string) {
-    const { scopeVersion: scope, dialog } = this.state,
-      forNewTask = dialog?.kind === "project" && dialog.forNewTask;
+    const { scopeVersion: scope, dialog } = this.state;
+    const forNewTask = dialog?.kind === "project" && dialog.forNewTask;
 
     let registered: string | undefined;
 

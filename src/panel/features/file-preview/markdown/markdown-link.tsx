@@ -21,9 +21,9 @@ function fragmentId(href: string) {
 function jumpWithin(event: MouseEvent<HTMLAnchorElement>, href: string) {
   event.preventDefault();
 
-  const id = fragmentId(href),
-    root = event.currentTarget.closest<HTMLElement>(".markdown-body"),
-    prefix = root?.dataset.idPrefix ?? "";
+  const id = fragmentId(href);
+  const root = event.currentTarget.closest<HTMLElement>(".markdown-body");
+  const prefix = root?.dataset.idPrefix ?? "";
 
   // Footnote links already carry the view's prefix; heading links are written
   // as plain slugs, sometimes with the heading's own capitals.
@@ -42,8 +42,8 @@ export function MarkdownLink({
   children,
   ...rest
 }: MarkdownLinkProps) {
-  const controller = useContext(ControllerContext),
-    kind = linkKind(href);
+  const controller = useContext(ControllerContext);
+  const kind = linkKind(href);
 
   if (kind === "text") {
     return (

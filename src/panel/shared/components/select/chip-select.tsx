@@ -59,8 +59,8 @@ export function ChipSelect({
   footer,
   iconOnly = false,
 }: ChipSelectProps) {
-  const selected = options.find((option) => option.value === value),
-    text = selected ? (selected.chipLabel ?? selected.label) : placeholder;
+  const selected = options.find((option) => option.value === value);
+  const text = selected ? (selected.chipLabel ?? selected.label) : placeholder;
 
   // The action waits for the menu to close and return focus to the chip, so
   // a dialog it opens restores focus there.

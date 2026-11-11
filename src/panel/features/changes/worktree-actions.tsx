@@ -36,8 +36,8 @@ export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
 
   if (task.branch_deleted) return null;
 
-  const running = ACTIVE.includes(task.status),
-    disabled = busy || running || changes.loading || Boolean(changes.error);
+  const running = ACTIVE.includes(task.status);
+  const disabled = busy || running || changes.loading || Boolean(changes.error);
 
   return (
     <div className="worktree-actions">

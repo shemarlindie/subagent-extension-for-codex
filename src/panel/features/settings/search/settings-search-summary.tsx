@@ -16,9 +16,10 @@ export function SettingsSearchSummary({
   onClear,
 }: SettingsSearchSummaryProps) {
   const text = results
-      ? `${results} ${results === 1 ? "result" : "results"} across ${sections} ${sections === 1 ? "section" : "sections"}`
-      : `No settings match “${query.trim()}”.`,
-    [announcement, setAnnouncement] = useState("");
+    ? `${results} ${results === 1 ? "result" : "results"} across ${sections} ${sections === 1 ? "section" : "sections"}`
+    : `No settings match “${query.trim()}”.`;
+
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setAnnouncement(text), 200);

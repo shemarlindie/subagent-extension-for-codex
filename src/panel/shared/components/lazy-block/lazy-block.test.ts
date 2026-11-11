@@ -135,10 +135,10 @@ test("the scroll area is the nearest ancestor that overflows, else the viewport"
     return element;
   };
 
-  const outer = box(true),
-    // Scrolls sideways only: grown to fit its rows, as a table view is.
-    inner = box(false),
-    element = document.createElement("div");
+  const outer = box(true);
+  // Scrolls sideways only: grown to fit its rows, as a table view is.
+  const inner = box(false);
+  const element = document.createElement("div");
 
   inner.append(element);
   outer.append(inner);
@@ -177,8 +177,8 @@ test("after a resize changes which box scrolls, blocks watch the new one", (t) =
     return { element, overflow: (value: boolean) => (overflowing = value) };
   };
 
-  const outer = box(),
-    inner = box();
+  const outer = box();
+  const inner = box();
 
   outer.element.append(inner.element);
   document.body.append(outer.element);
@@ -255,8 +255,8 @@ test("a scroll area changing size, without a window resize, also re-finds it", (
     return { element, overflow: (value: boolean) => (overflowing = value) };
   };
 
-  const outer = box(),
-    inner = box();
+  const outer = box();
+  const inner = box();
 
   outer.element.append(inner.element);
   document.body.append(outer.element);

@@ -45,12 +45,12 @@ export function QuestionCard({
   onNext,
   onUnskip,
 }: QuestionCardProps) {
-  const id = `question-${index}`,
-    options = question.options ?? [],
-    multiple = Boolean(question.multiSelect),
-    active = position === "active",
-    presetField = register(`answers.${index}`),
-    customField = register(`custom.${index}`);
+  const id = `question-${index}`;
+  const options = question.options ?? [];
+  const multiple = Boolean(question.multiSelect);
+  const active = position === "active";
+  const presetField = register(`answers.${index}`);
+  const customField = register(`custom.${index}`);
 
   // A single choice and a typed answer are alternatives. The fields have no
   // async validation, so RHF's change promise has nothing to report.

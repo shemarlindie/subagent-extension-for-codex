@@ -17,13 +17,13 @@ type RequestAttachmentsProps = {
 
 /** Reads the hidden copies' widths and fits the row to its current width. */
 function useAttachmentFit(count: number) {
-  const row = useRef<HTMLDivElement>(null),
-    measure = useRef<HTMLDivElement>(null),
-    [fit, setFit] = useState<AttachmentFit>({ shown: count });
+  const row = useRef<HTMLDivElement>(null);
+  const measure = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState<AttachmentFit>({ shown: count });
 
   useLayoutEffect(() => {
-    const rowElement = row.current,
-      copies = measure.current;
+    const rowElement = row.current;
+    const copies = measure.current;
 
     if (!rowElement || !copies) return;
 
@@ -61,14 +61,14 @@ export function RequestAttachments({
   task,
   attachments,
 }: RequestAttachmentsProps) {
-  const controller = useController(),
-    count = attachments.length,
-    { row, measure, fit } = useAttachmentFit(count),
-    [expanded, setExpanded] = useState(false),
-    hidden = count - fit.shown,
-    shown = expanded ? attachments : attachments.slice(0, fit.shown),
-    // Every hidden-count label, so the fit uses the one it would show.
-    counts = Array.from({ length: count - 1 }, (_, index) => index + 1);
+  const controller = useController();
+  const count = attachments.length;
+  const { row, measure, fit } = useAttachmentFit(count);
+  const [expanded, setExpanded] = useState(false);
+  const hidden = count - fit.shown;
+  const shown = expanded ? attachments : attachments.slice(0, fit.shown);
+  // Every hidden-count label, so the fit uses the one it would show.
+  const counts = Array.from({ length: count - 1 }, (_, index) => index + 1);
 
   return (
     <div className="request-attachments" data-expanded={expanded || undefined}>

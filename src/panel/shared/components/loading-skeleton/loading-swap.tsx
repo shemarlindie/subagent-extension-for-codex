@@ -39,16 +39,16 @@ export function LoadingSwap({
 }: LoadingSwapProps) {
   const classes = ["loading-swap", className].filter(Boolean).join(" ");
 
-  const delayedLoading = useLoadingSkeletonDelay(loading),
-    activeSkeleton = loading && delayedLoading,
-    [retainedSkeleton, setRetainedSkeleton] = useState(false),
-    [minimumVisibleElapsed, setMinimumVisibleElapsed] = useState(false),
-    showSkeleton = loading || retainedSkeleton,
-    visibleSkeleton = activeSkeleton || retainedSkeleton;
+  const delayedLoading = useLoadingSkeletonDelay(loading);
+  const activeSkeleton = loading && delayedLoading;
+  const [retainedSkeleton, setRetainedSkeleton] = useState(false);
+  const [minimumVisibleElapsed, setMinimumVisibleElapsed] = useState(false);
+  const showSkeleton = loading || retainedSkeleton;
+  const visibleSkeleton = activeSkeleton || retainedSkeleton;
 
-  const skeletonShownAt = useRef<number | null>(null),
-    wasLoading = useRef(loading),
-    previousLoading = useRef(loading);
+  const skeletonShownAt = useRef<number | null>(null);
+  const wasLoading = useRef(loading);
+  const previousLoading = useRef(loading);
 
   const remainingMinimumVisible =
     skeletonShownAt.current === null
@@ -60,13 +60,15 @@ export function LoadingSwap({
         );
 
   const minimumVisibleHold =
-      !loading &&
-      retainedSkeleton &&
-      !minimumVisibleElapsed &&
-      remainingMinimumVisible > 0,
-    effectiveLoading = loading || minimumVisibleHold,
-    activeSkeletonLayer =
-      activeSkeleton || (loading && retainedSkeleton) || minimumVisibleHold;
+    !loading &&
+    retainedSkeleton &&
+    !minimumVisibleElapsed &&
+    remainingMinimumVisible > 0;
+
+  const effectiveLoading = loading || minimumVisibleHold;
+
+  const activeSkeletonLayer =
+    activeSkeleton || (loading && retainedSkeleton) || minimumVisibleHold;
 
   useEffect(() => {
     if (loading || !retainedSkeleton || minimumVisibleHold) return;

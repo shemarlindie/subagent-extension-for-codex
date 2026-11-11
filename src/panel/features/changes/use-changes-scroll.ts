@@ -19,12 +19,12 @@ export function useChangesScroll(
   ready: boolean,
   hasFiles = true,
 ) {
-  const viewportRef = useRef<HTMLDivElement>(null),
-    // The reader scrolled since the tab showed, so their place is current.
-    scrolled = useRef(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  // The reader scrolled since the tab showed, so their place is current.
+  const scrolled = useRef(false);
 
-  const [atTop, setAtTop] = useState(true),
-    [activePath, setActivePath] = useState(reading.position?.anchor?.path);
+  const [atTop, setAtTop] = useState(true);
+  const [activePath, setActivePath] = useState(reading.position?.anchor?.path);
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;

@@ -11,8 +11,8 @@ import { TaskRow } from "./task-list";
 test("right-clicking an unread row offers Mark read", async () => {
   onTestFinished(cleanup);
 
-  const onSelect = vi.fn(),
-    onToggleRead = vi.fn();
+  const onSelect = vi.fn();
+  const onToggleRead = vi.fn();
 
   const view = render(
     <TaskRow

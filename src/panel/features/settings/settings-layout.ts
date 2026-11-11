@@ -123,8 +123,8 @@ export function changes(
 
   for (const row of sections.flatMap((section) => section.rows)) {
     for (const path of rowPaths(row)) {
-      const name = fieldName(path),
-        value = form[name];
+      const name = fieldName(path);
+      const value = form[name];
 
       if (value === undefined || value === initial[name]) continue;
 

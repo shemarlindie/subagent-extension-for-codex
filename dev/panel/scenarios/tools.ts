@@ -257,8 +257,8 @@ function raisePreviewBudget(taskId: unknown, value: unknown) {
   const budget = { ...originalBudget };
 
   for (const key of ["max_runtime_minutes", "max_cost_usd"] as const) {
-    const next = raise[key],
-      current = task.budget[key];
+    const next = raise[key];
+    const current = task.budget[key];
 
     if (next === undefined) continue;
 

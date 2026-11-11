@@ -1091,8 +1091,8 @@ export class Control {
 
   /** Sends a queued message into the busy task without changing its identity. */
   steerQueued(owner: string, id: string, messageId: string) {
-    const t = this.queueTask(owner, id),
-      a = this.active.get(id);
+    const t = this.queueTask(owner, id);
+    const a = this.active.get(id);
 
     if (a?.abort.signal.aborted) throw new Error("Task was interrupted.");
 
@@ -1139,8 +1139,8 @@ export class Control {
    * busy keeps them paused, and an archived task returns to the lists.
    */
   restoreQueued(owner: string, id: string, placements: QueuePlacement[]) {
-    const t = this.queueTask(owner, id),
-      busy = this.active.has(id) || BUSY.includes(t.status);
+    const t = this.queueTask(owner, id);
+    const busy = this.active.has(id) || BUSY.includes(t.status);
 
     // A task with messages queued again is back in the user's lists.
     restoreQueuedMessages(this.store, t, placements, busy, () =>

@@ -51,12 +51,14 @@ test.skipIf(process.platform === "win32")(
   "Homebrew targets the matching prefix and cask, including latest and quoted paths",
   async () => {
     for (const cask of ["claude-code", "claude-code@latest"]) {
-      const prefix = join(root, "brew's prefix", cask),
-        binary = await file(
-          join(prefix, "Caskroom", cask, "2.1.319", "claude"),
-        ),
-        launcher = await link(join(prefix, "bin", "claude"), binary),
-        manager = await file(join(prefix, "bin", "brew"));
+      const prefix = join(root, "brew's prefix", cask);
+
+      const binary = await file(
+        join(prefix, "Caskroom", cask, "2.1.319", "claude"),
+      );
+
+      const launcher = await link(join(prefix, "bin", "claude"), binary);
+      const manager = await file(join(prefix, "bin", "brew"));
 
       const info = await claudeUpgradeInfo(binary, environment(launcher));
 
@@ -84,9 +86,10 @@ test.skipIf(process.platform === "win32")(
   "native updates use the standard launcher and refuse version-pinned overrides",
   async () => {
     const binary = await file(
-        join(root, ".local", "share", "claude", "versions", "2.1.319"),
-      ),
-      launcher = await link(join(root, ".local", "bin", "claude"), binary);
+      join(root, ".local", "share", "claude", "versions", "2.1.319"),
+    );
+
+    const launcher = await link(join(root, ".local", "bin", "claude"), binary);
 
     const info = await claudeUpgradeInfo(binary, environment(launcher), root);
     expect(info.command).toBe(`'${launcher}' update`);

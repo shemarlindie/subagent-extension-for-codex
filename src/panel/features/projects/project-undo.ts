@@ -67,8 +67,8 @@ function projectChange(
 ): UndoEntry | undefined {
   if (!before) return undefined;
 
-  const { repository } = before,
-    was = projectName(before);
+  const { repository } = before;
+  const was = projectName(before);
 
   if (name === undefined) {
     if (deleteTasks || before.kind === "parent") return undefined;

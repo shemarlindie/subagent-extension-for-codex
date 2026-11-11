@@ -11,9 +11,9 @@ type WorktreeFormProps = {
 
 /** Confirms removing a worktree with uncommitted changes, or deleting a branch. */
 function WorktreeForm({ dialog }: WorktreeFormProps) {
-  const controller = useController(),
-    { action, task, files = [] } = dialog,
-    remove = action === "remove";
+  const controller = useController();
+  const { action, task, files = [] } = dialog;
+  const remove = action === "remove";
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();

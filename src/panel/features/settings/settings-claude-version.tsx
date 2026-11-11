@@ -51,9 +51,12 @@ export function SettingsClaudeVersion({
   error,
   onRecheck,
 }: SettingsClaudeVersionProps) {
-  const controller = useController(),
-    tooOld = readiness?.details.problem === "too_old",
-    current = Boolean(readiness?.ready && recommended && !recommended.behind);
+  const controller = useController();
+  const tooOld = readiness?.details.problem === "too_old";
+
+  const current = Boolean(
+    readiness?.ready && recommended && !recommended.behind,
+  );
 
   function openInstructions(event: MouseEvent<HTMLAnchorElement>) {
     if (!controller.transport.openLink) return;

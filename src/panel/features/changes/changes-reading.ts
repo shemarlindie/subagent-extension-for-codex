@@ -57,12 +57,13 @@ export function restorePosition(
 ) {
   container.scrollTop = position.top;
 
-  const { anchor } = position,
-    file =
-      anchor &&
-      [...files(viewport)].find(
-        (file) => file.getAttribute(FILE_ATTRIBUTE) === anchor.path,
-      );
+  const { anchor } = position;
+
+  const file =
+    anchor &&
+    [...files(viewport)].find(
+      (file) => file.getAttribute(FILE_ATTRIBUTE) === anchor.path,
+    );
 
   if (anchor && file) {
     container.scrollTop +=

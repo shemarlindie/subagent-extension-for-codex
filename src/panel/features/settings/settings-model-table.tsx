@@ -46,14 +46,15 @@ export function ModelTable({
   loading = false,
   reserveProviderScope = false,
 }: ModelTableProps) {
-  const { form } = useContext(SettingsContext),
-    search = useContext(SettingsSearchContext),
-    [opened, setOpened] = useState<Record<string, boolean>>({}),
-    query = search.active ? search.terms.join(" ") : "",
-    [searchExpansion, setSearchExpansion] = useState<SearchExpansion>({
-      query,
-      opened: {},
-    });
+  const { form } = useContext(SettingsContext);
+  const search = useContext(SettingsSearchContext);
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const query = search.active ? search.terms.join(" ") : "";
+
+  const [searchExpansion, setSearchExpansion] = useState<SearchExpansion>({
+    query,
+    opened: {},
+  });
 
   // Search expansion is temporary. A fresh query starts from its match metadata.
   if (searchExpansion.query !== query) {
@@ -68,12 +69,12 @@ export function ModelTable({
         <span>Reasoning</span>
       </div>
       {scopes.map((scope) => {
-        const modelName = fieldName(scope.model.path),
-          effortName = fieldName(scope.effort.path),
-          warningId = `setting-${effortName}-warning`,
-          note = searchNotes[scope.id],
-          noteId = note ? `settings-match-${modelName}` : undefined,
-          hasProfileIcon = Boolean(workerProfileIconName(scope.id));
+        const modelName = fieldName(scope.model.path);
+        const effortName = fieldName(scope.effort.path);
+        const warningId = `setting-${effortName}-warning`;
+        const note = searchNotes[scope.id];
+        const noteId = note ? `settings-match-${modelName}` : undefined;
+        const hasProfileIcon = Boolean(workerProfileIconName(scope.id));
 
         const onOpenChange = (open: boolean) => {
           if (search.active) {

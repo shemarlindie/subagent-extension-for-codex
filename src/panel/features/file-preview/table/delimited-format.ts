@@ -1,9 +1,9 @@
 /** Parses CSV or TSV, honoring quoted fields with embedded separators and newlines. */
 export function parseDelimited(content: string, separator = ","): string[][] {
   const rows: string[][] = [];
-  let row: string[] = [],
-    field = "",
-    quoted = false;
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
 
   // A byte order mark would otherwise prefix the first header.
   for (

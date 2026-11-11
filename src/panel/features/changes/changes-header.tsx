@@ -30,18 +30,18 @@ const CHANGES_NOTE =
 
 /** Where the changes are, how to get at them, and which part is shown. */
 export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
-  const controller = useController(),
-    data = changes?.data,
-    removed = task.workspace_removed,
-    loading = changes?.loading ?? (!data && !changes?.error),
-    summary = data ? changesSummary(changeCounts(data)) : "",
-    branch = task.branch,
-    [viewed] = useViewedFiles(task.id),
-    entries = data ? changedFileEntries(data) : [],
-    viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length,
-    loadingNote = data ? "Refreshing changes…" : "Reading changes…",
-    // Preview all picks up where the reader left off.
-    resumeAt = firstUnviewed(viewed, entries);
+  const controller = useController();
+  const data = changes?.data;
+  const removed = task.workspace_removed;
+  const loading = changes?.loading ?? (!data && !changes?.error);
+  const summary = data ? changesSummary(changeCounts(data)) : "";
+  const branch = task.branch;
+  const [viewed] = useViewedFiles(task.id);
+  const entries = data ? changedFileEntries(data) : [];
+  const viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length;
+  const loadingNote = data ? "Refreshing changes…" : "Reading changes…";
+  // Preview all picks up where the reader left off.
+  const resumeAt = firstUnviewed(viewed, entries);
 
   return (
     <div className="changes-header">

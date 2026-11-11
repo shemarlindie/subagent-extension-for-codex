@@ -52,8 +52,8 @@ export class TaskDetailLoader {
     { args, selection, draftRead }: ViewRequest,
     { chat, activity }: PanelView,
   ) {
-    const current = this.context.snapshot(),
-      id = current.selected;
+    const current = this.context.snapshot();
+    const id = current.selected;
 
     if (!id || this.context.closed()) return true;
 
@@ -91,8 +91,8 @@ export class TaskDetailLoader {
 
   /** Reads a turn's own events when the latest activity no longer holds them. */
   async viewTurn(turn: number) {
-    const state = this.context.snapshot(),
-      task = state.selected;
+    const state = this.context.snapshot();
+    const task = state.selected;
 
     if (!task) return;
 

@@ -59,6 +59,7 @@ export default defineConfig(
       // Best-effort cleanup and probing deliberately ignore failures.
       "no-empty": ["error", { allowEmptyCatch: true }],
       "no-nested-ternary": "error",
+      "one-var": ["error", "never"],
     },
   },
   {

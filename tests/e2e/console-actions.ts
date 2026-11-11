@@ -37,8 +37,8 @@ export async function scrollChatUp(page: Page, distance: number) {
   await expect
     .poll(
       async () => {
-        const top = await history.evaluate((element) => element.scrollTop),
-          settled = top === last;
+        const top = await history.evaluate((element) => element.scrollTop);
+        const settled = top === last;
 
         last = top;
 

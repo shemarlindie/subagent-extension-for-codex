@@ -14,14 +14,15 @@ function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
 }
 
 export function rowStatus(task: Task) {
-  const activity = task.status === "running" ? task.live_activity : undefined,
-    kind = rowKind(task, activity),
-    label =
-      activity &&
-      (kind === "failed" || kind === "paused" || kind === "input") &&
-      !task.pending_input
-        ? activity.text
-        : statusLabel(task);
+  const activity = task.status === "running" ? task.live_activity : undefined;
+  const kind = rowKind(task, activity);
+
+  const label =
+    activity &&
+    (kind === "failed" || kind === "paused" || kind === "input") &&
+    !task.pending_input
+      ? activity.text
+      : statusLabel(task);
 
   const shortLabels: Record<RowKind, string> = {
     queued: "Queued",

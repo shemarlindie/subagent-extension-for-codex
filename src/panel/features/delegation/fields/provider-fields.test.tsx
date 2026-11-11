@@ -215,9 +215,9 @@ test("known budget selections stay visible while workers finish loading", (t) =>
     );
   }
 
-  const view = render(<Fields />),
-    costMode = view.getByRole("switch", { name: "Cost limit" }),
-    cost = view.container.querySelector<HTMLInputElement>("#cost");
+  const view = render(<Fields />);
+  const costMode = view.getByRole("switch", { name: "Cost limit" });
+  const cost = view.container.querySelector<HTMLInputElement>("#cost");
 
   assert.equal(costMode.getAttribute("aria-disabled"), "true");
   assert.equal(costMode.getAttribute("aria-busy"), null);

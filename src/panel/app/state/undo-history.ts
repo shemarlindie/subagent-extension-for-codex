@@ -250,13 +250,13 @@ export class UndoHistory {
 
   /** Shows the step, with the earlier ones its open toast listed. */
   private stepped(entry: UndoEntry, direction: Direction) {
-    const state = this.context.snapshot(),
-      { view } = entry,
-      name = view && !view.visible(state) ? view.name(state) : undefined,
-      line = name ? `${entry.label} · ${name}` : entry.label,
-      verb = direction === "undo" ? "Undid" : "Redid",
-      offer = direction === "undo" ? "redo" : "undo",
-      streak = this.streak;
+    const state = this.context.snapshot();
+    const { view } = entry;
+    const name = view && !view.visible(state) ? view.name(state) : undefined;
+    const line = name ? `${entry.label} · ${name}` : entry.label;
+    const verb = direction === "undo" ? "Undid" : "Redid";
+    const offer = direction === "undo" ? "redo" : "undo";
+    const streak = this.streak;
 
     // Only steps the same way while their toast is open collect.
     const lines =

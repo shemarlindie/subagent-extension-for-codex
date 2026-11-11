@@ -356,17 +356,18 @@ test("native model controls scope discovered models and derive reasoning choices
     assert.equal("default" in node, false);
   }
 
-  const models = result.sections.find((s) => s.id === "models")!,
-    profiles = result.sections.find((s) => s.id === "profile-models")!;
+  const models = result.sections.find((s) => s.id === "models")!;
+  const profiles = result.sections.find((s) => s.id === "profile-models")!;
 
   assert.equal(models.title, "Model defaults");
   assert.ok(sectionPaths(profiles).includes("models.profiles.reviewer.model"));
 
   // Model options carry display names and keep a saved custom ID.
   const scopes = profiles.rows.flatMap((row) =>
-      row.kind === "models" ? row.scopes : [],
-    ),
-    reviewer = scopes.find((scope) => scope.label === "Reviewer");
+    row.kind === "models" ? row.scopes : [],
+  );
+
+  const reviewer = scopes.find((scope) => scope.label === "Reviewer");
 
   assert.equal(scopes[0]?.label, "Researcher");
   assert.ok(reviewer);

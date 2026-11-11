@@ -238,9 +238,9 @@ export type QueuePlacement = { message_id: string; index: number };
  * already has it as a steer, so the caller can't change them.
  */
 function removedMessages(store: Store, t: Task, ids: Set<string>) {
-  const found = new Map<string, QueuedMessage>(),
-    removed = new Set<string>(),
-    recorded = new Set<string>();
+  const found = new Map<string, QueuedMessage>();
+  const removed = new Set<string>();
+  const recorded = new Set<string>();
 
   const events = store.eventsOfTypes(t.id, [
     "task.queue_changed",
@@ -249,9 +249,9 @@ function removedMessages(store: Store, t: Task, ids: Set<string>) {
   ]);
 
   for (const e of events) {
-    const removal = eventPayload(e, "task.message_removed"),
-      instruction = eventPayload(e, "task.instruction"),
-      queue = eventPayload(e, "task.queue_changed")?.queue ?? [];
+    const removal = eventPayload(e, "task.message_removed");
+    const instruction = eventPayload(e, "task.instruction");
+    const queue = eventPayload(e, "task.queue_changed")?.queue ?? [];
 
     if (removal) removed.add(removal.message_id);
     if (instruction) recorded.add(instruction.message_id);
@@ -317,12 +317,13 @@ export function restoreQueuedMessages(
   const before = queueSnapshot(t);
 
   for (const { message_id: id, index } of restoring) {
-    const m = messages.get(id)!,
-      first = t.queue.filter((q) => q.recorded).length,
-      // Steers the worker already has lead the queue.
-      at = m.recorded
-        ? Math.min(index, first)
-        : Math.min(Math.max(index, first), t.queue.length);
+    const m = messages.get(id)!;
+    const first = t.queue.filter((q) => q.recorded).length;
+
+    // Steers the worker already has lead the queue.
+    const at = m.recorded
+      ? Math.min(index, first)
+      : Math.min(Math.max(index, first), t.queue.length);
 
     t.queue.splice(at, 0, m);
   }

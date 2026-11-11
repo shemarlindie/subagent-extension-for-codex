@@ -299,9 +299,10 @@ test("fixture task renaming updates listed titles and validates input", () => {
 
 test("fixture queues reorder, edit and remove in memory behind a left-over steer", () => {
   const task = previewTasks.find(
-      (candidate) => candidate.id === "preview-paused",
-    )!,
-    original = structuredClone(task.queue);
+    (candidate) => candidate.id === "preview-paused",
+  )!;
+
+  const original = structuredClone(task.queue);
 
   const order = () =>
     (previewTool("app_list_tasks") as { tasks: Task[] }).tasks
@@ -345,14 +346,15 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
 });
 
 test("fixture sends queue or steer a busy task in memory, never starting a turn", () => {
-  const find = (id: string) => previewTasks.find((task) => task.id === id)!,
-    running = find("preview-steering"),
-    input = find("preview-input"),
-    saved = [running, input].map((task) => ({
-      task,
-      queue: structuredClone(task.queue),
-      steers: structuredClone(task.pending_steers),
-    }));
+  const find = (id: string) => previewTasks.find((task) => task.id === id)!;
+  const running = find("preview-steering");
+  const input = find("preview-input");
+
+  const saved = [running, input].map((task) => ({
+    task,
+    queue: structuredClone(task.queue),
+    steers: structuredClone(task.pending_steers),
+  }));
 
   const send = (task: Task, delivery: string) =>
     previewTool("app_send_message", {

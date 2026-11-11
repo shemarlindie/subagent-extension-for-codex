@@ -137,20 +137,21 @@ export function delegateInitialValues({
   scope,
   draft,
 }: DelegateInitialValuesInput): DelegateValues {
-  const { statuses, defaults } = delegateReads(dialog),
-    settingsReady = statuses.settings === "ready",
-    contextReady = statuses.context === "ready",
-    target = delegateTarget(dialog, scope),
-    { budget } = defaults.task;
+  const { statuses, defaults } = delegateReads(dialog);
+  const settingsReady = statuses.settings === "ready";
+  const contextReady = statuses.context === "ready";
+  const target = delegateTarget(dialog, scope);
+  const { budget } = defaults.task;
 
   const preferred =
     dialog.preferredWorker ??
     `${defaults.task.provider}:${defaults.task.worker_profile}`;
 
-  const { provider: preferredProvider } = workerChoice(preferred),
-    preferredWorker = scope.workers.find(
-      (worker) => worker.provider === preferredProvider,
-    );
+  const { provider: preferredProvider } = workerChoice(preferred);
+
+  const preferredWorker = scope.workers.find(
+    (worker) => worker.provider === preferredProvider,
+  );
 
   const strategy = settingsReady ? defaults.task.workspace_strategy : "";
 

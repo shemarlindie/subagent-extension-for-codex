@@ -20,8 +20,8 @@ export function SandboxField({
   disabled,
   loading,
 }: SandboxFieldProps) {
-  const { control } = useFormContext<DelegateValues>(),
-    sandbox = permissions?.sandbox;
+  const { control } = useFormContext<DelegateValues>();
+  const sandbox = permissions?.sandbox;
 
   if (!sandbox && !unresolved) return null;
 

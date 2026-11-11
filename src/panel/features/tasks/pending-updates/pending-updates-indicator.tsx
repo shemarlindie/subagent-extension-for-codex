@@ -22,8 +22,8 @@ export function PendingUpdatesIndicator() {
 
   if (!count) return null;
 
-  const label = `${count} pending worker update${count === 1 ? "" : "s"}`,
-    waiting = updates.some((update) => update.kind === "request");
+  const label = `${count} pending worker update${count === 1 ? "" : "s"}`;
+  const waiting = updates.some((update) => update.kind === "request");
 
   return (
     <TooltipWrapper label={label}>

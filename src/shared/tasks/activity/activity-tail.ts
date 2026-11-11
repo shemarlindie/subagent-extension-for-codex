@@ -82,8 +82,8 @@ export function addDropped(
  * cursor, and a tally of the rest. Matches the service's reads, for fixtures.
  */
 export function windowActivity(events: Event[], after = 0): ActivityPage {
-  const start = Math.max(0, events.length - EVENT_TAIL_SIZE),
-    dropped = addDropped(undefined, events.slice(0, start));
+  const start = Math.max(0, events.length - EVENT_TAIL_SIZE);
+  const dropped = addDropped(undefined, events.slice(0, start));
 
   return {
     events: events.slice(start).filter((event) => event.id > after),
@@ -139,11 +139,11 @@ export function windowTurnActivity(
   events: Event[],
   turn: number,
 ): TurnActivityPage {
-  const previous = turnCloseIndex(events, turn - 1),
-    end = turnCloseIndex(events, turn),
-    range = events.slice(previous + 1, end === -1 ? undefined : end + 1),
-    start = Math.max(0, range.length - EVENT_TAIL_SIZE),
-    dropped = addDropped(undefined, range.slice(0, start));
+  const previous = turnCloseIndex(events, turn - 1);
+  const end = turnCloseIndex(events, turn);
+  const range = events.slice(previous + 1, end === -1 ? undefined : end + 1);
+  const start = Math.max(0, range.length - EVENT_TAIL_SIZE);
+  const dropped = addDropped(undefined, range.slice(0, start));
 
   return {
     turn,

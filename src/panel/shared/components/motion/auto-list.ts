@@ -62,21 +62,25 @@ export const autoListEffects: AutoAnimationPlugin = (
     });
   }
 
-  const zoom = el.currentCSSZoom || 1,
-    from = cssCoordinates(previous!, zoom),
-    to = cssCoordinates(next!, zoom),
-    [widthFrom, widthTo, heightFrom, heightTo] = getTransitionSizes(
-      el,
-      from,
-      to,
-    ),
-    // An edge that stays put anchors the box, as for a list pinned above the composer.
-    dx =
-      from.left + from.width === to.left + to.width ? 0 : from.left - to.left,
-    dy = from.top + from.height === to.top + to.height ? 0 : from.top - to.top;
+  const zoom = el.currentCSSZoom || 1;
+  const from = cssCoordinates(previous!, zoom);
+  const to = cssCoordinates(next!, zoom);
 
-  const start: Keyframe = { transform: `translate(${dx}px, ${dy}px)` },
-    end: Keyframe = { transform: "none" };
+  const [widthFrom, widthTo, heightFrom, heightTo] = getTransitionSizes(
+    el,
+    from,
+    to,
+  );
+
+  // An edge that stays put anchors the box, as for a list pinned above the composer.
+  const dx =
+    from.left + from.width === to.left + to.width ? 0 : from.left - to.left;
+
+  const dy =
+    from.top + from.height === to.top + to.height ? 0 : from.top - to.top;
+
+  const start: Keyframe = { transform: `translate(${dx}px, ${dy}px)` };
+  const end: Keyframe = { transform: "none" };
 
   // The list itself eases its size, so content around it follows.
   if (widthFrom !== widthTo) {

@@ -35,8 +35,8 @@ export function thinkingSpan(
   group: ActivityGroup,
   events: Event[],
 ): { start: number; end: number | null } | undefined {
-  const firstSignal = group.events.find(thinkingSignal),
-    last = group.events.at(-1)!;
+  const firstSignal = group.events.find(thinkingSignal);
+  const last = group.events.at(-1)!;
 
   if (!firstSignal) return undefined;
   const start = Date.parse(firstSignal.timestamp);
@@ -184,8 +184,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     }
 
     if (presentation.stream) {
-      const stream = presentation.stream,
-        parent = `${e.task_id}:${stream.id}`;
+      const stream = presentation.stream;
+      const parent = `${e.task_id}:${stream.id}`;
 
       let group = streams.get(parent);
 

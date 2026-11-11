@@ -21,8 +21,8 @@ const page = (diff: string, next_cursor?: string): Changes => ({
 });
 
 test("pages are read in order and merged into one diff", async () => {
-  const pages = [page("a", "1"), page("b", "2"), page("c")],
-    cursors: unknown[] = [];
+  const pages = [page("a", "1"), page("b", "2"), page("c")];
+  const cursors: unknown[] = [];
 
   const merged = await readChanges(
     "task",
@@ -57,13 +57,14 @@ test("a read that is no longer wanted stops between pages", async () => {
 });
 
 test("changes reload for another task or a new status or turn, not mid-read", () => {
-  const task = { id: "one", status: "running", turn: 1 } as Task,
-    state = {
-      task: "one",
-      scope: "task" as const,
-      key: changesKey(task),
-      loading: false,
-    };
+  const task = { id: "one", status: "running", turn: 1 } as Task;
+
+  const state = {
+    task: "one",
+    scope: "task" as const,
+    key: changesKey(task),
+    loading: false,
+  };
 
   assert.equal(changesStale(undefined, task), true);
   assert.equal(changesStale(state, task), false);

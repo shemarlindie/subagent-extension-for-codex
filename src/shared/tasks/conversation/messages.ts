@@ -48,8 +48,8 @@ function workerText(e: Event) {
 }
 
 const same = (message: string, reply: string) => {
-  const a = message.trim(),
-    b = reply.trim();
+  const a = message.trim();
+  const b = reply.trim();
 
   return a === b || a.endsWith(b);
 };

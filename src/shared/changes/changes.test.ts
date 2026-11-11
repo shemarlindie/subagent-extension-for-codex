@@ -10,9 +10,9 @@ import {
 } from "./changes.js";
 
 test("diffs split by file and page whole files, at least one per page", () => {
-  const one = "diff --git a/a b/a\n+diff --git inside content\n",
-    two = "diff --git a/b b/b\n-x\n",
-    parts = diffParts(one + two);
+  const one = "diff --git a/a b/a\n+diff --git inside content\n";
+  const two = "diff --git a/b b/b\n-x\n";
+  const parts = diffParts(one + two);
 
   assert.deepEqual(parts, [one, two]);
   assert.deepEqual(diffPage(parts, 0, 1_000), { diff: one + two, end: 2 });

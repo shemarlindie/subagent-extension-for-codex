@@ -31,8 +31,8 @@ function Prose({ text }: { text: string }): ReactNode {
     }
 
     // FENCE's code group is required, so every match has it.
-    const code = match[2]!.replace(/\n$/, ""),
-      language = match[1]?.trim().split(/\s/)[0];
+    const code = match[2]!.replace(/\n$/, "");
+    const language = match[1]?.trim().split(/\s/)[0];
 
     parts.push(
       <CodeBlock
@@ -187,9 +187,9 @@ export function ActivityContent({
   }
 
   if (type === "image" || type === "document") {
-    const source = record(block.source),
-      mediaType = scalarText(source.media_type),
-      data = typeof source.data === "string" ? source.data : undefined;
+    const source = record(block.source);
+    const mediaType = scalarText(source.media_type);
+    const data = typeof source.data === "string" ? source.data : undefined;
 
     const inlineImage =
       type === "image" &&

@@ -87,10 +87,11 @@ async function settledGeometry(history: Locator) {
   await expect
     .poll(
       async () => {
-        const current = await conversationGeometry(history),
-          same =
-            previous !== undefined &&
-            JSON.stringify(current) === JSON.stringify(previous);
+        const current = await conversationGeometry(history);
+
+        const same =
+          previous !== undefined &&
+          JSON.stringify(current) === JSON.stringify(previous);
 
         previous = current;
 

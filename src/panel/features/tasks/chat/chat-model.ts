@@ -36,13 +36,14 @@ export function spentBudget(task: Task): SpentBudget | undefined {
   if (composerMode(task) !== "idle") return undefined;
   const { max_cost_usd, max_runtime_minutes } = task.budget;
 
-  const cost = task.cost_usd ?? 0,
-    minutes = task.runtime_ms / 60000,
-    failed = task.status === "failed",
-    budgetRaise =
-      task.budget_raised_for_turn?.turn === task.turn
-        ? task.budget_raised_for_turn
-        : undefined;
+  const cost = task.cost_usd ?? 0;
+  const minutes = task.runtime_ms / 60000;
+  const failed = task.status === "failed";
+
+  const budgetRaise =
+    task.budget_raised_for_turn?.turn === task.turn
+      ? task.budget_raised_for_turn
+      : undefined;
 
   const spent: SpentBudget = {
     ...(max_cost_usd !== null &&

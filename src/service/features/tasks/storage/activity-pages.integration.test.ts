@@ -72,8 +72,8 @@ test("a page is the newest window and the tally of the rest", (t) => {
   const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 250);
 
-  const page = new ActivityPages(store).page(task.id, 0),
-    log = everything(store, task.id);
+  const page = new ActivityPages(store).page(task.id, 0);
+  const log = everything(store, task.id);
 
   assert.deepEqual(page, windowActivity(log));
   assert.equal(page.events.length, EVENT_TAIL_SIZE);
@@ -84,14 +84,14 @@ test("a poll returns only the events after its cursor and extends the tally", (t
   const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 10);
 
-  const pages = new ActivityPages(store),
-    first = pages.page(task.id, 0),
-    cursor = first.events.at(-1)!.id;
+  const pages = new ActivityPages(store);
+  const first = pages.page(task.id, 0);
+  const cursor = first.events.at(-1)!.id;
 
   write(1200);
 
-  const next = pages.page(task.id, cursor),
-    log = everything(store, task.id);
+  const next = pages.page(task.id, cursor);
+  const log = everything(store, task.id);
 
   assert.deepEqual(next, windowActivity(log, cursor));
   assert.equal(next.events.length, EVENT_TAIL_SIZE);
@@ -101,10 +101,10 @@ test("a poll with nothing new does not count the history again", (t) => {
   const { store, task, write } = fixture(t);
   write(EVENT_TAIL_SIZE + 500);
 
-  const pages = new ActivityPages(store),
-    first = pages.page(task.id, 0),
-    cursor = first.events.at(-1)!.id,
-    read = vi.spyOn(store, "taskEvents");
+  const pages = new ActivityPages(store);
+  const first = pages.page(task.id, 0);
+  const cursor = first.events.at(-1)!.id;
+  const read = vi.spyOn(store, "taskEvents");
 
   const again = pages.page(task.id, cursor);
 
@@ -138,9 +138,9 @@ test("a turn reads from the previous turn's close through its own close", (t) =>
   end(3);
   write(3);
 
-  const pages = new ActivityPages(store),
-    log = everything(store, task.id),
-    second = pages.turn(task.id, 2);
+  const pages = new ActivityPages(store);
+  const log = everything(store, task.id);
+  const second = pages.turn(task.id, 2);
 
   assert.deepEqual(second, windowTurnActivity(log, 2));
   assert.equal(second.events.length, EVENT_TAIL_SIZE);

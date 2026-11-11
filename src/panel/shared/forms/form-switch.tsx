@@ -36,9 +36,9 @@ export function FormSwitch({
   ariaLabel,
   title,
 }: FormSwitchProps) {
-  const generatedLabelId = useId(),
-    // The visible label names the switch unless another name is given.
-    nameId = label ? (labelId ?? generatedLabelId) : labelId;
+  const generatedLabelId = useId();
+  // The visible label names the switch unless another name is given.
+  const nameId = label ? (labelId ?? generatedLabelId) : labelId;
 
   const control = (
     <Switch.Root

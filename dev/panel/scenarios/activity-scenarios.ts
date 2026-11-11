@@ -474,8 +474,8 @@ const manyTurns = new Timeline("preview-many-turns", at(112), 4000);
 begin(manyTurns, ["Read", "Edit", "Bash"]);
 
 for (const [index, module] of manyTurnModules.entries()) {
-  const turn = index + 1,
-    file = `src/api/${module}-client.ts`;
+  const turn = index + 1;
+  const file = `src/api/${module}-client.ts`;
 
   if (turn > 1) {
     const followUp = manyTurnFollowUp(turn);

@@ -43,10 +43,14 @@ export function TaskGroup({
   actions,
   renderRow,
 }: TaskGroupProps) {
-  const id = useId(),
-    rows = capped ? groupRows(tasks, selected) : { shown: tasks, hidden: [] },
-    limited = rows.hidden.length > 0,
-    { shown, hidden } = expanded ? { shown: tasks, hidden: [] } : rows;
+  const id = useId();
+
+  const rows = capped
+    ? groupRows(tasks, selected)
+    : { shown: tasks, hidden: [] };
+
+  const limited = rows.hidden.length > 0;
+  const { shown, hidden } = expanded ? { shown: tasks, hidden: [] } : rows;
 
   return (
     <Accordion.Item

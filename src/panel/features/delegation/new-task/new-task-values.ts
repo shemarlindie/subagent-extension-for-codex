@@ -37,8 +37,10 @@ export function profileValues(
   worker: string,
   defaults?: Defaults,
 ): Pick<DelegateValues, "model" | "reasoning_effort"> {
-  const scope = `models.profiles.${workerChoice(worker).profile}`,
-    saved = (key: string) => scalarText(settingAt(defaults, `${scope}.${key}`));
+  const scope = `models.profiles.${workerChoice(worker).profile}`;
+
+  const saved = (key: string) =>
+    scalarText(settingAt(defaults, `${scope}.${key}`));
 
   return {
     model: saved("model"),
@@ -56,12 +58,14 @@ export function newTaskInitialValues(
   newTask: NewTaskState,
   state: ProjectTargetState & DelegateScope,
 ): DelegateValues {
-  const projects = newTaskProjects(state),
-    provider =
-      newTask.defaults?.task.provider || state.workers[0]?.provider || "",
-    repository =
-      state.repository ??
-      (projects.length === 1 ? projects[0]?.repository : undefined);
+  const projects = newTaskProjects(state);
+
+  const provider =
+    newTask.defaults?.task.provider || state.workers[0]?.provider || "";
+
+  const repository =
+    state.repository ??
+    (projects.length === 1 ? projects[0]?.repository : undefined);
 
   const values = delegateInitialValues({
     dialog: {

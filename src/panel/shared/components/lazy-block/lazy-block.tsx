@@ -103,19 +103,20 @@ export function LazyBlock({
   className,
   children,
 }: LazyBlockProps) {
-  const ref = useRef<HTMLElement>(null),
-    height = useRef(estimate),
-    [visible, setVisible] = useState(
-      eager || typeof IntersectionObserver === "undefined",
-    );
+  const ref = useRef<HTMLElement>(null);
+  const height = useRef(estimate);
+
+  const [visible, setVisible] = useState(
+    eager || typeof IntersectionObserver === "undefined",
+  );
 
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof IntersectionObserver === "undefined") return;
 
-    let root: HTMLElement | null,
-      observer: IntersectionObserver | undefined,
-      unwatch = () => {};
+    let root: HTMLElement | null;
+    let observer: IntersectionObserver | undefined;
+    let unwatch = () => {};
 
     // Visibility is measured against the scroll area found now; a block
     // watched against a box that no longer scrolls would count as always

@@ -79,21 +79,22 @@ export function modelScope(
   scope: string,
   { values, providers, catalogs }: ScopeInput,
 ) {
-  const scopePath = modelScopePath(scope),
-    modelPath = `${scopePath}.model`,
-    effortPath = `${scopePath}.reasoning_effort`,
-    providerScope = providers.includes(scope),
-    provider = providerScope
-      ? scope
-      : scalarText(settingAt(values, "task.provider"));
+  const scopePath = modelScopePath(scope);
+  const modelPath = `${scopePath}.model`;
+  const effortPath = `${scopePath}.reasoning_effort`;
+  const providerScope = providers.includes(scope);
+
+  const provider = providerScope
+    ? scope
+    : scalarText(settingAt(values, "task.provider"));
 
   // Global and role choices apply across providers; provider scopes use their own catalog.
   const choices = catalogs
     .filter((catalog) => !providerScope || catalog.provider === scope)
     .flatMap((catalog) => catalog.models ?? []);
 
-  const saved = scalarText(settingAt(values, modelPath)),
-    savedEffort = scalarText(settingAt(values, effortPath), "default");
+  const saved = scalarText(settingAt(values, modelPath));
+  const savedEffort = scalarText(settingAt(values, effortPath), "default");
 
   // The model this scope's tasks run: its own, then the scopes it inherits.
   const chain =
@@ -196,9 +197,10 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   // to the other section's exact setting; the defaults stand in for "the
   // task's" profile and provider.
   const modelPath = (scope: unknown) =>
-      `${modelScopePath(scalarText(scope))}.model`,
-    profileModel = modelPath(settingAt(values, "task.worker_profile")),
-    providerModel = modelPath(settingAt(values, "task.provider"));
+    `${modelScopePath(scalarText(scope))}.model`;
+
+  const profileModel = modelPath(settingAt(values, "task.worker_profile"));
+  const providerModel = modelPath(settingAt(values, "task.provider"));
 
   const defaultsHelp = withHelp(
     [

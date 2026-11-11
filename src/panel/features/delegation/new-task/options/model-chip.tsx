@@ -35,9 +35,10 @@ export function ModelChip({
   loading,
   disabled,
 }: ModelChipProps) {
-  const { field, choose } = useProfileChoice("model"),
-    custom =
-      field.value && !models.some((model) => model.value === field.value);
+  const { field, choose } = useProfileChoice("model");
+
+  const custom =
+    field.value && !models.some((model) => model.value === field.value);
 
   return (
     <ChipSelect

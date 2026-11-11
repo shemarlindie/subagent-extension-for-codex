@@ -18,10 +18,10 @@ async function folders<P extends Provider>(provider: P) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "plain-folders-")));
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
 
-  const plain = join(dir, "plain"),
-    unborn = join(dir, "unborn"),
-    repo = join(dir, "repo"),
-    roots = [plain, unborn, repo];
+  const plain = join(dir, "plain");
+  const unborn = join(dir, "unborn");
+  const repo = join(dir, "repo");
+  const roots = [plain, unborn, repo];
 
   await mkdir(plain);
   await mkdir(unborn);

@@ -46,8 +46,8 @@ export function nextUnviewed(
   entries: ChangedFileEntry[],
   from: ChangedFileEntry,
 ) {
-  const index = entries.indexOf(from),
-    rest = [...entries.slice(index + 1), ...entries.slice(0, index)];
+  const index = entries.indexOf(from);
+  const rest = [...entries.slice(index + 1), ...entries.slice(0, index)];
 
   return rest.find((entry) => !isViewed(viewed, entry));
 }
@@ -62,9 +62,9 @@ function setMark(
   path: string,
   mark: FileMark,
 ) {
-  const state = session.get("task", task),
-    next = new Map(state.viewedChanges),
-    { open } = state.reading.changes;
+  const state = session.get("task", task);
+  const next = new Map(state.viewedChanges);
+  const { open } = state.reading.changes;
 
   if (mark.signature === undefined) next.delete(path);
   else next.set(path, mark.signature);
@@ -80,14 +80,14 @@ function setMark(
  * how the file was before.
  */
 export function useViewedFiles(task: string) {
-  const { session, undo } = useController(),
-    [viewed] = useSessionState("task", task, selectViewed);
+  const { session, undo } = useController();
+  const [viewed] = useSessionState("task", task, selectViewed);
 
   const setViewed = useCallback(
     (entry: ChangedFileEntry, value: boolean) => {
-      const state = session.get("task", task),
-        { path } = entry.file,
-        name = path.split("/").at(-1) ?? path;
+      const state = session.get("task", task);
+      const { path } = entry.file;
+      const name = path.split("/").at(-1) ?? path;
 
       const before: FileMark = {
         signature: state.viewedChanges.get(path),

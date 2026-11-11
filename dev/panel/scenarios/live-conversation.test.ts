@@ -30,8 +30,8 @@ test("scheduled activity passes through thinking, responding, tool work and comp
 
 // The tools test below covers the first reply's handoff.
 test("the second reply grows under one id and hands off to stored Chat", () => {
-  const start = 20_000,
-    end = 25_000;
+  const start = 20_000;
+  const end = 25_000;
 
   expect(liveConversationSnapshot(start - 1).draft).toBeUndefined();
   const first = liveConversationSnapshot(start);

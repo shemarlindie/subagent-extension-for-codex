@@ -36,13 +36,13 @@ export function ChangesView({
   reading,
   activePath,
 }: ChangesViewProps) {
-  const controller = useController(),
-    [viewed, setViewed] = useViewedFiles(task.id),
-    entries = changedFileEntries(changes),
-    listRef = useRef<HTMLDivElement>(null),
-    diffsRef = useRef<HTMLDivElement>(null),
-    positionedReveal = useRef<Reveal>(undefined),
-    [reveal, setReveal] = useState<Reveal>();
+  const controller = useController();
+  const [viewed, setViewed] = useViewedFiles(task.id);
+  const entries = changedFileEntries(changes);
+  const listRef = useRef<HTMLDivElement>(null);
+  const diffsRef = useRef<HTMLDivElement>(null);
+  const positionedReveal = useRef<Reveal>(undefined);
+  const [reveal, setReveal] = useState<Reveal>();
 
   /** Opens a file the reader picked in the tree, and scrolls to it below. */
   function revealFile(path: string) {
@@ -55,21 +55,24 @@ export function ChangesView({
     if (!reveal || !list || positionedReveal.current === reveal) return;
 
     const file = list.querySelector<HTMLElement>(
-        `[${FILE_ATTRIBUTE}="${CSS.escape(reveal.path)}"]`,
-      ),
-      container = scrollContainer(list);
+      `[${FILE_ATTRIBUTE}="${CSS.escape(reveal.path)}"]`,
+    );
+
+    const container = scrollContainer(list);
 
     // Move only the Changes scroller, leaving the floating navigator in place.
     if (file) {
       const offset =
-          file.getBoundingClientRect().top -
-          container.getBoundingClientRect().top,
-        diffs = diffsRef.current,
-        shortfall =
-          container.scrollTop +
-          offset +
-          container.clientHeight -
-          container.scrollHeight;
+        file.getBoundingClientRect().top -
+        container.getBoundingClientRect().top;
+
+      const diffs = diffsRef.current;
+
+      const shortfall =
+        container.scrollTop +
+        offset +
+        container.clientHeight -
+        container.scrollHeight;
 
       // A file near the end can't reach the top, so it would stay under the
       // open navigator and the file above would read as current. Add space

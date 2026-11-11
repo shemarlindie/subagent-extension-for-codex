@@ -6,18 +6,19 @@ import { task } from "./controller-test-harness";
 import { defaultTask } from "./selection";
 
 test("the default task prefers one waiting for input, then an unfinished one", () => {
-  const done = { ...task("done"), status: "completed" as const },
-    running = task("running"),
-    waiting = {
-      ...task("waiting"),
-      status: "waiting" as const,
-      pending_input: {
-        id: "input",
-        tool: "AskUserQuestion",
-        kind: "question" as const,
-        input: {},
-      },
-    };
+  const done = { ...task("done"), status: "completed" as const };
+  const running = task("running");
+
+  const waiting = {
+    ...task("waiting"),
+    status: "waiting" as const,
+    pending_input: {
+      id: "input",
+      tool: "AskUserQuestion",
+      kind: "question" as const,
+      input: {},
+    },
+  };
 
   assert.equal(defaultTask([done, running, waiting])?.id, "waiting");
   assert.equal(defaultTask([done, running])?.id, "running");

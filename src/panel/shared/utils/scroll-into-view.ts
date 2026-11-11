@@ -7,8 +7,8 @@ export function scrollChildIntoView(
 ) {
   if (!list.clientWidth) return;
 
-  const left = child.offsetLeft - gap,
-    right = child.offsetLeft + child.offsetWidth + gap;
+  const left = child.offsetLeft - gap;
+  const right = child.offsetLeft + child.offsetWidth + gap;
 
   let target: number | undefined;
 

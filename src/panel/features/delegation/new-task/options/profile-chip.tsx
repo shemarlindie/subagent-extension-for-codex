@@ -29,11 +29,13 @@ export function ProfileChip({
   loading,
   disabled,
 }: ProfileChipProps) {
-  const { setValue } = useFormContext<DelegateValues>(),
-    { field } = useFieldController<DelegateValues, "worker">({
-      name: "worker",
-    }),
-    multipleProviders = workers.length > 1;
+  const { setValue } = useFormContext<DelegateValues>();
+
+  const { field } = useFieldController<DelegateValues, "worker">({
+    name: "worker",
+  });
+
+  const multipleProviders = workers.length > 1;
 
   const choose = (worker: string) => {
     const values = profileValues(worker, defaults);

@@ -37,8 +37,8 @@ export const executionTaskPolicy: ProviderTaskPolicy = {
       throw new Error("Provider does not accept task options");
     }
 
-    const saved = defaults.approvals.execution_mode,
-      approval_mode = input.approval_mode ?? saved;
+    const saved = defaults.approvals.execution_mode;
+    const approval_mode = input.approval_mode ?? saved;
 
     if (
       authority !== "user" &&
