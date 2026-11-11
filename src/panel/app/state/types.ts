@@ -280,7 +280,7 @@ export type Snapshot = {
   activityHistoryLoading?: string;
   /** The current scope's first task-list read is still pending. */
   taskListLoading: boolean;
-  /** The selected task's message being written, streamed or read. */
+  /** The complete paragraphs of the selected task's message being written. */
   draft?: DraftState;
   /** Where Chat's "New" divider moved when the user marked the task unread from a message. */
   newMark?: NewMark;

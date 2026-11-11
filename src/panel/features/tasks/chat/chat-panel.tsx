@@ -32,9 +32,10 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
 
   const [budgetApplyVersion, setBudgetApplyVersion] = useState(0);
 
-  // Chat's content is selected too, though only the timeline renders it:
-  // useReadingScroll follows, restores and fades rows after each render here.
-  const { chat, tab } = useSnapshot(["chat", "draft", "events", "tab"]);
+  // Chat content renders in the timeline, so only its task is selected here.
+  const { tab, chatTask } = useSnapshot(["tab"], (state) => ({
+    chatTask: state.chat?.task,
+  }));
 
   const budgetRaise = budgetDraft.taskId === taskId ? budgetDraft.value : {};
 
@@ -50,7 +51,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     return error;
   };
 
-  const ready = Boolean(task && chat?.task === task.id);
+  const ready = Boolean(task && chatTask === task.id);
 
   const divider = useNewMessagesFrom(task, ready);
   const newFrom = divider.from;
@@ -67,6 +68,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     positionRestored,
     reconcileAfterContentChange,
     scrollToLatest,
+    syncAfterRender,
   } = useReadingScroll({
     reading,
     active: tab === "chat",
@@ -78,6 +80,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     // while the view glides to follow them.
     animateRows: "arrivals",
     followSmoothly: true,
+    syncInChild: true,
     focus:
       newFrom === undefined
         ? undefined
@@ -99,6 +102,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
         viewportRef={viewportRef}
         positionRestored={positionRestored}
         onContentChange={reconcileAfterContentChange}
+        onRendered={syncAfterRender}
         budgetRaise={budgetRaise}
         onBudgetRaiseChange={changeBudgetRaise}
         onBudgetApply={applyBudgetRaise}

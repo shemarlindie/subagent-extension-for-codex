@@ -17,12 +17,16 @@ function fixture() {
 
   const reads: string[] = [];
   let refreshes = 0;
+  let patches = 0;
 
   const follower = new DraftFollower({
     snapshot: () => state,
     hidden: () => false,
     streamsDrafts: () => false,
-    patch: (patch) => (state = { ...state, ...patch }),
+    patch: (patch) => {
+      patches++;
+      state = { ...state, ...patch };
+    },
     tool: async <T>(name: string, args: Record<string, unknown>) => {
       reads.push(`${name}:${(args.draft as { task_id: string }).task_id}`);
 
@@ -38,6 +42,7 @@ function fixture() {
     follower,
     reads,
     refreshes: () => refreshes,
+    patches: () => patches,
     state: () => state,
     set: (patch: Partial<Snapshot>) => (state = { ...state, ...patch }),
   };
@@ -46,8 +51,7 @@ function fixture() {
 test("the target is the selected running task's draft while Chat shows it", () => {
   const { follower, set } = fixture();
   assert.deepEqual(follower.target(), { task_id: "a" });
-
-  set({ draft: { task: "a", message_id: "m", text: "Hel" } });
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hel" });
 
   assert.deepEqual(follower.target(), {
     task_id: "a",
@@ -59,6 +63,21 @@ test("the target is the selected running task's draft while Chat shows it", () =
   assert.equal(follower.target(), undefined);
   set({ tab: "chat", tasks: [{ ...task("a"), status: "completed" }] });
   assert.equal(follower.target(), undefined);
+});
+
+test("a draft patches the snapshot only when its complete paragraphs change", () => {
+  const { follower, state, patches } = fixture();
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hel" });
+  assert.equal(patches(), 1);
+  assert.deepEqual(state().draft, { task: "a", message_id: "m", text: "" });
+
+  follower.apply({ task_id: "a", message_id: "m", offset: 3, text: "lo" });
+  assert.equal(patches(), 1);
+
+  follower.apply({ task_id: "a", message_id: "m", offset: 5, text: "\n\nWo" });
+  assert.equal(patches(), 2);
+  assert.equal(state().draft?.text, "Hello");
+  assert.equal(follower.target()?.after_length, 9);
 });
 
 test("showing reads a draft only for a new target", () => {
@@ -78,22 +97,23 @@ test("showing reads a draft only for a new target", () => {
 test("a wait's draft is applied, and a cleared draft reads the stored message", () => {
   const { follower, state, refreshes } = fixture();
   const target = { task_id: "a", message_id: "m", after_length: 3 };
-  const draft = { message_id: "m", text: "Hello" };
+  const draft = { message_id: "m", text: "Hello\n\nWo" };
+  const shown = { task: "a", message_id: "m", text: "Hello" };
 
   assert.equal(follower.receive(target, { draft, running: true }), true);
-  assert.deepEqual(state().draft, { task: "a", ...draft });
+  assert.deepEqual(state().draft, shown);
 
-  const grown = { ...target, after_length: 5 };
+  const grown = { ...target, after_length: draft.text.length };
   assert.equal(follower.receive(grown, { draft, running: true }), false);
   assert.equal(refreshes(), 0);
 
   // The draft stays until a Chat read that started afterwards finds none.
   const before = follower.reading();
   assert.equal(follower.receive(grown, { draft: null, running: false }), true);
-  assert.deepEqual(state().draft, { task: "a", ...draft });
+  assert.deepEqual(state().draft, shown);
   assert.equal(refreshes(), 1);
   follower.show(before);
-  assert.deepEqual(state().draft, { task: "a", ...draft });
+  assert.deepEqual(state().draft, shown);
   follower.show(follower.reading());
   assert.equal(state().draft, undefined);
 
@@ -108,7 +128,7 @@ test("a wait's draft is applied, and a cleared draft reads the stored message", 
 
 test("a streamed draft stays shown until Chat holds its stored message", () => {
   const { follower, state, refreshes, set } = fixture();
-  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hi" });
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hi\n\n" });
   const inFlight = follower.reading();
   follower.apply({ task_id: "a", message_id: "m", cleared: true });
   assert.equal(refreshes(), 1);
@@ -143,7 +163,7 @@ test.each(["its own view's Chat read", "the stored message"] as const)(
   "a listed draft survives an older Chat read and releases after %s",
   (release) => {
     const { follower, state, set, refreshes } = fixture();
-    const draft = { message_id: "listed", text: "Complete reply" };
+    const draft = { message_id: "listed", text: "Complete reply\n\nMore" };
     set({ tasks: [{ ...task("a"), draft }] });
     const inFlight = follower.reading();
     const view = follower.reading();
@@ -152,7 +172,12 @@ test.each(["its own view's Chat read", "the stored message"] as const)(
     set({ draft: follower.retainListed(next, view), tasks: [next] });
     follower.show(inFlight);
 
-    assert.deepEqual(state().draft, { task: "a", ...draft });
+    assert.deepEqual(state().draft, {
+      task: "a",
+      message_id: "listed",
+      text: "Complete reply",
+    });
+
     assert.equal(refreshes(), 0);
 
     if (release === "the stored message") {
@@ -204,7 +229,7 @@ test("a canonical streamed draft wins when an older listed fallback clears", () 
     task_id: "a",
     message_id: "canonical",
     offset: 0,
-    text: "Current streamed reply",
+    text: "Current streamed reply\n\n",
   });
 
   const canonical = state().draft;

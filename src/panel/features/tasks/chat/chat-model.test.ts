@@ -101,14 +101,23 @@ test("a raised budget clears only its matching failure for that turn", () => {
   });
 });
 
-test("a draft row shows finished paragraphs only, and none before the first", () => {
-  const task = failedBudgetTask({ status: "running" });
-  const draft = (text: string) => ({ task: task.id, message_id: "m", text });
+test("a listed draft row shows finished paragraphs only, and none before the first", () => {
+  const listed = (text: string) => ({
+    ...failedBudgetTask({ status: "running" }),
+    draft: { message_id: "m", text },
+  });
 
-  assert.equal(draftRow(task, draft("Still writing")), undefined);
+  assert.equal(draftRow(listed("Still writing"), undefined), undefined);
 
   assert.equal(
-    draftRow(task, draft("Done.\n\nStill wri"))?.message.text,
+    draftRow(listed("Done.\n\nStill wri"), undefined)?.message.text,
     "Done.",
   );
+});
+
+test("a followed draft row shows the paragraphs the follower kept", () => {
+  const task = failedBudgetTask({ status: "running" });
+  const draft = { task: task.id, message_id: "m", text: "Done." };
+
+  assert.equal(draftRow(task, draft)?.message.text, "Done.");
 });

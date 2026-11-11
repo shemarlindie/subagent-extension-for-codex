@@ -51,6 +51,21 @@ export function anchorable(position: RowPosition) {
   );
 }
 
+/** The row whose `attribute` is `id`. */
+export function findRow(viewport: HTMLElement, attribute: string, id: string) {
+  return Array.from(
+    viewport.querySelectorAll<HTMLElement>(`[${attribute}]`),
+  ).find((element) => element.getAttribute(attribute) === id);
+}
+
+/** Whether `row` shows in full within the container's frame. */
+export function inView(container: HTMLElement, row: HTMLElement) {
+  const { top, bottom } = row.getBoundingClientRect();
+  const frame = container.getBoundingClientRect();
+
+  return top >= frame.top && bottom <= frame.bottom;
+}
+
 /** Restores the saved row, or another visible row when history was trimmed. */
 export function restoreReadingAnchor(
   viewport: HTMLElement,
@@ -62,11 +77,7 @@ export function restoreReadingAnchor(
 ) {
   container.scrollTop = saved.top + scrolled;
 
-  const element =
-    saved.anchor &&
-    Array.from(viewport.querySelectorAll<HTMLElement>(`[${attribute}]`)).find(
-      (element) => element.getAttribute(attribute) === saved.anchor!.id,
-    );
+  const element = saved.anchor && findRow(viewport, attribute, saved.anchor.id);
 
   const anchor = element
     ? { element, top: saved.anchor!.top }

@@ -5,7 +5,8 @@ import type {
 import { selectedTask } from "../../../../app/state/selectors";
 import type { Snapshot, Task } from "../../../../app/state/types";
 import { composerMode } from "../chat-model";
-import { applyDraftUpdate } from "./draft-state";
+import { completeParagraphs } from "./complete-paragraphs";
+import { applyDraftUpdate, type DraftState } from "./draft-state";
 
 interface DraftContext {
   snapshot(): Snapshot;
@@ -34,6 +35,12 @@ export type DraftRead = { draft: Draft | null; running: boolean };
 export class DraftFollower {
   constructor(private context: DraftContext) {}
 
+  /**
+   * The shown draft in full. The snapshot holds only its complete paragraphs,
+   * so a delta inside a paragraph patches nothing.
+   */
+  private full?: DraftState;
+
   /** Chat reads started, numbered so `show` knows which began after a clear. */
   private reads = 0;
 
@@ -50,12 +57,8 @@ export class DraftFollower {
       return;
     }
 
-    const { draft, stale } = applyDraftUpdate(
-      this.context.snapshot().draft,
-      update,
-    );
-
-    this.context.patch({ draft });
+    const { draft, stale } = applyDraftUpdate(this.current(), update);
+    this.set(draft);
     if (stale) this.context.run(() => this.readDraft());
   }
 
@@ -89,7 +92,29 @@ export class DraftFollower {
       reads: read - 1,
     };
 
-    return { task: task.id, ...previous.draft };
+    this.full = { task: task.id, ...previous.draft };
+
+    return visible(this.full);
+  }
+
+  /** The full draft, while the snapshot still shows it. */
+  private current() {
+    return this.context.snapshot().draft && this.full;
+  }
+
+  /** Keeps `draft` in full, and patches it when its shown part changes. */
+  private set(draft: DraftState | undefined) {
+    this.full = draft;
+    const shown = this.context.snapshot().draft;
+    const next = draft && visible(draft);
+
+    if (
+      next?.task !== shown?.task ||
+      next?.message_id !== shown?.message_id ||
+      next?.text !== shown?.text
+    ) {
+      this.context.patch({ draft: next });
+    }
   }
 
   /**
@@ -124,7 +149,7 @@ export class DraftFollower {
     }
 
     this.completed = undefined;
-    this.context.patch({ draft: undefined });
+    this.set(undefined);
 
     return true;
   }
@@ -140,9 +165,7 @@ export class DraftFollower {
     );
 
     if (this.context.snapshot().selected === id) {
-      this.context.patch({
-        draft: read.draft ? { task: id, ...read.draft } : undefined,
-      });
+      this.set(read.draft ? { task: id, ...read.draft } : undefined);
     }
   }
 
@@ -164,7 +187,8 @@ export class DraftFollower {
       return undefined;
     }
 
-    const known = snapshot.draft?.task === task.id ? snapshot.draft : undefined;
+    const current = this.current();
+    const known = current?.task === task.id ? current : undefined;
 
     return known
       ? {
@@ -210,9 +234,14 @@ export class DraftFollower {
     if (target.message_id !== undefined && !draft) {
       this.complete(target.message_id);
     } else {
-      this.context.patch({ draft });
+      this.set(draft);
     }
 
     return changed;
   }
+}
+
+/** The part of a draft Chat shows: its complete paragraphs. */
+function visible(draft: DraftState): DraftState {
+  return { ...draft, text: completeParagraphs(draft.text) };
 }
