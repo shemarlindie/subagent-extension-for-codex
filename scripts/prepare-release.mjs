@@ -3,8 +3,8 @@
 // Without a version, it picks the next one from the conventional commits since
 // the last release and asks to confirm it. Without a CHANGELOG.md section for
 // the version, it drafts one from the feat and fix commits. The pull request
-// starts as a draft while the notes are reviewed. See
-// docs/releasing.md.
+// starts as a draft and stays one until the Release workflow publishes and
+// merges it. See docs/releasing.md.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
@@ -250,7 +250,7 @@ const notes = `${repository}/blob/${branch}/CHANGELOG.md#${version.replace(/[^\w
 
 const next = version.includes("-")
   ? `Then run the Release workflow on \`${branch}\` and close this pull request without merging.`
-  : `Then run the Release workflow on \`${branch}\`, re-run the Listed version published check and merge with a merge commit.`;
+  : `Keep this pull request a draft and run the Release workflow on \`${branch}\`, which publishes and merges it.`;
 
 console.log(
   run("gh", [
@@ -264,6 +264,6 @@ console.log(
     "--title",
     `chore(release): v${version}`,
     "--body",
-    `Release notes: ${notes}\n\nReview the notes, rewrite them for users where needed and mark this ready for review. ${next}`,
+    `Release notes: ${notes}\n\nReview the notes and rewrite them for users where needed. ${next}`,
   ]),
 );

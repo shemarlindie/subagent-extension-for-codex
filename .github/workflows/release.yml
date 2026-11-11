@@ -2,10 +2,10 @@ name: Release
 
 # Run by hand on a release branch that sets the version in package.json,
 # plugin.json and .agents/plugins/marketplace.json and holds its CHANGELOG.md
-# section. The workflow publishes the branch's head to npm and tags it
-# v<version>. Merging the branch's pull request then releases the version to
-# users. A prerelease such as 1.2.0-beta.1 publishes under the npm next tag, and
-# its pull request is closed without merging.
+# section. The workflow publishes the branch's head to npm, tags it v<version>
+# and merges the branch's pull request with a merge commit, which releases the
+# version to users. A prerelease such as 1.2.0-beta.1 publishes under the npm
+# next tag, and its pull request is closed without merging.
 on:
   workflow_dispatch:
 
@@ -17,11 +17,68 @@ permissions:
   contents: read
 
 jobs:
+  # Checks the release pull request before publishing, so the merge job can
+  # merge it afterwards. A run on main has no pull request.
+  pull-request:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      checks: read
+    outputs:
+      number: ${{ steps.find.outputs.number }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Find the pull request
+        id: find
+        if: github.ref_name != 'main'
+        run: |
+          pr=$(gh pr list --base main --head "$GITHUB_REF_NAME" --state open \
+            --json number,headRefOid --jq '.[0]')
+          if [ -z "$pr" ]; then
+            echo "No open pull request from ${GITHUB_REF_NAME} into main. Open one and run the workflow again." >&2
+            exit 1
+          fi
+          number=$(jq -r .number <<<"$pr")
+          head=$(jq -r .headRefOid <<<"$pr")
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "Pull request #${number} is at ${head}, but this run is for ${GITHUB_SHA}. Push your changes, wait for CI and run the workflow again." >&2
+            exit 1
+          fi
+
+          # GitHub computes mergeability in the background.
+          for _ in {1..10}; do
+            mergeable=$(gh pr view "$number" --json mergeable --jq .mergeable)
+            [ "$mergeable" != UNKNOWN ] && break
+            sleep 6
+          done
+          if [ "$mergeable" != MERGEABLE ]; then
+            echo "Pull request #${number} can't merge into main (${mergeable}). Merge main into the branch, wait for CI and run the workflow again." >&2
+            exit 1
+          fi
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+
+      # Listed version published fails until the publish, and the merge job
+      # re-runs it.
+      - name: Wait for the required checks
+        if: github.ref_name != 'main'
+        env:
+          PR: ${{ steps.find.outputs.number }}
+        run: |
+          gh pr checks "$PR" --required --watch --interval 30 >/dev/null || true
+          failed=$(gh pr checks "$PR" --required --json name,bucket \
+            --jq '[.[] | select(.name != "Listed version published" and .bucket != "pass") | .name] | join(", ")')
+          if [ -n "$failed" ]; then
+            echo "Pull request #${PR} has required checks that didn't pass: ${failed}. Fix them and run the workflow again." >&2
+            exit 1
+          fi
+
   checks:
     uses: ./.github/workflows/ci.yml
 
   publish:
-    needs: checks
+    needs: [pull-request, checks]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -100,8 +157,8 @@ jobs:
         with:
           subject-path: subagent-extension-for-codex-${{ steps.version.outputs.version }}.zip
 
-      # Tags the published commit, which marks the release pull request ready
-      # to merge.
+      # Tags the published commit, which the Listed version published check
+      # looks for.
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -149,3 +206,49 @@ jobs:
         env:
           MARKETPLACE_SOURCE: ${{ github.repository }}@v${{ needs.publish.outputs.version }}
         run: npx vitest run tests/integration/package/marketplace-install.test.ts
+
+  # Merges a final release pull request once the installs pass, so the tagged
+  # commit lands in main's history and main lists the version.
+  merge:
+    needs: [pull-request, publish, install]
+    if: needs.publish.outputs.prerelease == 'false' && github.ref_name != 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ needs.pull-request.outputs.number }}
+      VERSION: ${{ needs.publish.outputs.version }}
+    steps:
+      - name: Re-run Listed version published
+        run: |
+          run=$(gh run list --workflow ci.yml --event pull_request --commit "$GITHUB_SHA" \
+            --limit 1 --json databaseId --jq '.[0].databaseId')
+          job=$(gh run view "$run" --json jobs \
+            --jq '.jobs[] | select(.name == "Listed version published") | .databaseId')
+          attempt=$(gh run view "$run" --json attempt --jq .attempt)
+          gh run rerun "$run" --job "$job"
+
+          # GitHub queues the re-run asynchronously. Watching before the new
+          # attempt starts would report the previous, failed one.
+          for _ in {1..30}; do
+            [ "$(gh run view "$run" --json attempt --jq .attempt)" -gt "$attempt" ] && break
+            sleep 2
+          done
+          if ! gh run watch "$run" --interval 10 --exit-status >/dev/null; then
+            echo "Listed version published didn't pass in CI run ${run}. Check that v${VERSION} points at ${GITHUB_SHA}, then re-run this job." >&2
+            exit 1
+          fi
+
+      # GitHub can't merge a draft.
+      - run: gh pr ready "$PR"
+
+      # Refused if the head moved since the pull-request job checked it.
+      - run: gh pr merge "$PR" --merge --match-head-commit "$GITHUB_SHA"
+
+      # A merge made with GITHUB_TOKEN doesn't start CI on main.
+      - run: gh workflow run ci.yml --ref main
