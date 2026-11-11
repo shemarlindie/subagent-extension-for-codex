@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   useEffect,
@@ -137,6 +136,10 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
   // Narrow panels switch between the list and a task, so they ignore collapsing.
   const railCollapsed = rail.collapsed && !narrow;
 
+  const separatorTitle = rail.collapsed
+    ? "Drag or click to show the task list"
+    : "Drag or use arrow keys to resize the task list, or drag past its edge to hide it";
+
   useEffect(() => {
     const media = window.matchMedia("(max-width: 640px)");
     const update = () => setNarrow(media.matches);
@@ -194,13 +197,6 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
       className="shell"
       elementRef={groupElementRef}
       data-rail-motion={rail.motionWidth === undefined ? undefined : ""}
-      style={
-        rail.motionWidth === undefined
-          ? undefined
-          : ({
-              "--task-rail-width": `${rail.motionWidth}px`,
-            } as CSSProperties)
-      }
       disabled={narrow}
       disableCursor
       resizeTargetMinimumSize={{ fine: 8, coarse: 24 }}
@@ -224,6 +220,8 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
           // Stays visible while it eases closed, but out of reach.
           hidden={railCollapsed && rail.motionWidth === undefined}
           inert={railCollapsed}
+          // Keeps its width while its panel clips it, so rows don't rewrap.
+          style={{ minWidth: rail.motionWidth }}
         >
           {list}
         </aside>
@@ -232,11 +230,7 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
         className="task-list-resizer"
         elementRef={separatorElementRef}
         aria-label="Resize task list"
-        title={
-          rail.collapsed
-            ? "Drag or click to show task list"
-            : "Drag to resize task list, or past its edge to hide it"
-        }
+        title={separatorTitle}
         disableDoubleClick
         onDoubleClick={resetWidth}
         onPointerDown={() => {

@@ -152,10 +152,6 @@ header .toolbar {
 .shell[data-rail-motion] > [data-panel] {
   transition: flex-grow var(--motion-base) var(--ease-out);
 }
-/* The list keeps its width while its panel clips it, so rows don't rewrap. */
-.shell[data-rail-motion] #task-rail {
-  min-width: var(--task-rail-width);
-}
 .task-layout-panel {
   height: 100%;
   min-width: 0;

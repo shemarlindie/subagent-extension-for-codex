@@ -298,7 +298,7 @@ test("the toggle eases the list closed, keeping it visible but out of reach unti
   await waitFor(() => expect(width(rail)).toBe(0));
   expect(shell.hasAttribute("data-rail-motion")).toBe(true);
   // The list keeps its width while its panel shrinks, so rows don't rewrap.
-  expect(shell.style.getPropertyValue("--task-rail-width")).toBe("245px");
+  expect(list(container).style.minWidth).toBe("245px");
   expect(list(container).hidden).toBe(false);
   expect(list(container).hasAttribute("inert")).toBe(true);
 
