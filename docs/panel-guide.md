@@ -262,7 +262,9 @@ The model and reasoning chips edit the selected profile's settings, so the
 profile starts with your last choice next time. **Default** clears the profile's
 setting and names the provider or global default it then inherits. A failed save
 shows an error below the composer, and the choice still applies to the task.
-Workspace, revision, budgets and the Bash sandbox use your settings defaults.
+When your organization sets a default model or reasoning, that chip starts on
+the organization's default, and a choice applies to this task only. Workspace,
+revision, budgets and the Bash sandbox use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds workspace
 and revision, approval decision maker, Bash sandbox and budgets. The mode and

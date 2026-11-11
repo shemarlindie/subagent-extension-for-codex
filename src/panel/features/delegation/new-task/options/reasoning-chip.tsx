@@ -9,6 +9,8 @@ type ReasoningChipProps = {
   supported: readonly string[];
   /** The effort a default choice inherits. */
   inherited?: string;
+  /** Says when a pick isn't saved. */
+  footer?: string;
   loading: boolean;
   disabled: boolean;
 };
@@ -29,6 +31,7 @@ export function reasoningChipLabel(value: string, inherited?: string) {
 export function ReasoningChip({
   supported,
   inherited,
+  footer,
   loading,
   disabled,
 }: ReasoningChipProps) {
@@ -49,6 +52,7 @@ export function ReasoningChip({
       value={value}
       onValueChange={choose}
       loading={loading}
+      footer={footer}
       disabled={disabled || supported.length === 0}
       title={
         supported.length === 0

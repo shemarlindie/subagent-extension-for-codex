@@ -251,6 +251,58 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
+test("under the org's defaults the composer starts on them, and a pick stays with the task", async () => {
+  const saved = withSetting(
+    withSetting(ready.defaults!, "models.profiles.implementer.model", "opus"),
+    "models.profiles.implementer.reasoning_effort",
+    "high",
+  );
+
+  const { view, user, start, saveProfileSetting } = setup(
+    { ...ready, defaults: saved },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [],
+            default_model: "Sonnet 5.5",
+            default_effort: "low",
+            notes: [],
+          },
+        },
+      ],
+    },
+  );
+
+  await user.click(
+    await view.findByRole("button", {
+      name: /^Edit Sonnet 5\.5 · Low reasoning · /,
+    }),
+  );
+
+  await user.click(view.getByRole("combobox", { name: "Reasoning: Low" }));
+  assert.ok(await view.findByText(/a choice here applies to this task only/));
+  await user.click(await view.findByRole("option", { name: "High" }));
+
+  expect(saveProfileSetting).not.toHaveBeenCalled();
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Ship it{Enter}",
+  );
+
+  await waitFor(() => assert.equal(start.mock.calls.length, 1));
+
+  expect(start.mock.calls[0]?.[0]).toMatchObject({
+    model: "",
+    reasoning_effort: "high",
+  });
+});
+
 test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
   const { view, user, start } = setup();
 

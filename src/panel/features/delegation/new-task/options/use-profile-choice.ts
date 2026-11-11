@@ -5,10 +5,14 @@ import {
 } from "react-hook-form";
 
 import { titleCase } from "../../../../../shared/text";
-import { useController } from "../../../../app/state/controller-context";
+import {
+  useController,
+  useSnapshot,
+} from "../../../../app/state/controller-context";
 import { quote } from "../../../../app/state/undo-history";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
+import { orgDefaults } from "../../model-defaults";
 
 const SETTING_NAMES = { model: "model", reasoning_effort: "reasoning" };
 
@@ -23,12 +27,14 @@ function choiceName(name: keyof typeof SETTING_NAMES, value: string) {
  * A profile setting's field, with `choose` for the user's picks: it sets the
  * value and saves it as the selected profile's default. A failed save shows
  * as the form's `root.settings` error. Undo saves the previous default, and
- * puts the field back while it still shows this pick.
+ * puts the field back while it still shows this pick. Under the org's default
+ * a saved value wouldn't apply, so the pick stays with the task.
  */
 export function useProfileChoice<Name extends "model" | "reasoning_effort">(
   name: Name,
 ) {
   const controller = useController();
+  const workers = useSnapshot((snapshot) => snapshot.workers);
 
   const { getValues, setValue, setError, clearErrors } =
     useFormContext<DelegateValues>();
@@ -42,6 +48,7 @@ export function useProfileChoice<Name extends "model" | "reasoning_effort">(
 
     field.onChange(value);
     clearErrors("root.settings");
+    if (orgDefaults(workers, worker)[name]) return;
 
     // Saves `to` in place of `from`, failing with the reason.
     const save = async (from: string, to: string) => {

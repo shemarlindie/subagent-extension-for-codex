@@ -36,18 +36,33 @@ type NewTaskOptionsProps = {
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
 
-/** Why the model list is shorter than usual, if it is. */
+/** A pick stays with the task when the org's default outranks saved ones. */
+const ORG_DEFAULT_NOTE =
+  "Your organization sets the default, so a choice here applies to this task only.";
+
+/** Why the model list is shorter than usual, and whether a pick is saved. */
 function modelsFooter(workerInfo: Worker | undefined) {
   if (workerInfo?.model_discovery_error) {
     return "Couldn't load the model list. Use More options to enter a model ID.";
   }
 
-  return workerInfo?.policy?.available_models
+  const policy = workerInfo?.policy;
+
+  if (policy?.default_model) {
+    return policy.available_models
+      ? "Your organization limits these models and sets the default, so a choice here applies to this task only."
+      : ORG_DEFAULT_NOTE;
+  }
+
+  return policy?.available_models
     ? "Your organization limits these models."
     : undefined;
 }
 
-/** The choices org policy changes: locked modes, and a saved model it excludes. */
+/**
+ * The choices org policy changes: locked modes, and a saved model it
+ * excludes. The org's default model is already a name, as nothing outranks it.
+ */
 function policyOptions(
   provider: string,
   workerInfo: Worker | undefined,
@@ -59,8 +74,11 @@ function policyOptions(
   const permissions = providerMetadata(provider, workerInfo?.metadata)
     ?.nativePermissions?.options;
 
+  const allowed =
+    policy?.default_model || (model && modelAllowed(policy, models, model));
+
   return {
-    model: model && modelAllowed(policy, models, model) ? model : undefined,
+    model: allowed ? model : undefined,
     permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
@@ -81,16 +99,18 @@ function resolvedOptions(
 
   const { workerInfo, providerModel } = resolved ?? {};
   const models = workerInfo?.models ?? [];
+  const policy = workerInfo?.policy;
 
   return {
     models,
-    modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
-    allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
+    modelExcluded: !modelAllowed(policy, models, model),
+    allowedMode: allowedPermissionMode(policy, mode),
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
     modelsFooter: modelsFooter(workerInfo),
+    reasoningFooter: policy?.default_effort ? ORG_DEFAULT_NOTE : undefined,
     // The model and reasoning chips edit the profile's settings, so Default
-    // clears them and inherits the provider's.
+    // clears them and inherits the provider's, or the org's.
     ...policyOptions(provider, workerInfo, models, providerModel),
   };
 }
@@ -148,7 +168,11 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
   // A draft that already overrides the profile opens with its settings shown.
   // Reasoning stays blank until settings load.
   const [expanded, setExpanded] = useState(() => {
-    const saved = profileValues(getValues("worker"), newTask.defaults);
+    const saved = profileValues(
+      getValues("worker"),
+      newTask.defaults,
+      state.workers,
+    );
 
     return (
       getValues("model") !== saved.model ||
@@ -218,6 +242,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           <ReasoningChip
             supported={resolved.supported}
             inherited={resolved.reasoning}
+            footer={resolved.reasoningFooter}
             loading={loading}
             disabled={disabled}
           />
