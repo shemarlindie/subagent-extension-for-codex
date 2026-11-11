@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { Notice } from "../../../../shared/components/notice/notice";
@@ -7,7 +9,7 @@ import { useDismissedNotices } from "./dismissed-notices";
 type WorkspaceFallbackNoticeProps = { task: Task };
 
 /** Warns that a task lost the worktree its user's default asked for. */
-export function WorkspaceFallbackNotice({
+export const WorkspaceFallbackNotice = memo(function WorkspaceFallbackNotice({
   task,
 }: WorkspaceFallbackNoticeProps) {
   const [dismissed, dismiss] = useDismissedNotices();
@@ -23,4 +25,4 @@ export function WorkspaceFallbackNotice({
       </Button>
     </Notice>
   );
-}
+});

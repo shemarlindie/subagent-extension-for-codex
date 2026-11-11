@@ -54,7 +54,9 @@ interface ActivityGroupCardProps {
   first: boolean;
   last: boolean;
   span?: { start: number; end: number | null };
-  running: boolean;
+  /** The row's thinking is still going, so it shows a running clock. */
+  thinking: boolean;
+  /** The task's runtime, given only to the row that reports its completion. */
   runtimeMs?: number;
   preferences?: UserDateTimePreferences;
 }
@@ -64,7 +66,7 @@ function GroupCard({
   first,
   last,
   span,
-  running,
+  thinking,
   runtimeMs,
   preferences,
 }: ActivityGroupCardProps) {
@@ -188,10 +190,7 @@ function GroupCard({
 
   let title = group.title;
 
-  if (
-    group.events.some((event) => event.type === "task.completed") &&
-    runtimeMs !== undefined
-  ) {
+  if (runtimeMs !== undefined) {
     title = `Task completed after ${formatDuration(runtimeMs)}`;
   } else if (thoughtMs !== undefined) {
     title =
@@ -244,9 +243,7 @@ function GroupCard({
               {badge}
             </MotionContent>
           )}
-          {span?.end === null && running && (
-            <ThinkingClock start={span.start} />
-          )}
+          {thinking && span && <ThinkingClock start={span.start} />}
         </span>
         <ActivityTime
           timestamp={group.events[0].timestamp}
