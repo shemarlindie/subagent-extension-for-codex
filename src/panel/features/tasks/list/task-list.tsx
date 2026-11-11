@@ -106,6 +106,7 @@ function TaskRowContent({ task }: TaskRowContentProps) {
         <span className="row-worker" title={worker}>
           <WorkerProfileIcon
             profile={task.worker_profile}
+            size={12}
             className="row-worker-icon"
           />
           {task.unread && <UnreadDot />}

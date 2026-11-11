@@ -133,7 +133,7 @@ export function ModelTable({
             {hasProfileIcon && (
               <WorkerProfileIcon
                 profile={scope.id}
-                size={10}
+                size={12}
                 className="setting-profile-icon"
               />
             )}

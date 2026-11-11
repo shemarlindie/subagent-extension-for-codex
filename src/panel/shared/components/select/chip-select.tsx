@@ -2,7 +2,7 @@ import { Select } from "@base-ui/react/select";
 import { useRef } from "react";
 
 import { Chevron } from "../chevron";
-import { Icon } from "../icons/icons";
+import { Icon, type IconName } from "../icons/icons";
 import { LoadingSpinner } from "../loading-spinner/loading-spinner";
 import {
   SELECT_ACTION_VALUE,
@@ -33,6 +33,11 @@ type ChipSelectProps = {
   action?: SelectAction;
   /** A line under the menu's options. */
   footer?: string;
+  /**
+   * Shows only the selected option's icon. The label stays in the accessible
+   * name and tooltip.
+   */
+  iconOnly?: boolean;
 };
 
 /**
@@ -52,6 +57,7 @@ export function ChipSelect({
   title,
   action,
   footer,
+  iconOnly = false,
 }: ChipSelectProps) {
   const selected = options.find((option) => option.value === value),
     text = selected ? (selected.chipLabel ?? selected.label) : placeholder;
@@ -86,16 +92,46 @@ export function ChipSelect({
         aria-busy={loading || undefined}
         title={title ?? `${label}: ${text}`}
         data-placeholder={selected ? undefined : ""}
+        data-icon-only={iconOnly || undefined}
       >
-        {selected?.icon && (
-          <Icon name={selected.icon} size={10} className="chip-select-icon" />
-        )}
-        <span className="chip-select-value">{loading ? label : text}</span>
-        <span className="chip-select-caret" aria-hidden="true">
-          {loading ? <LoadingSpinner /> : <Chevron size={10} />}
-        </span>
+        <ChipSelectValue
+          icon={selected?.icon}
+          text={loading ? label : text}
+          loading={loading}
+          iconOnly={iconOnly}
+        />
       </Select.Trigger>
       <SelectOptions options={options} action={action} footer={footer} />
     </Select.Root>
+  );
+}
+
+type ChipSelectValueProps = {
+  icon?: IconName;
+  text: string;
+  loading: boolean;
+  iconOnly: boolean;
+};
+
+/**
+ * The chip's icon, text and caret. An icon-only chip keeps the spinner while
+ * loading.
+ */
+function ChipSelectValue({
+  icon,
+  text,
+  loading,
+  iconOnly,
+}: ChipSelectValueProps) {
+  return (
+    <>
+      {icon && <Icon name={icon} size={12} className="chip-select-icon" />}
+      {!iconOnly && <span className="chip-select-value">{text}</span>}
+      {(!iconOnly || loading) && (
+        <span className="chip-select-caret" aria-hidden="true">
+          {loading ? <LoadingSpinner /> : <Chevron size={10} />}
+        </span>
+      )}
+    </>
   );
 }
