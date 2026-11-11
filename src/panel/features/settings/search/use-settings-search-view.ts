@@ -28,48 +28,37 @@ export function useSettingsSearchView(form: RefObject<HTMLFormElement | null>) {
     previous.current = active;
     if (!restoring) return;
 
-    const targets = saved.current;
-    for (const { element, top } of targets) element.scrollTop = top;
+    for (const { element, top } of saved.current) element.scrollTop = top;
 
     // Panels that search closed animate open again, so the browser clamps the
-    // position until they regain their height. Restore once they settle,
+    // position until they regain their height. Restore as their content grows,
     // unless the user has scrolled since.
-    const clamped = targets.map(({ element }) => element.scrollTop);
-    let cancelled = false;
+    let pending = saved.current
+      .filter(({ element, top }) => element.scrollTop !== top)
+      .map((target) => ({ ...target, clamped: target.element.scrollTop }));
 
-    // Wait two frames, so the reopening panels' transitions have started.
-    const frame = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        const root = form.current;
+    // Sections grow inside the form body in both the page and the dialog.
+    const sections = form.current?.querySelector(".settings-sections-layer");
 
-        // Looping animations, such as loading indicators, never finish.
-        const animations =
-          root && typeof root.getAnimations === "function"
-            ? root
-                .getAnimations({ subtree: true })
-                .filter(
-                  (animation) =>
-                    animation.effect?.getTiming().iterations !==
-                    Number.POSITIVE_INFINITY,
-                )
-            : [];
+    if (!pending.length || !sections || typeof ResizeObserver === "undefined") {
+      return;
+    }
 
-        void Promise.allSettled(
-          animations.map((animation) => animation.finished),
-        ).then(() => {
-          if (cancelled) return;
+    const observer = new ResizeObserver(() => {
+      pending = pending.filter((target) => {
+        if (target.element.scrollTop !== target.clamped) return false;
+        target.element.scrollTop = target.top;
+        target.clamped = target.element.scrollTop;
 
-          targets.forEach(({ element, top }, index) => {
-            if (element.scrollTop === clamped[index]) element.scrollTop = top;
-          });
-        });
-      }),
-    );
+        return target.clamped !== target.top;
+      });
 
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-    };
+      if (!pending.length) observer.disconnect();
+    });
+
+    observer.observe(sections);
+
+    return () => observer.disconnect();
   }, [active, form]);
 
   return { query, setQuery };
