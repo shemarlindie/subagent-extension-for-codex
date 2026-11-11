@@ -360,13 +360,14 @@ applies, under the same rules as a task, so an API key on a custom
 `ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The result
 is cached for five minutes.
 
-| Policy                                                                                         | New tasks                                                        | Panel                                                                      |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `permissions.disableBypassPermissionsMode`, `disableAutoMode` or `permissions.disableAutoMode` | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                         |
-| `model`                                                                                        | A task on Default runs it.                                       |                                                                            |
-| `availableModels`                                                                              | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error. |
-| `deniedModels`                                                                                 | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                      |
-| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                     | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                           |
+| Policy                                                                                         | New tasks                                                        | Panel                                                                                          |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `permissions.disableBypassPermissionsMode`, `disableAutoMode` or `permissions.disableAutoMode` | An explicit request fails. A saved mode falls back.              | The mode stays listed and locked, with the reason.                                             |
+| `model`                                                                                        | A task on Default runs it.                                       | The Default model names it. A **Default model** row under **Organization policy** in Settings. |
+| `effortLevel`, `modelSettings.<model>.effortLevel`                                             | A task on Default reasoning runs it.                             | A **Default reasoning** row under **Organization policy**.                                     |
+| `availableModels`                                                                              | An explicit model outside it fails. A saved one runs as Default. | Model menus list only allowed models and say so. A typed ID gets an error.                     |
+| `deniedModels`                                                                                 | Claude Code swaps the model.                                     | A note in Chat. The run settings show the model used.                                          |
+| `allowManagedHooksOnly`, `allowManagedPermissionRulesOnly`                                     | Claude Code enforces them.                                       | A row under **Organization policy** in Settings.                                               |
 
 A saved choice that policy now blocks stays saved, with a warning on its row,
 and applies again if the policy lifts. Locks are a convenience: importing

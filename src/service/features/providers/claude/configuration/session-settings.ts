@@ -15,6 +15,8 @@ export const READ_TIMEOUT_MS = 45_000;
 export type SessionSettings = {
   effective: Settings;
   sources?: { source: string; settings: Settings }[];
+  /** What the session will run, after settings, policy and caps. */
+  applied?: { model: string; effort: string | null };
 };
 
 export type SettingsReader = { getSettings?(): Promise<SessionSettings> };

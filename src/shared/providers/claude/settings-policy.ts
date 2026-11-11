@@ -3,6 +3,7 @@ import type {
   SettingSection,
 } from "../../settings/document-contract.js";
 import { settingAt } from "../../settings/settings-schema.js";
+import { titleCase } from "../../text.js";
 import { blockedReason, withBlockedOptions } from "../policy.js";
 import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
@@ -50,6 +51,17 @@ function policyFacts(policy: ProviderPolicy) {
     .map(({ value }) => permissionModeName(value));
 
   return [
+    ...(policy.default_model
+      ? [{ label: "Default model", detail: `${policy.default_model}.` }]
+      : []),
+    ...(policy.default_effort
+      ? [
+          {
+            label: "Default reasoning",
+            detail: `${titleCase(policy.default_effort)}.`,
+          },
+        ]
+      : []),
     ...(modes.length
       ? [
           {

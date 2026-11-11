@@ -48,16 +48,30 @@ const previewOrgPolicy = (
   ],
   available_models: ["sonnet", "haiku"],
   available_models_match: "prefix",
+  default_model: "Sonnet 5.5",
+  default_effort: "low",
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 });
+
+/** Default as discovery reports it under the org's default model. */
+const previewOrgDefault: ModelChoice = {
+  value: "default",
+  displayName: "Default (recommended)",
+  description:
+    "Use the default model (currently Sonnet 5.5) · Set by your organization",
+  supportedEffortLevels: ["low", "medium", "high"],
+};
 
 /** What discovery reports for a worker, with an allowlist narrowing the models. */
 export const previewCatalog = (source?: ProviderPolicy["source"]) =>
   source
     ? {
-        models: previewModels.filter(({ value }) =>
-          ["sonnet", "haiku"].includes(value),
-        ),
+        models: [
+          previewOrgDefault,
+          ...previewModels.filter(({ value }) =>
+            ["sonnet", "haiku"].includes(value),
+          ),
+        ],
         policy: previewOrgPolicy(source),
       }
     : { models: previewModels };

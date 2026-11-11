@@ -81,6 +81,18 @@ test("the section names the source and lists what's limited", () => {
   ]);
 });
 
+test("the org's default model and reasoning lead the facts", () => {
+  const facts = sections(
+    {},
+    { ...policy, default_model: "Sonnet 5.5", default_effort: "low" },
+  ).find(({ id }) => id === "organization-policy")?.facts;
+
+  assert.deepEqual(facts?.slice(0, 2), [
+    { label: "Default model", detail: "Sonnet 5.5." },
+    { label: "Default reasoning", detail: "Low." },
+  ]);
+});
+
 test("an empty allowlist reads as the default model", () => {
   const facts = sections({}, { ...policy, available_models: [] }).find(
     ({ id }) => id === "organization-policy",

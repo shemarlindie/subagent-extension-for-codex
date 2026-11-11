@@ -27,21 +27,27 @@ function discovery({
   rejected = [],
   resolved = [],
   modelsAfter = 0,
+  catalog = models,
+  applied,
 }: {
   policy?: object;
   rejected?: string[];
   resolved?: object[];
   /** How long Claude Code takes to answer, in milliseconds. */
   modelsAfter?: number;
+  catalog?: object[];
+  /** What the session reports it will run. */
+  applied?: { model: string; effort: string | null };
 }) {
   const launch = () => ({
     supportedModels: () =>
-      new Promise((resolve) => setTimeout(() => resolve(models), modelsAfter)),
+      new Promise((resolve) => setTimeout(() => resolve(catalog), modelsAfter)),
     setPermissionMode: async (mode: string) => {
       if (rejected.includes(mode)) throw new Error(REJECTIONS[mode]);
     },
     getSettings: async () => ({
       effective: {},
+      ...(applied ? { applied } : {}),
       sources: [
         { source: "flagSettings", settings: {} },
         ...(policy ? [{ source: "policySettings", settings: policy }] : []),
@@ -232,5 +238,62 @@ test("the allowlist and other active policy reach the panel", async () => {
   assert.deepEqual(
     policy?.notes.map((note) => note.label),
     ["Hooks", "Permission rules"],
+  );
+});
+
+/** Claude Code's catalog, whose Default describes its own default model. */
+const defaultCatalog = [
+  {
+    value: "default",
+    resolvedModel: "claude-opus-5-5",
+    displayName: "Default (recommended)",
+    description: "Use the default model (currently Opus 5.5)",
+    supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+  },
+  {
+    value: "sonnet",
+    resolvedModel: "claude-sonnet-5-5",
+    displayName: "Sonnet",
+    description: "",
+    supportedEffortLevels: ["low", "medium", "high"],
+  },
+];
+
+const defaultEntry = (read: ClaudeDiscovery) =>
+  read.models().then((list) => list.find(({ value }) => value === "default"));
+
+test("the org's default model and reasoning reach the Default entry and the policy", async () => {
+  const read = discovery({
+    policy: {
+      model: "sonnet",
+      modelSettings: { "claude-sonnet-5-5": { effortLevel: "low" } },
+    },
+    catalog: defaultCatalog,
+    applied: { model: "claude-sonnet-5-5", effort: "low" },
+  });
+
+  assert.deepEqual(await defaultEntry(read), {
+    ...defaultCatalog[0],
+    resolvedModel: "claude-sonnet-5-5",
+    description:
+      "Use the default model (currently Sonnet) · Set by your organization",
+    supportsEffort: undefined,
+    supportedEffortLevels: ["low", "medium", "high"],
+  });
+
+  const policy = await read.policy();
+  assert.equal(policy?.default_model, "Sonnet");
+  assert.equal(policy?.default_effort, "low");
+});
+
+test("a default from the user's settings doesn't name the organization", async () => {
+  const read = discovery({
+    catalog: defaultCatalog,
+    applied: { model: "claude-sonnet-5-5", effort: "medium" },
+  });
+
+  assert.equal(
+    (await defaultEntry(read))?.description,
+    "Use the default model (currently Sonnet)",
   );
 });
