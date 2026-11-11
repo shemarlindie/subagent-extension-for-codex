@@ -31,7 +31,10 @@ function streamingMotion() {
         cancel: vi.fn(() => displayed.delete(this)),
       };
 
-      displayed.set(this, parseFloat(String(frames[0]?.height)));
+      if (frames[0]?.height !== undefined) {
+        displayed.set(this, parseFloat(String(frames[0].height)));
+      }
+
       animations.push({ element: this, frames, animation });
 
       return animation;
@@ -125,4 +128,18 @@ test("saving a streamed message continues from its displayed height without repl
     "10px",
     "20px",
   ]);
+});
+
+test("streamed paragraphs fade in without fading the ones already shown", () => {
+  const { animations } = streamingMotion();
+
+  const content = (text: string) => (
+    <ChatMessageView message={message(text)} worker="Claude" streaming />
+  );
+
+  const view = render(content("First"));
+  view.rerender(content("First\n\nSecond"));
+
+  const fades = animations.filter((entry) => "opacity" in entry.frames[0]!);
+  expect(fades.map((entry) => entry.element.textContent)).toEqual(["Second"]);
 });

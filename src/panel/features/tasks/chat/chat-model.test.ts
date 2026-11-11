@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { startSchema, type Task } from "../../../../shared/tasks/model";
-import { spentBudget } from "./chat-model";
+import { draftRow, spentBudget } from "./chat-model";
 
 function failedBudgetTask(patch: Partial<Task> = {}): Task {
   return {
@@ -99,4 +99,16 @@ test("a raised budget clears only its matching failure for that turn", () => {
     cost: { used: 2.5, allowed: 2 },
     runtime: { usedMinutes: 22, allowedMinutes: 20 },
   });
+});
+
+test("a draft row shows finished paragraphs only, and none before the first", () => {
+  const task = failedBudgetTask({ status: "running" });
+  const draft = (text: string) => ({ task: task.id, message_id: "m", text });
+
+  assert.equal(draftRow(task, draft("Still writing")), undefined);
+
+  assert.equal(
+    draftRow(task, draft("Done.\n\nStill wri"))?.message.text,
+    "Done.",
+  );
 });

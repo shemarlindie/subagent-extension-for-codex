@@ -28,7 +28,9 @@ export async function installChatCycle(
     snapshot.events.map((event) => ({ ...event, task_id: taskId }));
 
   // The console uses its documented listed-task draft fallback here. Real SSE
-  // delivery and following are covered by chat-reading.spec.ts.
+  // delivery and following are covered by chat-reading.spec.ts. Chat shows
+  // only finished paragraphs, so each draft ends with a blank line to show
+  // all of its text.
   const list = () => ({
     tasks: [
       panelTask(
@@ -37,7 +39,7 @@ export async function installChatCycle(
         undefined,
         snapshot.draft && {
           ...snapshot.draft,
-          text: messageText(snapshot.draft.message_id, snapshot.draft.text),
+          text: `${messageText(snapshot.draft.message_id, snapshot.draft.text)}\n\n`,
         },
       ),
     ],

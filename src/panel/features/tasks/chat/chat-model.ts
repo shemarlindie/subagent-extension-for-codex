@@ -3,6 +3,7 @@ import type {
   ChatMessage,
 } from "../../../../shared/tasks/conversation/chat.js";
 import type { Task } from "../../../app/state/types";
+import { completeParagraphs } from "./drafts/complete-paragraphs";
 import type { DraftState } from "./drafts/draft-state";
 
 /** Statuses in which a turn is running, starting or about to. */
@@ -84,6 +85,7 @@ export function responseOutcome(message?: ChatItem, outcome?: ChatItem) {
 /**
  * The message being written as a Chat row, until Chat stores the message with
  * its id. The row shares that id, so the stored message replaces it in place.
+ * It shows whole paragraphs only, and none until the first one finishes.
  */
 export function draftRow(
   task: Task,
@@ -92,6 +94,8 @@ export function draftRow(
 ): ChatMessage | undefined {
   const shown = draft?.task === task.id ? draft : task.draft;
   if (!shown || stored.some((item) => item.id === shown.message_id)) return;
+  const text = completeParagraphs(shown.text);
+  if (!text) return;
 
   return {
     kind: "message",
@@ -104,7 +108,7 @@ export function draftRow(
       turn: task.turn,
       from: "worker",
       kind: "message",
-      text: shown.text,
+      text,
     },
   };
 }
