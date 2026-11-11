@@ -39,6 +39,10 @@ header .connection-icon,
 header .connection-icon:hover {
   color: var(--warn);
 }
+/* Lines the icon up with the header's padding and pulls the title closer. */
+header .task-rail-toggle {
+  margin: 0 -4px 0 -9px;
+}
 header .brand {
   flex: 1;
   display: flex;
@@ -143,6 +147,14 @@ header .toolbar {
 .task-list-resizer:focus-visible .task-list-resizer-grip {
   outline: var(--focus-ring);
   outline-offset: 1px;
+}
+/* The header toggle eases the list open and closed. Drags follow the pointer. */
+.shell[data-rail-motion] > [data-panel] {
+  transition: flex-grow var(--motion-base) var(--ease-out);
+}
+/* The list keeps its width while its panel clips it, so rows don't rewrap. */
+.shell[data-rail-motion] #task-rail {
+  min-width: var(--task-rail-width);
 }
 .task-layout-panel {
   height: 100%;

@@ -12,7 +12,7 @@ import { Controller } from "./state/controller";
 import { ControllerContext } from "./state/controller-context";
 import type { Snapshot, Transport } from "./state/types";
 
-function setup(overrides: Partial<Snapshot> = {}) {
+function setup(overrides: Partial<Snapshot> = {}, railCollapsed = false) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -40,10 +40,12 @@ function setup(overrides: Partial<Snapshot> = {}) {
 
   const settings = vi.spyOn(controller, "settings").mockResolvedValue();
 
+  const toggleRail = vi.fn();
+
   const view = render(
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <Header />
+        <Header taskRail={{ collapsed: railCollapsed, toggle: toggleRail }} />
       </Tooltip.Provider>
     </ControllerContext.Provider>,
   );
@@ -53,8 +55,24 @@ function setup(overrides: Partial<Snapshot> = {}) {
     user: userEvent.setup(),
     addProject,
     settings,
+    toggleRail,
   };
 }
+
+test("the task list toggle names the action it takes and reports whether the list is open", async () => {
+  const open = setup();
+  const hide = open.view.getByRole("button", { name: "Hide task list" });
+
+  expect(hide.getAttribute("aria-expanded")).toBe("true");
+  await open.user.click(hide);
+  expect(open.toggleRail).toHaveBeenCalledTimes(1);
+  cleanup();
+
+  const collapsed = setup({}, true);
+  const show = collapsed.view.getByRole("button", { name: "Show task list" });
+
+  expect(show.getAttribute("aria-expanded")).toBe("false");
+});
 
 test("connection changes announce the new status", () => {
   const { view } = setup({ connection: CONNECTION.reconnecting });

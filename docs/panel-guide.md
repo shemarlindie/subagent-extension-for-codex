@@ -147,8 +147,11 @@ have a dialog open, wait for a submitted request or browse the list or another
 page.
 
 Wide panels show the task list and inspector side by side, with a resizable
-divider. Narrow panels switch between them. Runtime accumulates across turns and
-includes the active run.
+divider. Narrow panels switch between them. On wide panels, hide the list with
+**Hide task list** at the start of the header or by dragging the divider past
+the list's minimum width. Click the remaining edge or **Show task list** to show
+it again. The panel remembers the width and whether the list is hidden. Runtime
+accumulates across turns and includes the active run.
 
 ### Read and unread tasks
 

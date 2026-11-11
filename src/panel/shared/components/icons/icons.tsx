@@ -50,6 +50,7 @@ const ICON_NAMES = [
   "task-details",
   "task-card",
   "inspector-panel",
+  "sidebar",
   "handoff",
   "pencil",
   "pencil-simple",
