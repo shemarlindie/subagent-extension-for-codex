@@ -10,11 +10,12 @@ import { pendingUpdates } from "./pending-update-tracker";
 
 /** The count of worker updates Codex hasn't seen. It opens the dialog to send them. */
 export function PendingUpdatesIndicator() {
-  const controller = useController(),
-    state = useSnapshot(),
-    tasks = pendingUpdates(state),
-    updates = tasks.flatMap((task) => task.updates),
-    count = updates.length;
+  const controller = useController();
+  const pendingState = useSnapshot(["pendingUpdates", "conversation"]);
+  const { connected, busy } = useSnapshot(["connected", "busy"]);
+  const tasks = pendingUpdates(pendingState);
+  const updates = tasks.flatMap((task) => task.updates);
+  const count = updates.length;
 
   if (!count) return null;
 
@@ -28,7 +29,7 @@ export function PendingUpdatesIndicator() {
         className="pending-updates-button"
         aria-label={label}
         data-waiting={waiting || undefined}
-        disabled={!state.connected || state.busy}
+        disabled={!connected || busy}
         onClick={() => controller.open({ kind: "pending-updates" })}
       >
         <Icon name="paper-plane" size={10} />

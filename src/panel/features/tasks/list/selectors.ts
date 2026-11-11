@@ -39,6 +39,18 @@ export const failedStatus = (task: Task) =>
 
 const needsInput = (task: Task) => Boolean(task.pending_input);
 
+/** The snapshot fields the task list selectors read. */
+export const TASK_LIST_FIELDS = [
+  "tasks",
+  "readCompleted",
+  "repository",
+  "search",
+  "filter",
+  "selected",
+] as const;
+
+export type TaskListState = Pick<Snapshot, (typeof TASK_LIST_FIELDS)[number]>;
+
 // One AskUserQuestion call carries every stacked question in `questions`
 // (1-4 in the Claude SDK). A request without them has no questions to show.
 export const pendingQuestions = (task: Task): Question[] => {
@@ -59,7 +71,9 @@ const matchesFilter = (task: Task, filter: Filter) =>
 
 // Tasks in the chosen project and search, before the status filter applies.
 // Archived tasks are left out. The Projects page lists them.
-export function scopedTasks(state: Snapshot) {
+export function scopedTasks(
+  state: Pick<TaskListState, "tasks" | "repository" | "search">,
+) {
   const search = state.search.toLowerCase();
 
   return state.tasks.filter(
@@ -74,7 +88,7 @@ export function scopedTasks(state: Snapshot) {
 }
 
 // The chosen filter, or until one is chosen, the first in display order that holds tasks.
-export function effectiveFilter(state: Snapshot): Filter {
+export function effectiveFilter(state: TaskListState): Filter {
   if (state.filter) return state.filter;
   const counts = filterCounts(state);
 
@@ -83,7 +97,7 @@ export function effectiveFilter(state: Snapshot): Filter {
 
 // Under Unread, the open task stays listed once read, until another is chosen.
 // Across projects, tasks come in display order: grouped by project.
-export const visibleTasks = (state: Snapshot) => {
+export const visibleTasks = (state: TaskListState) => {
   const filter = effectiveFilter(state);
 
   const tasks = scopedTasks(state).filter(
@@ -138,7 +152,7 @@ export const groupSignals = (tasks: Task[]) => ({
 
 // Done and All count read completed tasks the list hasn't loaded. A search
 // loads them, so it never counts them unloaded.
-export function filterCounts(state: Snapshot) {
+export function filterCounts(state: TaskListState) {
   const scoped = scopedTasks(state);
 
   const unloaded = state.search
@@ -160,7 +174,7 @@ export function filterCounts(state: Snapshot) {
 }
 
 /** A restored filter, or none when it no longer holds tasks in scope. */
-export function availableFilter(state: Snapshot, filter: Filter | null) {
+export function availableFilter(state: TaskListState, filter: Filter | null) {
   if (!filter || filter === "all") return filter;
 
   // Search may have no matches while its chosen status remains valid in scope.
@@ -172,12 +186,12 @@ export function availableFilter(state: Snapshot, filter: Filter | null) {
  * demand. The default filter is unknown while nothing is listed. A scope with
  * tasks always lists its newest.
  */
-export function showsReadCompleted(state: Snapshot) {
+export function showsReadCompleted(state: TaskListState) {
   const filter =
     state.filter ?? (state.tasks.length ? effectiveFilter(state) : undefined);
 
   return Boolean(state.search) || filter === "completed" || filter === "all";
 }
 
-export const selectedTask = (state: Snapshot) =>
+export const selectedTask = (state: Pick<Snapshot, "tasks" | "selected">) =>
   state.tasks.find((task) => task.id === state.selected);

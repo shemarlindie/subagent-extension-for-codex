@@ -13,8 +13,10 @@ import { TaskArrivalToast } from "./task-arrival-toast";
 import { UndoToast } from "./undo-toast";
 import { useUndoShortcuts } from "./use-undo-shortcuts";
 
+type BodyLayoutState = Pick<Snapshot, "selected" | "newTask" | "host">;
+
 /** Whether the panel shows only the inline preview of an embedded host. */
-function isCompact(state: Snapshot, embedded: boolean) {
+function isCompact(state: Pick<Snapshot, "host">, embedded: boolean) {
   return embedded && state.host.displayMode === "inline";
 }
 
@@ -22,7 +24,7 @@ function isCompact(state: Snapshot, embedded: boolean) {
  * Sets the body attributes the layout styles key off. Bootstrap applies them
  * before the first render, so no layout is measured or painted without them.
  */
-export function applyBodyLayout(state: Snapshot, embedded: boolean) {
+export function applyBodyLayout(state: BodyLayoutState, embedded: boolean) {
   const { dataset } = document.body;
   // Composing a task shows the inspector in place of the list, like a selection.
   dataset.selected = String(Boolean(state.selected || state.newTask));
@@ -31,17 +33,26 @@ export function applyBodyLayout(state: Snapshot, embedded: boolean) {
 }
 
 export function AppShell() {
-  const controller = useController(),
-    state = useSnapshot(),
-    { embedded } = controller.transport;
+  const controller = useController();
+  const { embedded } = controller.transport;
 
-  const compact = isCompact(state, embedded);
+  const { selected, newTask, host, error } = useSnapshot([
+    "selected",
+    "newTask",
+    "host",
+    "error",
+  ]);
+
+  const compact = isCompact({ host }, embedded);
   useEffect(() => trackIdleScrollbars(document), []);
   useUnreadTitle();
   useUndoShortcuts();
 
   // Before paint, so a change never shows the previous layout.
-  useLayoutEffect(() => applyBodyLayout(state, embedded), [state, embedded]);
+  useLayoutEffect(
+    () => applyBodyLayout({ selected, newTask, host }, embedded),
+    [selected, newTask, host, embedded],
+  );
 
   return (
     <>
@@ -49,10 +60,10 @@ export function AppShell() {
         <InlinePreview />
       ) : (
         <>
-          <Presence show={Boolean(state.error)}>
-            {state.error && (
+          <Presence show={Boolean(error)}>
+            {error && (
               <div id="error" className="context-error" role="alert">
-                {state.error}
+                {error}
               </div>
             )}
           </Presence>

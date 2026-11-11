@@ -31,7 +31,9 @@ export function projectApproved(projects: Project[], repository: string) {
   );
 }
 
-export function projectChoices(state: Snapshot) {
+export function projectChoices(
+  state: Pick<Snapshot, "projects" | "repository">,
+) {
   const choices = state.projects.filter(
     (project) => project.kind === "repository",
   );

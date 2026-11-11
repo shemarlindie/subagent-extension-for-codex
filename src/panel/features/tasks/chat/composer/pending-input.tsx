@@ -22,17 +22,22 @@ type PendingInputProps = { task: Task };
  * render as cards and permissions include their review details and actions.
  */
 export function PendingInput({ task }: PendingInputProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    pending = task.pending_input,
-    isQuestion = Boolean(pending && pendingInputKind(pending) === "question"),
-    isPermission = Boolean(
-      pending && pendingInputKind(pending) === "permission",
-    ),
-    questions =
-      isQuestion && pendingQuestions(task).length
-        ? pendingQuestions(task)
-        : undefined;
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const pending = task.pending_input;
+
+  const isQuestion = Boolean(
+    pending && pendingInputKind(pending) === "question",
+  );
+
+  const isPermission = Boolean(
+    pending && pendingInputKind(pending) === "permission",
+  );
+
+  const questions =
+    isQuestion && pendingQuestions(task).length
+      ? pendingQuestions(task)
+      : undefined;
 
   // Pending requests fold in and out so the messages above don't jump.
   return (
@@ -54,7 +59,7 @@ export function PendingInput({ task }: PendingInputProps) {
           <Button
             id="respond"
             variant="primary"
-            disabled={state.busy}
+            disabled={busy}
             onClick={() => controller.open({ kind: "respond", task })}
           >
             Review request

@@ -20,29 +20,37 @@ import { useArrivalMotion } from "./use-arrival-motion";
 import { useNewTaskMotion } from "./use-new-task-motion";
 
 export function TaskInspector() {
-  const controller = useController(),
-    state = useSnapshot(),
-    task = selectedTask(state);
+  const controller = useController();
+
+  const { selected, newTask, taskListLoading, task, projectRemoved } =
+    useSnapshot(["selected", "newTask", "taskListLoading"], (state) => {
+      const task = selectedTask(state);
+
+      return {
+        task,
+        projectRemoved: Boolean(
+          task &&
+          state.projectsLoaded &&
+          !projectApproved(state.projects, task.repository),
+        ),
+      };
+    });
 
   const { detailRef, headerRef, stacked } = useStackedLayout(task?.id);
 
   const newTaskViewRef = useArrivalMotion(
     detailRef,
-    state.selected ?? undefined,
-    Boolean(state.newTask),
+    selected ?? undefined,
+    Boolean(newTask),
   );
 
-  const taskViewRef = useNewTaskMotion(
-    detailRef,
-    Boolean(state.newTask),
-    task?.id,
-  );
+  const taskViewRef = useNewTaskMotion(detailRef, Boolean(newTask), task?.id);
 
-  const loading = !task && Boolean(state.selected) && state.taskListLoading;
+  const loading = !task && Boolean(selected) && taskListLoading;
   // Hosts without a restored selection pick a task once the list loads.
-  const awaitingSelection = !task && !loading && state.taskListLoading;
+  const awaitingSelection = !task && !loading && taskListLoading;
 
-  if (state.newTask) {
+  if (newTask) {
     return (
       <section
         ref={detailRef}
@@ -50,7 +58,7 @@ export function TaskInspector() {
         className="detail has-task"
         aria-label="New task"
       >
-        <NewTaskView newTask={state.newTask} viewRef={newTaskViewRef} />
+        <NewTaskView newTask={newTask} viewRef={newTaskViewRef} />
       </section>
     );
   }
@@ -66,7 +74,7 @@ export function TaskInspector() {
       aria-busy={loading || undefined}
     >
       {task || loading ? (
-        <div ref={taskViewRef} key={state.selected} className="task-view">
+        <div ref={taskViewRef} key={selected} className="task-view">
           <div ref={headerRef} className="task-header">
             <LoadingSwap
               className="task-header-loading-swap"
@@ -88,18 +96,17 @@ export function TaskInspector() {
                     </div>
                     <TaskMenu task={task} />
                   </div>
-                  {state.projectsLoaded &&
-                    !projectApproved(state.projects, task.repository) && (
-                      <Notice>
-                        Add this project again before starting another turn. You
-                        can still view its task history.
-                      </Notice>
-                    )}
+                  {projectRemoved && (
+                    <Notice>
+                      Add this project again before starting another turn. You
+                      can still view its task history.
+                    </Notice>
+                  )}
                 </>
               ) : null}
             </LoadingSwap>
           </div>
-          <EvidenceTabs task={task} taskId={state.selected ?? ""} />
+          <EvidenceTabs task={task} taskId={selected ?? ""} />
         </div>
       ) : (
         !awaitingSelection && (

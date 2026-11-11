@@ -14,7 +14,7 @@ import { providerOptionDefaults } from "./provider-defaults";
 
 export type DelegateFormDialog = DelegateDialog | DelegateLoadingDialog;
 
-type DelegateScope = Pick<
+export type DelegateScope = Pick<
   Snapshot,
   "workers" | "scopeKnown" | "repository" | "revision"
 >;

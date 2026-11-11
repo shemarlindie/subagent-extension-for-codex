@@ -10,10 +10,12 @@ import {
  * in "(2) Delegated Work". A host names the embedded panel itself.
  */
 export function useUnreadTitle() {
-  const controller = useController(),
-    state = useSnapshot(),
-    [base] = useState(() => document.title),
-    unread = state.tasks.filter((task) => task.unread).length;
+  const controller = useController();
+  const [base] = useState(() => document.title);
+
+  const unread = useSnapshot(
+    (state) => state.tasks.filter((task) => task.unread).length,
+  );
 
   useEffect(() => {
     if (controller.transport.embedded) return;

@@ -15,7 +15,7 @@ type AskReplyButtonProps = {
 /** Prepares a message about this reply for the user to review and send. */
 export function AskReplyButton({ task, message, inline }: AskReplyButtonProps) {
   const controller = useController();
-  const threadMode = Boolean(useSnapshot().conversation);
+  const threadMode = useSnapshot((state) => Boolean(state.conversation));
 
   if (!threadMode) return null;
 

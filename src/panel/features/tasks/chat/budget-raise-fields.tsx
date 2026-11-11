@@ -54,7 +54,7 @@ function BudgetRaiseField({
   onChange,
   onApply,
 }: Omit<BudgetRaiseFieldsProps, "fields"> & { field: BudgetField }) {
-  const busy = useSnapshot().busy;
+  const busy = useSnapshot((state) => state.busy);
   const [applyError, setApplyError] = useState<string>();
   const isCost = field === "cost";
   const spentAmount = isCost ? spent.cost : spent.runtime;

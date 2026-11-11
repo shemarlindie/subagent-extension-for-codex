@@ -12,25 +12,27 @@ import { useAnimatedHeight } from "../components/motion/use-animated-height";
 import { dialogDefinition } from "./dialog-registry";
 
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
-  const controller = useController(),
-    state = useSnapshot(),
-    // The closing animation keeps showing the last dialog rather than an empty box.
-    lastDialog = useRef(
-      isSettingsPageDialog(state.dialog) ? undefined : state.dialog,
-    );
+  const controller = useController();
 
-  const settingsPageDialog = isSettingsPageDialog(state.dialog);
+  const { dialog, formError, busy } = useSnapshot([
+    "dialog",
+    "formError",
+    "busy",
+  ]);
 
-  const activeDialog = isSettingsPageDialog(state.dialog)
-    ? undefined
-    : state.dialog;
+  // The closing animation keeps showing the last dialog rather than an empty box.
+  const lastDialog = useRef(isSettingsPageDialog(dialog) ? undefined : dialog);
+
+  const settingsPageDialog = isSettingsPageDialog(dialog);
+
+  const activeDialog = isSettingsPageDialog(dialog) ? undefined : dialog;
 
   if (activeDialog) lastDialog.current = activeDialog;
 
-  const dialog =
+  const shownDialog =
     activeDialog ?? (settingsPageDialog ? undefined : lastDialog.current);
 
-  const definition = dialog && dialogDefinition(dialog);
+  const definition = shownDialog && dialogDefinition(shownDialog);
 
   const trigger = useRef<HTMLElement | null>(null),
     openedScope = useRef(0),
@@ -40,9 +42,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   // Replacing a dialog's contents keeps the popup open, so Base UI's opening
   // focus does not run again. Focus the replacement form or restored preview.
   useLayoutEffect(() => {
-    const currentDialog = isSettingsPageDialog(state.dialog)
-      ? undefined
-      : state.dialog;
+    const currentDialog = isSettingsPageDialog(dialog) ? undefined : dialog;
 
     const previous = previousKind.current;
     previousKind.current = currentDialog?.kind;
@@ -68,25 +68,26 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
       popup.current;
 
     focus?.focus();
-  }, [state.dialog, definition, suspended]);
+  }, [dialog, definition, suspended]);
 
   // Switching forms or showing an error eases the height instead of snapping it.
-  useAnimatedHeight(popup, `${dialog?.kind}:${state.formError}`);
+  useAnimatedHeight(popup, `${shownDialog?.kind}:${formError}`);
 
   const handleOpenChange = (
     open: boolean,
     details: DialogRootChangeEventDetails,
   ) => {
-    if (state.busy) details.cancel();
+    if (busy) details.cancel();
     else if (!open) controller.dismiss();
   };
 
   const handleInitialFocus = () => {
     trigger.current = document.activeElement as HTMLElement | null;
-    openedScope.current = dialog?.scope ?? 0;
+    openedScope.current = shownDialog?.scope ?? 0;
 
     return (
-      (dialog && definition?.initialFocus?.(popup.current, dialog)) || true
+      (shownDialog && definition?.initialFocus?.(popup.current, shownDialog)) ||
+      true
     );
   };
 
@@ -119,26 +120,26 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           ref={popup}
           id="dialog"
           className="dialog"
-          data-kind={dialog?.kind}
+          data-kind={shownDialog?.kind}
           aria-describedby={undefined}
           initialFocus={handleInitialFocus}
           finalFocus={handleFinalFocus}
         >
           <div className="dialog-heading">
             <Dialog.Title id="dialog-title">
-              {dialog && definition?.title(dialog)}
+              {shownDialog && definition?.title(shownDialog)}
             </Dialog.Title>
-            {dialog && definition?.headingActions?.(dialog)}
+            {shownDialog && definition?.headingActions?.(shownDialog)}
             <Dialog.Close
               type="button"
               className={buttonClass("ghost", { className: "dialog-close" })}
               aria-label="Close"
-              disabled={state.busy}
+              disabled={busy}
             >
               <Icon name="close" size={10} />
             </Dialog.Close>
           </div>
-          {dialog && definition?.render(dialog)}
+          {shownDialog && definition?.render(shownDialog)}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

@@ -9,9 +9,9 @@ import { Field } from "../../shared/forms/fields";
 type LoginValues = { token: string };
 
 export function LoginForm() {
-  const controller = useController(),
-    state = useSnapshot(),
-    [error, setError] = useState("");
+  const controller = useController();
+  const loginRequired = useSnapshot((state) => state.loginRequired);
+  const [error, setError] = useState("");
 
   const {
     register,
@@ -32,7 +32,7 @@ export function LoginForm() {
 
   return (
     <Dialog.Root
-      open={state.loginRequired}
+      open={loginRequired}
       disablePointerDismissal
       onOpenChange={(_open, details) => details.cancel()}
     >

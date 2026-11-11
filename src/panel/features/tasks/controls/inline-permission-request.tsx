@@ -13,15 +13,15 @@ import { Notice } from "../../../shared/components/notice/notice";
 import { PermissionInputDetails } from "./permission-input-details";
 
 export function InlinePermissionRequest({ task }: { task: Task }) {
-  const controller = useController(),
-    busy = useSnapshot().busy,
-    request = task.pending_input!,
-    presentation = inputPresentation(request),
-    titleId = useId(),
-    [message, setMessage] = useState(""),
-    [messageOpen, setMessageOpen] = useState(false),
-    messageInput = useRef<HTMLInputElement>(null),
-    [error, setError] = useState<string>();
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const request = task.pending_input!;
+  const presentation = inputPresentation(request);
+  const titleId = useId();
+  const [message, setMessage] = useState("");
+  const [messageOpen, setMessageOpen] = useState(false);
+  const messageInput = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
     if (!messageOpen) return;

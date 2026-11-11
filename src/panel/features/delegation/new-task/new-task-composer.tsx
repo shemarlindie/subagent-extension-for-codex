@@ -47,21 +47,38 @@ function readFailure(errors: NewTaskState["errors"]) {
  * mode, and **More options** opens the Advanced task dialog with them.
  */
 export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    [saved, updateSession] = useSessionState(
-      "newTask",
-      NEW_TASK_SESSION_ID,
-      (session) => session.draft,
-    ),
-    savedAtMount = useRef(saved).current,
-    initialValues = newTaskInitialValues(newTask, state),
-    form = useForm<DelegateValues>({
-      defaultValues: { ...initialValues, ...savedAtMount },
-    }),
-    input = useRef<HTMLTextAreaElement>(null),
-    box = useRef<HTMLDivElement>(null),
-    [error, setError] = useState<string>();
+  const controller = useController();
+
+  const scope = useSnapshot([
+    "projects",
+    "projectCandidate",
+    "projectCandidateAuto",
+    "projectCandidateGit",
+    "workers",
+    "scopeKnown",
+    "repository",
+    "revision",
+    "busy",
+  ]);
+
+  const dialogOpen = useSnapshot((state) => Boolean(state.dialog));
+
+  const [saved, updateSession] = useSessionState(
+    "newTask",
+    NEW_TASK_SESSION_ID,
+    (session) => session.draft,
+  );
+
+  const savedAtMount = useRef(saved).current;
+  const initialValues = newTaskInitialValues(newTask, scope);
+
+  const form = useForm<DelegateValues>({
+    defaultValues: { ...initialValues, ...savedAtMount },
+  });
+
+  const input = useRef<HTMLTextAreaElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string>();
 
   useAsyncDefaults(form, initialValues, savedAtMount);
   useProfileMode(form, initialValues.permission_mode, savedAtMount);
@@ -88,25 +105,32 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   }, []);
 
   const [description, chosenRepository, worker] = useWatch({
-      control: form.control,
-      name: ["description", "repository", "worker"],
-    }),
-    // A scoped panel targets its project; the chip only shows for All projects.
-    repository = state.repository ?? chosenRepository;
+    control: form.control,
+    name: ["description", "repository", "worker"],
+  });
 
-  const { statuses, errors } = newTask,
-    readsReady = Object.values(statuses).every((status) => status === "ready"),
-    failed = Object.values(statuses).some((status) => status === "error"),
-    readiness = state.workers.find(
-      (item) => item.provider === workerChoice(worker).provider,
-    )?.readiness,
-    canSubmit =
-      readsReady &&
-      !state.busy &&
-      Boolean(description.trim()) &&
-      Boolean(repository) &&
-      workerChoices(state.workers).includes(worker) &&
-      readiness?.ready !== false;
+  // A scoped panel targets its project; the chip only shows for All projects.
+  const repository = scope.repository ?? chosenRepository;
+
+  const { statuses, errors } = newTask;
+
+  const readsReady = Object.values(statuses).every(
+    (status) => status === "ready",
+  );
+
+  const failed = Object.values(statuses).some((status) => status === "error");
+
+  const readiness = scope.workers.find(
+    (item) => item.provider === workerChoice(worker).provider,
+  )?.readiness;
+
+  const canSubmit =
+    readsReady &&
+    !scope.busy &&
+    Boolean(description.trim()) &&
+    Boolean(repository) &&
+    workerChoices(scope.workers).includes(worker) &&
+    readiness?.ready !== false;
 
   const submit = form.handleSubmit(async (values) => {
     const failure = await controller.newTasks.start(
@@ -115,7 +139,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         repository,
         description: values.description.trim(),
         // Another project's checkout starts from its own HEAD.
-        revision: repository === state.repository ? values.revision : "HEAD",
+        revision: repository === scope.repository ? values.revision : "HEAD",
       },
       box.current?.offsetHeight,
     );
@@ -178,7 +202,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       <form
         className="chat-composer new-task-composer"
         noValidate
-        aria-busy={state.busy || undefined}
+        aria-busy={scope.busy || undefined}
         onSubmit={handleSubmit}
       >
         <div className="chat-composer-body">
@@ -193,18 +217,18 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
                 rows={2}
                 maxLength={20000}
                 placeholder="Describe the task."
-                disabled={state.busy}
+                disabled={scope.busy}
                 {...messageField}
                 ref={setInput}
                 onKeyDown={keys}
               />
               <div className="new-task-box-footer">
-                <NewTaskOptions newTask={newTask} state={state} />
+                <NewTaskOptions newTask={newTask} state={scope} />
                 <div className="chat-composer-actions">
                   <Button
                     variant="text"
                     className="new-task-more"
-                    disabled={state.busy || Boolean(state.dialog)}
+                    disabled={scope.busy || dialogOpen}
                     onClick={advanced}
                   >
                     More options…
@@ -230,7 +254,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
           <div className="chat-composer-field-feedback">
             <WorkspaceNoteView
               note={workspaceNote({
-                git: projectGit(state, repository),
+                git: projectGit(scope, repository),
                 savedStrategy: newTask.defaults?.task.workspace_strategy,
                 readOnly: readOnlyProfile(workerChoice(worker).profile ?? ""),
               })}

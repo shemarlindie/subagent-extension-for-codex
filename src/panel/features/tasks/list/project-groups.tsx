@@ -25,13 +25,13 @@ export function ProjectGroups({
   projectName,
   renderRow,
 }: ProjectGroupsProps) {
-  const { search, selected } = useSnapshot(),
-    groups = tasksByProject(tasks),
-    capped = !search && groups.length > 1,
-    [collapsed, setGroupOpen] = useCollapsedProjects(),
-    // Groups whose "Show more" was chosen, while the groups stay shown.
-    [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set()),
-    revealed = useRef(selected);
+  const { search, selected } = useSnapshot(["search", "selected"]);
+  const groups = tasksByProject(tasks);
+  const capped = !search && groups.length > 1;
+  const [collapsed, setGroupOpen] = useCollapsedProjects();
+  // Groups whose "Show more" was chosen, while the groups stay shown.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const revealed = useRef(selected);
 
   // Choosing a task from outside the list, such as a toast, opens its group.
   useEffect(() => {

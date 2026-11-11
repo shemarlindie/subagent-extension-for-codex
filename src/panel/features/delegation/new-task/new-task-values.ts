@@ -1,10 +1,17 @@
 import { settingAt } from "../../../../shared/settings/settings-schema";
 import { scalarText } from "../../../../shared/text";
-import type { NewTaskState, Snapshot } from "../../../app/state/types";
+import type { NewTaskState } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
-import { delegateInitialValues } from "../delegate-initial-values";
+import {
+  delegateInitialValues,
+  type DelegateScope,
+} from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
-import { taskProjects, workerChoice } from "../delegation";
+import {
+  type ProjectTargetState,
+  taskProjects,
+  workerChoice,
+} from "../delegation";
 
 /** The session-memory entry that keeps the composer's draft. */
 export const NEW_TASK_SESSION_ID = "draft";
@@ -18,7 +25,7 @@ export function draftTitle(description = "") {
 }
 
 /** Projects a composed task can target. */
-export function newTaskProjects(state: Snapshot) {
+export function newTaskProjects(state: ProjectTargetState) {
   return taskProjects(state).filter((project) => project.kind === "repository");
 }
 
@@ -47,7 +54,7 @@ export function profileValues(
  */
 export function newTaskInitialValues(
   newTask: NewTaskState,
-  state: Snapshot,
+  state: ProjectTargetState & DelegateScope,
 ): DelegateValues {
   const projects = newTaskProjects(state),
     provider =

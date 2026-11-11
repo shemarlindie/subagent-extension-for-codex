@@ -10,12 +10,20 @@ import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { SettingsForm, type SettingsSaveActionState } from "./settings-form";
 
 export function SettingsPage() {
-  const controller = useController(),
-    state = useSnapshot(),
-    [saveAction, setSaveAction] = useState<SettingsSaveActionState>({
-      disabled: true,
-      label: "Save",
-    });
+  const controller = useController();
+
+  const { connected, dialog, page, scopeVersion, busy } = useSnapshot([
+    "connected",
+    "dialog",
+    "page",
+    "scopeVersion",
+    "busy",
+  ]);
+
+  const [saveAction, setSaveAction] = useState<SettingsSaveActionState>({
+    disabled: true,
+    label: "Save",
+  });
 
   const updateSaveAction = useCallback((next: SettingsSaveActionState) => {
     setSaveAction((current) =>
@@ -27,13 +35,13 @@ export function SettingsPage() {
 
   useEffect(() => {
     controller.ensureSettingsLoaded();
-  }, [controller, state.connected, state.dialog, state.page]);
+  }, [controller, connected, dialog, page]);
 
-  const dialog: SettingsPageDialog = isSettingsPageDialog(state.dialog)
-    ? state.dialog
+  const pageDialog: SettingsPageDialog = isSettingsPageDialog(dialog)
+    ? dialog
     : {
         kind: "settings-loading",
-        scope: state.scopeVersion,
+        scope: scopeVersion,
         request: 0,
         status: "loading",
       };
@@ -44,7 +52,8 @@ export function SettingsPage() {
       title={PAGES.settings.label}
       headingId="settings-heading"
       titleStatus={
-        dialog.kind === "settings-loading" && dialog.status === "loading" ? (
+        pageDialog.kind === "settings-loading" &&
+        pageDialog.status === "loading" ? (
           <span
             className="settings-title-status"
             role="status"
@@ -57,7 +66,7 @@ export function SettingsPage() {
       back={
         <BackButton
           label={PAGES.tasks.label}
-          disabled={state.busy}
+          disabled={busy}
           onClick={() => controller.backFromSettings()}
         />
       }
@@ -74,7 +83,7 @@ export function SettingsPage() {
       }
     >
       <SettingsForm
-        dialog={dialog}
+        dialog={pageDialog}
         saveActionPlacement="header"
         onSaveActionChange={updateSaveAction}
       />

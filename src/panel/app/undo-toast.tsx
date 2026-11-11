@@ -11,7 +11,7 @@ const UNDO_TIMEOUT_MS = 6000;
  * that a step failed.
  */
 export function UndoToast() {
-  const notice = useSnapshot().undoNotice;
+  const notice = useSnapshot((state) => state.undoNotice);
 
   return notice ? (
     <Toast.Provider timeout={UNDO_TIMEOUT_MS} limit={1}>

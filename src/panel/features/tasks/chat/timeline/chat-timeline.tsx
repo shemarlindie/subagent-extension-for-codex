@@ -55,25 +55,31 @@ export function ChatTimeline({
   onBudgetApply,
   newMessages,
 }: ChatTimelineProps) {
-  const state = useSnapshot(),
-    chat = task && state.chat?.task === task.id ? state.chat : undefined,
-    worker = task ? providerName(task.provider, state.workers) : "";
+  const { chat, workers, draft, events } = useSnapshot([
+    "chat",
+    "workers",
+    "draft",
+    "events",
+  ]);
+
+  const taskChat = task && chat?.task === task.id ? chat : undefined;
+  const worker = task ? providerName(task.provider, workers) : "";
 
   // Pending steers and queued messages show above the composer until sent.
   const waiting = new Set(
     task ? [...task.pending_steers, ...task.queue].map((m) => m.id) : [],
   );
 
-  const items = chat?.items.filter(
+  const items = taskChat?.items.filter(
     (item) => !(item.kind === "message" && waiting.has(item.id)),
   );
 
-  const draftItem = task && draftRow(task, state.draft, chat?.items);
+  const draftItem = task && draftRow(task, draft, taskChat?.items);
   const visibleItems = items && (draftItem ? [...items, draftItem] : items);
 
   const activity =
-    task?.status === "running" && state.events.length
-      ? currentActivityStatus(state.events, task)
+    task?.status === "running" && events.length
+      ? currentActivityStatus(events, task)
       : task?.live_activity;
 
   const presentation = task

@@ -14,7 +14,8 @@ const CONTENT: Record<PageId, ComponentType> = {
 
 /** Retained pages preserve forms and reading positions while inactive. */
 export function PageOutlet() {
-  const { page, selected } = useSnapshot();
+  const { page, selected } = useSnapshot(["page", "selected"]);
+
   const previous = useRef(page);
   const openers = useRef(new Map<PageId, HTMLElement>());
   const root = useRef<HTMLDivElement>(null);

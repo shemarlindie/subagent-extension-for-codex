@@ -2,6 +2,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import type { ReactNode } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
+import { dialogStale } from "../../app/state/scope-reconciliation";
 import { Button } from "../components/button/button";
 import { Presence } from "../components/motion/presence";
 
@@ -19,22 +20,25 @@ export function FormFooter({
   dismissLabel = "Cancel",
   children,
 }: FormFooterProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    stale = state.dialog?.scope !== state.scopeVersion;
+  const controller = useController();
+
+  const { formError, busy, stale } = useSnapshot(
+    ["formError", "busy"],
+    (state) => ({ stale: dialogStale(state) }),
+  );
 
   return (
     <>
-      <Presence show={Boolean(state.formError)}>
+      <Presence show={Boolean(formError)}>
         <div id="form-error" className="form-error error" role="alert">
-          {state.formError}
+          {formError}
         </div>
       </Presence>
       <footer>
         <Dialog.Close
           type="button"
           id="dismiss"
-          disabled={state.busy}
+          disabled={busy}
           onClick={() => controller.dismiss()}
         >
           {dismissLabel}
@@ -44,9 +48,9 @@ export function FormFooter({
           id="submit"
           type="submit"
           variant="primary"
-          disabled={state.busy || stale || disabled}
+          disabled={busy || stale || disabled}
         >
-          {state.busy ? "Working…" : label}
+          {busy ? "Working…" : label}
         </Button>
       </footer>
     </>

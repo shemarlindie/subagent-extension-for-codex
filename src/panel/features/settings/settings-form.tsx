@@ -66,17 +66,22 @@ export function SettingsForm({
   saveActionPlacement = "footer",
   onSaveActionChange,
 }: SettingsFormProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    loading = dialog.kind === "settings-loading",
-    settings = loading ? undefined : dialog.settings,
-    status = loading ? dialog.status : "ready",
-    loadError = loading ? dialog.error : undefined,
-    sections = useMemo(() => settings?.sections ?? [], [settings?.sections]),
-    initial = useMemo(
-      () => sectionsForm(sections, settings?.values ?? {}),
-      [sections, settings?.values],
-    );
+  const controller = useController();
+  const { busy, formError } = useSnapshot(["busy", "formError"]);
+  const loading = dialog.kind === "settings-loading";
+  const settings = loading ? undefined : dialog.settings;
+  const status = loading ? dialog.status : "ready";
+  const loadError = loading ? dialog.error : undefined;
+
+  const sections = useMemo(
+    () => settings?.sections ?? [],
+    [settings?.sections],
+  );
+
+  const initial = useMemo(
+    () => sectionsForm(sections, settings?.values ?? {}),
+    [sections, settings?.values],
+  );
 
   const { control, register, handleSubmit, setValue, reset } =
     usePersistedDialogForm<Values>("settings", initial, { ready: !loading });
@@ -110,8 +115,8 @@ export function SettingsForm({
     isError = status === "error",
     showDiscard = !loading && discarding && total > 0;
 
-  const saveButtonDisabled = state.busy || !settings || !total,
-    saveButtonLabel = saveButtonText(state.busy, total);
+  const saveButtonDisabled = busy || !settings || !total;
+  const saveButtonLabel = saveButtonText(busy, total);
 
   useEffect(() => {
     onSaveActionChange?.({
@@ -341,7 +346,7 @@ export function SettingsForm({
       id="settings-form"
       className="settings-form"
       noValidate
-      aria-busy={isLoading || state.busy || undefined}
+      aria-busy={isLoading || busy || undefined}
       onSubmit={loading ? (event) => event.preventDefault() : submit}
     >
       <Collapsible.Root open={showDiscard}>
@@ -418,9 +423,9 @@ export function SettingsForm({
           </Presence>
         </SettingsSearchContext.Provider>
       </fieldset>
-      <Presence show={Boolean(state.formError)}>
+      <Presence show={Boolean(formError)}>
         <div id="form-error" className="form-error error" role="alert">
-          {state.formError}
+          {formError}
         </div>
       </Presence>
       {saveActionPlacement === "footer" && (

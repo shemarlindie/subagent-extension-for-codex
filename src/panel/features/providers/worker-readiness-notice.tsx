@@ -4,11 +4,9 @@ import { Notice } from "../../shared/components/notice/notice";
 
 /** Says which workers can't start tasks and how to fix it, such as a missing Claude Code CLI. */
 export function WorkerReadinessNotice() {
-  const state = useSnapshot();
+  const workers = useSnapshot((state) => state.workers);
 
-  const unready = state.workers.filter(
-    (worker) => worker.readiness?.ready === false,
-  );
+  const unready = workers.filter((worker) => worker.readiness?.ready === false);
 
   if (!unready.length) return null;
 

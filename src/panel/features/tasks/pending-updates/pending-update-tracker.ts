@@ -8,7 +8,9 @@ interface PendingUpdateContext {
 }
 
 /** The worker updates Codex hasn't seen in the panel's conversation. */
-export function pendingUpdates(state: Snapshot) {
+export function pendingUpdates(
+  state: Pick<Snapshot, "pendingUpdates" | "conversation">,
+) {
   const read = state.pendingUpdates;
 
   return read && read.conversation === state.conversation ? read.tasks : [];

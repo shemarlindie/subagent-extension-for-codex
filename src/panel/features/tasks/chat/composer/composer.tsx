@@ -57,64 +57,81 @@ export function Composer({
   budgetApplyVersion,
   disabled = false,
 }: ComposerProps) {
-  const controller = useController(),
-    { busy, workers } = useSnapshot(),
-    provider = task ? providerName(task.provider, workers) : "agent",
-    sessionTaskId = task?.id ?? taskId ?? "loading",
-    mode = task ? composerMode(task) : "idle",
-    inputHint =
-      task?.pending_input &&
-      pendingInputKind(task.pending_input) === "permission"
-        ? "Enter to queue"
-        : HINTS.input,
-    hint = mode === "input" ? inputHint : HINTS[mode],
-    sendTooltip =
-      mode === "busy"
-        ? `Send into the running turn (${STEER_KEY})`
-        : "Send (Enter)",
-    continueLabel = mode === "busy" ? "Steer" : "Send",
-    inputRequest = task?.pending_input?.id,
-    [expandedRequest, setExpandedRequest] = useState<string>(),
-    [manuallyCollapsed, updateComposerSession] = useSessionState(
-      "task",
-      sessionTaskId,
-      (state) => state.composerCollapsed,
-    ),
-    spent = task ? spentBudget(task) : undefined,
-    collapsed = inputRequest
-      ? expandedRequest !== inputRequest
-      : manuallyCollapsed,
-    container = useRef<HTMLDivElement>(null),
-    input = useRef<HTMLTextAreaElement>(null),
-    showComposer = useRef<HTMLButtonElement>(null),
-    focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined),
-    [text, updateSession] = useSessionState(
-      "task",
-      sessionTaskId,
-      (state) => state.composerDraft,
-    ),
-    canContinue = !spent,
-    [error] = useSessionState(
-      "task",
-      sessionTaskId,
-      (state) => state.composerError,
-    ),
-    [sending] = useSessionState(
-      "task",
-      sessionTaskId,
-      (state) => state.composerSending,
-    ),
-    [stopping] = useSessionState(
-      "task",
-      sessionTaskId,
-      (state) => state.composerStopping,
-    ),
-    sendingFeedback = sending ? "Sending…" : undefined,
-    pendingFeedback = stopping ? "Stopping the current turn…" : sendingFeedback,
-    [showContinuePrompt, setShowContinuePrompt] = useState(false),
-    previousBudgetApply = useRef(budgetApplyVersion),
-    message = text.trim(),
-    feedback = spent ? undefined : hint;
+  const controller = useController();
+  const { busy, workers } = useSnapshot(["busy", "workers"]);
+  const provider = task ? providerName(task.provider, workers) : "agent";
+  const sessionTaskId = task?.id ?? taskId ?? "loading";
+  const mode = task ? composerMode(task) : "idle";
+
+  const inputHint =
+    task?.pending_input && pendingInputKind(task.pending_input) === "permission"
+      ? "Enter to queue"
+      : HINTS.input;
+
+  const hint = mode === "input" ? inputHint : HINTS[mode];
+
+  const sendTooltip =
+    mode === "busy"
+      ? `Send into the running turn (${STEER_KEY})`
+      : "Send (Enter)";
+
+  const continueLabel = mode === "busy" ? "Steer" : "Send";
+  const inputRequest = task?.pending_input?.id;
+  const [expandedRequest, setExpandedRequest] = useState<string>();
+
+  const [manuallyCollapsed, updateComposerSession] = useSessionState(
+    "task",
+    sessionTaskId,
+    (state) => state.composerCollapsed,
+  );
+
+  const spent = task ? spentBudget(task) : undefined;
+
+  const collapsed = inputRequest
+    ? expandedRequest !== inputRequest
+    : manuallyCollapsed;
+
+  const container = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const showComposer = useRef<HTMLButtonElement>(null);
+  const focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined);
+
+  const [text, updateSession] = useSessionState(
+    "task",
+    sessionTaskId,
+    (state) => state.composerDraft,
+  );
+
+  const canContinue = !spent;
+
+  const [error] = useSessionState(
+    "task",
+    sessionTaskId,
+    (state) => state.composerError,
+  );
+
+  const [sending] = useSessionState(
+    "task",
+    sessionTaskId,
+    (state) => state.composerSending,
+  );
+
+  const [stopping] = useSessionState(
+    "task",
+    sessionTaskId,
+    (state) => state.composerStopping,
+  );
+
+  const sendingFeedback = sending ? "Sending…" : undefined;
+
+  const pendingFeedback = stopping
+    ? "Stopping the current turn…"
+    : sendingFeedback;
+
+  const [showContinuePrompt, setShowContinuePrompt] = useState(false);
+  const previousBudgetApply = useRef(budgetApplyVersion);
+  const message = text.trim();
+  const feedback = spent ? undefined : hint;
 
   // Animate one footprint so switching layouts never reserves both heights.
   useAnimatedHeight(container, collapsed);

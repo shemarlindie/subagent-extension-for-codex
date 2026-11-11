@@ -77,7 +77,7 @@ test("each task state appears only in its own filter besides All", () => {
           tasks: [task(patch)],
           filter,
           search: "",
-        } as unknown as Snapshot).length === 1,
+        }).length === 1,
     );
 
     assert.deepEqual(found, expected, name);

@@ -32,7 +32,9 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
 
   const [budgetApplyVersion, setBudgetApplyVersion] = useState(0);
 
-  const state = useSnapshot();
+  // Chat's content is selected too, though only the timeline renders it:
+  // useReadingScroll follows, restores and fades rows after each render here.
+  const { chat, tab } = useSnapshot(["chat", "draft", "events", "tab"]);
 
   const budgetRaise = budgetDraft.taskId === taskId ? budgetDraft.value : {};
 
@@ -48,7 +50,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     return error;
   };
 
-  const ready = Boolean(task && state.chat?.task === task.id);
+  const ready = Boolean(task && chat?.task === task.id);
 
   const divider = useNewMessagesFrom(task, ready);
   const newFrom = divider.from;
@@ -67,7 +69,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     scrollToLatest,
   } = useReadingScroll({
     reading,
-    active: state.tab === "chat",
+    active: tab === "chat",
     ready,
     blockScrollWhileLoading: true,
     reportPositionRestored: true,

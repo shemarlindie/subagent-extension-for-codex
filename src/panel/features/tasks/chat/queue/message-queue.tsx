@@ -33,19 +33,19 @@ function dropEdge(
  * Queued messages can be reordered by dragging or with Alt+Up/Down.
  */
 export function MessageQueue({ task }: MessageQueueProps) {
-  const controller = useController(),
-    busy = useSnapshot().busy,
-    [error, setError] = useState<string>(),
-    [drag, setDrag] = useState<QueueDrag>(),
-    pending = task.pending_steers,
-    queue = task.queue,
-    // Steers the worker already has lead the queue and stay there.
-    first = queue.filter((message) => message.recorded).length,
-    reorderable = queue.length - first > 1,
-    positions = new Map(queue.map((message, index) => [message.id, index])),
-    // Rows fade in when added, out when sent or removed, and slide when reordered.
-    [pendingList] = useAutoList<HTMLUListElement>(),
-    [queueList] = useAutoList<HTMLUListElement>();
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const [error, setError] = useState<string>();
+  const [drag, setDrag] = useState<QueueDrag>();
+  const pending = task.pending_steers;
+  const queue = task.queue;
+  // Steers the worker already has lead the queue and stay there.
+  const first = queue.filter((message) => message.recorded).length;
+  const reorderable = queue.length - first > 1;
+  const positions = new Map(queue.map((message, index) => [message.id, index]));
+  // Rows fade in when added, out when sent or removed, and slide when reordered.
+  const [pendingList] = useAutoList<HTMLUListElement>();
+  const [queueList] = useAutoList<HTMLUListElement>();
 
   const move = async (messageId: string, index: number) => {
     const error = await controller.taskActions.moveQueued(

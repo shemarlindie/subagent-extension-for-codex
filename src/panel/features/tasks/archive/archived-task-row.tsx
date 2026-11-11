@@ -17,7 +17,7 @@ export function ArchivedTaskRow({
   disabled,
   onCheckedChange,
 }: ArchivedTaskRowProps) {
-  const { host } = useSnapshot();
+  const host = useSnapshot((state) => state.host);
 
   const archived = task.archived_at
     ? formatUserDateTime(task.archived_at, host, {

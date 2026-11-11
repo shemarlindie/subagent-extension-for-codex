@@ -65,7 +65,7 @@ function useChangedFile(task: Task, path: string) {
 
 /** The task's changes, as the Changes tab last read them. */
 function useChanges(task: Task) {
-  const { changes } = useSnapshot();
+  const changes = useSnapshot((state) => state.changes);
 
   return changes?.task === task.id ? changes.data : undefined;
 }

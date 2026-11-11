@@ -61,11 +61,13 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
  * assistive tech and the tooltip.
  */
 export function TaskRunSettings({ task }: TaskRunSettingsProps) {
-  const { workers } = useSnapshot(),
-    models =
-      workers.find((worker) => worker.provider === task.provider)?.models ?? [],
-    profile = titleCase(task.worker_profile),
-    settings = runSettings(task, models);
+  const workers = useSnapshot((state) => state.workers);
+
+  const models =
+    workers.find((worker) => worker.provider === task.provider)?.models ?? [];
+
+  const profile = titleCase(task.worker_profile);
+  const settings = runSettings(task, models);
 
   return (
     <ul

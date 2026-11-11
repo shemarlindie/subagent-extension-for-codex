@@ -18,7 +18,7 @@ export function AskFileButton({
   disabled,
 }: AskFileButtonProps) {
   const controller = useController();
-  const threadMode = Boolean(useSnapshot().conversation);
+  const threadMode = useSnapshot((state) => Boolean(state.conversation));
   const label = "Ask Codex about this file";
 
   if (!threadMode) return null;

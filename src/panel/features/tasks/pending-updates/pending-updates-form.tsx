@@ -4,6 +4,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
+import { dialogStale } from "../../../app/state/scope-reconciliation";
 import { Button } from "../../../shared/components/button/button";
 import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
@@ -21,21 +22,27 @@ import {
  * stops counting them without telling Codex.
  */
 function PendingUpdatesForm() {
-  const controller = useController(),
-    state = useSnapshot(),
-    // Tracks unchecked updates, so updates arriving while open start checked.
-    [unchecked, setUnchecked] = useState<ReadonlySet<number>>(new Set());
+  const controller = useController();
+  const pendingState = useSnapshot(["pendingUpdates", "conversation"]);
 
-  const tasks = pendingUpdates(state),
-    selected = tasks
-      .map((task) => ({
-        ...task,
-        updates: task.updates.filter((u) => !unchecked.has(u.event_id)),
-      }))
-      .filter((task) => task.updates.length),
-    ids = selected.flatMap((task) => task.updates.map((u) => u.event_id)),
-    stale = state.dialog?.scope !== state.scopeVersion,
-    disabled = state.busy || stale || !ids.length;
+  const { busy, host, stale } = useSnapshot(["busy", "host"], (state) => ({
+    stale: dialogStale(state),
+  }));
+
+  // Tracks unchecked updates, so updates arriving while open start checked.
+  const [unchecked, setUnchecked] = useState<ReadonlySet<number>>(new Set());
+
+  const tasks = pendingUpdates(pendingState);
+
+  const selected = tasks
+    .map((task) => ({
+      ...task,
+      updates: task.updates.filter((u) => !unchecked.has(u.event_id)),
+    }))
+    .filter((task) => task.updates.length);
+
+  const ids = selected.flatMap((task) => task.updates.map((u) => u.event_id));
+  const disabled = busy || stale || !ids.length;
 
   const check = (eventIds: number[], checked: boolean) =>
     setUnchecked((previous) => {
@@ -81,7 +88,7 @@ function PendingUpdatesForm() {
                   <Checkbox
                     checked={count === taskIds.length}
                     indeterminate={count > 0 && count < taskIds.length}
-                    disabled={state.busy}
+                    disabled={busy}
                     onCheckedChange={(value) => check(taskIds, value)}
                   />
                   <span className="pending-update-title">{task.title}</span>
@@ -96,7 +103,7 @@ function PendingUpdatesForm() {
                         {!single && (
                           <Checkbox
                             checked={!unchecked.has(update.event_id)}
-                            disabled={state.busy}
+                            disabled={busy}
                             onCheckedChange={(value) =>
                               check([update.event_id], value)
                             }
@@ -112,7 +119,7 @@ function PendingUpdatesForm() {
                           {update.text}
                         </span>
                         <time dateTime={update.timestamp}>
-                          {formatOutcomeTimestamp(update.timestamp, state.host)}
+                          {formatOutcomeTimestamp(update.timestamp, host)}
                         </time>
                       </label>
                     </li>
@@ -128,7 +135,7 @@ function PendingUpdatesForm() {
       <FormFooter
         label="Send to Codex"
         dismissLabel="Close"
-        disabled={!ids.length || !state.host.canSend}
+        disabled={!ids.length || !host.canSend}
       >
         <Button id="mark-seen" disabled={disabled} onClick={markSeen}>
           Mark seen

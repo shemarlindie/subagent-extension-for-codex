@@ -13,11 +13,11 @@ type ChangedFileNavProps = {
  * Changes list's order.
  */
 export function ChangedFileNav({ task, path }: ChangedFileNavProps) {
-  const controller = useController(),
-    { changes } = useSnapshot(),
-    data = changes?.task === task.id ? changes.data : undefined,
-    entries = data ? changedFileEntries(data) : [],
-    index = entries.findIndex((entry) => entry.file.path === path);
+  const controller = useController();
+  const changes = useSnapshot((state) => state.changes);
+  const data = changes?.task === task.id ? changes.data : undefined;
+  const entries = data ? changedFileEntries(data) : [];
+  const index = entries.findIndex((entry) => entry.file.path === path);
 
   // Opened from a reload before the changes were read, or the file is gone.
   if (index < 0) return null;
