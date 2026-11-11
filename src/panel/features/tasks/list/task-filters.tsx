@@ -10,6 +10,7 @@ import {
   effectiveFilter,
   FILTER_LABELS,
   filterCounts,
+  TASK_LIST_FIELDS,
 } from "../../../app/state/selectors";
 import type { Filter } from "../../../app/state/types";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
@@ -21,19 +22,19 @@ import { scrollChildIntoView } from "../../../shared/utils/scroll-into-view";
 const FILTER_EDGE_GAP = 16;
 
 export function TaskFilters() {
-  const controller = useController(),
-    state = useSnapshot(),
-    loading = state.taskListLoading,
-    counts = filterCounts(state),
-    current = effectiveFilter(state),
-    groupRef = useRef<HTMLDivElement>(null),
-    // A load or scope switch passes through an empty list, so the batch that follows sets every
-    // pill at once; it appears in place. Only changes between populated renders animate.
-    hadTasks = useRef(false),
-    settled = hadTasks.current;
+  const controller = useController();
+  const list = useSnapshot(TASK_LIST_FIELDS);
+  const loading = useSnapshot((state) => state.taskListLoading);
+  const counts = filterCounts(list);
+  const current = effectiveFilter(list);
+  const groupRef = useRef<HTMLDivElement>(null);
+  // A load or scope switch passes through an empty list, so the batch that follows sets every
+  // pill at once; it appears in place. Only changes between populated renders animate.
+  const hadTasks = useRef(false);
+  const settled = hadTasks.current;
 
   useEffect(() => {
-    hadTasks.current = state.tasks.length > 0;
+    hadTasks.current = list.tasks.length > 0;
   });
 
   const filters = Object.entries(FILTER_LABELS) as [Filter, string][];
@@ -62,7 +63,7 @@ export function TaskFilters() {
         label="Search tasks"
         clearLabel="Clear search"
         focusShortcut
-        value={state.search}
+        value={list.search}
         onValueChange={(value) => controller.setSearch(value)}
         blurOnEmptyEscape
       />

@@ -13,6 +13,7 @@ import {
   profileLabel,
   projectChoices,
   scopedTasks,
+  TASK_LIST_FIELDS,
   terminal,
   visibleTasks,
 } from "../../../app/state/selectors";
@@ -166,24 +167,40 @@ const EMPTY_FILTER: Record<Filter, string> = {
 };
 
 export function TaskList() {
-  const controller = useController(),
-    state = useSnapshot(),
-    tasks = visibleTasks(state),
-    total = scopedTasks({ ...state, search: "", filter: null }).length,
-    filter = effectiveFilter(state),
-    narrowed = tasks.length < total || Boolean(state.search),
-    filterLabel = FILTER_LABELS[filter],
-    projectNames = new Map(
-      projectChoices(state).map((project) => [
-        project.repository,
-        projectDisplayName(project),
-      ]),
-    ),
-    projectName = (repository: string) =>
-      projectNames.get(repository) ?? projectDisplayName({ repository }),
-    listRef = useRef<HTMLDivElement>(null),
-    scrolledOnLoad = useRef(false),
-    cancelScroll = useRef<(() => void) | undefined>(undefined);
+  const controller = useController();
+  const list = useSnapshot(TASK_LIST_FIELDS);
+
+  const {
+    projects,
+    connected,
+    connection,
+    conversation,
+    taskListLoading,
+    composing,
+  } = useSnapshot(
+    ["projects", "connected", "connection", "conversation", "taskListLoading"],
+    (state) => ({ composing: Boolean(state.newTask) }),
+  );
+
+  const tasks = visibleTasks(list);
+  const total = scopedTasks({ ...list, search: "" }).length;
+  const filter = effectiveFilter(list);
+  const narrowed = tasks.length < total || Boolean(list.search);
+  const filterLabel = FILTER_LABELS[filter];
+
+  const projectNames = new Map(
+    projectChoices({ projects, repository: list.repository }).map((project) => [
+      project.repository,
+      projectDisplayName(project),
+    ]),
+  );
+
+  const projectName = (repository: string) =>
+    projectNames.get(repository) ?? projectDisplayName({ repository });
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrolledOnLoad = useRef(false);
+  const cancelScroll = useRef<(() => void) | undefined>(undefined);
 
   const order = tasks.map((task) => task.id).join();
 
@@ -215,10 +232,10 @@ export function TaskList() {
 
   // Rows, or the message that replaces them when offline or when nothing matches.
   const renderRows = () => {
-    if (!state.connected) {
+    if (!connected) {
       return (
         <p className="help">
-          {state.connection === CONNECTION.hostRequired
+          {connection === CONNECTION.hostRequired
             ? "Ask Codex to call open_subagent_extension_for_codex. To preview the panel during development, run npm run dev:ui."
             : "Waiting for the host connection."}
         </p>
@@ -230,14 +247,14 @@ export function TaskList() {
         <TaskRow
           key={task.id}
           task={task}
-          selected={task.id === state.selected}
+          selected={task.id === list.selected}
           onSelect={() => controller.run(() => controller.select(task.id))}
           onToggleRead={() => toggleRead(task)}
           onArchive={() => archive(task)}
         />
       );
 
-      if (state.repository) return tasks.map(renderRow);
+      if (list.repository) return tasks.map(renderRow);
 
       // Across projects, each project's tasks sit under their own header.
       return (
@@ -251,8 +268,8 @@ export function TaskList() {
 
     return (
       <p className="help empty-state">
-        {state.search
-          ? `No tasks match “${state.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
+        {list.search
+          ? `No tasks match “${list.search}”${filter === "all" ? "" : ` in ${filterLabel}`}.`
           : EMPTY_FILTER[filter]}
       </p>
     );
@@ -274,7 +291,7 @@ export function TaskList() {
   // Under Unread, the listed tasks can all be read at once. Without a search
   // to clear, this takes Clear filter's place; the All pill does the same.
   const unreadShown = filter === "unread" && tasks.some((task) => task.unread);
-  const clearShown = narrowed && (!unreadShown || Boolean(state.search));
+  const clearShown = narrowed && (!unreadShown || Boolean(list.search));
 
   const markAllRead = () =>
     controller.run(() => controller.taskActions.unread.markAllRead(tasks));
@@ -283,7 +300,7 @@ export function TaskList() {
     <>
       <div className="list-label">
         <span id="scope">
-          {state.conversation ? "This conversation" : "All conversations"}
+          {conversation ? "This conversation" : "All conversations"}
         </span>
         <span className="list-count">
           {unreadShown && (
@@ -300,7 +317,7 @@ export function TaskList() {
             <LoadingSwap
               as="span"
               className="loading-swap-inline"
-              loading={state.taskListLoading}
+              loading={taskListLoading}
               busy={false}
               skeleton={
                 <SkeletonShape
@@ -317,18 +334,18 @@ export function TaskList() {
         <div id="task-list" ref={listRef}>
           <LoadingSwap
             className="task-list-loading-swap"
-            loading={state.taskListLoading}
+            loading={taskListLoading}
             skeleton={<TaskListSkeleton />}
           >
-            {state.taskListLoading ? null : (
+            {taskListLoading ? null : (
               <>
-                {state.newTask && <NewTaskRow />}
+                {composing && <NewTaskRow />}
                 {renderRows()}
               </>
             )}
           </LoadingSwap>
         </div>
-        {!state.taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}
+        {!taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}
       </div>
     </>
   );

@@ -22,9 +22,9 @@ const ACTIVE = ["queued", "starting", "running", "waiting"];
  * Task lifecycle metadata determines which action is available.
  */
 export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
-  const controller = useController(),
-    busy = useSnapshot().busy,
-    removed = task.workspace_removed;
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const removed = task.workspace_removed;
 
   if (
     task.workspace_strategy !== "worktree" ||

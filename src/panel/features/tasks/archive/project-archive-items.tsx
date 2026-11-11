@@ -17,9 +17,11 @@ type ProjectArchiveItemsProps = { repository: string };
  * completed tasks the list left out.
  */
 export function ProjectArchiveItems({ repository }: ProjectArchiveItemsProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    unloaded = state.readCompleted?.[repository] ?? 0;
+  const controller = useController();
+
+  const { tasks, readCompleted } = useSnapshot(["tasks", "readCompleted"]);
+
+  const unloaded = readCompleted?.[repository] ?? 0;
 
   const stoppedIn = (tasks: Task[]) =>
     tasks.filter(
@@ -27,24 +29,24 @@ export function ProjectArchiveItems({ repository }: ProjectArchiveItemsProps) {
         task.repository === repository && !task.archived_at && archivable(task),
     );
 
-  const stopped = stoppedIn(state.tasks);
+  const stopped = stoppedIn(tasks);
 
   const completed = (tasks: Task[]) =>
     tasks.filter((task) => task.status === "completed");
 
   const archive = (pick: (tasks: Task[]) => Task[]) =>
     controller.run(async () => {
-      const tasks = unloaded
+      const candidates = unloaded
         ? (
             await controller.tool<TaskList>(
               "app_list_tasks",
-              projectTaskArgs(state, repository),
+              projectTaskArgs(controller.getSnapshot(), repository),
             )
           ).tasks
-        : state.tasks;
+        : tasks;
 
       await controller.taskActions.archive.setArchived(
-        pick(stoppedIn(tasks)),
+        pick(stoppedIn(candidates)),
         true,
       );
     });

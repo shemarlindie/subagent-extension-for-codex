@@ -17,40 +17,67 @@ import { WorkerReadinessNotice } from "../../providers/worker-readiness-notice";
 import { TaskStatus } from "../shared/status";
 
 export function InlinePreview() {
-  const controller = useController(),
-    state = useSnapshot();
+  const controller = useController();
+
+  const {
+    tasks,
+    repository,
+    selected,
+    projects,
+    host,
+    busy,
+    conversation,
+    taskListLoading,
+    connected,
+    connection,
+    error,
+  } = useSnapshot([
+    "tasks",
+    "repository",
+    "selected",
+    "projects",
+    "host",
+    "busy",
+    "conversation",
+    "taskListLoading",
+    "connected",
+    "connection",
+    "error",
+  ]);
 
   // Summarize the whole scope, independent of the expanded view's list filters.
-  const tasks = state.tasks.filter(
-    (task) => !state.repository || task.repository === state.repository,
+  const projectTasks = tasks.filter(
+    (task) => !repository || task.repository === repository,
   );
 
-  const attention = tasks.filter((task) => task.pending_input);
-  const active = tasks.filter((task) => !terminal(task) && !failedStatus(task));
-  const unread = tasks.filter((task) => task.unread).length;
+  const attention = projectTasks.filter((task) => task.pending_input);
+
+  const active = projectTasks.filter(
+    (task) => !terminal(task) && !failedStatus(task),
+  );
+
+  const unread = projectTasks.filter((task) => task.unread).length;
 
   const task =
-    tasks.find((task) => task.id === state.selected) ??
+    projectTasks.find((task) => task.id === selected) ??
     attention.at(0) ??
     active.at(0) ??
-    tasks.at(0);
+    projectTasks.at(0);
 
-  const project = state.projects.find(
-    (project) => project.repository === state.repository,
-  );
+  const project = projects.find((project) => project.repository === repository);
 
   return (
     <section className="inline-preview" aria-label="Delegated Work preview">
       <div className="preview-heading">
         <strong>Delegated Work</strong>
-        {state.host.canExpand && (
+        {host.canExpand && (
           <TooltipWrapper label="Open panel">
             <Button
               id="open-panel"
               variant="ghost"
               className="toolbar-icon-button"
               aria-label="Open panel"
-              disabled={state.busy}
+              disabled={busy}
               onClick={() =>
                 controller.run(async () => {
                   await controller.transport.expand?.();
@@ -63,15 +90,15 @@ export function InlinePreview() {
         )}
       </div>
       <p className="preview-scope muted">
-        {state.repository
-          ? projectDisplayName(project ?? { repository: state.repository })
+        {repository
+          ? projectDisplayName(project ?? { repository })
           : "All projects"}
         {" · "}
-        {state.conversation ? "This conversation" : "All conversations"}
+        {conversation ? "This conversation" : "All conversations"}
       </p>
       <LoadingSwap
         className="inline-preview-loading-swap"
-        loading={state.taskListLoading}
+        loading={taskListLoading}
         skeleton={
           <LoadingSkeleton label="Loading delegated tasks">
             <div className="preview-counts-skeleton">
@@ -95,10 +122,11 @@ export function InlinePreview() {
           </LoadingSkeleton>
         }
       >
-        {state.connected ? (
+        {connected ? (
           <>
             <p className="preview-counts" role="status">
-              {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+              {projectTasks.length}{" "}
+              {projectTasks.length === 1 ? "task" : "tasks"}
               {" · "}
               {active.length} active
               {" · "}
@@ -123,16 +151,16 @@ export function InlinePreview() {
             )}
           </>
         ) : (
-          <p role="status">{state.connection}</p>
+          <p role="status">{connection}</p>
         )}
       </LoadingSwap>
       <WorkerReadinessNotice />
-      {state.error && (
+      {error && (
         <p className="error" role="alert">
-          {state.error}
+          {error}
         </p>
       )}
-      {!state.host.canExpand && (
+      {!host.canExpand && (
         <p className="muted">Expand this app using the chat controls.</p>
       )}
     </section>

@@ -13,8 +13,8 @@ interface ProjectFormProps {
 }
 
 function ProjectForm({ dialog }: ProjectFormProps) {
-  const controller = useController(),
-    state = useSnapshot();
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
 
   const [repository, setRepository] = usePersistedDialogField(
     dialog.kind,
@@ -79,12 +79,9 @@ function ProjectForm({ dialog }: ProjectFormProps) {
             placeholder="/absolute/path/to/folder"
             required
             maxLength={4096}
-            disabled={state.busy || browsing}
+            disabled={busy || browsing}
           />
-          <Button
-            disabled={state.busy || browsing}
-            onClick={() => void browse()}
-          >
+          <Button disabled={busy || browsing} onClick={() => void browse()}>
             {browsing ? "Choosing…" : "Browse…"}
           </Button>
         </div>

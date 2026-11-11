@@ -5,6 +5,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
+import { dialogStale } from "../../../app/state/scope-reconciliation";
 import type { Task } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import {
@@ -16,16 +17,23 @@ import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dial
 import { PermissionInputDetails } from "./permission-input-details";
 
 function PermissionForm({ task }: { task: Task }) {
-  const controller = useController(),
-    state = useSnapshot(),
-    request = task.pending_input!,
-    presentation = inputPresentation(request);
+  const controller = useController();
+
+  const { busy, formError, stale } = useSnapshot(
+    ["busy", "formError"],
+    (state) => ({
+      stale: dialogStale(state),
+    }),
+  );
+
+  const request = task.pending_input!;
+  const presentation = inputPresentation(request);
 
   const { register, handleSubmit } = usePersistedDialogForm("respond", {
     response: "",
   });
 
-  const disabled = state.busy || state.dialog?.scope !== state.scopeVersion;
+  const disabled = busy || stale;
 
   const decide = (approved: boolean) =>
     controller.handle(
@@ -52,12 +60,12 @@ function PermissionForm({ task }: { task: Task }) {
         <textarea id="response" maxLength={20000} {...register("response")} />
       </Field>
       <div id="form-error" className="form-error error" role="alert">
-        {state.formError}
+        {formError}
       </div>
       <footer>
         <Dialog.Close
           type="button"
-          disabled={state.busy}
+          disabled={busy}
           onClick={() => controller.dismiss()}
         >
           Close

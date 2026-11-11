@@ -29,17 +29,18 @@ interface QuestionFormProps {
 }
 
 export function QuestionForm({ task }: QuestionFormProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    questions = pendingQuestions(task),
-    stacked = questions.length > 1,
-    request = task.pending_input!.id,
-    // Answers left unsent when this request was last on screen.
-    [draft, updateSession] = useSessionState(
-      "question",
-      request,
-      (state) => state.draft,
-    );
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const questions = pendingQuestions(task);
+  const stacked = questions.length > 1;
+  const request = task.pending_input!.id;
+
+  // Answers left unsent when this request was last on screen.
+  const [draft, updateSession] = useSessionState(
+    "question",
+    request,
+    (state) => state.draft,
+  );
 
   const { register, control, setValue, getValues, handleSubmit } =
     useForm<Answers>({
@@ -260,13 +261,8 @@ export function QuestionForm({ task }: QuestionFormProps) {
         </Button>
         <div className="question-nav">
           {active > 0 && <Button onClick={goBack}>Back</Button>}
-          <Button
-            ref={submit}
-            type="submit"
-            variant="primary"
-            disabled={state.busy}
-          >
-            {submitLabel(state.busy, sending)}
+          <Button ref={submit} type="submit" variant="primary" disabled={busy}>
+            {submitLabel(busy, sending)}
           </Button>
         </div>
       </div>

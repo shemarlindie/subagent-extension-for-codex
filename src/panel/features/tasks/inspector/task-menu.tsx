@@ -20,12 +20,17 @@ function handoffMenuLabel(canSend: boolean, canCopy: boolean) {
 
 /** Task actions beside the open task's title and status. */
 export function TaskMenu({ task }: TaskMenuProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    handoffLabel = handoffMenuLabel(
-      state.host.canSend,
-      !controller.transport.embedded,
-    );
+  const controller = useController();
+
+  const { canSend, busy } = useSnapshot((state) => ({
+    canSend: state.host.canSend,
+    busy: state.busy,
+  }));
+
+  const handoffLabel = handoffMenuLabel(
+    canSend,
+    !controller.transport.embedded,
+  );
 
   const toggleRead = () =>
     controller.run(() => controller.taskActions.unread.toggle(task));
@@ -67,7 +72,7 @@ export function TaskMenu({ task }: TaskMenuProps) {
             <Menu.Item
               className="menu-item"
               data-action="handoff"
-              disabled={state.busy}
+              disabled={busy}
               onClick={() => controller.open({ kind: "handoff", task })}
             >
               {handoffLabel}
@@ -75,7 +80,7 @@ export function TaskMenu({ task }: TaskMenuProps) {
             <Menu.Item
               className="menu-item"
               data-action="delete"
-              disabled={state.busy}
+              disabled={busy}
               onClick={() => controller.open({ kind: "delete", task })}
             >
               Delete task

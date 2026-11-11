@@ -72,12 +72,12 @@ function aboutDiagnostics(sections: AboutSection[], readinessMessage?: string) {
 
 /** Read only diagnostics, loaded only while the About section is visible. */
 function SettingsAbout() {
-  const controller = useController(),
-    { host } = useSnapshot(),
-    [info, setInfo] = useState<AboutInfo>(),
-    [error, setError] = useState<string>(),
-    [pending, setPending] = useState(true),
-    [attempt, setAttempt] = useState(0);
+  const controller = useController();
+  const host = useSnapshot((state) => state.host);
+  const [info, setInfo] = useState<AboutInfo>();
+  const [error, setError] = useState<string>();
+  const [pending, setPending] = useState(true);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let current = true;

@@ -35,8 +35,8 @@ export function TurnOutcomeRow({
   action,
   markUnread,
 }: TurnOutcomeRowProps) {
-  const controller = useController(),
-    { host } = useSnapshot();
+  const controller = useController();
+  const host = useSnapshot((state) => state.host);
 
   const turnDuration = useMemo(
     () => formatDuration(outcome.runtime_ms),

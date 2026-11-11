@@ -23,7 +23,7 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
   const controller = useController(),
     { task } = dialog;
 
-  const { busy } = useSnapshot();
+  const busy = useSnapshot((state) => state.busy);
 
   const { control, handleSubmit } = usePersistedDialogForm<DeleteTaskValues>(
     "delete",

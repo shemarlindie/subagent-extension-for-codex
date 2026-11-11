@@ -19,22 +19,29 @@ type ChangesPanelProps = { task?: Task; taskId?: string };
 export function ChangesPanel({ task, taskId }: ChangesPanelProps) {
   const id = task?.id ?? taskId ?? "";
 
-  const state = useSnapshot(),
-    changes =
-      task && state.changes?.task === task.id ? state.changes : undefined,
-    data = changes?.data,
-    loading = !task || (changes?.loading ?? (!data && !changes?.error)),
-    headerLoading = !task || (loading && !data),
-    reserveEmptyHeight =
-      (!data && loading) || Boolean(data && !data.files.length),
-    // Kept per task, so the reader's place survives tab and task switches.
-    [reading] = useSessionState("task", id, (state) => state.reading.changes),
-    { viewportRef, scrolled, scrollToTop, activePath } = useChangesScroll(
-      reading,
-      Boolean(data),
-      Boolean(data?.files.length),
-    ),
-    headerRef = useRef<HTMLDivElement>(null);
+  const current = useSnapshot((state) => state.changes);
+  const changes = task && current?.task === task.id ? current : undefined;
+  const data = changes?.data;
+  const loading = !task || (changes?.loading ?? (!data && !changes?.error));
+  const headerLoading = !task || (loading && !data);
+
+  const reserveEmptyHeight =
+    (!data && loading) || Boolean(data && !data.files.length);
+
+  // Kept per task, so the reader's place survives tab and task switches.
+  const [reading] = useSessionState(
+    "task",
+    id,
+    (state) => state.reading.changes,
+  );
+
+  const { viewportRef, scrolled, scrollToTop, activePath } = useChangesScroll(
+    reading,
+    Boolean(data),
+    Boolean(data?.files.length),
+  );
+
+  const headerRef = useRef<HTMLDivElement>(null);
 
   useAnimatedHeight(headerRef, headerLoading);
 

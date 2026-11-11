@@ -25,11 +25,10 @@ function footerLabel(canSend: boolean, canCopy: boolean) {
 }
 
 function HandoffForm({ task, target }: HandoffFormProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    canSend = state.host.canSend,
-    // Without a host to send to, a standalone page falls back to the clipboard.
-    canCopy = !controller.transport.embedded;
+  const controller = useController();
+  const canSend = useSnapshot((state) => state.host.canSend);
+  // Without a host to send to, a standalone page falls back to the clipboard.
+  const canCopy = !controller.transport.embedded;
 
   const { register, handleSubmit } = usePersistedDialogForm("handoff", {
     message: handoffMessage(task, target),

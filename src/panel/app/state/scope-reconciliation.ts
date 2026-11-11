@@ -1,6 +1,10 @@
 import { projectApproved } from "../../features/projects/selectors";
 import type { PanelData, Project, Snapshot, Task } from "./types";
 
+/** Whether the open dialog belongs to an earlier panel scope, so its form can't submit. */
+export const dialogStale = (state: Pick<Snapshot, "dialog" | "scopeVersion">) =>
+  state.dialog?.scope !== state.scopeVersion;
+
 /** Validates host scope fields and supplies the panel's default revision. */
 export function parsePanelScope(scope: PanelData["panel_scope"]) {
   if (

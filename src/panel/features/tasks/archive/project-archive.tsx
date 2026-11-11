@@ -32,12 +32,18 @@ export function ProjectArchive({
   name,
   onBack,
 }: ProjectArchiveProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    [tasks, setTasks] = useState<Task[]>(),
-    [checked, setChecked] = useState<ReadonlySet<string>>(new Set()),
-    [confirming, setConfirming] = useState(false),
-    [pending, setPending] = useState(false);
+  const controller = useController();
+
+  const { undoRevision, busy, connected } = useSnapshot([
+    "undoRevision",
+    "busy",
+    "connected",
+  ]);
+
+  const [tasks, setTasks] = useState<Task[]>();
+  const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
     const { tasks: listed } = await controller.tool<{ tasks: Task[] }>(
@@ -63,14 +69,16 @@ export function ProjectArchive({
   }, [controller, repository]);
 
   // Undo can change the archive from outside this page, so it reads again.
-  useEffect(() => controller.run(load), [controller, load, state.undoRevision]);
+  useEffect(() => controller.run(load), [controller, load, undoRevision]);
 
-  const listed = tasks ?? [],
-    targets = checked.size
-      ? listed.filter((task) => checked.has(task.id))
-      : listed,
-    scope = checked.size ? "selected" : "all",
-    disabled = pending || state.busy || !state.connected;
+  const listed = tasks ?? [];
+
+  const targets = checked.size
+    ? listed.filter((task) => checked.has(task.id))
+    : listed;
+
+  const scope = checked.size ? "selected" : "all";
+  const disabled = pending || busy || !connected;
 
   // Runs a change, then reads the archive again for what the service did.
   const act = (action: () => Promise<unknown>) =>

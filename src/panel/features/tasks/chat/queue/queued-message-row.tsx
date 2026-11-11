@@ -48,15 +48,15 @@ export function QueuedMessageRow({
   onDragOver,
   onDragEnd,
 }: QueuedMessageRowProps) {
-  const controller = useController(),
-    busy = useSnapshot().busy,
-    [draft, setDraft] = useState<string>(),
-    // Only a switch between reading and editing fades, not the first render.
-    [switched, setSwitched] = useState(false),
-    row = useRef<HTMLDivElement>(null),
-    editing = draft !== undefined,
-    canMove = movable && !editing,
-    swap = switched ? " motion-swap" : "";
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const [draft, setDraft] = useState<string>();
+  // Only a switch between reading and editing fades, not the first render.
+  const [switched, setSwitched] = useState(false);
+  const row = useRef<HTMLDivElement>(null);
+  const editing = draft !== undefined;
+  const canMove = movable && !editing;
+  const swap = switched ? " motion-swap" : "";
 
   useAnimatedHeight(row, editing);
 

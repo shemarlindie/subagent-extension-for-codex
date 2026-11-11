@@ -5,8 +5,7 @@ import { taskArrivalTarget } from "./state/task-arrivals";
 import { TaskArrivalNotification } from "./task-arrival-notification";
 
 export function TaskArrivalToast() {
-  const state = useSnapshot();
-  const arrival = taskArrivalTarget(state);
+  const arrival = useSnapshot(taskArrivalTarget);
 
   return arrival ? (
     <Toast.Provider timeout={0} limit={1}>

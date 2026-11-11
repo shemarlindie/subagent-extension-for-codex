@@ -19,11 +19,31 @@ type HeaderProps = {
 };
 
 export function Header({ taskRail }: HeaderProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    blocked = !state.connected || state.busy,
-    // Thread mode scopes the panel to the conversation; Settings stays available.
-    threadMode = !!state.conversation;
+  const controller = useController();
+
+  const {
+    connected,
+    busy,
+    conversation,
+    projects,
+    repository,
+    connection,
+    projectCandidate,
+    scopeKnown,
+  } = useSnapshot([
+    "connected",
+    "busy",
+    "conversation",
+    "projects",
+    "repository",
+    "connection",
+    "projectCandidate",
+    "scopeKnown",
+  ]);
+
+  const blocked = !connected || busy;
+  // Thread mode scopes the panel to the conversation; Settings stays available.
+  const threadMode = !!conversation;
 
   const newTaskFocus = useRef(false);
 
@@ -43,14 +63,14 @@ export function Header({ taskRail }: HeaderProps) {
   const settings = () => controller.run(() => controller.settings());
 
   const projectName =
-    projectChoices(state).find(
-      (project) => project.repository === state.repository,
+    projectChoices({ projects, repository }).find(
+      (project) => project.repository === repository,
     )?.name ??
-    state.repository?.split("/").at(-1) ??
+    repository?.split("/").at(-1) ??
     "All projects";
 
   // Only connection problems are visible. The task list explains a missing connection.
-  const trouble = connectionTrouble(state.connection);
+  const trouble = connectionTrouble(connection);
 
   const status = (
     <>
@@ -59,13 +79,11 @@ export function Header({ taskRail }: HeaderProps) {
         className={trouble ? "connection" : "visually-hidden"}
         role="status"
       >
-        <MotionContent changeKey={state.connection}>
-          {state.connection}
-        </MotionContent>
+        <MotionContent changeKey={connection}>{connection}</MotionContent>
       </span>
       {/* Narrow panels show this icon in place of the text, which stays announced. */}
       {trouble && (
-        <Infotip label={state.connection}>
+        <Infotip label={connection}>
           <button type="button" className="text-button connection-icon">
             <Icon name="alert-triangle" size={14} />
           </button>
@@ -98,7 +116,7 @@ export function Header({ taskRail }: HeaderProps) {
           ·
         </span>
         {threadMode ? (
-          <strong id="project-name" title={state.repository}>
+          <strong id="project-name" title={repository}>
             {projectName}
           </strong>
         ) : (
@@ -111,16 +129,16 @@ export function Header({ taskRail }: HeaderProps) {
         {threadMode && <PendingUpdatesIndicator />}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">
-          {state.projectCandidate && (
+          {projectCandidate && (
             <TooltipWrapper
-              label={`Let tasks run and edit files in ${state.projectCandidate}. It stays allowed until you remove it in Manage projects.`}
+              label={`Let tasks run and edit files in ${projectCandidate}. It stays allowed until you remove it in Manage projects.`}
               triggerLabel="Allow tasks here"
             >
               <Button
                 id="add-chat-project"
                 variant="ghost"
                 className="toolbar-icon-button"
-                disabled={!state.connected || !state.scopeKnown || state.busy}
+                disabled={!connected || !scopeKnown || busy}
                 onClick={() => controller.addProject()}
               >
                 <Icon name="plus" size={14} />
@@ -158,12 +176,10 @@ export function Header({ taskRail }: HeaderProps) {
               sideOffset={4}
             >
               <Menu.Popup className="menu-popup" finalFocus={menuFinalFocus}>
-                {state.projectCandidate && (
+                {projectCandidate && (
                   <Menu.Item
                     className="menu-item"
-                    disabled={
-                      !state.connected || !state.scopeKnown || state.busy
-                    }
+                    disabled={!connected || !scopeKnown || busy}
                     onClick={() => controller.addProject()}
                   >
                     Allow tasks here

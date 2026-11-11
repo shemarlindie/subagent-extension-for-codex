@@ -16,7 +16,13 @@ type RemoveProjectFormProps = {
 
 function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
   const controller = useController();
-  const state = useSnapshot();
+
+  const { projects, busy, scopeVersion } = useSnapshot([
+    "projects",
+    "busy",
+    "scopeVersion",
+  ]);
+
   // A reopened confirmation always starts with task records retained.
   const [removeTasks, setRemoveTasks] = useState(false);
   const [deleteAgentTasks, setDeleteAgentTasks] = useState(false);
@@ -30,7 +36,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
 
   // Only another parent registration survives removal of this entry.
   const hasParentRegistration = projectApproved(
-    state.projects.filter(
+    projects.filter(
       (item) =>
         item.kind === "parent" && item.repository !== project.repository,
     ),
@@ -51,8 +57,8 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
     event.preventDefault();
 
     if (
-      !state.busy &&
-      dialog.scope === state.scopeVersion &&
+      !busy &&
+      dialog.scope === scopeVersion &&
       (!removeTasks || deletion.confirmation)
     ) {
       controller.run(() =>
@@ -91,7 +97,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
         <Switch.Root
           className="switch"
           checked={removeTasks}
-          disabled={state.busy}
+          disabled={busy}
           onCheckedChange={toggleRemoveTasks}
           aria-labelledby="remove-project-tasks-label"
           aria-describedby="remove-project-tasks-help"
@@ -105,7 +111,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
             id="remove-project-agent-tasks"
             label="Also delete the agent tasks"
             checked={deleteAgentTasks}
-            busy={state.busy}
+            busy={busy}
             sessionDeletion={deletion.preview?.sessionDeletion}
             onCheckedChange={setDeleteAgentTasks}
           />
@@ -114,7 +120,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
             checking={deletion.checking}
             error={deletion.error}
             onRefresh={deletion.reload}
-            disabled={state.busy}
+            disabled={busy}
           />
         </>
       )}

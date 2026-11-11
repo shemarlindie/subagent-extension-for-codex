@@ -17,9 +17,9 @@ type UndoNotificationProps = {
 
 /** The undo toast for one notice, updated in place as notices change. */
 export function UndoNotification({ notice, timeout }: UndoNotificationProps) {
-  const controller = useController(),
-    busy = useSnapshot().busy,
-    { add, toasts } = Toast.useToastManager();
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const { add, toasts } = Toast.useToastManager();
 
   useEffect(() => {
     // One toast updates in place, keeping focus on its controls.

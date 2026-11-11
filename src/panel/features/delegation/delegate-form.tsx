@@ -38,18 +38,35 @@ interface DelegateFormProps {
 }
 
 function DelegateForm({ dialog }: DelegateFormProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    { loading, statuses, errors, message, defaults } = delegateReads(dialog),
-    persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {}),
-    choices = workerChoices(state.workers),
-    { repository: resolvedRepository, revision: resolvedRevision } =
-      delegateTarget(dialog, state),
-    initialValues = delegateInitialValues({
-      dialog,
-      scope: state,
-      draft: persistedDraft.current,
-    });
+  const controller = useController();
+
+  const scope = useSnapshot([
+    "projects",
+    "projectCandidate",
+    "projectCandidateAuto",
+    "projectCandidateGit",
+    "workers",
+    "scopeKnown",
+    "repository",
+    "revision",
+  ]);
+
+  const { busy, conversation } = useSnapshot(["busy", "conversation"]);
+
+  const { loading, statuses, errors, message, defaults } =
+    delegateReads(dialog);
+
+  const persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {});
+  const choices = workerChoices(scope.workers);
+
+  const { repository: resolvedRepository, revision: resolvedRevision } =
+    delegateTarget(dialog, scope);
+
+  const initialValues = delegateInitialValues({
+    dialog,
+    scope,
+    draft: persistedDraft.current,
+  });
 
   const form = usePersistedDialogForm<DelegateValues>(
     "delegate",
@@ -67,40 +84,45 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const previous = useRef(repository);
 
   const requiredReadsReady =
-      statuses.context === "ready" &&
-      statuses.settings === "ready" &&
-      statuses.projects === "ready" &&
-      statuses.workers === "ready",
-    hasWorkers = choices.length > 0,
-    selectedWorkerReady =
-      state.workers.find(
-        (worker) => worker.provider === workerChoice(selectedWorker).provider,
-      )?.readiness?.ready !== false,
-    canSubmit =
-      requiredReadsReady &&
-      hasWorkers &&
-      choices.includes(selectedWorker) &&
-      Boolean(selectedWorker) &&
-      Boolean(repository.trim()) &&
-      selectedWorkerReady,
-    failedReads = (Object.keys(statuses) as (keyof typeof statuses)[]).filter(
-      (resource) => statuses[resource] === "error",
-    ),
-    submit = form.handleSubmit((values) =>
-      controller.submit(async () => {
-        await controller.addChatProjectForTask(values.repository);
+    statuses.context === "ready" &&
+    statuses.settings === "ready" &&
+    statuses.projects === "ready" &&
+    statuses.workers === "ready";
 
-        return controller.tool<Task>(
-          "start_task",
-          startTaskArguments(
-            values,
-            state.workers,
-            conversation,
-            projectGit(state, values.repository),
-          ),
-        );
-      }, true),
-    );
+  const hasWorkers = choices.length > 0;
+
+  const selectedWorkerReady =
+    scope.workers.find(
+      (worker) => worker.provider === workerChoice(selectedWorker).provider,
+    )?.readiness?.ready !== false;
+
+  const canSubmit =
+    requiredReadsReady &&
+    hasWorkers &&
+    choices.includes(selectedWorker) &&
+    Boolean(selectedWorker) &&
+    Boolean(repository.trim()) &&
+    selectedWorkerReady;
+
+  const failedReads = (
+    Object.keys(statuses) as (keyof typeof statuses)[]
+  ).filter((resource) => statuses[resource] === "error");
+
+  const submit = form.handleSubmit((values) =>
+    controller.submit(async () => {
+      await controller.addChatProjectForTask(values.repository);
+
+      return controller.tool<Task>(
+        "start_task",
+        startTaskArguments(
+          values,
+          scope.workers,
+          openedConversation,
+          projectGit(scope, values.repository),
+        ),
+      );
+    }, true),
+  );
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     if (!canSubmit) {
@@ -135,10 +157,10 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
   // A project with no commit has one valid workspace. Leaving it restores the
   // saved default, the value the form would have started with.
-  const git = projectGit(state, repository),
-    inPlace = runsInPlace(git),
-    savedStrategy = defaults.task.workspace_strategy,
-    wasInPlace = useRef(false);
+  const git = projectGit(scope, repository);
+  const inPlace = runsInPlace(git);
+  const savedStrategy = defaults.task.workspace_strategy;
+  const wasInPlace = useRef(false);
 
   useEffect(() => {
     // Async defaults can fill the saved value after this project is chosen.
@@ -154,7 +176,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   // The project folder runs on its checkout, so only a worktree takes a revision.
   const revisionShown = !inPlace && strategy !== "current_repo";
 
-  const conversation = useRef(state.conversation).current;
+  const openedConversation = useRef(conversation).current;
 
   return (
     <FormProvider {...form}>
@@ -173,17 +195,17 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         </Presence>
         <FormFieldError message={message} />
         <ProjectField
-          projects={taskProjects(state)}
+          projects={taskProjects(scope)}
           loading={statuses.projects === "loading"}
           contextLoading={statuses.context === "loading"}
           error={errors?.projects}
           contextError={errors?.context}
           disabled={
-            state.busy ||
+            busy ||
             statuses.projects !== "ready" ||
             statuses.context === "loading"
           }
-          browseDisabled={state.busy || loading}
+          browseDisabled={busy || loading}
           onBrowse={() =>
             controller.run(async () => {
               const repository = await controller.browseTaskProject();
@@ -197,7 +219,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
               }
             })
           }
-          allowParent={state.projects.some(
+          allowParent={scope.projects.some(
             (project) => project.kind === "parent",
           )}
         />
@@ -244,7 +266,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
           })}
         />
         <WorkerField
-          workers={state.workers}
+          workers={scope.workers}
           loading={
             statuses.workers === "loading" ||
             (statuses.settings === "loading" && !selectedWorker)
@@ -256,14 +278,14 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         />
         <ModelFields
           defaults={defaults}
-          workers={state.workers}
+          workers={scope.workers}
           settingsReady={statuses.settings === "ready"}
           workersReady={statuses.workers === "ready"}
           settingsLoading={statuses.settings === "loading"}
           workersLoading={statuses.workers === "loading"}
         />
         <ApprovalField
-          workers={state.workers}
+          workers={scope.workers}
           disabled={
             statuses.workers !== "ready" || statuses.settings !== "ready"
           }
@@ -272,7 +294,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
           }
         />
         <BudgetFields
-          workers={state.workers}
+          workers={scope.workers}
           settingsReady={statuses.settings === "ready"}
           workersReady={statuses.workers === "ready"}
           settingsLoading={statuses.settings === "loading"}

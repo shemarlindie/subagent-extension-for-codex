@@ -36,7 +36,8 @@ export function useNewMessagesFrom(
   task: Task | undefined,
   ready: boolean,
 ): NewMessages {
-  const state = useSnapshot();
+  const { chat, newMark } = useSnapshot(["chat", "newMark"]);
+
   const [opened, setOpened] = useState<OpenedChat>();
 
   // The service sends a marker with every unread task. Only a task the user
@@ -45,26 +46,24 @@ export function useNewMessagesFrom(
   if (!opened && task) {
     setOpened({
       newFrom: task.unread ? task.read_through : undefined,
-      markRevision: state.newMark?.revision,
+      markRevision: newMark?.revision,
     });
   }
 
   // Once Chat loads, keep the divider only if something new follows the
   // marker. Otherwise a reply arriving later would add a divider and move
   // the reader to it.
-  if (opened && !opened.loaded && ready && state.chat) {
+  if (opened && !opened.loaded && ready && chat) {
     const from = opened.newFrom;
 
     const found =
-      from !== undefined &&
-      newMessagesIndex(state.chat.items, from) !== undefined;
+      from !== undefined && newMessagesIndex(chat.items, from) !== undefined;
 
     setOpened({ ...opened, loaded: true, newFrom: found ? from : undefined });
   }
 
   // A mark made since Chat opened moves the divider to it.
-  const mark =
-    opened && state.newMark?.task === task?.id ? state.newMark : undefined;
+  const mark = opened && newMark?.task === task?.id ? newMark : undefined;
 
   if (mark && mark.revision !== opened?.markRevision) {
     return { from: mark.through, request: mark.revision, reveal: true };

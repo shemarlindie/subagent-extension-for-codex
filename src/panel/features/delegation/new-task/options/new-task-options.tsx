@@ -15,7 +15,7 @@ import type {
 } from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateValues } from "../../delegate-values";
-import { workerChoice } from "../../delegation";
+import { type ProjectTargetState, workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
@@ -29,7 +29,7 @@ import { ReasoningChip, reasoningChipLabel } from "./reasoning-chip";
 
 type NewTaskOptionsProps = {
   newTask: NewTaskState;
-  state: Snapshot;
+  state: ProjectTargetState & Pick<Snapshot, "workers" | "busy" | "repository">;
 };
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
@@ -65,7 +65,7 @@ function policyOptions(
 /** What the selected worker resolves to, once settings have loaded. */
 function resolvedOptions(
   newTask: NewTaskState,
-  state: Snapshot,
+  state: Pick<Snapshot, "workers">,
   worker: string,
   model: string,
   mode: string,

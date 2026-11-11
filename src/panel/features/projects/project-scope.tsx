@@ -5,20 +5,37 @@ import { LookupField } from "../../shared/components/select/lookup-field";
 import { projectDisplayName } from "./selectors";
 
 export function ProjectScope() {
-  const controller = useController(),
-    state = useSnapshot();
+  const controller = useController();
 
-  const value = state.repository ?? "",
-    selectedOptionKnown =
-      value === "" ||
-      projectChoices(state).some((project) => project.repository === value),
-    loading = !state.projectsLoaded && !selectedOptionKnown;
+  const {
+    repository,
+    projects,
+    projectsLoaded,
+    connected,
+    scopeKnown,
+    busy,
+    manageable,
+  } = useSnapshot(
+    [
+      "repository",
+      "projects",
+      "projectsLoaded",
+      "connected",
+      "scopeKnown",
+      "busy",
+    ],
+    (state) => ({ manageable: canNavigate(state, "projects") }),
+  );
 
-  const disabled =
-    !state.connected ||
-    !state.scopeKnown ||
-    !state.projectsLoaded ||
-    state.busy;
+  const value = repository ?? "";
+  const choices = projectChoices({ projects, repository });
+
+  const selectedOptionKnown =
+    value === "" || choices.some((project) => project.repository === value);
+
+  const loading = !projectsLoaded && !selectedOptionKnown;
+
+  const disabled = !connected || !scopeKnown || !projectsLoaded || busy;
 
   return (
     <div className="project-scope">
@@ -34,7 +51,7 @@ export function ProjectScope() {
         placeholder={loading ? "Loading…" : undefined}
         options={[
           { value: "", label: "All projects" },
-          ...projectChoices(state).map((project) => ({
+          ...choices.map((project) => ({
             value: project.repository,
             label: projectDisplayName(project),
             description: project.repository,
@@ -44,7 +61,7 @@ export function ProjectScope() {
           controller.run(() => controller.changeProject(value || undefined))
         }
         action={
-          canNavigate(state, "projects")
+          manageable
             ? {
                 label: "Manage projects…",
                 onSelect: () => controller.manageProjects(),

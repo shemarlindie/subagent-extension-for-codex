@@ -23,14 +23,17 @@ type MarkReadOptions = {
  * Chat's history.
  */
 export function useMarkRead({ task, ready, atLatest }: MarkReadOptions) {
-  const controller = useController(),
-    state = useSnapshot(),
-    visible = useDocumentVisible(),
-    unread = controller.taskActions.unread,
-    taskId = task?.id,
-    cursor = state.chat?.task === taskId ? state.chat?.cursor : undefined,
-    showing =
-      ready && visible && state.page === "tasks" && state.tab === "chat";
+  const controller = useController();
+  const visible = useDocumentVisible();
+  const unread = controller.taskActions.unread;
+  const taskId = task?.id;
+
+  const { cursor, chatShown } = useSnapshot((state) => ({
+    cursor: state.chat?.task === taskId ? state.chat?.cursor : undefined,
+    chatShown: state.page === "tasks" && state.tab === "chat",
+  }));
+
+  const showing = ready && visible && chatShown;
 
   // Scrolling to or from the end, or leaving the task, ends a hold from
   // marking it unread; this runs before the read below.

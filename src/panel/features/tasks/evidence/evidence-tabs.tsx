@@ -23,23 +23,43 @@ type EvidenceTabsProps = { task?: Task; taskId: string };
 
 /** Keeps one tab shell mounted while only its header or content changes with data. */
 export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
-  const controller = useController(),
-    state = useSnapshot(),
-    [reading] = useSessionState(
-      "task",
-      taskId,
-      (state) => state.reading.activity,
-    ),
-    listRef = useActiveTabInView(state.tab),
-    counts =
-      task && state.changeCounts?.task === task.id
-        ? state.changeCounts
-        : undefined,
-    focus =
-      task && state.activityFocus?.task === task.id
-        ? state.activityFocus
-        : undefined,
-    range = focus?.range;
+  const controller = useController();
+
+  const {
+    tab,
+    changeCounts,
+    activityFocus,
+    events,
+    droppedEvents,
+    activityHistoryLoading,
+    chatHistoryLoading,
+    host,
+  } = useSnapshot([
+    "tab",
+    "changeCounts",
+    "activityFocus",
+    "events",
+    "droppedEvents",
+    "activityHistoryLoading",
+    "chatHistoryLoading",
+    "host",
+  ]);
+
+  const [reading] = useSessionState(
+    "task",
+    taskId,
+    (state) => state.reading.activity,
+  );
+
+  const listRef = useActiveTabInView(tab);
+
+  const counts =
+    task && changeCounts?.task === task.id ? changeCounts : undefined;
+
+  const focus =
+    task && activityFocus?.task === task.id ? activityFocus : undefined;
+
+  const range = focus?.range;
 
   // A turn the latest activity holds scrolls into view there; a turn read on
   // its own opens at its first row. Stable objects keep the list memoized.
@@ -48,18 +68,15 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
   if (focus && range) {
     if (range !== "loading") focusEventId = range.events[0]?.id;
   } else if (focus) {
-    focusEventId = turnStart(
-      { events: state.events, dropped: state.droppedEvents },
-      focus.turn,
-    );
+    focusEventId = turnStart({ events, dropped: droppedEvents }, focus.turn);
   }
 
   const request = focus?.request;
 
   const activityLoading =
     !task ||
-    (state.activityHistoryLoading === task.id &&
-      !state.events.some((event) => event.task_id === task.id));
+    (activityHistoryLoading === task.id &&
+      !events.some((event) => event.task_id === task.id));
 
   const activityBusy = activityLoading || range === "loading";
 
@@ -82,11 +99,11 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         <EventList
           task={task}
           reading={reading}
-          events={state.events}
+          events={events}
           runtimeMs={task.runtime_ms}
-          dropped={state.droppedEvents}
-          preferences={state.host}
-          active={state.tab === "activity"}
+          dropped={droppedEvents}
+          preferences={host}
+          active={tab === "activity"}
           running={task.status === "running" && !task.pending_input}
           focus={rowFocus}
         />
@@ -98,10 +115,10 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         <EventList
           task={task}
           reading={reading}
-          events={state.events}
+          events={events}
           runtimeMs={task.runtime_ms}
-          dropped={state.droppedEvents}
-          preferences={state.host}
+          dropped={droppedEvents}
+          preferences={host}
           active={false}
         />
       );
@@ -115,8 +132,8 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         events={range.events}
         dropped={range.dropped}
         runtimeMs={task.runtime_ms}
-        preferences={state.host}
-        active={state.tab === "activity"}
+        preferences={host}
+        active={tab === "activity"}
         focus={rowFocus}
       />
     );
@@ -125,7 +142,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
   return (
     <Tabs.Root
       className="evidence"
-      value={state.tab}
+      value={tab}
       onValueChange={(tab) => controller.setTab(tab as Tab)}
     >
       <TabList ref={listRef} label="Task views">
@@ -147,7 +164,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         value="chat"
         className="chat-panel"
         keepMounted
-        aria-busy={!task || state.chatHistoryLoading === task.id || undefined}
+        aria-busy={!task || chatHistoryLoading === task.id || undefined}
       >
         <ChatPanel task={task} taskId={taskId} />
       </Tabs.Panel>
@@ -183,12 +200,12 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
       <Tabs.Panel
         value="details"
         aria-busy={
-          (!task && state.tab === "details") ||
+          (!task && tab === "details") ||
           (task && !counts?.data && !counts?.error) ||
           undefined
         }
       >
-        <TaskDetails task={task} counts={counts} preferences={state.host} />
+        <TaskDetails task={task} counts={counts} preferences={host} />
       </Tabs.Panel>
     </Tabs.Root>
   );

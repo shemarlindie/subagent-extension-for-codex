@@ -7,8 +7,20 @@ import type {
 } from "../../app/state/types";
 import { projectApproved } from "../projects/selectors";
 
+/** The snapshot fields that decide which projects a task can target. */
+export type ProjectTargetState = Pick<
+  Snapshot,
+  | "projects"
+  | "projectCandidate"
+  | "projectCandidateAuto"
+  | "projectCandidateGit"
+>;
+
 /** Registered projects plus the chat's project when starting a task may add it. */
-export function taskProjects(state: Snapshot, projects = state.projects) {
+export function taskProjects(
+  state: ProjectTargetState,
+  projects = state.projects,
+) {
   const candidate = state.projectCandidateAuto
     ? state.projectCandidate
     : undefined;
@@ -28,7 +40,7 @@ export function taskProjects(state: Snapshot, projects = state.projects) {
 }
 
 /** A project's Git state, when the service could read it. */
-export const projectGit = (state: Snapshot, repository?: string) =>
+export const projectGit = (state: ProjectTargetState, repository?: string) =>
   taskProjects(state).find((project) => project.repository === repository)?.git;
 
 /** A worker choice's `provider:profile` value; a bare provider has no profile. */

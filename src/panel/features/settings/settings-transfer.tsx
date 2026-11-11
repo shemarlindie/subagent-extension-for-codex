@@ -44,13 +44,13 @@ export function SettingsTransfer({
 
   const pasted = useWatch({ control, name: "document", defaultValue: "" });
 
-  const controller = useController(),
-    { busy } = useSnapshot(),
-    pasteId = useId(),
-    [status, setStatus] = useState<TransferStatus>({ kind: "idle" }),
-    [exportError, setExportError] = useState(""),
-    [exporting, setExporting] = useState<ExportAction>(),
-    disabled = !ready || edited || busy || Boolean(exporting);
+  const controller = useController();
+  const busy = useSnapshot((state) => state.busy);
+  const pasteId = useId();
+  const [status, setStatus] = useState<TransferStatus>({ kind: "idle" });
+  const [exportError, setExportError] = useState("");
+  const [exporting, setExporting] = useState<ExportAction>();
+  const disabled = !ready || edited || busy || Boolean(exporting);
 
   async function exportSaved(action: ExportAction) {
     setExportError("");

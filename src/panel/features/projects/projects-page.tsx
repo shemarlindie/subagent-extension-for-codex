@@ -15,11 +15,21 @@ import { ProjectListSkeleton } from "./project-list-skeleton";
 import { projectDisplayName } from "./selectors";
 
 export function ProjectsPage() {
-  const controller = useController(),
-    state = useSnapshot(),
-    // The project whose archive replaces the list, until the user goes back.
-    [archive, setArchive] = useState<{ repository: string; name: string }>(),
-    closedArchive = useRef<string>(undefined);
+  const controller = useController();
+
+  const { busy, connected, scopeKnown, projects, projectsLoaded, dialogOpen } =
+    useSnapshot(
+      ["busy", "connected", "scopeKnown", "projects", "projectsLoaded"],
+      (state) => ({ dialogOpen: Boolean(state.dialog) }),
+    );
+
+  // The project whose archive replaces the list, until the user goes back.
+  const [archive, setArchive] = useState<{
+    repository: string;
+    name: string;
+  }>();
+
+  const closedArchive = useRef<string>(undefined);
 
   // Back from an archive, focus returns to the button that opened it.
   useLayoutEffect(() => {
@@ -34,11 +44,7 @@ export function ProjectsPage() {
     closedArchive.current = undefined;
   }, [archive]);
 
-  const disabled =
-    state.busy ||
-    !state.connected ||
-    !state.scopeKnown ||
-    Boolean(state.dialog);
+  const disabled = busy || !connected || !scopeKnown || dialogOpen;
 
   if (archive) {
     const closeArchive = () => {
@@ -56,7 +62,7 @@ export function ProjectsPage() {
       back={
         <BackButton
           label={PAGES.tasks.label}
-          disabled={state.busy || Boolean(state.dialog)}
+          disabled={busy || dialogOpen}
           onClick={() => controller.backToTasks()}
         />
       }
@@ -72,16 +78,16 @@ export function ProjectsPage() {
       }
     >
       <div className="project-manager">
-        {state.projectsLoaded && !state.projects.length ? (
+        {projectsLoaded && !projects.length ? (
           <p className="muted managed-projects-empty">No saved projects.</p>
         ) : null}
         <LoadingSwap
           className="managed-projects-loading-swap"
-          loading={!state.projectsLoaded}
+          loading={!projectsLoaded}
           skeleton={<ProjectListSkeleton />}
         >
           <ul className="managed-projects" aria-label="Saved projects">
-            {state.projects.map((project) => {
+            {projects.map((project) => {
               const name = projectDisplayName(project);
 
               const saveName = async (value: string) => {
