@@ -52,8 +52,7 @@ export function activityCursor(events: Event[], taskId: string) {
  * newest events after its requested cursor. Overlapping reads can repeat
  * events already shown, so only events after the current cursor append.
  * Keeping the last EVENT_TAIL_SIZE matches the service's window. The tally is
- * the service's own, so it replaces the previous one. Unchanged parts keep
- * their identity, so an unchanged view skips rendering.
+ * the service's own, so it replaces the previous one.
  */
 export function mergeActivity(
   previous: ActivityView,
@@ -64,21 +63,11 @@ export function mergeActivity(
   const cursor = recent.at(-1)?.id ?? 0;
   const incoming = page.events.filter((event) => event.id > cursor);
 
-  let events = recent;
+  const events = incoming.length
+    ? [...recent, ...incoming].slice(-EVENT_TAIL_SIZE)
+    : recent;
 
-  if (incoming.length) {
-    events = [...recent, ...incoming].slice(-EVENT_TAIL_SIZE);
-  } else if (recent.length === previous.events.length) {
-    events = previous.events;
-  }
-
-  const dropped =
-    page.dropped &&
-    JSON.stringify(page.dropped) === JSON.stringify(previous.dropped)
-      ? previous.dropped
-      : page.dropped;
-
-  return { events, dropped };
+  return { events, dropped: page.dropped };
 }
 
 const plural = (count: number, noun: string) =>

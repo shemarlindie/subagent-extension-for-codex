@@ -58,22 +58,8 @@ test("events from another task are dropped rather than reused", () => {
   assert.equal(activityCursor(view.events, "task"), 0);
 });
 
-test("the tally is the service's, and an unchanged one keeps its identity", () => {
-  const previous = { events: [event(1)], dropped };
-
-  const same = mergeActivity(previous, "task", {
-    events: [event(1)],
-    dropped: { ...dropped },
-  });
-
-  assert.ok(
-    same.dropped === previous.dropped,
-    "Unchanged notes skip rendering",
-  );
-
-  assert.equal(same.events, previous.events, "Repeated events skip rendering");
-
-  const grown = mergeActivity(previous, "task", {
+test("the tally is the service's", () => {
+  const grown = mergeActivity({ events: [event(1)], dropped }, "task", {
     events: [],
     dropped: { ...dropped, count: 6 },
   });
