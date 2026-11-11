@@ -60,5 +60,8 @@ export function policyBlocksMode(
     return !!policy?.permissions?.disableBypassPermissionsMode;
   }
 
-  return mode === "auto" && !!policy?.disableAutoMode;
+  return (
+    mode === "auto" &&
+    !!(policy?.disableAutoMode ?? policy?.permissions?.disableAutoMode)
+  );
 }

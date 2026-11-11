@@ -93,6 +93,15 @@ test("modes the session rejects are blocked, naming the organization when its po
   assert.equal(policy?.managed, true);
 });
 
+test("auto mode turned off under permissions names the organization", async () => {
+  const policy = await discovery({
+    policy: { permissions: { disableAutoMode: "disable" } },
+    rejected: ["auto"],
+  }).policy();
+
+  assert.equal(policy?.blocked[0]?.reason, "Turned off by your organization");
+});
+
 test("discovery runs outside any project, without the Bypass flag as root", async () => {
   let options: { cwd?: string; allowDangerouslySkipPermissions?: boolean } = {};
 
