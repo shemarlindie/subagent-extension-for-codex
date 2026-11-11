@@ -90,7 +90,14 @@ export function ModelTable({
         // Without a discovered catalog the model ID is typed instead.
         let modelControl: ReactNode;
 
-        if (loading) {
+        if (scope.model.locked) {
+          // The organization's default, read-only where a choice would be.
+          modelControl = (
+            <span className="model-table-locked">
+              {scope.model.locked} · Organization
+            </span>
+          );
+        } else if (loading) {
           modelControl = (
             <FormSelect
               control={control}
@@ -147,28 +154,39 @@ export function ModelTable({
         const controls = (
           <>
             {modelControl}
-            <FormSelect
-              control={control}
-              name={effortName}
-              id={`setting-${effortName}`}
-              label={scope.effort.label}
-              options={scope.effort.options}
-              describedBy={descriptionIds(
-                noteId,
-                scope.effort.unsupported ? warningId : undefined,
-              )}
-              disabled={loading}
-              loading={loading}
-              loadingLabel={`Loading ${scope.effort.label.toLowerCase()}`}
-              placeholder={loading ? "Loading…" : undefined}
-            />
+            {scope.effort.locked ? (
+              <span className="model-table-locked">
+                {scope.effort.locked} · Organization
+              </span>
+            ) : (
+              <FormSelect
+                control={control}
+                name={effortName}
+                id={`setting-${effortName}`}
+                label={scope.effort.label}
+                options={scope.effort.options}
+                describedBy={descriptionIds(
+                  noteId,
+                  scope.effort.unsupported ? warningId : undefined,
+                )}
+                disabled={loading}
+                loading={loading}
+                loadingLabel={`Loading ${scope.effort.label.toLowerCase()}`}
+                placeholder={loading ? "Loading…" : undefined}
+              />
+            )}
             {note && (
               <p id={noteId} className="settings-search-note">
                 <SettingsSearchHighlight text={note} />
               </p>
             )}
-            {scope.model.warning && (
-              <p className="help warn">{scope.model.warning}</p>
+            {[scope.model.warning, scope.effort.warning].map(
+              (warning) =>
+                warning && (
+                  <p key={warning} className="help warn">
+                    {warning}
+                  </p>
+                ),
             )}
             {scope.effort.unsupported && (
               <p id={warningId} className="help warn">

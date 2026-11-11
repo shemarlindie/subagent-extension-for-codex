@@ -153,3 +153,57 @@ test("a saved choice now blocked warns on its row, and nothing else does", () =>
 
   assert.equal(row(sections({}), MODE).warning, undefined);
 });
+
+/** Each model scope by ID, across sections. */
+const scopes = (all: ReturnType<typeof sections>) =>
+  Object.fromEntries(
+    all
+      .flatMap((section) => section.rows)
+      .flatMap((item) => (item.kind === "models" ? item.scopes : []))
+      .map((scope) => [scope.id, scope]),
+  );
+
+test("the org's default model locks Global, Claude and profile rows, and reasoning locks apart", () => {
+  const saved = {
+    models: {
+      global: { model: "haiku" },
+      profiles: { implementer: { reasoning_effort: "high" } },
+    },
+  };
+
+  const modelOnly = sections(saved, { ...policy, default_model: "Sonnet 5.5" });
+  const rows = scopes(modelOnly);
+
+  for (const id of ["global", "claude", "reviewer", "implementer"]) {
+    assert.equal(rows[id]?.model.locked, "Sonnet 5.5");
+    assert.equal(rows[id]?.effort.locked, undefined);
+  }
+
+  // Only a saved value warns, by name.
+  assert.equal(
+    rows.global?.model.warning,
+    "Your saved model, Haiku, applies again if your organization stops setting a default.",
+  );
+
+  assert.equal(rows.claude?.model.warning, undefined);
+
+  // Each section explains the lock once.
+  for (const id of ["models", "profile-models"]) {
+    const help = modelOnly.find((section) => section.id === id)?.help ?? [];
+
+    assert.equal(
+      help.at(-1),
+      " Your organization's default model is Sonnet 5.5. To change it for one task, use the composer.",
+    );
+  }
+
+  const effort = scopes(sections(saved, { ...policy, default_effort: "low" }));
+
+  assert.equal(effort.implementer?.model.locked, undefined);
+  assert.equal(effort.implementer?.effort.locked, "Low");
+
+  assert.equal(
+    effort.implementer?.effort.warning,
+    "Your saved reasoning, High, applies again if your organization stops setting a default.",
+  );
+});

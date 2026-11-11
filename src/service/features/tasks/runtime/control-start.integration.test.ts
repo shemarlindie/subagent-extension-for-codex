@@ -598,6 +598,47 @@ test("a saved effort the default can't run gives way with the saved model", asyn
   );
 });
 
+test("the org's default model and reasoning outrank saved ones, and a request's own choice wins", async () => {
+  const models: ModelChoice[] = [
+    { value: "default", displayName: "Default", description: "" },
+    { value: "opus", displayName: "Opus", description: "" },
+  ];
+
+  const orgDefaults = {
+    managed: true,
+    blocked: [],
+    notes: [],
+    default_model: "Sonnet",
+  };
+
+  let policy: ProviderPolicy = orgDefaults;
+  const { c, start } = await underPolicy(async () => policy, models);
+
+  c.settings.update("alice", {
+    set: {
+      models: {
+        global: { model: "haiku", reasoning_effort: "low" },
+        providers: { claude: { model: "haiku" } },
+        profiles: { implementer: { model: "opus", reasoning_effort: "high" } },
+      },
+    },
+  });
+
+  // Model and reasoning lock separately.
+  let task = await start({});
+  assert.ok(!task.model);
+  assert.equal(task.reasoning_effort, "high");
+
+  policy = { ...orgDefaults, default_effort: "medium" };
+  task = await start({});
+  assert.ok(!task.model);
+  assert.equal(task.reasoning_effort, "default");
+
+  task = await start({ model: "opus", reasoning_effort: "xhigh" });
+  assert.equal(task.model, "opus");
+  assert.equal(task.reasoning_effort, "xhigh");
+});
+
 test("failed discovery blocks no start", async () => {
   const { start } = await underPolicy(() =>
     Promise.reject(new Error("Discovery failed")),

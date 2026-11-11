@@ -9,7 +9,7 @@ import type { Provider } from "../../providers/types.js";
 import { gitState, WORKTREE_NEEDS_GIT } from "../../workspaces/git.js";
 import { validateBudgets } from "./budget.js";
 import { assertModelEffort, modelRejectingEffort } from "./model-effort.js";
-import { checkStartPolicy } from "./policy-check.js";
+import { checkStartPolicy, type Requested } from "./policy-check.js";
 import { generateTaskTitle } from "./task-title.js";
 
 /**
@@ -22,18 +22,16 @@ export async function resolveStart(
   input: Start,
   defaults: SettingsValues,
   authority: InputAuthority,
-  modelRequested: boolean,
-  effortRequested: boolean,
+  requested: Requested,
 ) {
   const readiness = await provider.readiness?.();
   if (readiness?.ready === false) throw new Error(readiness.message);
 
-  const { model, limited } = await checkStartPolicy(
-    provider,
-    input,
-    defaults,
-    modelRequested,
-  );
+  const {
+    model,
+    reasoning_effort: effort,
+    limited,
+  } = await checkStartPolicy(provider, input, defaults, requested);
 
   const options = provider.taskPolicy.prepareStart({
     input,
@@ -48,6 +46,7 @@ export async function resolveStart(
   const req = {
     ...input,
     model,
+    reasoning_effort: effort,
     ...options,
     title: generateTaskTitle(input.description),
     description: input.description.trim(),
@@ -59,8 +58,8 @@ export async function resolveStart(
 
   // A saved effort suited the model that gave way, and the default may not offer it.
   if (
-    limited &&
-    !effortRequested &&
+    model !== input.model &&
+    !requested.effort &&
     (await modelRejectingEffort(provider, req, defaults))
   ) {
     delete req.reasoning_effort;

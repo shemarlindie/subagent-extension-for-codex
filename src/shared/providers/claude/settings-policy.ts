@@ -1,9 +1,11 @@
 import type {
+  ModelScope,
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
 import { settingAt } from "../../settings/settings-schema.js";
-import { titleCase } from "../../text.js";
+import { roles } from "../../tasks/model.js";
+import { scalarText, titleCase } from "../../text.js";
 import { blockedReason, withBlockedOptions } from "../policy.js";
 import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
@@ -36,6 +38,66 @@ function withPolicy(
               : `Your saved mode, ${permissionModeName(saved)}, isn't available. New tasks ask for approval.`,
         }
       : {}),
+  };
+}
+
+/** Why a section's locked fields show the org's defaults, said once. */
+function orgDefaultsHelp({ default_model, default_effort }: ProviderPolicy) {
+  if (!default_model && !default_effort) return undefined;
+
+  const effort = default_effort && titleCase(default_effort);
+
+  let defaults = `default model is ${default_model}`;
+
+  if (!default_model) defaults = `default reasoning is ${effort}`;
+  else if (effort)
+    defaults = `default is ${default_model} with ${effort} reasoning`;
+
+  return ` Your organization's ${defaults}. To change it for one task, use the composer.`;
+}
+
+const savedWarning = (what: string, name: string) =>
+  `Your saved ${what}, ${name}, applies again if your organization stops setting a default.`;
+
+/**
+ * A model scope with the org's defaults in place of the choices they
+ * outrank. Saved values stay, with a warning. Other providers' rows keep
+ * their own defaults.
+ */
+function withOrgDefaultLocks(
+  scope: ModelScope,
+  { default_model: model, default_effort: effort }: ProviderPolicy,
+  values: unknown,
+): ModelScope {
+  if (!["global", "claude", ...roles].includes(scope.id)) return scope;
+
+  const savedModel = scalarText(settingAt(values, scope.model.path));
+  const savedEffort = scalarText(settingAt(values, scope.effort.path));
+
+  const modelName =
+    scope.model.options?.find(({ value }) => value === savedModel)?.label ??
+    savedModel;
+
+  return {
+    ...scope,
+    model: model
+      ? {
+          ...scope.model,
+          locked: model,
+          warning: savedModel ? savedWarning("model", modelName) : undefined,
+        }
+      : scope.model,
+    effort: effort
+      ? {
+          ...scope.effort,
+          locked: titleCase(effort),
+          unsupported: false,
+          warning:
+            savedEffort && savedEffort !== "default"
+              ? savedWarning("reasoning", titleCase(savedEffort))
+              : undefined,
+        }
+      : scope.effort,
   };
 }
 
@@ -92,10 +154,28 @@ export function withClaudePolicy(
 ) {
   if (!policy) return sections;
 
-  const applied = sections.map((section) => ({
-    ...section,
-    rows: section.rows.map((row) => withPolicy(row, policy, values)),
-  }));
+  const lockHelp = orgDefaultsHelp(policy);
+
+  const applied = sections.map((section) => {
+    const models = section.rows.some(({ kind }) => kind === "models");
+
+    return {
+      ...section,
+      ...(models && lockHelp
+        ? { help: [...(section.help ?? []), lockHelp] }
+        : {}),
+      rows: section.rows.map((row) =>
+        row.kind === "models"
+          ? {
+              ...row,
+              scopes: row.scopes.map((scope) =>
+                withOrgDefaultLocks(scope, policy, values),
+              ),
+            }
+          : withPolicy(row, policy, values),
+      ),
+    };
+  });
 
   if (!policy.managed) return applied;
 
