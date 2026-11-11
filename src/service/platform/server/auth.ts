@@ -8,8 +8,8 @@ export class Auth {
   ) {}
 
   matches(input: string) {
-    const a = Buffer.from(input),
-      b = Buffer.from(this.token);
+    const a = Buffer.from(input);
+    const b = Buffer.from(this.token);
 
     return a.length === b.length && timingSafeEqual(a, b);
   }

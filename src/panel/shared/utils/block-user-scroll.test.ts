@@ -19,8 +19,8 @@ test("blocks a loading region from scrolling but keeps pinch zoom available", ()
   document.body.append(region);
   const release = blockUserScroll(region);
 
-  const oneFinger = touchMove(1),
-    pinch = touchMove(2);
+  const oneFinger = touchMove(1);
+  const pinch = touchMove(2);
 
   region.dispatchEvent(oneFinger);
   region.dispatchEvent(pinch);

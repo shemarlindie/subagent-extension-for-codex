@@ -22,10 +22,10 @@ export function ChangedFileNavigator({
   activePath,
   onSelect,
 }: ChangedFileNavigatorProps) {
-  const [open, setOpen] = useState(false),
-    [boundary, setBoundary] = useState<HTMLElement>(),
-    popupRef = useRef<HTMLDivElement>(null),
-    triggerRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [boundary, setBoundary] = useState<HTMLElement>();
+  const popupRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   function changeOpen(next: boolean) {
     if (next && triggerRef.current) {

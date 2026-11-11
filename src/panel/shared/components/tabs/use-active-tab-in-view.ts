@@ -19,14 +19,15 @@ export function useActiveTabInView<T extends string>(
     edgeGap = TAB_EDGE_GAP,
   }: ActiveTabInViewOptions<T> = {},
 ) {
-  const listRef = useRef<HTMLDivElement>(null),
-    activeTabId = getTabId(value);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeTabId = getTabId(value);
 
   useEffect(() => {
-    const list = listRef.current,
-      active = Array.from(
-        list?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [],
-      ).find((tab) => tab.id === activeTabId);
+    const list = listRef.current;
+
+    const active = Array.from(
+      list?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [],
+    ).find((tab) => tab.id === activeTabId);
 
     if (list && active) scrollChildIntoView(list, active, edgeGap);
   }, [activeTabId, edgeGap, layoutKey]);

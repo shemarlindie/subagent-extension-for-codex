@@ -301,9 +301,9 @@ test("a draft cleared while a view is in flight stays until a later view's Chat 
     text: "Hello",
   });
 
-  const older = deferred<unknown>(),
-    later = deferred<unknown>(),
-    chats = [older.promise, later.promise];
+  const older = deferred<unknown>();
+  const later = deferred<unknown>();
+  const chats = [older.promise, later.promise];
 
   transport.handler = (name) =>
     name === "view.chat" ? chats.shift() : undefined;

@@ -10,8 +10,8 @@ type WorkspaceFallbackNoticeProps = { task: Task };
 export function WorkspaceFallbackNotice({
   task,
 }: WorkspaceFallbackNoticeProps) {
-  const [dismissed, dismiss] = useDismissedNotices(),
-    reason = workspaceFallbackReason(task);
+  const [dismissed, dismiss] = useDismissedNotices();
+  const reason = workspaceFallbackReason(task);
 
   if (!reason || dismissed.has(task.id)) return null;
 

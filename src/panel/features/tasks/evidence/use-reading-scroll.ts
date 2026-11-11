@@ -358,10 +358,10 @@ export function useReadingScroll({
     remember(viewport, container);
   }, [continueGlide, followLatest, remember, restore]);
 
-  const focused = useRef<number | undefined>(undefined),
-    focusId = focus?.id,
-    focusRequest = focus?.request,
-    focusReveal = focus?.reveal;
+  const focused = useRef<number | undefined>(undefined);
+  const focusId = focus?.id;
+  const focusRequest = focus?.request;
+  const focusReveal = focus?.reveal;
 
   // After the restore above, so the requested row wins over the saved place.
   useLayoutEffect(() => {

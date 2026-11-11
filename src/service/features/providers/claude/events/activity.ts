@@ -80,8 +80,8 @@ const thinking = new Set([
 ]);
 
 function statusTitle(e: ActivityEvent) {
-  const key = activityKind(e),
-    d = object(e.data);
+  const key = activityKind(e);
+  const d = object(e.data);
 
   if (thinking.has(key)) return "Thinking…";
 
@@ -274,8 +274,8 @@ function operationTitle(
 export function claudeActivityPresentation(
   e: ActivityEvent,
 ): ActivityPresentation {
-  const d = object(e.data),
-    key = activityKind(e);
+  const d = object(e.data);
+  const key = activityKind(e);
 
   const rateLimitInfo =
     e.rawResponse?.type === "rate_limit_event"

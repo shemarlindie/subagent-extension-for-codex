@@ -15,8 +15,8 @@ function callbacks() {
   const hosts: unknown[] = [];
   const drafts: unknown[] = [];
   const revisions: string[] = [];
-  let logins = 0,
-    teardowns = 0;
+  let logins = 0;
+  let teardowns = 0;
 
   const events: TransportEvents = {
     scope: (scope) => {

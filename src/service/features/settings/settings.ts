@@ -135,8 +135,8 @@ export class Settings {
   }
 
   read(owner: string, catalogs: ScopeInput["catalogs"] = []) {
-    const providers = this.providers(),
-      modelProviders = this.modelProviders();
+    const providers = this.providers();
+    const modelProviders = this.modelProviders();
 
     catalogs = catalogs.filter((catalog) =>
       providers.includes(catalog.provider),
@@ -153,8 +153,8 @@ export class Settings {
       }
     }
 
-    const values = this.shown(this.values(owner)),
-      scopes = { values, providers, catalogs, modelProviders };
+    const values = this.shown(this.values(owner));
+    const scopes = { values, providers, catalogs, modelProviders };
 
     const sections = settingsSections(scopes);
 
@@ -164,9 +164,9 @@ export class Settings {
       "Blank inherits the next default: the task's worker profile, then its provider, then the global default, then the provider's own default. A model chosen for a task overrides these.";
 
     for (const scope of ["global", ...modelProviders, ...roles]) {
-      const info = modelScope(scope, scopes),
-        modelField = jsonSchemaAt(schema, info.modelPath)!,
-        effortField = jsonSchemaAt(schema, info.effortPath)!;
+      const info = modelScope(scope, scopes);
+      const modelField = jsonSchemaAt(schema, info.modelPath)!;
+      const effortField = jsonSchemaAt(schema, info.effortPath)!;
 
       modelField.description = modelNote;
 
@@ -248,8 +248,8 @@ export class Settings {
       args.reasoning_effort = reasoningSchema.parse(args.reasoning_effort);
     }
 
-    const defaults = this.values(owner),
-      { task } = defaults;
+    const defaults = this.values(owner);
+    const { task } = defaults;
 
     // Task choices win. Inheritance sentinels leave the saved defaults in control.
     const saved = resolveModelDefaults(defaults, {

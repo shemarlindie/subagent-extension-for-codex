@@ -18,13 +18,13 @@ type RunSetting = { label: string; compact?: string };
 
 /** The settings shown after the profile, in order. */
 function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
-  const facts = providerTaskFacts(task),
-    native = facts["Permission mode"],
-    permission = native && shortPermissionLabel(native),
-    reasoning = task.reasoning_effort || "default",
-    // Named as the composer names it, when the provider still lists the model.
-    ran = facts["Effective model"] ?? task.model,
-    model = ran ? modelName(models, ran) : "Default model";
+  const facts = providerTaskFacts(task);
+  const native = facts["Permission mode"];
+  const permission = native && shortPermissionLabel(native);
+  const reasoning = task.reasoning_effort || "default";
+  // Named as the composer names it, when the provider still lists the model.
+  const ran = facts["Effective model"] ?? task.model;
+  const model = ran ? modelName(models, ran) : "Default model";
 
   return [
     { label: model, compact: model },
@@ -41,11 +41,12 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
 
 /** What the task runs with, and what it asked for where that differs. */
 function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
-  const facts = providerTaskFacts(task),
-    requested = [
-      facts["Requested permission mode"],
-      facts["Effective model"] && task.model,
-    ].filter(Boolean);
+  const facts = providerTaskFacts(task);
+
+  const requested = [
+    facts["Requested permission mode"],
+    facts["Effective model"] && task.model,
+  ].filter(Boolean);
 
   return [
     `Set when the task started: ${[profile, ...settings.map((setting) => setting.label)].join(" · ")}`,

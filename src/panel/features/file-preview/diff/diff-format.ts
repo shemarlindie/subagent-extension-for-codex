@@ -23,14 +23,15 @@ const ESCAPES: Partial<Record<string, string>> = {
 function unquoteDiffPath(path: string) {
   if (!path.includes("\\")) return path;
 
-  const bytes: number[] = [],
-    encoder = new TextEncoder();
+  const bytes: number[] = [];
+  const encoder = new TextEncoder();
 
   for (let index = 0; index < path.length;) {
     const [, octal] =
-        /^\\([0-3][0-7]{2})/.exec(path.slice(index, index + 4)) ?? [],
-      escaped =
-        path[index] === "\\" ? ESCAPES[path.charAt(index + 1)] : undefined;
+      /^\\([0-3][0-7]{2})/.exec(path.slice(index, index + 4)) ?? [];
+
+    const escaped =
+      path[index] === "\\" ? ESCAPES[path.charAt(index + 1)] : undefined;
 
     if (octal !== undefined) {
       bytes.push(parseInt(octal, 8));

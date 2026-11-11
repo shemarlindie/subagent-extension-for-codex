@@ -132,18 +132,19 @@ export function SettingRowView({
   loading = false,
   searchNoteId,
 }: SettingRowProps) {
-  const { form } = useContext(SettingsContext),
-    { name, enabledName } = rowFieldNames(row),
-    id = `setting-${name}`,
-    describedBy = descriptionIds(
-      row.help?.length ? helpId(row.path) : undefined,
-      searchNoteId,
-    );
+  const { form } = useContext(SettingsContext);
+  const { name, enabledName } = rowFieldNames(row);
+  const id = `setting-${name}`;
 
-  const { errors } = useFormState({ control, name }),
-    error = errors[name],
-    errorId = `${id}-error`,
-    describedByWithError = descriptionIds(describedBy, error && errorId);
+  const describedBy = descriptionIds(
+    row.help?.length ? helpId(row.path) : undefined,
+    searchNoteId,
+  );
+
+  const { errors } = useFormState({ control, name });
+  const error = errors[name];
+  const errorId = `${id}-error`;
+  const describedByWithError = descriptionIds(describedBy, error && errorId);
 
   const text = (labelElement: React.ReactNode) => (
     <div className="setting-text">

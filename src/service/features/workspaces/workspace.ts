@@ -175,9 +175,10 @@ export class Workspaces {
       // "XY path" entries; a rename or copy is followed by its old path.
       // Ignored files don't block removal.
       const entries = (
-          await git(t.workspace, ["status", "--porcelain", "-z"])
-        ).split("\0"),
-        files: string[] = [];
+        await git(t.workspace, ["status", "--porcelain", "-z"])
+      ).split("\0");
+
+      const files: string[] = [];
 
       for (let index = 0; index < entries.length; index++) {
         const entry = entries[index];

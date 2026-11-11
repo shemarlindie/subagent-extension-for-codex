@@ -119,8 +119,8 @@ function parseFields(value: string) {
 
   for (const match of value.matchAll(expression)) {
     // Neither group is optional, so every match has both.
-    const key = match[1]!,
-      raw = match[2]!;
+    const key = match[1]!;
+    const raw = match[2]!;
 
     if (["__proto__", "prototype", "constructor"].includes(key)) continue;
     fields[key] = parseValue(raw);

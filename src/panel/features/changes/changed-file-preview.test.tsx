@@ -43,18 +43,19 @@ function setup(path: string, changes: Changes = data) {
 
   onTestFinished(() => controller.dispose());
 
-  const initial = controller.getSnapshot(),
-    snapshot = {
-      ...initial,
-      conversation: "thread-one",
-      changes: {
-        task: task.id,
-        scope: "task" as const,
-        key: "",
-        loading: false,
-        data: changes,
-      },
-    };
+  const initial = controller.getSnapshot();
+
+  const snapshot = {
+    ...initial,
+    conversation: "thread-one",
+    changes: {
+      task: task.id,
+      scope: "task" as const,
+      key: "",
+      loading: false,
+      data: changes,
+    },
+  };
 
   vi.spyOn(controller, "getSnapshot").mockImplementation(() => snapshot);
 
@@ -126,8 +127,8 @@ test("the preview steps through the changed files in order, wrapping at the ends
   const position = () =>
     view.container.querySelector(".step-nav-position")?.textContent;
 
-  const previous = view.getByRole("button", { name: "Previous file" }),
-    next = view.getByRole("button", { name: "Next file" });
+  const previous = view.getByRole("button", { name: "Previous file" });
+  const next = view.getByRole("button", { name: "Next file" });
 
   assert.equal(position(), "1 / 3");
   // Back from the first file goes round to the last.
@@ -212,9 +213,10 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
   await act(async () => {});
 
   const toggle = (path: string) =>
-      view.getByRole("checkbox", { name: `Viewed ${path}` }),
-    // By name, so a failure prints the name rather than the whole element.
-    focused = () => document.activeElement?.getAttribute("aria-label");
+    view.getByRole("checkbox", { name: `Viewed ${path}` });
+
+  // By name, so a failure prints the name rather than the whole element.
+  const focused = () => document.activeElement?.getAttribute("aria-label");
 
   toggle("gone.ts").focus();
   await act(async () => fireEvent.click(toggle("gone.ts")));
@@ -234,8 +236,8 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
 });
 
 test("does not reuse another task's preview when the path matches", async () => {
-  let resolveFirst!: (file: ChangedFileContent) => void,
-    resolveSecond!: (file: ChangedFileContent) => void;
+  let resolveFirst!: (file: ChangedFileContent) => void;
+  let resolveSecond!: (file: ChangedFileContent) => void;
 
   const reads = new Map([
     [

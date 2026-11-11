@@ -114,8 +114,8 @@ export function exceedsPermission(
 ) {
   if (requested === baseline) return false;
 
-  const requestedRank = permissionRank[requested],
-    baselineRank = permissionRank[baseline];
+  const requestedRank = permissionRank[requested];
+  const baselineRank = permissionRank[baseline];
 
   // An SDK mode without an explicit rank has unknown policy; fail closed when
   // comparing it with a different mode until its behavior is reviewed.

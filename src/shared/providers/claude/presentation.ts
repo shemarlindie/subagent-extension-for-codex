@@ -11,8 +11,8 @@ export const claudeTaskFacts = (task: TaskView): Record<string, string> => {
 
   if (!parsed.success) return {};
 
-  const options = parsed.data,
-    policy = options.claude_policy;
+  const options = parsed.data;
+  const policy = options.claude_policy;
 
   const { effective } = options;
 

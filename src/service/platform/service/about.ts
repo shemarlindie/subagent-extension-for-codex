@@ -26,11 +26,12 @@ export async function aboutInfo(
   c: Control,
   refresh = false,
 ): Promise<AboutInfo> {
-  const claude = await c.providers.get("claude")?.readiness?.({ refresh }),
-    version = claude?.details.version,
-    upgrade = claude
-      ? await claudeUpgradeInfo(version ? claude.details.executable : undefined)
-      : undefined;
+  const claude = await c.providers.get("claude")?.readiness?.({ refresh });
+  const version = claude?.details.version;
+
+  const upgrade = claude
+    ? await claudeUpgradeInfo(version ? claude.details.executable : undefined)
+    : undefined;
 
   if (refresh) {
     logEvent("info", "about.claude_rechecked", {

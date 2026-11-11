@@ -6,8 +6,8 @@ const FENCE = /^\s*(`{3,}|~{3,})(.*)/;
  * shows once it closes and a blank line follows.
  */
 export function completeParagraphs(text: string) {
-  let end = 0,
-    fence: string | undefined;
+  let end = 0;
+  let fence: string | undefined;
 
   // Only lines ending in a newline are finished. The last line may still grow.
   for (let start = 0, next; (next = text.indexOf("\n", start)) !== -1;) {

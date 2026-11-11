@@ -33,10 +33,10 @@ export function useListPresence<T>(
   if (state.items === items) return state.entries;
 
   // Exits from the last change have finished or are cut short by this one.
-  const previous = state.entries.filter((entry) => entry.present),
-    known = new Set(previous.map((entry) => entry.key)),
-    current = new Set(items.map(keyOf)),
-    entries: ListPresenceEntry<T>[] = [];
+  const previous = state.entries.filter((entry) => entry.present);
+  const known = new Set(previous.map((entry) => entry.key));
+  const current = new Set(items.map(keyOf));
+  const entries: ListPresenceEntry<T>[] = [];
 
   const pending = items.values();
 

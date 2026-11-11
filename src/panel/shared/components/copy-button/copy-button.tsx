@@ -23,12 +23,12 @@ export function CopyButton({
   const controller = useController();
 
   // A changed value must not inherit the previous value's checkmark.
-  const [copiedText, setCopiedText] = useState<string>(),
-    copied = copiedText === text,
-    copiedLabel = iconOnly ? `${label} — copied` : "Copied",
-    feedbackLabel = copied ? copiedLabel : label,
-    resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined),
-    currentWrite = useRef(0);
+  const [copiedText, setCopiedText] = useState<string>();
+  const copied = copiedText === text;
+  const copiedLabel = iconOnly ? `${label} — copied` : "Copied";
+  const feedbackLabel = copied ? copiedLabel : label;
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const currentWrite = useRef(0);
 
   // A clipboard write can finish after the user leaves this view.
   useEffect(

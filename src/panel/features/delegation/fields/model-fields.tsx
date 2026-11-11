@@ -33,8 +33,10 @@ export function ModelFields({
     name: ["worker", "model", "reasoning_effort"],
   });
 
-  const resolved = modelDefaults(defaults, workers, worker, selectedModel),
-    { provider, model, reasoning, workerInfo, metadata, supported } = resolved;
+  const resolved = modelDefaults(defaults, workers, worker, selectedModel);
+
+  const { provider, model, reasoning, workerInfo, metadata, supported } =
+    resolved;
 
   return (
     <div className="two task-model-fields">

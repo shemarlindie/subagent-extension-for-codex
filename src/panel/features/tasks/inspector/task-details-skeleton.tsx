@@ -109,16 +109,18 @@ export function TaskDetailsSkeleton({
     : FACTS.map((fact) => ({ ...fact, text: undefined }));
 
   const projectText = task
-      ? `${task.repository.split("/").at(-1) ?? ""} · ${hasRevision(task) ? `${task.revision} · ` : ""}${task.workspace_strategy === "current_repo" ? "project folder" : "isolated worktree"}`
-      : "repository · revision · isolated worktree",
-    runtimeText =
-      task?.budget.max_runtime_minutes === null
-        ? "No runtime limit"
-        : `${task?.budget.max_runtime_minutes ?? 20} min limit`,
-    costText =
-      task?.budget.max_cost_usd === null
-        ? "No cost limit"
-        : `$${task?.budget.max_cost_usd ?? 10} budget`;
+    ? `${task.repository.split("/").at(-1) ?? ""} · ${hasRevision(task) ? `${task.revision} · ` : ""}${task.workspace_strategy === "current_repo" ? "project folder" : "isolated worktree"}`
+    : "repository · revision · isolated worktree";
+
+  const runtimeText =
+    task?.budget.max_runtime_minutes === null
+      ? "No runtime limit"
+      : `${task?.budget.max_runtime_minutes ?? 20} min limit`;
+
+  const costText =
+    task?.budget.max_cost_usd === null
+      ? "No cost limit"
+      : `$${task?.budget.max_cost_usd ?? 10} budget`;
 
   return (
     <LoadingSkeleton

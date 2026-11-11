@@ -20,8 +20,8 @@ type DeleteTaskValues = { deleteAgentTask: boolean };
 
 /** Confirms deleting a task, with a choice to delete the provider's session too. */
 function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
-  const controller = useController(),
-    { task } = dialog;
+  const controller = useController();
+  const { task } = dialog;
 
   const busy = useSnapshot((state) => state.busy);
 

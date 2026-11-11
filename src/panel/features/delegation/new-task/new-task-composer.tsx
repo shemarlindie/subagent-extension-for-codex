@@ -19,7 +19,10 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../shared/forms/form-field-hint";
-import { workerChoices } from "../delegate-initial-values";
+import {
+  DELEGATE_FORM_FIELDS,
+  workerChoices,
+} from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
 import { projectGit, workerChoice } from "../delegation";
 import { WorkspaceNoteView } from "../fields/workspace-note-view";
@@ -49,17 +52,8 @@ function readFailure(errors: NewTaskState["errors"]) {
 export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   const controller = useController();
 
-  const scope = useSnapshot([
-    "projects",
-    "projectCandidate",
-    "projectCandidateAuto",
-    "projectCandidateGit",
-    "workers",
-    "scopeKnown",
-    "repository",
-    "revision",
-    "busy",
-  ]);
+  const scope = useSnapshot(DELEGATE_FORM_FIELDS);
+  const busy = useSnapshot((state) => state.busy);
 
   const dialogOpen = useSnapshot((state) => Boolean(state.dialog));
 
@@ -126,7 +120,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
 
   const canSubmit =
     readsReady &&
-    !scope.busy &&
+    !busy &&
     Boolean(description.trim()) &&
     Boolean(repository) &&
     workerChoices(scope.workers).includes(worker) &&
@@ -202,7 +196,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       <form
         className="chat-composer new-task-composer"
         noValidate
-        aria-busy={scope.busy || undefined}
+        aria-busy={busy || undefined}
         onSubmit={handleSubmit}
       >
         <div className="chat-composer-body">
@@ -217,7 +211,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
                 rows={2}
                 maxLength={20000}
                 placeholder="Describe the task."
-                disabled={scope.busy}
+                disabled={busy}
                 {...messageField}
                 ref={setInput}
                 onKeyDown={keys}
@@ -228,7 +222,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
                   <Button
                     variant="text"
                     className="new-task-more"
-                    disabled={scope.busy || dialogOpen}
+                    disabled={busy || dialogOpen}
                     onClick={advanced}
                   >
                     More options…

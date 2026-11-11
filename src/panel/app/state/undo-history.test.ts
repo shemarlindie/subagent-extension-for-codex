@@ -123,8 +123,8 @@ test("a step names its task only while the task is out of view", async () => {
 test("a failed step warns and is dropped, and a busy panel keeps the step for later", async () => {
   const { history, entry, state, show } = setup();
 
-  const kept = entry("Kept"),
-    failing = entry("Failing");
+  const kept = entry("Kept");
+  const failing = entry("Failing");
 
   vi.mocked(failing.undo).mockRejectedValue(new Error("It changed."));
   history.record(kept);

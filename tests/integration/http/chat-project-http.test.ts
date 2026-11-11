@@ -113,8 +113,8 @@ const registered = (f: { c: Control }) =>
 test("HTTP auto-registration happens only on task start for the trusted thread root", async (t) => {
   const f = await fixture(t);
 
-  const repository = await f.repo("trusted"),
-    other = await f.repo("other");
+  const repository = await f.repo("trusted");
+  const other = await f.repo("other");
 
   const header = { ...f.bearer, ...hostHeader(repository) };
   // Read-only tools never register, even with trusted metadata.

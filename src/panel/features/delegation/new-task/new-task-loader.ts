@@ -89,8 +89,12 @@ export class NewTaskLoader {
     const newTask = this.context.snapshot().newTask;
     if (!newTask) return;
 
-    const retryContext = newTask.statuses.context === "error",
-      retry = { ...retryDelegateStatuses(newTask), request: ++this.request };
+    const retryContext = newTask.statuses.context === "error";
+
+    const retry = {
+      ...retryDelegateStatuses(newTask),
+      request: ++this.request,
+    };
 
     this.context.patch({ newTask: retry });
     this.load(retry);
@@ -142,8 +146,8 @@ export class NewTaskLoader {
     values: DelegateValues,
     composerHeight?: number,
   ): Promise<string | undefined> {
-    const state = this.context.snapshot(),
-      newTask = state.newTask;
+    const state = this.context.snapshot();
+    const newTask = state.newTask;
 
     if (!newTask || state.busy || this.context.closed()) return undefined;
 

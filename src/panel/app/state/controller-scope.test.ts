@@ -259,13 +259,14 @@ test("opening data selects the default task before the task-list read returns", 
     name === "app_list_tasks" ? listRead.promise : undefined;
 
   const done: Task = {
-      ...task("done", "/repo/a", "chat"),
-      status: "completed",
-    },
-    waiting: Task = {
-      ...task("waiting", "/repo/a", "chat"),
-      pending_input: { id: "q", tool: "ask", kind: "question", input: {} },
-    };
+    ...task("done", "/repo/a", "chat"),
+    status: "completed",
+  };
+
+  const waiting: Task = {
+    ...task("waiting", "/repo/a", "chat"),
+    pending_input: { id: "q", tool: "ask", kind: "question", input: {} },
+  };
 
   transport.tasks = [done, waiting];
   void controller.start();

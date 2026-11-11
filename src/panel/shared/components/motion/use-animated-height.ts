@@ -48,8 +48,8 @@ export function useAnimatedHeight(
     const element = ref.current;
     if (!element) return;
 
-    const from = height.current,
-      to = element.offsetHeight;
+    const from = height.current;
+    const to = element.offsetHeight;
 
     height.current = to;
 

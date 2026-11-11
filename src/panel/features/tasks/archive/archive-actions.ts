@@ -31,8 +31,8 @@ const titles = (tasks: Task[], ids: string[]) =>
 
 /** Names the archived tasks for the undo toast. */
 function archiveLabel(tasks: Task[], ids: string[], archived: boolean) {
-  const verb = archived ? "Archived" : "Unarchived",
-    title = ids.length === 1 && tasks.find((t) => t.id === ids[0])?.title;
+  const verb = archived ? "Archived" : "Unarchived";
+  const title = ids.length === 1 && tasks.find((t) => t.id === ids[0])?.title;
 
   if (title) return `${verb} ${quote(title)}`;
 
@@ -57,9 +57,11 @@ export class ArchiveActions {
 
     if (!changing.length || this.context.closed()) return EMPTY;
 
-    const { selected } = this.context.snapshot(),
-      ids = changing.map((task) => task.id),
-      closed = archived && selected && ids.includes(selected) ? selected : "";
+    const { selected } = this.context.snapshot();
+    const ids = changing.map((task) => task.id);
+
+    const closed =
+      archived && selected && ids.includes(selected) ? selected : "";
 
     const action = this.apply(ids, archived, changing);
 

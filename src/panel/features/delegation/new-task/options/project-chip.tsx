@@ -28,13 +28,15 @@ export function ProjectChip({
   loading,
   disabled,
 }: ProjectChipProps) {
-  const controller = useController(),
-    { field } = useFieldController<DelegateValues, "repository">({
-      name: "repository",
-    }),
-    // Starts at the current addition, so a remount keeps the restored choice.
-    applied = useRef(added),
-    { onChange } = field;
+  const controller = useController();
+
+  const { field } = useFieldController<DelegateValues, "repository">({
+    name: "repository",
+  });
+
+  // Starts at the current addition, so a remount keeps the restored choice.
+  const applied = useRef(added);
+  const { onChange } = field;
 
   useEffect(() => {
     if (!added || added === applied.current) return;

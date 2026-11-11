@@ -19,9 +19,9 @@ type AttachmentChipContentProps = { attachment: RequestAttachment };
 export function AttachmentChipContent({
   attachment,
 }: AttachmentChipContentProps) {
-  const title = displayTitle(attachment),
-    // A long title truncates in the middle, so its extension stays visible.
-    split = title.length > TITLE_END * 2;
+  const title = displayTitle(attachment);
+  // A long title truncates in the middle, so its extension stays visible.
+  const split = title.length > TITLE_END * 2;
 
   return (
     <>
@@ -77,11 +77,12 @@ export function AttachmentChip({
   maxWidth,
   onOpen,
 }: AttachmentChipProps) {
-  const chip = useRef<HTMLButtonElement>(null),
-    [open, setOpen] = useState(false),
-    [truncated, setTruncated] = useState(false),
-    style: CSSProperties | undefined =
-      maxWidth === undefined ? undefined : { maxWidth };
+  const chip = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+
+  const style: CSSProperties | undefined =
+    maxWidth === undefined ? undefined : { maxWidth };
 
   const handleOpenChange = (next: boolean) => {
     if (next) setTruncated(titleTruncated(chip.current));

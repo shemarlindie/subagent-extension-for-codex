@@ -73,10 +73,11 @@ export class PersistedDialogs {
       return;
     }
 
-    const descriptor = persistDialog(dialog),
-      latest = this.latest(),
-      finishingDelegateLoad =
-        previous?.kind === "delegate-loading" && dialog.kind === "delegate";
+    const descriptor = persistDialog(dialog);
+    const latest = this.latest();
+
+    const finishingDelegateLoad =
+      previous?.kind === "delegate-loading" && dialog.kind === "delegate";
 
     if (sameDialogReference(latest, descriptor) || finishingDelegateLoad) {
       this.dialogs[this.dialogs.length - 1] = {

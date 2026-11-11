@@ -28,15 +28,17 @@ function choiceName(name: keyof typeof SETTING_NAMES, value: string) {
 export function useProfileChoice<Name extends "model" | "reasoning_effort">(
   name: Name,
 ) {
-  const controller = useController(),
-    { getValues, setValue, setError, clearErrors } =
-      useFormContext<DelegateValues>(),
-    { field } = useFieldController<DelegateValues, Name>({ name });
+  const controller = useController();
+
+  const { getValues, setValue, setError, clearErrors } =
+    useFormContext<DelegateValues>();
+
+  const { field } = useFieldController<DelegateValues, Name>({ name });
 
   const choose = (value: string) => {
-    const previous = getValues(name),
-      worker = getValues("worker"),
-      { profile } = workerChoice(worker);
+    const previous = getValues(name);
+    const worker = getValues("worker");
+    const { profile } = workerChoice(worker);
 
     field.onChange(value);
     clearErrors("root.settings");

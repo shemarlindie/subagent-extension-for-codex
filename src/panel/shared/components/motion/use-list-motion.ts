@@ -19,19 +19,19 @@ export function useListMotion(
     const container = ref.current;
     if (!container) return;
 
-    const previous = tops.current,
-      next = new Map<string, number>(),
-      animations: Animation[] = [];
+    const previous = tops.current;
+    const next = new Map<string, number>();
+    const animations: Animation[] = [];
 
-    const motion = canAnimate(container),
-      // Relative to the list, so layout shifts above it never read as row movement.
-      origin = container.getBoundingClientRect().top - container.scrollTop;
+    const motion = canAnimate(container);
+    // Relative to the list, so layout shifts above it never read as row movement.
+    const origin = container.getBoundingClientRect().top - container.scrollTop;
 
     for (const element of Array.from(
       container.querySelectorAll<HTMLElement>(`[${attribute}]`),
     )) {
-      const id = element.getAttribute(attribute)!,
-        top = element.getBoundingClientRect().top - origin;
+      const id = element.getAttribute(attribute)!;
+      const top = element.getBoundingClientRect().top - origin;
 
       next.set(id, top);
       const old = previous.get(id);

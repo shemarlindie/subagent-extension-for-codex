@@ -67,12 +67,13 @@ obsolete. Components use these entry points:
 Components read the immutable snapshot with `useSnapshot` and call controller
 actions. The hook rerenders a component only when its selection changes, so
 select the fields it renders, usually by name, as in
-`const { busy, dialog } = useSnapshot(["busy", "dialog"])`. Destructure the
-result so lint flags a field the component no longer reads. A helper that takes
-several fields gets them as its own selection, such as
-`useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs state only when the
-user acts reads `controller.getSnapshot()`. Pure rendering components can take
-props directly. Transport revisions and draft following stay outside rendering.
+`const { busy, dialog } = useSnapshot(["busy", "dialog"])`. Lint requires
+destructuring the result, so it flags a field the component no longer reads. A
+helper that takes several fields gets them as its own selection of a named field
+constant, such as `useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs
+state only when the user acts reads `controller.getSnapshot()`. Pure rendering
+components can take props directly. Transport revisions and draft following stay
+outside rendering.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 write partial updates. Select stable fields or references to avoid unrelated

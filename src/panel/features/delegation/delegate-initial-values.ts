@@ -9,14 +9,33 @@ import type {
   Worker,
 } from "../../app/state/types";
 import type { DelegateValues } from "./delegate-values";
-import { workerChoice } from "./delegation";
+import { PROJECT_TARGET_FIELDS, workerChoice } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";
 
 export type DelegateFormDialog = DelegateDialog | DelegateLoadingDialog;
 
+/** The snapshot fields that decide a new task's worker and target. */
+const DELEGATE_SCOPE_FIELDS = [
+  "workers",
+  "scopeKnown",
+  "repository",
+  "revision",
+] as const;
+
 export type DelegateScope = Pick<
   Snapshot,
-  "workers" | "scopeKnown" | "repository" | "revision"
+  (typeof DELEGATE_SCOPE_FIELDS)[number]
+>;
+
+/** The snapshot fields the delegate forms pass to their helpers. */
+export const DELEGATE_FORM_FIELDS = [
+  ...PROJECT_TARGET_FIELDS,
+  ...DELEGATE_SCOPE_FIELDS,
+] as const;
+
+export type DelegateFormState = Pick<
+  Snapshot,
+  (typeof DELEGATE_FORM_FIELDS)[number]
 >;
 
 // Fields wait for the settings read, so these only fill the form's shape.
@@ -123,20 +142,21 @@ export function delegateInitialValues({
   scope,
   draft,
 }: DelegateInitialValuesInput): DelegateValues {
-  const { statuses, defaults } = delegateReads(dialog),
-    settingsReady = statuses.settings === "ready",
-    contextReady = statuses.context === "ready",
-    target = delegateTarget(dialog, scope),
-    { budget } = defaults.task;
+  const { statuses, defaults } = delegateReads(dialog);
+  const settingsReady = statuses.settings === "ready";
+  const contextReady = statuses.context === "ready";
+  const target = delegateTarget(dialog, scope);
+  const { budget } = defaults.task;
 
   const preferred =
     dialog.preferredWorker ??
     `${defaults.task.provider}:${defaults.task.worker_profile}`;
 
-  const { provider: preferredProvider } = workerChoice(preferred),
-    preferredWorker = scope.workers.find(
-      (worker) => worker.provider === preferredProvider,
-    );
+  const { provider: preferredProvider } = workerChoice(preferred);
+
+  const preferredWorker = scope.workers.find(
+    (worker) => worker.provider === preferredProvider,
+  );
 
   const strategy = settingsReady ? defaults.task.workspace_strategy : "";
 

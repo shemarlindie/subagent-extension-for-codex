@@ -60,9 +60,9 @@ export function mergeActivity(
   taskId: string,
   page: ActivityPage,
 ): ActivityView {
-  const recent = previous.events.filter((event) => event.task_id === taskId),
-    cursor = recent.at(-1)?.id ?? 0,
-    incoming = page.events.filter((event) => event.id > cursor);
+  const recent = previous.events.filter((event) => event.task_id === taskId);
+  const cursor = recent.at(-1)?.id ?? 0;
+  const incoming = page.events.filter((event) => event.id > cursor);
 
   let events = recent;
 
@@ -86,12 +86,14 @@ const plural = (count: number, noun: string) =>
 
 /** Readable lines for the note shown where the timeline's older rows were dropped. */
 export function describeDropped(summary: DroppedSummary) {
-  const elapsed = Date.parse(summary.to) - Date.parse(summary.from),
-    tools = Object.entries(summary.tools).sort(
-      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
-    ),
-    shown = tools.slice(0, 3).map(([name, n]) => `${name} ${n}`),
-    hidden = tools.length - shown.length;
+  const elapsed = Date.parse(summary.to) - Date.parse(summary.from);
+
+  const tools = Object.entries(summary.tools).sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+
+  const shown = tools.slice(0, 3).map(([name, n]) => `${name} ${n}`);
+  const hidden = tools.length - shown.length;
 
   return {
     headline: `${plural(summary.count, "earlier event")}${

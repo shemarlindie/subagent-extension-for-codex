@@ -65,17 +65,14 @@ export function DiffFile({
   onContentReady,
   ...data
 }: DiffFileProps) {
-  const [ownOpen, setOpen] = useState(initiallyOpen),
-    open = controlledOpen ?? ownOpen,
-    deferredOpen = useDeferredValue(open),
-    renderRows = open && deferredOpen,
-    language = pathLanguage(diffPath(file)),
-    renamed =
-      file.from &&
-      file.to &&
-      file.from !== file.to &&
-      !file.new &&
-      !file.deleted;
+  const [ownOpen, setOpen] = useState(initiallyOpen);
+  const open = controlledOpen ?? ownOpen;
+  const deferredOpen = useDeferredValue(open);
+  const renderRows = open && deferredOpen;
+  const language = pathLanguage(diffPath(file));
+
+  const renamed =
+    file.from && file.to && file.from !== file.to && !file.new && !file.deleted;
 
   useLayoutEffect(() => {
     if (renderRows) onContentReady?.();

@@ -23,10 +23,11 @@ function Harness({ reading }: HarnessProps) {
 
 /** jsdom has no layout; give every element a scroll and client height. */
 function layout(scrollHeight: number, clientHeight: number) {
-  const proto = HTMLElement.prototype,
-    saved = ["scrollHeight", "clientHeight"].map(
-      (key) => [key, Object.getOwnPropertyDescriptor(proto, key)] as const,
-    );
+  const proto = HTMLElement.prototype;
+
+  const saved = ["scrollHeight", "clientHeight"].map(
+    (key) => [key, Object.getOwnPropertyDescriptor(proto, key)] as const,
+  );
 
   Object.defineProperty(proto, "scrollHeight", {
     configurable: true,
@@ -49,10 +50,10 @@ test("the saved place is restored, and the restore's own scroll doesn't replace 
   onTestFinished(cleanup);
   layout(1000, 200);
 
-  const position = { top: 120, anchor: { path: "gone.ts", top: 5 } },
-    reading: ChangesReading = { position, open: new Map() },
-    view = render(<Harness reading={reading} />),
-    scroller = view.getByTestId("scroller");
+  const position = { top: 120, anchor: { path: "gone.ts", top: 5 } };
+  const reading: ChangesReading = { position, open: new Map() };
+  const view = render(<Harness reading={reading} />);
+  const scroller = view.getByTestId("scroller");
 
   assert.equal(scroller.scrollTop, 120);
 

@@ -26,18 +26,19 @@ export function FormSelect<T extends FieldValues, N extends FieldPath<T>>({
   }) {
   const { field, fieldState } = useController({ name, control, rules });
 
-  const errorId = `${props.id}-error`,
-    shared = {
-      ...props,
-      name: field.name,
-      triggerRef: field.ref,
-      onBlur: field.onBlur,
-      invalid: fieldState.invalid,
-      describedBy: descriptionIds(
-        props.describedBy,
-        fieldState.error ? errorId : undefined,
-      ),
-    };
+  const errorId = `${props.id}-error`;
+
+  const shared = {
+    ...props,
+    name: field.name,
+    triggerRef: field.ref,
+    onBlur: field.onBlur,
+    invalid: fieldState.invalid,
+    describedBy: descriptionIds(
+      props.describedBy,
+      fieldState.error ? errorId : undefined,
+    ),
+  };
 
   return (
     <>

@@ -46,10 +46,11 @@ export function TaskFilters() {
 
   // Keep the selected filter visible when the group scrolls sideways.
   useEffect(() => {
-    const group = groupRef.current,
-      selected = group?.querySelector<HTMLElement>(
-        `[data-filter="${current}"]`,
-      );
+    const group = groupRef.current;
+
+    const selected = group?.querySelector<HTMLElement>(
+      `[data-filter="${current}"]`,
+    );
 
     if (group && selected) {
       scrollChildIntoView(group, selected, FILTER_EDGE_GAP);

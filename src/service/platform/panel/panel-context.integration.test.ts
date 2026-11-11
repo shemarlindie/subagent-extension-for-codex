@@ -88,8 +88,8 @@ async function fixture(t: TestContext) {
 test("panel defaults use only the latest owned task in the same conversation", async (t) => {
   const f = await fixture(t);
 
-  const a = await f.repo("a"),
-    b = await f.repo("b");
+  const a = await f.repo("a");
+  const b = await f.repo("b");
 
   f.seed("old", a, {
     conversation_id: "chat-a",
@@ -168,8 +168,8 @@ test("panel defaults use only the latest owned task in the same conversation", a
 test("an unavailable history default does not prevent choosing a different project", async (t) => {
   const f = await fixture(t);
 
-  const old = await f.repo("removed"),
-    active = await f.repo("active");
+  const old = await f.repo("removed");
+  const active = await f.repo("active");
 
   f.seed("old-task", old, { conversation_id: "chat-a" });
 
@@ -208,8 +208,8 @@ test("an unavailable history default does not prevent choosing a different proje
 test("task selection checks ownership and rejects conflicting scope", async (t) => {
   const f = await fixture(t);
 
-  const a = await f.repo("a"),
-    b = await f.repo("b");
+  const a = await f.repo("a");
+  const b = await f.repo("b");
 
   const selected = f.seed("selected", a, {
     conversation_id: "chat-a",
@@ -275,8 +275,8 @@ test("task selection checks ownership and rejects conflicting scope", async (t) 
 test("sandbox directory hints resolve approved Git roots without granting access", async (t) => {
   const f = await fixture(t);
 
-  const a = await f.repo("approved repo"),
-    b = await f.repo("unapproved", false);
+  const a = await f.repo("approved repo");
+  const b = await f.repo("unapproved", false);
 
   await mkdir(join(a, "src"));
   const alias = join(f.dir, "alias");

@@ -48,14 +48,15 @@ export function BudgetFields({
   settingsLoading = false,
 }: BudgetFieldsProps) {
   const {
-      register,
-      control,
-      formState: { errors },
-    } = useFormContext<DelegateValues>(),
-    [worker, mode, runtimeMode, cost, runtime] = useWatch({
-      control,
-      name: ["worker", "costMode", "runtimeMode", "cost", "runtime"],
-    });
+    register,
+    control,
+    formState: { errors },
+  } = useFormContext<DelegateValues>();
+
+  const [worker, mode, runtimeMode, cost, runtime] = useWatch({
+    control,
+    name: ["worker", "costMode", "runtimeMode", "cost", "runtime"],
+  });
 
   const provider = workers.find(
     (item) => item.provider === workerChoice(worker).provider,

@@ -34,8 +34,8 @@ export function ProjectField({
   browseDisabled = disabled,
   onBrowse,
 }: ProjectFieldProps) {
-  const { control } = useFormContext<DelegateValues>(),
-    options = projects.filter((project) => project.kind === "repository");
+  const { control } = useFormContext<DelegateValues>();
+  const options = projects.filter((project) => project.kind === "repository");
 
   return (
     <Field id="repository" label="Project">

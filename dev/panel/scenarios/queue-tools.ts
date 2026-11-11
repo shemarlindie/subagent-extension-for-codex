@@ -38,8 +38,8 @@ function restoreQueued(task: Task, args: Record<string, unknown>) {
     .toSorted((a, b) => a.index - b.index);
 
   for (const { message_id: id, index } of placements) {
-    const m = removed.get(id)!,
-      first = task.queue.filter((q) => q.recorded).length;
+    const m = removed.get(id)!;
+    const first = task.queue.filter((q) => q.recorded).length;
 
     task.queue.splice(
       m.recorded
@@ -141,8 +141,8 @@ export function previewQueueTool(
 let sent = 0;
 
 function previewSend(task: Task, args: Record<string, unknown>) {
-  const delivery = (args.delivery ?? "steer") as Delivery,
-    mode = composerMode(task);
+  const delivery = (args.delivery ?? "steer") as Delivery;
+  const mode = composerMode(task);
 
   if (mode === "idle" || delivery === "interrupt") {
     throw new Error(

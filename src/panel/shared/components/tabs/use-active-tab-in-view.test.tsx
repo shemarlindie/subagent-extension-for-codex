@@ -28,11 +28,11 @@ function TabsHarness({
 }
 
 test("scrolls the selected tab into view when selection or layout changes", () => {
-  const view = render(<TabsHarness value="task" layoutKey="vertical" />),
-    list = view.getByRole("tablist"),
-    task = view.getByRole("tab", { name: "Task" }),
-    models = view.getByRole("tab", { name: "Models" }),
-    scrollTo = vi.fn();
+  const view = render(<TabsHarness value="task" layoutKey="vertical" />);
+  const list = view.getByRole("tablist");
+  const task = view.getByRole("tab", { name: "Task" });
+  const models = view.getByRole("tab", { name: "Models" });
+  const scrollTo = vi.fn();
 
   Object.defineProperty(list, "clientWidth", {
     configurable: true,

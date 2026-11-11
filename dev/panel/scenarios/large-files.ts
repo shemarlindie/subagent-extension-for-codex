@@ -47,8 +47,8 @@ function moduleAt(index: number) {
 
 /** 60 files with ~7,000 changed lines: renames, deletions and new files included. */
 const buildDiff = lazy(() => {
-  const next = random(1),
-    parts: string[] = [];
+  const next = random(1);
+  const parts: string[] = [];
 
   for (let file = 0; file < 60; file++) {
     const path = `src/build/module-${String(file).padStart(2, "0")}.ts`;
@@ -76,8 +76,8 @@ const buildDiff = lazy(() => {
 
     const added = file % 9 === 0;
     const lines: string[] = [];
-    let oldCount = 0,
-      newCount = 0;
+    let oldCount = 0;
+    let newCount = 0;
 
     for (let line = 0; line < 118; line++) {
       const roll = added ? 0 : next();
@@ -123,8 +123,8 @@ const bundleStats = lazy(() => {
 
 /** 20,000 rows; some fields quote commas and newlines. */
 const moduleSizes = lazy(() => {
-  const next = random(3),
-    rows = ['module,chunk,raw_bytes,gzip_bytes,"notes"'];
+  const next = random(3);
+  const rows = ['module,chunk,raw_bytes,gzip_bytes,"notes"'];
 
   for (let index = 0; index < 20000; index++) {
     const raw = Math.round(next() * 200000);
@@ -139,8 +139,8 @@ const moduleSizes = lazy(() => {
 
 /** 30,000 lines, past the highlighting cap. */
 const buildLog = lazy(() => {
-  const next = random(4),
-    lines: string[] = [];
+  const next = random(4);
+  const lines: string[] = [];
 
   for (let index = 0; index < 30000; index++) {
     const level = next() < 0.04 ? "WARN" : "INFO";
@@ -221,12 +221,12 @@ const vendorBundle = lazy(() => {
 
 /** An SVG over 64 KB, which shows as source only. */
 const dependencyGraph = lazy(() => {
-  const next = random(5),
-    nodes: string[] = [];
+  const next = random(5);
+  const nodes: string[] = [];
 
   for (let index = 0; index < 900; index++) {
-    const x = Math.round(next() * 1180) + 10,
-      y = Math.round(next() * 780) + 10;
+    const x = Math.round(next() * 1180) + 10;
+    const y = Math.round(next() * 780) + 10;
 
     nodes.push(
       `<circle cx="${x}" cy="${y}" r="${3 + (index % 5)}" fill="hsl(${(index * 37) % 360} 70% 55%)"/><line x1="${x}" y1="${y}" x2="600" y2="400" stroke="#8884" stroke-width="0.5"/>`,

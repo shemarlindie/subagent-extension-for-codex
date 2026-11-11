@@ -30,21 +30,22 @@ export interface SettingsSearchMatch {
 
 /** Search stable metadata, so editing values cannot change the result set. */
 export function settingsSearch(query: string) {
-  const terms = normalize(query).split(/\s+/).filter(Boolean),
-    matches = (text: string) =>
-      terms.every((term) => searchable(text).includes(term));
+  const terms = normalize(query).split(/\s+/).filter(Boolean);
+
+  const matches = (text: string) =>
+    terms.every((term) => searchable(text).includes(term));
 
   const fieldMatch = (
     section: SettingSection,
     fields: SearchableField[],
     label: string,
   ): SettingsSearchMatch | undefined => {
-    const labels = [label, ...fields.map((field) => field.label)].join(" "),
-      paths = fields.map((field) => field.path).join(" "),
-      help = fields.map((field) => helpText(field.help)).join(" "),
-      options = fields.flatMap((field) => field.options ?? []),
-      keywords = fields.flatMap((field) => field.keywords ?? []),
-      context = `${section.title} ${helpText(section.help)}`;
+    const labels = [label, ...fields.map((field) => field.label)].join(" ");
+    const paths = fields.map((field) => field.path).join(" ");
+    const help = fields.map((field) => helpText(field.help)).join(" ");
+    const options = fields.flatMap((field) => field.options ?? []);
+    const keywords = fields.flatMap((field) => field.keywords ?? []);
+    const context = `${section.title} ${helpText(section.help)}`;
 
     if (
       !matches(

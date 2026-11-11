@@ -18,17 +18,18 @@ type TableViewProps = {
  * so tables with tens of thousands of rows stay light in the DOM.
  */
 export function TableView({ rows }: TableViewProps) {
-  const head = rows[0] ?? [],
-    blocks = useMemo(() => chunks(rows.slice(1), BLOCK_ROWS), [rows]),
-    // Ragged rows keep every cell; columns past the header have no name.
-    columns = useMemo(
-      // A reduce, since spreading tens of thousands of rows overflows the stack.
-      () =>
-        Array.from({
-          length: rows.reduce((most, row) => Math.max(most, row.length), 0),
-        }),
-      [rows],
-    );
+  const head = rows[0] ?? [];
+  const blocks = useMemo(() => chunks(rows.slice(1), BLOCK_ROWS), [rows]);
+
+  // Ragged rows keep every cell; columns past the header have no name.
+  const columns = useMemo(
+    // A reduce, since spreading tens of thousands of rows overflows the stack.
+    () =>
+      Array.from({
+        length: rows.reduce((most, row) => Math.max(most, row.length), 0),
+      }),
+    [rows],
+  );
 
   return (
     <div className="table-view">

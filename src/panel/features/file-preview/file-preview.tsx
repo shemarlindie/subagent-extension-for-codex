@@ -67,51 +67,54 @@ export function FilePreview({
   alwaysShowViews = false,
   wrapLines = false,
 }: FilePreviewProps) {
-  const controller = useController(),
-    canCopy = !controller.transport.embedded && hasClipboardApi(),
-    format = fileFormat(file),
-    views = useMemo(
-      (): FileViews =>
-        diff ? [...fileViews(file), "changes"] : fileViews(file),
-      [file, diff],
-    ),
-    // Sizing reads the whole content, so it runs once per file, not per render.
-    size = useMemo(() => fileBytes(file), [file]),
-    largeSvg = useMemo(() => isLargeSvg(file), [file]),
-    [ownView, setOwnView] = useState<FileView>(views[0]),
-    chosen = chosenView ?? ownView,
-    setView = onViewChange ?? setOwnView,
-    // A new file may not offer the chosen view; it then opens in its best one.
-    view = views.includes(chosen) ? chosen : views[0],
-    // The switcher follows `view` at once; the body renders `shown` in the
-    // background, keeping the previous view until the new one is ready.
-    shown = useDeferredValue(view),
-    rendering = shown !== view,
-    switcherRef = useRef<HTMLDivElement>(null),
-    switcher =
-      views.length > 1 || alwaysShowViews ? (
-        <ToggleGroup
-          ref={switcherRef}
-          className="view-switch"
-          aria-label="View"
-          value={[view]}
-          onValueChange={([next]) => next && setView(next)}
-        >
-          {views.map((option) => (
-            <Toggle key={option} value={option} className="view-option">
-              {viewLabel(option)}
-            </Toggle>
-          ))}
-        </ToggleGroup>
-      ) : null,
-    renderedSwitcher = viewSwitcherTarget
-      ? switcher && createPortal(switcher, viewSwitcherTarget)
-      : switcher;
+  const controller = useController();
+  const canCopy = !controller.transport.embedded && hasClipboardApi();
+  const format = fileFormat(file);
+
+  const views = useMemo(
+    (): FileViews => (diff ? [...fileViews(file), "changes"] : fileViews(file)),
+    [file, diff],
+  );
+
+  // Sizing reads the whole content, so it runs once per file, not per render.
+  const size = useMemo(() => fileBytes(file), [file]);
+  const largeSvg = useMemo(() => isLargeSvg(file), [file]);
+  const [ownView, setOwnView] = useState<FileView>(views[0]);
+  const chosen = chosenView ?? ownView;
+  const setView = onViewChange ?? setOwnView;
+  // A new file may not offer the chosen view; it then opens in its best one.
+  const view = views.includes(chosen) ? chosen : views[0];
+  // The switcher follows `view` at once; the body renders `shown` in the
+  // background, keeping the previous view until the new one is ready.
+  const shown = useDeferredValue(view);
+  const rendering = shown !== view;
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  const switcher =
+    views.length > 1 || alwaysShowViews ? (
+      <ToggleGroup
+        ref={switcherRef}
+        className="view-switch"
+        aria-label="View"
+        value={[view]}
+        onValueChange={([next]) => next && setView(next)}
+      >
+        {views.map((option) => (
+          <Toggle key={option} value={option} className="view-option">
+            {viewLabel(option)}
+          </Toggle>
+        ))}
+      </ToggleGroup>
+    ) : null;
+
+  const renderedSwitcher = viewSwitcherTarget
+    ? switcher && createPortal(switcher, viewSwitcherTarget)
+    : switcher;
 
   // Narrow headings scroll the view choices; file changes can move the selection.
   useEffect(() => {
-    const list = switcherRef.current,
-      selected = list?.querySelector<HTMLElement>("[data-pressed]");
+    const list = switcherRef.current;
+    const selected = list?.querySelector<HTMLElement>("[data-pressed]");
 
     if (list && selected) scrollChildIntoView(list, selected, 2);
   }, [view, views, viewSwitcherTarget]);

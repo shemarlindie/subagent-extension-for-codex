@@ -313,9 +313,11 @@ export function fileViews(file: PreviewFile): FileViews {
 
 /** Source text for the Source view, formatted for its type. */
 export function fileSource(file: PreviewFile) {
-  const format = fileFormat(file),
-    // Only minified JSON is reformatted. Pretty-printed JSON is shown as stored.
-    reformat = format === "json" && !file.content.slice(0, 2000).includes("\n");
+  const format = fileFormat(file);
+
+  // Only minified JSON is reformatted. Pretty-printed JSON is shown as stored.
+  const reformat =
+    format === "json" && !file.content.slice(0, 2000).includes("\n");
 
   return {
     code: reformat ? prettyJson(file.content) : file.content,

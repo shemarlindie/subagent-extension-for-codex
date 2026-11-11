@@ -34,10 +34,10 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
 
   const definition = shownDialog && dialogDefinition(shownDialog);
 
-  const trigger = useRef<HTMLElement | null>(null),
-    openedScope = useRef(0),
-    popup = useRef<HTMLDivElement>(null),
-    previousKind = useRef(activeDialog?.kind);
+  const trigger = useRef<HTMLElement | null>(null);
+  const openedScope = useRef(0);
+  const popup = useRef<HTMLDivElement>(null);
+  const previousKind = useRef(activeDialog?.kind);
 
   // Replacing a dialog's contents keeps the popup open, so Base UI's opening
   // focus does not run again. Focus the replacement form or restored preview.

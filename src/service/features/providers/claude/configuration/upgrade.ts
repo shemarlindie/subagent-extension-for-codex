@@ -57,9 +57,9 @@ export async function claudeUpgradeInfo(
     /^(.*)\/Caskroom\/(claude-code(?:@latest)?)\/[^/]+\/claude$/.exec(selected);
 
   if (brew) {
-    const prefix = brew[1]!,
-      cask = brew[2]!,
-      manager = join(prefix, "bin", "brew");
+    const prefix = brew[1]!;
+    const cask = brew[2]!;
+    const manager = join(prefix, "bin", "brew");
 
     const installation =
       cask === "claude-code@latest" ? "Homebrew (latest)" : "Homebrew (stable)";
@@ -82,8 +82,8 @@ export async function claudeUpgradeInfo(
     };
   }
 
-  const versions = join(home, ".local", "share", "claude", "versions"),
-    launcher = join(home, ".local", "bin", "claude");
+  const versions = join(home, ".local", "share", "claude", "versions");
+  const launcher = join(home, ".local", "bin", "claude");
 
   if (
     dirname(selected) === versions &&

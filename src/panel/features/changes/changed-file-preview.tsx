@@ -34,8 +34,8 @@ type Read = Settled & { taskId: string; path: string };
 
 /** Reads the file, every part, when the preview opens or moves to it. */
 function useChangedFile(task: Task, path: string) {
-  const controller = useController(),
-    [read, setRead] = useState<Read>();
+  const controller = useController();
+  const [read, setRead] = useState<Read>();
 
   useEffect(() => {
     let current = true;
@@ -79,10 +79,10 @@ type ChangedFileViewedProps = {
 
 /** The shown file's Viewed checkbox, when it is a changed file. */
 function ChangedFileViewed({ task, path, onViewed }: ChangedFileViewedProps) {
-  const data = useChanges(task),
-    entries = data ? changedFileEntries(data) : [],
-    [viewed, setViewed] = useViewedFiles(task.id),
-    entry = entries.find((entry) => entry.file.path === path);
+  const data = useChanges(task);
+  const entries = data ? changedFileEntries(data) : [];
+  const [viewed, setViewed] = useViewedFiles(task.id);
+  const entry = entries.find((entry) => entry.file.path === path);
 
   if (!entry) return null;
 
@@ -111,49 +111,61 @@ type ChangedFilePreviewProps = {
  * changes once rather than through a loading state.
  */
 export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
-  const controller = useController(),
-    read = useChangedFile(task, path),
-    // The file showing: the one asked for once read, until then the last one.
-    shown = read?.path ?? path,
-    loading = read?.path !== path,
-    data = useChanges(task),
-    diff = useMemo(() => data && changedFileDiff(data, shown), [data, shown]),
-    file = read?.status === "ready" ? read.file : undefined,
-    progress = loading && read ? <Progress label={`Loading ${path}`} /> : null,
-    // Kept across files, so stepping through them stays in, say, Diff.
-    [view, setView] = useState<FileView>(),
-    [wrapLines, setWrapLines] = useState(false),
-    [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null),
-    [viewSwitcherTarget, setViewSwitcherTarget] = useState<HTMLElement | null>(
-      null,
-    ),
-    root = useRef<HTMLDivElement>(null),
-    // Viewed was used to move on, so the next file's Viewed takes focus.
-    refocusViewed = useRef(false),
-    handleViewed = (next?: string) => {
-      if (!next) return;
-      refocusViewed.current = true;
-      controller.showChangedFile(next);
-    },
-    viewedToggle = (
-      <ChangedFileViewed task={task} path={shown} onViewed={handleViewed} />
-    ),
-    askButton = (
-      <AskFileButton
-        task={task}
-        path={shown}
-        disabled={loading}
-        contextText={
-          file?.content ??
-          diff?.chunks
-            .flatMap((chunk) => [
-              chunk.content,
-              ...chunk.changes.map((change) => change.content),
-            ])
-            .join("\n")
-        }
-      />
-    );
+  const controller = useController();
+  const read = useChangedFile(task, path);
+  // The file showing: the one asked for once read, until then the last one.
+  const shown = read?.path ?? path;
+  const loading = read?.path !== path;
+  const data = useChanges(task);
+
+  const diff = useMemo(
+    () => data && changedFileDiff(data, shown),
+    [data, shown],
+  );
+
+  const file = read?.status === "ready" ? read.file : undefined;
+
+  const progress =
+    loading && read ? <Progress label={`Loading ${path}`} /> : null;
+
+  // Kept across files, so stepping through them stays in, say, Diff.
+  const [view, setView] = useState<FileView>();
+  const [wrapLines, setWrapLines] = useState(false);
+  const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
+
+  const [viewSwitcherTarget, setViewSwitcherTarget] =
+    useState<HTMLElement | null>(null);
+
+  const root = useRef<HTMLDivElement>(null);
+  // Viewed was used to move on, so the next file's Viewed takes focus.
+  const refocusViewed = useRef(false);
+
+  const handleViewed = (next?: string) => {
+    if (!next) return;
+    refocusViewed.current = true;
+    controller.showChangedFile(next);
+  };
+
+  const viewedToggle = (
+    <ChangedFileViewed task={task} path={shown} onViewed={handleViewed} />
+  );
+
+  const askButton = (
+    <AskFileButton
+      task={task}
+      path={shown}
+      disabled={loading}
+      contextText={
+        file?.content ??
+        diff?.chunks
+          .flatMap((chunk) => [
+            chunk.content,
+            ...chunk.changes.map((change) => change.content),
+          ])
+          .join("\n")
+      }
+    />
+  );
 
   const firstRead = loading && !read;
 

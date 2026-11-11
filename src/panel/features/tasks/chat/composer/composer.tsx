@@ -286,10 +286,11 @@ export function Composer({
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
 
-      const steer = event.metaKey || event.ctrlKey,
-        // A worker waiting for input can't be steered, so every Enter queues.
-        delivery =
-          mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue";
+      const steer = event.metaKey || event.ctrlKey;
+
+      // A worker waiting for input can't be steered, so every Enter queues.
+      const delivery =
+        mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue";
 
       controller.run(() => send(delivery));
     }

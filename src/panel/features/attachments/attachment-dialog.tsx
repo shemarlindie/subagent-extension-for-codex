@@ -31,8 +31,8 @@ type Read = { position: number } & (
  * settles, so a step never shows the previous attachment's content.
  */
 function useAttachment(task: Task, position: number) {
-  const controller = useController(),
-    [read, setRead] = useState<Read>();
+  const controller = useController();
+  const [read, setRead] = useState<Read>();
 
   useEffect(() => {
     let current = true;
@@ -79,15 +79,15 @@ type AttachmentPreviewProps = {
 
 /** An attachment's summary and origin, then its content in a file viewer. */
 function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
-  const read = useAttachment(task, attachment.position),
-    page = read?.status === "ready" ? read.page : undefined,
-    [wrapLines, setWrapLines] = useState(false),
-    [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null),
-    root = useRef<HTMLDivElement>(null);
+  const read = useAttachment(task, attachment.position);
+  const page = read?.status === "ready" ? read.page : undefined;
+  const [wrapLines, setWrapLines] = useState(false);
+  const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
+  const root = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    const dialog = root.current?.closest<HTMLElement>(".dialog"),
-      heading = dialog?.querySelector<HTMLElement>(".dialog-heading");
+    const dialog = root.current?.closest<HTMLElement>(".dialog");
+    const heading = dialog?.querySelector<HTMLElement>(".dialog-heading");
 
     // The options sit in the dialog's heading, where Changes previews keep them.
     setOptionsTarget(

@@ -50,10 +50,11 @@ export function ChangedFileSection({
   onPreview,
 }: ChangedFileSectionProps) {
   const [open, setOpen] = useState(
-      () => remembered ?? (changedSinceViewed || (openByDefault && !viewed)),
-    ),
-    // Marking the file viewed, here or in its preview, collapses it.
-    [wasViewed, setWasViewed] = useState(viewed);
+    () => remembered ?? (changedSinceViewed || (openByDefault && !viewed)),
+  );
+
+  // Marking the file viewed, here or in its preview, collapses it.
+  const [wasViewed, setWasViewed] = useState(viewed);
 
   if (viewed !== wasViewed) {
     setWasViewed(viewed);

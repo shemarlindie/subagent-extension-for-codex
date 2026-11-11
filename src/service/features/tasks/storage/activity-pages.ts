@@ -30,8 +30,8 @@ export class ActivityPages {
   /** A task's page. The caller has checked that the task belongs to its owner. */
   page(taskId: string, after: number): ActivityPage {
     return this.store.reads.measure("activity_latest", (work) => {
-      const start = this.store.eventWindowStart(taskId, EVENT_TAIL_SIZE),
-        dropped = this.tally(taskId, start, work);
+      const start = this.store.eventWindowStart(taskId, EVENT_TAIL_SIZE);
+      const dropped = this.tally(taskId, start, work);
 
       const page = {
         // The window holds at most EVENT_TAIL_SIZE events, so one page covers it.
@@ -54,14 +54,15 @@ export class ActivityPages {
     return this.store.reads.measure("activity_turn", (work) => {
       work.cache = "none";
 
-      const after = this.turnClose(taskId, turn - 1) ?? 0,
-        through = this.turnClose(taskId, turn) ?? Number.MAX_SAFE_INTEGER,
-        start = this.store.rangeWindowStart(
-          taskId,
-          after,
-          through,
-          EVENT_TAIL_SIZE,
-        );
+      const after = this.turnClose(taskId, turn - 1) ?? 0;
+      const through = this.turnClose(taskId, turn) ?? Number.MAX_SAFE_INTEGER;
+
+      const start = this.store.rangeWindowStart(
+        taskId,
+        after,
+        through,
+        EVENT_TAIL_SIZE,
+      );
 
       let dropped: DroppedSummary | undefined;
 

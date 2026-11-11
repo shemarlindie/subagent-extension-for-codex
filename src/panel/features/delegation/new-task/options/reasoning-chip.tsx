@@ -32,10 +32,11 @@ export function ReasoningChip({
   loading,
   disabled,
 }: ReasoningChipProps) {
-  const { field, choose } = useProfileChoice("reasoning_effort"),
-    { value, onChange } = field,
-    unsupported =
-      !loading && value && value !== "default" && !supported.includes(value);
+  const { field, choose } = useProfileChoice("reasoning_effort");
+  const { value, onChange } = field;
+
+  const unsupported =
+    !loading && value && value !== "default" && !supported.includes(value);
 
   useEffect(() => {
     if (unsupported) onChange("default");

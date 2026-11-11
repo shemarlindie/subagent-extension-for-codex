@@ -8,14 +8,16 @@ import {
   withBlockedOptions,
 } from "../../../../../shared/providers/policy";
 import type { ModelChoice } from "../../../../../shared/providers/types";
+import { useSnapshot } from "../../../../app/state/controller-context";
 import type {
   NewTaskState,
   Snapshot,
   Worker,
 } from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
+import type { DelegateFormState } from "../../delegate-initial-values";
 import type { DelegateValues } from "../../delegate-values";
-import { type ProjectTargetState, workerChoice } from "../../delegation";
+import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
@@ -29,7 +31,7 @@ import { ReasoningChip, reasoningChipLabel } from "./reasoning-chip";
 
 type NewTaskOptionsProps = {
   newTask: NewTaskState;
-  state: ProjectTargetState & Pick<Snapshot, "workers" | "busy" | "repository">;
+  state: DelegateFormState;
 };
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
@@ -52,9 +54,10 @@ function policyOptions(
   models: ModelChoice[],
   model: string | undefined,
 ) {
-  const policy = workerInfo?.policy,
-    permissions = providerMetadata(provider, workerInfo?.metadata)
-      ?.nativePermissions?.options;
+  const policy = workerInfo?.policy;
+
+  const permissions = providerMetadata(provider, workerInfo?.metadata)
+    ?.nativePermissions?.options;
 
   return {
     model: model && modelAllowed(policy, models, model) ? model : undefined,
@@ -70,13 +73,14 @@ function resolvedOptions(
   model: string,
   mode: string,
 ) {
-  const { provider } = workerChoice(worker),
-    resolved = newTask.defaults
-      ? modelDefaults(newTask.defaults, state.workers, worker, model)
-      : undefined;
+  const { provider } = workerChoice(worker);
 
-  const { workerInfo, providerModel } = resolved ?? {},
-    models = workerInfo?.models ?? [];
+  const resolved = newTask.defaults
+    ? modelDefaults(newTask.defaults, state.workers, worker, model)
+    : undefined;
+
+  const { workerInfo, providerModel } = resolved ?? {};
+  const models = workerInfo?.models ?? [];
 
   return {
     models,
@@ -100,13 +104,14 @@ function settingsSummary(
   resolved: ResolvedOptions,
   [model = "", reasoning = "default", permission = ""]: string[],
 ) {
-  const modelLabel = modelChipLabel(resolved.models, model, resolved.model),
-    supportsReasoning = resolved.supported.length > 0,
-    reasoningShort = compactReasoningLabel(reasoning, resolved.reasoning),
-    reasoningText = reasoningChipLabel(reasoning, resolved.reasoning),
-    permissionText = permissionChipLabel(resolved.permissions, permission),
-    line = (parts: (string | false | undefined)[]) =>
-      parts.filter(Boolean).join(" · ");
+  const modelLabel = modelChipLabel(resolved.models, model, resolved.model);
+  const supportsReasoning = resolved.supported.length > 0;
+  const reasoningShort = compactReasoningLabel(reasoning, resolved.reasoning);
+  const reasoningText = reasoningChipLabel(reasoning, resolved.reasoning);
+  const permissionText = permissionChipLabel(resolved.permissions, permission);
+
+  const line = (parts: (string | false | undefined)[]) =>
+    parts.filter(Boolean).join(" · ");
 
   return {
     summary: line([
@@ -129,31 +134,39 @@ function settingsSummary(
  * More options sets the sandbox.
  */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
-  const { control, getValues, setValue } = useFormContext<DelegateValues>(),
-    values = useWatch({
-      control,
-      name: ["worker", "model", "reasoning_effort", "permission_mode"],
-    }),
-    [worker, model, , mode] = values,
-    // A draft that already overrides the profile opens with its settings shown.
-    // Reasoning stays blank until settings load.
-    [expanded, setExpanded] = useState(() => {
-      const saved = profileValues(getValues("worker"), newTask.defaults);
+  const busy = useSnapshot((snapshot) => snapshot.busy);
 
-      return (
-        getValues("model") !== saved.model ||
-        !["", saved.reasoning_effort].includes(getValues("reasoning_effort"))
-      );
-    }),
-    [optionsRef] = useAutoList<HTMLDivElement>(),
-    { statuses } = newTask,
-    loading = statuses.workers === "loading" || statuses.settings === "loading",
-    disabled =
-      state.busy ||
-      statuses.settings !== "ready" ||
-      statuses.workers !== "ready",
-    resolved = resolvedOptions(newTask, state, worker, model, mode),
-    { modelExcluded, allowedMode } = resolved;
+  const { control, getValues, setValue } = useFormContext<DelegateValues>();
+
+  const values = useWatch({
+    control,
+    name: ["worker", "model", "reasoning_effort", "permission_mode"],
+  });
+
+  const [worker, model, , mode] = values;
+
+  // A draft that already overrides the profile opens with its settings shown.
+  // Reasoning stays blank until settings load.
+  const [expanded, setExpanded] = useState(() => {
+    const saved = profileValues(getValues("worker"), newTask.defaults);
+
+    return (
+      getValues("model") !== saved.model ||
+      !["", saved.reasoning_effort].includes(getValues("reasoning_effort"))
+    );
+  });
+
+  const [optionsRef] = useAutoList<HTMLDivElement>();
+  const { statuses } = newTask;
+
+  const loading =
+    statuses.workers === "loading" || statuses.settings === "loading";
+
+  const disabled =
+    busy || statuses.settings !== "ready" || statuses.workers !== "ready";
+
+  const resolved = resolvedOptions(newTask, state, worker, model, mode);
+  const { modelExcluded, allowedMode } = resolved;
 
   // A saved model policy excludes shows as what will run. Sent blank, the
   // service falls back from it and says so in Chat.
@@ -183,7 +196,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           loading={
             statuses.projects === "loading" || statuses.context === "loading"
           }
-          disabled={state.busy || statuses.projects !== "ready"}
+          disabled={busy || statuses.projects !== "ready"}
         />
       )}
       <ProfileChip

@@ -86,34 +86,37 @@ export function SettingsForm({
   const { control, register, handleSubmit, setValue, reset } =
     usePersistedDialogForm<Values>("settings", initial, { ready: !loading });
 
-  const baseline = useRef(initial),
-    previousSettings = useRef(settings);
+  const baseline = useRef(initial);
+  const previousSettings = useRef(settings);
 
   if (settings && previousSettings.current !== settings) {
     baseline.current = initial;
     previousSettings.current = settings;
   }
 
-  const form = { ...initial, ...useWatch({ control }) } as Values,
-    edits = sections.map((section) =>
-      editCount(section, form, baseline.current),
-    ),
-    total = edits.reduce((sum, count) => sum + count, 0);
+  const form = { ...initial, ...useWatch({ control }) } as Values;
+
+  const edits = sections.map((section) =>
+    editCount(section, form, baseline.current),
+  );
+
+  const total = edits.reduce((sum, count) => sum + count, 0);
 
   const [selectedSection, setSelectedSection] = useState(
-      controller.getLastSettingsSection(),
-    ),
-    [discarding, setDiscarding] = useState(false),
-    [importing, setImporting] = useState(false),
-    element = useRef<HTMLFormElement>(null),
-    discardPrompt = useRef<HTMLDivElement>(null);
+    controller.getLastSettingsSection(),
+  );
 
-  const { query, setQuery } = useSettingsSearchView(element),
-    search = useMemo(() => settingsSearch(query), [query]);
+  const [discarding, setDiscarding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const element = useRef<HTMLFormElement>(null);
+  const discardPrompt = useRef<HTMLDivElement>(null);
 
-  const isLoading = status === "loading",
-    isError = status === "error",
-    showDiscard = !loading && discarding && total > 0;
+  const { query, setQuery } = useSettingsSearchView(element);
+  const search = useMemo(() => settingsSearch(query), [query]);
+
+  const isLoading = status === "loading";
+  const isError = status === "error";
+  const showDiscard = !loading && discarding && total > 0;
 
   const saveButtonDisabled = busy || !settings || !total;
   const saveButtonLabel = saveButtonText(busy, total);
@@ -211,12 +214,13 @@ export function SettingsForm({
 
   const sectionViews: SettingsSectionView[] = settings
     ? sections.map((section, index) => {
-        const matches = search.sectionMatches(section),
-          paths = sectionPaths(section),
-          resets = Object.assign(
-            {},
-            ...section.rows.map((row) => rowForm(row, settings.defaults)),
-          ) as Values;
+        const matches = search.sectionMatches(section);
+        const paths = sectionPaths(section);
+
+        const resets = Object.assign(
+          {},
+          ...section.rows.map((row) => rowForm(row, settings.defaults)),
+        ) as Values;
 
         return {
           id: section.id,
@@ -275,13 +279,14 @@ export function SettingsForm({
   // The transfer section has no setting rows, so search matches its title and
   // its own keywords.
   const transfer = {
-      id: "transfer",
-      title: "Import and export",
-      keywords: ["settings", "JSON", "copy", "file"],
-    },
-    transferMatches = search.matches(
-      [transfer.title, ...transfer.keywords].join(" "),
-    );
+    id: "transfer",
+    title: "Import and export",
+    keywords: ["settings", "JSON", "copy", "file"],
+  };
+
+  const transferMatches = search.matches(
+    [transfer.title, ...transfer.keywords].join(" "),
+  );
 
   sectionViews.push({
     id: transfer.id,
@@ -300,12 +305,13 @@ export function SettingsForm({
 
   sectionViews.push(aboutSection(search, selectedSection, !loading));
 
-  const activeSectionId = activeSection(selectedSection, sectionViews),
-    matchingSections = sectionViews.filter((section) => !section.hidden),
-    resultCount = matchingSections.reduce(
-      (sum, section) => sum + (section.matches ?? 0),
-      0,
-    );
+  const activeSectionId = activeSection(selectedSection, sectionViews);
+  const matchingSections = sectionViews.filter((section) => !section.hidden);
+
+  const resultCount = matchingSections.reduce(
+    (sum, section) => sum + (section.matches ?? 0),
+    0,
+  );
 
   const clearSearch = () => {
     setQuery("");
@@ -444,10 +450,11 @@ export function SettingsForm({
   );
 }
 
-const settingsTitle = () => "Settings",
-  renderSettingsDialog = (dialog: SettingsPageDialog) => (
-    <SettingsForm dialog={dialog} />
-  );
+const settingsTitle = () => "Settings";
+
+const renderSettingsDialog = (dialog: SettingsPageDialog) => (
+  <SettingsForm dialog={dialog} />
+);
 
 export const settingsDialog = defineDialog<"settings">({
   title: settingsTitle,

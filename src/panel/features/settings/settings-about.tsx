@@ -149,102 +149,104 @@ function SettingsAbout() {
     );
   }
 
-  const { build, claude, runtime } = info,
-    checkout = info.installation === "checkout",
-    cliStatus = claude && (claude.ready ? "Ready" : "Needs attention"),
-    cliVersion = claude?.details.version ?? "Unavailable",
-    sections: AboutSection[] = [
-      {
-        title: "Extension",
-        rows: [
-          { label: "Version", value: build.version },
-          {
-            label: "Built at",
-            value: build.built_at
-              ? formatUserDateTime(build.built_at, host)
-              : "Not recorded",
-            copy: build.built_at,
-          },
-          {
-            label: "Installation",
-            value: checkout
-              ? "Local checkout"
-              : "Packaged release (GitHub / npm)",
-          },
-          ...(checkout
-            ? [
-                {
-                  label: "Commit",
-                  value: build.commit ?? "Unavailable",
-                },
-                {
-                  label: "Working tree snapshot",
-                  value: workingTree(build.dirty),
-                },
-              ]
-            : []),
-        ],
-      },
-      {
-        title: "Claude",
-        rows: [
-          {
-            label: "Claude Code CLI",
-            value: cliVersion,
-            element: (
-              <SettingsClaudeVersion
-                version={cliVersion}
-                readiness={claude}
-                recommended={info.claude_recommended}
-                upgrade={info.claude_upgrade}
-                pending={pending}
-                error={error}
-                onRecheck={retry}
-              />
-            ),
-          },
-          { label: "CLI status", value: cliStatus ?? "Provider disabled" },
-          ...(info.claude_upgrade
-            ? [
-                {
-                  label: "Installation",
-                  value: info.claude_upgrade.installation,
-                },
-              ]
-            : []),
-          ...(claude?.details.executable
-            ? [
-                {
-                  label: "Executable",
-                  value: claude.details.executable,
-                },
-              ]
-            : []),
-        ],
-      },
-      {
-        title: "SDKs",
-        rows: build.sdks.map(({ name, version }) => ({
-          label: SDK_LABELS[name] ?? name,
-          value: version,
-        })),
-      },
-      {
-        title: "Service runtime",
-        rows: [
-          { label: "Node.js", value: runtime.node },
-          { label: "Platform", value: `${runtime.platform} · ${runtime.arch}` },
-          {
-            label: "Started by",
-            value:
-              runtime.launcher === "stdio"
-                ? "Codex plugin"
-                : "Foreground process",
-          },
-        ],
-      },
-    ],
-    diagnostics = aboutDiagnostics(sections, claude?.message);
+  const { build, claude, runtime } = info;
+  const checkout = info.installation === "checkout";
+  const cliStatus = claude && (claude.ready ? "Ready" : "Needs attention");
+  const cliVersion = claude?.details.version ?? "Unavailable";
+
+  const sections: AboutSection[] = [
+    {
+      title: "Extension",
+      rows: [
+        { label: "Version", value: build.version },
+        {
+          label: "Built at",
+          value: build.built_at
+            ? formatUserDateTime(build.built_at, host)
+            : "Not recorded",
+          copy: build.built_at,
+        },
+        {
+          label: "Installation",
+          value: checkout
+            ? "Local checkout"
+            : "Packaged release (GitHub / npm)",
+        },
+        ...(checkout
+          ? [
+              {
+                label: "Commit",
+                value: build.commit ?? "Unavailable",
+              },
+              {
+                label: "Working tree snapshot",
+                value: workingTree(build.dirty),
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "Claude",
+      rows: [
+        {
+          label: "Claude Code CLI",
+          value: cliVersion,
+          element: (
+            <SettingsClaudeVersion
+              version={cliVersion}
+              readiness={claude}
+              recommended={info.claude_recommended}
+              upgrade={info.claude_upgrade}
+              pending={pending}
+              error={error}
+              onRecheck={retry}
+            />
+          ),
+        },
+        { label: "CLI status", value: cliStatus ?? "Provider disabled" },
+        ...(info.claude_upgrade
+          ? [
+              {
+                label: "Installation",
+                value: info.claude_upgrade.installation,
+              },
+            ]
+          : []),
+        ...(claude?.details.executable
+          ? [
+              {
+                label: "Executable",
+                value: claude.details.executable,
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "SDKs",
+      rows: build.sdks.map(({ name, version }) => ({
+        label: SDK_LABELS[name] ?? name,
+        value: version,
+      })),
+    },
+    {
+      title: "Service runtime",
+      rows: [
+        { label: "Node.js", value: runtime.node },
+        { label: "Platform", value: `${runtime.platform} · ${runtime.arch}` },
+        {
+          label: "Started by",
+          value:
+            runtime.launcher === "stdio"
+              ? "Codex plugin"
+              : "Foreground process",
+        },
+      ],
+    },
+  ];
+
+  const diagnostics = aboutDiagnostics(sections, claude?.message);
 
   return (
     <div className="settings-about">

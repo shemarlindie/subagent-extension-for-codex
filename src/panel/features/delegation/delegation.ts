@@ -8,12 +8,16 @@ import type {
 import { projectApproved } from "../projects/selectors";
 
 /** The snapshot fields that decide which projects a task can target. */
+export const PROJECT_TARGET_FIELDS = [
+  "projects",
+  "projectCandidate",
+  "projectCandidateAuto",
+  "projectCandidateGit",
+] as const;
+
 export type ProjectTargetState = Pick<
   Snapshot,
-  | "projects"
-  | "projectCandidate"
-  | "projectCandidateAuto"
-  | "projectCandidateGit"
+  (typeof PROJECT_TARGET_FIELDS)[number]
 >;
 
 /** Registered projects plus the chat's project when starting a task may add it. */

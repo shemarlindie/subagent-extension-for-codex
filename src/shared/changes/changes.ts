@@ -107,8 +107,8 @@ export function diffParts(diff: string) {
 
 /** One page of whole files from `start`, at least one file long. */
 export function diffPage(parts: string[], start: number, pageChars: number) {
-  let end = start,
-    size = 0;
+  let end = start;
+  let size = 0;
 
   for (const part of parts.slice(start)) {
     if (end > start && size + part.length > pageChars) break;

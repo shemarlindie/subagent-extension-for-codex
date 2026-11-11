@@ -342,8 +342,8 @@ test("project registration requires user authority and grants live persistent ac
 test("registration persists and a running registry sees CLI database updates", async (t) => {
   const f = await fixture(t);
 
-  const a = await f.repo("a"),
-    b = await f.repo("b");
+  const a = await f.repo("a");
+  const b = await f.repo("b");
 
   await f.projects.register(a);
   assert.equal(await f.projects.resolve(a), a);
@@ -658,8 +658,8 @@ test("repository approval does not grant access to independent nested repositori
 test("tasks and interrupted continuations stay bound to the chosen project", async (t) => {
   const f = await fixture(t);
 
-  const a = await f.repo("a"),
-    b = await f.repo("b");
+  const a = await f.repo("a");
+  const b = await f.repo("b");
 
   for (const repo of [a, b]) {
     execFileSync("git", [

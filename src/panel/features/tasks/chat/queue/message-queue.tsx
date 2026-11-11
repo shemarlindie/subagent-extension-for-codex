@@ -74,9 +74,9 @@ export function MessageQueue({ task }: MessageQueueProps) {
   const drop = () => {
     if (!drag || drag.over === undefined) return setDrag(undefined);
 
-    const from = queue.findIndex((message) => message.id === drag.id),
-      // The insertion point counts the dragged row, which leaves its place.
-      to = Math.max(drag.over > from ? drag.over - 1 : drag.over, first);
+    const from = queue.findIndex((message) => message.id === drag.id);
+    // The insertion point counts the dragged row, which leaves its place.
+    const to = Math.max(drag.over > from ? drag.over - 1 : drag.over, first);
 
     setDrag(undefined);
     if (from >= 0 && to !== from) controller.run(() => move(drag.id, to));
@@ -165,8 +165,8 @@ export function MessageQueue({ task }: MessageQueueProps) {
             </div>
             <ul ref={queueList} onDragOver={dragOverQueue} onDrop={dropOnQueue}>
               {queue.map((message) => {
-                const key = message.id,
-                  index = positions.get(key) ?? -1;
+                const key = message.id;
+                const index = positions.get(key) ?? -1;
 
                 return (
                   <li key={key}>

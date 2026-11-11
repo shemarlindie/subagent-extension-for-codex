@@ -398,8 +398,8 @@ test("settings copy as JSON and import from pasted text", async ({
 test("pending imports protect settings edits and failures restore editing", async ({
   consolePage: page,
 }) => {
-  const first = Promise.withResolvers<void>(),
-    retry = Promise.withResolvers<void>();
+  const first = Promise.withResolvers<void>();
+  const retry = Promise.withResolvers<void>();
 
   let imports = 0;
 
@@ -573,11 +573,12 @@ test("settings search keeps hidden drafts and reveals invalid fields on save", a
 }) => {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const search = page.getByRole("searchbox", { name: "Search settings" }),
-    prefix = page.getByRole("textbox", {
-      name: "Worktree branch prefix",
-      exact: true,
-    });
+  const search = page.getByRole("searchbox", { name: "Search settings" });
+
+  const prefix = page.getByRole("textbox", {
+    name: "Worktree branch prefix",
+    exact: true,
+  });
 
   // Opening settings focuses search once it loads. The hidden tasks page keeps
   // its search mounted, but "/" focuses this one.

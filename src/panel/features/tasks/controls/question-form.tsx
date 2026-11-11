@@ -55,31 +55,37 @@ export function QuestionForm({ task }: QuestionFormProps) {
       },
     });
 
-  const [active, setActive] = useState(draft?.active ?? 0),
-    [incomplete, setIncomplete] = useState(false),
-    [error, setError] = useState<string>(),
-    [skipped, setSkipped] = useState<ReadonlySet<number>>(
-      () => new Set(draft?.skipped),
-    ),
-    view = useRef({ active, skipped }),
-    sent = useRef(false),
-    form = useRef<HTMLFormElement>(null),
-    submit = useRef<HTMLButtonElement>(null),
-    focusAfterMove = useRef<"card" | "submit">(undefined),
-    presets = useWatch({ control, name: "answers" }),
-    customs = useWatch({ control, name: "custom" }),
-    answerEntries = questionAnswers(questions, skipped, {
-      answers: presets,
-      custom: customs,
-    }),
-    answers = answerEntries.map(([, answer]) => answer),
-    unanswered = answers.findIndex((answer) => !answer),
-    last = active === questions.length - 1,
-    sending = last || unanswered < 0,
-    incompleteMessage = stacked
-      ? "Answer each question before sending."
-      : "Answer the question before sending.",
-    message = incomplete && unanswered >= 0 ? incompleteMessage : error;
+  const [active, setActive] = useState(draft?.active ?? 0);
+  const [incomplete, setIncomplete] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const [skipped, setSkipped] = useState<ReadonlySet<number>>(
+    () => new Set(draft?.skipped),
+  );
+
+  const view = useRef({ active, skipped });
+  const sent = useRef(false);
+  const form = useRef<HTMLFormElement>(null);
+  const submit = useRef<HTMLButtonElement>(null);
+  const focusAfterMove = useRef<"card" | "submit">(undefined);
+  const presets = useWatch({ control, name: "answers" });
+  const customs = useWatch({ control, name: "custom" });
+
+  const answerEntries = questionAnswers(questions, skipped, {
+    answers: presets,
+    custom: customs,
+  });
+
+  const answers = answerEntries.map(([, answer]) => answer);
+  const unanswered = answers.findIndex((answer) => !answer);
+  const last = active === questions.length - 1;
+  const sending = last || unanswered < 0;
+
+  const incompleteMessage = stacked
+    ? "Answer each question before sending."
+    : "Answer the question before sending.";
+
+  const message = incomplete && unanswered >= 0 ? incompleteMessage : error;
 
   const show = (index: number) => {
     setIncomplete(false);

@@ -41,8 +41,8 @@ export function useProfileMode(
   savedMode: string,
   saved: Partial<DelegateValues>,
 ) {
-  const worker = useWatch({ control: form.control, name: "worker" }),
-    previousWorker = useRef(worker);
+  const worker = useWatch({ control: form.control, name: "worker" });
+  const previousWorker = useRef(worker);
 
   const mode = readOnlyProfile(workerChoice(worker).profile ?? "")
     ? "plan"

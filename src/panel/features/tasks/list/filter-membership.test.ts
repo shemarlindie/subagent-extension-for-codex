@@ -168,10 +168,10 @@ test("the filter follows the first nonempty one in order until chosen", () => {
       ...patch,
     }) as unknown as Snapshot;
 
-  const running = task({ id: "a", status: "running" }),
-    failed = task({ id: "b", status: "failed" }),
-    done = task({ id: "c", status: "completed" }),
-    asking = task({ id: "d", pending_input: input });
+  const running = task({ id: "a", status: "running" });
+  const failed = task({ id: "b", status: "failed" });
+  const done = task({ id: "c", status: "completed" });
+  const asking = task({ id: "d", pending_input: input });
 
   assert.equal(effectiveFilter(state([])), "all");
   assert.equal(effectiveFilter(state([done])), "completed");

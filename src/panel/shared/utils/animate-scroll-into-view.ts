@@ -38,8 +38,8 @@ export function animateScrollIntoView(element: HTMLElement) {
     const started = view.performance.now();
 
     const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / MOTION.fast),
-        eased = 1 - (1 - progress) ** 3;
+      const progress = Math.min(1, (now - started) / MOTION.fast);
+      const eased = 1 - (1 - progress) ** 3;
 
       for (const ancestor of scrolling) {
         ancestor.element.scrollTop =

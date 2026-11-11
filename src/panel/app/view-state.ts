@@ -194,17 +194,17 @@ function dialogStackIdentity(dialogs: PersistedDialog[]) {
 
 /** Keeps shareable view choices in the URL and private dialog drafts in local storage. */
 export function browserUiState(win: Window = window): UiStatePersistence {
-  const storage = dialogStorage(win),
-    composerDrafts = browserComposerDrafts(storage);
+  const storage = dialogStorage(win);
+  const composerDrafts = browserComposerDrafts(storage);
 
-  let persistedDialogs = readDialogs(storage),
-    persistedSettingsSection = readLastSettingsSection(storage),
-    pendingDialogs: PersistedDialog[] | undefined,
-    pendingSearch: string | undefined,
-    dialogTimer: ReturnType<typeof setTimeout> | undefined,
-    searchTimer: ReturnType<typeof setTimeout> | undefined,
-    persistedSearch =
-      new URL(win.location.href).searchParams.get(keys.search) ?? "";
+  let persistedDialogs = readDialogs(storage);
+  let persistedSettingsSection = readLastSettingsSection(storage);
+  let pendingDialogs: PersistedDialog[] | undefined;
+  let pendingSearch: string | undefined;
+  let dialogTimer: ReturnType<typeof setTimeout> | undefined;
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  let persistedSearch =
+    new URL(win.location.href).searchParams.get(keys.search) ?? "";
 
   const flushSearch = () => {
     clearTimeout(searchTimer);
@@ -240,15 +240,17 @@ export function browserUiState(win: Window = window): UiStatePersistence {
   return {
     composerDrafts,
     get initial() {
-      const url = new URL(win.location.href),
-        openIds = new Set(
-          persistedDialogIds.filter(
-            (id) => url.searchParams.get(dialogKey(id)) === "1",
-          ),
+      const url = new URL(win.location.href);
+
+      const openIds = new Set(
+        persistedDialogIds.filter(
+          (id) => url.searchParams.get(dialogKey(id)) === "1",
         ),
-        dialogs = readDialogs(storage).filter((dialog) =>
-          openIds.has(persistedDialogId(dialog)),
-        );
+      );
+
+      const dialogs = readDialogs(storage).filter((dialog) =>
+        openIds.has(persistedDialogId(dialog)),
+      );
 
       return {
         view: read(url),
@@ -259,8 +261,8 @@ export function browserUiState(win: Window = window): UiStatePersistence {
       };
     },
     save: (state) => {
-      const dialogs = state.dialogs ?? [],
-        search = state.view.search ?? "";
+      const dialogs = state.dialogs ?? [];
+      const search = state.view.search ?? "";
 
       if (
         state.lastSettingsSection &&
@@ -291,8 +293,8 @@ export function browserUiState(win: Window = window): UiStatePersistence {
 
       replaceUrl(win, url);
 
-      const nextIdentity = dialogStackIdentity(dialogs),
-        currentIdentity = dialogStackIdentity(persistedDialogs);
+      const nextIdentity = dialogStackIdentity(dialogs);
+      const currentIdentity = dialogStackIdentity(persistedDialogs);
 
       if (nextIdentity !== currentIdentity) {
         clearTimeout(dialogTimer);

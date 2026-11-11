@@ -179,8 +179,8 @@ test("settings explains invalid disabled budgets and lets the user restore editi
 
   await screen.findByRole("heading", { name: "Settings" });
 
-  const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" }),
-    toggle = screen.getByRole("switch", { name: "Cost limit" });
+  const amount = screen.getByRole("spinbutton", { name: "Cost limit (USD)" });
+  const toggle = screen.getByRole("switch", { name: "Cost limit" });
 
   await user.clear(amount);
   await pasteText(user, amount, "500");

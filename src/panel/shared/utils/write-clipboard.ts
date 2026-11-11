@@ -15,14 +15,16 @@ export async function writeClipboardText(text: string): Promise<void> {
     }
   }
 
-  const focused = document.activeElement,
-    selection = document.getSelection(),
-    ranges = selection
-      ? Array.from({ length: selection.rangeCount }, (_, i) =>
-          selection.getRangeAt(i).cloneRange(),
-        )
-      : [],
-    field = document.createElement("textarea");
+  const focused = document.activeElement;
+  const selection = document.getSelection();
+
+  const ranges = selection
+    ? Array.from({ length: selection.rangeCount }, (_, i) =>
+        selection.getRangeAt(i).cloneRange(),
+      )
+    : [];
+
+  const field = document.createElement("textarea");
 
   field.value = text;
   field.readOnly = true;

@@ -101,8 +101,8 @@ test("chat project registration is enabled by default and opt-out is owner scope
 test("task-start registration requires the task to target the thread root", async (t) => {
   const f = await fixture(t);
 
-  const repository = await f.repo("project"),
-    other = await f.repo("other");
+  const repository = await f.repo("project");
+  const other = await f.repo("other");
 
   await mkdir(join(repository, "src"));
 
@@ -219,8 +219,8 @@ test("invalid or absent host metadata never grants access despite opt-in", async
 test("disabling automatic registration preserves prior approval and stops approving new chats", async (t) => {
   const f = await fixture(t);
 
-  const prior = await f.repo("prior"),
-    next = await f.repo("next");
+  const prior = await f.repo("prior");
+  const next = await f.repo("next");
 
   assert.equal(
     await autoRegisterChatProject(f.control, "alice", hostMeta(prior)),

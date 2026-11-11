@@ -29,11 +29,12 @@ export const MarkdownView = memo(function MarkdownView({
 }: MarkdownViewProps) {
   // Footnote and heading ids are unique per view, so several messages can
   // each have [^1] or a "Summary" heading. Links resolve through the prefix.
-  const prefix = `${useId()}-`,
-    rehypePlugins = useMemo<Options["rehypePlugins"]>(
-      () => [[rehypeSlug, { prefix }]],
-      [prefix],
-    );
+  const prefix = `${useId()}-`;
+
+  const rehypePlugins = useMemo<Options["rehypePlugins"]>(
+    () => [[rehypeSlug, { prefix }]],
+    [prefix],
+  );
 
   return (
     <div className="markdown-body" data-id-prefix={prefix}>

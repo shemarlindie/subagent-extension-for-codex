@@ -8,10 +8,10 @@ import { animateScrollIntoView } from "./animate-scroll-into-view";
 afterEach(() => document.body.replaceChildren());
 
 function setup(reduceMotion = false) {
-  const outer = document.createElement("div"),
-    inner = document.createElement("div"),
-    target = document.createElement("button"),
-    frames = new Map<number, FrameRequestCallback>();
+  const outer = document.createElement("div");
+  const inner = document.createElement("div");
+  const target = document.createElement("button");
+  const frames = new Map<number, FrameRequestCallback>();
 
   let nextFrame = 0;
 

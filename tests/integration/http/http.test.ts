@@ -883,8 +883,8 @@ test("SSE requires authentication, streams each owner's revision on its changes 
   const { c, auth, base, repository, task, userTool, close } =
     await changeService("ac-sse-");
 
-  const a = task("a", "local"),
-    b = task("b", "other");
+  const a = task("a", "local");
+  const b = task("b", "other");
 
   c.store.save(a);
   c.store.save(b);

@@ -17,8 +17,8 @@ function box(element: HTMLElement, top: () => number, height: number) {
 
 // Three 100px files in a scroller whose top edge is at 50px.
 function setup() {
-  const container = document.createElement("div"),
-    viewport = document.createElement("div");
+  const container = document.createElement("div");
+  const viewport = document.createElement("div");
 
   container.append(viewport);
   box(container, () => 50, 200);

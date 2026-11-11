@@ -18,8 +18,8 @@ export function ProfileInstructions({
   register,
   describedBy,
 }: ProfileInstructionsProps) {
-  const name = fieldName(setting.path),
-    id = `setting-${name}`;
+  const name = fieldName(setting.path);
+  const id = `setting-${name}`;
 
   return (
     <Collapsible.Panel

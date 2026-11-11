@@ -7,10 +7,19 @@ interface PendingUpdateContext {
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
 }
 
+/** The snapshot fields `pendingUpdates` reads. */
+export const PENDING_UPDATE_FIELDS = [
+  "pendingUpdates",
+  "conversation",
+] as const;
+
+export type PendingState = Pick<
+  Snapshot,
+  (typeof PENDING_UPDATE_FIELDS)[number]
+>;
+
 /** The worker updates Codex hasn't seen in the panel's conversation. */
-export function pendingUpdates(
-  state: Pick<Snapshot, "pendingUpdates" | "conversation">,
-) {
+export function pendingUpdates(state: PendingState) {
   const read = state.pendingUpdates;
 
   return read && read.conversation === state.conversation ? read.tasks : [];

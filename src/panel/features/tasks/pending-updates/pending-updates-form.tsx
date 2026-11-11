@@ -10,7 +10,10 @@ import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
-import { pendingUpdates } from "./pending-update-tracker";
+import {
+  PENDING_UPDATE_FIELDS,
+  pendingUpdates,
+} from "./pending-update-tracker";
 import {
   pendingUpdatesMessage,
   UPDATE_LABELS,
@@ -23,7 +26,7 @@ import {
  */
 function PendingUpdatesForm() {
   const controller = useController();
-  const pendingState = useSnapshot(["pendingUpdates", "conversation"]);
+  const pendingState = useSnapshot(PENDING_UPDATE_FIELDS);
 
   const { busy, host, stale } = useSnapshot(["busy", "host"], (state) => ({
     stale: dialogStale(state),
@@ -77,10 +80,10 @@ function PendingUpdatesForm() {
       {tasks.length ? (
         <ul className="pending-update-tasks" aria-label="Pending updates">
           {tasks.map((task) => {
-            const taskIds = task.updates.map((u) => u.event_id),
-              count = taskIds.filter((id) => !unchecked.has(id)).length,
-              // The task checkbox alone selects a task's only update.
-              single = taskIds.length === 1;
+            const taskIds = task.updates.map((u) => u.event_id);
+            const count = taskIds.filter((id) => !unchecked.has(id)).length;
+            // The task checkbox alone selects a task's only update.
+            const single = taskIds.length === 1;
 
             return (
               <li key={task.task_id} data-task={task.task_id}>
