@@ -108,7 +108,10 @@ export async function claudeTurnOptions(
   return {
     pathToClaudeCodeExecutable: executable,
     cwd: workspace,
-    ...(c.task.model ? { model: c.task.model } : {}),
+    // Default is what Claude Code runs without a model, which may be the org's.
+    ...(c.task.model && c.task.model !== "default"
+      ? { model: c.task.model }
+      : {}),
     ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"
       ? { effort: c.task.reasoning_effort as Options["effort"] }
       : {}),

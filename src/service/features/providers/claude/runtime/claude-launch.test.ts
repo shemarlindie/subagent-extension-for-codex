@@ -103,7 +103,7 @@ test("Claude forwards the selected model and effort without changing its resolve
   assert.equal(options!.model, "selected-model");
   assert.equal(options!.effort, "high");
   assert.equal(options!.permissionMode, "plan");
-  delete c.task.model;
+  c.task.model = "default";
   c.task.reasoning_effort = "default";
   await provider.run(c, "Review");
   assert.equal(Object.hasOwn(options!, "model"), false);
