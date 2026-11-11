@@ -187,7 +187,13 @@ inspect pending states in the fixture UI.
 - `Notice` shows banner messages, and `NoticeText` shows expandable long text.
   Keep shared presentation out of feature-specific banner classes.
 - `Icon` renders the shared icon catalog, and `Chevron` renders compact carets.
-  Icons are decorative unless given a label.
+  Icons are decorative unless given a label. Each icon is an SVG in
+  `assets/icons` listed in `ICON_NAMES`. Its artwork fills the 24-unit viewBox.
+  Scale the source geometry and stroke width together until the artwork, strokes
+  included, reaches the edges on its longer axis, and center it on the other.
+  Every file sets a stroke width on the root `<svg>`, which the catalog
+  requires. Pick `size` for the visible size, and render shapes that cover more
+  area, such as squares, a little smaller than circles beside them.
 - `TooltipWrapper` labels controls for mouse and keyboard users. Base UI turns
   tooltips off for touch, so use `Infotip` for info triggers whose note must
   open on tap.
