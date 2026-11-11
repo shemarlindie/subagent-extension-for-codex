@@ -38,6 +38,9 @@ async function committedRepository(files: Record<string, string>) {
       "user.name=Test",
       "-c",
       "user.email=test@example.invalid",
+      // Background maintenance can add and remove lock files while tests copy the seed.
+      "-c",
+      "maintenance.auto=false",
       "commit",
       "-qm",
       "initial",
