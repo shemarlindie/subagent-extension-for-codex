@@ -29,6 +29,7 @@ import {
   type SessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
+import { otherPolicyKeys, policyNotes } from "./policy-notes.js";
 
 type Discovered = { models: ModelChoice[]; policy?: ProviderPolicy };
 
@@ -60,22 +61,6 @@ async function blockedModes(session: Query, policy: Settings | undefined) {
   }
 
   return blocked;
-}
-
-function policyNotes(policy: Settings) {
-  return [
-    ...(policy.allowManagedHooksOnly
-      ? [{ label: "Hooks", detail: "Only your organization's hooks run." }]
-      : []),
-    ...(policy.allowManagedPermissionRulesOnly
-      ? [
-          {
-            label: "Permission rules",
-            detail: "Only your organization's permission rules apply.",
-          },
-        ]
-      : []),
-  ];
 }
 
 /**
@@ -221,6 +206,8 @@ async function readPolicy(
     source: found?.source,
     blocked: found?.blocked.map(({ value }) => value).join(","),
     available_models: found?.available_models?.join(","),
+    notes: found?.notes.map(({ label }) => label).join(","),
+    other_keys: otherPolicyKeys(policySettings(settings) ?? {}).join(","),
     applied_model: settings?.applied?.model,
     applied_effort: settings?.applied?.effort ?? undefined,
   });
