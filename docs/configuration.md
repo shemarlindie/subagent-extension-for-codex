@@ -177,8 +177,8 @@ Settings are grouped by what they control:
 | Approval decision maker | `approvals.decider`                | `user`                                               |
 
 The worker profile setting applies to agent calls and the Advanced task dialog.
-The panel's **New task** composer starts with the General profile instead. Its
-model and reasoning choices save to the selected profile's
+The panel's **New task** composer starts with the Implementer profile instead.
+Its model and reasoning choices save to the selected profile's
 `models.profiles.<profile>` settings. See
 [Create and rename tasks](panel-guide.md#create-and-rename-tasks).
 
@@ -277,8 +277,8 @@ inherited either.
 - `providers.claude.permission_mode` sets the default for new tasks.
 - `provider_options.claude.permission_mode` overrides it for one task. `inherit`
   uses the saved setting.
-- The read-only profiles, `researcher`, `reviewer` and `security_reviewer`,
-  start in `plan` unless the task names another mode.
+- The read-only profiles, `researcher` and `reviewer`, start in `plan` unless
+  the task names another mode.
 - Each task stores its resolved mode and whether it came from the task, the
   profile or the setting.
 

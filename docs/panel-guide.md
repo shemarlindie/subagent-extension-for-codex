@@ -81,8 +81,8 @@ Removing the selected project returns the task list to **All projects**.
   tasks in other folders edit them directly. Without Git, those edits can't be
   undone with Git. If your default is a worktree, the task uses the project
   folder and warns you that it isn't isolated.
-- **Permissions.** The researcher, reviewer and security reviewer profiles start
-  in plan mode, which asks before edits. Other profiles follow your saved
+- **Permissions.** The researcher and reviewer profiles start in plan mode,
+  which asks before edits. The implementer profile follows your saved
   [Claude permissions](configuration.md#claude-permissions). All follow your
   [session restrictions](configuration.md#claude-session-restrictions).
 - **Budgets.** Runtime and cost budgets span turns. Claude checks cost after

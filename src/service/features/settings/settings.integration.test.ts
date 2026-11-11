@@ -368,7 +368,7 @@ test("native model controls scope discovered models and derive reasoning choices
     ),
     reviewer = scopes.find((scope) => scope.label === "Reviewer");
 
-  assert.equal(scopes[0]?.label, "General");
+  assert.equal(scopes[0]?.label, "Researcher");
   assert.ok(reviewer);
   assert.equal(reviewer.id, "reviewer");
 

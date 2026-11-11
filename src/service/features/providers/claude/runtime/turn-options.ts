@@ -47,11 +47,6 @@ function workspaceRule(task: Task) {
 
 /** The task's role and workspace rules, then the user's custom instructions. */
 function systemPromptAppend(c: RunContext) {
-  const role =
-    c.task.worker_profile === "general"
-      ? "coding agent"
-      : c.task.worker_profile;
-
   const rules = [
     c.attachments
       ? "Work only in the provided task workspace, apart from reading the attachments the request lists, which are read-only."
@@ -65,7 +60,7 @@ function systemPromptAppend(c: RunContext) {
 
   const parts = [
     environment,
-    `You are an independent ${role}. ${rules.join(" ")}`,
+    `You are an independent ${c.task.worker_profile}. ${rules.join(" ")}`,
   ];
 
   if (c.task.profile_instructions) {

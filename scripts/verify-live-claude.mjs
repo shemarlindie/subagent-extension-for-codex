@@ -709,7 +709,7 @@ if (scenario === "token") {
 
   const task = await control.start("verification", {
     ...taskBase,
-    worker_profile: "test_engineer",
+    worker_profile: "implementer",
     // Fixture writes stay out of the primary checkout.
     workspace_strategy: "worktree",
     // Sandboxed commands may run unasked. Any other command asks first.

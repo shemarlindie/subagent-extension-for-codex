@@ -85,7 +85,7 @@ const permissionRank: Partial<Record<ClaudePermissionMode, number>> = {
 };
 
 export const readOnlyProfile = (role: string) =>
-  ["researcher", "reviewer", "security_reviewer"].includes(role);
+  ["researcher", "reviewer"].includes(role);
 
 /**
  * A task's mode: the one it asks for, else `plan` for a read-only profile,

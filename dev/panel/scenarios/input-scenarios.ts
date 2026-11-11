@@ -173,7 +173,7 @@ export const inputTasks: Task[] = [
     title: "Investigate session expiry regression",
     description:
       "Trace the session expiry regression and identify the first incorrect state transition.",
-    worker_profile: "debugger",
+    worker_profile: "implementer",
     provider_options: settingOptions(),
     status: "waiting",
     waiting_reason: "waiting_for_permission",

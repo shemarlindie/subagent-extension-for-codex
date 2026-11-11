@@ -212,7 +212,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
         "models.providers.claude.reasoning_effort",
         "medium",
       ),
-      "models.profiles.implementer.reasoning_effort",
+      "models.profiles.researcher.reasoning_effort",
       "low",
     ),
   });
@@ -222,11 +222,14 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   await user.click(await view.findByRole("option", { name: "High" }));
 
   expect(saveProfileSetting.mock.calls).toEqual([
-    ["claude:general", "reasoning_effort", "high"],
+    ["claude:implementer", "reasoning_effort", "high"],
   ]);
 
-  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
-  await user.click(await view.findByRole("option", { name: "Implementer" }));
+  await user.click(
+    view.getByRole("combobox", { name: "Profile: Implementer" }),
+  );
+
+  await user.click(await view.findByRole("option", { name: "Researcher" }));
 
   // Default clears the profile's setting, so it names the provider's.
   await user.click(view.getByRole("combobox", { name: /^Reasoning: Low/ }));
@@ -242,7 +245,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   await waitFor(() => assert.equal(start.mock.calls.length, 1));
 
   expect(start.mock.calls[0]?.[0]).toMatchObject({
-    worker: "claude:implementer",
+    worker: "claude:researcher",
     model: "",
     reasoning_effort: "low",
   });
@@ -251,7 +254,10 @@ test("reasoning choices save to the profile, and choosing a profile restores its
 test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
   const { view, user, start } = setup();
 
-  await user.click(view.getByRole("combobox", { name: "Profile: General" }));
+  await user.click(
+    view.getByRole("combobox", { name: "Profile: Implementer" }),
+  );
+
   await user.click(await view.findByRole("option", { name: "Reviewer" }));
 
   assert.ok(view.getByRole("button", { name: /· Plan$/ }));
@@ -267,9 +273,7 @@ test("a read-only profile starts in plan mode, and switching profiles resets a c
 
   await user.click(view.getByRole("combobox", { name: "Profile: Reviewer" }));
 
-  await user.click(
-    await view.findByRole("option", { name: "Security reviewer" }),
-  );
+  await user.click(await view.findByRole("option", { name: "Researcher" }));
 
   assert.ok(view.getByRole("combobox", { name: "Permission mode: Plan" }));
 

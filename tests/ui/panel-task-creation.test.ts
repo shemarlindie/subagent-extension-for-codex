@@ -190,7 +190,7 @@ test("project folder selection hides the revision and submits HEAD with the chec
 
 test("delegation starts a read-only profile in plan mode, keeps a chosen mode and separately selects the approval decision maker and sandbox", async (t) => {
   const { user, transport } = await setupDelegate(t, (transport) =>
-    writingWorker(transport, ["reviewer", "general"]),
+    writingWorker(transport, ["reviewer", "implementer"]),
   );
 
   await screen.findByRole("dialog");
@@ -202,7 +202,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
   );
 
   // Switching profiles resets the mode: a write profile takes the saved one.
-  await selectOption(user, "Worker", "claude · general");
+  await selectOption(user, "Worker", "claude · implementer");
 
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
@@ -240,7 +240,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
 /** Serves a profile that can write, since read-only tasks lose no isolation. */
 function writingWorker(
   transport: Parameters<typeof configureModelDefaults>[0],
-  profiles = ["general"],
+  profiles = ["implementer"],
 ) {
   const { tool } = transport;
 

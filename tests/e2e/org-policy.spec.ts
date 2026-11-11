@@ -39,7 +39,7 @@ test("a model an organization excludes later gives way to the default, and the p
       set: {
         models: {
           providers: { fixture: { model: "retired-model" } },
-          profiles: { general: { model: "retired-model" } },
+          profiles: { implementer: { model: "retired-model" } },
         },
       },
     },

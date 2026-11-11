@@ -476,7 +476,7 @@ test("save task defaults and reload the settings from the service", async ({
   await page.keyboard.press("ControlOrMeta+z");
 
   await expect(
-    page.getByRole("dialog", { name: /^Undid: Set the General profile/ }),
+    page.getByRole("dialog", { name: /^Undid: Set the Implementer profile/ }),
   ).toBeVisible();
 
   await expect(reasoning).toHaveText(saved);

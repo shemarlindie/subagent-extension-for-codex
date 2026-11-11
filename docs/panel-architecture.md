@@ -88,8 +88,8 @@ The composer (`features/delegation/new-task/`) and the Advanced task dialog
 share settings reads, task defaults, submission policy and task-start arguments.
 Their read progress and retry logic live in
 `features/delegation/delegate-reads.ts`. Keep their intentional profile
-difference. The composer starts with General, and Advanced task starts with the
-default worker profile from settings.
+difference. The composer starts with Implementer, and Advanced task starts with
+the default worker profile from settings.
 
 The composer's model and reasoning chips save each choice as the selected
 profile's default setting. `useProfileChoice` sets the field and calls

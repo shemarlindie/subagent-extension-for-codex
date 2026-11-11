@@ -4,16 +4,7 @@ import { AttachmentError } from "../attachments/attachment-error.js";
 import { attachmentsSchema } from "../attachments/model.js";
 import { reasoningLevels } from "./reasoning.js";
 
-export const roles = [
-  "general",
-  "researcher",
-  "reviewer",
-  "implementer",
-  "debugger",
-  "test_engineer",
-  "refactorer",
-  "security_reviewer",
-] as const;
+export const roles = ["researcher", "reviewer", "implementer"] as const;
 
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
@@ -76,7 +67,7 @@ export const startSchema = z.object({
     .enum(roles)
     .default("reviewer")
     .describe(
-      "reviewer, researcher and security_reviewer start in plan mode, which asks before editing, unless provider_options.claude.permission_mode names another mode. Other profiles can edit their workspace.",
+      "reviewer and researcher start in plan mode, which asks before editing, unless provider_options.claude.permission_mode names another mode. implementer can edit its workspace.",
     ),
   model: modelNameSchema
     .optional()

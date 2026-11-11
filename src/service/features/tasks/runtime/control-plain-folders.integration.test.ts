@@ -45,7 +45,7 @@ async function folders<P extends Provider>(provider: P) {
       provider: "fixture",
       repository,
       description: "Write",
-      worker_profile: "general",
+      worker_profile: "implementer",
       ...extra,
     });
 
