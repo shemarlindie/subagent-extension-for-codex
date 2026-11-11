@@ -8,12 +8,14 @@ import {
   withBlockedOptions,
 } from "../../../../../shared/providers/policy";
 import type { ModelChoice } from "../../../../../shared/providers/types";
+import { useSnapshot } from "../../../../app/state/controller-context";
 import type {
   NewTaskState,
   Snapshot,
   Worker,
 } from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
+import type { DelegateScope } from "../../delegate-initial-values";
 import type { DelegateValues } from "../../delegate-values";
 import { type ProjectTargetState, workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
@@ -29,7 +31,7 @@ import { ReasoningChip, reasoningChipLabel } from "./reasoning-chip";
 
 type NewTaskOptionsProps = {
   newTask: NewTaskState;
-  state: ProjectTargetState & Pick<Snapshot, "workers" | "busy" | "repository">;
+  state: ProjectTargetState & DelegateScope;
 };
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;
@@ -129,6 +131,8 @@ function settingsSummary(
  * More options sets the sandbox.
  */
 export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
+  const busy = useSnapshot((snapshot) => snapshot.busy);
+
   const { control, getValues, setValue } = useFormContext<DelegateValues>(),
     values = useWatch({
       control,
@@ -149,9 +153,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     { statuses } = newTask,
     loading = statuses.workers === "loading" || statuses.settings === "loading",
     disabled =
-      state.busy ||
-      statuses.settings !== "ready" ||
-      statuses.workers !== "ready",
+      busy || statuses.settings !== "ready" || statuses.workers !== "ready",
     resolved = resolvedOptions(newTask, state, worker, model, mode),
     { modelExcluded, allowedMode } = resolved;
 
@@ -183,7 +185,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           loading={
             statuses.projects === "loading" || statuses.context === "loading"
           }
-          disabled={state.busy || statuses.projects !== "ready"}
+          disabled={busy || statuses.projects !== "ready"}
         />
       )}
       <ProfileChip

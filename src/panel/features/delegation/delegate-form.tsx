@@ -13,6 +13,7 @@ import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
 import { runsInPlace } from "../projects/selectors";
 import {
+  DELEGATE_FORM_FIELDS,
   type DelegateFormDialog,
   delegateInitialValues,
   delegateReads,
@@ -40,16 +41,7 @@ interface DelegateFormProps {
 function DelegateForm({ dialog }: DelegateFormProps) {
   const controller = useController();
 
-  const scope = useSnapshot([
-    "projects",
-    "projectCandidate",
-    "projectCandidateAuto",
-    "projectCandidateGit",
-    "workers",
-    "scopeKnown",
-    "repository",
-    "revision",
-  ]);
+  const scope = useSnapshot(DELEGATE_FORM_FIELDS);
 
   const { busy, conversation } = useSnapshot(["busy", "conversation"]);
 

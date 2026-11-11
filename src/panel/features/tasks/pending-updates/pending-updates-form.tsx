@@ -10,7 +10,10 @@ import { Checkbox } from "../../../shared/components/checkbox/checkbox";
 import { defineDialog } from "../../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../../shared/forms/form-footer";
 import { formatOutcomeTimestamp } from "../chat/timeline/outcome-timestamp";
-import { pendingUpdates } from "./pending-update-tracker";
+import {
+  PENDING_UPDATE_FIELDS,
+  pendingUpdates,
+} from "./pending-update-tracker";
 import {
   pendingUpdatesMessage,
   UPDATE_LABELS,
@@ -23,7 +26,7 @@ import {
  */
 function PendingUpdatesForm() {
   const controller = useController();
-  const pendingState = useSnapshot(["pendingUpdates", "conversation"]);
+  const pendingState = useSnapshot(PENDING_UPDATE_FIELDS);
 
   const { busy, host, stale } = useSnapshot(["busy", "host"], (state) => ({
     stale: dialogStale(state),

@@ -207,8 +207,9 @@ export default defineConfig(
   {
     // One-expression handlers read as part of the markup; anything longer is
     // logic that belongs in a named function. Empty no-ops and one-expression
-    // blocks, such as a ref callback's assignment, stay inline.
-    files: ["src/panel/**/*.tsx", "dev/panel/**/*.tsx"],
+    // blocks, such as a ref callback's assignment, stay inline. The handler
+    // selectors match only JSX, so they skip .ts files.
+    files: ["src/panel/**/*.{ts,tsx}", "dev/panel/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -221,6 +222,14 @@ export default defineConfig(
           message:
             "Move multi-statement handlers out of JSX into a named function.",
         })),
+        // A destructured selection lets no-unused-vars flag fields the
+        // component stopped reading. Helpers take a named field constant.
+        {
+          selector:
+            'VariableDeclarator[id.type="Identifier"] > CallExpression[callee.name="useSnapshot"]:matches([arguments.0.type="ArrayExpression"], [arguments.length=2], [arguments.0.body.type="ObjectExpression"])',
+          message:
+            "Destructure the selection so lint flags unused fields. Pass a helper a named field constant.",
+        },
       ],
     },
   },

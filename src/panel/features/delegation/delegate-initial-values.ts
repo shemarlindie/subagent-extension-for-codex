@@ -9,15 +9,29 @@ import type {
   Worker,
 } from "../../app/state/types";
 import type { DelegateValues } from "./delegate-values";
-import { workerChoice } from "./delegation";
+import { PROJECT_TARGET_FIELDS, workerChoice } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";
 
 export type DelegateFormDialog = DelegateDialog | DelegateLoadingDialog;
 
+/** The snapshot fields that decide a new task's worker and target. */
+const DELEGATE_SCOPE_FIELDS = [
+  "workers",
+  "scopeKnown",
+  "repository",
+  "revision",
+] as const;
+
 export type DelegateScope = Pick<
   Snapshot,
-  "workers" | "scopeKnown" | "repository" | "revision"
+  (typeof DELEGATE_SCOPE_FIELDS)[number]
 >;
+
+/** The snapshot fields the delegate forms pass to their helpers. */
+export const DELEGATE_FORM_FIELDS = [
+  ...PROJECT_TARGET_FIELDS,
+  ...DELEGATE_SCOPE_FIELDS,
+] as const;
 
 // Fields wait for the settings read, so these only fill the form's shape.
 const FALLBACK_DEFAULTS: Defaults = settingsDefaults("");

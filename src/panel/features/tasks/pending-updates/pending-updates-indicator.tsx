@@ -6,12 +6,15 @@ import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { formatCount } from "../../../shared/utils/format";
-import { pendingUpdates } from "./pending-update-tracker";
+import {
+  PENDING_UPDATE_FIELDS,
+  pendingUpdates,
+} from "./pending-update-tracker";
 
 /** The count of worker updates Codex hasn't seen. It opens the dialog to send them. */
 export function PendingUpdatesIndicator() {
   const controller = useController();
-  const pendingState = useSnapshot(["pendingUpdates", "conversation"]);
+  const pendingState = useSnapshot(PENDING_UPDATE_FIELDS);
   const { connected, busy } = useSnapshot(["connected", "busy"]);
   const tasks = pendingUpdates(pendingState);
   const updates = tasks.flatMap((task) => task.updates);
