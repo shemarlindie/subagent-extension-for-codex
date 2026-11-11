@@ -36,15 +36,57 @@ const changed = execFileSync("git", ["status", "--porcelain"], {
   .filter(Boolean)
   .map((line) => line.slice(3));
 
-// The last release on main. Unmerged prerelease tags aren't on main.
-const [since] = run("git", [
-  "tag",
-  "--merged",
-  "HEAD",
-  "--list",
-  "v*",
-  "--sort=-v:refname",
-]).split("\n");
+const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+
+// The last release is the newest final tag. Prerelease tags don't count, since
+// their pull requests close without merging. main must contain the tag, or list
+// its version when a squashed release pull request left the tag off main.
+const since = run("git", ["tag", "--list", "v*", "--sort=-v:refname"])
+  .split("\n")
+  .find((tag) => tag && !tag.includes("-"));
+
+const onMain =
+  since && run("git", ["tag", "--merged", "HEAD", "--list", since]) === since;
+
+// Reports what it found, and a fix only for a cause it confirms.
+if (since && !onMain && since !== `v${manifest.version}`) {
+  const detected = `${since} is the newest release tag, but main doesn't contain it and lists ${manifest.version}.`;
+
+  if (!run("git", ["ls-remote", "--tags", "origin", `refs/tags/${since}`])) {
+    fail(
+      `${detected}\nThe tag is only local. Delete it with: git tag -d ${since}`,
+    );
+  }
+
+  const open = run("gh", [
+    "pr",
+    "list",
+    "--base",
+    "main",
+    "--head",
+    `chore/release-${since}`,
+    "--json",
+    "number",
+    "--jq",
+    ".[0].number",
+  ]);
+
+  if (open) {
+    fail(
+      `${detected}\nIts release pull request #${open} is still open. Finish its release as docs/releasing.md describes, then run this again.`,
+    );
+  }
+
+  fail(
+    `${detected}\nCheck whether its release pull request was squashed and main was then rolled back, or whether it was released from another branch.`,
+  );
+}
+
+if (since && !onMain) {
+  console.warn(
+    `main lists ${manifest.version}, but ${since} isn't in main's history. Counting from ${since}.`,
+  );
+}
 
 const messages = run("git", [
   "log",
@@ -86,8 +128,6 @@ const version = process.argv[2] ?? nextVersion();
 if (!/^\d+\.\d+\.\d+(-[\w.-]+)?$/.test(version)) {
   fail("Usage: npm run release:prepare [-- <version>]");
 }
-
-const manifest = JSON.parse(readFileSync("package.json", "utf8"));
 
 if (version === manifest.version) {
   fail(`package.json is already at ${version}`);
