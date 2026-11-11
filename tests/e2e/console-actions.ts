@@ -8,6 +8,13 @@ export async function startTask(page: Page, message: string) {
   await page.getByRole("button", { name: "Start task", exact: true }).click();
 }
 
+/** Sets the open new-task composer to ask for approval instead of Auto. */
+export async function askForApproval(page: Page) {
+  await page.getByRole("button", { name: /^Edit .* · Auto$/ }).click();
+  await page.getByRole("combobox", { name: "Permission mode: Auto" }).click();
+  await page.getByRole("option", { name: /^Default/ }).click();
+}
+
 /** Opens Advanced task with its description filled, ready for more options. */
 export async function openAdvancedTask(page: Page, description: string) {
   await page.getByRole("button", { name: "More ways to start a task" }).click();

@@ -34,7 +34,7 @@ export const claudeSettingsSchema = z
         title: "Claude permission mode",
         description: help.permission_mode,
       })
-      .default("default"),
+      .default("auto"),
     // Restriction titles drop "Claude": their settings group already names it.
     sandbox: z
       .boolean()

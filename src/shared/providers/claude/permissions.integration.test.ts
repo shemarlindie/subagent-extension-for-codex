@@ -88,13 +88,13 @@ const withClaudeOptions = (
 
 const taskOptions = (task: Task) => readClaudeTaskOptions(task);
 
-test("settings default to Default, expose only SDK permission modes, persist overrides, and require user authority", async (t) => {
+test("settings default to Auto, expose only SDK permission modes, persist overrides, and require user authority", async (t) => {
   const { c, store } = await setup(t);
   const settings = c.settings;
 
   assert.equal(
     settings.values("alice").providers.claude.permission_mode,
-    "default",
+    "auto",
   );
 
   const { schema, values } = settings.read("alice");
@@ -135,17 +135,14 @@ test("settings default to Default, expose only SDK permission modes, persist ove
 
   assert.equal(reloaded.values("alice").approvals.decider, "parent_agent");
 
-  assert.equal(
-    reloaded.values("bob").providers.claude.permission_mode,
-    "default",
-  );
+  assert.equal(reloaded.values("bob").providers.claude.permission_mode, "auto");
 });
 
-test("task-level inherit uses the extension's configured Auto mode", async (t) => {
+test("task-level inherit uses the saved mode", async (t) => {
   const { c, request } = await setup(t);
 
   c.settings.update("alice", {
-    set: { providers: { claude: { permission_mode: "auto" } } },
+    set: { providers: { claude: { permission_mode: "acceptEdits" } } },
   });
 
   const task = await c.start(
@@ -154,12 +151,16 @@ test("task-level inherit uses the extension's configured Auto mode", async (t) =
     "user",
   );
 
-  assert.equal(taskOptions(task).permission_mode, "auto");
+  assert.equal(taskOptions(task).permission_mode, "acceptEdits");
   assert.equal(taskOptions(task).permission_source, "setting");
 });
 
 test("parent cannot increase native permissions or grant itself decision authority", async (t) => {
   const { c, request } = await setup(t);
+
+  c.settings.update("alice", {
+    set: { providers: { claude: { permission_mode: "default" } } },
+  });
 
   await assert.rejects(
     c.start(
