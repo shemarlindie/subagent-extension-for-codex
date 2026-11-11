@@ -61,6 +61,8 @@ export interface ProviderPolicy {
   max_effort?: string;
   /** Each model's own highest reasoning, by model name, in place of `max_effort`. */
   model_max_effort?: Record<string, string>;
+  /** Approval prompts are denied without asking anyone. */
+  prompts_denied?: boolean;
   /** Other active policy, as plain-language rows for Settings. */
   notes: { label: string; detail: string }[];
 }

@@ -11,18 +11,25 @@ import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
 
-/** The mode row with modes policy rules out locked, and a warning if it's the saved one. */
+const PROMPTS_DENIED =
+  "Your organization denies tool calls that would ask for approval, and Claude can't ask questions.";
+
+/**
+ * The mode row with modes policy rules out locked, and a warning if it's the
+ * saved one. The approval decider row warns when nobody is asked.
+ */
 function withPolicy(
   row: SettingRow,
   policy: ProviderPolicy,
   values: unknown,
 ): SettingRow {
-  if (
-    row.kind !== "select" ||
-    row.path !== "providers.claude.permission_mode"
-  ) {
-    return row;
+  if (row.kind !== "select") return row;
+
+  if (row.path === "approvals.decider") {
+    return policy.prompts_denied ? { ...row, warning: PROMPTS_DENIED } : row;
   }
+
+  if (row.path !== "providers.claude.permission_mode") return row;
 
   const saved = String(settingAt(values, row.path));
   const reason = blockedReason(policy, saved);
@@ -144,6 +151,15 @@ function policyFacts(policy: ProviderPolicy) {
       : []),
     ...(reasoningLimit(policy)
       ? [{ label: "Reasoning", detail: reasoningLimit(policy)! }]
+      : []),
+    ...(policy.prompts_denied
+      ? [
+          {
+            label: "Approvals",
+            detail:
+              "Tool calls that would ask for approval are denied, and Claude can't ask questions.",
+          },
+        ]
       : []),
     ...policy.notes,
   ];

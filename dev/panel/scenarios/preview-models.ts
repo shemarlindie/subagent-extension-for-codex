@@ -51,6 +51,7 @@ const previewOrgPolicy = (
   default_model: "Sonnet 5.5",
   default_effort: "low",
   max_effort: "medium",
+  prompts_denied: true,
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 });
 

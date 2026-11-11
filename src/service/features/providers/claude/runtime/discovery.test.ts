@@ -229,8 +229,11 @@ test("the allowlist and other active policy reach the panel", async () => {
       availableModelsMatch: "exact",
       allowManagedHooksOnly: true,
       allowManagedPermissionRulesOnly: true,
+      permissions: { denyInsteadOfPrompting: true },
     },
   }).policy();
+
+  assert.equal(policy?.prompts_denied, true);
 
   assert.deepEqual(policy?.available_models, ["haiku"]);
   assert.equal(policy?.available_models_match, "exact");

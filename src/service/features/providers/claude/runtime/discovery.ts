@@ -198,6 +198,9 @@ async function policyFrom(
       : {}),
     ...(policy.maxEffortLevel ? { max_effort: policy.maxEffortLevel } : {}),
     ...effortCaps(policy),
+    ...(policy.permissions?.denyInsteadOfPrompting
+      ? { prompts_denied: true }
+      : {}),
     notes: policyNotes(policy),
   };
 }

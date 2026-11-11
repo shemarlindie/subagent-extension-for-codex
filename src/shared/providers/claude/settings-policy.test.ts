@@ -241,3 +241,20 @@ test("the org's reasoning cap locks higher levels and warns on a saved one above
       ),
   );
 });
+
+test("an org that denies approval prompts warns on the approval decider", () => {
+  const all = sections({}, { ...policy, prompts_denied: true });
+
+  assert.match(
+    row(all, "approvals.decider").warning ?? "",
+    /denies tool calls/,
+  );
+
+  assert.ok(
+    all
+      .find(({ id }) => id === "organization-policy")
+      ?.facts?.some(({ label }) => label === "Approvals"),
+  );
+
+  assert.equal(row(sections({}), "approvals.decider").warning, undefined);
+});
