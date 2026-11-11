@@ -1,4 +1,9 @@
-import { Fragment, type ReactNode, type RefObject } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  type RefObject,
+  useLayoutEffect,
+} from "react";
 
 import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
 import type { BudgetRaise } from "../../../../../shared/tasks/model";
@@ -33,6 +38,8 @@ type ChatTimelineProps = {
   viewportRef: RefObject<HTMLDivElement | null>;
   positionRestored: boolean;
   onContentChange: () => void;
+  /** Runs after each render, to follow, restore and fade in rows. */
+  onRendered: () => void;
   budgetRaise: BudgetRaise;
   onBudgetRaiseChange: (value: BudgetRaise) => void;
   onBudgetApply: (value: BudgetRaise) => Promise<string | undefined>;
@@ -50,6 +57,7 @@ export function ChatTimeline({
   viewportRef,
   positionRestored,
   onContentChange,
+  onRendered,
   budgetRaise,
   onBudgetRaiseChange,
   onBudgetApply,
@@ -114,6 +122,8 @@ export function ChatTimeline({
     loading,
     onContentChange,
   );
+
+  useLayoutEffect(onRendered);
 
   const loadingSwapClass = visibleItems?.length
     ? "chat-loading-swap chat-loading-swap-has-history"

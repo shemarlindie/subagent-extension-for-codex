@@ -13,11 +13,13 @@ import {
   distanceFromEnd,
   end,
   END_SLACK_PX,
+  findRow,
   followsEnd,
   type Glide,
   glideAhead,
   glideProgress,
   glideTarget,
+  inView,
   jump,
   pendingScroll,
   restoreReadingAnchor,
@@ -51,6 +53,12 @@ export type ReadingScrollOptions = {
    * even for the same row.
    */
   focus?: ReadingFocus;
+  /**
+   * The rows render in a child, which runs the returned `syncAfterRender` in a
+   * layout effect after each of its renders. The caller then need not render
+   * when only the rows change.
+   */
+  syncInChild?: boolean;
 };
 
 type ReadingFocus = {
@@ -74,6 +82,7 @@ export function useReadingScroll({
   animateRows: animate = false,
   followSmoothly = false,
   focus,
+  syncInChild = false,
 }: ReadingScrollOptions) {
   const [local] = useState<ReadingState>(() => ({}));
   const reading = owned ?? local;
@@ -199,7 +208,11 @@ export function useReadingScroll({
     [remember, followSmoothly, endGlide],
   );
 
-  useLayoutEffect(() => {
+  /**
+   * Restores, follows or animates the rows after they render. The values it
+   * reads change only when the caller renders, which renders the child too.
+   */
+  const syncAfterRender = () => {
     activeRef.current = active;
     // A hidden view may share its scroller with the shown one.
     if (!active) endGlide();
@@ -252,18 +265,20 @@ export function useReadingScroll({
       // Rows count as seen where a glide to the end will show them.
       const ahead = glideAhead(container, glide.current);
 
-      const started = animateRows(
-        previous,
-        rows.current,
-        { top: ahead, bottom: ahead + container.clientHeight },
-        animate === "arrivals",
-      );
-
       animations.current = [
         ...animations.current.filter((a) => a.playState === "running"),
-        ...started,
+        ...animateRows(
+          previous,
+          rows.current,
+          { top: ahead, bottom: ahead + container.clientHeight },
+          animate === "arrivals",
+        ),
       ];
     }
+  };
+
+  useLayoutEffect(() => {
+    if (!syncInChild) syncAfterRender();
   });
 
   // Runs after the restore above. The chat swap uses this to wait until its
@@ -369,31 +384,22 @@ export function useReadingScroll({
     if (focusId === undefined || focused.current === focusRequest) return;
     if (!viewport || !active || !ready) return;
 
-    const element = Array.from(
-      viewport.querySelectorAll<HTMLElement>(`[${itemAttribute}]`),
-    ).find((element) => element.getAttribute(itemAttribute) === focusId);
-
+    const element = findRow(viewport, itemAttribute, focusId);
     if (!element) return;
     focused.current = focusRequest;
     const container = scrollContainer(viewport);
-    const row = element.getBoundingClientRect();
-    const frame = container.getBoundingClientRect();
-
-    if (focusReveal && row.top >= frame.top && row.bottom <= frame.bottom) {
-      return;
-    }
+    if (focusReveal && inView(container, element)) return;
 
     endGlide();
     stopAnimations();
     const before = container.scrollTop;
     const target = glideTarget(container, element);
-    const distance = Math.abs(target - before);
 
     // Reading from the row unpins, unless the row already sits at the end.
     pin(end(container) - target <= END_SLACK_PX);
 
     // Revealing a row the reader asked for glides to it; opening at one jumps.
-    if (focusReveal && distance >= 1 && canGlide(container)) {
+    if (focusReveal && Math.abs(target - before) >= 1 && canGlide(container)) {
       startGlide(container, target, element);
     } else {
       container.scrollTop = target;
@@ -539,5 +545,6 @@ export function useReadingScroll({
     positionRestored: !reportPositionRestored || positionRestored,
     reconcileAfterContentChange,
     scrollToLatest,
+    syncAfterRender,
   };
 }
