@@ -9,6 +9,7 @@ import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { AskReplyButton } from "./ask-reply-button";
 import { MarkUnreadButton } from "./mark-unread-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
+import { useNewBlocksFade } from "./use-new-blocks-fade";
 
 type ChatMessageViewProps = {
   task?: Task;
@@ -37,6 +38,7 @@ export function ChatMessageView({
   const ref = useRef<HTMLElement>(null);
   const contentKey = `${message.text}\0${streaming ?? false}\0${outcome?.id ?? ""}`;
   useAnimatedHeight(ref, contentKey, arriving);
+  useNewBlocksFade(ref, contentKey);
 
   const askButton =
     task && message.kind === "reply" && !streaming ? (
