@@ -1,4 +1,8 @@
-import { openManageProjects, startTask } from "./console-actions";
+import {
+  askForApproval,
+  openManageProjects,
+  startTask,
+} from "./console-actions";
 import { expect, test } from "./fixtures";
 import { CONSOLE_TOKEN } from "./server";
 
@@ -127,6 +131,7 @@ test("create a task, answer input, approve a tool, and continue after reload", a
   consolePage: page,
 }) => {
   await page.getByRole("button", { name: "New task", exact: true }).click();
+  await askForApproval(page);
 
   await page
     .getByRole("textbox", { name: "Task message" })

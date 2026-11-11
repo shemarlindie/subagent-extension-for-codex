@@ -206,7 +206,7 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
 
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
-    "Default — ask for approval",
+    "Auto — Claude Code decides",
   );
 
   await selectOption(user, "Worker", "claude · reviewer");

@@ -1,9 +1,11 @@
+import { askForApproval } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 test("answer stacked choices with a skip, then deny a tool with a message", async ({
   consolePage: page,
 }) => {
   await page.getByRole("button", { name: "New task", exact: true }).click();
+  await askForApproval(page);
 
   await page
     .getByRole("textbox", { name: "Task message" })

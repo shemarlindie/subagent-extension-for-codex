@@ -173,7 +173,7 @@ Settings are grouped by what they control:
 | Worktree branch prefix  | `task.worktree_branch_prefix`      | `agent/`                                             |
 | Runtime limit           | `task.budget.max_runtime_minutes`  | Off, 20 minutes                                      |
 | Cost limit              | `task.budget.max_cost_usd`         | Off, 5 USD                                           |
-| Claude permission mode  | `providers.claude.permission_mode` | `default`                                            |
+| Claude permission mode  | `providers.claude.permission_mode` | `auto`                                               |
 | Approval decision maker | `approvals.decider`                | `user`                                               |
 
 The worker profile setting applies to agent calls and the Advanced task dialog.
