@@ -13,6 +13,7 @@ import {
   FAMILY_ALIASES,
   isModelVariant,
 } from "../../../../../shared/providers/policy.js";
+import { titleCase } from "../../../../../shared/text.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {
@@ -61,6 +62,24 @@ function modelReason(requested: string, actual: string, policy?: Settings) {
     : `Running with ${actual} instead of ${requested}.`;
 }
 
+/** Whether policy caps reasoning, for every model or for one. */
+const capsEffort = (policy?: Settings) =>
+  !!policy?.maxEffortLevel ||
+  Object.values(policy?.modelSettings ?? {}).some(
+    ({ maxEffortLevel }) => maxEffortLevel,
+  );
+
+/**
+ * Policy's cap is the likely reason. An org's per-model cap from the admin
+ * console doesn't show in its policy, so other causes read plainly.
+ */
+const effortReason = (requested: string, actual: string, policy?: Settings) =>
+  capsEffort(policy)
+    ? `Running with ${titleCase(actual)} reasoning, your organization's limit.`
+    : `Running with ${titleCase(actual)} reasoning instead of ${titleCase(requested)}.`;
+
+const EFFECTIVE_KEYS = ["permission_mode", "model", "effort"] as const;
+
 /**
  * Compares what a session started with to what the task asked for, stores the
  * difference and reports each new one. Claude Code changes these silently when
@@ -74,6 +93,7 @@ export async function recordEffectiveSettings(
   const options = readClaudeTaskOptions(c.task);
   const before = options.effective;
   const after: ClaudeEffectiveSettings = {};
+  const effort = c.task.reasoning_effort;
 
   if (init.permissionMode && init.permissionMode !== options.permission_mode) {
     after.permission_mode = init.permissionMode;
@@ -81,16 +101,30 @@ export async function recordEffectiveSettings(
 
   if (!modelHonored(c.task.model, init.model)) after.model = init.model;
 
-  const { permission_mode: mode, model } = after;
+  // Claude Code reports the effort it runs only when asked.
+  const settings =
+    effort && effort !== "default"
+      ? await readSessionSettings(session)
+      : undefined;
 
-  if (mode === before?.permission_mode && model === before?.model) return;
+  const applied = settings?.applied?.effort;
+  if (applied && applied !== effort) after.effort = applied;
+
+  const changed = EFFECTIVE_KEYS.filter((key) => after[key] !== before?.[key]);
+  if (!changed.length) return;
   c.effectiveOptions(after);
 
-  const newMode = mode !== before?.permission_mode ? mode : undefined;
-  const newModel = model !== before?.model ? model : undefined;
-  if (!newMode && !newModel) return;
+  const fresh = (key: (typeof EFFECTIVE_KEYS)[number]) =>
+    changed.includes(key) ? after[key] : undefined;
 
-  const policy = policySettings(await readSessionSettings(session));
+  const newMode = fresh("permission_mode");
+  const newModel = fresh("model");
+  const newEffort = fresh("effort");
+  if (!newMode && !newModel && !newEffort) return;
+
+  const policy = policySettings(
+    settings ?? (await readSessionSettings(session)),
+  );
 
   const report = (limit: EventPayloadMap["agent.limited"]) => {
     const { setting, requested, effective } = limit;
@@ -119,6 +153,15 @@ export async function recordEffectiveSettings(
       requested: c.task.model!,
       effective: newModel,
       reason: modelReason(c.task.model!, newModel, policy),
+    });
+  }
+
+  if (newEffort) {
+    report({
+      setting: "reasoning_effort",
+      requested: effort!,
+      effective: newEffort,
+      reason: effortReason(effort!, newEffort, policy),
     });
   }
 }

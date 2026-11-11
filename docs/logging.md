@@ -105,7 +105,7 @@ and session lifetime. Never paste token values into a diagnostic report.
 | `provider.policy_rejected`                                                                                                   | A mode, model or reasoning level refused at start, and why.                                                                                                                                       |
 | `provider.policy_default_applied`                                                                                            | Saved model or reasoning defaults a start dropped for the org's defaults.                                                                                                                         |
 | `provider.startup_refused`                                                                                                   | Claude Code's reason code when it refused to start, such as for a sign-in pin.                                                                                                                    |
-| `provider.settings_limited`                                                                                                  | A mode or model that differs from the one requested.                                                                                                                                              |
+| `provider.settings_limited`                                                                                                  | A mode, model or reasoning level that differs from the one requested.                                                                                                                             |
 
 ## Measure performance
 

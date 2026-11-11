@@ -52,7 +52,7 @@ interface AgentStartedPayload {
 
 /** A session runs with something other than what the task asked for. */
 interface AgentLimitedPayload {
-  setting: "permission_mode" | "model";
+  setting: "permission_mode" | "model" | "reasoning_effort";
   requested: string;
   effective: string;
   /** A sentence for the user, saying what the task runs with and why. */

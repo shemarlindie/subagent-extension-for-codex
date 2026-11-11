@@ -134,6 +134,7 @@ export const previewEvents: Event[] = [
     "preview-live-streaming",
     "preview-live-fast-streaming",
     "preview-policy-limited",
+    "preview-policy-lowered",
   ].flatMap((id) => timelinesById.get(id)!.events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),

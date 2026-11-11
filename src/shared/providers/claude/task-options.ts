@@ -23,6 +23,7 @@ export const claudeStartOptionsSchema = z.strictObject({
 const claudeEffectiveSettingsSchema = z.strictObject({
   permission_mode: z.string().optional(),
   model: z.string().optional(),
+  effort: z.string().optional(),
 });
 
 export type ClaudeEffectiveSettings = z.infer<

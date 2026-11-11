@@ -56,7 +56,11 @@ const agentStartedPayloadSchema = z.object({
 });
 
 const agentLimitedPayloadSchema = z.object({
-  setting: z.union([z.literal("permission_mode"), z.literal("model")]),
+  setting: z.union([
+    z.literal("permission_mode"),
+    z.literal("model"),
+    z.literal("reasoning_effort"),
+  ]),
   requested: z.string(),
   effective: z.string(),
   reason: z.string(),
