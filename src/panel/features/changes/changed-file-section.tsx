@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -18,12 +18,12 @@ type ChangedFileSectionProps = {
   viewed: boolean;
   /** Marked viewed, then changed: it needs reading again. */
   changedSinceViewed: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (path: string, open: boolean) => void;
   /** Counts the reader's picks of this file in the file tree; each one opens it. */
   revealed?: number;
   onContentReady?: () => void;
-  onViewedChange: (viewed: boolean) => void;
-  onPreview: () => void;
+  onViewedChange: (entry: ChangedFileEntry, viewed: boolean) => void;
+  onPreview: (path: string) => void;
 };
 
 /** Why a file's diff has no lines to show. */
@@ -36,9 +36,12 @@ function emptyDiffNote(file: ChangedFile, missing?: boolean) {
 /** The short tag keeps narrow file headers readable; the note explains it. */
 const COMMAND_NOTE = "Changed by a command.";
 
-/** One changed file in the Changes list: its diff, Preview and Viewed. */
-export function ChangedFileSection({
-  entry: { file, diff, missing },
+/**
+ * One changed file in the Changes list: its diff, Preview and Viewed. It
+ * renders only when its own props change, so its callbacks take the file.
+ */
+export const ChangedFileSection = memo(function ChangedFileSection({
+  entry,
   remembered,
   openByDefault,
   viewed,
@@ -49,6 +52,8 @@ export function ChangedFileSection({
   onViewedChange,
   onPreview,
 }: ChangedFileSectionProps) {
+  const { file, diff, missing } = entry;
+
   const [open, setOpen] = useState(
     () => remembered ?? (changedSinceViewed || (openByDefault && !viewed)),
   );
@@ -71,7 +76,7 @@ export function ChangedFileSection({
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    onOpenChange(next);
+    onOpenChange(file.path, next);
   };
 
   return (
@@ -94,7 +99,7 @@ export function ChangedFileSection({
             <Button
               variant="ghost"
               className="diff-preview"
-              onClick={onPreview}
+              onClick={() => onPreview(file.path)}
             >
               <Icon name="eye" size={14} />
             </Button>
@@ -102,10 +107,10 @@ export function ChangedFileSection({
           <ViewedToggle
             path={file.path}
             viewed={viewed}
-            onChange={onViewedChange}
+            onChange={(value) => onViewedChange(entry, value)}
           />
         </>
       }
     />
   );
-}
+});

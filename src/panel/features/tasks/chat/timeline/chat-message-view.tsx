@@ -1,8 +1,7 @@
-import { useRef } from "react";
+import { memo, useRef } from "react";
 
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
-import type { Task } from "../../../../app/state/types";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { RequestAttachments } from "../../../attachments/request-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
@@ -12,7 +11,7 @@ import { TurnOutcomeRow } from "./turn-outcome-row";
 import { useNewBlocksFade } from "./use-new-blocks-fade";
 
 type ChatMessageViewProps = {
-  task?: Task;
+  taskId?: string;
   message: ConversationMessage;
   /** The worker's name, such as Claude, for its messages. */
   worker: string;
@@ -26,9 +25,11 @@ type ChatMessageViewProps = {
 /**
  * One message: the user's on the right as typed, the parent agent's labelled,
  * and the agents' rendered as Markdown, with the worker's replies standing out.
+ * It renders only when its own props change, so its task's id stands in for
+ * the task.
  */
-export function ChatMessageView({
-  task,
+export const ChatMessageView = memo(function ChatMessageView({
+  taskId,
   message,
   worker,
   streaming,
@@ -41,13 +42,17 @@ export function ChatMessageView({
   useNewBlocksFade(ref, contentKey);
 
   const askButton =
-    task && message.kind === "reply" && !streaming ? (
-      <AskReplyButton task={task} message={message} inline={Boolean(outcome)} />
+    taskId && message.kind === "reply" && !streaming ? (
+      <AskReplyButton
+        taskId={taskId}
+        message={message}
+        inline={Boolean(outcome)}
+      />
     ) : undefined;
 
   const markUnreadButton =
-    task && outcome ? (
-      <MarkUnreadButton task={task} eventId={message.event_id} />
+    taskId && outcome ? (
+      <MarkUnreadButton taskId={taskId} eventId={message.event_id} />
     ) : undefined;
 
   return (
@@ -66,11 +71,11 @@ export function ChatMessageView({
         <div className="chat-sender">Parent agent</div>
       )}
       {messageBody(message)}
-      {task && message.kind === "request" && message.attachments?.length ? (
+      {taskId && message.kind === "request" && message.attachments?.length ? (
         // Keyed by task, so another task's row fits and folds afresh.
         <RequestAttachments
-          key={task.id}
-          task={task}
+          key={taskId}
+          taskId={taskId}
           attachments={message.attachments}
         />
       ) : undefined}
@@ -86,7 +91,7 @@ export function ChatMessageView({
       )}
     </article>
   );
-}
+});
 
 function messageLabel(message: ConversationMessage, worker: string) {
   if (message.from === "worker") return worker;

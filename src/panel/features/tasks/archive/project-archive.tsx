@@ -108,15 +108,19 @@ export function ProjectArchive({
       await controller.refresh();
     });
 
-  const check = (id: string, value: boolean) =>
-    setChecked((ids) => {
-      const next = new Set(ids);
+  // Stable, so checking one row renders only that row.
+  const check = useCallback(
+    (id: string, value: boolean) =>
+      setChecked((ids) => {
+        const next = new Set(ids);
 
-      if (value) next.add(id);
-      else next.delete(id);
+        if (value) next.add(id);
+        else next.delete(id);
 
-      return next;
-    });
+        return next;
+      }),
+    [],
+  );
 
   return (
     <PageFrame
@@ -184,7 +188,7 @@ export function ProjectArchive({
                     task={task}
                     checked={checked.has(task.id)}
                     disabled={disabled || confirming}
-                    onCheckedChange={(value) => check(task.id, value)}
+                    onCheck={check}
                   />
                 ))}
               </ul>

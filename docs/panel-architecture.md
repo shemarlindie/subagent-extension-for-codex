@@ -73,7 +73,11 @@ helper that takes several fields gets them as its own selection of a named field
 constant, such as `useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs
 state only when the user acts reads `controller.getSnapshot()`. Patches keep the
 references of unchanged read data, listed in `READ_FIELDS` in
-`app/state/patch-state.ts`, so a refresh renders only what changed. Pure
+`app/state/patch-state.ts`, so a refresh renders only what changed. Rows of
+lists that change one item at a time, such as task rows and Chat messages, are
+wrapped in `memo`. Give them data, ids and stable callbacks, so a function the
+parent builds for each row doesn't render every row again. A row that acts on
+its task takes the task's id and looks the task up when the user acts. Pure
 rendering components can take props directly. Transport revisions and draft
 following stay outside rendering.
 

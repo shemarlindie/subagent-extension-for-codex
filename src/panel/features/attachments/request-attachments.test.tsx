@@ -7,7 +7,6 @@ import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Transport } from "../../app/state/types";
-import type { Task } from "../tasks/types";
 import { RequestAttachments } from "./request-attachments";
 
 const note = (position: number): RequestAttachment => ({
@@ -43,12 +42,11 @@ test("hidden chips fold behind a toggle that keeps focus as the row expands and 
   );
 
   onTestFinished(() => controller.dispose());
-  const task = { id: "task" } as Task;
   const attachments = [1, 2, 3, 4].map(note);
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <RequestAttachments task={task} attachments={attachments} />
+      <RequestAttachments taskId="task" attachments={attachments} />
     </ControllerContext.Provider>,
   );
 

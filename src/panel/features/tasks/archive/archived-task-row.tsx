@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { Checkbox } from "../../../shared/components/checkbox/checkbox";
@@ -7,15 +9,15 @@ type ArchivedTaskRowProps = {
   task: Task;
   checked: boolean;
   disabled: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  onCheck: (id: string, checked: boolean) => void;
 };
 
 /** An archived task in a project's archive, with a box to select it. */
-export function ArchivedTaskRow({
+export const ArchivedTaskRow = memo(function ArchivedTaskRow({
   task,
   checked,
   disabled,
-  onCheckedChange,
+  onCheck,
 }: ArchivedTaskRowProps) {
   const host = useSnapshot((state) => state.host);
 
@@ -32,7 +34,7 @@ export function ArchivedTaskRow({
         <Checkbox
           checked={checked}
           disabled={disabled}
-          onCheckedChange={onCheckedChange}
+          onCheckedChange={(value) => onCheck(task.id, value)}
         />
         <span className="archived-task-text">
           <span className="archived-task-title">{task.title}</span>
@@ -45,4 +47,4 @@ export function ArchivedTaskRow({
       </label>
     </li>
   );
-}
+});

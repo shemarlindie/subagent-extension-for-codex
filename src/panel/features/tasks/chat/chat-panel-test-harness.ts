@@ -49,8 +49,10 @@ function setup(
   const tool = vi.spyOn(controller, "tool").mockResolvedValue({});
   vi.spyOn(controller, "refresh").mockResolvedValue();
 
+  // The open task is listed, as the inspector opens it from the task list.
   const snapshot = {
     ...controller.getSnapshot(),
+    tasks: [task],
     events,
     chat: { task: task.id, items: chatItems, cursor: chatItems.length },
   };
@@ -93,8 +95,12 @@ function setup(
 
   const view = render(panel(task));
 
-  const updateTask = (patch: Partial<Task>) =>
-    view.rerender(panel({ ...task, ...patch }));
+  const updateTask = (patch: Partial<Task>) => {
+    const current = { ...task, ...patch };
+    snapshot.tasks = [current];
+    visibleSnapshot = { ...snapshot };
+    view.rerender(panel(current));
+  };
 
   const updateChat = (items: ChatItem[]) => {
     snapshot.chat = { task: task.id, items, cursor: items.length };

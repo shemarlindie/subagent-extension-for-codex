@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import { useController } from "../../app/state/controller-context";
-import type { Task } from "../tasks/types";
+import { findTask } from "../../app/state/selectors";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
 import {
   type AttachmentFit,
@@ -11,7 +11,7 @@ import {
 } from "./attachment-fit";
 
 type RequestAttachmentsProps = {
-  task: Task;
+  taskId: string;
   attachments: RequestAttachment[];
 };
 
@@ -58,7 +58,7 @@ function useAttachmentFit(count: number) {
  * hide behind "+N more", which expands the row in place.
  */
 export function RequestAttachments({
-  task,
+  taskId,
   attachments,
 }: RequestAttachmentsProps) {
   const controller = useController();
@@ -67,6 +67,15 @@ export function RequestAttachments({
   const [expanded, setExpanded] = useState(false);
   const hidden = count - fit.shown;
   const shown = expanded ? attachments : attachments.slice(0, fit.shown);
+
+  const open = (attachment: RequestAttachment) => {
+    const task = findTask(controller.getSnapshot(), taskId);
+
+    if (task) {
+      controller.open({ kind: "attachment", task, attachment, attachments });
+    }
+  };
+
   // Every hidden-count label, so the fit uses the one it would show.
   const counts = Array.from({ length: count - 1 }, (_, index) => index + 1);
 
@@ -83,14 +92,7 @@ export function RequestAttachments({
             key={attachment.position}
             attachment={attachment}
             maxWidth={!expanded && index === 0 ? fit.firstMax : undefined}
-            onOpen={() =>
-              controller.open({
-                kind: "attachment",
-                task,
-                attachment,
-                attachments,
-              })
-            }
+            onOpen={() => open(attachment)}
           />
         ))}
         {(expanded || hidden > 0) && (

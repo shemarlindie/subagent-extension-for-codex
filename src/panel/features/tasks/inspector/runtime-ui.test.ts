@@ -13,6 +13,8 @@ import { act, cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
 
 import { startSchema } from "../../../../shared/tasks/model.js";
+import type { Controller } from "../../../app/state/controller";
+import { ControllerContext } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { TaskRow } from "../list/task-list";
 import { TaskDetails } from "./task-details";
@@ -68,14 +70,13 @@ test("a running task's runtime ticks and a finished task's stays fixed", (t) => 
   assert.equal(runtime(view), "1m 35s");
 });
 
+// The row only calls the controller from its menu, which these tests leave closed.
 const row = (task: Task) =>
-  createElement(TaskRow, {
-    task,
-    selected: false,
-    onSelect() {},
-    onToggleRead() {},
-    onArchive() {},
-  });
+  createElement(
+    ControllerContext.Provider,
+    { value: {} as Controller },
+    createElement(TaskRow, { task, selected: false }),
+  );
 
 const rowRuntime = (view: ReturnType<typeof render>) =>
   view.container.querySelector(".row-runtime")?.textContent;

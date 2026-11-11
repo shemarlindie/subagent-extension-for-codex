@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type { ChatNote } from "../../../../../shared/tasks/conversation/chat.js";
 
 type ChatNoteRowProps = { note: ChatNote };
@@ -8,7 +10,9 @@ const NOTE_ROLES: Partial<Record<ChatNote["note"], string>> = {
 };
 
 /** A small marker between messages, such as a compaction or a new session. */
-export function ChatNoteRow({ note }: ChatNoteRowProps) {
+export const ChatNoteRow = memo(function ChatNoteRow({
+  note,
+}: ChatNoteRowProps) {
   return (
     <div
       data-chat-item={note.id}
@@ -19,4 +23,4 @@ export function ChatNoteRow({ note }: ChatNoteRowProps) {
       <span>{note.text}</span>
     </div>
   );
-}
+});
