@@ -48,6 +48,7 @@ import {
   type ViewRead,
   type ViewRequest,
 } from "./panel-view";
+import { patchState } from "./patch-state";
 import { PersistedDialogs } from "./persistence/persisted-dialogs";
 import { persistView } from "./persistence/persisted-view";
 import { RevisionTrigger } from "./revision-trigger";
@@ -291,7 +292,7 @@ export class Controller {
     }
 
     const wasBusy = this.state.busy;
-    this.state = { ...this.state, ...patch };
+    this.state = patchState(this.state, patch);
 
     if (this.state.selected) {
       this.session.update("task", this.state.selected, { tab: this.state.tab });

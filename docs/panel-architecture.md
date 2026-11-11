@@ -71,9 +71,11 @@ select the fields it renders, usually by name, as in
 destructuring the result, so it flags a field the component no longer reads. A
 helper that takes several fields gets them as its own selection of a named field
 constant, such as `useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs
-state only when the user acts reads `controller.getSnapshot()`. Pure rendering
-components can take props directly. Transport revisions and draft following stay
-outside rendering.
+state only when the user acts reads `controller.getSnapshot()`. Patches keep the
+references of unchanged read data, listed in `READ_FIELDS` in
+`app/state/patch-state.ts`, so a refresh renders only what changed. Pure
+rendering components can take props directly. Transport revisions and draft
+following stay outside rendering.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 write partial updates. Select stable fields or references to avoid unrelated

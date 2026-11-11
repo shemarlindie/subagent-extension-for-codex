@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from "react";
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
 
+import { isPlainObject } from "../../shared/utils/reuse-unchanged";
 import type { Controller } from "./controller";
 import type { Snapshot } from "./types";
 
@@ -67,11 +68,6 @@ function warnIfUnstable<T>(select: Select<T>, state: Snapshot) {
     select,
   );
 }
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" &&
-  value !== null &&
-  Object.getPrototypeOf(value) === Object.prototype;
 
 /** Compares primitives and plain objects one level deep. */
 export function shallowEqual(a: unknown, b: unknown) {
