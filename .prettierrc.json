@@ -9,6 +9,10 @@
     {
       "files": ".github/**/*.md",
       "options": { "proseWrap": "never" }
+    },
+    {
+      "files": "assets/**/*.svg",
+      "options": { "parser": "html" }
     }
   ]
 }
