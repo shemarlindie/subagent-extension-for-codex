@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import { memo, type ReactNode, useMemo } from "react";
 
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import {
@@ -29,7 +29,7 @@ const OUTCOME_LABELS: Record<TurnOutcome["outcome"], string> = {
 };
 
 /** Where a turn ended: its outcome, how long it ran and what it cost. */
-export function TurnOutcomeRow({
+export const TurnOutcomeRow = memo(function TurnOutcomeRow({
   outcome,
   response,
   action,
@@ -135,4 +135,4 @@ export function TurnOutcomeRow({
       {outcome.error && <p className="chat-outcome-error">{outcome.error}</p>}
     </div>
   );
-}
+});

@@ -195,3 +195,6 @@ export function showsReadCompleted(state: TaskListState) {
 
 export const selectedTask = (state: Pick<Snapshot, "tasks" | "selected">) =>
   state.tasks.find((task) => task.id === state.selected);
+
+export const findTask = (state: Pick<Snapshot, "tasks">, id: string) =>
+  state.tasks.find((task) => task.id === id);

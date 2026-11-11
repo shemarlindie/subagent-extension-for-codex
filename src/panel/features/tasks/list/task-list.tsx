@@ -1,5 +1,5 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
 import { CONNECTION } from "../../../app/state/connection";
@@ -38,21 +38,22 @@ import { WorkerProfileIcon } from "./worker-profile-icon";
 interface TaskRowProps {
   task: Task;
   selected: boolean;
-  onSelect: () => void;
-  /** Marks the task read when it's unread, otherwise unread. */
-  onToggleRead: () => void;
-  /** Archives the task, once it has stopped. */
-  onArchive: () => void;
 }
 
 /** A task in the list; right-click or long-press marks it read or unread, or archives it. */
-export function TaskRow({
-  task,
-  selected,
-  onSelect,
-  onToggleRead,
-  onArchive,
-}: TaskRowProps) {
+export const TaskRow = memo(function TaskRow({ task, selected }: TaskRowProps) {
+  const controller = useController();
+
+  const select = () => controller.run(() => controller.select(task.id));
+
+  const toggleRead = () =>
+    controller.run(() => controller.taskActions.unread.toggle(task));
+
+  const archive = () =>
+    controller.run(() =>
+      controller.taskActions.archive.setArchived([task], true),
+    );
+
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger
@@ -62,7 +63,7 @@ export function TaskRow({
             data-task={task.id}
             data-unread={task.unread ? "" : undefined}
             aria-current={selected}
-            onClick={onSelect}
+            onClick={select}
           />
         }
       >
@@ -74,7 +75,7 @@ export function TaskRow({
             <ContextMenu.Item
               className="menu-item"
               data-action={task.unread ? "mark-read" : "mark-unread"}
-              onClick={onToggleRead}
+              onClick={toggleRead}
             >
               {task.unread ? "Mark read" : "Mark unread"}
             </ContextMenu.Item>
@@ -82,7 +83,7 @@ export function TaskRow({
               className="menu-item"
               data-action="archive"
               disabled={!archivable(task)}
-              onClick={onArchive}
+              onClick={archive}
             >
               Archive
             </ContextMenu.Item>
@@ -91,7 +92,7 @@ export function TaskRow({
       </ContextMenu.Portal>
     </ContextMenu.Root>
   );
-}
+});
 
 type TaskRowContentProps = Pick<TaskRowProps, "task">;
 
@@ -250,9 +251,6 @@ export function TaskList() {
           key={task.id}
           task={task}
           selected={task.id === list.selected}
-          onSelect={() => controller.run(() => controller.select(task.id))}
-          onToggleRead={() => toggleRead(task)}
-          onArchive={() => archive(task)}
         />
       );
 
@@ -281,14 +279,6 @@ export function TaskList() {
     controller.setSearch("");
     controller.setFilter("all");
   };
-
-  const toggleRead = (task: Task) =>
-    controller.run(() => controller.taskActions.unread.toggle(task));
-
-  const archive = (task: Task) =>
-    controller.run(() =>
-      controller.taskActions.archive.setArchived([task], true),
-    );
 
   // Under Unread, the listed tasks can all be read at once. Without a search
   // to clear, this takes Clear filter's place; the All pill does the same.

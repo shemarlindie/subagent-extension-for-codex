@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 import { useController } from "../../app/state/controller-context";
+import { findTask } from "../../app/state/selectors";
 import { scrollContainer } from "../../shared/utils/scroll-container";
 import type { Task } from "../tasks/types";
 import { ChangedFileNavigator } from "./changed-file-navigator";
@@ -43,6 +44,22 @@ export function ChangesView({
   const diffsRef = useRef<HTMLDivElement>(null);
   const positionedReveal = useRef<Reveal>(undefined);
   const [reveal, setReveal] = useState<Reveal>();
+
+  const taskId = task.id;
+
+  // Stable, so a change to one file renders only that file's section.
+  const openChange = useCallback(
+    (path: string, open: boolean) => reading.open.set(path, open),
+    [reading],
+  );
+
+  const preview = useCallback(
+    (path: string) => {
+      const current = findTask(controller.getSnapshot(), taskId);
+      if (current) controller.open({ kind: "file", task: current, path });
+    },
+    [controller, taskId],
+  );
 
   /** Opens a file the reader picked in the tree, and scrolls to it below. */
   function revealFile(path: string) {
@@ -114,13 +131,13 @@ export function ChangesView({
               openByDefault={opensByDefault(entries, index)}
               viewed={isViewed(viewed, entry)}
               changedSinceViewed={changedSinceViewed(viewed, entry)}
-              onOpenChange={(open) => reading.open.set(path, open)}
+              onOpenChange={openChange}
               revealed={reveal?.path === path ? reveal.count : undefined}
               onContentReady={
                 reveal?.path === path ? scrollToRevealed : undefined
               }
-              onViewedChange={(value) => setViewed(entry, value)}
-              onPreview={() => controller.open({ kind: "file", task, path })}
+              onViewedChange={setViewed}
+              onPreview={preview}
             />
           );
         })}

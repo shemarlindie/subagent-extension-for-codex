@@ -1,5 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
+  memo,
   type TransitionEvent,
   useEffect,
   useId,
@@ -17,6 +18,7 @@ import { MotionContent } from "../../../shared/components/motion/motion-content"
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
+import { reuseUnchanged } from "../../../shared/utils/reuse-unchanged";
 import { useNow } from "../../../shared/utils/use-now";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
@@ -57,7 +59,7 @@ interface ActivityGroupCardProps {
   preferences?: UserDateTimePreferences;
 }
 
-export function ActivityGroupCard({
+function GroupCard({
   group,
   first,
   last,
@@ -363,3 +365,12 @@ export function ActivityGroupCard({
     </Collapsible.Root>
   );
 }
+
+/**
+ * Grouping builds new groups on every render, so the card compares its props
+ * by contents and renders only when its own group or settings change.
+ */
+export const ActivityGroupCard = memo(
+  GroupCard,
+  (previous, next) => reuseUnchanged(previous, next) === previous,
+);

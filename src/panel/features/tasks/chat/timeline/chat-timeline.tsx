@@ -145,7 +145,7 @@ export function ChatTimeline({
                   if (item.kind === "message") {
                     row = (
                       <ChatMessageView
-                        task={task}
+                        taskId={task.id}
                         message={item.message}
                         worker={worker}
                         outcome={responseOutcome(item, visibleItems[index + 1])}
