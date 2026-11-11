@@ -13,6 +13,7 @@ import { errorMessage } from "../../shared/utils/error-message";
 import { formatUserDateTime } from "../../shared/utils/user-date-time";
 import type { settingsSearch } from "./search/settings-search";
 import { SettingsClaudeVersion } from "./settings-claude-version";
+import { SettingsDataDirectory } from "./settings-data-directory";
 import type { SettingsSectionView } from "./settings-sections";
 
 export function aboutSection(
@@ -21,7 +22,7 @@ export function aboutSection(
   ready: boolean,
 ): SettingsSectionView {
   const matches = search.matches(
-    "About extension version installation build commit local GitHub npm Claude Code CLI Agent SDK MCP Node platform runtime diagnostics update upgrade Homebrew native recheck",
+    "About extension version installation build commit local GitHub npm Claude Code CLI Agent SDK MCP Node platform runtime diagnostics update upgrade Homebrew native recheck data directory folder storage",
   );
 
   return {
@@ -242,6 +243,16 @@ function SettingsAbout() {
               ? "Codex plugin"
               : "Foreground process",
         },
+        {
+          label: "Data directory",
+          value: runtime.data_directory,
+          element: (
+            <SettingsDataDirectory
+              path={runtime.data_directory}
+              platform={runtime.platform}
+            />
+          ),
+        },
       ],
     },
   ];
@@ -283,8 +294,8 @@ function SettingsAbout() {
       <div className="settings-about-diagnostics">
         <CopyButton text={diagnostics} label="Copy diagnostics" />
         <p className="muted">
-          Version and runtime details for bug reports. Includes the CLI path
-          when available.
+          Version and runtime details for bug reports. Includes the data
+          directory and, when available, the CLI path.
         </p>
       </div>
     </div>

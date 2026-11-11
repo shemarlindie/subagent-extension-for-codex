@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
-import { aboutInfo } from "../../service/about.js";
+import { aboutInfo, openDataDirectory } from "../../service/about.js";
 import {
   composerMentionsEnabled,
   mentionSearchSchema,
@@ -36,6 +36,12 @@ export function userTools(
         "User interface only: extension build, SDK versions and local runtime diagnostics.",
       schema: z.object({ refresh: z.boolean().default(false) }),
       run: ({ refresh }) => aboutInfo(c, refresh),
+    }),
+    app_open_data_directory: tool({
+      description:
+        "User interface only: open the service data directory in the service host's file manager.",
+      schema: z.strictObject({}),
+      run: () => openDataDirectory(),
     }),
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
     ...(composerMentionsEnabled

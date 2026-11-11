@@ -60,6 +60,7 @@ const ICON_NAMES = [
   "triangle-down",
   "bug",
   "copy",
+  "external-link",
   "enter",
   "reply",
   "paper-plane",

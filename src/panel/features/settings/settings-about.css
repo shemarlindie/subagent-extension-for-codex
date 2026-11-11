@@ -76,16 +76,16 @@
   gap: 8px;
   font-size: 12px;
 }
-.settings-cli-version-row {
+.settings-about-action-row {
   align-items: center;
 }
-.settings-cli-version-value {
+.settings-about-action-value {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
-.settings-cli-upgrade-trigger {
+.settings-about-action-button {
   display: grid;
   place-items: center;
   flex: none;
@@ -93,7 +93,7 @@
   height: 24px;
   padding: 3px;
 }
-.settings-cli-upgrade-trigger[data-muted] {
+.settings-about-action-button[data-muted] {
   color: var(--muted);
 }
 .settings-cli-upgrade-trigger[data-warning] {

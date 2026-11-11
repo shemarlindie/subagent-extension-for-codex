@@ -19,7 +19,13 @@ export interface ExtensionBuildInfo {
 export interface AboutInfo {
   build: ExtensionBuildInfo;
   installation: "checkout" | "package";
-  runtime: { node: string; platform: string; arch: string; launcher: string };
+  runtime: {
+    node: string;
+    platform: string;
+    arch: string;
+    launcher: string;
+    data_directory: string;
+  };
   claude?: ProviderReadiness;
   /** The CLI release the bundled SDK pairs with. Only set when the CLI version is known. */
   claude_recommended?: { version: string; behind: boolean };
