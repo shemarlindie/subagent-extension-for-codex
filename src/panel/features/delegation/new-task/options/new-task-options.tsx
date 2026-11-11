@@ -15,9 +15,9 @@ import type {
   Worker,
 } from "../../../../app/state/types";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
-import type { DelegateScope } from "../../delegate-initial-values";
+import type { DelegateFormState } from "../../delegate-initial-values";
 import type { DelegateValues } from "../../delegate-values";
-import { type ProjectTargetState, workerChoice } from "../../delegation";
+import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
@@ -31,7 +31,7 @@ import { ReasoningChip, reasoningChipLabel } from "./reasoning-chip";
 
 type NewTaskOptionsProps = {
   newTask: NewTaskState;
-  state: ProjectTargetState & DelegateScope;
+  state: DelegateFormState;
 };
 
 type ResolvedOptions = ReturnType<typeof resolvedOptions>;

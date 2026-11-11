@@ -33,6 +33,11 @@ export const DELEGATE_FORM_FIELDS = [
   ...DELEGATE_SCOPE_FIELDS,
 ] as const;
 
+export type DelegateFormState = Pick<
+  Snapshot,
+  (typeof DELEGATE_FORM_FIELDS)[number]
+>;
+
 // Fields wait for the settings read, so these only fill the form's shape.
 const FALLBACK_DEFAULTS: Defaults = settingsDefaults("");
 

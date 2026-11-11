@@ -3,8 +3,8 @@ import { scalarText } from "../../../../shared/text";
 import type { NewTaskState } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
 import {
+  type DelegateFormState,
   delegateInitialValues,
-  type DelegateScope,
 } from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
 import {
@@ -56,7 +56,7 @@ export function profileValues(
  */
 export function newTaskInitialValues(
   newTask: NewTaskState,
-  state: ProjectTargetState & DelegateScope,
+  state: DelegateFormState,
 ): DelegateValues {
   const projects = newTaskProjects(state);
 
