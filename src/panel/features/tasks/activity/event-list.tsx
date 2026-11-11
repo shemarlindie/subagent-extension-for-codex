@@ -140,18 +140,30 @@ export const EventList = memo(function EventList({
                 preferences={preferences}
               />
             )}
-            {groups.map((group, index) => (
-              <ActivityGroupCard
-                key={group.id}
-                group={group}
-                first={index === 0 && !showRequest}
-                last={index === groups.length - 1}
-                span={thinkingSpan(group, events)}
-                running={running}
-                runtimeMs={runtimeMs}
-                preferences={preferences}
-              />
-            ))}
+            {groups.map((group, index) => {
+              const span = thinkingSpan(group, events);
+
+              // Each card gets only the task state it shows, so a status or
+              // runtime change renders the rows it affects.
+              return (
+                <ActivityGroupCard
+                  key={group.id}
+                  group={group}
+                  first={index === 0 && !showRequest}
+                  last={index === groups.length - 1}
+                  span={span}
+                  thinking={running && span?.end === null}
+                  runtimeMs={
+                    group.events.some(
+                      (event) => event.type === "task.completed",
+                    )
+                      ? runtimeMs
+                      : undefined
+                  }
+                  preferences={preferences}
+                />
+              );
+            })}
           </Timeline>
         ) : (
           <p className="help activity-empty">No activity recorded yet.</p>

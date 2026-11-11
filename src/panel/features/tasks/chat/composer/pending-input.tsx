@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { pendingInputKind } from "../../../../../shared/tasks/model.js";
 import { scalarText } from "../../../../../shared/text.js";
 import {
@@ -21,7 +23,9 @@ type PendingInputProps = { task: Task };
  * The worker's question or permission request at the end of Chat. Questions
  * render as cards and permissions include their review details and actions.
  */
-export function PendingInput({ task }: PendingInputProps) {
+export const PendingInput = memo(function PendingInput({
+  task,
+}: PendingInputProps) {
   const controller = useController();
   const busy = useSnapshot((state) => state.busy);
   const pending = task.pending_input;
@@ -68,4 +72,4 @@ export function PendingInput({ task }: PendingInputProps) {
       </Presence>
     </>
   );
-}
+});
