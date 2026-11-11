@@ -3,6 +3,7 @@ import {
   type ReactNode,
   type RefObject,
   useLayoutEffect,
+  useMemo,
 } from "react";
 
 import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
@@ -82,7 +83,15 @@ export function ChatTimeline({
     (item) => !(item.kind === "message" && waiting.has(item.id)),
   );
 
-  const draftItem = task && draftRow(task, draft, taskChat?.items);
+  // The same row while the shown draft is unchanged, so the streaming message
+  // renders only when a paragraph finishes.
+  const stored = taskChat?.items;
+
+  const draftItem = useMemo(
+    () => task && draftRow(task, draft, stored),
+    [task, draft, stored],
+  );
+
   const visibleItems = items && (draftItem ? [...items, draftItem] : items);
 
   const activity =

@@ -298,7 +298,7 @@ test("a draft cleared while a view is in flight stays until a later view's Chat 
     task_id: "a",
     message_id: "m",
     offset: 0,
-    text: "Hello",
+    text: "Hello\n\n",
   });
 
   const older = deferred<unknown>();

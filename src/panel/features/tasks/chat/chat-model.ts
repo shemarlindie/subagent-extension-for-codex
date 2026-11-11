@@ -95,7 +95,8 @@ export function draftRow(
 ): ChatMessage | undefined {
   const shown = draft?.task === task.id ? draft : task.draft;
   if (!shown || stored.some((item) => item.id === shown.message_id)) return;
-  const text = completeParagraphs(shown.text);
+  // The snapshot's draft holds its complete paragraphs already.
+  const text = shown === draft ? shown.text : completeParagraphs(shown.text);
   if (!text) return;
 
   return {
