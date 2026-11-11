@@ -55,6 +55,7 @@
   }
   /* Header actions share one menu so the project controls have room. */
   header .toolbar-inline,
+  header .task-rail-toggle,
   header #new-task {
     display: none;
   }

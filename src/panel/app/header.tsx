@@ -12,8 +12,13 @@ import { TooltipWrapper } from "../shared/components/tooltip";
 import { connectionTrouble } from "./state/connection";
 import { useController, useSnapshot } from "./state/controller-context";
 import { projectChoices } from "./state/selectors";
+import type { TaskRail } from "./task-layout";
 
-export function Header() {
+type HeaderProps = {
+  taskRail: Pick<TaskRail, "collapsed" | "toggle">;
+};
+
+export function Header({ taskRail }: HeaderProps) {
   const controller = useController(),
     state = useSnapshot(),
     blocked = !state.connected || state.busy,
@@ -69,8 +74,23 @@ export function Header() {
     </>
   );
 
+  const railLabel = taskRail.collapsed ? "Show task list" : "Hide task list";
+
   return (
     <header>
+      {/* Narrow panels switch between the list and a task, so CSS hides this. */}
+      <TooltipWrapper label={railLabel}>
+        <Button
+          variant="ghost"
+          className="toolbar-icon-button task-rail-toggle"
+          aria-label={railLabel}
+          aria-expanded={!taskRail.collapsed}
+          aria-controls="task-rail"
+          onClick={taskRail.toggle}
+        >
+          <Icon name="sidebar" size={14} />
+        </Button>
+      </TooltipWrapper>
       {/* The host tab or rail already shows the logo, so the title is text only. */}
       <div className="brand">
         <span>Delegated Work</span>
