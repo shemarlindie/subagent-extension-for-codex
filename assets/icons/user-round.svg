@@ -5,10 +5,12 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="2"
+  stroke-width="2.182"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <circle cx="12" cy="7" r="5" />
-  <path d="M3 22v-2a6 6 0 0 1 6-6h6a6 6 0 0 1 6 6v2" />
+  <circle cx="12" cy="6.545" r="5.455"></circle>
+  <path
+    d="M2.182 22.909v-2.182a6.545 6.545 0 0 1 6.545-6.545h6.545a6.545 6.545 0 0 1 6.545 6.545v2.182"
+  ></path>
 </svg>

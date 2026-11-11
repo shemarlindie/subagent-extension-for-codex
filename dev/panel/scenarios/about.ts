@@ -22,6 +22,7 @@ export const previewAbout = (
     platform: "darwin",
     arch: "arm64",
     launcher: "stdio",
+    data_directory: "/Users/avery/.local/share/subagent-extension-for-codex",
   },
   claude,
   claude_recommended: { version: "2.1.319", behind },

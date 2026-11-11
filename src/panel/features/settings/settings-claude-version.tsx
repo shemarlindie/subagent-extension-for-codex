@@ -69,9 +69,9 @@ export function SettingsClaudeVersion({
   }
 
   return (
-    <Collapsible.Root className="settings-cli-version-row">
+    <Collapsible.Root className="settings-about-action-row">
       <dt>Claude Code CLI</dt>
-      <dd className="settings-cli-version-value">
+      <dd className="settings-about-action-value">
         <span>{version}</span>
         {pending && <LoadingSpinner />}
         <TooltipWrapper
@@ -82,12 +82,13 @@ export function SettingsClaudeVersion({
         >
           <Collapsible.Trigger
             className={buttonClass("ghost", {
-              className: "settings-cli-upgrade-trigger",
+              className:
+                "settings-about-action-button settings-cli-upgrade-trigger",
             })}
             data-warning={tooOld || undefined}
             data-muted={current || undefined}
           >
-            <Icon name={upgradeIcon(tooOld, current)} size={16} />
+            <Icon name={upgradeIcon(tooOld, current)} size={13} />
           </Collapsible.Trigger>
         </TooltipWrapper>
       </dd>

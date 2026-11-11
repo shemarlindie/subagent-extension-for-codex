@@ -95,9 +95,9 @@ Removing the selected project returns the task list to **All projects**.
 ### About
 
 **Settings > About**, the last section, provides copyable diagnostics for bug
-reports, including the selected CLI path. Local commit and working tree details
-describe the build or source startup. Rebuild to update a built service's
-snapshot, or restart a service running from source.
+reports, including the selected CLI path and the data directory. Local commit
+and working tree details describe the build or source startup. Rebuild to update
+a built service's snapshot, or restart a service running from source.
 
 **Built at** shows the build time in local time. Copied diagnostics include its
 exact UTC timestamp. Source runs show **Not recorded**, since they have no
