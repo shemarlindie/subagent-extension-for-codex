@@ -539,7 +539,7 @@ if (scenario === "token") {
 
     assert.ok(ended, "Native budget verification timed out");
     assert.equal(ended.status, "failed", ended.error);
-    assert.match(ended.error, /error_max_budget_usd/);
+    assert.equal(ended.error_code, "cost_budget_exhausted", ended.error);
     assert.ok(ended.cost_usd >= limit);
     assert.equal(store.latestEvent(task.id, "agent.reply"), undefined);
 
