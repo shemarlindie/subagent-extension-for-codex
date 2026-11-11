@@ -39,6 +39,8 @@ import {
   type Thread,
   threadLabel,
   threadsOf,
+  urlSettings,
+  WIDTHS,
 } from "./host-helpers";
 import { connectPanel } from "./panel-bridge";
 
@@ -102,18 +104,16 @@ const defaults: Settings = {
   styles: "",
 };
 
-const widths = [
-  ["360", "360px"],
-  ["480", "480px"],
-  ["760", "760px"],
-  ["fill", "Fill"],
-];
-
 function loadSettings(): Settings {
+  const linked = urlSettings(location.search);
+
   try {
-    return settingsFrom(defaults, localStorage.getItem(storageKey));
+    return {
+      ...settingsFrom(defaults, localStorage.getItem(storageKey)),
+      ...linked,
+    };
   } catch {
-    return defaults;
+    return { ...defaults, ...linked };
   }
 }
 
@@ -559,7 +559,7 @@ export function Host() {
             value={settings.width}
             onChange={(e) => update({ width: e.target.value })}
           >
-            {widths.map(([value, label]) => (
+            {WIDTHS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
