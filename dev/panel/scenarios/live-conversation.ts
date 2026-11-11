@@ -11,8 +11,109 @@ const taskId = "preview-live-conversation";
 const firstReply =
   "I found the layout shift. The activity label changes height when it appears or wraps. I'll check a longer command next.";
 
-const finalReply =
-  "The status line now keeps its height as the worker changes activities.\n\n- Short labels fit on one line.\n- Long commands truncate and keep their full text on hover.\n- Streamed replies become saved messages before the next activity begins.";
+// The final reply streams the Markdown features Chat renders in parts: headings
+// repeated across sections, loose and nested lists, content and code indented
+// under an item, a table, a multi-paragraph quote, a task list, a code block
+// with a blank line, a rule, inline formatting and a footnote.
+const finalReply = `## Module 1: what changed
+
+The status line now keeps its height as the worker changes activities. Short labels fit on one line, and **long commands** truncate with \`text-overflow\` while keeping their full text on hover. See the [layout notes](https://example.com/layout-1) for the measurements. Prose like <StatusLine> stays literal.
+
+### Steps
+
+1. **Measure the shift.** Record the label's height on every activity change.
+
+   - Thinking and tool rows were 18px.
+   - Wrapped commands grew to 36px.
+
+2. **Fix the height.** Clamp the label to one line:
+
+   \`\`\`css
+   .status-line {
+     height: 18px;
+
+     overflow: hidden;
+   }
+   \`\`\`
+
+3. **Check narrow panels.** At 360px the clamp still holds.
+
+### Results
+
+| Case | Before | After |
+| --- | --- | --- |
+| Short label | 18px | 18px |
+| Wrapped command | 36px | 18px |
+| Compacting | 18px | 18px |
+
+> The worker's view no longer jumps when an activity starts.
+>
+> Replies that stream in become saved messages before the next activity begins.
+
+- [x] Height clamp
+- [x] Hover text
+- [ ] Narrow panel screenshot
+
+\`\`\`sh
+npm test -- --runInBand
+
+npm run test:e2e
+\`\`\`
+
+---
+
+
+## Module 2: what changed
+
+The status line now keeps its height as the worker changes activities. Short labels fit on one line, and **long commands** truncate with \`text-overflow\` while keeping their full text on hover. See the [layout notes](https://example.com/layout-2) for the measurements. Prose like <StatusLine> stays literal.
+
+### Steps
+
+1. **Measure the shift.** Record the label's height on every activity change.
+
+   - Thinking and tool rows were 18px.
+   - Wrapped commands grew to 36px.
+
+2. **Fix the height.** Clamp the label to one line:
+
+   \`\`\`css
+   .status-line {
+     height: 18px;
+
+     overflow: hidden;
+   }
+   \`\`\`
+
+3. **Check narrow panels.** At 360px the clamp still holds.
+
+### Results
+
+| Case | Before | After |
+| --- | --- | --- |
+| Short label | 18px | 18px |
+| Wrapped command | 36px | 18px |
+| Compacting | 18px | 18px |
+
+> The worker's view no longer jumps when an activity starts.
+>
+> Replies that stream in become saved messages before the next activity begins.
+
+- [x] Height clamp
+- [x] Hover text
+- [ ] Narrow panel screenshot
+
+\`\`\`sh
+npm test -- --runInBand
+
+npm run test:e2e
+\`\`\`
+
+---
+
+
+Nothing else in the layout moved, and the truncation keeps the start of each command.[^1]
+
+[^1]: Measured on the fixture host at 480px and 760px.`;
 
 export const liveConversationTask: Task = {
   ...taskBase,

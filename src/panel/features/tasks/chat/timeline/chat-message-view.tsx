@@ -1,10 +1,11 @@
-import { memo, useRef } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { RequestAttachments } from "../../../attachments/request-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
+import { markdownParts } from "../drafts/complete-paragraphs";
 import { AskReplyButton } from "./ask-reply-button";
 import { MarkUnreadButton } from "./mark-unread-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
@@ -37,6 +38,15 @@ export const ChatMessageView = memo(function ChatMessageView({
   outcome,
 }: ChatMessageViewProps) {
   const ref = useRef<HTMLElement>(null);
+  // A message that streams in keeps rendering in parts once stored, so each
+  // finished paragraph parses once and the stored text only adds its last part.
+  const [inParts] = useState(Boolean(streaming));
+
+  const content = useMemo(
+    () => (inParts ? markdownParts(message.text) : message.text),
+    [inParts, message.text],
+  );
+
   const contentKey = `${message.text}\0${streaming ?? false}\0${outcome?.id ?? ""}`;
   useAnimatedHeight(ref, contentKey, arriving);
   useNewBlocksFade(ref, contentKey);
@@ -70,7 +80,7 @@ export const ChatMessageView = memo(function ChatMessageView({
       {message.from === "parent" && (
         <div className="chat-sender">Parent agent</div>
       )}
-      {messageBody(message)}
+      {messageBody(message, content)}
       {taskId && message.kind === "request" && message.attachments?.length ? (
         // Keyed by task, so another task's row fits and folds afresh.
         <RequestAttachments
@@ -100,7 +110,10 @@ function messageLabel(message: ConversationMessage, worker: string) {
   return "You";
 }
 
-function messageBody(message: ConversationMessage) {
+function messageBody(
+  message: ConversationMessage,
+  content: string | readonly string[],
+) {
   if (message.from === "user") {
     return <p className="chat-bubble">{message.text}</p>;
   }
@@ -116,7 +129,7 @@ function messageBody(message: ConversationMessage) {
 
   return (
     <div className="chat-worker-text">
-      <MarkdownView content={message.text} />
+      <MarkdownView content={content} />
     </div>
   );
 }

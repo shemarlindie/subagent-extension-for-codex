@@ -9,8 +9,19 @@ import { MarkdownLink } from "./markdown-link";
 import { MarkdownPre } from "./markdown-pre";
 
 type MarkdownViewProps = {
-  /** Markdown; embedded HTML shows as literal text, so prose like `<Foo>` stays visible. */
+  /**
+   * Markdown; embedded HTML shows as literal text, so prose like `<Foo>` stays
+   * visible. Parts render one by one, so a part that stays the same isn't
+   * parsed again. They must render as their joined text would, except that a
+   * heading repeated in another part gets the same id.
+   */
+  content: string | readonly string[];
+};
+
+type MarkdownPartProps = {
   content: string;
+  prefix: string;
+  rehypePlugins: Options["rehypePlugins"];
 };
 
 const COMPONENTS: Components = {
@@ -36,16 +47,36 @@ export const MarkdownView = memo(function MarkdownView({
     [prefix],
   );
 
+  const parts = typeof content === "string" ? [content] : content;
+
   return (
     <div className="markdown-body" data-id-prefix={prefix}>
-      <Markdown
-        remarkPlugins={REMARK_PLUGINS}
-        rehypePlugins={rehypePlugins}
-        remarkRehypeOptions={{ clobberPrefix: prefix }}
-        components={COMPONENTS}
-      >
-        {content}
-      </Markdown>
+      {parts.map((part, index) => (
+        <MarkdownPart
+          // Parts only grow at the end, so an index names the same part.
+          key={index}
+          content={part}
+          prefix={prefix}
+          rehypePlugins={rehypePlugins}
+        />
+      ))}
     </div>
+  );
+});
+
+const MarkdownPart = memo(function MarkdownPart({
+  content,
+  prefix,
+  rehypePlugins,
+}: MarkdownPartProps) {
+  return (
+    <Markdown
+      remarkPlugins={REMARK_PLUGINS}
+      rehypePlugins={rehypePlugins}
+      remarkRehypeOptions={{ clobberPrefix: prefix }}
+      components={COMPONENTS}
+    >
+      {content}
+    </Markdown>
   );
 });
