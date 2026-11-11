@@ -1,12 +1,17 @@
 const FENCE = /^\s*(`{3,}|~{3,})(.*)/;
 
+// Indented content and list items can belong to the block before a blank line.
+const CONTINUATION = /^(\s|[-*+](\s|$)|\d{1,9}[.)](\s|$))/;
+
+// Link and footnote definitions apply to the whole text.
+const DEFINITION = /^ {0,3}\[[^\]]+\]:/m;
+
 /**
- * The text up to its last finished paragraph: the last blank line outside a
- * code fence. Blank lines inside a fence belong to the code, so a code block
- * shows once it closes and a blank line follows.
+ * Where each blank line outside a code fence starts. Blank lines inside a
+ * fence belong to the code.
  */
-export function completeParagraphs(text: string) {
-  let end = 0;
+function blankLines(text: string) {
+  const blanks: number[] = [];
   let fence: string | undefined;
 
   // Only lines ending in a newline are finished. The last line may still grow.
@@ -28,11 +33,44 @@ export function completeParagraphs(text: string) {
     } else if (marker) {
       fence = marker;
     } else if (!line.trim()) {
-      end = start;
+      blanks.push(start);
     }
 
     start = next + 1;
   }
 
-  return text.slice(0, end).trimEnd();
+  return blanks;
+}
+
+/**
+ * The text up to its last finished paragraph: the last blank line outside a
+ * code fence. A code block shows once it closes and a blank line follows.
+ */
+export function completeParagraphs(text: string) {
+  return text.slice(0, blankLines(text).at(-1) ?? 0).trimEnd();
+}
+
+/**
+ * The text split where its parts render the same separately as together, so a
+ * streamed message parses each finished part once. A part ends at a blank line
+ * outside a code fence, unless indented content or a list item follows. Text
+ * with a link or footnote definition stays whole.
+ */
+export function markdownParts(text: string) {
+  if (DEFINITION.test(text)) return [text];
+  const parts: string[] = [];
+  let start = 0;
+
+  for (const blank of blankLines(text)) {
+    const after = blank + /^(?:[ \t]*\n)*/.exec(text.slice(blank))![0].length;
+
+    if (blank > start && !CONTINUATION.test(text.slice(after))) {
+      parts.push(text.slice(start, blank).trimEnd());
+      start = after;
+    }
+  }
+
+  const rest = text.slice(start).trimEnd();
+
+  return rest ? [...parts, rest] : parts;
 }
