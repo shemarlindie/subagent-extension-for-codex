@@ -41,7 +41,11 @@ different.
 ## Scope and host controls
 
 The dev host saves its settings in browser storage. Changing a setting
-relaunches the panel.
+relaunches the panel. A link can also set **Data**, **Launch**, **Theme**,
+**Display** and **Width** with the `data`, `launch`, `theme`, `display` and
+`width` params, using the toolbar's values. Each load applies them and saves
+them. With the panel's `dw_*` params, one link opens a view, such as
+`/?display=fullscreen&launch=global&dw_task=<id>&dw_tab=chat`.
 
 | Control                               | Use                                                                                                                                                                                                                                                                                 |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

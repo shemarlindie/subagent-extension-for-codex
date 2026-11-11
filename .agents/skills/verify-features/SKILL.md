@@ -81,17 +81,20 @@ such as `chromium`.
 The dev host embeds the panel in an iframe, so use
 `page.frameLocator("iframe").first()` for panel elements. The host toolbar's
 selects sit inside labels you can target with `getByLabel`, without
-`exact: true`. Pass these option values to `selectOption`:
+`exact: true`. Pass these option values to `selectOption`, or set them in the
+link with the URL param:
 
-| Label   | Values                      |
-| ------- | --------------------------- |
-| Data    | `fixtures`, `live`          |
-| Launch  | `thread`, `global`          |
-| Theme   | `light`, `dark`             |
-| Display | `inline`, `fullscreen`      |
-| Width   | `360`, `480`, `760`, `fill` |
+| Label   | URL param | Values                      |
+| ------- | --------- | --------------------------- |
+| Data    | `data`    | `fixtures`, `live`          |
+| Launch  | `launch`  | `thread`, `global`          |
+| Theme   | `theme`   | `light`, `dark`             |
+| Display | `display` | `inline`, `fullscreen`      |
+| Width   | `width`   | `360`, `480`, `760`, `fill` |
 
-A fresh browser starts with **Launch: Thread** and **Display: inline**. Use
+Open a view directly with one link that adds the panel's `dw_*` params, such as
+`/?display=fullscreen&launch=global&dw_task=<id>&dw_tab=chat`. Without params, a
+fresh browser starts with **Launch: Thread** and **Display: inline**. Use
 **Launch: Global** with the **All** filter to list every fixture task, and
 **Display: fullscreen** to open Settings and the task inspector. Filter names
 include a count, so match **All** with `getByRole("radio", { name: /^All,/ })`.

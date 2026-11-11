@@ -69,6 +69,39 @@ export function normalizeCwd(value: string) {
   return url.href;
 }
 
+export const WIDTHS = [
+  ["360", "360px"],
+  ["480", "480px"],
+  ["760", "760px"],
+  ["fill", "Fill"],
+] as const;
+
+// Each URL param names a toolbar choice and the values it accepts.
+const URL_SETTINGS: Record<string, [keyof Settings, readonly string[]]> = {
+  data: ["source", ["fixtures", "live"]],
+  launch: ["launch", ["thread", "global"]],
+  theme: ["theme", ["light", "dark"]],
+  display: ["displayMode", ["inline", "fullscreen"]],
+  width: ["width", WIDTHS.map(([value]) => value)],
+};
+
+/**
+ * Toolbar choices a link sets, such as `?display=fullscreen&launch=global`.
+ * They apply over the saved settings and are saved with them. Unknown values
+ * are ignored.
+ */
+export function urlSettings(search: string): Partial<Settings> {
+  const params = new URLSearchParams(search);
+
+  return Object.fromEntries(
+    Object.entries(URL_SETTINGS).flatMap(([param, [key, values]]) => {
+      const value = params.get(param);
+
+      return value && values.includes(value) ? [[key, value]] : [];
+    }),
+  );
+}
+
 /** Saved settings over the defaults; unreadable storage falls back to them. */
 export function settingsFrom(defaults: Settings, stored: string | null) {
   try {
