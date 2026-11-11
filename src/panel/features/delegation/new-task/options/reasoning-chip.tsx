@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { withEffortCap } from "../../../../../shared/providers/policy";
 import { titleCase } from "../../../../../shared/text";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import { useProfileChoice } from "./use-profile-choice";
@@ -11,6 +12,8 @@ type ReasoningChipProps = {
   inherited?: string;
   /** Says when a pick isn't saved. */
   footer?: string;
+  /** The highest level the organization allows, if it limits reasoning. */
+  cap?: string;
   loading: boolean;
   disabled: boolean;
 };
@@ -32,6 +35,7 @@ export function ReasoningChip({
   supported,
   inherited,
   footer,
+  cap,
   loading,
   disabled,
 }: ReasoningChipProps) {
@@ -65,11 +69,14 @@ export function ReasoningChip({
           label: inherited ? `Default (${inherited})` : "Default",
           chipLabel: reasoningChipLabel("default", inherited),
         },
-        ...supported.map((level) => ({
-          value: level,
-          label: titleCase(level),
-          chipLabel: reasoningChipLabel(level),
-        })),
+        ...withEffortCap(
+          supported.map((level) => ({
+            value: level,
+            label: titleCase(level),
+            chipLabel: reasoningChipLabel(level),
+          })),
+          cap,
+        ),
       ]}
     />
   );

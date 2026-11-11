@@ -112,6 +112,16 @@ const setsEffort = (policy: Settings) =>
     ({ effortLevel }) => effortLevel,
   );
 
+/** Each model's own reasoning cap, when policy sets any. */
+function effortCaps(policy: Settings) {
+  const caps = Object.entries(policy.modelSettings ?? {}).flatMap(
+    ([model, { maxEffortLevel }]) =>
+      maxEffortLevel ? [[model, maxEffortLevel]] : [],
+  );
+
+  return caps.length ? { model_max_effort: Object.fromEntries(caps) } : {};
+}
+
 /**
  * The Default entry as the model it runs. Claude Code's own description
  * follows an org's allowlist, and misses a model that settings or policy set.
@@ -186,6 +196,8 @@ async function policyFrom(
     ...(setsEffort(policy) && applied?.effort
       ? { default_effort: applied.effort }
       : {}),
+    ...(policy.maxEffortLevel ? { max_effort: policy.maxEffortLevel } : {}),
+    ...effortCaps(policy),
     notes: policyNotes(policy),
   };
 }

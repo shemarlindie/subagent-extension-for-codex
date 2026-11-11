@@ -50,6 +50,7 @@ const previewOrgPolicy = (
   available_models_match: "prefix",
   default_model: "Sonnet 5.5",
   default_effort: "low",
+  max_effort: "medium",
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 });
 

@@ -1,5 +1,11 @@
 import { withClaudePolicy } from "../providers/claude/settings-policy.js";
-import { modelAllowed } from "../providers/policy.js";
+import {
+  aboveEffortCap,
+  effortCap,
+  modelAllowed,
+  resolvedModel,
+  withEffortCap,
+} from "../providers/policy.js";
 import {
   providerApprovalRows,
   providerRestrictionSections,
@@ -102,9 +108,13 @@ export function modelScope(
       ? {}
       : { provider, profile: providerScope ? undefined : scope };
 
-  const effectiveModel = resolveModelDefaults(values, chain).model ?? "default";
-
   const catalog = catalogs.find((item) => item.provider === provider);
+
+  // The org's default model outranks saved ones.
+  const effectiveModel =
+    (!catalog?.policy?.default_model &&
+      resolveModelDefaults(values, chain).model) ||
+    "default";
 
   const metadata = catalog?.models?.find(
     (model) => model.value === effectiveModel,
@@ -133,15 +143,10 @@ export function modelScope(
       ]
     : undefined;
 
-  const effortLevels =
-    providerScope && levels !== undefined
-      ? [
-          ...new Set([
-            ...levels,
-            ...(savedEffort === "default" ? [] : [savedEffort]),
-          ]),
-        ]
-      : [...reasoningLevels];
+  const cap = effortCap(
+    catalog?.policy,
+    resolvedModel(catalog?.models ?? [], effectiveModel),
+  );
 
   return {
     modelPath,
@@ -152,14 +157,45 @@ export function modelScope(
     levels,
     modelChoices,
     modelExcluded: !modelAllowed(catalog?.policy, choices, saved),
-    effortChoices: [
-      { value: "default", label: "Inherit" },
-      ...effortLevels.map((level) => ({ value: level, label: level })),
-    ],
+    ...effortScope(levels, providerScope, savedEffort, cap),
+  };
+}
+
+/**
+ * A scope's effort choices: a provider's offers the levels its model
+ * supports, when known, and others offer all of them. Levels above the
+ * org's cap are locked.
+ */
+function effortScope(
+  levels: readonly string[] | undefined,
+  providerScope: boolean,
+  savedEffort: string,
+  cap: string | undefined,
+) {
+  const choices =
+    providerScope && levels
+      ? [
+          ...new Set([
+            ...levels,
+            ...(savedEffort === "default" ? [] : [savedEffort]),
+          ]),
+        ]
+      : [...reasoningLevels];
+
+  return {
+    effortChoices: withEffortCap(
+      [
+        { value: "default", label: "Inherit" },
+        ...choices.map((level) => ({ value: level, label: level })),
+      ],
+      cap,
+    ),
+    // Claude Code lowers a saved effort above the cap.
+    effortLowered: aboveEffortCap(savedEffort, cap) ? cap : undefined,
     unsupported:
       levels !== undefined &&
       savedEffort !== "default" &&
-      !levels.some((level) => level === savedEffort),
+      !levels.includes(savedEffort),
   };
 }
 
@@ -189,6 +225,11 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         label: `${label} reasoning`,
         options: info.effortChoices,
         unsupported: info.unsupported,
+        ...(info.effortLowered
+          ? {
+              warning: `New tasks run your saved reasoning at ${titleCase(info.effortLowered)}, your organization's limit.`,
+            }
+          : {}),
       },
     };
   };

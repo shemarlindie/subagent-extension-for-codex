@@ -3,6 +3,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata";
 import {
+  aboveEffortCap,
   allowedPermissionMode,
   modelAllowed,
   withBlockedOptions,
@@ -107,6 +108,7 @@ function resolvedOptions(
     allowedMode: allowedPermissionMode(policy, mode),
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
+    cap: resolved?.cap,
     modelsFooter: modelsFooter(workerInfo),
     reasoningFooter: policy?.default_effort ? ORG_DEFAULT_NOTE : undefined,
     // The model and reasoning chips edit the profile's settings, so Default
@@ -163,7 +165,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     name: ["worker", "model", "reasoning_effort", "permission_mode"],
   });
 
-  const [worker, model, , mode] = values;
+  const [worker, model, reasoning, mode] = values;
 
   // A draft that already overrides the profile opens with its settings shown.
   // Reasoning stays blank until settings load.
@@ -190,7 +192,8 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     busy || statuses.settings !== "ready" || statuses.workers !== "ready";
 
   const resolved = resolvedOptions(newTask, state, worker, model, mode);
-  const { modelExcluded, allowedMode } = resolved;
+  const { modelExcluded, allowedMode, cap } = resolved;
+  const capped = aboveEffortCap(reasoning, cap);
 
   // A saved model policy excludes shows as what will run. Sent blank, the
   // service falls back from it and says so in Chat.
@@ -199,6 +202,12 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     setValue("model", "");
     setValue("reasoning_effort", "default");
   }, [modelExcluded, setValue]);
+
+  // A saved level above the org's cap would be sent as a choice, which fails.
+  // Default still runs it, lowered by Claude Code.
+  useEffect(() => {
+    if (capped) setValue("reasoning_effort", "default");
+  }, [capped, setValue]);
 
   // A restored draft or late policy can leave a blocked mode, which won't run.
   useEffect(() => {
@@ -243,6 +252,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
             supported={resolved.supported}
             inherited={resolved.reasoning}
             footer={resolved.reasoningFooter}
+            cap={resolved.cap}
             loading={loading}
             disabled={disabled}
           />

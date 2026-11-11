@@ -639,6 +639,49 @@ test("the org's default model and reasoning outrank saved ones, and a request's 
   assert.equal(task.reasoning_effort, "xhigh");
 });
 
+test("a reasoning level a request names above the org's cap fails, and a saved one starts", async () => {
+  const { c, start } = await underPolicy(
+    async () => ({
+      managed: true,
+      blocked: [],
+      notes: [],
+      max_effort: "high",
+      model_max_effort: { "claude-haiku-5-5": "low" },
+    }),
+    [
+      {
+        value: "default",
+        resolvedModel: "claude-opus-5-5",
+        displayName: "Default",
+        description: "",
+      },
+      {
+        value: "haiku",
+        resolvedModel: "claude-haiku-5-5",
+        displayName: "Haiku",
+        description: "",
+      },
+    ],
+  );
+
+  await assert.rejects(
+    start({ reasoning_effort: "xhigh" }),
+    /Your organization limits reasoning to High/,
+  );
+
+  // The model's own cap applies.
+  await assert.rejects(
+    start({ model: "haiku", reasoning_effort: "medium" }),
+    /limits reasoning to Low/,
+  );
+
+  c.settings.update("alice", {
+    set: { models: { global: { reasoning_effort: "xhigh" } } },
+  });
+
+  assert.equal((await start({})).reasoning_effort, "xhigh");
+});
+
 test("failed discovery blocks no start", async () => {
   const { start } = await underPolicy(() =>
     Promise.reject(new Error("Discovery failed")),

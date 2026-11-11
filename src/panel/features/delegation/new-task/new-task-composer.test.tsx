@@ -303,6 +303,42 @@ test("under the org's defaults the composer starts on them, and a pick stays wit
   });
 });
 
+test("a saved level above the org's cap goes out as Default", async () => {
+  const { view, user, start } = setup(
+    {
+      ...ready,
+      defaults: withSetting(
+        ready.defaults!,
+        "models.profiles.implementer.reasoning_effort",
+        "high",
+      ),
+    },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [],
+            max_effort: "medium",
+            notes: [],
+          },
+        },
+      ],
+    },
+  );
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Ship it{Enter}",
+  );
+
+  await waitFor(() => assert.equal(start.mock.calls.length, 1));
+  expect(start.mock.calls[0]?.[0].reasoning_effort).toBe("default");
+});
+
 test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
   const { view, user, start } = setup();
 

@@ -1,4 +1,9 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
+import {
+  aboveEffortCap,
+  effortCap,
+  effortCapReason,
+} from "../../../shared/providers/policy";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
@@ -43,10 +48,8 @@ export function modelDefaults(
   // Under the org's model, a blank choice runs Default.
   const inheritedValue = org.model ? undefined : saved.model;
 
-  const metadata = workerInfo?.models?.find(
-    (item) =>
-      item.value === (selectedModel.trim() || inheritedValue || "default"),
-  );
+  const runs = selectedModel.trim() || inheritedValue || "default";
+  const metadata = workerInfo?.models?.find((item) => item.value === runs);
 
   const supported =
     metadata?.supportsEffort === false
@@ -64,6 +67,7 @@ export function modelDefaults(
     workerInfo,
     metadata,
     supported,
+    cap: effortCap(workerInfo?.policy, metadata?.resolvedModel ?? runs),
   };
 }
 
@@ -75,9 +79,13 @@ export function validateReasoning(
     reasoning,
     metadata,
     supported,
+    cap,
   }: ReturnType<typeof modelDefaults>,
 ) {
   const resolved = value === "default" ? reasoning : value;
+
+  // Only a choice. Default inherits a saved effort, which Claude Code lowers.
+  if (cap && aboveEffortCap(value, cap)) return effortCapReason(cap);
 
   return (
     !resolved ||

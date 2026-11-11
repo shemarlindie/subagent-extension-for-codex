@@ -1,8 +1,12 @@
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import { optionsForProvider } from "../../../../shared/providers/options.js";
 import {
+  aboveEffortCap,
   blockedReason,
+  effortCap,
+  effortCapReason,
   modelAllowed,
+  resolvedModel,
 } from "../../../../shared/providers/policy.js";
 import type { ProviderPolicy } from "../../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
@@ -126,18 +130,27 @@ export async function checkStartPolicy(
   }
 
   const start = withOrgDefaults(provider, input, policy, requested);
-  if (!start.model) return start;
-
   const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
-  if (modelAllowed(policy, models, start.model)) return start;
 
-  if (requested.model) throw reject("model", start.model, MODEL_NOT_ALLOWED);
+  const excluded = !!start.model && !modelAllowed(policy, models, start.model);
 
-  return {
-    ...start,
-    model: undefined,
-    limited: modelLimit(start.model),
-  };
+  if (excluded && requested.model) {
+    throw reject("model", start.model!, MODEL_NOT_ALLOWED);
+  }
+
+  const fitted = excluded
+    ? { ...start, model: undefined, limited: modelLimit(start.model!) }
+    : start;
+
+  // A saved effort above the cap starts, and Claude Code lowers it.
+  const effort = fitted.reasoning_effort ?? "";
+  const cap = effortCap(policy, resolvedModel(models, fitted.model));
+
+  if (requested.effort && cap && aboveEffortCap(effort, cap)) {
+    throw reject("reasoning_effort", effort, effortCapReason(cap));
+  }
+
+  return fitted;
 }
 
 /**

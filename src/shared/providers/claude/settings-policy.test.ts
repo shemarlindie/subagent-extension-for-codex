@@ -207,3 +207,37 @@ test("the org's default model locks Global, Claude and profile rows, and reasoni
     "Your saved reasoning, High, applies again if your organization stops setting a default.",
   );
 });
+
+test("the org's reasoning cap locks higher levels and warns on a saved one above it", () => {
+  const capped = { ...policy, max_effort: "high" };
+
+  const all = sections(
+    { models: { providers: { claude: { reasoning_effort: "xhigh" } } } },
+    capped,
+  );
+
+  const claude = scopes(all).claude;
+
+  assert.deepEqual(
+    claude?.effort.options
+      .filter(({ disabled }) => disabled)
+      .map(({ value }) => value),
+    ["xhigh", "max"],
+  );
+
+  assert.equal(
+    claude?.effort.warning,
+    "New tasks run your saved reasoning at High, your organization's limit.",
+  );
+
+  assert.equal(scopes(all).global?.effort.warning, undefined);
+
+  assert.ok(
+    all
+      .find(({ id }) => id === "organization-policy")
+      ?.facts?.some(
+        ({ label, detail }) =>
+          label === "Reasoning" && detail === "Limited to High.",
+      ),
+  );
+});

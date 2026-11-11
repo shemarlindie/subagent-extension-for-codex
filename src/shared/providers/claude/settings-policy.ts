@@ -142,8 +142,31 @@ function policyFacts(policy: ProviderPolicy) {
           },
         ]
       : []),
+    ...(reasoningLimit(policy)
+      ? [{ label: "Reasoning", detail: reasoningLimit(policy)! }]
+      : []),
     ...policy.notes,
   ];
+}
+
+/** The org's reasoning caps in words, such as "Limited to High, and Low for opus." */
+function reasoningLimit({ max_effort, model_max_effort }: ProviderPolicy) {
+  const all = max_effort && max_effort !== "max" ? titleCase(max_effort) : "";
+
+  // A model's `max` only lifts a top-level cap.
+  const own = Object.entries(model_max_effort ?? {})
+    .filter(([, level]) => all || level !== "max")
+    .map(([model, level]) =>
+      level === "max"
+        ? `no limit for ${model}`
+        : `${titleCase(level)} for ${model}`,
+    );
+
+  if (!all) return own.length ? `Limited to ${own.join(", ")}.` : undefined;
+
+  return own.length
+    ? `Limited to ${all}, and ${own.join(", ")}.`
+    : `Limited to ${all}.`;
 }
 
 /** Settings sections with Claude's org policy applied. */
