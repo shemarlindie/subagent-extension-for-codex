@@ -12,7 +12,7 @@
   overflow: clip;
 }
 .page-frame.settings-page {
-  --settings-search-top: calc(var(--settings-heading-height, 54px) + 10px);
+  --settings-search-top: calc(var(--settings-heading-height, 54px) + 12px);
   --settings-tabs-top: calc(
     var(--settings-search-top) + var(--settings-search-height, 36px) + 16px
   );
@@ -20,11 +20,13 @@
   display: flex;
   flex-direction: column;
 }
+/* The search toolbar owns the gap so it pins without first scrolling. */
 .settings-page .page-frame-heading {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 .settings-page .page-frame-inner {
   display: flex;
+  flex: none;
   flex-direction: column;
 }
 .settings-page .page-frame-content {
@@ -231,9 +233,6 @@
 }
 .settings-sections-layer {
   min-width: 0;
-}
-.settings-loading-body {
-  gap: 12px;
 }
 .settings-loading-error {
   display: grid;
@@ -514,8 +513,21 @@ input[type="number"]::-webkit-inner-spin-button {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding-bottom: 16px;
+  /* A margin keeps the gap transparent, so content scrolls up to the field. */
+  margin-bottom: 16px;
   background: var(--bg);
+}
+/* Horizontal tabs pin under the search, so the gap must hide content there. */
+@media (max-width: 640px) {
+  .page-frame.settings-page {
+    --settings-tabs-top: calc(
+      var(--settings-search-top) + var(--settings-search-height, 36px) + 8px
+    );
+  }
+  .settings-search-toolbar {
+    margin-bottom: 0;
+    padding-bottom: 8px;
+  }
 }
 .settings-search-row {
   display: contents;
@@ -562,7 +574,7 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .settings-page .settings-search-toolbar {
   top: var(--settings-heading-height, 54px);
-  padding-top: 10px;
+  padding-top: 12px;
 }
 .settings-page .settings-section-tabs .settings-section-tabs-list {
   top: var(--settings-tabs-top);

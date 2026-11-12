@@ -303,7 +303,7 @@ export function SettingsForm({
     ),
   });
 
-  sectionViews.push(aboutSection(search, selectedSection, !loading));
+  sectionViews.push(aboutSection(search, selectedSection));
 
   const activeSectionId = activeSection(selectedSection, sectionViews);
   const matchingSections = sectionViews.filter((section) => !section.hidden);
@@ -372,7 +372,7 @@ export function SettingsForm({
         </Collapsible.Panel>
       </Collapsible.Root>
       <fieldset
-        className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
+        className="settings-form-body"
         disabled={importing}
         aria-label="Settings values"
       >

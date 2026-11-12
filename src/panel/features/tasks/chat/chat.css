@@ -20,6 +20,9 @@ body[data-expanded-panel="true"]
   min-height: 0;
 }
 .chat-timeline {
+  /* Contain absolute descendants, such as hidden footnote headings, so they
+     can't extend the outer task view's scroll area. */
+  position: relative;
   /* Preserve a useful scroll area before the chat reaches its flex height. */
   display: flex;
   flex-direction: column;
