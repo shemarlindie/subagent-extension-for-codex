@@ -570,7 +570,7 @@ test("a saved mode that became blocked still starts, as Claude Code falls back i
   );
 });
 
-test("a saved effort the default can't run gives way with the saved model", async () => {
+test("a saved effort the model can't run gives way, and one a request names fails", async () => {
   const { c, start } = await underPolicy(
     async () => orgPolicy,
     [
@@ -587,15 +587,113 @@ test("a saved effort the default can't run gives way with the saved model", asyn
     set: { models: { global: { model: "opus", reasoning_effort: "xhigh" } } },
   });
 
-  const task = await start({});
+  // With the saved model that gave way, then on the default itself.
+  let task = await start({});
 
   assert.ok(!task.model);
+  assert.ok(!task.reasoning_effort);
+
+  c.settings.update("alice", { set: { models: { global: { model: "" } } } });
+  task = await start({});
   assert.ok(!task.reasoning_effort);
 
   await assert.rejects(
     start({ reasoning_effort: "xhigh" }),
     /does not support xhigh reasoning/,
   );
+});
+
+test("the org's default model and reasoning take Global's place, and saved Claude and profile choices win", async () => {
+  const models: ModelChoice[] = [
+    { value: "default", displayName: "Default", description: "" },
+    { value: "opus", displayName: "Opus", description: "" },
+  ];
+
+  const orgDefaults = {
+    managed: true,
+    blocked: [],
+    notes: [],
+    default_model: { id: "claude-sonnet-5-5", name: "Sonnet" },
+  };
+
+  let policy: ProviderPolicy = orgDefaults;
+  const { c, start } = await underPolicy(async () => policy, models);
+
+  c.settings.update("alice", {
+    set: {
+      models: {
+        // Claude can't run Minimal, which only fails a start it applies to.
+        global: { model: "haiku", reasoning_effort: "minimal" },
+        profiles: { implementer: { reasoning_effort: "high" } },
+      },
+    },
+  });
+
+  // Model and reasoning apply separately.
+  let task = await start({});
+  assert.ok(!task.model);
+  assert.equal(task.reasoning_effort, "high");
+
+  c.settings.update("alice", {
+    set: {
+      models: {
+        providers: { claude: { model: "opus" } },
+        profiles: { implementer: { reasoning_effort: "default" } },
+      },
+    },
+  });
+
+  policy = { ...orgDefaults, default_effort: "medium" };
+  task = await start({});
+  assert.equal(task.model, "opus");
+  assert.ok(!task.reasoning_effort);
+
+  task = await start({ model: "opus", reasoning_effort: "xhigh" });
+  assert.equal(task.model, "opus");
+  assert.equal(task.reasoning_effort, "xhigh");
+});
+
+test("a reasoning level a request names above the org's cap fails, and a saved one starts", async () => {
+  const { c, start } = await underPolicy(
+    async () => ({
+      managed: true,
+      blocked: [],
+      notes: [],
+      max_effort: "high",
+      model_max_effort: { "claude-haiku-5-5": "low" },
+    }),
+    [
+      {
+        value: "default",
+        resolvedModel: "claude-opus-5-5",
+        displayName: "Default",
+        description: "",
+      },
+      {
+        value: "haiku",
+        resolvedModel: "claude-haiku-5-5",
+        displayName: "Haiku",
+        description: "",
+      },
+    ],
+  );
+
+  await assert.rejects(
+    start({ reasoning_effort: "xhigh" }),
+    /Your organization limits reasoning to High/,
+  );
+
+  // The model's own cap applies.
+  await assert.rejects(
+    start({ model: "haiku", reasoning_effort: "medium" }),
+    /limits reasoning to Low/,
+  );
+
+  c.settings.update("alice", {
+    set: { models: { global: { reasoning_effort: "xhigh" } } },
+  });
+
+  assert.equal((await start({})).reasoning_effort, "xhigh");
 });
 
 test("failed discovery blocks no start", async () => {

@@ -1,6 +1,11 @@
+import { reasoningLevels } from "../tasks/reasoning.js";
+import { titleCase } from "../text.js";
 import type { ModelChoice, ProviderPolicy } from "./types.js";
 
 export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
+
+/** Under a model menu when the org's allowlist shortens it. */
+export const MODELS_LIMITED = "Your organization limits these models.";
 
 /** Whether an ID is a dated or fast form of another. */
 export const isModelVariant = (model: string, base: string) =>
@@ -39,6 +44,59 @@ export function modelAllowed(
         choice.value === model ||
         choice.resolvedModel === model,
     ) || entries.some((entry) => entryAllows(entry, model, exact))
+  );
+}
+
+/** The model ID a choice runs, from the catalog. Blank runs Default. */
+export const resolvedModel = (models: readonly ModelChoice[], value = "") =>
+  models.find((choice) => choice.value === (value || "default"))
+    ?.resolvedModel ?? value;
+
+/** A model ID's entry in a by-model map, in any of its spellings. */
+const modelEntry = (levels: Record<string, string> = {}, model: string) => {
+  const id = model.replace(/\[.*\]$/, "");
+
+  return Object.entries(levels).find(([key]) =>
+    entryAllows(key, id, true),
+  )?.[1];
+};
+
+/**
+ * The highest reasoning policy allows for a model ID, if it limits it. A
+ * model's own cap replaces the top-level one, and `max` means no limit.
+ */
+export function effortCap(policy: ProviderPolicy | undefined, model: string) {
+  const cap = modelEntry(policy?.model_max_effort, model) ?? policy?.max_effort;
+
+  return cap === "max" ? undefined : cap;
+}
+
+/**
+ * The reasoning a model ID runs when nothing else sets it, if the org sets it.
+ * A model's own default replaces the top-level one.
+ */
+export const orgEffort = (policy: ProviderPolicy | undefined, model: string) =>
+  modelEntry(policy?.model_default_effort, model) ?? policy?.default_effort;
+
+const rank = (level: string) =>
+  reasoningLevels.indexOf(level as (typeof reasoningLevels)[number]);
+
+/** Whether a level is above a cap. Default inherits, so it never is. */
+export const aboveEffortCap = (level: string, cap: string | undefined) =>
+  !!cap && rank(level) > rank(cap);
+
+export const effortCapReason = (cap: string) =>
+  `Your organization limits reasoning to ${titleCase(cap)}.`;
+
+/** Reasoning choices, with those above the cap locked and explained. */
+export function withEffortCap<O extends { value: string }>(
+  options: O[],
+  cap: string | undefined,
+) {
+  return options.map((option) =>
+    cap && aboveEffortCap(option.value, cap)
+      ? { ...option, disabled: true, description: effortCapReason(cap) }
+      : option,
   );
 }
 

@@ -1,3 +1,4 @@
+import type { ProviderPolicy } from "../../../src/shared/providers/types";
 import { settingsSections } from "../../../src/shared/settings/settings-document";
 import {
   settingsDefaults,
@@ -52,8 +53,8 @@ export type PreviewOptions = {
   autoRegisterChatProject?: boolean;
   /** Reports Claude as not ready, as the service does for an unsupported CLI. */
   claudeUnavailable?: boolean;
-  /** Applies an org policy from this source, as discovery reports it. */
-  orgPolicy?: "device" | "console";
+  /** Applies an org policy, as discovery reports it. */
+  orgPolicy?: ProviderPolicy;
   /** Applies budget changes to fixture tasks instead of rejecting the action. */
   successfulBudgetUpdates?: boolean;
   /** Leaves launch task data to the delayed list read when inspecting loading. */
@@ -528,12 +529,17 @@ export function previewTool(
           options.autoRegisterChatProject ?? true,
         ),
         "models.providers.claude.model",
-        "sonnet",
+        // Blank under a policy, so Claude inherits the org's default.
+        options.orgPolicy ? "" : "sonnet",
       );
 
       // Saved before the policy arrived, so the warnings have something to say.
       const values = options.orgPolicy
-        ? withSetting(base, "providers.claude.permission_mode", "auto")
+        ? withSetting(
+            withSetting(base, "providers.claude.permission_mode", "auto"),
+            "models.global.model",
+            "haiku",
+          )
         : base;
 
       return {

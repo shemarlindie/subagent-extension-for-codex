@@ -1,5 +1,16 @@
-import { withClaudePolicy } from "../providers/claude/settings-policy.js";
-import { modelAllowed } from "../providers/policy.js";
+import {
+  inheritHelp,
+  withClaudePolicy,
+} from "../providers/claude/settings-policy.js";
+import {
+  aboveEffortCap,
+  effortCap,
+  modelAllowed,
+  MODELS_LIMITED,
+  orgEffort,
+  resolvedModel,
+  withEffortCap,
+} from "../providers/policy.js";
 import {
   providerApprovalRows,
   providerRestrictionSections,
@@ -34,10 +45,10 @@ export type {
   SettingSection,
 } from "./document-contract.js";
 
-// Agents read this in an effort field's description; the panel shows it
+// Agents read this in an effort field's description, and the panel shows it
 // beside a scope flagged `unsupported`.
 export const unsupportedEffortWarning =
-  "The saved reasoning is not supported by this model.";
+  "This model doesn't support this level. New tasks use the default.";
 
 /** Help parts, with a link to a setting the panel doesn't show as plain text. */
 export const withHelp = (parts: HelpPart[], shown: unknown) =>
@@ -72,6 +83,31 @@ export interface ScopeInput {
 }
 
 /**
+ * The org's reasoning a scope's Inherit lands on: its level for the model the
+ * scope runs, when no scope it inherits sets one and the model supports it.
+ */
+function orgInherited(
+  values: unknown,
+  scope: { id: string; provider: string; providerScope: boolean },
+  policy: ProviderPolicy | undefined,
+  model: string,
+  levels: readonly string[] | undefined,
+) {
+  // Global inherits no scope, and Claude only Global.
+  const parent = scope.providerScope ? {} : { provider: scope.provider };
+
+  const inherits =
+    scope.id !== "global" &&
+    resolveModelDefaults(values, parent, policy).reasoning_effort;
+
+  const org = orgEffort(policy, model);
+
+  return !inherits && org && (!levels || levels.includes(org))
+    ? org
+    : undefined;
+}
+
+/**
  * One model/effort scope: its choices, and the effort levels its effective
  * model supports (undefined when unknown).
  */
@@ -102,9 +138,11 @@ export function modelScope(
       ? {}
       : { provider, profile: providerScope ? undefined : scope };
 
-  const effectiveModel = resolveModelDefaults(values, chain).model ?? "default";
-
   const catalog = catalogs.find((item) => item.provider === provider);
+
+  // Default runs the org's model, when it sets one.
+  const effectiveModel =
+    resolveModelDefaults(values, chain, catalog?.policy).model ?? "default";
 
   const metadata = catalog?.models?.find(
     (model) => model.value === effectiveModel,
@@ -133,15 +171,16 @@ export function modelScope(
       ]
     : undefined;
 
-  const effortLevels =
-    providerScope && levels !== undefined
-      ? [
-          ...new Set([
-            ...levels,
-            ...(savedEffort === "default" ? [] : [savedEffort]),
-          ]),
-        ]
-      : [...reasoningLevels];
+  const runs = resolvedModel(catalog?.models ?? [], effectiveModel);
+  const cap = effortCap(catalog?.policy, runs);
+
+  const inherited = orgInherited(
+    values,
+    { id: scope, provider, providerScope },
+    catalog?.policy,
+    runs,
+    levels,
+  );
 
   return {
     modelPath,
@@ -152,20 +191,63 @@ export function modelScope(
     levels,
     modelChoices,
     modelExcluded: !modelAllowed(catalog?.policy, choices, saved),
-    effortChoices: [
-      { value: "default", label: "Inherit" },
-      ...effortLevels.map((level) => ({ value: level, label: level })),
-    ],
-    unsupported:
-      levels !== undefined &&
-      savedEffort !== "default" &&
-      !levels.some((level) => level === savedEffort),
+    ...effortScope(levels, providerScope, savedEffort, cap, inherited),
+  };
+}
+
+/**
+ * A scope's effort choices: a provider's offers the levels its model
+ * supports, when known, and others offer all of them. Levels above the
+ * org's cap are locked, and Inherit names the org's level it lands on.
+ */
+function effortScope(
+  levels: readonly string[] | undefined,
+  providerScope: boolean,
+  savedEffort: string,
+  cap: string | undefined,
+  inherited: string | undefined,
+) {
+  const choices =
+    providerScope && levels
+      ? [
+          ...new Set([
+            ...levels,
+            ...(savedEffort === "default" ? [] : [savedEffort]),
+          ]),
+        ]
+      : [...reasoningLevels];
+
+  const unsupported =
+    levels !== undefined &&
+    savedEffort !== "default" &&
+    !levels.includes(savedEffort);
+
+  return {
+    effortChoices: withEffortCap(
+      [
+        {
+          value: "default",
+          label: inherited ? `Inherit (${titleCase(inherited)})` : "Inherit",
+        },
+        ...choices.map((level) => ({ value: level, label: level })),
+      ],
+      cap,
+    ),
+    // Claude Code lowers a saved effort above the cap. A start skips one the
+    // model can't run, so only that warning applies.
+    effortLowered:
+      !unsupported && aboveEffortCap(savedEffort, cap) ? cap : undefined,
+    unsupported,
   };
 }
 
 /** The dialog's sections, in display order. */
 export function settingsSections(input: ScopeInput): SettingSection[] {
   const { values, providers } = input;
+
+  const claudePolicy = input.catalogs.find(
+    ({ provider }) => provider === "claude",
+  )?.policy;
 
   const scopeRow = (scope: string, label: string): ModelScope => {
     const info = modelScope(scope, input);
@@ -177,6 +259,8 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         path: info.modelPath,
         label: `${label} model`,
         options: info.modelChoices,
+        // Claude is the only provider, so its allowlist shortens every menu.
+        ...(claudePolicy?.available_models ? { footer: MODELS_LIMITED } : {}),
         ...(info.modelExcluded
           ? {
               warning:
@@ -189,6 +273,11 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         label: `${label} reasoning`,
         options: info.effortChoices,
         unsupported: info.unsupported,
+        ...(info.effortLowered
+          ? {
+              warning: `Your organization doesn't allow this level. New tasks use ${titleCase(info.effortLowered)}.`,
+            }
+          : {}),
       },
     };
   };
@@ -202,13 +291,19 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   const profileModel = modelPath(settingAt(values, "task.worker_profile"));
   const providerModel = modelPath(settingAt(values, "task.provider"));
 
+  // Claude is the only provider, so its org defaults are what Inherit uses.
+  const inherit = inheritHelp(claudePolicy, {
+    text: "Global",
+    setting: "models.global.model",
+  });
+
   const defaultsHelp = withHelp(
     [
       "The task's ",
       { text: "worker profile", setting: profileModel },
       " defaults override these. Inherit uses ",
-      { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning. Task choices override all defaults.",
+      ...inherit,
+      " Task choices override all defaults.",
     ],
     values,
   );
@@ -218,8 +313,8 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       "Inherit uses the task's ",
       { text: "provider", setting: providerModel },
       " default, then ",
-      { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning. Task choices override profile defaults.",
+      ...inherit,
+      " Task choices override profile defaults.",
     ],
     values,
   );
@@ -323,9 +418,5 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     },
   ];
 
-  return withClaudePolicy(
-    sections,
-    input.catalogs.find(({ provider }) => provider === "claude")?.policy,
-    values,
-  );
+  return withClaudePolicy(sections, claudePolicy, values);
 }

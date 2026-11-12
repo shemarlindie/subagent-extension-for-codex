@@ -71,6 +71,11 @@ test("the section names the source and lists what's limited", () => {
   assert.match(section?.help?.[0] as string, /admin console/);
   assert.deepEqual(section?.rows, []);
 
+  assert.equal(
+    scopes(sections({})).claude?.model.footer,
+    "Your organization limits these models.",
+  );
+
   assert.deepEqual(section?.facts, [
     {
       label: "Permission modes",
@@ -78,6 +83,22 @@ test("the section names the source and lists what's limited", () => {
     },
     { label: "Models", detail: "Limited to haiku." },
     { label: "Hooks", detail: "Only your organization's hooks run." },
+  ]);
+});
+
+test("the org's default model and reasoning lead the facts", () => {
+  const facts = sections(
+    {},
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "low",
+    },
+  ).find(({ id }) => id === "organization-policy")?.facts;
+
+  assert.deepEqual(facts?.slice(0, 2), [
+    { label: "Default model", detail: "Sonnet 5.5." },
+    { label: "Default reasoning", detail: "Low." },
   ]);
 });
 
@@ -105,7 +126,10 @@ test("a mode blocked outside policy isn't blamed on the organization", () => {
     },
   );
 
-  assert.match(row(all, MODE).warning ?? "", /Auto, isn't available/);
+  assert.equal(
+    row(all, MODE).warning,
+    "This mode isn't available. New tasks ask for approval.",
+  );
 
   assert.ok(
     !all
@@ -136,8 +160,144 @@ test("a saved choice now blocked warns on its row, and nothing else does", () =>
 
   assert.equal(
     row(all, MODE).warning,
-    "Your saved mode, Bypass permission prompts, is turned off by your organization. New tasks ask for approval.",
+    "Your organization turned off this mode. New tasks ask for approval.",
   );
 
   assert.equal(row(sections({}), MODE).warning, undefined);
+});
+
+/** Each model scope by ID, across sections. */
+const scopes = (all: ReturnType<typeof sections>) =>
+  Object.fromEntries(
+    all
+      .flatMap((section) => section.rows)
+      .flatMap((item) => (item.kind === "models" ? item.scopes : []))
+      .map((scope) => [scope.id, scope]),
+  );
+
+test("the org's default is Claude's Inherit and disables Global, which keeps a saved value", () => {
+  const all = sections(
+    { models: { global: { model: "haiku" } } },
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "low",
+    },
+  );
+
+  const rows = scopes(all);
+
+  assert.equal(rows.claude?.model.options?.[0]?.label, "Inherit (Sonnet 5.5)");
+
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
+
+  assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit");
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Low)");
+
+  assert.equal(rows.global?.model.disabled, true);
+  assert.equal(rows.global?.effort.disabled, true);
+
+  // Only a saved value warns.
+  assert.equal(
+    rows.global?.model.warning,
+    "Your saved model, Haiku, applies again if your organization stops setting a default.",
+  );
+
+  assert.equal(rows.global?.effort.warning, undefined);
+
+  const help = (id: string) =>
+    all
+      .find((section) => section.id === id)
+      ?.help?.map((part) => (typeof part === "string" ? part : part.text))
+      .join("");
+
+  assert.equal(
+    help("models"),
+    "The task's worker profile defaults override these. Inherit uses your organization's default, Sonnet 5.5 with Low reasoning. Task choices override all defaults.",
+  );
+
+  assert.equal(
+    help("profile-models"),
+    "Inherit uses the task's provider default, then your organization's default, Sonnet 5.5 with Low reasoning. Task choices override profile defaults.",
+  );
+});
+
+test("a model's own org reasoning shows where Inherit lands on it", () => {
+  const perModel = { ...policy, model_default_effort: { haiku: "low" } };
+  const global = { model: "haiku", reasoning_effort: "high" };
+
+  let rows = scopes(sections({ models: { global } }, perModel));
+
+  assert.equal(rows.global?.effort.options[0]?.label, "Inherit (Low)");
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
+
+  rows = scopes(sections({ models: { global: { model: "haiku" } } }, perModel));
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
+
+  // Another model runs without it.
+  rows = scopes(sections({ models: { global: { model: "opus" } } }, perModel));
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
+
+  const facts = sections({}, { ...perModel, default_effort: "medium" }).find(
+    ({ id }) => id === "organization-policy",
+  )?.facts;
+
+  assert.ok(
+    facts?.some(
+      ({ label, detail }) =>
+        label === "Default reasoning" &&
+        detail === "Medium, and Low for haiku.",
+    ),
+  );
+});
+
+test("the org's reasoning cap locks higher levels and warns on a saved one above it", () => {
+  const capped = { ...policy, max_effort: "high" };
+
+  const all = sections(
+    { models: { providers: { claude: { reasoning_effort: "xhigh" } } } },
+    capped,
+  );
+
+  const claude = scopes(all).claude;
+
+  assert.deepEqual(
+    claude?.effort.options
+      .filter(({ disabled }) => disabled)
+      .map(({ value }) => value),
+    ["xhigh", "max"],
+  );
+
+  assert.equal(
+    claude?.effort.warning,
+    "Your organization doesn't allow this level. New tasks use High.",
+  );
+
+  assert.equal(scopes(all).global?.effort.warning, undefined);
+
+  assert.ok(
+    all
+      .find(({ id }) => id === "organization-policy")
+      ?.facts?.some(
+        ({ label, detail }) =>
+          label === "Reasoning" && detail === "Limited to High.",
+      ),
+  );
+});
+
+test("an org that denies approval prompts warns on the approval decider", () => {
+  const all = sections({}, { ...policy, prompts_denied: true });
+
+  assert.match(
+    row(all, "approvals.decider").warning ?? "",
+    /denies tool calls/,
+  );
+
+  assert.ok(
+    all
+      .find(({ id }) => id === "organization-policy")
+      ?.facts?.some(({ label }) => label === "Approvals"),
+  );
+
+  assert.equal(row(sections({}), "approvals.decider").warning, undefined);
 });

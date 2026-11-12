@@ -1,6 +1,19 @@
 import { expect, test } from "vitest";
 
-import { normalizeCwd } from "./host-helpers";
+import { normalizeCwd, parseOrgPolicy } from "./host-helpers";
+
+test("a partial org policy gets the fields the panel reads, and other JSON none", () => {
+  expect(parseOrgPolicy('{"default_effort": "high"}')).toEqual({
+    managed: true,
+    blocked: [],
+    notes: [],
+    default_effort: "high",
+  });
+
+  for (const none of ["", "{ nope", "[]", "null"]) {
+    expect(parseOrgPolicy(none)).toBeUndefined();
+  }
+});
 
 test("a typed cwd becomes the file URI Codex sends", () => {
   expect(normalizeCwd("  /repo/src ")).toBe("file:///repo/src");

@@ -34,7 +34,7 @@ async function startAfterChoosingEffort(
   return (await startedTask(panel.transport)).args;
 }
 
-test("discovered model metadata offers suggestions and rejects unsupported inherited effort until corrected", async (t) => {
+test("discovered model metadata offers suggestions, and an unsupported inherited effort starts on the default", async (t) => {
   const panel = await setupDelegate(t, (transport) =>
     configureModelDefaults(
       transport,
@@ -68,14 +68,13 @@ test("discovered model metadata offers suggestions and rejects unsupported inher
   assert.match(suggestion.textContent ?? "", /SDK model/);
   await user.keyboard("{Escape}");
   await enterTask(user, "Check discovered metadata");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  const args = await startAfterChoosingEffort(
-    panel,
-    /Choose a reasoning option supported by claude model limited-model: low/,
-    "low",
+  // The start skips the saved High, as the model can't run it.
+  assert.equal(
+    (await startedTask(panel.transport)).args.reasoning_effort,
+    "default",
   );
-
-  assert.equal(args.reasoning_effort, "low");
 });
 
 test("runtime default model metadata blocks unsupported effort and permits native default reasoning", async (t) => {

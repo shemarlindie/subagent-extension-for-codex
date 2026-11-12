@@ -26,8 +26,10 @@ import {
   policySettings,
   READ_TIMEOUT_MS,
   readSessionSettings,
+  type SessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
+import { otherPolicyKeys, policyNotes } from "./policy-notes.js";
 
 type Discovered = { models: ModelChoice[]; policy?: ProviderPolicy };
 
@@ -61,22 +63,6 @@ async function blockedModes(session: Query, policy: Settings | undefined) {
   return blocked;
 }
 
-function policyNotes(policy: Settings) {
-  return [
-    ...(policy.allowManagedHooksOnly
-      ? [{ label: "Hooks", detail: "Only your organization's hooks run." }]
-      : []),
-    ...(policy.allowManagedPermissionRulesOnly
-      ? [
-          {
-            label: "Permission rules",
-            detail: "Only your organization's permission rules apply.",
-          },
-        ]
-      : []),
-  ];
-}
-
 /**
  * Where policy comes from. `resolveSettings` sees what's on this computer and
  * not the admin console's, so policy only the session sees is the console's.
@@ -97,12 +83,72 @@ async function policySource(
   }
 }
 
-/** What applies to new tasks, given the session's policy settings. */
+/** The catalog's entry for a model ID, other than Default. */
+const catalogEntry = (models: ModelChoice[], model: string) =>
+  models.find(
+    ({ value, resolvedModel }) =>
+      value !== "default" && resolvedModel === model,
+  );
+
+/** Each model's own reasoning default or cap, by model name, when policy sets any. */
+function byModel(
+  policy: Settings,
+  setting: "effortLevel" | "maxEffortLevel",
+  field: "model_default_effort" | "model_max_effort",
+) {
+  const levels = Object.entries(policy.modelSettings ?? {}).flatMap(
+    ([model, settings]) =>
+      settings[setting] ? [[model, settings[setting]]] : [],
+  );
+
+  return levels.length ? { [field]: Object.fromEntries(levels) } : {};
+}
+
+/**
+ * The Default entry as the model it runs. Claude Code's own description
+ * follows an org's allowlist, and misses a model that settings or policy set.
+ */
+function withAppliedDefault(
+  models: ModelChoice[],
+  settings: SessionSettings | undefined,
+) {
+  const applied = settings?.applied?.model;
+  const org = !!policySettings(settings)?.model;
+
+  return models.map((choice) => {
+    if (
+      choice.value !== "default" ||
+      !applied ||
+      choice.resolvedModel === applied
+    ) {
+      return choice;
+    }
+
+    const match = catalogEntry(models, applied);
+
+    return {
+      ...choice,
+      resolvedModel: applied,
+      description: `Use the default model (currently ${match?.displayName ?? applied})${org ? " · Set by your organization" : ""}`,
+      ...(match
+        ? {
+            supportsEffort: match.supportsEffort,
+            supportedEffortLevels: match.supportedEffortLevels,
+          }
+        : {}),
+    };
+  });
+}
+
+/** What applies to new tasks, given the session's settings. */
 async function policyFrom(
   session: Query,
-  policy: Settings | undefined,
+  settings: SessionSettings | undefined,
+  models: ModelChoice[],
   resolve: typeof resolveSettings,
 ): Promise<ProviderPolicy | undefined> {
+  const policy = policySettings(settings);
+  const applied = settings?.applied;
   const modes = await blockedModes(session, policy);
 
   if (!policy) {
@@ -123,17 +169,34 @@ async function policyFrom(
           available_models_match: policy.availableModelsMatch ?? "prefix",
         }
       : {}),
+    ...(policy.model && applied
+      ? {
+          default_model: {
+            id: applied.model,
+            name:
+              catalogEntry(models, applied.model)?.displayName ?? applied.model,
+          },
+        }
+      : {}),
+    ...(policy.effortLevel ? { default_effort: policy.effortLevel } : {}),
+    ...byModel(policy, "effortLevel", "model_default_effort"),
+    ...(policy.maxEffortLevel ? { max_effort: policy.maxEffortLevel } : {}),
+    ...byModel(policy, "maxEffortLevel", "model_max_effort"),
+    ...(policy.permissions?.denyInsteadOfPrompting
+      ? { prompts_denied: true }
+      : {}),
     notes: policyNotes(policy),
   };
 }
 
-/** Reads policy from the session and logs what was found. */
+/** Reads the session's settings and policy, and logs what was found. */
 async function readPolicy(
   session: Query & SettingsReader,
+  models: ModelChoice[],
   resolve: typeof resolveSettings,
 ) {
   const settings = await readSessionSettings(session);
-  const found = await policyFrom(session, policySettings(settings), resolve);
+  const found = await policyFrom(session, settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
     // Without the session's settings, whether policy applies is unknown.
@@ -142,9 +205,13 @@ async function readPolicy(
     source: found?.source,
     blocked: found?.blocked.map(({ value }) => value).join(","),
     available_models: found?.available_models?.join(","),
+    notes: found?.notes.map(({ label }) => label).join(","),
+    other_keys: otherPolicyKeys(policySettings(settings) ?? {}).join(","),
+    applied_model: settings?.applied?.model,
+    applied_effort: settings?.applied?.effort ?? undefined,
   });
 
-  return found;
+  return { settings, policy: found };
 }
 
 /**
@@ -265,8 +332,8 @@ export class ClaudeDiscovery {
       let policyFailed = false as boolean;
 
       // Models stay useful without it, and tasks are still checked as they run.
-      const policy = await Promise.race([
-        readPolicy(session, this.resolve),
+      const read = await Promise.race([
+        readPolicy(session, models, this.resolve),
         timeout,
       ]).catch((error: unknown) => {
         logError("provider.policy_read_failed", error);
@@ -275,8 +342,10 @@ export class ClaudeDiscovery {
         return undefined;
       });
 
+      const policy = read?.policy;
+
       this.catalog = {
-        models,
+        models: withAppliedDefault(models, read?.settings),
         ...(policy ? { policy } : {}),
         // A failed read tells nothing about policy, so it's retried soon.
         expires: Date.now() + (policyFailed ? 30000 : 5 * 60 * 1000),

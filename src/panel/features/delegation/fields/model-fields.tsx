@@ -1,5 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 
+import { withEffortCap } from "../../../../shared/providers/policy";
 import { reasoningLevels } from "../../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../../app/state/types";
 import { AsyncControl } from "../../../shared/forms/async-control";
@@ -80,19 +81,24 @@ export function ModelFields({
                 : undefined
             }
             rules={{ validate: (value) => validateReasoning(value, resolved) }}
-            options={[
-              {
-                value: "default",
-                label: reasoning ? `Use default (${reasoning})` : "Use default",
-              },
-              // Stable options preserve the draft when switching providers or correcting an effort.
-              ...reasoningLevels.map((level) => ({
-                value: level,
-                label: supported.some((item) => item === level)
-                  ? level
-                  : `${level} (unsupported by ${provider})`,
-              })),
-            ]}
+            options={withEffortCap(
+              [
+                {
+                  value: "default",
+                  label: reasoning
+                    ? `Use default (${reasoning})`
+                    : "Use default",
+                },
+                // Stable options preserve the draft when switching providers or correcting an effort.
+                ...reasoningLevels.map((level) => ({
+                  value: level,
+                  label: supported.some((item) => item === level)
+                    ? level
+                    : `${level} (unsupported by ${provider})`,
+                })),
+              ],
+              resolved.cap,
+            )}
           />
         </Field>
       </div>

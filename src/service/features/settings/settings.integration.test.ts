@@ -456,7 +456,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
   // description, and the panel gets a flag.
   assert.match(
     String(schemaField(disabled, fixtureEffort).description),
-    /saved reasoning is not supported/,
+    /doesn't support this level/,
   );
 
   const fixtureScope = disabled.sections

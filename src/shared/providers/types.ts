@@ -53,6 +53,18 @@ export interface ProviderPolicy {
   /** The model allowlist, for checking typed model IDs. */
   available_models?: string[];
   available_models_match?: "prefix" | "exact";
+  /** The model new tasks run by default, when policy sets it. */
+  default_model?: { id: string; name: string };
+  /** The reasoning new tasks run by default, when policy sets it. */
+  default_effort?: string;
+  /** Each model's own default reasoning, by model name, in place of `default_effort`. */
+  model_default_effort?: Record<string, string>;
+  /** The highest reasoning policy allows, unless a model has its own. */
+  max_effort?: string;
+  /** Each model's own highest reasoning, by model name, in place of `max_effort`. */
+  model_max_effort?: Record<string, string>;
+  /** Approval prompts are denied without asking anyone. */
+  prompts_denied?: boolean;
   /** Other active policy, as plain-language rows for Settings. */
   notes: { label: string; detail: string }[];
 }

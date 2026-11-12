@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
@@ -131,5 +132,50 @@ test("a swapped model is reported, and an alias or a blank model isn't", async (
   assert.equal(
     (limited(events)[0]?.data as { reason: string }).reason,
     "Running with claude-sonnet-5-5. Your organization doesn't allow opus.",
+  );
+});
+
+test("reasoning the session lowers is recorded and reported, naming the org's cap when policy sets one", async () => {
+  const session = (policy: Settings) => ({
+    getSettings: async () => ({
+      effective: {},
+      applied: { model: "claude-opus-5-5", effort: "high" },
+      sources: [{ source: "policySettings", settings: policy }],
+    }),
+  });
+
+  const { c, events } = await context();
+  setClaudeOptions(c.task, { permission_mode: "default" });
+  c.task.reasoning_effort = "xhigh";
+
+  await recordEffectiveSettings(
+    c,
+    { permissionMode: "default", model: "claude-opus-5-5" },
+    session({ maxEffortLevel: "high" }),
+  );
+
+  assert.deepEqual(claudeOptions(c.task).effective, { effort: "high" });
+
+  assert.deepEqual(limited(events)[0]?.data, {
+    setting: "reasoning_effort",
+    requested: "xhigh",
+    effective: "high",
+    reason:
+      "Running with High reasoning. Your organization doesn't allow Xhigh.",
+  });
+
+  const plain = await context();
+  setClaudeOptions(plain.c.task, { permission_mode: "default" });
+  plain.c.task.reasoning_effort = "xhigh";
+
+  await recordEffectiveSettings(
+    plain.c,
+    { permissionMode: "default", model: "claude-opus-5-5" },
+    session({}),
+  );
+
+  assert.equal(
+    (limited(plain.events)[0]?.data as { reason: string }).reason,
+    "Running with High reasoning instead of Xhigh.",
   );
 });

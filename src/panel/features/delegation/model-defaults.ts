@@ -1,14 +1,35 @@
 import { providerMetadata } from "../../../shared/providers/metadata";
+import {
+  aboveEffortCap,
+  effortCap,
+  effortCapReason,
+  orgEffort,
+} from "../../../shared/providers/policy";
+import type { ModelChoice } from "../../../shared/providers/types";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
 
+/** A saved level a start keeps. It skips one the model is known not to support. */
+function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
+  const known =
+    metadata?.supportsEffort === false ? [] : metadata?.supportedEffortLevels;
+
+  return level && (!known || known.some((item) => item === level))
+    ? level
+    : undefined;
+}
+
 /**
  * What a worker choice inherits when its model and reasoning are left at
- * default: the profile's setting, then the provider's, then the global one.
- * `providerModel` and `providerReasoning` skip the profile's setting. Also
- * returns the selected model's metadata and its supported effort levels.
+ * default: the profile's setting, then the provider's, then the org's
+ * default or the global one. `providerModel` and `providerReasoning` skip the
+ * profile's setting. The org's model is a name, as it has no value of its
+ * own. A saved level the model doesn't support is skipped, and the org's
+ * reasoning for the model that runs fills in last, where the model supports
+ * it. Also returns the selected model's metadata and its supported effort
+ * levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -17,19 +38,13 @@ export function modelDefaults(
   selectedModel: string,
 ) {
   const { provider, profile } = workerChoice(worker);
-
-  const {
-    model,
-    reasoning_effort: reasoning,
-    providerModel,
-    providerReasoning,
-  } = resolveModelDefaults(defaults, { provider, profile });
-
   const workerInfo = workers.find((item) => item.provider === provider);
+  const policy = workerInfo?.policy;
+  const saved = resolveModelDefaults(defaults, { provider, profile }, policy);
 
-  const metadata = workerInfo?.models?.find(
-    (item) => item.value === (selectedModel.trim() || model || "default"),
-  );
+  // Blank runs Default, which is the org's model when it sets one.
+  const runs = selectedModel.trim() || saved.model || "default";
+  const metadata = workerInfo?.models?.find((item) => item.value === runs);
 
   const supported =
     metadata?.supportsEffort === false
@@ -38,15 +53,21 @@ export function modelDefaults(
         providerMetadata(provider, workerInfo?.metadata)?.defaultEffortLevels ??
         reasoningLevels);
 
+  const model = metadata?.resolvedModel ?? runs;
+  const org = orgEffort(policy, model);
+  const orgLevel = supported.find((level) => level === org);
+
   return {
     provider,
-    model,
-    reasoning,
-    providerModel,
-    providerReasoning,
+    model: saved.model ?? policy?.default_model?.name,
+    reasoning: runnableLevel(metadata, saved.reasoning_effort) ?? orgLevel,
+    providerModel: saved.providerModel,
+    providerReasoning:
+      runnableLevel(metadata, saved.providerReasoning) ?? orgLevel,
     workerInfo,
     metadata,
     supported,
+    cap: effortCap(policy, model),
   };
 }
 
@@ -58,9 +79,13 @@ export function validateReasoning(
     reasoning,
     metadata,
     supported,
+    cap,
   }: ReturnType<typeof modelDefaults>,
 ) {
   const resolved = value === "default" ? reasoning : value;
+
+  // Only a choice. Default inherits a saved effort, which Claude Code lowers.
+  if (cap && aboveEffortCap(value, cap)) return effortCapReason(cap);
 
   return (
     !resolved ||

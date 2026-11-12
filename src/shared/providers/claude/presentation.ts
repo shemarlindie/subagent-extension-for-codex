@@ -27,6 +27,7 @@ export const claudeTaskFacts = (task: TaskView): Record<string, string> => {
         }
       : {}),
     ...(effective?.model ? { "Effective model": effective.model } : {}),
+    ...(effective?.effort ? { "Effective reasoning": effective.effort } : {}),
     "Permission source": options.permission_source,
     "Approval decision maker":
       options.approval_decider === "parent_agent" ? "Parent agent" : "User",

@@ -3,8 +3,10 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { providerMetadata } from "../../../../../shared/providers/metadata";
 import {
+  aboveEffortCap,
   allowedPermissionMode,
   modelAllowed,
+  MODELS_LIMITED,
   withBlockedOptions,
 } from "../../../../../shared/providers/policy";
 import type { ModelChoice } from "../../../../../shared/providers/types";
@@ -42,12 +44,13 @@ function modelsFooter(workerInfo: Worker | undefined) {
     return "Couldn't load the model list. Use More options to enter a model ID.";
   }
 
-  return workerInfo?.policy?.available_models
-    ? "Your organization limits these models."
-    : undefined;
+  return workerInfo?.policy?.available_models ? MODELS_LIMITED : undefined;
 }
 
-/** The choices org policy changes: locked modes, and a saved model it excludes. */
+/**
+ * The choices org policy changes: locked modes, and a saved model it
+ * excludes, which gives way to the org's default.
+ */
 function policyOptions(
   provider: string,
   workerInfo: Worker | undefined,
@@ -59,8 +62,10 @@ function policyOptions(
   const permissions = providerMetadata(provider, workerInfo?.metadata)
     ?.nativePermissions?.options;
 
+  const allowed = model && modelAllowed(policy, models, model);
+
   return {
-    model: model && modelAllowed(policy, models, model) ? model : undefined,
+    model: allowed ? model : policy?.default_model?.name,
     permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
@@ -81,16 +86,18 @@ function resolvedOptions(
 
   const { workerInfo, providerModel } = resolved ?? {};
   const models = workerInfo?.models ?? [];
+  const policy = workerInfo?.policy;
 
   return {
     models,
-    modelExcluded: !modelAllowed(workerInfo?.policy, models, model),
-    allowedMode: allowedPermissionMode(workerInfo?.policy, mode),
+    modelExcluded: !modelAllowed(policy, models, model),
+    allowedMode: allowedPermissionMode(policy, mode),
     reasoning: resolved?.providerReasoning,
     supported: resolved?.supported ?? [],
+    cap: resolved?.cap,
     modelsFooter: modelsFooter(workerInfo),
     // The model and reasoning chips edit the profile's settings, so Default
-    // clears them and inherits the provider's.
+    // clears them and inherits the provider's, or the org's.
     ...policyOptions(provider, workerInfo, models, providerModel),
   };
 }
@@ -143,7 +150,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     name: ["worker", "model", "reasoning_effort", "permission_mode"],
   });
 
-  const [worker, model, , mode] = values;
+  const [worker, model, reasoning, mode] = values;
 
   // A draft that already overrides the profile opens with its settings shown.
   // Reasoning stays blank until settings load.
@@ -166,7 +173,8 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     busy || statuses.settings !== "ready" || statuses.workers !== "ready";
 
   const resolved = resolvedOptions(newTask, state, worker, model, mode);
-  const { modelExcluded, allowedMode } = resolved;
+  const { modelExcluded, allowedMode, cap } = resolved;
+  const capped = aboveEffortCap(reasoning, cap);
 
   // A saved model policy excludes shows as what will run. Sent blank, the
   // service falls back from it and says so in Chat.
@@ -175,6 +183,12 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
     setValue("model", "");
     setValue("reasoning_effort", "default");
   }, [modelExcluded, setValue]);
+
+  // A saved level above the org's cap would be sent as a choice, which fails.
+  // Default still runs it, lowered by Claude Code.
+  useEffect(() => {
+    if (capped) setValue("reasoning_effort", "default");
+  }, [capped, setValue]);
 
   // A restored draft or late policy can leave a blocked mode, which won't run.
   useEffect(() => {
@@ -218,6 +232,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           <ReasoningChip
             supported={resolved.supported}
             inherited={resolved.reasoning}
+            cap={resolved.cap}
             loading={loading}
             disabled={disabled}
           />

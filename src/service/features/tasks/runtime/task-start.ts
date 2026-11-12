@@ -45,8 +45,10 @@ export async function startTask(
     parsed,
     c.settings.values(owner),
     authority,
-    !!(input as { model?: unknown }).model,
-    effortRequested(input),
+    {
+      model: !!(input as { model?: unknown }).model,
+      effort: effortRequested(input),
+    },
   );
 
   const repository = c.projects

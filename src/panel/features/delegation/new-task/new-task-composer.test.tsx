@@ -251,6 +251,120 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
+test("the composer inherits the org's defaults in place of Global's", async () => {
+  const saved = withSetting(
+    withSetting(ready.defaults!, "models.global.model", "haiku"),
+    "models.global.reasoning_effort",
+    "high",
+  );
+
+  const { view } = setup(
+    { ...ready, defaults: saved },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          models: [
+            {
+              value: "default",
+              resolvedModel: "claude-sonnet-5-5",
+              displayName: "Default",
+              description: "",
+            },
+          ],
+          // The running model's own level wins over the top-level one.
+          policy: {
+            managed: true,
+            blocked: [],
+            default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+            default_effort: "medium",
+            model_default_effort: { sonnet: "low" },
+            notes: [],
+          },
+        },
+      ],
+    },
+  );
+
+  assert.ok(
+    await view.findByRole("button", {
+      name: /^Edit Sonnet 5\.5 · Low reasoning · /,
+    }),
+  );
+});
+
+test("a saved level the model doesn't support reads as Default", async () => {
+  const { view } = setup(
+    {
+      ...ready,
+      defaults: withSetting(
+        ready.defaults!,
+        "models.global.reasoning_effort",
+        "high",
+      ),
+    },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          models: [
+            {
+              value: "default",
+              displayName: "Default",
+              description: "",
+              supportedEffortLevels: ["low", "medium"],
+            },
+          ],
+        },
+      ],
+    },
+  );
+
+  assert.ok(
+    await view.findByRole("button", { name: /^Edit [^·]+ · Default · / }),
+  );
+});
+
+test("a saved level above the org's cap goes out as Default", async () => {
+  const { view, user, start } = setup(
+    {
+      ...ready,
+      defaults: withSetting(
+        ready.defaults!,
+        "models.profiles.implementer.reasoning_effort",
+        "high",
+      ),
+    },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [],
+            max_effort: "medium",
+            notes: [],
+          },
+        },
+      ],
+    },
+  );
+
+  await user.type(
+    view.getByRole("textbox", { name: "Task message" }),
+    "Ship it{Enter}",
+  );
+
+  await waitFor(() => assert.equal(start.mock.calls.length, 1));
+  expect(start.mock.calls[0]?.[0].reasoning_effort).toBe("default");
+});
+
 test("a read-only profile starts in plan mode, and switching profiles resets a chosen mode", async () => {
   const { view, user, start } = setup();
 

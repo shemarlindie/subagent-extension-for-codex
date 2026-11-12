@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { modelAllowed } from "./policy.js";
+import { effortCap, modelAllowed, withEffortCap } from "./policy.js";
 import type { ProviderPolicy } from "./types.js";
 
 const models = [
@@ -56,4 +56,26 @@ test("a model ID entry covers its later versions by prefix, and only its own IDs
   assert.ok(modelAllowed(exact, [], "claude-opus-5-20260101"));
   assert.ok(modelAllowed(exact, [], "claude-opus-5-fast"));
   assert.ok(!modelAllowed(exact, [], "claude-opus-5-5"));
+});
+
+test("a model's own reasoning cap replaces the top-level one, in each of its spellings", () => {
+  const capped: ProviderPolicy = {
+    ...policy([]),
+    max_effort: "high",
+    model_max_effort: { "claude-opus-5-5": "low", haiku: "max" },
+  };
+
+  assert.equal(effortCap(capped, "claude-sonnet-5-5"), "high");
+  assert.equal(effortCap(capped, "claude-opus-5-5-20260101[1m]"), "low");
+  assert.equal(effortCap(capped, "claude-haiku-5-5"), undefined);
+
+  const levels = withEffortCap(
+    ["default", "low", "medium"].map((value) => ({ value })),
+    "low",
+  );
+
+  assert.deepEqual(
+    levels.map((level) => "disabled" in level),
+    [false, false, true],
+  );
 });

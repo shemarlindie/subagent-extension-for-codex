@@ -24,7 +24,28 @@ limitedTask.finish(limitedReply, 1, {
   total_cost_usd: 0.12,
 });
 
-export const orgPolicyTimelines = [limitedTask];
+const loweredReply =
+  "Mapped the three call sites that still read the legacy config.";
+
+// The org's cap lowered the reasoning the task asked for.
+const loweredTask = new Timeline("preview-policy-lowered", at(140), 2600);
+begin(loweredTask, ["Grep", "Read"]);
+
+loweredTask.add("agent.limited", {
+  setting: "reasoning_effort",
+  requested: "xhigh",
+  effective: "high",
+  reason: "Running with High reasoning. Your organization doesn't allow Xhigh.",
+});
+
+loweredTask.say(loweredReply);
+
+loweredTask.finish(loweredReply, 1, {
+  duration_ms: 23000,
+  total_cost_usd: 0.07,
+});
+
+export const orgPolicyTimelines = [limitedTask, loweredTask];
 
 export const orgPolicyTasks: Task[] = [
   {
@@ -46,5 +67,26 @@ export const orgPolicyTasks: Task[] = [
     runtime_ms: 41000,
     cost_usd: 0.12,
     ...timestamps(120, 3),
+  },
+  {
+    ...taskBase,
+    id: "preview-policy-lowered",
+    title: "Find legacy config readers",
+    description: "List the call sites that still read the legacy config.",
+    worker_profile: "researcher",
+    reasoning_effort: "xhigh",
+    status: "completed",
+    turn: 1,
+    provider_options: {
+      claude: {
+        ...settingOptions().claude,
+        permission_mode: "plan",
+        permission_source: "profile",
+        effective: { effort: "high" },
+      },
+    },
+    runtime_ms: 23000,
+    cost_usd: 0.07,
+    ...timestamps(140, 3),
   },
 ];

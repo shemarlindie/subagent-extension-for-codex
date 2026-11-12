@@ -113,6 +113,8 @@ export function ModelTable({
               label={scope.model.label}
               describedBy={noteId}
               options={scope.model.options}
+              footer={scope.model.footer}
+              disabled={scope.model.disabled}
             />
           );
         } else {
@@ -157,7 +159,7 @@ export function ModelTable({
                 noteId,
                 scope.effort.unsupported ? warningId : undefined,
               )}
-              disabled={loading}
+              disabled={loading || scope.effort.disabled}
               loading={loading}
               loadingLabel={`Loading ${scope.effort.label.toLowerCase()}`}
               placeholder={loading ? "Loading…" : undefined}
@@ -167,8 +169,13 @@ export function ModelTable({
                 <SettingsSearchHighlight text={note} />
               </p>
             )}
-            {scope.model.warning && (
-              <p className="help warn">{scope.model.warning}</p>
+            {[scope.model.warning, scope.effort.warning].map(
+              (warning) =>
+                warning && (
+                  <p key={warning} className="help warn">
+                    {warning}
+                  </p>
+                ),
             )}
             {scope.effort.unsupported && (
               <p id={warningId} className="help warn">

@@ -318,6 +318,14 @@ button {
 .host-settings .added-projects {
   margin-top: 0;
 }
+.org-policy-field {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.org-policy-field label {
+  justify-self: stretch;
+}
 .icon-catalog {
   display: grid;
   flex: 1;

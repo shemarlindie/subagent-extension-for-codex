@@ -45,8 +45,7 @@ guides do not need to be loaded.
   browser checks against the final changes being committed. Unrelated checks do
   not need to run.
 - Follow the repository's ESLint rules when editing code.
-- Format changed files with
-  `npx eslint --fix <files> && npx prettier --write <files>`.
+- Format changed files as described in [Checks](docs/development.md#checks).
 - Before running HTTP integration suites, ensure the sandbox permits localhost
   TCP listeners (`127.0.0.1`). Request escalation up front if needed. CI runners
   need the same access. Do not skip these tests because listener binding is

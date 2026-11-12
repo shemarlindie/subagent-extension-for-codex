@@ -249,7 +249,7 @@ export default defineConfig(
     // One-line statements may omit braces; anything spanning lines needs them,
     // and every branch of an if/else matches. Listed after the Prettier config,
     // which turns curly off; when Prettier wraps a long one-liner, eslint --fix
-    // adds braces once and the result stays stable.
+    // adds braces and a second Prettier pass formats them.
     files: CODE,
     rules: { curly: ["error", "multi-line", "consistent"] },
   },

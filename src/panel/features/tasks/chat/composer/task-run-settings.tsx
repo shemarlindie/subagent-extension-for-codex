@@ -21,7 +21,10 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
   const facts = providerTaskFacts(task);
   const native = facts["Permission mode"];
   const permission = native && shortPermissionLabel(native);
-  const reasoning = task.reasoning_effort || "default";
+
+  const reasoning =
+    facts["Effective reasoning"] ?? (task.reasoning_effort || "default");
+
   // Named as the composer names it, when the provider still lists the model.
   const ran = facts["Effective model"] ?? task.model;
   const model = ran ? modelName(models, ran) : "Default model";
@@ -46,6 +49,8 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
   const requested = [
     facts["Requested permission mode"],
     facts["Effective model"] && task.model,
+    facts["Effective reasoning"] &&
+      `${titleCase(task.reasoning_effort ?? "")} reasoning`,
   ].filter(Boolean);
 
   return [

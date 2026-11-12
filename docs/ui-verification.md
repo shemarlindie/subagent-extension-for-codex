@@ -66,8 +66,9 @@ Host settings:
 - **Automatically add chat projects** matches the user setting of that name.
 - **Claude Code unavailable** shows readiness notices in the panel and the New
   task form.
-- **Org policy** applies a fixture policy to the composer's menus and Settings,
-  with a saved mode it blocks.
+- **Org policy (JSON)** applies a policy, in the shape discovery reports, to the
+  composer's menus and Settings. **Insert example** fills in the fixture policy.
+  Any policy comes with a saved mode and Global model it may outrank.
 - **Added projects** lists projects you registered. They persist across reloads
   until **Reset projects**.
 - **Host style variable overrides** takes JSON. See
@@ -92,6 +93,7 @@ Host settings:
 | Finish the date helper migration            | Runtime limit reached. The warning notice applies a higher runtime limit without sending a message.                                                                                        |
 | Move the screens to the new layout          | Long Chat conversation for scrolling.                                                                                                                                                      |
 | Clean up the upload retries                 | Org policy limited the mode: the note in Chat, effective values in run settings and Details.                                                                                               |
+| Find legacy config readers                  | Org policy lowered the reasoning: the note in Chat and the effective level in run settings and Details.                                                                                    |
 | Stabilise the retry timer test              | Worktree recreated from its branch in a new session.                                                                                                                                       |
 | Migrate the config loader                   | Pending inline question and queue-only composer. Queued messages stay until reload.                                                                                                        |
 | Plan the sign-in rollout                    | Three stacked questions, single and multiple choices, and queue-only composer.                                                                                                             |
