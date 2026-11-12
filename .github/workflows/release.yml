@@ -247,8 +247,9 @@ jobs:
       # GitHub can't merge a draft.
       - run: gh pr ready "$PR"
 
-      # Refused if the head moved since the pull-request job checked it.
-      - run: gh pr merge "$PR" --merge --match-head-commit "$GITHUB_SHA"
+      # Refused if the head moved since the pull-request job checked it. GitHub
+      # doesn't auto-delete the head branch for merges made with GITHUB_TOKEN.
+      - run: gh pr merge "$PR" --merge --match-head-commit "$GITHUB_SHA" --delete-branch
 
       # A merge made with GITHUB_TOKEN doesn't start CI on main.
       - run: gh workflow run ci.yml --ref main

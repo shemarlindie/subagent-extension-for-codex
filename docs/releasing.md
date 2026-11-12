@@ -91,8 +91,9 @@ The workflow (`.github/workflows/release.yml`):
 4. Installs `<owner>/<repo>@v<version>` with Codex on Linux, macOS and Windows,
    once npm serves the version.
 5. For a final release, re-runs the pull request's **Listed version published**
-   check, marks the pull request ready, merges it with a merge commit and starts
-   CI on `main`. GitHub doesn't start CI for merges made by the workflow.
+   check, marks the pull request ready, merges it with a merge commit, deletes
+   the release branch and starts CI on `main`. GitHub doesn't start CI for
+   merges made by the workflow.
 
 The workflows pin the Codex CLI to the version the README lists as tested, so
 change them together.
