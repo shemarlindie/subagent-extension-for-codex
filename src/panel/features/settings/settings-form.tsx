@@ -303,7 +303,7 @@ export function SettingsForm({
     ),
   });
 
-  sectionViews.push(aboutSection(search, selectedSection, !loading));
+  sectionViews.push(aboutSection(search, selectedSection));
 
   const activeSectionId = activeSection(selectedSection, sectionViews);
   const matchingSections = sectionViews.filter((section) => !section.hidden);
