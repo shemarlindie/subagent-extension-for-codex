@@ -570,7 +570,7 @@ test("a saved mode that became blocked still starts, as Claude Code falls back i
   );
 });
 
-test("a saved effort the default can't run gives way with the saved model", async () => {
+test("a saved effort the model can't run gives way, and one a request names fails", async () => {
   const { c, start } = await underPolicy(
     async () => orgPolicy,
     [
@@ -587,9 +587,14 @@ test("a saved effort the default can't run gives way with the saved model", asyn
     set: { models: { global: { model: "opus", reasoning_effort: "xhigh" } } },
   });
 
-  const task = await start({});
+  // With the saved model that gave way, then on the default itself.
+  let task = await start({});
 
   assert.ok(!task.model);
+  assert.ok(!task.reasoning_effort);
+
+  c.settings.update("alice", { set: { models: { global: { model: "" } } } });
+  task = await start({});
   assert.ok(!task.reasoning_effort);
 
   await assert.rejects(

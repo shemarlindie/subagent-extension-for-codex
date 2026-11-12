@@ -5,19 +5,31 @@ import {
   effortCapReason,
   orgEffort,
 } from "../../../shared/providers/policy";
+import type { ModelChoice } from "../../../shared/providers/types";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
+
+/** A saved level a start keeps. It skips one the model is known not to support. */
+function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
+  const known =
+    metadata?.supportsEffort === false ? [] : metadata?.supportedEffortLevels;
+
+  return level && (!known || known.some((item) => item === level))
+    ? level
+    : undefined;
+}
 
 /**
  * What a worker choice inherits when its model and reasoning are left at
  * default: the profile's setting, then the provider's, then the org's
  * default or the global one. `providerModel` and `providerReasoning` skip the
  * profile's setting. The org's model is a name, as it has no value of its
- * own. The org's reasoning for the model that runs fills in last, where the
- * model supports it. Also returns the selected model's metadata and its
- * supported effort levels.
+ * own. A saved level the model doesn't support is skipped, and the org's
+ * reasoning for the model that runs fills in last, where the model supports
+ * it. Also returns the selected model's metadata and its supported effort
+ * levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -48,9 +60,10 @@ export function modelDefaults(
   return {
     provider,
     model: saved.model ?? policy?.default_model?.name,
-    reasoning: saved.reasoning_effort ?? orgLevel,
+    reasoning: runnableLevel(metadata, saved.reasoning_effort) ?? orgLevel,
     providerModel: saved.providerModel,
-    providerReasoning: saved.providerReasoning ?? orgLevel,
+    providerReasoning:
+      runnableLevel(metadata, saved.providerReasoning) ?? orgLevel,
     workerInfo,
     metadata,
     supported,

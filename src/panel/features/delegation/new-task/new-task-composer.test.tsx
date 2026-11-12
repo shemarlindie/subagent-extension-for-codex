@@ -295,6 +295,40 @@ test("the composer inherits the org's defaults in place of Global's", async () =
   );
 });
 
+test("a saved level the model doesn't support reads as Default", async () => {
+  const { view } = setup(
+    {
+      ...ready,
+      defaults: withSetting(
+        ready.defaults!,
+        "models.global.reasoning_effort",
+        "high",
+      ),
+    },
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          models: [
+            {
+              value: "default",
+              displayName: "Default",
+              description: "",
+              supportedEffortLevels: ["low", "medium"],
+            },
+          ],
+        },
+      ],
+    },
+  );
+
+  assert.ok(
+    await view.findByRole("button", { name: /^Edit [^·]+ · Default · / }),
+  );
+});
+
 test("a saved level above the org's cap goes out as Default", async () => {
   const { view, user, start } = setup(
     {

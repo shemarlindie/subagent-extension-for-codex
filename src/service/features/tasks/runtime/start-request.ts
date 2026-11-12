@@ -5,6 +5,7 @@ import type {
   Start,
   Task,
 } from "../../../../shared/tasks/model.js";
+import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";
 import { gitState, WORKTREE_NEEDS_GIT } from "../../workspaces/git.js";
 import { validateBudgets } from "./budget.js";
@@ -29,9 +30,29 @@ export async function resolveStart(
 
   const {
     model,
-    reasoning_effort: effort,
+    reasoning_effort: fitted,
     limited,
   } = await checkStartPolicy(provider, input, defaults, requested);
+
+  // A saved effort the model can't run gives way, since nobody asked for it
+  // just now. One the request names fails below.
+  const rejecting =
+    !requested.effort &&
+    (await modelRejectingEffort(
+      provider,
+      { model, reasoning_effort: fitted },
+      defaults,
+    ));
+
+  if (rejecting) {
+    logEvent("info", "task.saved_effort_skipped", {
+      provider: provider.id,
+      model: rejecting,
+      effort: fitted,
+    });
+  }
+
+  const effort = rejecting ? undefined : fitted;
 
   // Policy may have replaced the saved effort, so check the one that runs.
   const options = provider.taskPolicy.prepareStart({
@@ -56,15 +77,6 @@ export async function resolveStart(
 
   if (!req.title) throw new Error("Task title is required");
   if (!req.description) throw new Error("Task description is required");
-
-  // A saved effort suited the model that gave way, and the default may not offer it.
-  if (
-    model !== input.model &&
-    !requested.effort &&
-    (await modelRejectingEffort(provider, req, defaults))
-  ) {
-    delete req.reasoning_effort;
-  }
 
   await assertModelEffort(provider, req, defaults);
   validateBudgets(provider, req);

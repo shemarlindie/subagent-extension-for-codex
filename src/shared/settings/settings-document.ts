@@ -44,10 +44,10 @@ export type {
   SettingSection,
 } from "./document-contract.js";
 
-// Agents read this in an effort field's description; the panel shows it
+// Agents read this in an effort field's description, and the panel shows it
 // beside a scope flagged `unsupported`.
 export const unsupportedEffortWarning =
-  "The saved reasoning is not supported by this model.";
+  "This model doesn't support this level. New tasks use the default.";
 
 /** Help parts, with a link to a setting the panel doesn't show as plain text. */
 export const withHelp = (parts: HelpPart[], shown: unknown) =>
@@ -216,6 +216,11 @@ function effortScope(
         ]
       : [...reasoningLevels];
 
+  const unsupported =
+    levels !== undefined &&
+    savedEffort !== "default" &&
+    !levels.includes(savedEffort);
+
   return {
     effortChoices: withEffortCap(
       [
@@ -227,12 +232,11 @@ function effortScope(
       ],
       cap,
     ),
-    // Claude Code lowers a saved effort above the cap.
-    effortLowered: aboveEffortCap(savedEffort, cap) ? cap : undefined,
-    unsupported:
-      levels !== undefined &&
-      savedEffort !== "default" &&
-      !levels.includes(savedEffort),
+    // Claude Code lowers a saved effort above the cap. A start skips one the
+    // model can't run, so only that warning applies.
+    effortLowered:
+      !unsupported && aboveEffortCap(savedEffort, cap) ? cap : undefined,
+    unsupported,
   };
 }
 

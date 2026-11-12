@@ -246,8 +246,9 @@ and session restrictions follow their own rules below.
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
 `xhigh` and `max`, subject to model support. When model metadata is known, the
-service rejects unsupported choices before queuing. Otherwise the provider may
-fail the task when it runs.
+service rejects an unsupported level a task names before queuing, and skips an
+unsupported saved level so the runtime default applies. Otherwise the provider
+may fail the task when it runs.
 
 Claude model suggestions come from the installed CLI. Discovery submits no user
 turn and turns off tools, settings-file hooks and external MCP servers. It uses
