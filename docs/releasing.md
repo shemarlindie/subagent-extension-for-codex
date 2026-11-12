@@ -12,25 +12,29 @@ installs the plugin from npm at the exact version it lists. Codex refreshes it
 on startup, so a version reaches users when `main` lists it. Each release has
 its own branch:
 
-1. On an up-to-date `main`, run `npm run release:prepare` and confirm the
-   version it picks. Pass a version to choose it yourself, which a prerelease
-   needs: `npm run release:prepare -- 1.2.0-beta.1`.
-2. Review the drafted notes, which become the GitHub release notes. Rewrite them
-   for users on the branch where needed: what changed, and anything they must do
-   by hand. Keep the pull request a draft.
+1. On an up-to-date `main`, run `npm run release:prepare`. Pass a version to
+   choose it yourself, which a prerelease needs:
+   `npm run release:prepare -- 1.2.0-beta.1`.
+2. When it asks to confirm, check the version and review the drafted notes in
+   `CHANGELOG.md`, which become the GitHub release notes. Rewrite them for users
+   where needed: what changed, and anything they must do by hand. Then confirm,
+   and keep the pull request it opens a draft. Pass `--yes` to skip the
+   confirmation, then review the notes on the branch.
 3. Run the **Release** workflow on the branch in GitHub Actions. It publishes
    the version and merges the pull request with a merge commit, which keeps the
    tagged commit in `main`'s history. Don't merge release pull requests by hand.
 
 `release:prepare` picks the next version from the conventional commits since the
 last release: major for a breaking change, minor for a `feat` and patch
-otherwise. Before 1.0, a breaking change bumps the minor version. It creates
-`chore/release-v<version>` and sets the version in `package.json`,
-`package-lock.json`, `plugin.json` and the marketplace. Unless `CHANGELOG.md`
-already has a `## <version>` section, it drafts one with Features and Fixes
-sections from the `feat` and `fix` commits, writing `None` in an empty section.
-It commits, pushes and opens a draft pull request to `main` that links to the
-notes. It needs the `gh` CLI, signed in.
+otherwise. Before 1.0, a breaking change bumps the minor version. It sets the
+version in `package.json`, `package-lock.json`, `plugin.json` and the
+marketplace. Unless `CHANGELOG.md` already has a `## <version>` section, it
+drafts one with Features and Fixes sections from the `feat` and `fix` commits,
+writing `None` in an empty section. After you confirm, it creates
+`chore/release-v<version>`, commits, pushes and opens a draft pull request to
+`main` that links to the notes. If you decline, it restores the version files
+and keeps `CHANGELOG.md`, so the next run uses your notes. It needs the `gh`
+CLI, signed in.
 
 When `main` already lists an unreleased version, as with the first release, run
 the **Release** workflow on `main`, with no branch or pull request.

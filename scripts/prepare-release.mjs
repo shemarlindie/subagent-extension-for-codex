@@ -1,10 +1,12 @@
 // Opens the release pull request from an up-to-date main:
-//   npm run release:prepare [-- <version>]
+//   npm run release:prepare [-- [--yes] [<version>]]
 // Without a version, it picks the next one from the conventional commits since
-// the last release and asks to confirm it. Without a CHANGELOG.md section for
-// the version, it drafts one from the feat and fix commits. The pull request
-// starts as a draft and stays one until the Release workflow publishes and
-// merges it. See docs/releasing.md.
+// the last release. Without a CHANGELOG.md section for the version, it drafts
+// one from the feat and fix commits. It makes the changes locally and asks to
+// confirm before committing and pushing, so the notes can be edited first.
+// --yes skips the confirmation. The pull request starts as a draft and stays
+// one until the Release workflow publishes and merges it. See
+// docs/releasing.md.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
@@ -123,10 +125,13 @@ function nextVersion() {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-const version = process.argv[2] ?? nextVersion();
+const args = process.argv.slice(2);
+const yes = args.includes("--yes");
+const [requested, ...extra] = args.filter((arg) => arg !== "--yes");
+const version = requested ?? nextVersion();
 
-if (!/^\d+\.\d+\.\d+(-[\w.-]+)?$/.test(version)) {
-  fail("Usage: npm run release:prepare [-- <version>]");
+if (extra.length || !/^\d+\.\d+\.\d+(-[\w.-]+)?$/.test(version)) {
+  fail("Usage: npm run release:prepare [-- [--yes] [<version>]]");
 }
 
 if (version === manifest.version) {
@@ -174,20 +179,6 @@ if (changed.join() !== (written ? "CHANGELOG.md" : "")) {
   );
 }
 
-if (!process.argv[2]) {
-  const prompt = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  const answer = await prompt.question(
-    `The next version after ${since} is ${version}. Continue? [y/N] `,
-  );
-
-  prompt.close();
-  if (!/^y(es)?$/i.test(answer.trim())) fail("Cancelled");
-}
-
 /** Replaces a JSON file's one version value in place, keeping its formatting. */
 function setVersion(path, current) {
   const text = readFileSync(path, "utf8");
@@ -210,7 +201,12 @@ const npmCli = process.env.npm_execpath;
 const npm = npmCli?.endsWith(".js") ? [process.execPath, npmCli] : ["npm"];
 const branch = `chore/release-v${version}`;
 
-run("git", ["switch", "--quiet", "--create", branch]);
+const versioned = [
+  "package.json",
+  "package-lock.json",
+  "plugin.json",
+  marketplace,
+];
 
 if (!written) writeFileSync("CHANGELOG.md", withDraft(changelog));
 
@@ -226,6 +222,38 @@ run(npm[0], [
 setVersion("plugin.json", plugin.version);
 setVersion(marketplace, listed.version);
 
+if (!requested) console.log(`The next version after ${since} is ${version}.`);
+
+if (!yes) {
+  const prompt = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  // Ctrl+C rejects the question, which counts as declining.
+  const answer = await prompt
+    .question(
+      `Set the version to ${version}${written ? "" : " and drafted the notes in CHANGELOG.md"}. Edit the notes now if needed.\n` +
+        "Commit, push and open the release pull request? [y/N] ",
+    )
+    .catch(() => "");
+
+  prompt.close();
+
+  // Keeps CHANGELOG.md, so edited notes survive for the next run.
+  if (!/^y(es)?$/i.test(answer.trim())) {
+    run("git", ["checkout", "--", ...versioned]);
+
+    fail(
+      written
+        ? "Cancelled"
+        : "Cancelled. CHANGELOG.md keeps the drafted notes for the next run. Discard them with: git checkout CHANGELOG.md",
+    );
+  }
+}
+
+run("git", ["switch", "--quiet", "--create", branch]);
+
 run("git", [
   "commit",
   "--quiet",
@@ -233,10 +261,7 @@ run("git", [
   `chore(release): v${version}`,
   "--",
   "CHANGELOG.md",
-  "package.json",
-  "package-lock.json",
-  "plugin.json",
-  marketplace,
+  ...versioned,
 ]);
 
 run("git", ["push", "--quiet", "--set-upstream", "origin", branch]);
