@@ -6,6 +6,7 @@ import {
   aboveEffortCap,
   allowedPermissionMode,
   modelAllowed,
+  MODELS_LIMITED,
   withBlockedOptions,
 } from "../../../../../shared/providers/policy";
 import type { ModelChoice } from "../../../../../shared/providers/types";
@@ -43,9 +44,7 @@ function modelsFooter(workerInfo: Worker | undefined) {
     return "Couldn't load the model list. Use More options to enter a model ID.";
   }
 
-  return workerInfo?.policy?.available_models
-    ? "Your organization limits these models."
-    : undefined;
+  return workerInfo?.policy?.available_models ? MODELS_LIMITED : undefined;
 }
 
 /**

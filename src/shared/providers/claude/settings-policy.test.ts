@@ -71,6 +71,11 @@ test("the section names the source and lists what's limited", () => {
   assert.match(section?.help?.[0] as string, /admin console/);
   assert.deepEqual(section?.rows, []);
 
+  assert.equal(
+    scopes(sections({})).claude?.model.footer,
+    "Your organization limits these models.",
+  );
+
   assert.deepEqual(section?.facts, [
     {
       label: "Permission modes",

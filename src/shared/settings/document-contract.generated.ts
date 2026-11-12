@@ -57,6 +57,7 @@ const modelScopeSchema = z.object({
     path: z.string(),
     label: z.string(),
     options: z.array(settingOptionSchema).optional(),
+    footer: z.string().optional(),
     warning: z.string().optional(),
     disabled: z.boolean().optional(),
   }),

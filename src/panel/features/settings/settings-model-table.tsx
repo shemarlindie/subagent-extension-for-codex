@@ -113,6 +113,7 @@ export function ModelTable({
               label={scope.model.label}
               describedBy={noteId}
               options={scope.model.options}
+              footer={scope.model.footer}
               disabled={scope.model.disabled}
             />
           );

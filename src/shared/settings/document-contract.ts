@@ -18,6 +18,8 @@ export interface ModelScope {
     label: string;
     /** Without a discovered catalog the model ID is typed instead. */
     options?: SettingOption[];
+    /** A line under the menu, such as why the list is short. */
+    footer?: string;
     /** The saved model won't apply, and why. */
     warning?: string;
     /** Something else applies in its place, as the section's help says. */

@@ -4,6 +4,9 @@ import type { ModelChoice, ProviderPolicy } from "./types.js";
 
 export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
 
+/** Under a model menu when the org's allowlist shortens it. */
+export const MODELS_LIMITED = "Your organization limits these models.";
+
 /** Whether an ID is a dated or fast form of another. */
 export const isModelVariant = (model: string, base: string) =>
   model.startsWith(base) && /^(-\d{8}|-fast)+$/.test(model.slice(base.length));

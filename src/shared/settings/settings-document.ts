@@ -6,6 +6,7 @@ import {
   aboveEffortCap,
   effortCap,
   modelAllowed,
+  MODELS_LIMITED,
   orgEffort,
   resolvedModel,
   withEffortCap,
@@ -258,6 +259,8 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         path: info.modelPath,
         label: `${label} model`,
         options: info.modelChoices,
+        // Claude is the only provider, so its allowlist shortens every menu.
+        ...(claudePolicy?.available_models ? { footer: MODELS_LIMITED } : {}),
         ...(info.modelExcluded
           ? {
               warning:

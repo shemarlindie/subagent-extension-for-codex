@@ -38,6 +38,8 @@ export type SelectFieldProps = {
   itemsLabel?: string;
   /** "inline" drops the border so the value reads as text, such as in a title. */
   appearance?: "inline";
+  /** A line under the list, such as why it's short. */
+  footer?: string;
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
@@ -243,7 +245,7 @@ export function SelectField(
       onValueChange={(next) => props.onValueChange(next ?? "")}
     >
       <SelectTrigger {...props} />
-      <SelectOptions options={props.options} />
+      <SelectOptions options={props.options} footer={props.footer} />
     </Select.Root>
   );
 }
