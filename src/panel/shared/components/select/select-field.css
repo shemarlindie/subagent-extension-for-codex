@@ -150,9 +150,7 @@
 .select-action[data-highlighted] {
   color: var(--text);
 }
-/* Wraps a long footer instead of widening the menu. */
 .select-footer {
-  max-width: 280px;
   margin: 4px 0 0;
   padding: 6px 8px 2px;
   border-top: 1px solid var(--line);
