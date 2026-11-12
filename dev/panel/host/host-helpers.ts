@@ -3,7 +3,9 @@
 import type { McpUiDisplayMode } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
+import type { ProviderPolicy } from "../../../src/shared/providers/types";
 import type { Task } from "../../../src/shared/tasks/model";
+import { previewOrgPolicy } from "../scenarios/preview-models";
 import { type PreviewOptions, previewTool } from "../scenarios/tools";
 
 export type Settings = {
@@ -22,8 +24,8 @@ export type Settings = {
   autoRegister: boolean;
   /** Fixtures only; the live service checks the installed Claude Code. */
   claudeUnavailable: boolean;
-  /** Fixtures only; the live service asks Claude Code. */
-  orgPolicy: "" | "device" | "console";
+  /** Fixtures only, as JSON; the live service asks Claude Code. */
+  orgPolicy: string;
   /** Fixtures only; lets the preview simulate successful budget updates. */
   successfulBudgetUpdates: boolean;
   /** Fixtures only; delays content reads so loading placeholders can be inspected. */
@@ -111,6 +113,15 @@ export function settingsFrom(defaults: Settings, stored: string | null) {
       Object.entries(parsed).filter(([key]) => Object.hasOwn(defaults, key)),
     ) as Partial<Settings>;
 
+    // Earlier hosts saved only the policy's source, which applied the fixture
+    // policy. Keep it applying, as JSON.
+    if (saved.orgPolicy === "device" || saved.orgPolicy === "console") {
+      saved.orgPolicy = orgPolicyJson({
+        ...previewOrgPolicy,
+        source: saved.orgPolicy,
+      });
+    }
+
     return { ...defaults, ...saved };
   } catch {
     return defaults;
@@ -123,6 +134,22 @@ export function parseStyles(text: string): Record<string, string> | undefined {
 
     // Accept either the variables map or a whole hostContext.styles object.
     return value?.variables ?? value;
+  } catch {
+    return undefined;
+  }
+}
+
+export const orgPolicyJson = (policy: ProviderPolicy) =>
+  JSON.stringify(policy, null, 2);
+
+/** The org policy JSON as an object, or undefined when blank or invalid. */
+export function parseOrgPolicy(text: string): ProviderPolicy | undefined {
+  try {
+    const value: unknown = JSON.parse(text);
+
+    return typeof value === "object" && value !== null
+      ? (value as ProviderPolicy)
+      : undefined;
   } catch {
     return undefined;
   }

@@ -66,8 +66,9 @@ Host settings:
 - **Automatically add chat projects** matches the user setting of that name.
 - **Claude Code unavailable** shows readiness notices in the panel and the New
   task form.
-- **Org policy** applies a fixture policy to the composer's menus and Settings,
-  with a saved mode it blocks.
+- **Org policy (JSON)** applies a policy, in the shape discovery reports, to the
+  composer's menus and Settings. **Insert example** fills in the fixture policy.
+  Any policy comes with a saved mode and Global model it may outrank.
 - **Added projects** lists projects you registered. They persist across reloads
   until **Reset projects**.
 - **Host style variable overrides** takes JSON. See

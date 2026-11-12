@@ -32,6 +32,7 @@ import {
   fixtureServiceCall,
   hasProjectEdits,
   normalizeCwd,
+  parseOrgPolicy,
   parseStyles,
   removeFixtureProject,
   type Settings,
@@ -42,6 +43,7 @@ import {
   urlSettings,
   WIDTHS,
 } from "./host-helpers";
+import { OrgPolicyField } from "./org-policy-field";
 import { connectPanel } from "./panel-bridge";
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
@@ -360,7 +362,7 @@ export function Host() {
         result = fixtureCall(name, args, {
           autoRegisterChatProject: current.autoRegister,
           claudeUnavailable: current.claudeUnavailable,
-          ...(current.orgPolicy ? { orgPolicy: current.orgPolicy } : {}),
+          orgPolicy: parseOrgPolicy(current.orgPolicy),
           successfulBudgetUpdates: current.successfulBudgetUpdates,
           deferTaskList: current.slowAsyncReads,
           addedProjects: added.current,
@@ -769,22 +771,11 @@ export function Host() {
                   Claude Code unavailable
                 </span>
               </label>
-              <label>
-                Org policy
-                <select
-                  value={orgPolicy}
-                  disabled={source === "live"}
-                  onChange={(e) =>
-                    update({
-                      orgPolicy: e.target.value as Settings["orgPolicy"],
-                    })
-                  }
-                >
-                  <option value="">None</option>
-                  <option value="device">On this computer</option>
-                  <option value="console">Admin console</option>
-                </select>
-              </label>
+              <OrgPolicyField
+                value={orgPolicy}
+                disabled={source === "live"}
+                onChange={(value) => update({ orgPolicy: value })}
+              />
               <div className="added-projects">
                 <span>Added projects (fixtures)</span>
                 {settings.addedProjects.length ? (

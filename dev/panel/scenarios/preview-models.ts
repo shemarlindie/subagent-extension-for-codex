@@ -1,3 +1,4 @@
+import { modelAllowed } from "../../../src/shared/providers/policy";
 import type {
   ModelChoice,
   ProviderPolicy,
@@ -26,18 +27,20 @@ const previewModels: ModelChoice[] = [
   },
   {
     value: "haiku",
+    resolvedModel: "claude-haiku-4-5",
     displayName: "Haiku 4.5",
     description: "Fastest for quick answers",
     supportsEffort: false,
   },
 ];
 
-/** Policy as discovery reports it, with a lock the extension can't apply. */
-const previewOrgPolicy = (
-  source: NonNullable<ProviderPolicy["source"]>,
-): ProviderPolicy => ({
+/**
+ * Policy as discovery reports it, with a lock the extension can't apply. The
+ * dev host offers it as an example to edit.
+ */
+export const previewOrgPolicy: ProviderPolicy = {
   managed: true,
-  source,
+  source: "console",
   blocked: [
     {
       value: "auto",
@@ -55,28 +58,40 @@ const previewOrgPolicy = (
   max_effort: "medium",
   prompts_denied: true,
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
-});
-
-/** Default as discovery reports it under the org's default model. */
-const previewOrgDefault: ModelChoice = {
-  value: "default",
-  resolvedModel: "claude-sonnet-5-5",
-  displayName: "Default (recommended)",
-  description:
-    "Use the default model (currently Sonnet 5.5) · Set by your organization",
-  supportedEffortLevels: ["low", "medium", "high"],
 };
 
-/** What discovery reports for a worker, with an allowlist narrowing the models. */
-export const previewCatalog = (source?: ProviderPolicy["source"]) =>
-  source
+/** Default as discovery reports it, naming the org's default model. */
+function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
+  const plain = previewModels[0]!;
+
+  if (!default_model) return plain;
+
+  const runs = previewModels.find(
+    ({ resolvedModel }) => resolvedModel === default_model.id,
+  );
+
+  return {
+    ...plain,
+    resolvedModel: default_model.id,
+    description: `Use the default model (currently ${default_model.name}) · Set by your organization`,
+    supportedEffortLevels: runs?.supportedEffortLevels,
+    supportsEffort: runs?.supportsEffort,
+  };
+}
+
+/** What discovery reports for a worker, with the policy's allowlist applied. */
+export const previewCatalog = (policy?: ProviderPolicy) =>
+  policy
     ? {
         models: [
-          previewOrgDefault,
-          ...previewModels.filter(({ value }) =>
-            ["sonnet", "haiku"].includes(value),
+          orgDefault(policy),
+          ...previewModels.filter(
+            ({ value, resolvedModel = value }) =>
+              value !== "default" &&
+              (modelAllowed(policy, [], value) ||
+                modelAllowed(policy, [], resolvedModel)),
           ),
         ],
-        policy: previewOrgPolicy(source),
+        policy,
       }
     : { models: previewModels };
