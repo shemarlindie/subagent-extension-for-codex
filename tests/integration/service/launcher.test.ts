@@ -490,40 +490,42 @@ test("authentication failure never authorizes auto-start", async (t) => {
   await assert.rejects(access(join(dir, "service.log")));
 });
 
-test("launcher never sends the token to a listener that can't prove it holds it", async (t) => {
-  const dir = await data(t);
-  const sent: string[] = [];
+test(
+  "launcher moves off a listener that can't prove it holds the token, without sending it",
+  { timeout: 30000 },
+  async (t) => {
+    const dir = await data(t);
+    stopOnFinish(t, dir);
+    const sent: string[] = [];
 
-  // Another user's process on the port, imitating the service.
-  const impostor = await fake(t, (req, res) => {
-    if (req.headers.authorization) sent.push(req.headers.authorization);
+    // Another user's process on the port, imitating the service.
+    const impostor = await fake(t, (req, res) => {
+      if (req.headers.authorization) sent.push(req.headers.authorization);
 
-    res.end(
-      req.url === "/health"
-        ? health(req, "guessed-token", {
-            service: "subagent-extension-for-codex",
-            status: "ok",
-            apiVersion,
-          })
-        : "{}",
+      res.end(
+        req.url === "/health"
+          ? health(req, "guessed-token", {
+              service: "subagent-extension-for-codex",
+              status: "ok",
+              apiVersion,
+            })
+          : "{}",
+      );
+    });
+
+    await writeFile(
+      join(dir, "service.json"),
+      JSON.stringify({ origin: impostor }),
     );
-  });
 
-  await writeFile(
-    join(dir, "service.json"),
-    JSON.stringify({ origin: impostor }),
-  );
+    await writeFile(join(dir, "admin-token"), "secret-token");
 
-  await writeFile(join(dir, "admin-token"), "secret-token");
+    const moved = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
 
-  await assert.rejects(
-    connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir }),
-    /did not prove it holds this data directory's admin token/,
-  );
-
-  assert.deepEqual(sent, []);
-  await assert.rejects(access(join(dir, "service.log")));
-});
+    assert.notEqual(moved.origin, impostor);
+    assert.deepEqual(sent, []);
+  },
+);
 
 test("launcher waits for an existing service to finish recovery without spawning", async (t) => {
   const dir = await data(t);
