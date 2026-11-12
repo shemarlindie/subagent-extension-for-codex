@@ -8,6 +8,12 @@
       "port": 5317
     },
     {
+      "name": "panel-dev-host",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:ui", "--", "--host"],
+      "port": 5317
+    },
+    {
       "name": "service-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
