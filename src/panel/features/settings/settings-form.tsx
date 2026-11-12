@@ -372,7 +372,7 @@ export function SettingsForm({
         </Collapsible.Panel>
       </Collapsible.Root>
       <fieldset
-        className={`settings-form-body${loading ? " settings-loading-body" : ""}`}
+        className="settings-form-body"
         disabled={importing}
         aria-label="Settings values"
       >
