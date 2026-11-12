@@ -3,6 +3,23 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.4.0
+
+### Features
+
+- Polish settings About and fix scroll leaks (#73)
+- Follow the org's default model, reasoning cap and other policy (#71)
+- Show the data directory in About (#69)
+- Default the permission mode to auto (#68)
+- Stream chat replies a paragraph at a time (#55)
+- Let users hide the task list (#54)
+- Refine worker profiles (#52)
+
+### Fixes
+
+- Move off a port held by another data directory's service (#72)
+- Restore search scroll position as sections regrow (#56)
+
 ## 0.3.0
 
 ### Features
