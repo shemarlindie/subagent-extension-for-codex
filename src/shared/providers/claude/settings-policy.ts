@@ -1,7 +1,6 @@
 import type {
   HelpPart,
   ModelScope,
-  SettingOption,
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
@@ -87,15 +86,13 @@ export function inheritHelp(
   ];
 }
 
-const orgDefaultLabel = (name: string) => `Inherit (${name})`;
-
 const savedWarning = (what: string, name: string) =>
   `Your saved ${what}, ${name}, applies again if your organization stops setting a default.`;
 
 /**
- * A model scope with the org's defaults where they apply: Claude's Inherit
- * names them, and Global, which they replace, is disabled. A saved Global
- * value stays, with a warning. Profiles inherit as before.
+ * A model scope with the org's defaults where they apply: Claude's model
+ * Inherit names the org's model, and Global, which the defaults replace, is
+ * disabled. A saved Global value stays, with a warning.
  */
 function withOrgDefaults(
   scope: ModelScope,
@@ -103,26 +100,14 @@ function withOrgDefaults(
   values: unknown,
 ): ModelScope {
   if (scope.id === "claude") {
-    const named = (options: SettingOption[], blank: string, name?: string) =>
-      options.map((option) =>
-        name && option.value === blank
-          ? { ...option, label: orgDefaultLabel(name) }
-          : option,
-      );
-
     return {
       ...scope,
       model: {
         ...scope.model,
-        options:
-          scope.model.options && named(scope.model.options, "", model?.name),
-      },
-      effort: {
-        ...scope.effort,
-        options: named(
-          scope.effort.options,
-          "default",
-          effort && titleCase(effort),
+        options: scope.model.options?.map((option) =>
+          model && option.value === ""
+            ? { ...option, label: `Inherit (${model.name})` }
+            : option,
         ),
       },
     };
@@ -174,13 +159,8 @@ function policyFacts(policy: ProviderPolicy) {
     ...(policy.default_model
       ? [{ label: "Default model", detail: `${policy.default_model.name}.` }]
       : []),
-    ...(policy.default_effort
-      ? [
-          {
-            label: "Default reasoning",
-            detail: `${titleCase(policy.default_effort)}.`,
-          },
-        ]
+    ...(defaultReasoning(policy)
+      ? [{ label: "Default reasoning", detail: defaultReasoning(policy)! }]
       : []),
     ...(modes.length
       ? [
@@ -214,6 +194,23 @@ function policyFacts(policy: ProviderPolicy) {
       : []),
     ...policy.notes,
   ];
+}
+
+/** The org's default reasoning in words, such as "Medium, and Low for sonnet." */
+function defaultReasoning({
+  default_effort,
+  model_default_effort,
+}: ProviderPolicy) {
+  const parts = [
+    ...(default_effort ? [titleCase(default_effort)] : []),
+    ...Object.entries(model_default_effort ?? {}).map(
+      ([model, level]) => `${titleCase(level)} for ${model}`,
+    ),
+  ];
+
+  return parts.length
+    ? `${parts[0]}${parts.length > 1 ? `, and ${parts.slice(1).join(", ")}` : ""}.`
+    : undefined;
 }
 
 /** The org's reasoning caps in words, such as "Limited to High, and Low for opus." */

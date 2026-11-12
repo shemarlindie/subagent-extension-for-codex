@@ -57,6 +57,8 @@ export interface ProviderPolicy {
   default_model?: { id: string; name: string };
   /** The reasoning new tasks run by default, when policy sets it. */
   default_effort?: string;
+  /** Each model's own default reasoning, by model name, in place of `default_effort`. */
+  model_default_effort?: Record<string, string>;
   /** The highest reasoning policy allows, unless a model has its own. */
   max_effort?: string;
   /** Each model's own highest reasoning, by model name, in place of `max_effort`. */

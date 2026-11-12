@@ -184,6 +184,7 @@ test("the org's default is Claude's Inherit and disables Global, which keeps a s
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
 
   assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit");
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Low)");
 
   assert.equal(rows.global?.model.disabled, true);
   assert.equal(rows.global?.effort.disabled, true);
@@ -210,6 +211,35 @@ test("the org's default is Claude's Inherit and disables Global, which keeps a s
   assert.equal(
     help("profile-models"),
     "Inherit uses the task's provider default, then your organization's default, Sonnet 5.5 with Low reasoning. Task choices override profile defaults.",
+  );
+});
+
+test("a model's own org reasoning shows where Inherit lands on it", () => {
+  const perModel = { ...policy, model_default_effort: { haiku: "low" } };
+  const global = { model: "haiku", reasoning_effort: "high" };
+
+  let rows = scopes(sections({ models: { global } }, perModel));
+
+  assert.equal(rows.global?.effort.options[0]?.label, "Inherit (Low)");
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
+
+  rows = scopes(sections({ models: { global: { model: "haiku" } } }, perModel));
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
+
+  // Another model runs without it.
+  rows = scopes(sections({ models: { global: { model: "opus" } } }, perModel));
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
+
+  const facts = sections({}, { ...perModel, default_effort: "medium" }).find(
+    ({ id }) => id === "organization-policy",
+  )?.facts;
+
+  assert.ok(
+    facts?.some(
+      ({ label, detail }) =>
+        label === "Default reasoning" &&
+        detail === "Medium, and Low for haiku.",
+    ),
   );
 });
 

@@ -6,6 +6,7 @@ import {
   aboveEffortCap,
   effortCap,
   modelAllowed,
+  orgEffort,
   resolvedModel,
   withEffortCap,
 } from "../providers/policy.js";
@@ -81,6 +82,31 @@ export interface ScopeInput {
 }
 
 /**
+ * The org's reasoning a scope's Inherit lands on: its level for the model the
+ * scope runs, when no scope it inherits sets one and the model supports it.
+ */
+function orgInherited(
+  values: unknown,
+  scope: { id: string; provider: string; providerScope: boolean },
+  policy: ProviderPolicy | undefined,
+  model: string,
+  levels: readonly string[] | undefined,
+) {
+  // Global inherits no scope, and Claude only Global.
+  const parent = scope.providerScope ? {} : { provider: scope.provider };
+
+  const inherits =
+    scope.id !== "global" &&
+    resolveModelDefaults(values, parent, policy).reasoning_effort;
+
+  const org = orgEffort(policy, model);
+
+  return !inherits && org && (!levels || levels.includes(org))
+    ? org
+    : undefined;
+}
+
+/**
  * One model/effort scope: its choices, and the effort levels its effective
  * model supports (undefined when unknown).
  */
@@ -144,9 +170,15 @@ export function modelScope(
       ]
     : undefined;
 
-  const cap = effortCap(
+  const runs = resolvedModel(catalog?.models ?? [], effectiveModel);
+  const cap = effortCap(catalog?.policy, runs);
+
+  const inherited = orgInherited(
+    values,
+    { id: scope, provider, providerScope },
     catalog?.policy,
-    resolvedModel(catalog?.models ?? [], effectiveModel),
+    runs,
+    levels,
   );
 
   return {
@@ -158,20 +190,21 @@ export function modelScope(
     levels,
     modelChoices,
     modelExcluded: !modelAllowed(catalog?.policy, choices, saved),
-    ...effortScope(levels, providerScope, savedEffort, cap),
+    ...effortScope(levels, providerScope, savedEffort, cap, inherited),
   };
 }
 
 /**
  * A scope's effort choices: a provider's offers the levels its model
  * supports, when known, and others offer all of them. Levels above the
- * org's cap are locked.
+ * org's cap are locked, and Inherit names the org's level it lands on.
  */
 function effortScope(
   levels: readonly string[] | undefined,
   providerScope: boolean,
   savedEffort: string,
   cap: string | undefined,
+  inherited: string | undefined,
 ) {
   const choices =
     providerScope && levels
@@ -186,7 +219,10 @@ function effortScope(
   return {
     effortChoices: withEffortCap(
       [
-        { value: "default", label: "Inherit" },
+        {
+          value: "default",
+          label: inherited ? `Inherit (${titleCase(inherited)})` : "Inherit",
+        },
         ...choices.map((level) => ({ value: level, label: level })),
       ],
       cap,

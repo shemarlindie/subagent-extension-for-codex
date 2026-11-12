@@ -269,7 +269,10 @@ test("the org's default model and reasoning reach the Default entry and the poli
   const read = discovery({
     policy: {
       model: "sonnet",
-      modelSettings: { "claude-sonnet-5-5": { effortLevel: "low" } },
+      effortLevel: "medium",
+      modelSettings: {
+        "claude-sonnet-5-5": { effortLevel: "low", maxEffortLevel: "high" },
+      },
     },
     catalog: defaultCatalog,
     applied: { model: "claude-sonnet-5-5", effort: "low" },
@@ -291,7 +294,14 @@ test("the org's default model and reasoning reach the Default entry and the poli
     name: "Sonnet",
   });
 
-  assert.equal(policy?.default_effort, "low");
+  // A model's own reasoning stays with that model.
+  assert.equal(policy?.default_effort, "medium");
+
+  assert.deepEqual(policy?.model_default_effort, {
+    "claude-sonnet-5-5": "low",
+  });
+
+  assert.deepEqual(policy?.model_max_effort, { "claude-sonnet-5-5": "high" });
 });
 
 test("a default from the user's settings doesn't name the organization", async () => {

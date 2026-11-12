@@ -49,21 +49,31 @@ export const resolvedModel = (models: readonly ModelChoice[], value = "") =>
   models.find((choice) => choice.value === (value || "default"))
     ?.resolvedModel ?? value;
 
+/** A model ID's entry in a by-model map, in any of its spellings. */
+const modelEntry = (levels: Record<string, string> = {}, model: string) => {
+  const id = model.replace(/\[.*\]$/, "");
+
+  return Object.entries(levels).find(([key]) =>
+    entryAllows(key, id, true),
+  )?.[1];
+};
+
 /**
  * The highest reasoning policy allows for a model ID, if it limits it. A
  * model's own cap replaces the top-level one, and `max` means no limit.
  */
 export function effortCap(policy: ProviderPolicy | undefined, model: string) {
-  const id = model.replace(/\[.*\]$/, "");
-
-  const own = Object.entries(policy?.model_max_effort ?? {}).find(([key]) =>
-    entryAllows(key, id, true),
-  )?.[1];
-
-  const cap = own ?? policy?.max_effort;
+  const cap = modelEntry(policy?.model_max_effort, model) ?? policy?.max_effort;
 
   return cap === "max" ? undefined : cap;
 }
+
+/**
+ * The reasoning a model ID runs when nothing else sets it, if the org sets it.
+ * A model's own default replaces the top-level one.
+ */
+export const orgEffort = (policy: ProviderPolicy | undefined, model: string) =>
+  modelEntry(policy?.model_default_effort, model) ?? policy?.default_effort;
 
 const rank = (level: string) =>
   reasoningLevels.indexOf(level as (typeof reasoningLevels)[number]);

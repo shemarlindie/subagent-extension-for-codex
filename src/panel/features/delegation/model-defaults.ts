@@ -3,6 +3,7 @@ import {
   aboveEffortCap,
   effortCap,
   effortCapReason,
+  orgEffort,
 } from "../../../shared/providers/policy";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
@@ -14,8 +15,9 @@ import { workerChoice } from "./delegation";
  * default: the profile's setting, then the provider's, then the org's
  * default or the global one. `providerModel` and `providerReasoning` skip the
  * profile's setting. The org's model is a name, as it has no value of its
- * own, and its reasoning applies where the model supports it. Also returns
- * the selected model's metadata and its supported effort levels.
+ * own. The org's reasoning for the model that runs fills in last, where the
+ * model supports it. Also returns the selected model's metadata and its
+ * supported effort levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -39,18 +41,20 @@ export function modelDefaults(
         providerMetadata(provider, workerInfo?.metadata)?.defaultEffortLevels ??
         reasoningLevels);
 
-  const orgEffort = supported.find((level) => level === policy?.default_effort);
+  const model = metadata?.resolvedModel ?? runs;
+  const org = orgEffort(policy, model);
+  const orgLevel = supported.find((level) => level === org);
 
   return {
     provider,
     model: saved.model ?? policy?.default_model?.name,
-    reasoning: saved.reasoning_effort ?? orgEffort,
+    reasoning: saved.reasoning_effort ?? orgLevel,
     providerModel: saved.providerModel,
-    providerReasoning: saved.providerReasoning ?? orgEffort,
+    providerReasoning: saved.providerReasoning ?? orgLevel,
     workerInfo,
     metadata,
     supported,
-    cap: effortCap(policy, metadata?.resolvedModel ?? runs),
+    cap: effortCap(policy, model),
   };
 }
 

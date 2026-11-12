@@ -266,11 +266,21 @@ test("the composer inherits the org's defaults in place of Global's", async () =
           provider: "claude",
           profiles: [...roles],
           capabilities: {},
+          models: [
+            {
+              value: "default",
+              resolvedModel: "claude-sonnet-5-5",
+              displayName: "Default",
+              description: "",
+            },
+          ],
+          // The running model's own level wins over the top-level one.
           policy: {
             managed: true,
             blocked: [],
             default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
-            default_effort: "low",
+            default_effort: "medium",
+            model_default_effort: { sonnet: "low" },
             notes: [],
           },
         },

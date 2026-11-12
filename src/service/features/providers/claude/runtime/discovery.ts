@@ -90,21 +90,18 @@ const catalogEntry = (models: ModelChoice[], model: string) =>
       value !== "default" && resolvedModel === model,
   );
 
-/** Whether policy sets the default effort, for every model or for one. */
-const setsEffort = (policy: Settings) =>
-  !!policy.effortLevel ||
-  Object.values(policy.modelSettings ?? {}).some(
-    ({ effortLevel }) => effortLevel,
+/** Each model's own reasoning default or cap, by model name, when policy sets any. */
+function byModel(
+  policy: Settings,
+  setting: "effortLevel" | "maxEffortLevel",
+  field: "model_default_effort" | "model_max_effort",
+) {
+  const levels = Object.entries(policy.modelSettings ?? {}).flatMap(
+    ([model, settings]) =>
+      settings[setting] ? [[model, settings[setting]]] : [],
   );
 
-/** Each model's own reasoning cap, when policy sets any. */
-function effortCaps(policy: Settings) {
-  const caps = Object.entries(policy.modelSettings ?? {}).flatMap(
-    ([model, { maxEffortLevel }]) =>
-      maxEffortLevel ? [[model, maxEffortLevel]] : [],
-  );
-
-  return caps.length ? { model_max_effort: Object.fromEntries(caps) } : {};
+  return levels.length ? { [field]: Object.fromEntries(levels) } : {};
 }
 
 /**
@@ -181,11 +178,10 @@ async function policyFrom(
           },
         }
       : {}),
-    ...(setsEffort(policy) && applied?.effort
-      ? { default_effort: applied.effort }
-      : {}),
+    ...(policy.effortLevel ? { default_effort: policy.effortLevel } : {}),
+    ...byModel(policy, "effortLevel", "model_default_effort"),
     ...(policy.maxEffortLevel ? { max_effort: policy.maxEffortLevel } : {}),
-    ...effortCaps(policy),
+    ...byModel(policy, "maxEffortLevel", "model_max_effort"),
     ...(policy.permissions?.denyInsteadOfPrompting
       ? { prompts_denied: true }
       : {}),
