@@ -186,6 +186,7 @@ test("the org's default model locks Global, Claude and profile rows, and reasoni
     ...policy,
     default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
   });
+
   const rows = scopes(modelOnly);
 
   for (const id of ["global", "claude", "reviewer", "implementer"]) {
