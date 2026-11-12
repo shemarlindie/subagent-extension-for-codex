@@ -537,9 +537,15 @@ Vitest keeps file isolation. The `unit-dom` project uses VM threads. Keep
 process, SQLite and native-boundary tests in the Node projects because objects
 returned by native APIs can cross VM realms.
 
-Format edited files with `npx eslint --fix <files>`, then
-`npx prettier --write <files>`. ESLint also lints Markdown, but check cross-file
-links and heading fragments yourself after moving documentation.
+Format edited files with:
+
+```sh
+npx prettier --write <files> && npx eslint --fix <files> && npx prettier --write <files>
+```
+
+Prettier runs twice because its wrapping can trigger lint fixes, such as braces,
+that it then formats. ESLint also lints Markdown, but check cross-file links and
+heading fragments yourself after moving documentation.
 
 Lint enforces the [runtime boundaries](architecture.md#code-ownership), React
 hook rules and type-aware checks. TypeScript checks for missing values in
