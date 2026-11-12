@@ -285,7 +285,12 @@ test("the org's default model and reasoning reach the Default entry and the poli
   });
 
   const policy = await read.policy();
-  assert.equal(policy?.default_model, "Sonnet");
+
+  assert.deepEqual(policy?.default_model, {
+    id: "claude-sonnet-5-5",
+    name: "Sonnet",
+  });
+
   assert.equal(policy?.default_effort, "low");
 });
 

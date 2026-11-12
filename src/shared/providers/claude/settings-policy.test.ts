@@ -22,7 +22,14 @@ const policy: ProviderPolicy = {
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 };
 
-const models = [{ value: "haiku", displayName: "Haiku", description: "" }];
+const models = [
+  {
+    value: "haiku",
+    resolvedModel: "claude-haiku-5-5",
+    displayName: "Haiku",
+    description: "",
+  },
+];
 
 function sections(saved: object, catalogPolicy?: ProviderPolicy | null) {
   return settingsSections({
@@ -84,7 +91,11 @@ test("the section names the source and lists what's limited", () => {
 test("the org's default model and reasoning lead the facts", () => {
   const facts = sections(
     {},
-    { ...policy, default_model: "Sonnet 5.5", default_effort: "low" },
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "low",
+    },
   ).find(({ id }) => id === "organization-policy")?.facts;
 
   assert.deepEqual(facts?.slice(0, 2), [
@@ -171,7 +182,10 @@ test("the org's default model locks Global, Claude and profile rows, and reasoni
     },
   };
 
-  const modelOnly = sections(saved, { ...policy, default_model: "Sonnet 5.5" });
+  const modelOnly = sections(saved, {
+    ...policy,
+    default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+  });
   const rows = scopes(modelOnly);
 
   for (const id of ["global", "claude", "reviewer", "implementer"]) {
@@ -206,6 +220,18 @@ test("the org's default model locks Global, Claude and profile rows, and reasoni
     effort.implementer?.effort.warning,
     "Your saved reasoning, High, applies again if your organization stops setting a default.",
   );
+
+  // A saved value the org's default matches, by model ID, doesn't warn.
+  const same = scopes(
+    sections(saved, {
+      ...policy,
+      default_model: { id: "claude-haiku-5-5", name: "Haiku" },
+      default_effort: "high",
+    }),
+  );
+
+  assert.equal(same.global?.model.warning, undefined);
+  assert.equal(same.implementer?.effort.warning, undefined);
 });
 
 test("the org's reasoning cap locks higher levels and warns on a saved one above it", () => {

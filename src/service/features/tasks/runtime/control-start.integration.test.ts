@@ -608,7 +608,7 @@ test("the org's default model and reasoning outrank saved ones, and a request's 
     managed: true,
     blocked: [],
     notes: [],
-    default_model: "Sonnet",
+    default_model: { id: "claude-sonnet-5-5", name: "Sonnet" },
   };
 
   let policy: ProviderPolicy = orgDefaults;

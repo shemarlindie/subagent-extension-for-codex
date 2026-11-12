@@ -269,7 +269,7 @@ test("under the org's defaults the composer starts on them, and a pick stays wit
           policy: {
             managed: true,
             blocked: [],
-            default_model: "Sonnet 5.5",
+            default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
             default_effort: "low",
             notes: [],
           },

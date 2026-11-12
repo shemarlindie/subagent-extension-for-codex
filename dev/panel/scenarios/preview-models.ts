@@ -12,12 +12,14 @@ const previewModels: ModelChoice[] = [
   },
   {
     value: "opus",
+    resolvedModel: "claude-opus-5-5",
     displayName: "Opus 5.5",
     description: "For complex work and everyday tasks",
     supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
   },
   {
     value: "sonnet",
+    resolvedModel: "claude-sonnet-5-5",
     displayName: "Sonnet 5.5",
     description: "Most efficient for simpler tasks",
     supportedEffortLevels: ["low", "medium", "high"],
@@ -48,7 +50,7 @@ const previewOrgPolicy = (
   ],
   available_models: ["sonnet", "haiku"],
   available_models_match: "prefix",
-  default_model: "Sonnet 5.5",
+  default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
   default_effort: "low",
   max_effort: "medium",
   prompts_denied: true,
@@ -58,6 +60,7 @@ const previewOrgPolicy = (
 /** Default as discovery reports it under the org's default model. */
 const previewOrgDefault: ModelChoice = {
   value: "default",
+  resolvedModel: "claude-sonnet-5-5",
   displayName: "Default (recommended)",
   description:
     "Use the default model (currently Sonnet 5.5) · Set by your organization",

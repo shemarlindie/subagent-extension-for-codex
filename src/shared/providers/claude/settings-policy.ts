@@ -6,8 +6,8 @@ import type {
 import { settingAt } from "../../settings/settings-schema.js";
 import { roles } from "../../tasks/model.js";
 import { scalarText, titleCase } from "../../text.js";
-import { blockedReason, withBlockedOptions } from "../policy.js";
-import type { ProviderPolicy } from "../types.js";
+import { blockedReason, resolvedModel, withBlockedOptions } from "../policy.js";
+import type { ModelChoice, ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
 
@@ -54,11 +54,11 @@ function orgDefaultsHelp({ default_model, default_effort }: ProviderPolicy) {
 
   const effort = default_effort && titleCase(default_effort);
 
-  let defaults = `default model is ${default_model}`;
+  const model = default_model?.name;
+  let defaults = `default model is ${model}`;
 
-  if (!default_model) defaults = `default reasoning is ${effort}`;
-  else if (effort)
-    defaults = `default is ${default_model} with ${effort} reasoning`;
+  if (!model) defaults = `default reasoning is ${effort}`;
+  else if (effort) defaults = `default is ${model} with ${effort} reasoning`;
 
   return ` Your organization's ${defaults}. To change it for one task, use the composer.`;
 }
@@ -68,12 +68,13 @@ const savedWarning = (what: string, name: string) =>
 
 /**
  * A model scope with the org's defaults in place of the choices they
- * outrank. Saved values stay, with a warning. Other providers' rows keep
- * their own defaults.
+ * outrank. A saved value that differs stays, with a warning. Other
+ * providers' rows keep their own defaults.
  */
 function withOrgDefaultLocks(
   scope: ModelScope,
   { default_model: model, default_effort: effort }: ProviderPolicy,
+  models: readonly ModelChoice[],
   values: unknown,
 ): ModelScope {
   if (!["global", "claude", ...roles].includes(scope.id)) return scope;
@@ -85,13 +86,19 @@ function withOrgDefaultLocks(
     scope.model.options?.find(({ value }) => value === savedModel)?.label ??
     savedModel;
 
+  const modelDiffers =
+    !!savedModel && resolvedModel(models, savedModel) !== model?.id;
+
+  const effortDiffers =
+    !!savedEffort && savedEffort !== "default" && savedEffort !== effort;
+
   return {
     ...scope,
     model: model
       ? {
           ...scope.model,
-          locked: model,
-          warning: savedModel ? savedWarning("model", modelName) : undefined,
+          locked: model.name,
+          warning: modelDiffers ? savedWarning("model", modelName) : undefined,
         }
       : scope.model,
     effort: effort
@@ -99,10 +106,9 @@ function withOrgDefaultLocks(
           ...scope.effort,
           locked: titleCase(effort),
           unsupported: false,
-          warning:
-            savedEffort && savedEffort !== "default"
-              ? savedWarning("reasoning", titleCase(savedEffort))
-              : undefined,
+          warning: effortDiffers
+            ? savedWarning("reasoning", titleCase(savedEffort))
+            : undefined,
         }
       : scope.effort,
   };
@@ -121,7 +127,7 @@ function policyFacts(policy: ProviderPolicy) {
 
   return [
     ...(policy.default_model
-      ? [{ label: "Default model", detail: `${policy.default_model}.` }]
+      ? [{ label: "Default model", detail: `${policy.default_model.name}.` }]
       : []),
     ...(policy.default_effort
       ? [
@@ -188,19 +194,22 @@ function reasoningLimit({ max_effort, model_max_effort }: ProviderPolicy) {
 /** Settings sections with Claude's org policy applied. */
 export function withClaudePolicy(
   sections: SettingSection[],
-  policy: ProviderPolicy | undefined,
+  catalog: { policy?: ProviderPolicy; models?: ModelChoice[] } | undefined,
   values: unknown,
 ) {
+  const policy = catalog?.policy;
+  const models = catalog?.models ?? [];
+
   if (!policy) return sections;
 
   const lockHelp = orgDefaultsHelp(policy);
 
   const applied = sections.map((section) => {
-    const models = section.rows.some(({ kind }) => kind === "models");
+    const hasModels = section.rows.some(({ kind }) => kind === "models");
 
     return {
       ...section,
-      ...(models && lockHelp
+      ...(hasModels && lockHelp
         ? { help: [...(section.help ?? []), lockHelp] }
         : {}),
       rows: section.rows.map((row) =>
@@ -208,7 +217,7 @@ export function withClaudePolicy(
           ? {
               ...row,
               scopes: row.scopes.map((scope) =>
-                withOrgDefaultLocks(scope, policy, values),
+                withOrgDefaultLocks(scope, policy, models, values),
               ),
             }
           : withPolicy(row, policy, values),

@@ -366,7 +366,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
 
   return withClaudePolicy(
     sections,
-    input.catalogs.find(({ provider }) => provider === "claude")?.policy,
+    input.catalogs.find(({ provider }) => provider === "claude"),
     values,
   );
 }

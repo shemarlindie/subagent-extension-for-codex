@@ -15,7 +15,7 @@ export function orgDefaults(workers: Worker[], worker: string) {
   const policy = workers.find((item) => item.provider === provider)?.policy;
 
   return {
-    model: policy?.default_model,
+    model: policy?.default_model?.name,
     reasoning_effort: policy?.default_effort,
   };
 }

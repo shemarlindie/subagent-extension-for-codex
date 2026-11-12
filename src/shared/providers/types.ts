@@ -53,8 +53,8 @@ export interface ProviderPolicy {
   /** The model allowlist, for checking typed model IDs. */
   available_models?: string[];
   available_models_match?: "prefix" | "exact";
-  /** The name of the model new tasks run by default, when policy sets it. */
-  default_model?: string;
+  /** The model new tasks run by default, when policy sets it. */
+  default_model?: { id: string; name: string };
   /** The reasoning new tasks run by default, when policy sets it. */
   default_effort?: string;
   /** The highest reasoning policy allows, unless a model has its own. */

@@ -291,8 +291,8 @@ sections, and failed reads offer a retry. See [Configuration](configuration.md)
 for permission and approval defaults.
 
 When your organization sets a default model or reasoning, the Global, Claude and
-profile rows show it read-only. A saved value stays, with a warning, and applies
-again if the organization stops setting a default. See
+profile rows show it read-only. A saved value that differs stays, with a
+warning, and applies again if the organization stops setting a default. See
 [Org policy](configuration.md#org-policy).
 
 Search settings by section name, label, description, setting path or choice.

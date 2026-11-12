@@ -174,8 +174,11 @@ async function policyFrom(
       : {}),
     ...(policy.model && applied
       ? {
-          default_model:
-            catalogEntry(models, applied.model)?.displayName ?? applied.model,
+          default_model: {
+            id: applied.model,
+            name:
+              catalogEntry(models, applied.model)?.displayName ?? applied.model,
+          },
         }
       : {}),
     ...(setsEffort(policy) && applied?.effort
