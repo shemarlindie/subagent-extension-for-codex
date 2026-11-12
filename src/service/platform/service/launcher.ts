@@ -104,7 +104,7 @@ export async function connectService() {
     process.env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN ??
     readFileSync(join(data, "admin-token"), "utf8").trim();
 
-  /** Something other than an extension service answers on the port. */
+  /** Something other than this data directory's service answers on the port. */
   const foreign = (cause?: unknown) =>
     new PortInUseError(Number(url.port || 80), { cause });
 
@@ -138,7 +138,12 @@ export async function connectService() {
       throw foreign(error);
     });
 
-    if (health?.service !== "subagent-extension-for-codex") throw foreign();
+    if (
+      health?.service !== "subagent-extension-for-codex" ||
+      !provesToken(token(), challenge, health.proof)
+    ) {
+      throw foreign();
+    }
 
     if (
       ["starting", "stopping"].includes(health.status) &&
@@ -150,12 +155,6 @@ export async function connectService() {
     if (!response.ok) {
       throw new Error(
         `The extension service at ${origin} reported ${response.status}; inspect ${join(data, "service.log")}`,
-      );
-    }
-
-    if (!provesToken(token(), challenge, health.proof)) {
-      throw new Error(
-        `The service at ${origin} did not prove it holds this data directory's admin token, so the token was not sent. Another program may be using the port, or the data or URL overrides differ.`,
       );
     }
 
