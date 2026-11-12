@@ -41,8 +41,8 @@ function withPolicy(
       ? {
           warning:
             reason === MODE_TURNED_OFF_BY_ORG
-              ? `Your saved mode, ${permissionModeName(saved)}, is turned off by your organization. New tasks ask for approval.`
-              : `Your saved mode, ${permissionModeName(saved)}, isn't available. New tasks ask for approval.`,
+              ? "Your organization turned off this mode. New tasks ask for approval."
+              : "This mode isn't available. New tasks ask for approval.",
         }
       : {}),
   };

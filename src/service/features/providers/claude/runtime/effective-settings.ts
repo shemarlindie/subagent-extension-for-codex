@@ -75,7 +75,7 @@ const capsEffort = (policy?: Settings) =>
  */
 const effortReason = (requested: string, actual: string, policy?: Settings) =>
   capsEffort(policy)
-    ? `Running with ${titleCase(actual)} reasoning, your organization's limit.`
+    ? `Running with ${titleCase(actual)} reasoning. Your organization doesn't allow ${titleCase(requested)}.`
     : `Running with ${titleCase(actual)} reasoning instead of ${titleCase(requested)}.`;
 
 const EFFECTIVE_KEYS = ["permission_mode", "model", "effort"] as const;

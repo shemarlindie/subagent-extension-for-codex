@@ -35,7 +35,7 @@ loweredTask.add("agent.limited", {
   setting: "reasoning_effort",
   requested: "xhigh",
   effective: "high",
-  reason: "Running with High reasoning, your organization's limit.",
+  reason: "Running with High reasoning. Your organization doesn't allow Xhigh.",
 });
 
 loweredTask.say(loweredReply);

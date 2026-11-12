@@ -275,7 +275,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         unsupported: info.unsupported,
         ...(info.effortLowered
           ? {
-              warning: `New tasks run your saved reasoning at ${titleCase(info.effortLowered)}, your organization's limit.`,
+              warning: `Your organization doesn't allow this level. New tasks use ${titleCase(info.effortLowered)}.`,
             }
           : {}),
       },

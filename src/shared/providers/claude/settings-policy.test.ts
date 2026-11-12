@@ -126,7 +126,10 @@ test("a mode blocked outside policy isn't blamed on the organization", () => {
     },
   );
 
-  assert.match(row(all, MODE).warning ?? "", /Auto, isn't available/);
+  assert.equal(
+    row(all, MODE).warning,
+    "This mode isn't available. New tasks ask for approval.",
+  );
 
   assert.ok(
     !all
@@ -157,7 +160,7 @@ test("a saved choice now blocked warns on its row, and nothing else does", () =>
 
   assert.equal(
     row(all, MODE).warning,
-    "Your saved mode, Bypass permission prompts, is turned off by your organization. New tasks ask for approval.",
+    "Your organization turned off this mode. New tasks ask for approval.",
   );
 
   assert.equal(row(sections({}), MODE).warning, undefined);
@@ -267,7 +270,7 @@ test("the org's reasoning cap locks higher levels and warns on a saved one above
 
   assert.equal(
     claude?.effort.warning,
-    "New tasks run your saved reasoning at High, your organization's limit.",
+    "Your organization doesn't allow this level. New tasks use High.",
   );
 
   assert.equal(scopes(all).global?.effort.warning, undefined);
