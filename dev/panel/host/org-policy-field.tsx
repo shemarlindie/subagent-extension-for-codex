@@ -32,7 +32,7 @@ export function OrgPolicyField({ value, disabled, onChange }: Props) {
           rows={10}
           value={draft}
           disabled={disabled}
-          placeholder='{"managed": true, "blocked": [], "notes": []}'
+          placeholder='{"default_effort": "high"}'
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => apply(draft)}
         />

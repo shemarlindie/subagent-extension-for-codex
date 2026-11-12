@@ -142,13 +142,16 @@ export function parseStyles(text: string): Record<string, string> | undefined {
 export const orgPolicyJson = (policy: ProviderPolicy) =>
   JSON.stringify(policy, null, 2);
 
-/** The org policy JSON as an object, or undefined when blank or invalid. */
+/**
+ * The org policy JSON as a policy, or undefined when blank or invalid. Fields
+ * the panel reads unchecked are filled in, so a partial policy works.
+ */
 export function parseOrgPolicy(text: string): ProviderPolicy | undefined {
   try {
     const value: unknown = JSON.parse(text);
 
-    return typeof value === "object" && value !== null
-      ? (value as ProviderPolicy)
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? { managed: true, blocked: [], notes: [], ...value }
       : undefined;
   } catch {
     return undefined;
