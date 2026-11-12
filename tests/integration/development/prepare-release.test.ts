@@ -102,13 +102,12 @@ async function fixture(t: TestContext) {
     git,
     ghArgs,
     notes: (text: string) => appendFile(join(checkout, "CHANGELOG.md"), text),
-    /** Runs the script, answering its confirmation when it picks the version. */
-    prepare: (version?: string, answer = "") => {
-      const run = exec(
-        process.execPath,
-        [script, ...(version ? [version] : [])],
-        { cwd: checkout, env },
-      );
+    /** Runs the script, answering its confirmation before it commits. */
+    prepare: (arg?: string, answer = "y\n") => {
+      const run = exec(process.execPath, [script, ...(arg ? [arg] : [])], {
+        cwd: checkout,
+        env,
+      });
 
       run.child.stdin?.end(answer);
 
@@ -227,7 +226,7 @@ test.skipIf(process.platform === "win32")(
       }
 
       await git("push", "-q", "origin", "main", "--tags");
-      await prepare(undefined, "y\n");
+      await prepare("--yes", "");
 
       return (await git("branch", "--show-current")).stdout.trim();
     };
@@ -285,7 +284,7 @@ test.skipIf(process.platform === "win32")(
 );
 
 test.skipIf(process.platform === "win32")(
-  "changes nothing when it refuses or the version is declined",
+  "changes nothing when it refuses and keeps only the notes when declined",
   async (t) => {
     const { checkout, git, notes, prepare } = await fixture(t);
 
@@ -295,7 +294,15 @@ test.skipIf(process.platform === "win32")(
         (error: { stderr: string }) => error.stderr,
       );
 
+    // Declining restores the version files and keeps the drafted notes.
     assert.match(await refusal(), /Cancelled/);
+
+    assert.equal(
+      (await git("status", "--porcelain")).stdout,
+      " M CHANGELOG.md\n",
+    );
+
+    await git("checkout", "CHANGELOG.md");
     assert.match(await refusal("0.1.0"), /already at 0\.1\.0/);
 
     await git("tag", "v0.3.0");
