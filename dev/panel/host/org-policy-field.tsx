@@ -19,6 +19,10 @@ export function OrgPolicyField({ value, disabled, onChange }: Props) {
   const [draft, setDraft] = useState(value);
   const invalid = draft.trim() !== "" && !parseOrgPolicy(draft);
 
+  let hint = "The policy as discovery reports it. Leave blank for none.";
+  if (invalid) hint = "Invalid JSON, so no policy applies.";
+  if (disabled) hint = "The live service reads your organization's policy.";
+
   const apply = (text: string) => {
     setDraft(text);
     onChange(text);
@@ -36,11 +40,7 @@ export function OrgPolicyField({ value, disabled, onChange }: Props) {
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => apply(draft)}
         />
-        <small>
-          {invalid
-            ? "Invalid JSON, so no policy applies."
-            : "The policy as discovery reports it. Leave blank for none."}
-        </small>
+        <small>{hint}</small>
       </label>
       <button type="button" disabled={disabled} onClick={() => apply(EXAMPLE)}>
         Insert example
