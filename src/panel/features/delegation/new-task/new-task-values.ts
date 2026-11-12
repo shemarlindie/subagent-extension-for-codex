@@ -1,6 +1,6 @@
 import { settingAt } from "../../../../shared/settings/settings-schema";
 import { scalarText } from "../../../../shared/text";
-import type { NewTaskState, Worker } from "../../../app/state/types";
+import type { NewTaskState } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
 import {
   type DelegateFormState,
@@ -12,7 +12,6 @@ import {
   taskProjects,
   workerChoice,
 } from "../delegation";
-import { orgDefaults } from "../model-defaults";
 
 /** The session-memory entry that keeps the composer's draft. */
 export const NEW_TASK_SESSION_ID = "draft";
@@ -33,19 +32,15 @@ export function newTaskProjects(state: ProjectTargetState) {
 /**
  * The model and reasoning a profile starts with in the composer: its saved
  * settings, which the composer's chips edit. Blank inherits the provider's.
- * A field the org's default locks starts on Default, as a saved value
- * wouldn't apply.
  */
 export function profileValues(
   worker: string,
-  defaults: Defaults | undefined,
-  workers: Worker[],
+  defaults?: Defaults,
 ): Pick<DelegateValues, "model" | "reasoning_effort"> {
   const scope = `models.profiles.${workerChoice(worker).profile}`;
-  const org = orgDefaults(workers, worker);
 
-  const saved = (key: keyof typeof org) =>
-    org[key] ? "" : scalarText(settingAt(defaults, `${scope}.${key}`));
+  const saved = (key: string) =>
+    scalarText(settingAt(defaults, `${scope}.${key}`));
 
   return {
     model: saved("model"),
@@ -83,13 +78,7 @@ export function newTaskInitialValues(
     draft: {},
   });
 
-  // Before the worker's policy loads, a saved value could go out as a choice.
-  return newTask.statuses.settings === "ready" &&
-    newTask.statuses.workers === "ready" &&
-    values.worker
-    ? {
-        ...values,
-        ...profileValues(values.worker, newTask.defaults, state.workers),
-      }
+  return newTask.statuses.settings === "ready" && values.worker
+    ? { ...values, ...profileValues(values.worker, newTask.defaults) }
     : values;
 }

@@ -251,14 +251,14 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
-test("under the org's defaults the composer starts on them, and a pick stays with the task", async () => {
+test("the composer inherits the org's defaults in place of Global's", async () => {
   const saved = withSetting(
-    withSetting(ready.defaults!, "models.profiles.implementer.model", "opus"),
-    "models.profiles.implementer.reasoning_effort",
+    withSetting(ready.defaults!, "models.global.model", "haiku"),
+    "models.global.reasoning_effort",
     "high",
   );
 
-  const { view, user, start, saveProfileSetting } = setup(
+  const { view } = setup(
     { ...ready, defaults: saved },
     {
       workers: [
@@ -278,29 +278,11 @@ test("under the org's defaults the composer starts on them, and a pick stays wit
     },
   );
 
-  await user.click(
+  assert.ok(
     await view.findByRole("button", {
       name: /^Edit Sonnet 5\.5 · Low reasoning · /,
     }),
   );
-
-  await user.click(view.getByRole("combobox", { name: "Reasoning: Low" }));
-  assert.ok(await view.findByText(/a choice here applies to this task only/));
-  await user.click(await view.findByRole("option", { name: "High" }));
-
-  expect(saveProfileSetting).not.toHaveBeenCalled();
-
-  await user.type(
-    view.getByRole("textbox", { name: "Task message" }),
-    "Ship it{Enter}",
-  );
-
-  await waitFor(() => assert.equal(start.mock.calls.length, 1));
-
-  expect(start.mock.calls[0]?.[0]).toMatchObject({
-    model: "",
-    reasoning_effort: "high",
-  });
 });
 
 test("a saved level above the org's cap goes out as Default", async () => {

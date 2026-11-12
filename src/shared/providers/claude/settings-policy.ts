@@ -1,13 +1,14 @@
 import type {
+  HelpPart,
   ModelScope,
+  SettingOption,
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
 import { settingAt } from "../../settings/settings-schema.js";
-import { roles } from "../../tasks/model.js";
 import { scalarText, titleCase } from "../../text.js";
-import { blockedReason, resolvedModel, withBlockedOptions } from "../policy.js";
-import type { ModelChoice, ProviderPolicy } from "../types.js";
+import { blockedReason, withBlockedOptions } from "../policy.js";
+import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
 
@@ -48,36 +49,86 @@ function withPolicy(
   };
 }
 
-/** Why a section's locked fields show the org's defaults, said once. */
-function orgDefaultsHelp({ default_model, default_effort }: ProviderPolicy) {
-  if (!default_model && !default_effort) return undefined;
+/**
+ * What Inherit falls back to after Claude's and profile settings, ending a
+ * sentence that starts "Inherit uses": the org's defaults where it sets them,
+ * and otherwise Global, then the worker's own default.
+ */
+export function inheritHelp(
+  policy: ProviderPolicy | undefined,
+  global: HelpPart,
+): HelpPart[] {
+  const model = policy?.default_model?.name;
+  const effort = policy?.default_effort && titleCase(policy.default_effort);
 
-  const effort = default_effort && titleCase(default_effort);
+  if (model && effort) {
+    return [`your organization's default, ${model} with ${effort} reasoning.`];
+  }
 
-  const model = default_model?.name;
-  let defaults = `default model is ${model}`;
+  if (model) {
+    return [
+      `your organization's default model, ${model}, and the `,
+      global,
+      " reasoning, then the worker's own default.",
+    ];
+  }
 
-  if (!model) defaults = `default reasoning is ${effort}`;
-  else if (effort) defaults = `default is ${model} with ${effort} reasoning`;
+  if (effort) {
+    return [
+      "the ",
+      global,
+      ` model, then the worker's own, and your organization's default reasoning, ${effort}.`,
+    ];
+  }
 
-  return ` Your organization's ${defaults}. To change it for one task, use the composer.`;
+  return [
+    global,
+    ", then the worker's own default. This applies to model and reasoning.",
+  ];
 }
+
+const orgDefaultLabel = (name: string) => `Inherit (${name})`;
 
 const savedWarning = (what: string, name: string) =>
   `Your saved ${what}, ${name}, applies again if your organization stops setting a default.`;
 
 /**
- * A model scope with the org's defaults in place of the choices they
- * outrank. A saved value that differs stays, with a warning. Other
- * providers' rows keep their own defaults.
+ * A model scope with the org's defaults where they apply: Claude's Inherit
+ * names them, and Global, which they replace, is disabled. A saved Global
+ * value stays, with a warning. Profiles inherit as before.
  */
-function withOrgDefaultLocks(
+function withOrgDefaults(
   scope: ModelScope,
   { default_model: model, default_effort: effort }: ProviderPolicy,
-  models: readonly ModelChoice[],
   values: unknown,
 ): ModelScope {
-  if (!["global", "claude", ...roles].includes(scope.id)) return scope;
+  if (scope.id === "claude") {
+    const named = (options: SettingOption[], blank: string, name?: string) =>
+      options.map((option) =>
+        name && option.value === blank
+          ? { ...option, label: orgDefaultLabel(name) }
+          : option,
+      );
+
+    return {
+      ...scope,
+      model: {
+        ...scope.model,
+        options:
+          scope.model.options && named(scope.model.options, "", model?.name),
+      },
+      effort: {
+        ...scope.effort,
+        options: named(
+          scope.effort.options,
+          "default",
+          effort && titleCase(effort),
+        ),
+      },
+    };
+  }
+
+  if (scope.id !== "global") return scope;
 
   const savedModel = scalarText(settingAt(values, scope.model.path));
   const savedEffort = scalarText(settingAt(values, scope.effort.path));
@@ -86,29 +137,23 @@ function withOrgDefaultLocks(
     scope.model.options?.find(({ value }) => value === savedModel)?.label ??
     savedModel;
 
-  const modelDiffers =
-    !!savedModel && resolvedModel(models, savedModel) !== model?.id;
-
-  const effortDiffers =
-    !!savedEffort && savedEffort !== "default" && savedEffort !== effort;
-
   return {
     ...scope,
     model: model
       ? {
           ...scope.model,
-          locked: model.name,
-          warning: modelDiffers ? savedWarning("model", modelName) : undefined,
+          disabled: true,
+          warning: savedModel ? savedWarning("model", modelName) : undefined,
         }
       : scope.model,
     effort: effort
       ? {
           ...scope.effort,
-          locked: titleCase(effort),
-          unsupported: false,
-          warning: effortDiffers
-            ? savedWarning("reasoning", titleCase(savedEffort))
-            : undefined,
+          disabled: true,
+          warning:
+            savedEffort && savedEffort !== "default"
+              ? savedWarning("reasoning", titleCase(savedEffort))
+              : undefined,
         }
       : scope.effort,
   };
@@ -194,36 +239,24 @@ function reasoningLimit({ max_effort, model_max_effort }: ProviderPolicy) {
 /** Settings sections with Claude's org policy applied. */
 export function withClaudePolicy(
   sections: SettingSection[],
-  catalog: { policy?: ProviderPolicy; models?: ModelChoice[] } | undefined,
+  policy: ProviderPolicy | undefined,
   values: unknown,
 ) {
-  const policy = catalog?.policy;
-  const models = catalog?.models ?? [];
-
   if (!policy) return sections;
 
-  const lockHelp = orgDefaultsHelp(policy);
-
-  const applied = sections.map((section) => {
-    const hasModels = section.rows.some(({ kind }) => kind === "models");
-
-    return {
-      ...section,
-      ...(hasModels && lockHelp
-        ? { help: [...(section.help ?? []), lockHelp] }
-        : {}),
-      rows: section.rows.map((row) =>
-        row.kind === "models"
-          ? {
-              ...row,
-              scopes: row.scopes.map((scope) =>
-                withOrgDefaultLocks(scope, policy, models, values),
-              ),
-            }
-          : withPolicy(row, policy, values),
-      ),
-    };
-  });
+  const applied = sections.map((section) => ({
+    ...section,
+    rows: section.rows.map((row) =>
+      row.kind === "models"
+        ? {
+            ...row,
+            scopes: row.scopes.map((scope) =>
+              withOrgDefaults(scope, policy, values),
+            ),
+          }
+        : withPolicy(row, policy, values),
+    ),
+  }));
 
   if (!policy.managed) return applied;
 

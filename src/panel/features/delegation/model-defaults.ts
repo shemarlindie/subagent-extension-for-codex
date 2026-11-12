@@ -9,24 +9,13 @@ import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
 
-/** The org's default model and reasoning, which outrank saved ones. */
-export function orgDefaults(workers: Worker[], worker: string) {
-  const { provider } = workerChoice(worker);
-  const policy = workers.find((item) => item.provider === provider)?.policy;
-
-  return {
-    model: policy?.default_model?.name,
-    reasoning_effort: policy?.default_effort,
-  };
-}
-
 /**
  * What a worker choice inherits when its model and reasoning are left at
- * default: the org's default, or the profile's setting, then the provider's,
- * then the global one. `providerModel` and `providerReasoning` skip the
+ * default: the profile's setting, then the provider's, then the org's
+ * default or the global one. `providerModel` and `providerReasoning` skip the
  * profile's setting. The org's model is a name, as it has no value of its
- * own. Also returns the selected model's metadata and its supported effort
- * levels.
+ * own, and its reasoning applies where the model supports it. Also returns
+ * the selected model's metadata and its supported effort levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -35,20 +24,12 @@ export function modelDefaults(
   selectedModel: string,
 ) {
   const { provider, profile } = workerChoice(worker);
-  const org = orgDefaults(workers, worker);
-  const saved = resolveModelDefaults(defaults, { provider, profile });
-
-  const model = org.model ?? saved.model;
-  const reasoning = org.reasoning_effort ?? saved.reasoning_effort;
-  const providerModel = org.model ?? saved.providerModel;
-  const providerReasoning = org.reasoning_effort ?? saved.providerReasoning;
-
   const workerInfo = workers.find((item) => item.provider === provider);
+  const policy = workerInfo?.policy;
+  const saved = resolveModelDefaults(defaults, { provider, profile }, policy);
 
-  // Under the org's model, a blank choice runs Default.
-  const inheritedValue = org.model ? undefined : saved.model;
-
-  const runs = selectedModel.trim() || inheritedValue || "default";
+  // Blank runs Default, which is the org's model when it sets one.
+  const runs = selectedModel.trim() || saved.model || "default";
   const metadata = workerInfo?.models?.find((item) => item.value === runs);
 
   const supported =
@@ -58,16 +39,18 @@ export function modelDefaults(
         providerMetadata(provider, workerInfo?.metadata)?.defaultEffortLevels ??
         reasoningLevels);
 
+  const orgEffort = supported.find((level) => level === policy?.default_effort);
+
   return {
     provider,
-    model,
-    reasoning,
-    providerModel,
-    providerReasoning,
+    model: saved.model ?? policy?.default_model?.name,
+    reasoning: saved.reasoning_effort ?? orgEffort,
+    providerModel: saved.providerModel,
+    providerReasoning: saved.providerReasoning ?? orgEffort,
     workerInfo,
     metadata,
     supported,
-    cap: effortCap(workerInfo?.policy, metadata?.resolvedModel ?? runs),
+    cap: effortCap(policy, metadata?.resolvedModel ?? runs),
   };
 }
 

@@ -262,9 +262,7 @@ The model and reasoning chips edit the selected profile's settings, so the
 profile starts with your last choice next time. **Default** clears the profile's
 setting and names the provider or global default it then inherits. A failed save
 shows an error below the composer, and the choice still applies to the task.
-When your organization sets a default model or reasoning, that chip starts on
-the organization's default, and a choice applies to this task only. Workspace,
-revision, budgets and the Bash sandbox use your settings defaults.
+Workspace, revision, budgets and the Bash sandbox use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds workspace
 and revision, approval decision maker, Bash sandbox and budgets. The mode and
@@ -290,9 +288,10 @@ per-section resets, validates budgets and asks before discarding unsaved edits.
 sections, and failed reads offer a retry. See [Configuration](configuration.md)
 for permission and approval defaults.
 
-When your organization sets a default model or reasoning, the Global, Claude and
-profile rows show it read-only. A saved value that differs stays, with a
-warning, and applies again if the organization stops setting a default. See
+When your organization sets a default model or reasoning, it takes the place of
+Global, which is disabled, and Claude's **Inherit** names it. Claude and profile
+choices still apply. A saved Global value stays, with a warning, and applies
+again if the organization stops setting a default. See
 [Org policy](configuration.md#org-policy).
 
 Search settings by section name, label, description, setting path or choice.

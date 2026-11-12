@@ -529,7 +529,8 @@ export function previewTool(
           options.autoRegisterChatProject ?? true,
         ),
         "models.providers.claude.model",
-        "sonnet",
+        // Blank under a policy, so Claude inherits the org's default.
+        options.orgPolicy ? "" : "sonnet",
       );
 
       // Saved before the policy arrived, so the warnings have something to say.

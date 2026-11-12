@@ -9,6 +9,7 @@ import {
   resolvedModel,
 } from "../../../../shared/providers/policy.js";
 import type { ProviderPolicy } from "../../../../shared/providers/types.js";
+import { resolveModelDefaults } from "../../../../shared/settings/model-defaults.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Start, Task } from "../../../../shared/tasks/model.js";
 import { PolicyRejectedError } from "../../../platform/logging/error-metadata.js";
@@ -46,36 +47,42 @@ function explicitMode(provider: Provider, input: Start) {
 export type Requested = { model: boolean; effort: boolean };
 
 /**
- * The model and effort a start runs under the org's defaults, which outrank
- * saved ones. A choice the request makes itself still wins.
+ * The model and effort a start runs, with the org's defaults in place of the
+ * global ones. The request's own choices and saved profile and provider
+ * defaults still win.
  */
 function withOrgDefaults(
   provider: Provider,
   input: Start,
+  defaults: SettingsValues,
   policy: ProviderPolicy | undefined,
   requested: Requested,
 ) {
-  const dropModel =
-    !!policy?.default_model && !requested.model && !!input.model;
+  const saved = resolveModelDefaults(
+    defaults,
+    { provider: input.provider, profile: input.worker_profile },
+    policy,
+  );
 
-  const dropEffort =
-    !!policy?.default_effort &&
-    !requested.effort &&
-    !!input.reasoning_effort &&
-    input.reasoning_effort !== "default";
+  const model = requested.model ? input.model : saved.model;
 
-  if (dropModel || dropEffort) {
+  const reasoning_effort = requested.effort
+    ? input.reasoning_effort
+    : // Settings validation keeps saved levels to the known ones.
+      (saved.reasoning_effort as Start["reasoning_effort"]);
+
+  if (model !== input.model || reasoning_effort !== input.reasoning_effort) {
     logEvent("info", "provider.policy_default_applied", {
       provider: provider.id,
-      saved_model: dropModel ? input.model : undefined,
-      saved_effort: dropEffort ? input.reasoning_effort : undefined,
+      saved_model: model === input.model ? undefined : input.model,
+      saved_effort:
+        reasoning_effort === input.reasoning_effort
+          ? undefined
+          : input.reasoning_effort,
     });
   }
 
-  return {
-    model: dropModel ? undefined : input.model,
-    reasoning_effort: dropEffort ? "default" : input.reasoning_effort,
-  };
+  return { model, reasoning_effort };
 }
 
 /**
@@ -129,7 +136,7 @@ export async function checkStartPolicy(
     );
   }
 
-  const start = withOrgDefaults(provider, input, policy, requested);
+  const start = withOrgDefaults(provider, input, defaults, policy, requested);
   const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
 
   const excluded = !!start.model && !modelAllowed(policy, models, start.model);

@@ -20,8 +20,7 @@ type ProfileChipProps = {
 
 /**
  * Chooses the worker profile. A profile works as a preset: choosing one
- * returns model and reasoning to that profile's saved settings, or to
- * Default where the org's default outranks them, and
+ * returns model and reasoning to that profile's saved settings, and
  * `useProfileMode` returns the permission mode to its default.
  */
 export function ProfileChip({
@@ -39,7 +38,7 @@ export function ProfileChip({
   const multipleProviders = workers.length > 1;
 
   const choose = (worker: string) => {
-    const values = profileValues(worker, defaults, workers);
+    const values = profileValues(worker, defaults);
 
     field.onChange(worker);
     setValue("model", values.model);

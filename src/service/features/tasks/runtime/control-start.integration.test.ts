@@ -598,7 +598,7 @@ test("a saved effort the default can't run gives way with the saved model", asyn
   );
 });
 
-test("the org's default model and reasoning outrank saved ones, and a request's own choice wins", async () => {
+test("the org's default model and reasoning take Global's place, and saved Claude and profile choices win", async () => {
   const models: ModelChoice[] = [
     { value: "default", displayName: "Default", description: "" },
     { value: "opus", displayName: "Opus", description: "" },
@@ -618,21 +618,29 @@ test("the org's default model and reasoning outrank saved ones, and a request's 
     set: {
       models: {
         global: { model: "haiku", reasoning_effort: "low" },
-        providers: { claude: { model: "haiku" } },
-        profiles: { implementer: { model: "opus", reasoning_effort: "high" } },
+        profiles: { implementer: { reasoning_effort: "high" } },
       },
     },
   });
 
-  // Model and reasoning lock separately.
+  // Model and reasoning apply separately.
   let task = await start({});
   assert.ok(!task.model);
   assert.equal(task.reasoning_effort, "high");
 
+  c.settings.update("alice", {
+    set: {
+      models: {
+        providers: { claude: { model: "opus" } },
+        profiles: { implementer: { reasoning_effort: "default" } },
+      },
+    },
+  });
+
   policy = { ...orgDefaults, default_effort: "medium" };
   task = await start({});
-  assert.ok(!task.model);
-  assert.equal(task.reasoning_effort, "default");
+  assert.equal(task.model, "opus");
+  assert.ok(!task.reasoning_effort);
 
   task = await start({ model: "opus", reasoning_effort: "xhigh" });
   assert.equal(task.model, "opus");

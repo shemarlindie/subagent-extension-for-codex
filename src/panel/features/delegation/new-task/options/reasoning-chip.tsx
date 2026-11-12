@@ -10,8 +10,6 @@ type ReasoningChipProps = {
   supported: readonly string[];
   /** The effort a default choice inherits. */
   inherited?: string;
-  /** Says when a pick isn't saved. */
-  footer?: string;
   /** The highest level the organization allows, if it limits reasoning. */
   cap?: string;
   loading: boolean;
@@ -34,7 +32,6 @@ export function reasoningChipLabel(value: string, inherited?: string) {
 export function ReasoningChip({
   supported,
   inherited,
-  footer,
   cap,
   loading,
   disabled,
@@ -56,7 +53,6 @@ export function ReasoningChip({
       value={value}
       onValueChange={choose}
       loading={loading}
-      footer={footer}
       disabled={disabled || supported.length === 0}
       title={
         supported.length === 0

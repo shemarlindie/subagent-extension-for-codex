@@ -22,14 +22,7 @@ const policy: ProviderPolicy = {
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 };
 
-const models = [
-  {
-    value: "haiku",
-    resolvedModel: "claude-haiku-5-5",
-    displayName: "Haiku",
-    description: "",
-  },
-];
+const models = [{ value: "haiku", displayName: "Haiku", description: "" }];
 
 function sections(saved: object, catalogPolicy?: ProviderPolicy | null) {
   return settingsSections({
@@ -174,65 +167,50 @@ const scopes = (all: ReturnType<typeof sections>) =>
       .map((scope) => [scope.id, scope]),
   );
 
-test("the org's default model locks Global, Claude and profile rows, and reasoning locks apart", () => {
-  const saved = {
-    models: {
-      global: { model: "haiku" },
-      profiles: { implementer: { reasoning_effort: "high" } },
+test("the org's default is Claude's Inherit and disables Global, which keeps a saved value", () => {
+  const all = sections(
+    { models: { global: { model: "haiku" } } },
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "low",
     },
-  };
+  );
 
-  const modelOnly = sections(saved, {
-    ...policy,
-    default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
-  });
+  const rows = scopes(all);
 
-  const rows = scopes(modelOnly);
+  assert.equal(rows.claude?.model.options?.[0]?.label, "Inherit (Sonnet 5.5)");
 
-  for (const id of ["global", "claude", "reviewer", "implementer"]) {
-    assert.equal(rows[id]?.model.locked, "Sonnet 5.5");
-    assert.equal(rows[id]?.effort.locked, undefined);
-  }
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
 
-  // Only a saved value warns, by name.
+  assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit");
+
+  assert.equal(rows.global?.model.disabled, true);
+  assert.equal(rows.global?.effort.disabled, true);
+
+  // Only a saved value warns.
   assert.equal(
     rows.global?.model.warning,
     "Your saved model, Haiku, applies again if your organization stops setting a default.",
   );
 
-  assert.equal(rows.claude?.model.warning, undefined);
+  assert.equal(rows.global?.effort.warning, undefined);
 
-  // Each section explains the lock once.
-  for (const id of ["models", "profile-models"]) {
-    const help = modelOnly.find((section) => section.id === id)?.help ?? [];
-
-    assert.equal(
-      help.at(-1),
-      " Your organization's default model is Sonnet 5.5. To change it for one task, use the composer.",
-    );
-  }
-
-  const effort = scopes(sections(saved, { ...policy, default_effort: "low" }));
-
-  assert.equal(effort.implementer?.model.locked, undefined);
-  assert.equal(effort.implementer?.effort.locked, "Low");
+  const help = (id: string) =>
+    all
+      .find((section) => section.id === id)
+      ?.help?.map((part) => (typeof part === "string" ? part : part.text))
+      .join("");
 
   assert.equal(
-    effort.implementer?.effort.warning,
-    "Your saved reasoning, High, applies again if your organization stops setting a default.",
+    help("models"),
+    "The task's worker profile defaults override these. Inherit uses your organization's default, Sonnet 5.5 with Low reasoning. Task choices override all defaults.",
   );
 
-  // A saved value the org's default matches, by model ID, doesn't warn.
-  const same = scopes(
-    sections(saved, {
-      ...policy,
-      default_model: { id: "claude-haiku-5-5", name: "Haiku" },
-      default_effort: "high",
-    }),
+  assert.equal(
+    help("profile-models"),
+    "Inherit uses the task's provider default, then your organization's default, Sonnet 5.5 with Low reasoning. Task choices override profile defaults.",
   );
-
-  assert.equal(same.global?.model.warning, undefined);
-  assert.equal(same.implementer?.effort.warning, undefined);
 });
 
 test("the org's reasoning cap locks higher levels and warns on a saved one above it", () => {

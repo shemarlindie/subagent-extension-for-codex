@@ -20,8 +20,8 @@ export interface ModelScope {
     options?: SettingOption[];
     /** The saved model won't apply, and why. */
     warning?: string;
-    /** The organization's default, shown in place of a choice. */
-    locked?: string;
+    /** Something else applies in its place, as the section's help says. */
+    disabled?: boolean;
   };
   effort: {
     path: string;
@@ -31,8 +31,8 @@ export interface ModelScope {
     unsupported: boolean;
     /** The saved effort won't apply, and why. */
     warning?: string;
-    /** The organization's default, shown in place of a choice. */
-    locked?: string;
+    /** Something else applies in its place, as the section's help says. */
+    disabled?: boolean;
   };
   /** A worker profile's custom instructions, shown collapsed under its models. */
   instructions?: ProseSetting;

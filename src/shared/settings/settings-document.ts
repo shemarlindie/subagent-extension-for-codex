@@ -1,4 +1,7 @@
-import { withClaudePolicy } from "../providers/claude/settings-policy.js";
+import {
+  inheritHelp,
+  withClaudePolicy,
+} from "../providers/claude/settings-policy.js";
 import {
   aboveEffortCap,
   effortCap,
@@ -110,11 +113,9 @@ export function modelScope(
 
   const catalog = catalogs.find((item) => item.provider === provider);
 
-  // The org's default model outranks saved ones.
+  // Default runs the org's model, when it sets one.
   const effectiveModel =
-    (!catalog?.policy?.default_model &&
-      resolveModelDefaults(values, chain).model) ||
-    "default";
+    resolveModelDefaults(values, chain, catalog?.policy).model ?? "default";
 
   const metadata = catalog?.models?.find(
     (model) => model.value === effectiveModel,
@@ -203,6 +204,10 @@ function effortScope(
 export function settingsSections(input: ScopeInput): SettingSection[] {
   const { values, providers } = input;
 
+  const claudePolicy = input.catalogs.find(
+    ({ provider }) => provider === "claude",
+  )?.policy;
+
   const scopeRow = (scope: string, label: string): ModelScope => {
     const info = modelScope(scope, input);
 
@@ -243,13 +248,19 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   const profileModel = modelPath(settingAt(values, "task.worker_profile"));
   const providerModel = modelPath(settingAt(values, "task.provider"));
 
+  // Claude is the only provider, so its org defaults are what Inherit uses.
+  const inherit = inheritHelp(claudePolicy, {
+    text: "Global",
+    setting: "models.global.model",
+  });
+
   const defaultsHelp = withHelp(
     [
       "The task's ",
       { text: "worker profile", setting: profileModel },
       " defaults override these. Inherit uses ",
-      { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning. Task choices override all defaults.",
+      ...inherit,
+      " Task choices override all defaults.",
     ],
     values,
   );
@@ -259,8 +270,8 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       "Inherit uses the task's ",
       { text: "provider", setting: providerModel },
       " default, then ",
-      { text: "Global", setting: "models.global.model" },
-      ", then the worker's own default. This applies to model and reasoning. Task choices override profile defaults.",
+      ...inherit,
+      " Task choices override profile defaults.",
     ],
     values,
   );
@@ -364,9 +375,5 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     },
   ];
 
-  return withClaudePolicy(
-    sections,
-    input.catalogs.find(({ provider }) => provider === "claude"),
-    values,
-  );
+  return withClaudePolicy(sections, claudePolicy, values);
 }

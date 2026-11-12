@@ -58,7 +58,7 @@ const modelScopeSchema = z.object({
     label: z.string(),
     options: z.array(settingOptionSchema).optional(),
     warning: z.string().optional(),
-    locked: z.string().optional(),
+    disabled: z.boolean().optional(),
   }),
   effort: z.object({
     path: z.string(),
@@ -66,7 +66,7 @@ const modelScopeSchema = z.object({
     options: z.array(settingOptionSchema),
     unsupported: z.boolean(),
     warning: z.string().optional(),
-    locked: z.string().optional(),
+    disabled: z.boolean().optional(),
   }),
   instructions: proseSettingSchema.optional(),
 });

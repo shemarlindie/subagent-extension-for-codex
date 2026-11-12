@@ -425,16 +425,6 @@ input[type="number"]::-webkit-inner-spin-button {
   grid-column: 1 / -1;
   margin: 0;
 }
-/* An organization's default sits where the select would, at its height. */
-.model-table-locked {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 32px;
-  color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .help.warn {
   color: var(--warn);
 }
