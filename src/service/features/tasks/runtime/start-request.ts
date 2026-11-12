@@ -33,8 +33,9 @@ export async function resolveStart(
     limited,
   } = await checkStartPolicy(provider, input, defaults, requested);
 
+  // Policy may have replaced the saved effort, so check the one that runs.
   const options = provider.taskPolicy.prepareStart({
-    input,
+    input: { ...input, model, reasoning_effort: effort },
     defaults,
     authority,
   });

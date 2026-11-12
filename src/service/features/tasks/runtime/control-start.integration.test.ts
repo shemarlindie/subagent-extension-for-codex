@@ -617,7 +617,8 @@ test("the org's default model and reasoning take Global's place, and saved Claud
   c.settings.update("alice", {
     set: {
       models: {
-        global: { model: "haiku", reasoning_effort: "low" },
+        // Claude can't run Minimal, which only fails a start it applies to.
+        global: { model: "haiku", reasoning_effort: "minimal" },
         profiles: { implementer: { reasoning_effort: "high" } },
       },
     },
