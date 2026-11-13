@@ -168,7 +168,7 @@ Settings are grouped by what they control:
 | Setting                 | Path                               | Initial value                                        |
 | ----------------------- | ---------------------------------- | ---------------------------------------------------- |
 | Provider                | `task.provider`                    | Claude when enabled, otherwise the first enabled one |
-| Worker profile          | `task.worker_profile`              | `reviewer`                                           |
+| Worker profile          | `task.worker_profile`              | `implementer`                                        |
 | Workspace strategy      | `task.workspace_strategy`          | `current_repo`                                       |
 | Worktree branch prefix  | `task.worktree_branch_prefix`      | `agent/`                                             |
 | Runtime limit           | `task.budget.max_runtime_minutes`  | Off, 20 minutes                                      |
@@ -176,10 +176,9 @@ Settings are grouped by what they control:
 | Claude permission mode  | `providers.claude.permission_mode` | `auto`                                               |
 | Approval decision maker | `approvals.decider`                | `user`                                               |
 
-The worker profile setting applies to agent calls and the Advanced task dialog.
-The panel's **New task** composer starts with the Implementer profile instead.
-Its model and reasoning choices save to the selected profile's
-`models.profiles.<profile>` settings. See
+The worker profile setting applies to agent calls, the Advanced task dialog and
+the panel's **New task** composer. The composer's model and reasoning choices
+save to the selected profile's `models.profiles.<profile>` settings. See
 [Create and rename tasks](panel-guide.md#create-and-rename-tasks).
 
 Agents use `get_settings` to discover fields and `update_settings` to change
