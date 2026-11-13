@@ -219,9 +219,9 @@ heldTest(
 
     const queue = page.getByRole("region", { name: "Messages not sent yet" });
 
-    // Cmd/Ctrl+Enter steers the running turn at its next checkpoint.
+    // Enter steers the running turn at its next checkpoint.
     await composer.fill("Use the steered path");
-    await composer.press("ControlOrMeta+Enter");
+    await composer.press("Enter");
 
     await expect(
       queue.getByRole("button", {
@@ -242,7 +242,7 @@ heldTest(
     await composer.press("Enter");
     await expect(history).toContainText("Fixture worker running turn 2");
     await composer.fill("Send this now");
-    await composer.press("Enter");
+    await composer.press("Control+Enter");
     await expect(queue).toContainText("Queued · 1");
 
     await queue
@@ -273,7 +273,7 @@ heldTest(
     await composer.press("Enter");
     await expect(history).toContainText("Fixture worker running turn 4");
     await composer.fill("Drop this message");
-    await composer.press("Enter");
+    await composer.press("Meta+Enter");
     await expect(queue).toContainText("Queued · 1");
 
     await page

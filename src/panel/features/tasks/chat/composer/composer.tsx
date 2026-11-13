@@ -22,13 +22,13 @@ import { providerName } from "../../../providers/provider-name";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
 import { TaskRunSettings } from "./task-run-settings";
 
-const STEER_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
+const QUEUE_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
   ? "⌘ + Enter"
   : "Ctrl + Enter";
 
 const HINTS = {
   idle: "Enter to send · Shift + Enter for a new line",
-  busy: `Enter to queue · ${STEER_KEY} to steer`,
+  busy: `Enter to steer · ${QUEUE_KEY} to queue`,
   input: "Answer the question above, or Enter to queue",
 };
 
@@ -47,9 +47,10 @@ type ComposerProps = {
 };
 
 /**
- * Sends the user's messages: Enter sends, or queues while a turn runs;
- * Cmd/Ctrl+Enter steers a running turn after its next tool call. While the
- * worker waits for input, messages can only be queued. Apply a spent budget increase before sending the next message.
+ * Sends the user's messages: Enter sends, or steers while a turn runs.
+ * Cmd/Ctrl+Enter queues a later turn. While the worker waits for input,
+ * messages can only be queued. Apply a spent budget increase before sending
+ * the next message.
  */
 export function Composer({
   task,
@@ -71,9 +72,7 @@ export function Composer({
   const hint = mode === "input" ? inputHint : HINTS[mode];
 
   const sendTooltip =
-    mode === "busy"
-      ? `Send into the running turn (${STEER_KEY})`
-      : "Send (Enter)";
+    mode === "busy" ? "Send into the running turn (Enter)" : "Send (Enter)";
 
   const continueLabel = mode === "busy" ? "Steer" : "Send";
   const inputRequest = task?.pending_input?.id;
@@ -286,11 +285,11 @@ export function Composer({
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
 
-      const steer = event.metaKey || event.ctrlKey;
+      const queue = event.metaKey || event.ctrlKey;
 
       // A worker waiting for input can't be steered, so every Enter queues.
       const delivery =
-        mode === "idle" || (mode === "busy" && steer) ? "steer" : "queue";
+        mode === "idle" || (mode === "busy" && !queue) ? "steer" : "queue";
 
       controller.run(() => send(delivery));
     }

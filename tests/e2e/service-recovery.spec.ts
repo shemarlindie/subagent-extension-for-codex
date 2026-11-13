@@ -40,13 +40,13 @@ test("recover running and queued tasks and preserve follow-up order after a serv
   // marker so replaying that context does not delay the recovered turn.
   const first = "First recovered follow-up [fixture:wait ms=0]";
   await composer.fill(first);
-  await composer.press("Enter");
+  await composer.press("ControlOrMeta+Enter");
 
   await expect(page.getByText(first, { exact: true })).toBeVisible();
 
   await expect(composer).toHaveValue("");
   await composer.fill("Second recovered follow-up");
-  await composer.press("Enter");
+  await composer.press("ControlOrMeta+Enter");
   await expect(page.getByText("Queued · 2", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "New task", exact: true }).click();
