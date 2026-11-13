@@ -367,9 +367,22 @@ streamingTest(
     // the end until the reply settles. Checkpoints keep each partial reply
     // observable even on slow CI runners.
     await recordRowMotion(page);
+    await scrollChatUp(page, 900);
+    await expect(latest).toBeVisible();
     await recordRowShift(history);
     await send(page, "Stream at the end [fixture:reply lines=30]");
     await expect(streaming).toBeVisible();
+
+    await expect(
+      page.getByRole("textbox", { name: "Message", exact: true }),
+    ).toBeFocused();
+
+    await expect(
+      history.getByText("Stream at the end [fixture:reply lines=30]", {
+        exact: true,
+      }),
+    ).toBeInViewport();
+
     const partial = (await streaming.textContent())?.length ?? 0;
     replyStream.resume(2, 30);
 

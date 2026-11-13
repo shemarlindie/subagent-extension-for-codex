@@ -91,8 +91,7 @@ export function useReadingScroll({
   const [pinned, setPinned] = useState(pinnedRef.current);
   const [positionRestored, setPositionRestored] = useState(false);
   const restored = useRef(false);
-  const activeRef = useRef(active);
-  const wasActive = useRef(false);
+  const activeRef = useRef(false);
   const correctedScrollTop = useRef<number | undefined>(undefined);
   const rows = useRef(new Map<string, RowPosition>());
   const animations = useRef<Animation[]>([]);
@@ -213,11 +212,10 @@ export function useReadingScroll({
    * reads change only when the caller renders, which renders the child too.
    */
   const syncAfterRender = () => {
+    const revealed = active && !activeRef.current;
     activeRef.current = active;
     // A hidden view may share its scroller with the shown one.
     if (!active) endGlide();
-    const revealed = active && !wasActive.current;
-    wasActive.current = active;
     const viewport = viewportRef.current;
 
     if (!ready) {
@@ -402,11 +400,7 @@ export function useReadingScroll({
     if (focusReveal && Math.abs(target - before) >= 1 && canGlide(container)) {
       startGlide(container, target, element);
     } else {
-      container.scrollTop = target;
-
-      if (Math.abs(container.scrollTop - before) >= 1) {
-        correctedScrollTop.current = container.scrollTop;
-      }
+      correctedScrollTop.current = jump(container, target);
     }
 
     remember(viewport, container);
@@ -512,7 +506,7 @@ export function useReadingScroll({
     stopFollowing,
   );
 
-  const scrollToLatest = useCallback(() => {
+  const resumeFollowing = useCallback(() => {
     endGlide();
     stopAnimations();
     const viewport = viewportRef.current;
@@ -527,9 +521,13 @@ export function useReadingScroll({
       correctedScrollTop.current = jump(container, target);
     }
 
-    viewport.focus({ preventScroll: true });
     remember(viewport, container);
   }, [endGlide, pin, startGlide, remember, stopAnimations]);
+
+  const scrollToLatest = useCallback(() => {
+    resumeFollowing();
+    viewportRef.current?.focus({ preventScroll: true });
+  }, [resumeFollowing]);
 
   useLayoutEffect(
     () => () => {
@@ -544,6 +542,7 @@ export function useReadingScroll({
     pinned,
     positionRestored: !reportPositionRestored || positionRestored,
     reconcileAfterContentChange,
+    resumeFollowing,
     scrollToLatest,
     syncAfterRender,
   };
