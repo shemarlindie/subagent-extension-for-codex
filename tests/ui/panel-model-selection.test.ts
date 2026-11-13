@@ -39,8 +39,8 @@ test("discovered model metadata offers suggestions, and an unsupported inherited
     configureModelDefaults(
       transport,
       {
-        "models.global.model": "limited-model",
-        "models.global.reasoning_effort": "high",
+        "models.providers.claude.model": "limited-model",
+        "models.providers.claude.reasoning_effort": "high",
       },
       [
         {
@@ -157,8 +157,8 @@ test("model selection retains unsupported effort on Claude and blocks submission
 test("model selection updates role and provider defaults while preserving explicit drafts", async (t) => {
   const { transport, user } = await setupDelegate(t, (transport) =>
     configureModelDefaults(transport, {
-      "models.global.model": "global-model",
-      "models.global.reasoning_effort": "low",
+      "models.providers.fixture.model": "fixture-model",
+      "models.providers.fixture.reasoning_effort": "low",
       "models.providers.claude.model": "claude-model",
       "models.providers.claude.reasoning_effort": "medium",
       "models.profiles.reviewer.model": "review-model",
@@ -186,7 +186,7 @@ test("model selection updates role and provider defaults while preserving explic
   );
 
   await selectOption(user, "Worker", "fixture · researcher");
-  assert.equal(field.placeholder, "global-model");
+  assert.equal(field.placeholder, "fixture-model");
 
   assert.match(
     screen.getByRole("combobox", { name: "Reasoning" }).textContent ?? "",

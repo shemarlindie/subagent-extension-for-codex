@@ -114,7 +114,6 @@ export function ModelTable({
               describedBy={noteId}
               options={scope.model.options}
               footer={scope.model.footer}
-              disabled={scope.model.disabled}
             />
           );
         } else {
@@ -159,7 +158,7 @@ export function ModelTable({
                 noteId,
                 scope.effort.unsupported ? warningId : undefined,
               )}
-              disabled={loading || scope.effort.disabled}
+              disabled={loading}
               loading={loading}
               loadingLabel={`Loading ${scope.effort.label.toLowerCase()}`}
               placeholder={loading ? "Loading…" : undefined}

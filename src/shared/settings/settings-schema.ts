@@ -142,7 +142,6 @@ export const settingsSchema = z.strictObject({
   }),
   models: z
     .strictObject({
-      global: modelScope("Global"),
       providers: scopes(providerModelSettingScopes).prefault({}),
       profiles: scopes(roles).prefault({}),
     })

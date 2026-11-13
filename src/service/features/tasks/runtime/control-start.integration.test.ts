@@ -255,7 +255,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
       );
 
       c.settings.update("alice", {
-        set: { models: { global: { reasoning_effort } } },
+        set: { models: { providers: { claude: { reasoning_effort } } } },
       });
 
       await assert.rejects(
@@ -596,7 +596,11 @@ test("a saved effort the model can't run gives way, and one a request names fail
   );
 
   c.settings.update("alice", {
-    set: { models: { global: { model: "opus", reasoning_effort: "xhigh" } } },
+    set: {
+      models: {
+        providers: { claude: { model: "opus", reasoning_effort: "xhigh" } },
+      },
+    },
   });
 
   // With the saved model that gave way, then on the default itself.
@@ -605,7 +609,10 @@ test("a saved effort the model can't run gives way, and one a request names fail
   assert.ok(!task.model);
   assert.ok(!task.reasoning_effort);
 
-  c.settings.update("alice", { set: { models: { global: { model: "" } } } });
+  c.settings.update("alice", {
+    set: { models: { providers: { claude: { model: "" } } } },
+  });
+
   task = await start({});
   assert.ok(!task.reasoning_effort);
 
@@ -615,7 +622,7 @@ test("a saved effort the model can't run gives way, and one a request names fail
   );
 });
 
-test("the org's default model and reasoning take Global's place, and saved Claude and profile choices win", async () => {
+test("saved Claude and profile choices override the org's runtime defaults", async () => {
   const models: ModelChoice[] = [
     { value: "default", displayName: "Default", description: "" },
     { value: "opus", displayName: "Opus", description: "" },
@@ -634,8 +641,6 @@ test("the org's default model and reasoning take Global's place, and saved Claud
   c.settings.update("alice", {
     set: {
       models: {
-        // Claude can't run Minimal, which only fails a start it applies to.
-        global: { model: "haiku", reasoning_effort: "minimal" },
         profiles: { implementer: { reasoning_effort: "high" } },
       },
     },
@@ -702,7 +707,7 @@ test("a reasoning level a request names above the org's cap fails, and a saved o
   );
 
   c.settings.update("alice", {
-    set: { models: { global: { reasoning_effort: "xhigh" } } },
+    set: { models: { providers: { claude: { reasoning_effort: "xhigh" } } } },
   });
 
   assert.equal((await start({})).reasoning_effort, "xhigh");

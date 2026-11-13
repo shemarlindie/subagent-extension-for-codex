@@ -533,13 +533,8 @@ export function previewTool(
         options.orgPolicy ? "" : "sonnet",
       );
 
-      // Saved before the policy arrived, so the warnings have something to say.
       const values = options.orgPolicy
-        ? withSetting(
-            withSetting(base, "providers.claude.permission_mode", "auto"),
-            "models.global.model",
-            "haiku",
-          )
+        ? withSetting(base, "providers.claude.permission_mode", "auto")
         : base;
 
       return {

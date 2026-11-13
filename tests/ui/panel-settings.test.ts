@@ -218,12 +218,18 @@ test("settings resets preserve another section's draft and saved override", asyn
       values: {
         providers: { claude: { subagents: false } },
         task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
-        models: { global: { model: "saved-model", reasoning_effort: "high" } },
+        models: {
+          providers: {
+            claude: { model: "saved-model", reasoning_effort: "high" },
+          },
+        },
       },
       defaults: {
         providers: { claude: { subagents: true } },
         task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
-        models: { global: { model: "", reasoning_effort: "default" } },
+        models: {
+          providers: { claude: { model: "", reasoning_effort: "default" } },
+        },
       },
       sections: [
         {
@@ -242,7 +248,10 @@ test("settings resets preserve another section's draft and saved override", asyn
           id: "models",
           title: "Models",
           rows: [
-            { kind: "models", scopes: [scope("models.global", "Global")] },
+            {
+              kind: "models",
+              scopes: [scope("models.providers.claude", "Claude")],
+            },
           ],
         },
       ],
@@ -254,7 +263,7 @@ test("settings resets preserve another section's draft and saved override", asyn
 
   // Resetting Task must preserve another section's saved override and draft.
   await user.click(screen.getByRole("tab", { name: "Models" }));
-  const model = screen.getByRole("textbox", { name: "Global model" });
+  const model = screen.getByRole("textbox", { name: "Claude model" });
   await user.clear(model);
   await pasteText(user, model, "draft-model");
 
@@ -277,7 +286,7 @@ test("settings resets preserve another section's draft and saved override", asyn
   assert.equal(screen.getAllByRole("button", { name: /^Reset/ }).length, 1);
 
   assert.equal(
-    screen.getByRole("combobox", { name: "Global effort" }).textContent,
+    screen.getByRole("combobox", { name: "Claude effort" }).textContent,
     "high",
   );
 });

@@ -8,8 +8,6 @@ import {
   modelAllowed,
   resolvedModel,
 } from "../../../../shared/providers/policy.js";
-import type { ProviderPolicy } from "../../../../shared/providers/types.js";
-import { resolveModelDefaults } from "../../../../shared/settings/model-defaults.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Start, Task } from "../../../../shared/tasks/model.js";
 import { PolicyRejectedError } from "../../../platform/logging/error-metadata.js";
@@ -47,49 +45,10 @@ function explicitMode(provider: Provider, input: Start) {
 export type Requested = { model: boolean; effort: boolean };
 
 /**
- * The model and effort a start runs, with the org's defaults in place of the
- * global ones. The request's own choices and saved profile and provider
- * defaults still win.
- */
-function withOrgDefaults(
-  provider: Provider,
-  input: Start,
-  defaults: SettingsValues,
-  policy: ProviderPolicy | undefined,
-  requested: Requested,
-) {
-  const saved = resolveModelDefaults(
-    defaults,
-    { provider: input.provider, profile: input.worker_profile },
-    policy,
-  );
-
-  const model = requested.model ? input.model : saved.model;
-
-  const reasoning_effort = requested.effort
-    ? input.reasoning_effort
-    : // Settings validation keeps saved levels to the known ones.
-      (saved.reasoning_effort as Start["reasoning_effort"]);
-
-  if (model !== input.model || reasoning_effort !== input.reasoning_effort) {
-    logEvent("info", "provider.policy_default_applied", {
-      provider: provider.id,
-      saved_model: model === input.model ? undefined : input.model,
-      saved_effort:
-        reasoning_effort === input.reasoning_effort
-          ? undefined
-          : input.reasoning_effort,
-    });
-  }
-
-  return { model, reasoning_effort };
-}
-
-/**
  * Fits a start request to org policy. A choice the request makes itself fails
- * with the reason, so whoever asked can act on it. Saved defaults give way to
- * the org's. A saved model no longer allowed gives way to the default with a
- * note, since nobody asked for it just now. A saved mode needs nothing here:
+ * with the reason, so whoever asked can act on it. A saved model no longer
+ * allowed gives way to the default with a note, since nobody asked for it just
+ * now. A saved mode needs nothing here:
  * Claude Code falls back itself, and the provider reports it. Without discovery
  * there's nothing to check against, and tasks are still checked as they run.
  */
@@ -136,18 +95,17 @@ export async function checkStartPolicy(
     );
   }
 
-  const start = withOrgDefaults(provider, input, defaults, policy, requested);
   const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
 
-  const excluded = !!start.model && !modelAllowed(policy, models, start.model);
+  const excluded = !!model && !modelAllowed(policy, models, model);
 
   if (excluded && requested.model) {
-    throw reject("model", start.model!, MODEL_NOT_ALLOWED);
+    throw reject("model", model, MODEL_NOT_ALLOWED);
   }
 
   const fitted = excluded
-    ? { ...start, model: undefined, limited: modelLimit(start.model!) }
-    : start;
+    ? { model: undefined, reasoning_effort, limited: modelLimit(model) }
+    : { model, reasoning_effort };
 
   // A saved effort above the cap starts, and Claude Code lowers it.
   const effort = fitted.reasoning_effort ?? "";

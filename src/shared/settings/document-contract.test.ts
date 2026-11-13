@@ -11,12 +11,12 @@ import { settingsDefaults } from "./settings-schema.js";
 const option = { value: "default", label: "Inherit" };
 
 const scope: ModelScope = {
-  id: "global",
-  label: "Global",
-  model: { path: "models.global.model", label: "Global model" },
+  id: "claude",
+  label: "Claude",
+  model: { path: "models.providers.claude.model", label: "Claude model" },
   effort: {
-    path: "models.global.reasoning_effort",
-    label: "Global reasoning",
+    path: "models.providers.claude.reasoning_effort",
+    label: "Claude reasoning",
     options: [option],
     unsupported: false,
   },
@@ -54,7 +54,7 @@ test("rejects malformed setting rows", () => {
 });
 
 test("strips unknown fields throughout the settings document", () => {
-  const help = { text: "Global", setting: "models.global.model" };
+  const help = { text: "Claude", setting: "models.providers.claude.model" };
 
   const section: SettingSection = {
     id: "models",
