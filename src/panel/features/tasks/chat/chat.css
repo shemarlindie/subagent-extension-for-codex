@@ -223,7 +223,8 @@ body[data-expanded-panel="true"]
   margin-block-start: 4px;
   font-size: 11px;
 }
-.chat-outcome {
+.chat-outcome,
+.chat-message-actions {
   font-size: 11px;
   color: var(--muted);
 }
@@ -239,13 +240,18 @@ body[data-expanded-panel="true"]
   gap: 8px 24px;
   transition: opacity var(--motion-base) var(--ease-out);
 }
+.chat-message-actions {
+  transition: opacity var(--motion-base) var(--ease-out);
+}
 @media (hover: hover) {
   /* Reserve the row's space so revealing actions does not move the conversation. */
-  .chat-message > .chat-outcome > .chat-outcome-line {
+  .chat-message > .chat-outcome > .chat-outcome-line,
+  .chat-message > .chat-message-actions {
     opacity: 0;
     transition-delay: 0.5s;
   }
-  .chat-message:is(:hover, :focus-within) > .chat-outcome > .chat-outcome-line {
+  .chat-message:is(:hover, :focus-within) > .chat-outcome > .chat-outcome-line,
+  .chat-message:is(:hover, :focus-within) > .chat-message-actions {
     opacity: 1;
     transition-delay: 0s;
   }

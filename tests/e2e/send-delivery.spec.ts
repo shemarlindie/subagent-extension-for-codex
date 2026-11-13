@@ -35,7 +35,10 @@ test("a send with a lost response keeps its draft and a retry delivers it once",
   await composer.press("Enter");
   await expect(composer).toHaveValue("");
 
-  const messages = history.getByRole("article", { name: "You", exact: true });
+  const messages = history
+    .getByRole("article", { name: "You", exact: true })
+    .locator(".chat-bubble");
+
   await expect(messages).toHaveText(["Confirm delivery", followUp]);
   await expect(history).not.toContainText("Fixture session turn: 3.");
   await page.reload();

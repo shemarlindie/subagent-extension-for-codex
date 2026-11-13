@@ -155,7 +155,7 @@ export class UnreadActions {
    */
   markUnreadFrom(task: Task, from: number) {
     return this.remember(task, this.unreadFrom(task, from), {
-      label: `Marked ${quote(task.title)} unread from a reply`,
+      label: `Marked ${quote(task.title)} unread from a message`,
       redo: () => this.unreadFrom(task, from),
     });
   }
