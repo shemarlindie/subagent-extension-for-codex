@@ -1,11 +1,10 @@
 import type {
-  HelpPart,
   ModelScope,
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
 import { settingAt } from "../../settings/settings-schema.js";
-import { scalarText, titleCase } from "../../text.js";
+import { titleCase } from "../../text.js";
 import { blockedReason, withBlockedOptions } from "../policy.js";
 import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
@@ -48,15 +47,8 @@ function withPolicy(
   };
 }
 
-/**
- * What Inherit falls back to after Claude's and profile settings, ending a
- * sentence that starts "Inherit uses": the org's defaults where it sets them,
- * and otherwise Global, then the worker's own default.
- */
-export function inheritHelp(
-  policy: ProviderPolicy | undefined,
-  global: HelpPart,
-): HelpPart[] {
+/** The runtime defaults inherited after provider and profile settings. */
+export function inheritHelp(policy: ProviderPolicy | undefined): string[] {
   const model = policy?.default_model?.name;
   const effort = policy?.default_effort && titleCase(policy.default_effort);
 
@@ -66,81 +58,36 @@ export function inheritHelp(
 
   if (model) {
     return [
-      `your organization's default model, ${model}, and the `,
-      global,
-      " reasoning, then the worker's own default.",
+      `your organization's default model, ${model}, and the worker's own reasoning.`,
     ];
   }
 
   if (effort) {
     return [
-      "the ",
-      global,
-      ` model, then the worker's own, and your organization's default reasoning, ${effort}.`,
+      `the worker's own model and your organization's default reasoning, ${effort}.`,
     ];
   }
 
-  return [
-    global,
-    ", then the worker's own default. This applies to model and reasoning.",
-  ];
+  return ["the worker's own default. This applies to model and reasoning."];
 }
 
-const savedWarning = (what: string, name: string) =>
-  `Your saved ${what}, ${name}, applies again if your organization stops setting a default.`;
-
-/**
- * A model scope with the org's defaults where they apply: Claude's model
- * Inherit names the org's model, and Global, which the defaults replace, is
- * disabled. A saved Global value stays, with a warning.
- */
+/** Claude's Inherit names the organization's default model. */
 function withOrgDefaults(
   scope: ModelScope,
-  { default_model: model, default_effort: effort }: ProviderPolicy,
-  values: unknown,
+  policy: ProviderPolicy,
 ): ModelScope {
-  if (scope.id === "claude") {
-    return {
-      ...scope,
-      model: {
-        ...scope.model,
-        options: scope.model.options?.map((option) =>
-          model && option.value === ""
-            ? { ...option, label: `Inherit (${model.name})` }
-            : option,
-        ),
-      },
-    };
-  }
-
-  if (scope.id !== "global") return scope;
-
-  const savedModel = scalarText(settingAt(values, scope.model.path));
-  const savedEffort = scalarText(settingAt(values, scope.effort.path));
-
-  const modelName =
-    scope.model.options?.find(({ value }) => value === savedModel)?.label ??
-    savedModel;
+  if (scope.id !== "claude" || !policy.default_model) return scope;
 
   return {
     ...scope,
-    model: model
-      ? {
-          ...scope.model,
-          disabled: true,
-          warning: savedModel ? savedWarning("model", modelName) : undefined,
-        }
-      : scope.model,
-    effort: effort
-      ? {
-          ...scope.effort,
-          disabled: true,
-          warning:
-            savedEffort && savedEffort !== "default"
-              ? savedWarning("reasoning", titleCase(savedEffort))
-              : undefined,
-        }
-      : scope.effort,
+    model: {
+      ...scope.model,
+      options: scope.model.options?.map((option) =>
+        option.value === ""
+          ? { ...option, label: `Inherit (${policy.default_model!.name})` }
+          : option,
+      ),
+    },
   };
 }
 
@@ -247,9 +194,7 @@ export function withClaudePolicy(
       row.kind === "models"
         ? {
             ...row,
-            scopes: row.scopes.map((scope) =>
-              withOrgDefaults(scope, policy, values),
-            ),
+            scopes: row.scopes.map((scope) => withOrgDefaults(scope, policy)),
           }
         : withPolicy(row, policy, values),
     ),

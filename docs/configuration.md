@@ -159,7 +159,7 @@ Settings are grouped by what they control:
 | Group            | Contents                                                                                   | Who can change it |
 | ---------------- | ------------------------------------------------------------------------------------------ | ----------------- |
 | `task`           | Defaults for `start_task`, under its field names, plus `worktree_branch_prefix`            | Agents and you    |
-| `models`         | Model and reasoning defaults for `global`, each provider and each worker profile           | Agents and you    |
+| `models`         | Model and reasoning defaults for each provider and each worker profile                     | Agents and you    |
 | `profiles`       | Custom instructions for each worker profile                                                | You only          |
 | `approvals`      | The approval decision maker for every provider, and the execution approval mode            | You only          |
 | `projects`       | `auto_register_chat`                                                                       | You only          |
@@ -236,12 +236,14 @@ value set in this order:
 | Task     | `model`                           | `reasoning_effort`                           |
 | Profile  | `models.profiles.<profile>.model` | `models.profiles.<profile>.reasoning_effort` |
 | Provider | `models.providers.claude.model`   | `models.providers.claude.reasoning_effort`   |
-| Global   | `models.global.model`             | `models.global.reasoning_effort`             |
 
 A blank model and `default` reasoning inherit from the next scope. When every
-scope inherits, the provider runtime's default applies. Task values come from
-`start_task`, the New task composer or the Advanced task dialog. Permission mode
-and session restrictions follow their own rules below.
+scope inherits, the provider runtime's default applies. Global model and
+reasoning defaults are no longer supported. Existing saved global values are
+ignored, and imports list their paths as skipped. They are never copied into
+provider or profile defaults. Task values come from `start_task`, the New task
+composer or the Advanced task dialog. Permission mode and session restrictions
+follow their own rules below.
 
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
@@ -364,8 +366,8 @@ is cached for five minutes.
 | Policy                                                                                                                     | New tasks                                                                                                          | Panel                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `permissions.disableBypassPermissionsMode`, `disableAutoMode` or `permissions.disableAutoMode`                             | An explicit request fails. A saved mode falls back.                                                                | The mode stays listed and locked, with the reason.                                                                                                                                                     |
-| `model`                                                                                                                    | It replaces the Global model. Saved Claude and profile models still apply.                                         | The Global model is disabled, Claude's Inherit names it, and the composer starts on it unless a saved model applies. The Default model names it, and **Organization policy** lists it.                 |
-| `effortLevel`                                                                                                              | It replaces the Global reasoning. Saved Claude and profile reasoning still apply.                                  | The Global reasoning is disabled. Inherit and the composer name it where the model supports it, and **Organization policy** lists it.                                                                  |
+| `model`                                                                                                                    | It supplies the runtime default. Saved Claude and profile models still apply.                                      | Claude's Inherit names it, and the composer starts on it unless a saved model applies. The Default model names it, and **Organization policy** lists it.                                               |
+| `effortLevel`                                                                                                              | It supplies the runtime default. Saved Claude and profile reasoning still apply.                                   | Inherit and the composer name it where the model supports it, and **Organization policy** lists it.                                                                                                    |
 | `modelSettings.<model>.effortLevel`                                                                                        | Its model runs it in place of `effortLevel` when no saved reasoning applies.                                       | Inherit and the composer name it where that model runs, and **Organization policy** lists it.                                                                                                          |
 | `maxEffortLevel`, `modelSettings.<model>.maxEffortLevel`                                                                   | An explicit level above it fails. A saved one starts, and Claude Code lowers it.                                   | Reasoning menus lock higher levels. A saved level above it gets a warning, and **Organization policy** lists the limit. A lowered level gets a note in Chat, and the run settings show the level used. |
 | `availableModels`                                                                                                          | An explicit model outside it fails. A saved one runs as Default.                                                   | Model menus list only allowed models and say so. A typed ID gets an error.                                                                                                                             |

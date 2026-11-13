@@ -549,7 +549,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.ok(!settingsRead.isError);
 
       assert.equal(
-        (settingsRead.structuredContent as any).values.models.global.model,
+        (settingsRead.structuredContent as any).values.models.providers.fixture
+          .model,
         "",
       );
 
@@ -558,7 +559,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         arguments: {
           set: {
             models: {
-              global: { model: "native-proxy-model" },
+              providers: { fixture: { model: "native-proxy-model" } },
               profiles: { reviewer: { reasoning_effort: "high" } },
             },
           },
@@ -568,7 +569,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.ok(!nativeUpdated.isError);
 
       assert.equal(
-        (nativeUpdated.structuredContent as any).values.models.global.model,
+        (nativeUpdated.structuredContent as any).values.models.providers.fixture
+          .model,
         "native-proxy-model",
       );
 
@@ -584,7 +586,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       assert.equal(
-        (nativeReadback.structuredContent as any).values.models.global.model,
+        (nativeReadback.structuredContent as any).values.models.providers
+          .fixture.model,
         "native-proxy-model",
       );
 

@@ -5,7 +5,7 @@ import { useProfileChoice } from "./use-profile-choice";
 
 type ModelChipProps = {
   models: ModelChoice[];
-  /** The model a blank choice inherits, from the profile, provider or global default. */
+  /** The model a blank choice inherits, from the profile or provider default. */
   inherited?: string;
   /** Why the list is shorter than usual. */
   footer?: string;

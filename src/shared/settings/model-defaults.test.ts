@@ -6,7 +6,6 @@ import { resolveModelDefaults } from "./model-defaults.js";
 // tests. These cover the results only the panel and settings sections use.
 const values = {
   models: {
-    global: { model: "global-model", reasoning_effort: "low" },
     providers: {
       claude: { model: "provider-model", reasoning_effort: "default" },
     },
@@ -23,10 +22,6 @@ test("provider results skip the profile scope", () => {
     model: "profile-model",
     reasoning_effort: "high",
     providerModel: "provider-model",
-    providerReasoning: "low",
+    providerReasoning: undefined,
   });
-});
-
-test("global defaults resolve without a selected provider or profile", () => {
-  expect(resolveModelDefaults(values, {}).model).toBe("global-model");
 });

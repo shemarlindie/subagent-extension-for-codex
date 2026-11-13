@@ -175,9 +175,9 @@ const scopes = (all: ReturnType<typeof sections>) =>
       .map((scope) => [scope.id, scope]),
   );
 
-test("the org's default is Claude's Inherit and disables Global, which keeps a saved value", () => {
+test("the org's default is Claude's Inherit", () => {
   const all = sections(
-    { models: { global: { model: "haiku" } } },
+    {},
     {
       ...policy,
       default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
@@ -193,17 +193,6 @@ test("the org's default is Claude's Inherit and disables Global, which keeps a s
 
   assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit");
   assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Low)");
-
-  assert.equal(rows.global?.model.disabled, true);
-  assert.equal(rows.global?.effort.disabled, true);
-
-  // Only a saved value warns.
-  assert.equal(
-    rows.global?.model.warning,
-    "Your saved model, Haiku, applies again if your organization stops setting a default.",
-  );
-
-  assert.equal(rows.global?.effort.warning, undefined);
 
   const help = (id: string) =>
     all
@@ -224,18 +213,30 @@ test("the org's default is Claude's Inherit and disables Global, which keeps a s
 
 test("a model's own org reasoning shows where Inherit lands on it", () => {
   const perModel = { ...policy, model_default_effort: { haiku: "low" } };
-  const global = { model: "haiku", reasoning_effort: "high" };
+  const claude = { model: "haiku", reasoning_effort: "high" };
 
-  let rows = scopes(sections({ models: { global } }, perModel));
+  let rows = scopes(sections({ models: { providers: { claude } } }, perModel));
 
-  assert.equal(rows.global?.effort.options[0]?.label, "Inherit (Low)");
-  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit");
 
-  rows = scopes(sections({ models: { global: { model: "haiku" } } }, perModel));
+  rows = scopes(
+    sections(
+      { models: { providers: { claude: { model: "haiku" } } } },
+      perModel,
+    ),
+  );
+
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
 
   // Another model runs without it.
-  rows = scopes(sections({ models: { global: { model: "opus" } } }, perModel));
+  rows = scopes(
+    sections(
+      { models: { providers: { claude: { model: "opus" } } } },
+      perModel,
+    ),
+  );
+
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit");
 
   const facts = sections({}, { ...perModel, default_effort: "medium" }).find(
@@ -272,8 +273,6 @@ test("the org's reasoning cap locks higher levels and warns on a saved one above
     claude?.effort.warning,
     "Your organization doesn't allow this level. New tasks use High.",
   );
-
-  assert.equal(scopes(all).global?.effort.warning, undefined);
 
   assert.ok(
     all

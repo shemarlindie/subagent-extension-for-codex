@@ -260,9 +260,9 @@ filter.
 
 The model and reasoning chips edit the selected profile's settings, so the
 profile starts with your last choice next time. **Default** clears the profile's
-setting and names the provider or global default it then inherits. A failed save
-shows an error below the composer, and the choice still applies to the task.
-Workspace, revision, budgets and the Bash sandbox use your settings defaults.
+setting and names the provider default it then inherits. A failed save shows an
+error below the composer, and the choice still applies to the task. Workspace,
+revision, budgets and the Bash sandbox use your settings defaults.
 
 **More options…** carries the draft into **Advanced task**, which adds workspace
 and revision, approval decision maker, Bash sandbox and budgets. The mode and
@@ -288,12 +288,11 @@ per-section resets, validates budgets and asks before discarding unsaved edits.
 sections, and failed reads offer a retry. See [Configuration](configuration.md)
 for permission and approval defaults.
 
-When your organization sets a default model or reasoning for every model, it
-takes the place of Global, which is disabled. Claude and profile choices still
-apply. A saved Global value stays, with a warning, and applies again if the
-organization stops setting a default. **Inherit** names the org's model on
-Claude's row, and the org's reasoning on any row that lands on it, including one
-the org sets for a single model. See [Org policy](configuration.md#org-policy).
+When your organization sets a default model or reasoning, it supplies the
+runtime default. Claude and profile choices still apply. **Inherit** names the
+org's model on Claude's row, and the org's reasoning on any row that lands on
+it, including one the org sets for a single model. See
+[Org policy](configuration.md#org-policy).
 
 Search settings by section name, label, description, setting path or choice.
 Press `/` to start searching. Results appear together under section headings and
