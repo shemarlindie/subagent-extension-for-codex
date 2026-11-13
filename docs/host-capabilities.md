@@ -20,6 +20,30 @@ The panel advertises `inline` and `fullscreen` display modes and prefers
 | `app_open_subagent_extension_for_codex_global` | The global panel. App-only.               |
 | `start_task`                                   | The thread panel with the new task's Chat |
 
+### Host chat button
+
+The host's chat floating action button (FAB) over an embedded panel is separate
+from Delegated Work's scroll-to-latest buttons. No supported way to disable the
+host button was identified in the contracts reviewed on November 12, 2026:
+
+- The locked `@openai/mcp-extensions` 0.2.1 UI metadata schemas expose
+  entrypoints and display-mode preferences, with no chat-button visibility
+  setting.
+- The locked `@modelcontextprotocol/ext-apps` 1.7.5 host capabilities and
+  `requestDisplayMode` API expose no control for hiding host chat UI.
+- The
+  [OpenAI component bridge reference](https://developers.openai.com/plugins/reference#windowopenai-component-bridge)
+  documents presentation requests, with no chat-button visibility API. Its
+  [fullscreen guidance](https://developers.openai.com/plugins/build/chatgpt-ui#fullscreen)
+  keeps the ChatGPT composer available. That guidance does not establish the
+  behavior of a particular Codex desktop release.
+
+Changing display-mode preferences is not a verified way to hide the FAB. Keep
+host UI control in the host, and revisit this limit when a documented capability
+becomes available. This review did not verify the live Codex overlay. Browser
+fixtures cannot establish its visibility or whether a desktop release offers a
+user setting for it.
+
 ### Sidebar icon
 
 The global entrypoint supplies theme-specific assets for the **Delegated Work**
