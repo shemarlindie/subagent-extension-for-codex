@@ -341,8 +341,8 @@ sessions and recreated worktrees.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
-| Enter                             | Start an idle task's next turn, or queue during a run. |
-| Cmd/Ctrl+Enter during a run       | Steer the running turn after its next tool call.       |
+| Enter                             | Start an idle task's next turn, or steer during a run. |
+| Cmd/Ctrl+Enter during a run       | Queue a later turn.                                    |
 | Shift+Enter                       | Insert a newline.                                      |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
