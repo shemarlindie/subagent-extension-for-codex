@@ -895,7 +895,7 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
   settings.update("alice", {
     set: {
       task: { provider: "new-built-in" },
-      models: { profiles: { reviewer: { model: "new-model" } } },
+      models: { profiles: { implementer: { model: "new-model" } } },
     },
   });
 
@@ -1024,7 +1024,7 @@ test("legacy global defaults are discarded without losing provider and profile s
         fixture: { model: "provider-model", reasoning_effort: "high" },
       },
       profiles: {
-        reviewer: { model: "profile-model", reasoning_effort: "default" },
+        implementer: { model: "profile-model", reasoning_effort: "default" },
       },
     },
   };
@@ -1067,7 +1067,7 @@ test("legacy global defaults are discarded without losing provider and profile s
   f.settings.update("alice", {
     set: {
       models: {
-        profiles: { reviewer: { model: "" } },
+        profiles: { implementer: { model: "" } },
         providers: { fixture: { model: "", reasoning_effort: "default" } },
       },
     },
