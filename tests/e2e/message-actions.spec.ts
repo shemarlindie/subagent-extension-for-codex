@@ -3,7 +3,7 @@ import { send, startTask } from "./console-actions";
 import { firstReplyTest as test } from "./first-reply-fixtures";
 import { expect } from "./fixtures";
 
-test("sent messages copy literal text, show their sent times and mark a follow-up unread", async ({
+test("sent messages copy literal text and show their sent times", async ({
   consolePage: page,
   consoleService,
   firstReply,
@@ -18,10 +18,6 @@ test("sent messages copy literal text, show their sent times and mark a follow-u
   await startTask(page, request);
   await firstReply.held;
   await expect(initial.locator(".chat-bubble")).toHaveText(request);
-
-  await expect(
-    initial.getByRole("button", { name: "Mark unread from here" }),
-  ).toHaveCount(0);
 
   const copy = initial.getByRole("button", {
     name: "Copy message",
@@ -129,17 +125,4 @@ test("sent messages copy literal text, show their sent times and mark a follow-u
   await expect(timestampNote).toHaveText(
     (await followupTime.getAttribute("aria-label"))!,
   );
-
-  await followupTime.press("Escape");
-  await followup.getByRole("button", { name: "Mark unread from here" }).click();
-  await expect(task).toContainText("Unread");
-
-  expect(
-    await history.evaluate((element) => {
-      const rows = [...element.querySelectorAll("[data-chat-item]")];
-      const divider = rows.findIndex((row) => row.role === "separator");
-
-      return rows[divider + 1]?.textContent;
-    }),
-  ).toContain("Fixture worker running turn 2.");
 });

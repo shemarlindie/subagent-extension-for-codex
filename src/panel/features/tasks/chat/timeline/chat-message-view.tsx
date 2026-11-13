@@ -61,13 +61,12 @@ export const ChatMessageView = memo(function ChatMessageView({
       />
     ) : undefined;
 
-  const showUserActions = Boolean(taskId) && message.from === "user";
-
-  // The initial request has no event ID accepted by the unread action.
   const markUnreadButton =
-    taskId && message.event_id > 0 ? (
+    taskId && outcome ? (
       <MarkUnreadButton taskId={taskId} eventId={message.event_id} />
     ) : undefined;
+
+  const showUserActions = Boolean(taskId) && message.from === "user";
 
   return (
     <article
@@ -98,7 +97,6 @@ export const ChatMessageView = memo(function ChatMessageView({
           <ChatMessageActions
             timestamp={message.timestamp}
             text={message.text}
-            markUnread={markUnreadButton}
           />
         </div>
       )}

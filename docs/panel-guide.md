@@ -166,8 +166,8 @@ it.
 
 - **Task actions → Mark unread** or **Mark read** changes read state.
   Right-click or long-press a task row for the same actions.
-- **Mark unread from here**, the eye icon on a reply or your sent follow-up,
-  marks responses from that point on unread.
+- **Mark unread from here**, the eye icon on a reply, marks the task unread from
+  that reply on.
 - **Mark all read** beside the filter count marks every listed task.
 
 The service stores read state, so the embedded panel and the console agree and
