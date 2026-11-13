@@ -1,6 +1,9 @@
 import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClaudePolicy } from "../../../../../shared/providers/claude/permissions.js";
+import {
+  type ClaudePolicy,
+  readOnlyProfile,
+} from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
 import type { Task } from "../../../../../shared/tasks/model.js";
 import type { RunContext } from "../../types.js";
@@ -153,7 +156,10 @@ export async function claudeTurnOptions(
       ? { allowDangerouslySkipPermissions: true }
       : {}),
     tools: { type: "preset", preset: "claude_code" },
-    disallowedTools: policy.subagents ? [] : ["Agent", "Task"],
+    disallowedTools: [
+      ...(policy.subagents ? [] : ["Agent", "Task"]),
+      ...(readOnlyProfile(c.task.worker_profile) ? ["ExitPlanMode"] : []),
+    ],
     ...(c.task.budget.max_cost_usd === null
       ? {}
       : {
