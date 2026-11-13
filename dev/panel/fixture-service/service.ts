@@ -52,6 +52,12 @@ if (previous) {
 
 let current: FixtureStore | undefined;
 
+/**
+ * Synchronous calls block the worker, so a stuck Git call would otherwise
+ * outlast the test timeout and hang the run.
+ */
+const gitTimeout = 30_000;
+
 const git = (cwd: string, ...args: string[]) =>
   execFileSync(
     "git",
@@ -62,9 +68,12 @@ const git = (cwd: string, ...args: string[]) =>
       "user.name=Preview",
       "-c",
       "user.email=preview@example.invalid",
+      // Commits otherwise leave a background repack running in the repository.
+      "-c",
+      "maintenance.auto=false",
       ...args,
     ],
-    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+    { encoding: "utf8", maxBuffer: 256 * 1024 * 1024, timeout: gitTimeout },
   ).trim();
 
 function write(root: string, edits: Edits) {
@@ -82,7 +91,10 @@ function write(root: string, edits: Edits) {
 
 function apply(root: string, turn: Turn) {
   if ("patch" in turn && typeof turn.patch === "string") {
-    execFileSync("git", ["-C", root, "apply", "-"], { input: turn.patch });
+    execFileSync("git", ["-C", root, "apply", "-"], {
+      input: turn.patch,
+      timeout: gitTimeout,
+    });
   } else {
     write(root, turn);
   }

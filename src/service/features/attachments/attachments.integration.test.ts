@@ -292,6 +292,7 @@ test("diff snapshots show submodule commit changes without running their clean f
     "-c",
     "protocol.file.allow=always",
     "submodule",
+    "--quiet",
     "add",
     source,
     "sub",

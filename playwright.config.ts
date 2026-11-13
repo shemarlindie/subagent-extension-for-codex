@@ -6,7 +6,8 @@ export default defineConfig({
   fullyParallel: true,
   // Each test owns its service and data, so workers scale with the machine.
   // Half the cores measured fastest locally without slowing individual tests.
-  workers: "50%",
+  // On CI that leaves the 3-core macOS runner one worker, so CI uses two.
+  workers: process.env.CI ? 2 : "50%",
   forbidOnly: Boolean(process.env.CI),
   timeout: 60_000,
   expect: { timeout: 10_000 },

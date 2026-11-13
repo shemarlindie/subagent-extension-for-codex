@@ -80,15 +80,7 @@ export function logCorrelation() {
 
 /** Only curated scalar metadata belongs here. Never pass bodies, prompts or credentials. */
 export function logEvent(level: Level, event: string, fields: Fields = {}) {
-  if (levels[level] < levels[threshold]) return;
-
-  if (!writer) {
-    if (level === "error") {
-      process.stderr.write(`${JSON.stringify({ event, level })}\n`);
-    }
-
-    return;
-  }
+  if (!writer || levels[level] < levels[threshold]) return;
 
   const safe = Object.fromEntries(
     Object.entries({ ...context.getStore(), ...fields }).map(([key, value]) => {

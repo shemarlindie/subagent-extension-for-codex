@@ -531,7 +531,9 @@ For focused checks during iteration:
 | `npm run test:watch`         | Vitest in watch mode                  |
 
 The Vitest commands skip the `npm test` preflight. Regenerate schemas after
-contract edits, and build first when a test reads `dist/`.
+contract edits, and build first when a test reads `dist/`. Vitest hides console
+output from passing tests when it detects an agent. Add `--silent=false` to see
+the warnings and logs CI shows.
 
 Vitest keeps file isolation. The `unit-dom` project uses VM threads. Keep
 process, SQLite and native-boundary tests in the Node projects because objects
@@ -647,11 +649,11 @@ every level.
 
 ### Browser flows
 
-`npm run test:e2e` builds, then runs workers on half the CPU cores. Each test
-starts a disposable service on an OS-assigned loopback port, with its own SQLite
-database, settings, fixture worker and Git repository. Teardown closes the
-service and removes its files even when the test fails. In a sandbox, allow
-localhost TCP listeners and browser processes.
+`npm run test:e2e` builds, then runs workers on half the CPU cores, or 2 workers
+on CI. Each test starts a disposable service on an OS-assigned loopback port,
+with its own SQLite database, settings, fixture worker and Git repository.
+Teardown closes the service and removes its files even when the test fails. In a
+sandbox, allow localhost TCP listeners and browser processes.
 
 Wait for mutations to finish before reloading. A modal hiding background content
 from role queries does not prove that the mutation succeeded.
