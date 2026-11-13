@@ -65,7 +65,7 @@ export const startSchema = z.object({
     ),
   worker_profile: z
     .enum(roles)
-    .default("reviewer")
+    .default("implementer")
     .describe(
       "reviewer and researcher start in plan mode, which asks before editing, unless provider_options.claude.permission_mode names another mode. implementer can edit its workspace.",
     ),

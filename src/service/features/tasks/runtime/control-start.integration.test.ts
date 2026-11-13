@@ -353,14 +353,14 @@ test("task tools honor defaults and explicit overrides without changing existing
   c.settings.update("alice", {
     set: {
       task: {
-        worker_profile: "implementer",
+        worker_profile: "reviewer",
         budget: {
           max_runtime_minutes: { enabled: true, amount: 9 },
           max_cost_usd: { enabled: true, amount: 3 },
         },
       },
       profiles: {
-        implementer: { instructions: "  Run the linter before replying.  " },
+        reviewer: { instructions: "  Run the linter before replying.  " },
       },
     },
   });
@@ -372,19 +372,23 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   assert.equal(task.provider, "fixture");
-  assert.equal(task.worker_profile, "implementer");
+  assert.equal(task.worker_profile, "reviewer");
   assert.equal(task.budget.max_runtime_minutes, 9);
   assert.equal(task.budget.max_cost_usd, 1);
   assert.equal(task.profile_instructions, "Run the linter before replying.");
 
   c.settings.update("alice", {
     set: {
-      task: { budget: { max_runtime_minutes: { amount: 7 } } },
-      profiles: { implementer: { instructions: "" } },
+      task: {
+        worker_profile: "researcher",
+        budget: { max_runtime_minutes: { amount: 7 } },
+      },
+      profiles: { reviewer: { instructions: "" } },
     },
   });
 
   const saved = c.store.get(task.id, "alice");
+  assert.equal(saved.worker_profile, "reviewer");
   assert.equal(saved.budget.max_runtime_minutes, 9);
   assert.equal(saved.profile_instructions, "Run the linter before replying.");
 
@@ -394,10 +398,18 @@ test("task tools honor defaults and explicit overrides without changing existing
     description: "Other owner defaults",
   });
 
-  assert.equal(other.worker_profile, "reviewer");
+  assert.equal(other.worker_profile, "implementer");
   assert.equal(other.profile_instructions, undefined);
   assert.equal(other.budget.max_runtime_minutes, null);
   assert.equal(other.budget.max_cost_usd, null);
+
+  const explicit = await c.start("alice", {
+    ...input(repo),
+    worker_profile: "implementer",
+  });
+
+  assert.equal(explicit.worker_profile, "implementer");
+  assert.equal(c.settings.values("alice").task.worker_profile, "researcher");
   await c.close();
 });
 

@@ -140,7 +140,7 @@ test("an import refuses a format 1 export from before settings were grouped", as
     /These settings come from an older version\. Export them again\./,
   );
 
-  assert.equal(settings.values("owner").task.worker_profile, "reviewer");
+  assert.equal(settings.values("owner").task.worker_profile, "implementer");
 });
 
 test("a fresh source restores default budget amounts over the target's saved amounts", async (t) => {

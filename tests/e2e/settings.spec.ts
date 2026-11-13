@@ -207,7 +207,24 @@ test("custom instructions save under a worker profile and stay with the tasks it
   consolePage: page,
 }) => {
   const text = "Cite file paths.\nKeep it short.";
+
+  await page.getByRole("button", { name: "More ways to start a task" }).click();
+  await page.getByRole("menuitem", { name: /Advanced task/ }).click();
+
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("combobox", { name: "Worker", exact: true }),
+  ).toHaveText("fixture · implementer");
+
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  await page
+    .getByRole("combobox", { name: "Worker profile", exact: true })
+    .click();
+
+  await page.getByRole("option", { name: "Reviewer", exact: true }).click();
 
   await page.getByRole("tab", { name: "Worker profiles", exact: true }).click();
 
@@ -228,7 +245,7 @@ test("custom instructions save under a worker profile and stay with the tasks it
   await reviewer.fill(text);
 
   await page
-    .getByRole("button", { name: "Save 1 change", exact: true })
+    .getByRole("button", { name: "Save 2 changes", exact: true })
     .click();
 
   await expect(
@@ -241,10 +258,21 @@ test("custom instructions save under a worker profile and stay with the tasks it
   await expect(reviewer).toHaveValue(text);
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
 
-  // Advanced tasks start with the default Reviewer profile.
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+
+  await expect(
+    page.getByRole("combobox", { name: "Profile: Reviewer", exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Task message" }).press("Escape");
   await page.getByRole("button", { name: "More ways to start a task" }).click();
   await page.getByRole("menuitem", { name: /Advanced task/ }).click();
   const dialog = page.getByRole("dialog");
+
+  await expect(
+    dialog.getByRole("combobox", { name: "Worker", exact: true }),
+  ).toHaveText("fixture · reviewer");
+
   await dialog.getByLabel("Description", { exact: true }).fill("Review");
   await dialog.getByRole("button", { name: "Start task", exact: true }).click();
 

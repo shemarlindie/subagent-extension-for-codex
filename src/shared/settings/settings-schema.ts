@@ -103,7 +103,7 @@ export const settingsSchema = z.strictObject({
     worker_profile: z
       .enum(roles)
       .meta({ title: "Worker profile" })
-      .default("reviewer"),
+      .default("implementer"),
     workspace_strategy: z
       .enum(["worktree", "current_repo"])
       .meta({

@@ -195,7 +195,8 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
 
   await screen.findByRole("dialog");
 
-  // The fake service's default profile, reviewer, is read-only.
+  await selectOption(user, "Worker", "claude · reviewer");
+
   assert.equal(
     screen.getByRole("combobox", { name: "Permission mode" }).textContent,
     "Plan — read only",

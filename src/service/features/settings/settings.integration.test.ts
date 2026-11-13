@@ -487,6 +487,7 @@ test("model and reasoning defaults resolve independently from task through role,
 
   settings.update("alice", {
     set: {
+      task: { worker_profile: "reviewer" },
       models: {
         global: { model: "global-model", reasoning_effort: "low" },
         providers: {

@@ -388,7 +388,10 @@ test("cancelled queued input rejects promptly without bypassing the active permi
   const { c, store, repo } = await setup(provider);
 
   try {
-    const task = await c.start("alice", input(repo));
+    const task = await c.start("alice", {
+      ...input(repo),
+      provider_options: { fixture: { permission_mode: "default" } },
+    });
 
     await until(
       () => queuedRejected && !!store.get(task.id, "alice").pending_input,
