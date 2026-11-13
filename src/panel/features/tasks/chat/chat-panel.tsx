@@ -67,6 +67,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
     pinned,
     positionRestored,
     reconcileAfterContentChange,
+    resumeFollowing,
     scrollToLatest,
     syncAfterRender,
   } = useReadingScroll({
@@ -129,6 +130,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
           taskId={taskId}
           budgetApplyVersion={budgetApplyVersion}
           disabled={!ready}
+          onSend={resumeFollowing}
         />
       </div>
     </div>

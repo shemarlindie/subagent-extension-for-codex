@@ -44,6 +44,7 @@ type ComposerProps = {
   taskId?: string;
   budgetApplyVersion: number;
   disabled?: boolean;
+  onSend?: () => void;
 };
 
 /**
@@ -56,6 +57,7 @@ export function Composer({
   taskId,
   budgetApplyVersion,
   disabled = false,
+  onSend,
 }: ComposerProps) {
   const controller = useController();
   const { busy, workers } = useSnapshot(["busy", "workers"]);
@@ -220,6 +222,10 @@ export function Composer({
     ) {
       return;
     }
+
+    // Resume following at the gesture, so a later acknowledgement cannot
+    // override a reader who scrolls away while delivery is pending.
+    onSend?.();
 
     updateSession({
       composerSending: true,

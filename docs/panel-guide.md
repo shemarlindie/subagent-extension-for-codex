@@ -389,6 +389,7 @@ default to deny.
 
 Chat and Activity follow new content while you are at the end. Chat glides to
 new content as incoming messages and streamed paragraphs expand and fade in.
+Sending a message returns Chat to the latest content and resumes following.
 Replies keep their place when the saved message arrives. When you scroll into
 history, your position holds as content streams or loads, and a button returns
 to the latest content. Each tab remembers its own position.
