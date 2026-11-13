@@ -57,7 +57,8 @@ test("a model an organization excludes later gives way to the default, and the p
   const taskSettings = page.getByRole("list", { name: "Task settings" });
 
   await startTask(page, "First task");
-  await expect(history).toContainText("First task");
+  // Enter steers a running turn, so the follow-up waits for this one to end.
+  await expect(history).toContainText("Fixture session turn: 1.");
   await expect(page.getByRole("note")).toHaveCount(0);
   await expect(taskSettings).toContainText("retired-model");
 
