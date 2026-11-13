@@ -1,18 +1,13 @@
 import { memo, type ReactNode, useMemo } from "react";
 
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
-import {
-  useController,
-  useSnapshot,
-} from "../../../../app/state/controller-context";
+import { useController } from "../../../../app/state/controller-context";
 import { Button } from "../../../../shared/components/button/button";
-import { CopyButton } from "../../../../shared/components/copy-button/copy-button";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
-import { formatUserDateTime } from "../../../../shared/utils/user-date-time.js";
 import { formatDuration } from "../../list/duration";
 import { estimatedCostNote } from "../../shared/estimated-cost";
 import { formatCost } from "../chat-model";
-import { formatOutcomeTimestamp } from "./outcome-timestamp";
+import { ChatMessageActions } from "./chat-message-actions";
 
 type TurnOutcomeRowProps = {
   outcome: TurnOutcome;
@@ -36,21 +31,15 @@ export const TurnOutcomeRow = memo(function TurnOutcomeRow({
   markUnread,
 }: TurnOutcomeRowProps) {
   const controller = useController();
-  const host = useSnapshot((state) => state.host);
 
   const turnDuration = useMemo(
     () => formatDuration(outcome.runtime_ms),
     [outcome.runtime_ms],
   );
 
-  const turnTimestamp = formatOutcomeTimestamp(outcome.timestamp, host);
   const outcomeLabel = OUTCOME_LABELS[outcome.outcome];
 
   const turnDurationTitle = `Turn took ${turnDuration}`;
-
-  const turnTimestampTitle = formatUserDateTime(outcome.timestamp, host, {
-    timeZoneName: undefined,
-  });
 
   return (
     <div
@@ -65,35 +54,12 @@ export const TurnOutcomeRow = memo(function TurnOutcomeRow({
       )}
       <div className="chat-outcome-line">
         <div className="chat-outcome-details">
-          <span className="chat-outcome-detail">
-            {response !== undefined && (
-              <>
-                <span className="chat-outcome-tools">
-                  <CopyButton
-                    text={response}
-                    label="Copy response"
-                    iconOnly
-                    iconSize={10}
-                  />
-                  {markUnread}
-                </span>
-                <span
-                  className="chat-outcome-copy-separator"
-                  aria-hidden="true"
-                >
-                  |
-                </span>
-              </>
-            )}
-            <TooltipWrapper label={turnTimestampTitle}>
-              <span
-                className="chat-outcome-timestamp chat-outcome-label"
-                aria-label={turnTimestampTitle}
-              >
-                {turnTimestamp}
-              </span>
-            </TooltipWrapper>
-          </span>
+          <ChatMessageActions
+            timestamp={outcome.timestamp}
+            text={response}
+            copyLabel="Copy response"
+            markUnread={markUnread}
+          />
           <span className="chat-outcome-detail">
             <span aria-hidden="true">·</span>
             <TooltipWrapper label={turnDurationTitle}>

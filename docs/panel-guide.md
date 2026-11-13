@@ -333,10 +333,13 @@ A request's [attachments](mcp-reference.md#attachments) show as chips under it,
 with a summary on hover or focus. Chips that don't fit fold behind **+N more**,
 and a chip opens its attachment in a file viewer.
 
+Your messages offer **Copy message** and the time sent. Actions appear on hover
+or keyboard focus, and stay visible on touch devices.
+
 Turn outcomes show duration, estimated cost and time. Their actions copy the
-response, ask Codex about it or open that turn's activity. Hover a timestamp for
-its full date and time. Failures keep their error. Notes mark compaction, new
-sessions and recreated worktrees.
+response, ask Codex about it or open that turn's activity. Hover or activate a
+timestamp for its full date and time. Failures keep their error. Notes mark
+compaction, new sessions and recreated worktrees.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |

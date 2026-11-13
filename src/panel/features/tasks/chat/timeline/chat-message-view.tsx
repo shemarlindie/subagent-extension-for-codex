@@ -7,6 +7,7 @@ import { RequestAttachments } from "../../../attachments/request-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { markdownParts } from "../drafts/complete-paragraphs";
 import { AskReplyButton } from "./ask-reply-button";
+import { ChatMessageActions } from "./chat-message-actions";
 import { MarkUnreadButton } from "./mark-unread-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 import { useNewBlocksFade } from "./use-new-blocks-fade";
@@ -65,6 +66,8 @@ export const ChatMessageView = memo(function ChatMessageView({
       <MarkUnreadButton taskId={taskId} eventId={message.event_id} />
     ) : undefined;
 
+  const showUserActions = Boolean(taskId) && message.from === "user";
+
   return (
     <article
       ref={ref}
@@ -89,6 +92,14 @@ export const ChatMessageView = memo(function ChatMessageView({
           attachments={message.attachments}
         />
       ) : undefined}
+      {showUserActions && (
+        <div className="chat-message-actions">
+          <ChatMessageActions
+            timestamp={message.timestamp}
+            text={message.text}
+          />
+        </div>
+      )}
       {outcome ? (
         <TurnOutcomeRow
           outcome={outcome}

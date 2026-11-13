@@ -134,7 +134,9 @@ test("edit, reorder and remove queued messages, then stop and resume after reloa
 
   // User messages enter durable history in delivery order, between worker replies.
   await expect(
-    history.getByRole("article", { name: "You", exact: true }),
+    history
+      .getByRole("article", { name: "You", exact: true })
+      .locator(".chat-bubble"),
   ).toHaveText([initial, "Second queued turn", "Edited first turn"]);
 
   await expect(
@@ -265,7 +267,10 @@ heldTest(
     await expect(queue).toHaveCount(0);
 
     await expect(
-      history.getByRole("article", { name: "You", exact: true }).last(),
+      history
+        .getByRole("article", { name: "You", exact: true })
+        .last()
+        .locator(".chat-bubble"),
     ).toHaveText("Send this now");
 
     // Clearing a paused queue discards its messages without sending them.
