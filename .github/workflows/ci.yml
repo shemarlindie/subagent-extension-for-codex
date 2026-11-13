@@ -42,7 +42,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
         timeout-minutes: 1
       # npm test checks schemas, formatting, lint, types and unused code, and builds.
+      # It usually takes 4 to 10 minutes and has taken up to 15 on macOS. The
+      # timeout stops a stuck test well before GitHub's 6 hour limit.
       - run: npm test
+        timeout-minutes: 20
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
