@@ -654,7 +654,7 @@ const effortOptions = [
   { value: "high", label: "high" },
 ];
 
-// A model scope row at a settings path such as `models.global`. Without
+// A model scope row at a settings path such as `models.providers.claude`. Without
 // `options`, the model is typed.
 export const scope = (
   path: string,

@@ -88,17 +88,15 @@ export interface ScopeInput {
  */
 function orgInherited(
   values: unknown,
-  scope: { id: string; provider: string; providerScope: boolean },
+  scope: { provider: string; providerScope: boolean },
   policy: ProviderPolicy | undefined,
   model: string,
   levels: readonly string[] | undefined,
 ) {
-  // Global inherits no scope, and Claude only Global.
+  // Provider scopes inherit the runtime default.
   const parent = scope.providerScope ? {} : { provider: scope.provider };
 
-  const inherits =
-    scope.id !== "global" &&
-    resolveModelDefaults(values, parent, policy).reasoning_effort;
+  const inherits = resolveModelDefaults(values, parent).reasoning_effort;
 
   const org = orgEffort(policy, model);
 
@@ -124,7 +122,7 @@ export function modelScope(
     ? scope
     : scalarText(settingAt(values, "task.provider"));
 
-  // Global and role choices apply across providers; provider scopes use their own catalog.
+  // Role choices apply across providers; provider scopes use their own catalog.
   const choices = catalogs
     .filter((catalog) => !providerScope || catalog.provider === scope)
     .flatMap((catalog) => catalog.models ?? []);
@@ -133,16 +131,12 @@ export function modelScope(
   const savedEffort = scalarText(settingAt(values, effortPath), "default");
 
   // The model this scope's tasks run: its own, then the scopes it inherits.
-  const chain =
-    scope === "global"
-      ? {}
-      : { provider, profile: providerScope ? undefined : scope };
+  const chain = { provider, profile: providerScope ? undefined : scope };
 
   const catalog = catalogs.find((item) => item.provider === provider);
 
   // Default runs the org's model, when it sets one.
-  const effectiveModel =
-    resolveModelDefaults(values, chain, catalog?.policy).model ?? "default";
+  const effectiveModel = resolveModelDefaults(values, chain).model ?? "default";
 
   const metadata = catalog?.models?.find(
     (model) => model.value === effectiveModel,
@@ -176,7 +170,7 @@ export function modelScope(
 
   const inherited = orgInherited(
     values,
-    { id: scope, provider, providerScope },
+    { provider, providerScope },
     catalog?.policy,
     runs,
     levels,
@@ -292,10 +286,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   const providerModel = modelPath(settingAt(values, "task.provider"));
 
   // Claude is the only provider, so its org defaults are what Inherit uses.
-  const inherit = inheritHelp(claudePolicy, {
-    text: "Global",
-    setting: "models.global.model",
-  });
+  const inherit = inheritHelp(claudePolicy);
 
   const defaultsHelp = withHelp(
     [
@@ -391,7 +382,6 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         {
           kind: "models",
           scopes: [
-            scopeRow("global", "Global"),
             ...(input.modelProviders ?? providers).map((provider) =>
               scopeRow(provider, titleCase(provider)),
             ),

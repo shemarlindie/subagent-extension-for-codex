@@ -10,7 +10,7 @@ export interface SettingOption {
 }
 
 export interface ModelScope {
-  /** `global`, a provider or a worker profile. */
+  /** A provider or a worker profile. */
   id: string;
   label: string;
   model: {
@@ -22,8 +22,6 @@ export interface ModelScope {
     footer?: string;
     /** The saved model won't apply, and why. */
     warning?: string;
-    /** Something else applies in its place, as the section's help says. */
-    disabled?: boolean;
   };
   effort: {
     path: string;
@@ -33,8 +31,6 @@ export interface ModelScope {
     unsupported: boolean;
     /** The saved effort won't apply, and why. */
     warning?: string;
-    /** Something else applies in its place, as the section's help says. */
-    disabled?: boolean;
   };
   /** A worker profile's custom instructions, shown collapsed under its models. */
   instructions?: ProseSetting;

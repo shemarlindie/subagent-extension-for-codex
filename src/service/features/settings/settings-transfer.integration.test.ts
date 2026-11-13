@@ -83,7 +83,7 @@ test("an import skips unsupported values and preserves omitted settings", async 
   settings.update("owner", {
     set: {
       task: { worktree_branch_prefix: "kept/" },
-      models: { global: { model: "saved-model" } },
+      models: { providers: { claude: { model: "saved-model" } } },
     },
   });
 
@@ -114,7 +114,7 @@ test("an import skips unsupported values and preserves omitted settings", async 
   assert.equal(values.task.worker_profile, "researcher");
   assert.equal(values.task.provider, "claude");
   assert.equal(values.task.worktree_branch_prefix, "kept/");
-  assert.equal(values.models.global.model, "saved-model");
+  assert.equal(values.models.providers.claude.model, "saved-model");
 });
 
 test("an import rejects text that isn't a usable export", async (t) => {
@@ -140,7 +140,7 @@ test("an import refuses a format 1 export from before settings were grouped", as
     /These settings come from an older version\. Export them again\./,
   );
 
-  assert.equal(settings.values("owner").task.worker_profile, "reviewer");
+  assert.equal(settings.values("owner").task.worker_profile, "implementer");
 });
 
 test("a fresh source restores default budget amounts over the target's saved amounts", async (t) => {

@@ -269,7 +269,13 @@ test("More options preserves a pending composer draft and fills Advanced task de
         },
         models: {
           ...defaults.models,
-          global: { ...defaults.models.global, reasoning_effort: "high" },
+          providers: {
+            ...defaults.models.providers,
+            claude: {
+              model: defaults.models.providers.claude?.model ?? "",
+              reasoning_effort: "high",
+            },
+          },
         },
       },
     });

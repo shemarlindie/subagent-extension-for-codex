@@ -23,19 +23,19 @@ const models: SettingRow = {
   kind: "models",
   scopes: [
     {
-      id: "global",
-      label: "Global",
+      id: "claude",
+      label: "Claude",
       model: {
-        path: "models.global.model",
-        label: "Global model",
+        path: "models.providers.claude.model",
+        label: "Claude model",
         options: [
           { value: "", label: "Inherit" },
           { value: "sonnet", label: "Sonnet" },
         ],
       },
       effort: {
-        path: "models.global.reasoning_effort",
-        label: "Global reasoning",
+        path: "models.providers.claude.reasoning_effort",
+        label: "Claude reasoning",
         options: [
           { value: "default", label: "Inherit" },
           { value: "high", label: "high" },
@@ -82,7 +82,7 @@ const saved = {
     budget: { max_cost_usd: { enabled: false, amount: 7 } },
   },
   providers: { claude: { subagents: true } },
-  models: { global: { model: "", reasoning_effort: "default" } },
+  models: { providers: { claude: { model: "", reasoning_effort: "default" } } },
 };
 
 // Form fields are flat. Each name is its path with dots replaced.
@@ -91,8 +91,8 @@ const field = {
   subagents: "providers-claude-subagents",
   costOn: "task-budget-max_cost_usd-enabled",
   cost: "task-budget-max_cost_usd-amount",
-  model: "models-global-model",
-  effort: "models-global-reasoning_effort",
+  model: "models-providers-claude-model",
+  effort: "models-providers-claude-reasoning_effort",
 };
 
 test("form state holds strings, and a limit that is off keeps its amount", () => {
@@ -132,7 +132,7 @@ test("updates hold only edits, typed and nested, with budgets as switch and amou
     {
       providers: { claude: { subagents: false } },
       task: { budget: { max_cost_usd: { enabled: true } } },
-      models: { global: { model: "sonnet" } },
+      models: { providers: { claude: { model: "sonnet" } } },
     },
   );
 

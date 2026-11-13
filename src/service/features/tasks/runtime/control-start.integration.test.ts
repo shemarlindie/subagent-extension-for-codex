@@ -255,7 +255,7 @@ test("Claude rejects unsupported direct and inherited effort before persisting o
       );
 
       c.settings.update("alice", {
-        set: { models: { global: { reasoning_effort } } },
+        set: { models: { providers: { claude: { reasoning_effort } } } },
       });
 
       await assert.rejects(
@@ -353,14 +353,14 @@ test("task tools honor defaults and explicit overrides without changing existing
   c.settings.update("alice", {
     set: {
       task: {
-        worker_profile: "implementer",
+        worker_profile: "reviewer",
         budget: {
           max_runtime_minutes: { enabled: true, amount: 9 },
           max_cost_usd: { enabled: true, amount: 3 },
         },
       },
       profiles: {
-        implementer: { instructions: "  Run the linter before replying.  " },
+        reviewer: { instructions: "  Run the linter before replying.  " },
       },
     },
   });
@@ -372,19 +372,23 @@ test("task tools honor defaults and explicit overrides without changing existing
   });
 
   assert.equal(task.provider, "fixture");
-  assert.equal(task.worker_profile, "implementer");
+  assert.equal(task.worker_profile, "reviewer");
   assert.equal(task.budget.max_runtime_minutes, 9);
   assert.equal(task.budget.max_cost_usd, 1);
   assert.equal(task.profile_instructions, "Run the linter before replying.");
 
   c.settings.update("alice", {
     set: {
-      task: { budget: { max_runtime_minutes: { amount: 7 } } },
-      profiles: { implementer: { instructions: "" } },
+      task: {
+        worker_profile: "researcher",
+        budget: { max_runtime_minutes: { amount: 7 } },
+      },
+      profiles: { reviewer: { instructions: "" } },
     },
   });
 
   const saved = c.store.get(task.id, "alice");
+  assert.equal(saved.worker_profile, "reviewer");
   assert.equal(saved.budget.max_runtime_minutes, 9);
   assert.equal(saved.profile_instructions, "Run the linter before replying.");
 
@@ -394,10 +398,18 @@ test("task tools honor defaults and explicit overrides without changing existing
     description: "Other owner defaults",
   });
 
-  assert.equal(other.worker_profile, "reviewer");
+  assert.equal(other.worker_profile, "implementer");
   assert.equal(other.profile_instructions, undefined);
   assert.equal(other.budget.max_runtime_minutes, null);
   assert.equal(other.budget.max_cost_usd, null);
+
+  const explicit = await c.start("alice", {
+    ...input(repo),
+    worker_profile: "implementer",
+  });
+
+  assert.equal(explicit.worker_profile, "implementer");
+  assert.equal(c.settings.values("alice").task.worker_profile, "researcher");
   await c.close();
 });
 
@@ -584,7 +596,11 @@ test("a saved effort the model can't run gives way, and one a request names fail
   );
 
   c.settings.update("alice", {
-    set: { models: { global: { model: "opus", reasoning_effort: "xhigh" } } },
+    set: {
+      models: {
+        providers: { claude: { model: "opus", reasoning_effort: "xhigh" } },
+      },
+    },
   });
 
   // With the saved model that gave way, then on the default itself.
@@ -593,7 +609,10 @@ test("a saved effort the model can't run gives way, and one a request names fail
   assert.ok(!task.model);
   assert.ok(!task.reasoning_effort);
 
-  c.settings.update("alice", { set: { models: { global: { model: "" } } } });
+  c.settings.update("alice", {
+    set: { models: { providers: { claude: { model: "" } } } },
+  });
+
   task = await start({});
   assert.ok(!task.reasoning_effort);
 
@@ -603,7 +622,7 @@ test("a saved effort the model can't run gives way, and one a request names fail
   );
 });
 
-test("the org's default model and reasoning take Global's place, and saved Claude and profile choices win", async () => {
+test("saved Claude and profile choices override the org's runtime defaults", async () => {
   const models: ModelChoice[] = [
     { value: "default", displayName: "Default", description: "" },
     { value: "opus", displayName: "Opus", description: "" },
@@ -622,8 +641,6 @@ test("the org's default model and reasoning take Global's place, and saved Claud
   c.settings.update("alice", {
     set: {
       models: {
-        // Claude can't run Minimal, which only fails a start it applies to.
-        global: { model: "haiku", reasoning_effort: "minimal" },
         profiles: { implementer: { reasoning_effort: "high" } },
       },
     },
@@ -690,7 +707,7 @@ test("a reasoning level a request names above the org's cap fails, and a saved o
   );
 
   c.settings.update("alice", {
-    set: { models: { global: { reasoning_effort: "xhigh" } } },
+    set: { models: { providers: { claude: { reasoning_effort: "xhigh" } } } },
   });
 
   assert.equal((await start({})).reasoning_effort, "xhigh");

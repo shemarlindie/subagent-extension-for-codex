@@ -24,7 +24,7 @@ function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
 /**
  * What a worker choice inherits when its model and reasoning are left at
  * default: the profile's setting, then the provider's, then the org's
- * default or the global one. `providerModel` and `providerReasoning` skip the
+ * default. `providerModel` and `providerReasoning` skip the
  * profile's setting. The org's model is a name, as it has no value of its
  * own. A saved level the model doesn't support is skipped, and the org's
  * reasoning for the model that runs fills in last, where the model supports
@@ -40,7 +40,7 @@ export function modelDefaults(
   const { provider, profile } = workerChoice(worker);
   const workerInfo = workers.find((item) => item.provider === provider);
   const policy = workerInfo?.policy;
-  const saved = resolveModelDefaults(defaults, { provider, profile }, policy);
+  const saved = resolveModelDefaults(defaults, { provider, profile });
 
   // Blank runs Default, which is the org's model when it sets one.
   const runs = selectedModel.trim() || saved.model || "default";

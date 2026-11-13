@@ -52,6 +52,10 @@ test("reload keeps New task open until an existing task is selected", async ({
   await page.getByRole("button", { name: "New task", exact: true }).click();
 
   await expect(
+    page.getByRole("combobox", { name: "Profile: Implementer", exact: true }),
+  ).toBeVisible();
+
+  await expect(
     page.getByRole("textbox", { name: "Task message" }),
   ).toBeVisible();
 

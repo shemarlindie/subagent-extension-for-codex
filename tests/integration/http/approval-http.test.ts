@@ -81,6 +81,7 @@ async function setup() {
 
   const start = {
     provider: "fixture",
+    provider_options: { fixture: { permission_mode: "default" } },
     description: "Request permission",
     repository: dir,
     workspace_strategy: "current_repo",

@@ -16,9 +16,6 @@ import {
 /** The session-memory entry that keeps the composer's draft. */
 export const NEW_TASK_SESSION_ID = "draft";
 
-/** The profile a composed task starts with unless the user picks another. */
-const NEW_TASK_PROFILE = "implementer";
-
 /** A draft's first line, which stands in for the title until the task starts. */
 export function draftTitle(description = "") {
   return description.trim().split("\n")[0] ?? "";
@@ -50,7 +47,7 @@ export function profileValues(
 
 /**
  * The composer's starting values: the scoped project (or the only one), the
- * Implementer profile with its saved settings and the same settings defaults as
+ * default worker profile with its saved settings and the same settings defaults as
  * the Advanced task dialog. Values that depend on pending reads stay blank
  * until they load.
  */
@@ -60,9 +57,6 @@ export function newTaskInitialValues(
 ): DelegateValues {
   const projects = newTaskProjects(state);
 
-  const provider =
-    newTask.defaults?.task.provider || state.workers[0]?.provider || "";
-
   const repository =
     state.repository ??
     (projects.length === 1 ? projects[0]?.repository : undefined);
@@ -71,7 +65,6 @@ export function newTaskInitialValues(
     dialog: {
       kind: "delegate-loading",
       ...newTask,
-      preferredWorker: provider ? `${provider}:${NEW_TASK_PROFILE}` : undefined,
       ...(repository ? { repository } : {}),
     },
     scope: state,

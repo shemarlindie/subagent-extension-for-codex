@@ -68,7 +68,7 @@ Host settings:
   task form.
 - **Org policy (JSON)** applies a policy, in the shape discovery reports, to the
   composer's menus and Settings. **Insert example** fills in the fixture policy.
-  Any policy comes with a saved mode and Global model it may outrank.
+  Any policy comes with a saved mode it may outrank.
 - **Added projects** lists projects you registered. They persist across reloads
   until **Reset projects**.
 - **Host style variable overrides** takes JSON. See

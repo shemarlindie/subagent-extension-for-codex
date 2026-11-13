@@ -17,6 +17,7 @@ import { Store } from "../storage/store.js";
 
 const baseRequest = {
   provider: "fixture",
+  provider_options: { fixture: { permission_mode: "default" } },
   description: "Check approval",
   workspace_strategy: "current_repo",
 };

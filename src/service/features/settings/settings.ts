@@ -97,11 +97,18 @@ export class Settings {
 
     const record = `settings for ${owner}`;
 
-    const values = checkStored(
-      settingsSchema,
-      decodeStored(z.looseObject({}), row.body, record),
-      record,
-    );
+    const stored = decodeStored(z.looseObject({}), row.body, record);
+
+    // Retired global defaults never migrate into provider or profile choices.
+    if (
+      stored.models &&
+      typeof stored.models === "object" &&
+      !Array.isArray(stored.models)
+    ) {
+      delete (stored.models as Record<string, unknown>).global;
+    }
+
+    const values = checkStored(settingsSchema, stored, record);
 
     // A saved provider can disappear when the service configuration changes.
     if (!this.providers().includes(values.task.provider)) {
@@ -161,9 +168,9 @@ export class Settings {
     // Agents read choices and notes from the schema; the panel reads sections,
     // whose intros explain the same chain from each section's side.
     const modelNote =
-      "Blank inherits the next default: the task's worker profile, then its provider, then the global default, then the provider's own default. A model chosen for a task overrides these.";
+      "Blank inherits the next default: the task's worker profile, then its provider, then the provider's own default. A model chosen for a task overrides these.";
 
-    for (const scope of ["global", ...modelProviders, ...roles]) {
+    for (const scope of [...modelProviders, ...roles]) {
       const info = modelScope(scope, scopes);
       const modelField = jsonSchemaAt(schema, info.modelPath)!;
       const effortField = jsonSchemaAt(schema, info.effortPath)!;

@@ -19,6 +19,7 @@ import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "./settings-tool-schemas.js";
+import { exportSettings, importSettings } from "./settings-transfer.js";
 
 type Read = ReturnType<Settings["read"]>;
 
@@ -189,16 +190,16 @@ test("help links to settings the panel doesn't show become plain text", () => {
     withHelp(
       [
         "Use ",
-        { text: "Global", setting: "models.global.model" },
+        { text: "Reviewer", setting: "models.profiles.reviewer.model" },
         " or ",
         { text: "Claude", setting: "models.providers.claude.model" },
         ".",
       ],
-      { models: { global: { model: "" } } },
+      { models: { profiles: { reviewer: { model: "" } } } },
     ),
     [
       "Use ",
-      { text: "Global", setting: "models.global.model" },
+      { text: "Reviewer", setting: "models.profiles.reviewer.model" },
       " or ",
       "Claude",
       ".",
@@ -242,7 +243,12 @@ test("disabled providers' model defaults are hidden but kept, and listed models 
   }
 
   const models = listed(hidden).filter((path) => path.endsWith(".model"));
-  const note = schemaField(hidden, "models.global.model").description;
+
+  const note = schemaField(
+    hidden,
+    "models.profiles.reviewer.model",
+  ).description;
+
   assert.ok(note);
 
   assert.deepEqual(
@@ -269,9 +275,10 @@ test("native model controls scope discovered models and derive reasoning choices
     set: {
       task: { provider: "claude" },
       models: {
-        global: { model: "claude-model" },
         profiles: { reviewer: { model: "custom-saved-model" } },
-        providers: { claude: { reasoning_effort: "max" } },
+        providers: {
+          claude: { model: "claude-model", reasoning_effort: "max" },
+        },
       },
     },
   });
@@ -307,22 +314,12 @@ test("native model controls scope discovered models and derive reasoning choices
     "default",
   ]);
 
-  assert.deepEqual(field("models.global.model").enum, [
-    "",
-    "claude-model",
-    "default",
-  ]);
-
   assert.deepEqual(field("models.profiles.reviewer.model").enum, [
     "",
     "claude-model",
     "default",
     "custom-saved-model",
   ]);
-
-  const globalEfforts = field("models.global.reasoning_effort").enum!;
-  assert.ok(globalEfforts.includes("none"));
-  assert.ok(globalEfforts.includes("max"));
 
   assert.ok(
     field("models.profiles.reviewer.reasoning_effort").enum!.includes("none"),
@@ -388,8 +385,9 @@ test("settings preserve custom models and unknown metadata while disabling effor
   f.settings.update("alice", {
     set: {
       models: {
-        global: { model: "custom-model" },
-        providers: { fixture: { reasoning_effort: "high" } },
+        providers: {
+          fixture: { model: "custom-model", reasoning_effort: "high" },
+        },
       },
     },
   });
@@ -404,7 +402,9 @@ test("settings preserve custom models and unknown metadata while disabling effor
   ]);
 
   assert.ok(
-    schemaField(unknown, "models.global.model").enum!.includes("custom-model"),
+    schemaField(unknown, "models.providers.fixture.model").enum!.includes(
+      "custom-model",
+    ),
   );
 
   assert.match(
@@ -416,7 +416,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
 
   f.settings.update("alice", {
     set: {
-      models: { global: { model: "" }, providers: { fixture: { model: "" } } },
+      models: { providers: { fixture: { model: "" } } },
     },
   });
 
@@ -435,12 +435,6 @@ test("settings preserve custom models and unknown metadata while disabling effor
       ],
     },
   ]);
-
-  assert.ok(
-    schemaField(disabled, "models.global.reasoning_effort").enum!.includes(
-      "high",
-    ),
-  );
 
   assert.deepEqual(schemaField(disabled, fixtureEffort).enum, [
     "default",
@@ -482,13 +476,13 @@ test("settings preserve custom models and unknown metadata while disabling effor
   assert.deepEqual(f.stored(), persisted);
 });
 
-test("model and reasoning defaults resolve independently from task through role, provider and global", async (t) => {
+test("model and reasoning defaults resolve independently from task through role and provider", async (t) => {
   const { settings } = await fixture(t);
 
   settings.update("alice", {
     set: {
+      task: { worker_profile: "reviewer" },
       models: {
-        global: { model: "global-model", reasoning_effort: "low" },
         providers: {
           fixture: { model: "provider-model", reasoning_effort: "medium" },
         },
@@ -540,20 +534,11 @@ test("model and reasoning defaults resolve independently from task through role,
 
   assert.deepEqual(resolve({ worker_profile: "researcher" }), [
     "provider-model",
-    "low",
+    undefined,
   ]);
 
   settings.update("alice", {
     set: { models: { providers: { fixture: { model: "" } } } },
-  });
-
-  assert.deepEqual(resolve({ worker_profile: "researcher" }), [
-    "global-model",
-    "low",
-  ]);
-
-  settings.update("alice", {
-    set: { models: { global: { model: "", reasoning_effort: "default" } } },
   });
 
   assert.deepEqual(resolve({ worker_profile: "researcher" }), [
@@ -613,7 +598,11 @@ test("invalid settings updates cannot partially persist other settings", async (
 
   f.settings.update("alice", {
     set: {
-      models: { global: { model: "saved-model", reasoning_effort: "medium" } },
+      models: {
+        providers: {
+          fixture: { model: "saved-model", reasoning_effort: "medium" },
+        },
+      },
       task: { budget: budgets({}, { enabled: true, amount: 121 }) },
     },
   });
@@ -637,9 +626,13 @@ test("invalid settings updates cannot partially persist other settings", async (
     [{ task: { budget: {} } }, /Set at least one setting/],
     ...(
       [
-        { models: { global: { model: 123 } } },
-        { models: { global: { model: "x".repeat(201) } } },
-        { models: { global: { reasoning_effort: "unsupported" } } },
+        { models: { providers: { fixture: { model: 123 } } } },
+        { models: { providers: { fixture: { model: "x".repeat(201) } } } },
+        {
+          models: {
+            providers: { fixture: { reasoning_effort: "unsupported" } },
+          },
+        },
         { models: { profiles: { reviewer: { reasoning_effort: 1 } } } },
         { models: { providers: { unknown: { model: "unknown" } } } },
       ] as Record<string, unknown>[]
@@ -664,7 +657,11 @@ test("invalid task selections fail before inherited defaults can hide them", asy
 
   settings.update("alice", {
     set: {
-      models: { global: { model: "fallback-model", reasoning_effort: "high" } },
+      models: {
+        providers: {
+          fixture: { model: "fallback-model", reasoning_effort: "high" },
+        },
+      },
     },
   });
 
@@ -898,7 +895,7 @@ test("settings accept a new built-in's metadata without provider-ID handling", a
   settings.update("alice", {
     set: {
       task: { provider: "new-built-in" },
-      models: { global: { model: "new-model" } },
+      models: { profiles: { reviewer: { model: "new-model" } } },
     },
   });
 
@@ -979,7 +976,7 @@ test("updates to user-only settings need user authority and save nothing", async
     {
       set: {
         task: { worker_profile: "implementer" },
-        models: { global: { model: "agent-model" } },
+        models: { providers: { fixture: { model: "agent-model" } } },
       },
     },
     "parent",
@@ -1013,4 +1010,76 @@ test("malformed or pre-grouping stored settings fail with their owner instead of
     assert.throws(() => f.settings.values(owner), malformed);
     assert.throws(() => f.settings.read(owner), malformed);
   }
+});
+
+test("legacy global defaults are discarded without losing provider and profile settings", async (t) => {
+  const f = await fixture(t);
+
+  const legacy = {
+    ...f.settings.defaults(),
+    models: {
+      ...f.settings.defaults().models,
+      global: { model: "obsolete-model", reasoning_effort: "max" },
+      providers: {
+        fixture: { model: "provider-model", reasoning_effort: "high" },
+      },
+      profiles: {
+        reviewer: { model: "profile-model", reasoning_effort: "default" },
+      },
+    },
+  };
+
+  f.store.database.client
+    .prepare("INSERT INTO user_settings(owner,body) VALUES(?,?)")
+    .run("alice", JSON.stringify(legacy));
+
+  f.reopen();
+
+  const read = f.settings.read("alice");
+  assert.equal(schemaNode(read, "models.global"), undefined);
+  assert.equal(settingAt(read.values, "models.global"), undefined);
+  assert.equal(f.settings.taskInput("alice", {}).model, "profile-model");
+  assert.equal(f.settings.taskInput("alice", {}).reasoning_effort, "high");
+
+  assert.equal(
+    JSON.parse(exportSettings(f.settings, "alice").document).settings.models
+      .global,
+    undefined,
+  );
+
+  const imported = importSettings(f.settings, "bob", {
+    document: JSON.stringify({ format: 2, settings: legacy }),
+  });
+
+  assert.deepEqual(imported.ignored, [
+    "models.global.model",
+    "models.global.reasoning_effort",
+  ]);
+
+  assert.deepEqual(f.settings.values("bob"), f.settings.values("alice"));
+
+  assert.throws(() =>
+    f.settings.update("alice", {
+      set: { models: { global: { model: "revived" } } },
+    }),
+  );
+
+  f.settings.update("alice", {
+    set: {
+      models: {
+        profiles: { reviewer: { model: "" } },
+        providers: { fixture: { model: "", reasoning_effort: "default" } },
+      },
+    },
+  });
+
+  f.reopen();
+  assert.equal(f.settings.taskInput("alice", {}).model, undefined);
+  assert.equal(f.settings.taskInput("alice", {}).reasoning_effort, undefined);
+
+  const persisted = f.store.database.client
+    .prepare("SELECT body FROM user_settings WHERE owner = ?")
+    .get("alice") as { body: string };
+
+  assert.equal(JSON.parse(persisted.body).models.global, undefined);
 });
