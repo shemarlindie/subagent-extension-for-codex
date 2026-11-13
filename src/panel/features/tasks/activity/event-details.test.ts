@@ -404,7 +404,7 @@ test("a compact accessible debug toggle hides inspection until opened and preser
     ),
   );
 
-  toggle.focus();
+  act(() => toggle.focus());
 
   expect(
     document.activeElement,
@@ -495,7 +495,7 @@ test("opening debug scrolls its panel into view once the height transition settl
 
   fireEvent.transitionEnd(panel, { propertyName: "opacity" });
   // A reveal would scroll on a later frame, so give one time to land.
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
   assert.deepEqual(scrolled, []);
 
   fireEvent.transitionEnd(panel, { propertyName: "height" });

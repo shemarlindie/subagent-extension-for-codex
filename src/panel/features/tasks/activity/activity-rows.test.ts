@@ -442,20 +442,24 @@ test("a turn completion shows stats and keeps its result in raw JSON", (t) => {
   const view = render(
     createElement(GroupedEventList, {
       events: [
-        event("agent.completed", {
-          type: "result",
-          subtype: "success",
-          result,
-          duration_ms: 65_000,
-          cost_usd: 0.5,
-          usage: {
-            input_tokens: 2,
-            cache_creation_input_tokens: 15_874,
-            cache_read_input_tokens: 0,
-            output_tokens: 426,
+        event(
+          "agent.completed",
+          {
+            type: "result",
+            subtype: "success",
+            result,
+            duration_ms: 65_000,
+            cost_usd: 0.5,
+            usage: {
+              input_tokens: 2,
+              cache_creation_input_tokens: 15_874,
+              cache_read_input_tokens: 0,
+              output_tokens: 426,
+            },
           },
-        }),
-        event("agent.reply", { text: result, turn: 1 }),
+          "completion",
+        ),
+        event("agent.reply", { text: result, turn: 1 }, "completion-reply"),
       ],
     }),
   ).container;
