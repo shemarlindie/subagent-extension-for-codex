@@ -278,7 +278,9 @@ inherited either.
 - `provider_options.claude.permission_mode` overrides it for one task. `inherit`
   uses the saved setting.
 - The read-only profiles, `researcher` and `reviewer`, start in `plan` unless
-  the task names another mode.
+  the task names another mode. These profiles return findings directly and
+  cannot call `ExitPlanMode` to request implementation approval. Use
+  `implementer` when the task needs a plan approval followed by implementation.
 - Each task stores its resolved mode and whether it came from the task, the
   profile or the setting.
 

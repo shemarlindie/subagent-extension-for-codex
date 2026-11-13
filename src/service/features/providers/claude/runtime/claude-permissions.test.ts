@@ -332,7 +332,7 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
   }
 });
 
-test("every profile gets the full tool preset and no prompt rule against editing", async () => {
+test("review and research omit plan exit while implementation keeps plan approvals", async () => {
   const { c } = await context();
   let options: Options | undefined;
 
@@ -348,14 +348,19 @@ test("every profile gets the full tool preset and no prompt rule against editing
     readyClaudeCli,
   );
 
-  for (const profile of ["reviewer", "implementer"] as const) {
+  for (const profile of ["researcher", "reviewer", "implementer"] as const) {
     c.task.worker_profile = profile;
     await provider.run(c, "Work");
     assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
 
     const prompt = options!.systemPrompt as { append: string };
     assert.match(prompt.append, /Follow the configured native permission mode/);
-    assert.doesNotMatch(prompt.append, /cannot edit|Inspect only/);
+    assert.equal(options!.permissionMode, "plan");
+
+    assert.equal(
+      options!.disallowedTools!.includes("ExitPlanMode"),
+      profile !== "implementer",
+    );
   }
 });
 
