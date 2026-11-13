@@ -157,6 +157,9 @@
   width: 54px;
   height: 7px;
 }
+.row .row-status-icon.completed {
+  color: var(--muted);
+}
 /* Project groups in the all-projects list. Primary text sets headers apart
    from the muted scope label above the list. */
 #task-list {
