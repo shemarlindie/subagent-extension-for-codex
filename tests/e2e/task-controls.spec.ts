@@ -28,8 +28,6 @@ test("edit, reorder and remove queued messages, then stop and resume after reloa
     page.getByRole("button", { name: "Respond", exact: true }),
   ).toBeVisible();
 
-  await expect(page.getByRole("list", { name: "Task settings" })).toBeVisible();
-
   await page
     .getByRole("button", { name: "Show composer", exact: true })
     .click();

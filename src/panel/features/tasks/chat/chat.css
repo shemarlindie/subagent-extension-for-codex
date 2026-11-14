@@ -549,6 +549,11 @@ body[data-expanded-panel="true"]
   flex: 0 1 auto;
   margin-inline-start: auto;
 }
+@media (max-width: 360px) {
+  .chat-composer-toggle-row .task-run-settings {
+    display: none;
+  }
+}
 .chat-composer-expand {
   display: inline-grid;
   grid-template-columns: var(--composer-caret-size) auto;

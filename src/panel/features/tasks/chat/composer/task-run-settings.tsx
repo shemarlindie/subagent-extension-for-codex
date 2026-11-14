@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef } from "react";
-
 import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
@@ -13,7 +11,7 @@ import {
 } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
 
-type TaskRunSettingsProps = { task: Task; collapsed?: boolean };
+type TaskRunSettingsProps = { task: Task };
 
 /** A setting's label and the abbreviation shown for it. Without one, it stays unshown. */
 type RunSetting = { label: string; compact?: string };
@@ -68,42 +66,8 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
  * new-task composer's summary reads them. The full labels remain for
  * assistive tech and the tooltip.
  */
-export function TaskRunSettings({
-  task,
-  collapsed = false,
-}: TaskRunSettingsProps) {
-  const ref = useRef<HTMLUListElement>(null);
+export function TaskRunSettings({ task }: TaskRunSettingsProps) {
   const workers = useSnapshot((state) => state.workers);
-
-  // Recheck changed labels on render and available space on resize.
-  useLayoutEffect(() => {
-    const element = ref.current;
-    const row = element?.parentElement;
-    if (!collapsed || !element || !row) return;
-
-    const measure = () => {
-      // Compare both layouts before paint so hidden settings can return on resize.
-      element.hidden = true;
-      const height = row.offsetHeight;
-      element.hidden = false;
-      element.hidden = row.offsetHeight > height;
-    };
-
-    measure();
-
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? undefined
-        : new ResizeObserver(measure);
-
-    observer?.observe(row);
-    observer?.observe(element);
-
-    return () => {
-      observer?.disconnect();
-      element.hidden = false;
-    };
-  });
 
   const models =
     workers.find((worker) => worker.provider === task.provider)?.models ?? [];
@@ -113,7 +77,6 @@ export function TaskRunSettings({
 
   return (
     <ul
-      ref={ref}
       className="task-run-settings"
       aria-label="Task settings"
       title={runSettingsTitle(task, profile, settings)}
