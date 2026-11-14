@@ -8,6 +8,7 @@ import { Presence } from "../components/motion/presence";
 
 interface FormFooterProps {
   label: string;
+  variant?: "primary" | "danger";
   disabled?: boolean;
   dismissLabel?: string;
   /** Other actions, placed before the submit button. */
@@ -16,6 +17,7 @@ interface FormFooterProps {
 
 export function FormFooter({
   label,
+  variant = "primary",
   disabled = false,
   dismissLabel = "Cancel",
   children,
@@ -47,7 +49,7 @@ export function FormFooter({
         <Button
           id="submit"
           type="submit"
-          variant="primary"
+          variant={variant}
           disabled={busy || stale || disabled}
         >
           {busy ? "Working…" : label}

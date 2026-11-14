@@ -64,12 +64,10 @@
 .archive-delete-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.project-archive .archive-delete,
-.project-archive .archive-delete-submit {
+.project-archive .archive-delete {
   color: var(--color-text-danger);
-}
-.project-archive .archive-delete-submit {
-  border-color: var(--color-border-danger);
 }

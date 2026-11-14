@@ -21,6 +21,7 @@
   padding: var(--dialog-pad) 44px 4px var(--dialog-pad);
   background: var(--bg);
 }
+
 .dialog-heading h2 {
   flex: 1;
   min-width: 0;

@@ -3,13 +3,114 @@
 }
 
 .task-deletion-targets {
-  max-height: 280px;
-  overflow: auto;
-  padding-left: 20px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-deletion-targets > li {
+  padding-block: 4px;
 }
 
 .task-deletion-targets > li + li {
-  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.task-deletion-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.task-deletion-summary {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.task-deletion-summary > div + div {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.task-deletion-summary .task-deletion-group {
+  margin: 0 0 4px;
+}
+
+.task-deletion-removal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 8px;
+}
+
+.task-deletion-summary p {
+  margin: 4px 0 0;
+}
+
+.task-deletion-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-deletion-retained {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-deletion-retained > li:has(.task-deletion-path) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 4px;
+}
+
+.task-deletion-retained .task-deletion-path {
+  min-width: 0;
+}
+
+.task-deletion-trigger {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.task-deletion-label {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-deletion-trigger:focus-visible {
+  outline-offset: -2px;
+}
+
+.task-deletion-trigger[aria-expanded="false"] .chevron {
+  transform: rotate(-90deg);
+}
+
+.task-deletion-resources {
+  padding-left: 20px;
+}
+
+.task-deletion-targets > .task-deletion-plain {
+  padding: 8px 0 8px 20px;
+}
+
+.task-deletion-label code {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .task-deletion-details code {
@@ -30,7 +131,8 @@
   color: var(--muted);
 }
 
-.task-deletion-targets li {
+.task-deletion-targets ul li,
+.task-deletion-retained li {
   margin-block: 4px;
 }
 

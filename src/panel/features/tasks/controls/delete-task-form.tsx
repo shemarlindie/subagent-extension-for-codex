@@ -80,10 +80,11 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
         preview={deletion.preview}
         checking={deletion.checking}
         error={deletion.error}
-        onRefresh={deletion.reload}
         disabled={busy}
+        onRefresh={deletion.reload}
       />
       <FormFooter
+        variant="danger"
         label="Delete task"
         dismissLabel="Cancel"
         disabled={deletion.checking || !deletion.confirmation}

@@ -46,15 +46,15 @@ export function ArchiveDeleteConfirm({
         preview={deletion.preview}
         checking={deletion.checking}
         error={deletion.error}
-        onRefresh={deletion.reload}
         disabled={pending}
+        onRefresh={deletion.reload}
       />
       <div className="archive-delete-actions">
         <Button disabled={pending} onClick={onCancel}>
           Cancel
         </Button>
         <Button
-          className="archive-delete-submit"
+          variant="danger"
           disabled={pending || deletion.checking || !deletion.confirmation}
           onClick={() =>
             deletion.confirmation &&

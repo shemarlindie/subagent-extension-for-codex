@@ -84,9 +84,54 @@ test("delete a running task together with its agent session", async ({
   await linkInfo.press("Escape");
   await expect(linkNote).toHaveCount(0);
 
-  await confirmation
-    .getByRole("switch", { name: "Also delete the agent task" })
-    .check();
+  const previewRelease = Promise.withResolvers<void>();
+  const previewResumed = Promise.withResolvers<void>();
+  const previewRoute = "**/api/tools/app_preview_task_deletion";
+  let previewHeld = false;
+
+  const resources = details.getByRole("list", {
+    name: "Selected task resources",
+  });
+
+  const taskNode = await details
+    .getByText(taskId, { exact: true })
+    .elementHandle();
+
+  const beforeToggle = await resources.boundingBox();
+
+  await page.route(
+    previewRoute,
+    async (route) => {
+      previewHeld = true;
+
+      try {
+        await previewRelease.promise;
+        await route.continue();
+      } finally {
+        previewResumed.resolve();
+      }
+    },
+    { times: 1 },
+  );
+
+  try {
+    await confirmation
+      .getByRole("switch", { name: "Also delete the agent task" })
+      .check();
+
+    await expect.poll(() => previewHeld).toBe(true);
+
+    await expect(
+      confirmation.getByRole("button", { name: "Delete task", exact: true }),
+    ).toBeDisabled();
+
+    expect(await taskNode?.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await resources.boundingBox()).toEqual(beforeToggle);
+  } finally {
+    previewRelease.resolve();
+    if (previewHeld) await previewResumed.promise;
+    await page.unroute(previewRoute);
+  }
 
   await expect(details).toContainText(
     `Session transcript: fixture:${join(linkedRoot, name)}`,
@@ -95,6 +140,24 @@ test("delete a running task together with its agent session", async ({
   await expect(
     details.getByRole("list", { name: "Will remain" }),
   ).not.toContainText("Provider session");
+
+  // Long removal details share the dialog's scroll, including over the list.
+  await page.setViewportSize({ width: 360, height: 600 });
+
+  await details.getByText(taskId, { exact: true }).scrollIntoViewIfNeeded();
+  const scrollTop = await confirmation.evaluate((dialog) => dialog.scrollTop);
+  await details.getByText(taskId, { exact: true }).hover();
+  await page.mouse.wheel(0, 150);
+
+  await expect
+    .poll(() => confirmation.evaluate((dialog) => dialog.scrollTop))
+    .toBeGreaterThan(scrollTop);
+
+  for (const name of ["Cancel", "Delete task"]) {
+    await expect(
+      confirmation.getByRole("button", { name, exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+  }
 
   const release = Promise.withResolvers<void>();
   const resumed = Promise.withResolvers<void>();
@@ -160,7 +223,21 @@ test.describe("when the session location cannot be verified", () => {
     });
 
     const taskId = await row.getAttribute("data-task");
+
+    await page.route(
+      "**/api/tools/app_preview_task_deletion",
+      (route) => route.abort(),
+      { times: 1 },
+    );
+
     const confirmation = await openDeleteTask(page);
+
+    const details = confirmation.getByRole("region", {
+      name: "Removal details",
+    });
+
+    await expect(details.getByRole("alert")).toBeVisible();
+    await details.getByRole("button", { name: "Refresh removal list" }).click();
 
     const agentTask = confirmation.getByRole("switch", {
       name: "Also delete the agent task",
@@ -172,10 +249,6 @@ test.describe("when the session location cannot be verified", () => {
     await expect(confirmation).toContainText(
       "The session location could not be verified.",
     );
-
-    const details = confirmation.getByRole("region", {
-      name: "Removal details",
-    });
 
     await expect(
       details.getByRole("list", { name: "Will remain" }),
@@ -224,8 +297,24 @@ test.describe("when the session location cannot be verified", () => {
     consolePage: page,
     repository,
   }) => {
-    for (const title of ["First archived task", "Second archived task"]) {
-      await startTask(page, title);
+    // Only the first task gets a worktree, so only it expands to resources.
+    for (const [title, worktree] of [
+      ["First archived task", true],
+      ["Second archived task", false],
+    ] as const) {
+      await openAdvancedTask(page, title);
+
+      if (worktree) {
+        await page
+          .getByRole("combobox", { name: "Workspace", exact: true })
+          .click();
+
+        await page.getByRole("option", { name: /worktree/i }).click();
+      }
+
+      await page
+        .getByRole("button", { name: "Start task", exact: true })
+        .click();
 
       await expect(
         page.getByRole("region", { name: "Chat history" }),
@@ -260,13 +349,51 @@ test.describe("when the session location cannot be verified", () => {
       name: "Removal details",
     });
 
-    await expect(details).toContainText("First archived task");
-    await expect(details).toContainText("Second archived task");
-    await expect(details).toContainText(`Project files: ${repository}`);
+    const retained = details.getByRole("list", { name: "Will remain" });
 
-    await expect(
-      details.getByText("Provider session", { exact: true }),
-    ).toHaveCount(2);
+    await expect(retained.getByText(repository, { exact: true })).toHaveCount(
+      1,
+    );
+
+    await expect(retained).toContainText("Provider sessions (2)");
+
+    const removed = details.getByRole("list", {
+      name: "Will be removed",
+      exact: true,
+    });
+
+    await expect(removed.getByRole("listitem")).toHaveText([
+      "2 tasks",
+      "1 worktree",
+      "1 branch",
+    ]);
+
+    const target = details.getByRole("button", {
+      name: /^First archived task /,
+    });
+
+    const taskResources = details.getByRole("list", {
+      name: "Resources to remove for First archived task",
+    });
+
+    await expect(taskResources).toHaveCount(0);
+    await target.press("Enter");
+
+    await expect(taskResources).toContainText(
+      "Worktree folder and all contents",
+    );
+
+    await target.press("Enter");
+    await expect(taskResources).toHaveCount(0);
+    await expect(target.locator("code")).toBeVisible();
+
+    const plainTask = details
+      .getByRole("list", { name: "Selected task resources" })
+      .getByRole("listitem")
+      .filter({ hasText: "Second archived task" });
+
+    await expect(plainTask).toBeVisible();
+    await expect(plainTask.getByRole("button")).toHaveCount(0);
 
     await confirm.getByRole("button", { name: /^Delete/ }).click();
 

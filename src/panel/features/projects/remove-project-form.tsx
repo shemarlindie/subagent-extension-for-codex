@@ -73,25 +73,26 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
 
   return (
     <form className="remove-project-form" onSubmit={submit}>
-      <p>
-        Remove <strong>{project.name ?? project.repository}</strong> from saved
-        projects?
+      <p className="remove-project-name">
+        <strong>{project.name ?? project.repository}</strong>
       </p>
-      <code className="managed-project-path">{project.repository}</code>
-      <p className="form-note">
-        {removeTasks
-          ? "The listed task data will also be removed. Your project folder stays."
-          : "Only the project registration is removed. Your folder, task data and provider sessions stay."}
-      </p>
+      {!removeTasks && (
+        <>
+          <code className="managed-project-path">{project.repository}</code>
+          <p className="form-note">
+            Removes the saved registration. Your folder, task data and provider
+            sessions stay.
+          </p>
+        </>
+      )}
       <div className="delete-option">
         <div className="delete-option-text">
           <span id="remove-project-tasks-label">
             Also remove extension task data
           </span>
           <span id="remove-project-tasks-help" className="form-note">
-            Stops this project's tasks across all chats and removes their
-            extension records, worktrees and local branches, including
-            uncommitted changes. This can't be undone.
+            Across all chats, including worktrees and uncommitted files. Running
+            work will stop first. This can't be undone.
           </span>
         </div>
         <Switch.Root
@@ -119,8 +120,8 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
             preview={deletion.preview}
             checking={deletion.checking}
             error={deletion.error}
-            onRefresh={deletion.reload}
             disabled={busy}
+            onRefresh={deletion.reload}
           />
         </>
       )}
@@ -132,7 +133,8 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
           "To prevent this parent approval from returning on restart, remove it from service configuration too."}
       </p>
       <FormFooter
-        label={removeTasks ? "Remove project and task data" : "Remove project"}
+        variant="danger"
+        label={removeTasks ? "Remove project and tasks" : "Remove project"}
         disabled={removeTasks && (deletion.checking || !deletion.confirmation)}
       />
     </form>
