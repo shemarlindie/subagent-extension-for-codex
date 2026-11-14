@@ -164,7 +164,7 @@ test("a pending save suppresses duplicate submissions and cancellation", async (
   fireEvent.keyDown(input, { key: "Enter" });
 
   assert.equal(onSave.mock.calls.length, 1);
-  assert.equal(input.disabled, true);
+  assert.equal(input.readOnly, true);
 
   expect(view.getByRole("textbox")).toBe(input);
 
