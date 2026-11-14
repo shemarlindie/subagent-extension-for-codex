@@ -727,13 +727,6 @@ body[data-expanded-panel="true"]
 .task-run-settings li[data-compact="hidden"] {
   display: none;
 }
-/* Narrow panels give the settings their own line under the hint. */
-@media (max-width: 640px) {
-  .task-run-settings {
-    flex: 1 0 100%;
-    margin: 0;
-  }
-}
 .chat-error {
   margin: 0;
   font-size: 12px;
