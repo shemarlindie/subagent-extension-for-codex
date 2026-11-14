@@ -36,6 +36,10 @@
   overflow-wrap: anywhere;
 }
 
+.task-deletion-trigger:focus-visible {
+  outline-offset: -2px;
+}
+
 .task-deletion-trigger .chevron {
   flex: none;
 }
