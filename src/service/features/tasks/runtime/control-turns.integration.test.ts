@@ -269,10 +269,13 @@ test("a message whose turn never sent its prompt reaches the next turn", async (
   await c.close();
 });
 
-test("a session's effective options are stored apart from what the task requested", async () => {
+test("a session's effective options and prompt cache are stored apart from what the task requested", async () => {
+  const promptCache = { requested_at: "2026-11-14T12:00:00.000Z", ttl: "5m" };
+
   class Limited extends TestProvider {
     override async run(c: RunContext, p: string) {
       c.effectiveOptions({ model: "other" });
+      c.promptCache(promptCache);
 
       return super.run(c, p);
     }
@@ -287,6 +290,7 @@ test("a session's effective options are stored apart from what the task requeste
   assert.deepEqual(stored.provider_options?.[stored.provider], {
     ...t.provider_options?.[t.provider],
     effective: { model: "other" },
+    prompt_cache: promptCache,
   });
 
   await c.close();
