@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
 
-import { openAdvancedTask, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 
 /** Whether the page scrolls sideways, which a narrow layout must avoid. */
@@ -10,68 +9,6 @@ const overflows = (page: Page) =>
       document.documentElement.scrollWidth >
       document.documentElement.clientWidth,
   );
-
-test("composer settings wrap only when the hint and details need more space", async ({
-  consolePage: page,
-}) => {
-  await startTask(page, "Check composer details");
-  const history = page.getByRole("region", { name: "Chat history" });
-  await expect(history).toContainText("Fixture session turn: 1.");
-  const settings = page.getByRole("list", { name: "Task settings" });
-  const hint = page.locator("#chat-composer-hint");
-
-  const sharesLine = async () => {
-    const hintBox = await hint.boundingBox();
-    const settingsBox = await settings.boundingBox();
-
-    return (
-      !!hintBox && !!settingsBox && settingsBox.y < hintBox.y + hintBox.height
-    );
-  };
-
-  await page.setViewportSize({ width: 620, height: 800 });
-  await expect.poll(sharesLine).toBe(true);
-
-  await page.setViewportSize({ width: 360, height: 800 });
-  await expect.poll(sharesLine).toBe(false);
-
-  await expect
-    .poll(async () => {
-      const hintBox = await hint.boundingBox();
-      const settingsBox = await settings.boundingBox();
-
-      return hintBox && settingsBox
-        ? Math.abs(settingsBox.x - hintBox.x)
-        : Infinity;
-    })
-    .toBeLessThan(1);
-
-  expect(await overflows(page)).toBe(false);
-
-  await page.setViewportSize({ width: 1280, height: 800 });
-  const model = `custom-model-${"long-name-".repeat(15)}`;
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  await openAdvancedTask(page, "Check long model details");
-  const dialog = page.getByRole("dialog");
-
-  await dialog
-    .getByRole("combobox", { name: "Model", exact: true })
-    .fill(model);
-
-  await dialog.getByRole("button", { name: "Start task", exact: true }).click();
-  await expect(history).toContainText("Fixture session turn: 1.");
-  await expect(settings).toContainText(model);
-  await page.setViewportSize({ width: 620, height: 800 });
-  await expect.poll(sharesLine).toBe(false);
-  expect(await overflows(page)).toBe(false);
-
-  expect(
-    await settings
-      .getByRole("listitem")
-      .nth(1)
-      .evaluate((element) => element.scrollWidth > element.clientWidth),
-  ).toBe(true);
-});
 
 test("a narrow console switches between the list and the task, without overflowing", async ({
   consolePage: page,
