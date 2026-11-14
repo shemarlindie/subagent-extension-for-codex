@@ -385,8 +385,8 @@ test("the inspector stacks when its fixed header would squeeze the evidence", as
   assert.equal(detail.hasAttribute("data-stacked"), true, "260px is not");
 });
 
-test("refresh preserves the inspector and its scroll, while Back stays on the task list", async (t) => {
-  const { controller, user } = await setup(t);
+test("refresh preserves the inspector and its scroll, while browsing stays on the task list", async (t) => {
+  const { controller } = await setup(t);
   const detail = screen.getByRole("region", { name: "Selected task" });
   const header = detail.querySelector(".task-header");
   detail.scrollTop = 160;
@@ -395,20 +395,20 @@ test("refresh preserves the inspector and its scroll, while Back stays on the ta
   expect(screen.getByRole("region", { name: "Selected task" })).toBe(detail);
   expect(detail.querySelector(".task-header")).toBe(header);
   assert.equal(detail.scrollTop, 160);
-  await user.click(screen.getByRole("button", { name: "Tasks" }));
+  act(() => controller.back());
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
   assertAbsent(detail.querySelector(".task-header"));
 });
 
-test("narrow scoped panel Back keeps the task list visible across refresh", async (t) => {
-  const { controller, user } = await setup(t, undefined, {
+test("narrow scoped panel browsing keeps the task list visible across refresh", async (t) => {
+  const { controller } = await setup(t, undefined, {
     wide: false,
     scoped: true,
   });
 
   assert.equal(document.body.dataset.selected, "true");
-  await user.click(screen.getByRole("button", { name: "Tasks" }));
+  act(() => controller.back());
   assert.equal(document.body.dataset.selected, "false");
   await act(() => controller.refresh());
   assert.equal(document.body.dataset.selected, "false");

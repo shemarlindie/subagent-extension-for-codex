@@ -45,7 +45,13 @@ function setup(overrides: Partial<Snapshot> = {}, railCollapsed = false) {
   const view = render(
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <Header taskRail={{ collapsed: railCollapsed, toggle: toggleRail }} />
+        <Header
+          taskRail={{
+            collapsed: railCollapsed,
+            toggle: toggleRail,
+            narrow: false,
+          }}
+        />
       </Tooltip.Provider>
     </ControllerContext.Provider>,
   );
