@@ -94,6 +94,13 @@ that exists only in the chat, such as decisions or another task's result.
 Task-start requests have a 2 MiB HTTP body limit, including requests through
 `/mcp`.
 
+### Waiting message limit
+
+A task holds at most 10 waiting messages, counting queued messages and pending
+steers. While a turn runs, a steer or queued send fails at the limit for both
+the user and the parent agent. Interrupts and sends to an idle task start a turn
+with their message, so the limit doesn't apply to them.
+
 ### Retrying message sends
 
 `send_message` and `app_send_message` accept an optional `request_id`. Use a
@@ -242,8 +249,10 @@ each message and the position to restore. The service takes the text, sender and
 steer state from the task's recorded events, so it restores only messages that
 were removed and haven't been sent or queued again. A task that isn't busy gets
 a paused queue, so restoring never starts a turn, and an archived task returns
-to the task lists. `app_clear_queue` takes optional `message_ids` so redo
-removes only the restored messages.
+to the task lists. A restore that would pass the
+[waiting message limit](#waiting-message-limit) fails and changes nothing.
+`app_clear_queue` takes optional `message_ids` so redo removes only the restored
+messages.
 
 `app_wait_for_updates` returns when the owner's revision or a targeted reply
 draft changes, or after at most 25 seconds. A revision is `bootId:count`. The

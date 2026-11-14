@@ -1,4 +1,5 @@
 import { eventPayload } from "../../../../shared/events/payload.js";
+import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import type {
   QueuedMessage,
   Sender,
@@ -314,6 +315,7 @@ export function restoreQueuedMessages(
 
   if (!restoring.length) return false;
 
+  checkWaitingLimit(t, restoring.length);
   const before = queueSnapshot(t);
 
   for (const { message_id: id, index } of restoring) {

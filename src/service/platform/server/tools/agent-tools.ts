@@ -5,6 +5,7 @@ import {
   MESSAGE_EVENTS,
 } from "../../../../shared/tasks/conversation/messages.js";
 import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
+import { WAITING_MESSAGE_LIMIT } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import { startSchema } from "../../../../shared/tasks/model.js";
 import { replyFrom, taskSummary } from "../../../../shared/tasks/task-list.js";
 import {
@@ -171,8 +172,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       run: (a) => c.interrupt(owner, a.task_id, a.send_pending),
     }),
     send_message: tool({
-      description:
-        "Send the worker a message. On an idle task (completed, failed or interrupted) it starts the next turn, resuming the session or starting a new one that carries the conversation, and recreates a removed worktree. While a turn runs, delivery decides how the message arrives. Returns message_id and state: started, pending_steer or queued. Read replies with list_messages.",
+      description: `Send the worker a message. On an idle task (completed, failed or interrupted) it starts the next turn, resuming the session or starting a new one that carries the conversation, and recreates a removed worktree. While a turn runs, delivery decides how the message arrives. A task holds at most ${WAITING_MESSAGE_LIMIT} waiting messages, queued or pending steers, so further steers and queued messages fail until one is taken or removed. Returns message_id and state: started, pending_steer or queued. Read replies with list_messages.`,
       schema: messageInput,
       run: async (a) => {
         const sent = await c.send(owner, a.task_id, a.message, authority, {
