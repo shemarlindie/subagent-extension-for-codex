@@ -325,7 +325,10 @@ export function rateLimitStats(
     }
   }
 
-  return [...windows.values()].map((window) => {
+  // Sorting by id lists Claude's 5-hour window before its 7-day windows.
+  const sorted = [...windows.values()].sort((a, b) => a.id.localeCompare(b.id));
+
+  return sorted.map((window) => {
     const stats = [
       window.label,
       `${(window.utilization * 100).toLocaleString()}% used`,
