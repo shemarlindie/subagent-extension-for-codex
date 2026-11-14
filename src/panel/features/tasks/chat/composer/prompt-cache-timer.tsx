@@ -14,25 +14,17 @@ const MINUTE_MS = 60_000;
 /** Time left when the warning color starts, by cache lifetime. */
 const WARNING_MS = { "5m": 2 * MINUTE_MS, "1h": 10 * MINUTE_MS };
 
-/** Whole minutes rounded down, then seconds in the last minute. */
-function timeLeft(ms: number) {
-  return ms >= MINUTE_MS
-    ? { count: Math.floor(ms / MINUTE_MS), unit: "min" }
-    : { count: Math.max(1, Math.floor(ms / 1000)), unit: "sec" };
-}
-
-/** `2m` or `45s`. */
+/** Whole minutes rounded down, `2m`, or `<1m` in the last minute. */
 function short(ms: number) {
-  const { count, unit } = timeLeft(ms);
-
-  return `${count}${unit[0]}`;
+  return ms < MINUTE_MS ? "<1m" : `${Math.floor(ms / MINUTE_MS)}m`;
 }
 
-/** `2 more mins` or `1 more sec`. */
+/** `about 2 more mins`, or `less than a minute` in the last minute. */
 function more(ms: number) {
-  const { count, unit } = timeLeft(ms);
+  const count = Math.floor(ms / MINUTE_MS);
+  if (count === 0) return "less than a minute";
 
-  return `${count} more ${unit}${count === 1 ? "" : "s"}`;
+  return `about ${count} more min${count === 1 ? "" : "s"}`;
 }
 
 /** The tooltip's status line and the note that explains it. */
@@ -40,20 +32,21 @@ function description(left: PromptCacheLeft) {
   switch (left.state) {
     case "warm":
       return {
-        status: `Prompt cache warm for about ${more(left.ms)}`,
+        status:
+          left.ms < MINUTE_MS
+            ? "Prompt cache expires soon"
+            : `Prompt cache warm for ${more(left.ms)}`,
         note: [
-          "Replying before then costs less.",
+          "Replying while it's warm costs less.",
           ...(left.earlierMs
-            ? [
-                `Earlier messages stay cached for about ${more(left.earlierMs)}.`,
-              ]
+            ? [`Earlier messages stay cached for ${more(left.earlierMs)}.`]
             : []),
         ].join(" "),
       };
     case "partial":
       return {
         status: "Prompt cache partly expired",
-        note: `Recent messages need rewriting. Earlier ones stay cached for about ${more(left.ms)}.`,
+        note: `Recent messages need rewriting. Earlier ones stay cached for ${more(left.ms)}.`,
       };
     case "expired":
       return {
