@@ -292,7 +292,7 @@ export type Snapshot = {
   /** Counts applied undo and redo steps, so views with their own reads reload. */
   undoRevision: number;
   selected?: string;
-  /** The task Back left, which the list keeps marked until another opens. */
+  /** The last task closed, which the list keeps marked until another opens. */
   previousTask?: string;
   /** Set while the inspector shows the new-task composer instead of a task. */
   newTask?: NewTaskState;

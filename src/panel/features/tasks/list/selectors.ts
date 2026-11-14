@@ -96,7 +96,7 @@ export function effectiveFilter(state: TaskListState): Filter {
   return DEFAULT_FILTERS.find((filter) => counts[filter] > 0) ?? "all";
 }
 
-/** The task the list marks: the open one, or the one Back just left. */
+/** The task the list marks: the open one, or the last one closed. */
 export const listedTask = (
   state: Pick<Snapshot, "selected" | "previousTask">,
 ) => state.selected ?? state.previousTask;
