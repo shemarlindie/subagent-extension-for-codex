@@ -545,15 +545,6 @@ body[data-expanded-panel="true"]
   gap: 8px;
   min-height: 28px;
 }
-.chat-composer-toggle-row .task-run-settings {
-  flex: 0 1 auto;
-  margin-inline-start: auto;
-}
-@media (max-width: 360px) {
-  .chat-composer-toggle-row .task-run-settings {
-    display: none;
-  }
-}
 .chat-composer-expand {
   display: inline-grid;
   grid-template-columns: var(--composer-caret-size) auto;
@@ -738,9 +729,14 @@ body[data-expanded-panel="true"]
 }
 /* Narrow panels give the settings their own line under the hint. */
 @media (max-width: 640px) {
-  .task-run-settings {
+  .chat-composer-meta .task-run-settings {
     flex: 1 0 100%;
     margin: 0;
+  }
+}
+@media (max-width: 360px) {
+  .chat-composer-toggle-row .task-run-settings {
+    display: none;
   }
 }
 .chat-error {
