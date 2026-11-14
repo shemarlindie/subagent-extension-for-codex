@@ -25,6 +25,10 @@ function matchingCommands(commands: ProviderCommand[], query: string) {
   ];
 }
 
+/** A row's whole text, as its tooltip for when the row cuts it off. */
+const fullText = ({ name, argument_hint, description }: ProviderCommand) =>
+  [`/${name} ${argument_hint}`.trim(), description].filter(Boolean).join("\n");
+
 type CommandMenuProps = {
   /** What the menu opens above. */
   anchor: RefObject<HTMLElement | null>;
@@ -98,26 +102,27 @@ export function CommandMenu({
           sideOffset={6}
           align="start"
         >
-          <Autocomplete.Popup className="autocomplete-popup">
+          <Autocomplete.Popup className="autocomplete-popup command-menu-popup">
             <Autocomplete.List>
               {(command: ProviderCommand) => (
                 <Autocomplete.Item
                   key={command.name}
                   value={command}
                   className="autocomplete-item"
+                  title={fullText(command)}
                 >
-                  <span className="select-item-text">
-                    <span>
-                      /{command.name}
-                      {command.argument_hint && (
-                        <span className="model-id">
-                          {" "}
-                          {command.argument_hint}
-                        </span>
-                      )}
-                    </span>
+                  <span
+                    className="command-menu-text"
+                    data-args={command.argument_hint ? "" : undefined}
+                  >
+                    <span>/{command.name}</span>
+                    {command.argument_hint && (
+                      <span className="command-menu-args">
+                        {command.argument_hint}
+                      </span>
+                    )}
                     {command.description && (
-                      <span className="select-item-description">
+                      <span className="command-menu-description">
                         {command.description}
                       </span>
                     )}

@@ -1,0 +1,28 @@
+.command-menu-popup {
+  width: var(--anchor-width);
+}
+/* One line, or two with an argument hint, truncating what doesn't fit. */
+.command-menu-text {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+.command-menu-text > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.command-menu-args,
+.command-menu-description {
+  color: var(--muted);
+  font-size: 11px;
+}
+.command-menu-args {
+  font-family: var(--font-mono);
+}
+.command-menu-text[data-args] .command-menu-description {
+  grid-column: 1 / -1;
+}
