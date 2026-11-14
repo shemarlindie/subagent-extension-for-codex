@@ -15,7 +15,6 @@ export function TaskHeaderSkeleton({ title }: TaskHeaderSkeletonProps) {
     >
       <div className="task-topline">
         <div className="task-heading">
-          <SkeletonShape className="task-inspector-skeleton-back" />
           <h1 className="task-title task-inspector-skeleton-title">
             <SkeletonShape
               className="task-inspector-skeleton-title-shape"

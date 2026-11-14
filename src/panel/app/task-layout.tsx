@@ -65,6 +65,20 @@ function saveCollapsed(collapsed: boolean) {
 /** Collapsed state for the task list, shared by the layout and the header toggle. */
 export function useTaskRail() {
   const panelRef = usePanelRef();
+
+  const [narrow, setNarrow] = useState(
+    () => window.matchMedia("(max-width: 640px)").matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const update = () => setNarrow(media.matches);
+
+    media.addEventListener("change", update);
+
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const panelElementRef = useRef<HTMLDivElement>(null);
   const motionTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [collapsed, setCollapsedState] = useState(storedCollapsed);
@@ -105,6 +119,7 @@ export function useTaskRail() {
 
   return {
     panelRef,
+    narrow,
     panelElementRef,
     collapsed,
     setCollapsed,
@@ -129,9 +144,7 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
   const [initialWidth] = useState(storedWidth);
   const [initiallyCollapsed] = useState(rail.collapsed);
 
-  const [narrow, setNarrow] = useState(
-    () => window.matchMedia("(max-width: 640px)").matches,
-  );
+  const { narrow } = rail;
 
   // Narrow panels switch between the list and a task, so they ignore collapsing.
   const railCollapsed = rail.collapsed && !narrow;
@@ -139,15 +152,6 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
   const separatorTitle = rail.collapsed
     ? "Drag or click to show the task list"
     : "Drag or use arrow keys to resize the task list, or drag past its edge to hide it";
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 640px)");
-    const update = () => setNarrow(media.matches);
-
-    media.addEventListener("change", update);
-
-    return () => media.removeEventListener("change", update);
-  }, []);
 
   function handleLayoutChanged(
     layout: Layout,

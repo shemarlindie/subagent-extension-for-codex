@@ -39,15 +39,43 @@ test("a narrow console switches between the list and the task, without overflowi
   await expect(tasks).toBeHidden();
   expect(await overflows(page)).toBe(false);
 
-  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Tasks", exact: true }),
+  ).toHaveCount(0);
+
+  const showList = page.getByRole("button", { name: "Show task list" });
+  await expect(showList).toHaveAttribute("aria-expanded", "false");
+  await showList.focus();
+  await page.keyboard.press("Enter");
   await expect(tasks).toBeVisible();
   await expect(history).toBeHidden();
   expect(await overflows(page)).toBe(false);
 
+  const hideList = page.getByRole("button", { name: "Hide task list" });
+  await expect(hideList).toHaveAttribute("aria-expanded", "true");
+  await hideList.click();
+  await expect(history).toBeVisible();
+  await expect(tasks).toBeHidden();
+
+  await showList.click();
   await tasks.getByRole("button", { name: /Check the narrow layout/ }).click();
 
   await expect(history).toBeVisible();
   await expect(tasks).toBeHidden();
+
+  // Mobile navigation must leave the desktop collapse preference alone.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(tasks).toBeVisible();
+  await hideList.click();
+  await expect(tasks).toBeHidden();
+  await page.setViewportSize({ width: 420, height: 800 });
+  await showList.click();
+  await expect(tasks).toBeVisible();
+  await hideList.click();
+  await expect(history).toBeVisible();
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(tasks).toBeHidden();
+  await expect(showList).toHaveAttribute("aria-expanded", "false");
 });
 
 test("keyboard users can search, open a task and move between its tabs", async ({
