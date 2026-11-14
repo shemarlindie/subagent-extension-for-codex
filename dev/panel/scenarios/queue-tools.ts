@@ -32,17 +32,20 @@ function removeQueued(task: Task, gone: QueuedMessage[]) {
 /** Puts removed messages back at their places, as the service does. */
 function restoreQueued(task: Task, args: Record<string, unknown>) {
   const placements = (args.messages as { message_id: string; index: number }[])
-    .filter(
-      ({ message_id: id }) =>
-        removed.has(id) &&
-        ![...task.queue, ...task.pending_steers].some((m) => m.id === id),
-    )
+    .flatMap(({ message_id: id, index }) => {
+      const m = removed.get(id);
+
+      const queued = [...task.queue, ...task.pending_steers].some(
+        (q) => q.id === id,
+      );
+
+      return m && !queued ? [{ id, m, index }] : [];
+    })
     .toSorted((a, b) => a.index - b.index);
 
   checkWaitingLimit(task, placements.length);
 
-  for (const { message_id: id, index } of placements) {
-    const m = removed.get(id)!;
+  for (const { id, m, index } of placements) {
     const first = task.queue.filter((q) => q.recorded).length;
 
     task.queue.splice(

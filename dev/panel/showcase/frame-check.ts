@@ -74,14 +74,14 @@ export function checkFrames(
   shots: number[],
 ) {
   const mark = events.find((event) => event.name === SYNC);
+  const [first] = shots;
+  const last = shots.at(-1);
 
-  if (!mark || shots.length === 0) {
+  if (!mark || first === undefined || last === undefined) {
     throw new Error("Frame check found no sync mark or no captured frames");
   }
 
   const toWall = (ts: number) => ts / 1000 - mark.ts / 1000 + wall;
-  const first = shots[0]!;
-  const last = shots.at(-1)!;
   const inWindow = (time: number) => time >= first - 4 && time <= last + 4;
 
   const reports = pipelineReports(events, mark.pid).filter(({ end }) =>
@@ -117,11 +117,10 @@ export function checkFrames(
   let shot = 0;
 
   for (const { begin } of lasting) {
-    while (shot < shots.length && shots[shot]! < begin - 4) {
-      shot++;
-    }
+    // Past the last shot, Infinity stops the scan and counts the frame missed.
+    while ((shots[shot] ?? Infinity) < begin - 4) shot++;
 
-    if (shot < shots.length && shots[shot]! <= begin + REFRESH_MS + 4) {
+    if ((shots[shot] ?? Infinity) <= begin + REFRESH_MS + 4) {
       shot++;
     } else {
       missed.push(begin - first);

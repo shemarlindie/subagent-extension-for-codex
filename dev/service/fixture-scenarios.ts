@@ -119,8 +119,7 @@ function parseFields(value: string) {
 
   for (const match of value.matchAll(expression)) {
     // Neither group is optional, so every match has both.
-    const key = match[1]!;
-    const raw = match[2]!;
+    const [, key = "", raw = ""] = match;
 
     if (["__proto__", "prototype", "constructor"].includes(key)) continue;
     fields[key] = parseValue(raw);
@@ -167,7 +166,8 @@ export function readScenarios(
 
   for (const match of markers) {
     // The group isn't optional, so every marker has it.
-    const [head, ...rest] = match[1]!.trim().split(/\s+/);
+    const [, marker = ""] = match;
+    const [head, ...rest] = marker.trim().split(/\s+/);
 
     // A blank marker names no scenario.
     if (!head) continue;

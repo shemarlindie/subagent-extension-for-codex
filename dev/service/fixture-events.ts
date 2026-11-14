@@ -241,9 +241,12 @@ function setFieldPath(
     current = current[part] as Record<string, unknown>;
   }
 
-  const last = parts.at(-1)!;
+  const last = parts.at(-1);
 
-  if (!["__proto__", "prototype", "constructor"].includes(last)) {
+  if (
+    last !== undefined &&
+    !["__proto__", "prototype", "constructor"].includes(last)
+  ) {
     current[last] = value;
   }
 }

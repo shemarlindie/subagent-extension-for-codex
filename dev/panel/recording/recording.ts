@@ -135,14 +135,12 @@ export function recordFixture(
     for (const [from, to] of pairs) text = text.split(from).join(to);
 
     text = text.replace(/req_[A-Za-z0-9]{8,}/g, (id) => {
-      if (!requestIds.has(id)) {
-        requestIds.set(
-          id,
-          `req_preview_${String(++requests).padStart(4, "0")}`,
-        );
-      }
+      const known = requestIds.get(id);
+      if (known) return known;
+      const next = `req_preview_${String(++requests).padStart(4, "0")}`;
+      requestIds.set(id, next);
 
-      return requestIds.get(id)!;
+      return next;
     });
 
     return text;
@@ -182,8 +180,8 @@ export function recordFixture(
   const origin = Date.parse(sorted[0]?.timestamp ?? task.created_at);
   const shift = Date.parse(options.start) - origin;
 
-  const moved = (time?: string) =>
-    time && new Date(Date.parse(time) + shift).toISOString();
+  const moved = (time: string) =>
+    new Date(Date.parse(time) + shift).toISOString();
 
   const lookup = originalResponseLookup(sorted);
   const responseRefs = new Map<string, string>();
@@ -196,18 +194,18 @@ export function recordFixture(
     const original = identity ? lookup(event) : undefined;
     let data: Record<string, unknown>;
 
-    if (PROVIDER_EVENTS.has(event.type) && !original) {
+    if ((identity || PROVIDER_EVENTS.has(event.type)) && !original) {
       throw new Error(
         `Original response unavailable for ${event.task_id}#${event.id}. Run the task with SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS=1 before recording.`,
       );
     }
 
-    if (identity) {
+    if (identity && original) {
       const first = !responseRefs.has(identity);
       let raw: SDKMessage | undefined;
 
       if (first) {
-        raw = sanitize(original!);
+        raw = sanitize(original);
 
         if (raw.type === "system" && raw.subtype === "init") {
           Object.assign(raw, INIT_SCRUB);
@@ -222,7 +220,7 @@ export function recordFixture(
         derivedEvents.set(identity, derivedFrom(raw, normalize));
       }
 
-      const derived = derivedEvents.get(identity)!.shift();
+      const derived = derivedEvents.get(identity)?.shift();
 
       if (derived?.type !== event.type) {
         throw new Error(
@@ -244,7 +242,7 @@ export function recordFixture(
       id: options.firstId + index,
       task_id: options.id,
       type: event.type,
-      timestamp: moved(event.timestamp)!,
+      timestamp: moved(event.timestamp),
       data,
     };
   });
@@ -262,8 +260,8 @@ export function recordFixture(
       ...(options.conversationId
         ? { conversation_id: options.conversationId }
         : {}),
-      created_at: moved(task.created_at)!,
-      updated_at: moved(task.updated_at)!,
+      created_at: moved(task.created_at),
+      updated_at: moved(task.updated_at),
       ...(task.started_at ? { started_at: moved(task.started_at) } : {}),
       ...(task.completed_at ? { completed_at: moved(task.completed_at) } : {}),
       ...(task.run_started_at

@@ -4,7 +4,7 @@ import type {
   ProviderPolicy,
 } from "../../../src/shared/providers/types";
 
-const previewModels: ModelChoice[] = [
+const previewModels: [ModelChoice, ...ModelChoice[]] = [
   {
     value: "default",
     displayName: "Default (recommended)",
@@ -62,7 +62,7 @@ export const previewOrgPolicy: ProviderPolicy = {
 
 /** Default as discovery reports it, naming the org's default model. */
 function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
-  const plain = previewModels[0]!;
+  const plain = previewModels[0];
 
   if (!default_model) return plain;
 

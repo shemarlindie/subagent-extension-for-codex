@@ -33,7 +33,8 @@ export function connectPanel(
   src: string,
   options: PanelBridgeOptions,
 ) {
-  const view = iframe.contentWindow!;
+  const view = iframe.contentWindow;
+  if (!view) throw new Error("The panel frame is not in the document.");
   const record = options.record ?? (() => {});
 
   const bridge = new AppBridge(

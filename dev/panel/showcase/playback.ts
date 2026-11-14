@@ -32,7 +32,7 @@ const FINAL_HOLD_MS = 4000 - OPENING_DELAY_MS;
 const CLOSING_MS = 800;
 
 function storyCues() {
-  const cues: Cue[] = [
+  const cues: [Cue, ...Cue[]] = [
     { duration: OPENING_MS, scene: () => ({ step: 0, items: 0, fade: "in" }) },
   ];
 
@@ -103,15 +103,16 @@ export function sceneAt(elapsed: number): Scene {
     start += cue.duration;
   }
 
-  return cues.at(-1)!.scene(1);
+  return (cues.at(-1) ?? cues[0]).scene(1);
 }
 
 /** Codex's thread in a scene: earlier steps, and the step's items so far. */
 export function threadAt({ step, items }: Scene): StoryStep[] {
-  const current = {
-    ...story[step]!,
-    codex: story[step]!.codex.slice(0, items),
-  };
+  const current = story[step];
+  if (!current || !items) return story.slice(0, step);
 
-  return items ? [...story.slice(0, step), current] : story.slice(0, step);
+  return [
+    ...story.slice(0, step),
+    { ...current, codex: current.codex.slice(0, items) },
+  ];
 }

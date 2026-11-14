@@ -264,4 +264,6 @@ function FieldErrorDemo() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<FieldErrorDemo />);
+const container = document.getElementById("root");
+if (!container) throw new Error("The demo page has no root element.");
+createRoot(container).render(<FieldErrorDemo />);
