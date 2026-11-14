@@ -34,6 +34,18 @@ test("composer settings wrap only when the hint and details need more space", as
 
   await page.setViewportSize({ width: 360, height: 800 });
   await expect.poll(sharesLine).toBe(false);
+
+  await expect
+    .poll(async () => {
+      const hintBox = await hint.boundingBox();
+      const settingsBox = await settings.boundingBox();
+
+      return hintBox && settingsBox
+        ? Math.abs(settingsBox.x - hintBox.x)
+        : Infinity;
+    })
+    .toBeLessThan(1);
+
   expect(await overflows(page)).toBe(false);
 
   await page.setViewportSize({ width: 1280, height: 800 });
