@@ -12,9 +12,9 @@ import compareVersions from "semver/functions/compare.js";
  * accepted without an upper bound.
  */
 export const claudeCliSupport = {
-  sdk: "0.3.322",
+  sdk: "0.3.325",
   minimum: "2.1.300",
-  paired: "2.1.322",
+  paired: "2.1.325",
 } as const;
 
 /** Names an explicit Claude Code executable, which replaces the PATH lookup. */
