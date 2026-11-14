@@ -377,7 +377,7 @@ test("rate-limit details show the latest update without opening Debug", (t) => {
   ).toContain("rejected");
 });
 
-test("rate-limit rows retain each window when an overage update arrives", (t) => {
+test("rate-limit rows list the 5-hour window first and keep windows through overage", (t) => {
   t.onTestFinished(cleanup);
 
   const update = (rateLimitType: string, utilization: number, id: string) =>
@@ -393,8 +393,8 @@ test("rate-limit rows retain each window when an overage update arrives", (t) =>
   const view = render(
     createElement(GroupedEventList, {
       events: [
-        update("five_hour", 0.1, "windows-five-old"),
         update("seven_day", 0.4, "windows-week"),
+        update("five_hour", 0.1, "windows-five-old"),
         update("five_hour", 0.2, "windows-five-new"),
         update("overage", 0.9, "windows-overage"),
       ],
