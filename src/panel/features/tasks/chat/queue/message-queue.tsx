@@ -9,6 +9,7 @@ import { Button } from "../../../../shared/components/button/button";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import { Presence } from "../../../../shared/components/motion/presence";
 import { QueuedMessageRow } from "./queued-message-row";
+import { useQueueScroll } from "./use-queue-scroll";
 
 type MessageQueueProps = { task: Task };
 
@@ -45,7 +46,7 @@ export function MessageQueue({ task }: MessageQueueProps) {
   const positions = new Map(queue.map((message, index) => [message.id, index]));
   // Rows fade in when added, out when sent or removed, and slide when reordered.
   const [pendingList] = useAutoList<HTMLUListElement>();
-  const [queueList] = useAutoList<HTMLUListElement>();
+  const { ref: queueList, arrival } = useQueueScroll(queue);
 
   const move = async (messageId: string, index: number) => {
     const error = await controller.taskActions.moveQueued(
@@ -163,30 +164,49 @@ export function MessageQueue({ task }: MessageQueueProps) {
                 </span>
               )}
             </div>
-            <ul ref={queueList} onDragOver={dragOverQueue} onDrop={dropOnQueue}>
-              {queue.map((message) => {
-                const key = message.id;
-                const index = positions.get(key) ?? -1;
+            <div className="chat-queue-scroll">
+              <ul
+                ref={queueList}
+                onDragOver={dragOverQueue}
+                onDrop={dropOnQueue}
+              >
+                {queue.map((message) => {
+                  const key = message.id;
+                  const index = positions.get(key) ?? -1;
 
-                return (
-                  <li key={key}>
-                    <QueuedMessageRow
-                      task={task}
-                      message={message}
-                      onError={setError}
-                      reorderable={reorderable}
-                      movable={reorderable && !message.recorded}
-                      dragging={drag?.id === key}
-                      dropAt={dropEdge(drag?.over, index, queue.length)}
-                      onMove={(offset) => moveRow(key, index, offset)}
-                      onDragStart={() => setDrag({ id: key })}
-                      onDragOver={(after) => dragOverRow(index, after)}
-                      onDragEnd={() => setDrag(undefined)}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
+                  return (
+                    <li key={key}>
+                      <QueuedMessageRow
+                        task={task}
+                        message={message}
+                        onError={setError}
+                        reorderable={reorderable}
+                        movable={reorderable && !message.recorded}
+                        dragging={drag?.id === key}
+                        dropAt={dropEdge(drag?.over, index, queue.length)}
+                        onMove={(offset) => moveRow(key, index, offset)}
+                        onDragStart={() => setDrag({ id: key })}
+                        onDragOver={(after) => dragOverRow(index, after)}
+                        onDragEnd={() => setDrag(undefined)}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+              {/* Keyed so each message queued out of view replays it. */}
+              {arrival && (
+                <span className="chat-queue-arrival" key={arrival.id} />
+              )}
+              <span
+                className="visually-hidden"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {arrival &&
+                  `New message queued below. ${arrival.queued} queued.`}
+              </span>
+            </div>
           </div>
         </Presence>
         {error && (
