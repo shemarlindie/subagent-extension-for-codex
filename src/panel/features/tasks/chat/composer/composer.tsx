@@ -1,4 +1,10 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import type { Delivery } from "../../../../../shared/tasks/model";
 import { pendingInputKind } from "../../../../../shared/tasks/model.js";
@@ -45,6 +51,7 @@ type ComposerProps = {
   budgetApplyVersion: number;
   disabled?: boolean;
   onSend?: () => void;
+  onCollapse?: () => void;
 };
 
 /**
@@ -59,6 +66,7 @@ export function Composer({
   budgetApplyVersion,
   disabled = false,
   onSend,
+  onCollapse,
 }: ComposerProps) {
   const controller = useController();
   const { busy, workers } = useSnapshot(["busy", "workers"]);
@@ -138,6 +146,14 @@ export function Composer({
   useAnimatedHeight(container, collapsed);
   // Keep Stop at its previous visual position as it changes layout slots.
   useListMotion(container, "data-action", collapsed, MOTION.base);
+
+  const wasCollapsed = useRef(collapsed);
+
+  useLayoutEffect(() => {
+    // Measuring the shorter layout can clamp Chat before the animation starts.
+    if (collapsed && !wasCollapsed.current) onCollapse?.();
+    wasCollapsed.current = collapsed;
+  }, [collapsed, onCollapse]);
 
   useEffect(() => {
     if (!collapsed && focusAfterToggle.current === "input") {

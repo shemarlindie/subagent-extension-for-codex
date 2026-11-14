@@ -1,13 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-import {
-  useController,
-  useSnapshot,
-} from "../../../app/state/controller-context";
+import { useSnapshot } from "../../../app/state/controller-context";
 import { selectedTask } from "../../../app/state/selectors";
 import { Icon } from "../../../shared/components/icons/icons";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
-import { BackButton } from "../../../shared/components/navigation/back-button";
 import { Notice } from "../../../shared/components/notice/notice";
 import { NewTaskView } from "../../delegation/new-task/new-task-view";
 import { projectApproved } from "../../projects/selectors";
@@ -20,8 +16,6 @@ import { useArrivalMotion } from "./use-arrival-motion";
 import { useNewTaskMotion } from "./use-new-task-motion";
 
 export function TaskInspector() {
-  const controller = useController();
-
   const { selected, newTask, taskListLoading, task, projectRemoved } =
     useSnapshot(["selected", "newTask", "taskListLoading"], (state) => {
       const task = selectedTask(state);
@@ -85,15 +79,7 @@ export function TaskInspector() {
               {task ? (
                 <>
                   <div className="task-topline">
-                    <div className="task-heading">
-                      <BackButton
-                        id="back"
-                        className="task-inspector-back"
-                        label="Tasks"
-                        onClick={() => controller.back()}
-                      />
-                      <TaskTitle task={task} />
-                    </div>
+                    <TaskTitle task={task} />
                     <TaskMenu task={task} />
                   </div>
                   {projectRemoved && (

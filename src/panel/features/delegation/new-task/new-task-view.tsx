@@ -1,9 +1,7 @@
 import type { CSSProperties, Ref } from "react";
 
 import animatedGlyph from "../../../../../assets/brand/brand-glyph-animated.svg?raw";
-import { useController } from "../../../app/state/controller-context";
 import type { NewTaskState } from "../../../app/state/types";
-import { BackButton } from "../../../shared/components/navigation/back-button";
 import { NewTaskComposer } from "./new-task-composer";
 
 const glyphSource = `data:image/svg+xml,${encodeURIComponent(animatedGlyph)}`;
@@ -24,18 +22,8 @@ type NewTaskViewProps = {
  * once the task starts.
  */
 export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
-  const controller = useController();
-
   return (
     <div ref={viewRef} className="task-view new-task-view">
-      {/* Narrow panels need a way back to the list; wide ones hide it. */}
-      <div className="task-topline new-task-topline">
-        <BackButton
-          className="task-inspector-back"
-          label="Tasks"
-          onClick={() => controller.back()}
-        />
-      </div>
       <div className="evidence">
         <div className="chat-panel">
           <div className="chat">

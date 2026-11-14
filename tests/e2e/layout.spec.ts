@@ -39,7 +39,9 @@ test("a narrow console switches between the list and the task, without overflowi
   await expect(tasks).toBeHidden();
   expect(await overflows(page)).toBe(false);
 
-  await page.getByRole("button", { name: "Tasks", exact: true }).click();
+  const showList = page.getByRole("button", { name: "Show task list" });
+  const hideList = page.getByRole("button", { name: "Hide task list" });
+  await showList.click();
   await expect(tasks).toBeVisible();
   await expect(history).toBeHidden();
   expect(await overflows(page)).toBe(false);
@@ -47,6 +49,19 @@ test("a narrow console switches between the list and the task, without overflowi
   await tasks.getByRole("button", { name: /Check the narrow layout/ }).click();
 
   await expect(history).toBeVisible();
+  await expect(tasks).toBeHidden();
+
+  // Mobile navigation must leave the desktop collapse preference alone.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(tasks).toBeVisible();
+  await hideList.click();
+  await expect(tasks).toBeHidden();
+  await page.setViewportSize({ width: 420, height: 800 });
+  await showList.click();
+  await expect(tasks).toBeVisible();
+  await hideList.click();
+  await expect(history).toBeVisible();
+  await page.setViewportSize({ width: 1000, height: 800 });
   await expect(tasks).toBeHidden();
 });
 

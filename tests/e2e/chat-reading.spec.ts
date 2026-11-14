@@ -236,6 +236,76 @@ test.afterEach(async ({ page }, testInfo) => {
   }
 });
 
+test("collapsing the composer retains bottom following or the reader's place", async ({
+  consolePage: page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await startTask(page, "Fill the chat [fixture:reply lines=30]");
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture reply line 30.");
+  const composer = page.getByRole("textbox", { name: "Message", exact: true });
+  // A tall draft makes the temporary layout clamp exceed the end slack.
+  await composer.fill("A draft line\n".repeat(8));
+  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+
+  const latest = page.getByRole("button", {
+    name: "Scroll to latest message",
+    exact: true,
+  });
+
+  const settleComposer = () =>
+    page
+      .locator(".chat-composer")
+      .evaluate((element) =>
+        Promise.all(
+          element
+            .getAnimations()
+            .map((animation) => animation.finished.catch(() => undefined)),
+        ),
+      );
+
+  await page
+    .getByRole("button", { name: "Hide composer", exact: true })
+    .click();
+
+  await settleComposer();
+  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+  await expect(latest).toBeHidden();
+
+  await page
+    .getByRole("button", { name: "Show composer (draft)", exact: true })
+    .click();
+
+  await settleComposer();
+  await expect(composer).toBeVisible();
+  await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
+  await expect(latest).toBeHidden();
+
+  await scrollChatUp(page, 600);
+  await expect(latest).toBeVisible();
+  const anchor = await middleParagraph(history);
+
+  await page
+    .getByRole("button", { name: "Hide composer", exact: true })
+    .click();
+
+  await settleComposer();
+
+  await expect(
+    page.getByRole("button", { name: "Show composer (draft)", exact: true }),
+  ).toBeVisible();
+
+  await expect(latest).toBeVisible();
+
+  await expect
+    .poll(async () =>
+      Math.abs((await paragraphOffset(history, anchor.index)) - anchor.offset),
+    )
+    .toBeLessThanOrEqual(1);
+
+  expect(await distanceFromEnd(history)).toBeGreaterThan(300);
+});
+
 test("activity labels reserve one line without moving the conversation", async ({
   consolePage: page,
   inProcessService,
