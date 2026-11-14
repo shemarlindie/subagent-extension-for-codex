@@ -443,6 +443,85 @@ body[data-expanded-panel="true"]
   margin: 4px 0 0;
   padding: 0;
 }
+/*
+ * A long queue scrolls under its header, so the chat keeps its room. Its edges
+ * fade while more rows lie beyond them. A list that fits has no scroll
+ * timeline, so it keeps the unfaded initial values.
+ */
+@property --chat-queue-fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --chat-queue-fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes chat-queue-fade {
+  0% {
+    --chat-queue-fade-top: 0px;
+    --chat-queue-fade-bottom: var(--chat-queue-fade);
+  }
+  10%,
+  90% {
+    --chat-queue-fade-top: var(--chat-queue-fade);
+    --chat-queue-fade-bottom: var(--chat-queue-fade);
+  }
+  100% {
+    --chat-queue-fade-top: var(--chat-queue-fade);
+    --chat-queue-fade-bottom: 0px;
+  }
+}
+.chat-queue-group[data-group="queue"] ul {
+  /* The faded edges' width, which keyboard moves also scroll clear of. */
+  --chat-queue-fade: 24px;
+  /* Rows measure their offsets from the list. */
+  position: relative;
+  max-height: min(35vh, 180px);
+  /* The scrollbar runs in the group's padding, clear of the row actions. */
+  margin-inline-end: -10px;
+  padding-inline-end: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  mask-image: linear-gradient(
+    transparent,
+    #000 var(--chat-queue-fade-top),
+    #000 calc(100% - var(--chat-queue-fade-bottom)),
+    transparent
+  );
+  animation: chat-queue-fade linear both;
+  animation-timeline: scroll(self);
+}
+/*
+ * A message queued out of view flashes an accent along the list's bottom
+ * edge.
+ */
+.chat-queue-scroll {
+  position: relative;
+}
+.chat-queue-arrival {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+  animation: chat-queue-arrival 1400ms ease-out both;
+}
+@keyframes chat-queue-arrival {
+  0% {
+    opacity: 0;
+  }
+  6%,
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
 .chat-queue-item {
   display: flex;
   align-items: flex-start;
@@ -480,9 +559,10 @@ body[data-expanded-panel="true"]
 .chat-queue-item[draggable="true"]:hover .chat-queue-grip {
   color: var(--text);
 }
+/* Inset, so a scrolling queue doesn't clip it. */
 .chat-queue-item:focus-visible {
   outline: var(--focus-ring);
-  outline-offset: 0;
+  outline-offset: -1px;
 }
 .chat-queue-text {
   flex: 1;

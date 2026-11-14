@@ -114,8 +114,9 @@ export function QueuedMessageRow({
     const offset = event.key === "ArrowUp" ? -1 : 1;
 
     controller.run(async () => {
-      // Reordering can move the focused row out of the DOM and back.
-      if (await onMove(offset)) row.current?.focus();
+      // Reordering can move the focused row out of the DOM and back. The
+      // queue scrolls it into view itself.
+      if (await onMove(offset)) row.current?.focus({ preventScroll: true });
     });
   };
 
