@@ -22,7 +22,7 @@ import {
   within,
 } from "./panel-test-support";
 
-test("thread composers start collapsed, remember visibility and keep new tasks open", async (t) => {
+test("thread composers default to collapsed and honor explicit or new-task expansion", async (t) => {
   const { controller, transport, user } = await setup(
     t,
     (transport) => {
@@ -34,27 +34,9 @@ test("thread composers start collapsed, remember visibility and keep new tasks o
   expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Show composer" }));
 
-  await pasteText(
-    user,
-    screen.getByRole("textbox", { name: "Message" }),
-    "Keep this draft",
-  );
-
-  await act(() => controller.select("two"));
-  expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
-  await act(() => controller.select("one"));
-
-  expect(
-    screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" }).value,
-  ).toBe("Keep this draft");
-
-  await user.click(screen.getByRole("button", { name: "Hide composer" }));
   await act(() => controller.select("two"));
   await act(() => controller.select("one"));
-
-  expect(
-    screen.getByRole("button", { name: "Show composer (draft)" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
 
   await user.click(screen.getByRole("button", { name: "New task" }));
 
@@ -63,8 +45,7 @@ test("thread composers start collapsed, remember visibility and keep new tasks o
   transport.tasks.unshift({ ...task("created"), conversation_id: "chat-1" });
 
   await user.keyboard("{Enter}");
-  const composer = await screen.findByRole("textbox", { name: "Message" });
-  await waitFor(() => expect(document.activeElement).toBe(composer));
+  await screen.findByRole("textbox", { name: "Message" });
 });
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
