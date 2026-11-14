@@ -964,7 +964,10 @@ export class Controller {
   }
 
   back() {
+    const previousTask = this.state.selected ?? this.state.previousTask;
+
     this.leaveSelection(true);
+    this.patch({ previousTask });
   }
 
   /** Clears the selection; `browsing` keeps the list from choosing one again. */

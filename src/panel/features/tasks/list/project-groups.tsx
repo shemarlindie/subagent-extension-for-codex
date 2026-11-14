@@ -5,7 +5,7 @@ import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { useCollapsedProjects } from "./collapsed-projects";
 import { ProjectGroupMenu } from "./project-group-menu";
-import { tasksByProject } from "./selectors";
+import { listedTask, tasksByProject } from "./selectors";
 import { TaskGroup } from "./task-group";
 
 type ProjectGroupsProps = {
@@ -25,7 +25,10 @@ export function ProjectGroups({
   projectName,
   renderRow,
 }: ProjectGroupsProps) {
-  const { search, selected } = useSnapshot(["search", "selected"]);
+  const { search, selected } = useSnapshot(["search"], (state) => ({
+    selected: listedTask(state),
+  }));
+
   const groups = tasksByProject(tasks);
   const capped = !search && groups.length > 1;
   const [collapsed, setGroupOpen] = useCollapsedProjects();

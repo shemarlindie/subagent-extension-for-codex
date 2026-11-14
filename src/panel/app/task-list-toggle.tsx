@@ -1,5 +1,3 @@
-import { useRef } from "react";
-
 import { Button } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
 import { TooltipWrapper } from "../shared/components/tooltip";
@@ -13,7 +11,6 @@ export type TaskListToggleProps = {
 
 export function TaskListToggle({ rail }: TaskListToggleProps) {
   const controller = useController();
-  const lastTask = useRef<string>(undefined);
 
   const { selected, newTask, hasTasks } = useSnapshot(
     ["selected", "newTask"],
@@ -30,13 +27,13 @@ export function TaskListToggle({ rail }: TaskListToggleProps) {
     if (!rail.narrow) return rail.toggle();
 
     if (listHidden) {
-      lastTask.current = selected;
       controller.back();
     } else {
-      const tasks = visibleTasks(controller.getSnapshot());
+      const state = controller.getSnapshot();
+      const tasks = visibleTasks(state);
 
       const task =
-        tasks.find((task) => task.id === lastTask.current) ?? tasks[0];
+        tasks.find((task) => task.id === state.previousTask) ?? tasks[0];
 
       if (task) controller.run(() => controller.select(task.id));
     }

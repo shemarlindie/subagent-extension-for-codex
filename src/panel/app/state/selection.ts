@@ -14,7 +14,7 @@ export function selectionPatch(
     selected,
     taskArrival: undefined,
     ...(tab ? { tab } : {}),
-    ...(selected ? { newTask: undefined } : {}),
+    ...(selected ? { newTask: undefined, previousTask: undefined } : {}),
     events: [],
     droppedEvents: undefined,
     activityFocus: undefined,
