@@ -33,19 +33,21 @@ const middleParagraph = (history: Locator) =>
       return Math.max(box.top - middle, middle - box.bottom, 0);
     };
 
-    const index = paragraphs.reduce(
-      (nearest, paragraph, i) =>
-        nearest < 0 || distance(paragraph) < distance(paragraphs[nearest]!)
-          ? i
-          : nearest,
-      -1,
-    );
+    let index = -1;
+    let nearest: Element | undefined;
 
-    if (index < 0) throw new Error("No paragraph in Chat");
+    for (const [i, paragraph] of paragraphs.entries()) {
+      if (!nearest || distance(paragraph) < distance(nearest)) {
+        index = i;
+        nearest = paragraph;
+      }
+    }
+
+    if (!nearest) throw new Error("No paragraph in Chat");
 
     return {
       index,
-      offset: paragraphs[index]!.getBoundingClientRect().top - frame.top,
+      offset: nearest.getBoundingClientRect().top - frame.top,
     };
   });
 
@@ -117,7 +119,8 @@ const rowMotion = (page: Page, streamingOnly = false) =>
  */
 const recordRowShift = (history: Locator) =>
   history.evaluate((element) => {
-    const row = element.querySelector("[data-chat-item]")!;
+    const row = element.querySelector("[data-chat-item]");
+    if (!row) throw new Error("Chat has no rows");
 
     const offset = () =>
       row.getBoundingClientRect().top - element.getBoundingClientRect().top;
@@ -362,13 +365,13 @@ test("activity labels reserve one line without moving the conversation", async (
 
   const geometry = () =>
     history.evaluate((element) => {
-      const status = element.querySelector(".chat-working")!;
-      const lastMessage = element.querySelectorAll("article");
+      const status = element.querySelector(".chat-working");
+      const lastMessage = [...element.querySelectorAll("article")].at(-1);
+      if (!status || !lastMessage) throw new Error("Chat is missing a row");
 
       return {
         statusHeight: status.getBoundingClientRect().height,
-        messageTop:
-          lastMessage[lastMessage.length - 1]!.getBoundingClientRect().top,
+        messageTop: lastMessage.getBoundingClientRect().top,
         scrollHeight: element.scrollHeight,
         scrollTop: element.scrollTop,
       };

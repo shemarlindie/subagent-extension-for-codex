@@ -1,5 +1,5 @@
 import { scrollChatUp, send, startTask } from "./console-actions";
-import { expect, test } from "./fixtures";
+import { expect, test, visibleBox } from "./fixtures";
 
 test.use({ reducedMotion: "no-preference" });
 
@@ -185,11 +185,9 @@ test("a new task toast and an undo toast stack at the top without overlapping", 
   for (const width of [1280, 360]) {
     await page.setViewportSize({ width, height: 640 });
 
-    const [top, below] = await Promise.all(
-      [arrival, undo].map(async (toast) => (await toast.boundingBox())!),
-    );
-
-    expect(below!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+    const top = await visibleBox(arrival);
+    const below = await visibleBox(undo);
+    expect(below.y).toBeGreaterThanOrEqual(top.y + top.height);
     await expect(undo).toBeInViewport({ ratio: 1 });
   }
 });

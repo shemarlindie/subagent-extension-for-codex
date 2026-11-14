@@ -31,12 +31,13 @@ export function measurePosition(
 
   for (const file of files(viewport)) {
     const rect = file.getBoundingClientRect();
+    const path = file.getAttribute(FILE_ATTRIBUTE);
 
-    if (rect.bottom > top) {
+    if (path !== null && rect.bottom > top) {
       return {
         top: container.scrollTop,
         anchor: {
-          path: file.getAttribute(FILE_ATTRIBUTE)!,
+          path,
           top: rect.top - top,
         },
       };

@@ -2,7 +2,9 @@ import { MOTION, reducedMotion } from "../components/motion/motion-utils";
 
 /** Uses native nearest-edge positioning with a short, fixed scroll duration. */
 export function animateScrollIntoView(element: HTMLElement) {
-  const view = element.ownerDocument.defaultView!;
+  const view = element.ownerDocument.defaultView;
+  // A document outside a window has nothing to scroll.
+  if (!view) return () => {};
   let frame = view.requestAnimationFrame(() => {
     const ancestors: { element: HTMLElement; start: number; end: number }[] =
       [];

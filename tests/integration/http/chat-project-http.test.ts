@@ -16,6 +16,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
+import { sessionCookie } from "./http-test-harness.js";
 
 async function fixture(t: TestContext) {
   const dir = await realpath(
@@ -28,7 +29,8 @@ async function fixture(t: TestContext) {
     new Map(),
   );
 
-  c.projects = new Projects(c.store.database, c.workspaces);
+  const projects = new Projects(c.store.database, c.workspaces);
+  c.projects = projects;
   const html = join(dir, "app.html");
   await writeFile(html, "<!doctype html><title>Project registration</title>");
 
@@ -69,9 +71,7 @@ async function fixture(t: TestContext) {
 
   const login = await post("/api/login", { token: "project-test-token" });
 
-  const [session] = login.headers.get("set-cookie")!.split(";");
-
-  assert.ok(session);
+  const session = sessionCookie(login);
 
   const cookie = { Cookie: session, "X-Subagent-Extension-For-Codex": "1" };
 
@@ -95,7 +95,7 @@ async function fixture(t: TestContext) {
       200,
     );
 
-  return { c, base, bearer, post, cookie, repo, setAuto };
+  return { c, projects, base, bearer, post, cookie, repo, setAuto };
 }
 
 const hostHeader = (repository: string) => ({
@@ -107,8 +107,8 @@ const startTask = (repository: string) => ({
   repository,
 });
 
-const registered = (f: { c: Control }) =>
-  f.c.projects!.list().map((p) => p.repository);
+const registered = (f: { projects: Projects }) =>
+  f.projects.list().map((p) => p.repository);
 
 test("HTTP auto-registration happens only on task start for the trusted thread root", async (t) => {
   const f = await fixture(t);
@@ -280,6 +280,6 @@ test("HTTP exposes project registration only to the panel", async (t) => {
     kind: "repository",
   });
 
-  assert.equal(await f.c.projects!.resolve(repository), repository);
+  assert.equal(await f.projects.resolve(repository), repository);
   assert.equal(f.c.store.all().length, 0);
 });

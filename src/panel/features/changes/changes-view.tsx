@@ -106,15 +106,17 @@ export function ChangesView({
     }
   }, [reading, reveal]);
 
+  const [first] = entries;
+
   return (
     <div className="changes-files" ref={listRef}>
-      {entries.length > 1 && (
+      {first && entries.length > 1 && (
         <ChangedFileNavigator
           entries={entries}
           viewed={viewed}
           activePath={
             entries.find((entry) => entry.file.path === activePath)?.file
-              .path ?? entries[0]!.file.path
+              .path ?? first.file.path
           }
           onSelect={revealFile}
         />

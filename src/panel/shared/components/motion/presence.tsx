@@ -133,16 +133,16 @@ export function Presence({
     }
 
     if (skip) return;
-    const keyframes = frames(variant, element!);
+    const keyframes = frames(variant, element);
     const timing = { duration: MOTION.base, easing: MOTION.easing };
 
     if (show) {
-      const animation = element!.animate(keyframes, timing);
+      const animation = element.animate(keyframes, timing);
 
       return () => animation.cancel();
     }
 
-    const animation = element!.animate(keyframes.reverse(), {
+    const animation = element.animate(keyframes.reverse(), {
       ...timing,
       fill: "forwards",
     });

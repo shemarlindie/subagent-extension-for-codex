@@ -82,6 +82,8 @@ export default defineConfig(
       "@typescript-eslint/no-deprecated": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
+      // Narrow missing values instead.
+      "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/no-unnecessary-type-assertion": [
         "error",
         { checkLiteralConstAssertions: true },

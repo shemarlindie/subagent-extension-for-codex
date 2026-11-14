@@ -235,9 +235,13 @@ const storyTask: Task = {
  * the part shown so far, the stored message and the turn's end. Frames share
  * the stream events so a playing panel's event ids only ever grow.
  */
-function addReply(t: Timeline, step: StoryStep, streamed?: string) {
-  const { text, ...result } = step.reply!;
-  const id = `msg_showcase_${step.turn}`;
+function addReply(
+  t: Timeline,
+  { turn }: StoryStep,
+  { text, ...result }: NonNullable<StoryStep["reply"]>,
+  streamed?: string,
+) {
+  const id = `msg_showcase_${turn}`;
 
   t.streamed([text.slice(0, 1)], false, id);
   if (streamed !== undefined) return { message_id: id, text: streamed };
@@ -245,7 +249,7 @@ function addReply(t: Timeline, step: StoryStep, streamed?: string) {
   t.stream({ type: "content_block_stop", index: 0 })
     .stream({ type: "message_stop" })
     .say(text, id)
-    .finish(text, step.turn, result);
+    .finish(text, turn, result);
 
   return undefined;
 }
@@ -275,7 +279,7 @@ export function storyAt({ step, streamed }: StoryMoment) {
           )
         : undefined;
 
-    draft = addReply(timeline, s, partial);
+    draft = addReply(timeline, s, s.reply, partial);
   }
 
   const { events } = timeline;
@@ -294,3 +298,7 @@ export function storyAt({ step, streamed }: StoryMoment) {
 
   return { task, events, draft, now };
 }
+
+/** The panel's clock at a moment, or the real time before Codex delegates. */
+export const storyClock = (moment: StoryMoment) =>
+  storyAt(moment)?.now ?? Date.now();

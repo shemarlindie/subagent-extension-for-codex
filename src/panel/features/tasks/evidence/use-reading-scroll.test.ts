@@ -76,6 +76,12 @@ function Chat({
 let viewportHeight = 200;
 let notifyResize: (() => void) | undefined;
 
+/** Reports a resize to the chat's resize observer. */
+function resize() {
+  assert.ok(notifyResize, "The chat observes resizes");
+  notifyResize();
+}
+
 beforeEach(() => {
   viewportHeight = 200;
   notifyResize = undefined;
@@ -125,9 +131,9 @@ beforeEach(() => {
       let top = 100;
       let height = viewportHeight;
 
-      if (this.hasAttribute("data-chat-item")) {
-        const viewport = this.parentElement!;
+      const viewport = this.parentElement;
 
+      if (viewport && this.hasAttribute("data-chat-item")) {
         const container =
           viewport.parentElement?.dataset.testid === "inspector"
             ? viewport.parentElement
@@ -165,12 +171,10 @@ test("chat remains pinned throughout composer expansion and collapse", () => {
   const view = render(createElement(Chat, { reading, items }));
   const viewport = view.getByTestId("chat");
 
-  assert.ok(notifyResize);
-
   for (const height of [180, 140, 100, 140, 180, 200]) {
     act(() => {
       viewportHeight = height;
-      notifyResize!();
+      resize();
     });
 
     assert.equal(viewport.scrollTop, viewport.scrollHeight - height);
@@ -186,12 +190,10 @@ test("composer resizing preserves the unpinned reader's visible message", () => 
   viewport.scrollTop = 125;
   fireEvent.scroll(viewport);
 
-  assert.ok(notifyResize);
-
   for (const height of [180, 140, 100, 140, 180, 200]) {
     act(() => {
       viewportHeight = height;
-      notifyResize!();
+      resize();
     });
 
     assert.equal(viewport.scrollTop, 125);
@@ -371,9 +373,10 @@ test("scroll to latest returns to the end, restores focus and follows later repl
   expect(button()).toBeNull();
   viewport.scrollTop = 151;
   fireEvent.scroll(viewport);
-  assert.ok(button());
 
-  fireEvent.click(button()!);
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
 
   assert.equal(viewport.scrollTop, 400);
   expect(button()).toBeNull();
@@ -458,7 +461,11 @@ test("a smooth return stays pinned until the reader takes over", (t) => {
   };
 
   scrollAt(100);
-  fireEvent.click(button()!);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest message" }),
+  );
+
   advance(100);
   const gliding = viewport.scrollTop;
   assert.ok(gliding > 100 && gliding < 400, "The return glides");
@@ -628,7 +635,7 @@ test.for(["wheel", "touch", "keyboard"] as const)(
     }
 
     expect(button()).not.toBeNull();
-    act(() => notifyResize!());
+    act(() => resize());
     advance(1000);
     expect(viewport.scrollTop).toBe(400);
 

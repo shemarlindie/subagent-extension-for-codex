@@ -17,6 +17,10 @@ export type ActivityGroup = {
   events: [Event, ...Event[]];
 };
 
+/** The newest of a group's events. */
+export const lastEvent = (events: ActivityGroup["events"]) =>
+  events.at(-1) ?? events[0];
+
 const words = (v: unknown) =>
   scalarText(v)
     .replace(/([a-z])([A-Z])/g, "$1 $2")
@@ -155,10 +159,10 @@ export function thinkingSignal(e: Event): boolean {
   );
 }
 
-export function toolTitle(events: Event[]) {
+export function toolTitle(events: ActivityGroup["events"]) {
   const start = events.find((e) => eventPayload(e, "tool.started"));
   const started = start ? eventPayload(start, "tool.started") : undefined;
-  const last = events.at(-1)!;
+  const last = lastEvent(events);
   const operation = activityPresentation(last).operation;
 
   const opaqueData = last.view.kind === "known" ? {} : last.view.data;

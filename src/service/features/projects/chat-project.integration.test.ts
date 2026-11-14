@@ -22,7 +22,8 @@ async function fixture(t: TestContext) {
   const store = new Store(join(dir, "db.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const control = new Control(store, workspaces, new Map());
-  control.projects = new Projects(store.database, workspaces);
+  const projects = new Projects(store.database, workspaces);
+  control.projects = projects;
 
   t.onTestFinished(async () => {
     await control.close();
@@ -44,7 +45,7 @@ async function fixture(t: TestContext) {
       "user",
     );
 
-  return { dir, control, repo, enable };
+  return { dir, control, projects, repo, enable };
 }
 
 const hostMeta = (directory: string) => ({
@@ -67,12 +68,9 @@ test("chat project registration is enabled by default and opt-out is owner scope
     undefined,
   );
 
-  assert.deepEqual(f.control.projects!.list(), []);
+  assert.deepEqual(f.projects.list(), []);
 
-  await assert.rejects(
-    f.control.projects!.resolve(repository),
-    /outside allowed roots/,
-  );
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
 
   assert.match(
     String(
@@ -118,7 +116,7 @@ test("task-start registration requires the task to target the thread root", asyn
     );
   }
 
-  assert.deepEqual(f.control.projects!.list(), []);
+  assert.deepEqual(f.projects.list(), []);
 
   assert.equal(
     await autoRegisterChatProject(
@@ -130,14 +128,14 @@ test("task-start registration requires the task to target the thread root", asyn
     repository,
   );
 
-  assert.equal(await f.control.projects!.resolve(repository), repository);
+  assert.equal(await f.projects.resolve(repository), repository);
 });
 
 test("registration failures never block the task start", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("project");
 
-  f.control.projects!.register = async () => {
+  f.projects.register = async () => {
     throw new Error("database is locked");
   };
 
@@ -163,7 +161,7 @@ test("opted-in trusted host directories register the canonical Git root and gran
     repository,
   );
 
-  assert.equal(await f.control.projects!.resolve(repository), repository);
+  assert.equal(await f.projects.resolve(repository), repository);
 
   assert.equal(
     await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
@@ -171,9 +169,7 @@ test("opted-in trusted host directories register the canonical Git root and gran
   );
 
   assert.deepEqual(
-    f.control
-      .projects!.list()
-      .map(({ repository, kind }) => ({ repository, kind })),
+    f.projects.list().map(({ repository, kind }) => ({ repository, kind })),
     [{ repository, kind: "repository" }],
   );
 });
@@ -208,12 +204,9 @@ test("invalid or absent host metadata never grants access despite opt-in", async
     );
   }
 
-  assert.deepEqual(f.control.projects!.list(), []);
+  assert.deepEqual(f.projects.list(), []);
 
-  await assert.rejects(
-    f.control.projects!.resolve(repository),
-    /outside allowed roots/,
-  );
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
 });
 
 test("disabling automatic registration preserves prior approval and stops approving new chats", async (t) => {
@@ -234,15 +227,12 @@ test("disabling automatic registration preserves prior approval and stops approv
     undefined,
   );
 
-  assert.equal(await f.control.projects!.resolve(prior), prior);
+  assert.equal(await f.projects.resolve(prior), prior);
 
-  await assert.rejects(
-    f.control.projects!.resolve(next),
-    /outside allowed roots/,
-  );
+  await assert.rejects(f.projects.resolve(next), /outside allowed roots/);
 
   assert.deepEqual(
-    f.control.projects!.list().map((project) => project.repository),
+    f.projects.list().map((project) => project.repository),
     [prior],
   );
 });
@@ -250,7 +240,7 @@ test("disabling automatic registration preserves prior approval and stops approv
 test("automatic registration preserves existing parent grants", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("parent-project");
-  await f.control.projects!.register(repository, "parent");
+  await f.projects.register(repository, "parent");
   const nested = await f.repo("parent-project/nested");
 
   assert.equal(
@@ -259,9 +249,8 @@ test("automatic registration preserves existing parent grants", async (t) => {
   );
 
   assert.equal(
-    f.control
-      .projects!.list()
-      .find((project) => project.repository === repository)?.kind,
+    f.projects.list().find((project) => project.repository === repository)
+      ?.kind,
     "parent",
   );
 
@@ -271,16 +260,15 @@ test("automatic registration preserves existing parent grants", async (t) => {
   );
 
   assert.equal(
-    f.control
-      .projects!.list()
-      .find((project) => project.repository === repository)?.kind,
+    f.projects.list().find((project) => project.repository === repository)
+      ?.kind,
     "parent",
   );
 
-  assert.equal(await f.control.projects!.resolve(nested), nested);
+  assert.equal(await f.projects.resolve(nested), nested);
 
   assert.deepEqual(
-    f.control.projects!.list().map((project) => project.repository),
+    f.projects.list().map((project) => project.repository),
     [repository],
   );
 });
@@ -324,14 +312,14 @@ test("an unregistered plain chat folder is reported, offered and never added", a
     undefined,
   );
 
-  assert.deepEqual(f.control.projects!.list(), []);
+  assert.deepEqual(f.projects.list(), []);
 });
 
 test("a chat in a registered plain folder's subfolder resolves to that folder", async (t) => {
   const f = await fixture(t);
   const folder = await plainFolder(f.dir, "notes");
   const child = await plainFolder(folder, "deep/inside");
-  await f.control.projects!.register(folder);
+  await f.projects.register(folder);
 
   const current = await currentChatProject(f.control, "alice", hostMeta(child));
   assert.equal(current.repository, folder);

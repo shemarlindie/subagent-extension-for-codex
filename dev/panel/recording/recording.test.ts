@@ -434,15 +434,15 @@ test("recording sanitizes each original response once and rewrites sibling refer
   );
 
   const lookup = originalResponseLookup(result.events);
-  assert.equal(lookup(result.events[0]!), lookup(result.events[1]!));
-  assert.equal(JSON.stringify(lookup(result.events[1]!)).includes(home), false);
-
-  assert.ok(
-    JSON.stringify(lookup(result.events[1]!)).includes("future_metadata"),
-  );
+  const [first, second] = result.events;
+  const [, sibling] = siblings;
+  assert.ok(first && second && sibling);
+  assert.equal(lookup(first), lookup(second));
+  assert.equal(JSON.stringify(lookup(second)).includes(home), false);
+  assert.ok(JSON.stringify(lookup(second)).includes("future_metadata"));
 
   assert.throws(
-    () => recordFixture(task, [siblings[1]!], options),
+    () => recordFixture(task, [sibling], options),
     /FULL_EVENTS=1 before recording/,
   );
 });

@@ -94,13 +94,13 @@ test("archiving shows at once, sends only tasks that can change and keeps what t
 });
 
 test("a failed archive restores the list and rethrows", async () => {
-  const tasks = [task({ id: "a" })];
+  const archiving = task({ id: "a" });
 
-  const { actions, archived } = setup(tasks, () =>
+  const { actions, archived } = setup([archiving], () =>
     Promise.reject(new Error("offline")),
   );
 
-  await assert.rejects(actions.toggle(tasks[0]!), /offline/);
+  await assert.rejects(actions.toggle(archiving), /offline/);
   assert.deepEqual(archived(), []);
 });
 
@@ -132,8 +132,10 @@ test("undo and redo change only the tasks the service archived", async () => {
   );
 
   await actions.setArchived([done, skipped], true);
-  await entries[0]!.undo();
-  await entries[0]!.redo();
+  const [entry] = entries;
+  assert.ok(entry);
+  await entry.undo();
+  await entry.redo();
 
   assert.deepEqual(
     tool.mock.calls.slice(1).map(([, args]) => args),
@@ -158,7 +160,9 @@ test("undo lists an archived task again after a refresh dropped it, and reopens 
   await actions.toggle(open);
   // The list leaves archived tasks out.
   list([newer, older]);
-  await entries[0]!.undo();
+  const [entry] = entries;
+  assert.ok(entry);
+  await entry.undo();
 
   assert.deepEqual(listed(), ["newer", "open", "older"]);
   assert.deepEqual(archived(), []);

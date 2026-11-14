@@ -105,7 +105,7 @@ export async function context() {
     delta: () => {},
   };
 
-  return { c, events, sessions, workspace };
+  return { c, events, sessions, workspace, data };
 }
 
 export async function runWithPolicy(
@@ -134,6 +134,7 @@ export async function runWithPolicy(
   );
 
   await provider.run(ctx.c, "Work");
+  assert.ok(options);
   const hook = preToolUseHook(options);
 
   const check = async (tool: string, input: object) =>
@@ -154,13 +155,29 @@ export async function runWithPolicy(
     ).hookSpecificOutput?.permissionDecision;
 
   const decide = async (tool: string, input: Record<string, unknown>) =>
-    (await options!.canUseTool!(tool, input, {
-      signal: ctx.c.signal,
-      toolUseID: "x",
-      requestId: "request",
-    }))!.behavior;
+    (await askPermission(options, ctx.c.signal, tool, input)).behavior;
 
-  return { ...ctx, options: options!, check, decide, asked };
+  return { ...ctx, options, check, decide, asked };
+}
+
+/** Asks the launch's permission callback about a tool call. */
+export async function askPermission(
+  options: Options | undefined,
+  signal: AbortSignal,
+  tool: string,
+  input: Record<string, unknown>,
+) {
+  assert.ok(options?.canUseTool);
+
+  const result = await options.canUseTool(tool, input, {
+    signal,
+    toolUseID: "tool",
+    requestId: "request",
+  });
+
+  assert.ok(result);
+
+  return result;
 }
 
 /** The default settings, which leave the session to the user's Claude Code configuration. */

@@ -108,7 +108,7 @@ export function urlSettings(search: string): Partial<Settings> {
 /** Saved settings over the defaults; unreadable storage falls back to them. */
 export function settingsFrom(defaults: Settings, stored: string | null) {
   try {
-    const parsed = JSON.parse(stored!) as Record<string, unknown>;
+    const parsed = JSON.parse(stored ?? "{}") as Record<string, unknown>;
 
     const saved = Object.fromEntries(
       Object.entries(parsed).filter(([key]) => Object.hasOwn(defaults, key)),

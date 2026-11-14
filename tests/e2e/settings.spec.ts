@@ -855,20 +855,23 @@ test.describe("with motion", () => {
     });
 
     await expect(async () => {
-      const bounds = await pageFrame.evaluate((element) => ({
-        headerBottom: element
-          .querySelector(".page-frame-heading")!
-          .getBoundingClientRect().bottom,
-        searchTop: element
-          .querySelector(".settings-search")!
-          .getBoundingClientRect().top,
-        searchBottom: element
-          .querySelector(".settings-search")!
-          .getBoundingClientRect().bottom,
-        tabsTop: element
-          .querySelector(".settings-section-tabs-list")!
-          .getBoundingClientRect().top,
-      }));
+      const bounds = await pageFrame.evaluate((element) => {
+        const box = (selector: string) => {
+          const found = element.querySelector(selector);
+          if (!found) throw new Error(`${selector} is missing`);
+
+          return found.getBoundingClientRect();
+        };
+
+        const search = box(".settings-search");
+
+        return {
+          headerBottom: box(".page-frame-heading").bottom,
+          searchTop: search.top,
+          searchBottom: search.bottom,
+          tabsTop: box(".settings-section-tabs-list").top,
+        };
+      });
 
       expect(bounds.searchTop).toBeGreaterThanOrEqual(bounds.headerBottom);
       expect(bounds.tabsTop).toBeGreaterThanOrEqual(bounds.searchBottom);

@@ -15,7 +15,7 @@ import { story, storyAt } from "./story";
 
 const ORIGIN = "http://127.0.0.1:5317";
 const VIEWPORT = { width: 1600, height: 1000 };
-const THEMES = ["dark", "light"];
+const THEMES = ["dark", "light"] as const;
 
 const { values } = parseArgs({
   options: {
@@ -136,7 +136,7 @@ async function remainingPlaybackMs(page: Page, started: number) {
 // Plays the story once unrecorded, since a fresh browser's first-run work
 // drops frames in the first capture.
 async function warmUp(browser: Browser) {
-  const { page, started } = await startPlayback(browser, THEMES[0]!);
+  const { page, started } = await startPlayback(browser, THEMES[0]);
   await page.waitForTimeout(await remainingPlaybackMs(page, started));
   await page.close();
 }

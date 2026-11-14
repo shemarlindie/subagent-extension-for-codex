@@ -62,9 +62,12 @@ export const autoListEffects: AutoAnimationPlugin = (
     });
   }
 
+  // AutoAnimate passes both coordinates for "remain".
+  if (!previous || !next) return new KeyframeEffect(el, [], { duration: 0 });
+
   const zoom = el.currentCSSZoom || 1;
-  const from = cssCoordinates(previous!, zoom);
-  const to = cssCoordinates(next!, zoom);
+  const from = cssCoordinates(previous, zoom);
+  const to = cssCoordinates(next, zoom);
 
   const [widthFrom, widthTo, heightFrom, heightTo] = getTransitionSizes(
     el,

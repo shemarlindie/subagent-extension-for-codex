@@ -138,24 +138,27 @@ export class Workspaces {
 
     t.repository = await this.repository(t.repository);
 
-    if ((await gitState(t.repository)) === "ready") {
-      t.base_commit = (
-        await git(t.repository, [
-          "rev-parse",
-          "--verify",
-          "--end-of-options",
-          `${t.revision}^{commit}`,
-        ])
-      ).trim();
-    } else if (t.workspace_strategy === "worktree") {
-      throw new Error(WORKTREE_NEEDS_GIT);
-    }
+    const baseCommit =
+      (await gitState(t.repository)) === "ready"
+        ? (
+            await git(t.repository, [
+              "rev-parse",
+              "--verify",
+              "--end-of-options",
+              `${t.revision}^{commit}`,
+            ])
+          ).trim()
+        : undefined;
+
+    if (baseCommit) t.base_commit = baseCommit;
 
     if (t.workspace_strategy === "current_repo") {
       t.workspace = t.repository;
 
       return;
     }
+
+    if (!baseCommit) throw new Error(WORKTREE_NEEDS_GIT);
 
     const short = worktreeName(t, 6);
     const shortPath = join(this.root, short);
@@ -193,7 +196,7 @@ export class Workspaces {
       "-b",
       branch,
       workspace,
-      t.base_commit!,
+      baseCommit,
     ]);
 
     t.workspace = workspace;
@@ -234,11 +237,16 @@ export class Workspaces {
       if (files.length) return { status: "uncommitted" as const, files };
     }
 
+    // The folder can disappear while the removal is checked.
+    if (!resources.worktree) {
+      throw new Error("The worktree was already removed.");
+    }
+
     await git(t.repository, [
       "worktree",
       "remove",
       ...(force ? ["--force"] : []),
-      resources.worktree!,
+      resources.worktree,
     ]);
 
     return { status: "removed" as const };
@@ -349,13 +357,17 @@ export class Workspaces {
       return "branch";
     }
 
+    if (!t.base_commit) {
+      throw new Error("The task has no base commit to recreate its branch.");
+    }
+
     await git(t.repository, [
       "worktree",
       "add",
       "-b",
       t.branch,
       t.workspace,
-      t.base_commit!,
+      t.base_commit,
     ]);
 
     return "base";

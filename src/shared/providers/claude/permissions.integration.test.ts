@@ -15,6 +15,10 @@ import {
 } from "../../../service/features/providers/types.js";
 import { Settings } from "../../../service/features/settings/settings.js";
 import { Control } from "../../../service/features/tasks/runtime/control.js";
+import {
+  latestReply,
+  pendingInput,
+} from "../../../service/features/tasks/runtime/control-test-harness.js";
 import { Store } from "../../../service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../service/features/workspaces/workspace.js";
 import { settingPaths } from "../../settings/settings-schema.js";
@@ -299,7 +303,7 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
     await until(() => !!store.get(task.id, "alice").pending_input);
     const persisted = store.get(task.id, "alice");
     store.save(persisted);
-    const pending = persisted.pending_input!;
+    const pending = pendingInput(store, task.id);
 
     if (!parentAllowed) {
       for (const approved of [true, false]) {
@@ -333,11 +337,7 @@ test("persisted Claude tasks retain native approval routing", async (t) => {
 
     await until(() => store.get(task.id, "alice").status === "completed");
 
-    assert.equal(
-      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
-        .approved,
-      false,
-    );
+    assert.equal(JSON.parse(latestReply(store, task.id)).approved, false);
   }
 });
 
@@ -353,7 +353,7 @@ test("native unresolved approvals honor their decision setting independently of 
 
   const task = await c.start("alice", request);
   await until(() => !!store.get(task.id, "alice").pending_input);
-  const pending = store.get(task.id, "alice").pending_input!;
+  const pending = pendingInput(store, task.id);
   assert.equal(pending.tool, "Write");
 
   assert.throws(
@@ -379,7 +379,7 @@ test("native unresolved approvals honor their decision setting independently of 
 
   const delegated = await c.start("alice", request, "parent");
   await until(() => !!store.get(delegated.id, "alice").pending_input);
-  const delegatedPending = store.get(delegated.id, "alice").pending_input!;
+  const delegatedPending = pendingInput(store, delegated.id);
 
   c.input(
     "alice",
@@ -393,12 +393,7 @@ test("native unresolved approvals honor their decision setting independently of 
 
   await until(() => store.get(delegated.id, "alice").status === "completed");
 
-  assert.equal(
-    JSON.parse(
-      String(store.latestEvent(delegated.id, "agent.reply")!.data.text),
-    ).approved,
-    false,
-  );
+  assert.equal(JSON.parse(latestReply(store, delegated.id)).approved, false);
 });
 
 test("Claude tasks keep their session settings, and read-only profiles start in plan mode", async (t) => {

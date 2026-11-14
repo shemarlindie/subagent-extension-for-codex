@@ -1,7 +1,7 @@
 import { LIVE_CONVERSATION_PERIOD_MS } from "../../dev/panel/scenarios/live-conversation";
 import { installChatCycle } from "./chat-cycle-test-harness";
 import { scrollChatUp, startTask } from "./console-actions";
-import { expect, test } from "./fixtures";
+import { expect, requiredAttribute, test, visibleBox } from "./fixtures";
 
 test.use({ reducedMotion: "no-preference" });
 
@@ -15,16 +15,15 @@ for (const width of [1280, 420]) {
     const history = page.getByRole("region", { name: "Chat history" });
     await expect(history).toContainText("Fixture session turn: 1.");
 
-    const taskId = await page
-      .getByRole("region", { name: "Selected task" })
-      .getAttribute("data-task");
-
-    expect(taskId).toBeTruthy();
+    const taskId = await requiredAttribute(
+      page.getByRole("region", { name: "Selected task" }),
+      "data-task",
+    );
 
     const cycle = await installChatCycle(
       page,
       repository,
-      taskId!,
+      taskId,
       inProcessService.announceChange,
     );
 
@@ -39,7 +38,9 @@ for (const width of [1280, 420]) {
     ] as const) {
       await test.step(`streamed reply at ${streamingAt} becomes stored`, async () => {
         cycle.refresh(streamingAt);
-        const id = cycle.snapshot.draft!.message_id;
+        const { draft } = cycle.snapshot;
+        if (!draft) throw new Error("No reply is streaming");
+        const id = draft.message_id;
         const message = history.locator(`[data-message="${id}"]`);
         await expect(message).toHaveCount(1);
         await expect(message).toHaveAttribute("aria-busy", "true");
@@ -173,8 +174,8 @@ for (const width of [1280, 420]) {
     });
 
     const anchor = history.locator(`[data-message="${anchorId}"]`);
-    const start = await anchor.boundingBox();
-    const height = (await working.boundingBox())!.height;
+    const start = await visibleBox(anchor);
+    const { height } = await visibleBox(working);
 
     for (const [elapsed, label] of [
       [laterTurn + 12_000, /Running Bash/],
@@ -183,9 +184,9 @@ for (const width of [1280, 420]) {
     ] as const) {
       cycle.refresh(elapsed);
       await expect(working).toHaveText(label);
-      expect((await working.boundingBox())!.height).toBe(height);
-      const current = await anchor.boundingBox();
-      expect(Math.abs(current!.y - start!.y)).toBeLessThanOrEqual(1);
+      expect((await visibleBox(working)).height).toBe(height);
+      const current = await visibleBox(anchor);
+      expect(Math.abs(current.y - start.y)).toBeLessThanOrEqual(1);
     }
   });
 }

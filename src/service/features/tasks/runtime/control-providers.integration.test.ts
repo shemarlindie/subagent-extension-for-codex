@@ -4,7 +4,13 @@ import { test } from "vitest";
 
 import { type ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { Provider } from "../../providers/types.js";
-import { input, setup, TestProvider, until } from "./control-test-harness.js";
+import {
+  input,
+  pendingInput,
+  setup,
+  TestProvider,
+  until,
+} from "./control-test-harness.js";
 
 test("scheduler enforces concurrency and independent branches run together", async () => {
   const { c, store, repo } = await setup(undefined, 2);
@@ -145,7 +151,7 @@ test("a new provider controls preparation and input policy without built-in iden
         store.get(task.id, "alice").pending_input?.tool === "ChooseApproach",
     );
 
-    const question = store.get(task.id, "alice").pending_input!;
+    const question = pendingInput(store, task.id);
     assert.equal(question.kind, "question");
     assert.deepEqual(decisions, [true]);
 
@@ -164,7 +170,7 @@ test("a new provider controls preparation and input policy without built-in iden
       () => store.get(task.id, "alice").pending_input?.tool === "NativeWrite",
     );
 
-    const permission = store.get(task.id, "alice").pending_input!;
+    const permission = pendingInput(store, task.id);
 
     assert.throws(
       () =>
@@ -203,7 +209,7 @@ test("a new provider owns native session continuation after a restart", async ()
   const provider: Provider = new TestProvider();
   provider.id = "new-native";
   let sessionValid = false;
-  const validated: string[] = [];
+  const validated: (string | undefined)[] = [];
 
   const policy: ProviderTaskPolicy = {
     prepareStart: () => ({}),
@@ -211,7 +217,7 @@ test("a new provider owns native session continuation after a restart", async ()
     parentMayApprove: () => false,
     inputKind: () => "permission",
     async validateSession(task) {
-      validated.push(task.session_state_ref!);
+      validated.push(task.session_state_ref);
       if (!sessionValid) throw new Error("Native session unavailable");
     },
   };

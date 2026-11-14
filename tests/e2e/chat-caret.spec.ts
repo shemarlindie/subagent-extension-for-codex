@@ -2,7 +2,7 @@ import type { CDPSession, Locator } from "@playwright/test";
 
 import { installChatCycle } from "./chat-cycle-test-harness";
 import { startTask } from "./console-actions";
-import { expect, test } from "./fixtures";
+import { expect, requiredAttribute, test } from "./fixtures";
 
 /** Measures the rendered caret itself, including its browser-generated static position. */
 async function caretBox(cdp: CDPSession) {
@@ -29,30 +29,36 @@ async function caretBox(cdp: CDPSession) {
 
   visit(node);
   expect(carets).toHaveLength(1);
+  const [caret] = carets;
+  if (caret === undefined) throw new Error("The message has no caret");
 
   const { model } = await cdp.send("DOM.getBoxModel", {
-    backendNodeId: carets[0]!,
+    backendNodeId: caret,
   });
 
-  return {
-    left: model.border[0]!,
-    top: model.border[1]!,
-    right: model.border[4]!,
-    bottom: model.border[5]!,
-  };
+  // The border quad lists its corners clockwise from the top left.
+  const [left, top, , , right, bottom] = model.border;
+
+  if (
+    left === undefined ||
+    top === undefined ||
+    right === undefined ||
+    bottom === undefined
+  ) {
+    throw new Error("The caret has no border box");
+  }
+
+  return { left, top, right, bottom };
 }
 
 const conversationGeometry = (history: Locator) =>
   history.evaluate((element) => {
-    const message = element.querySelector(
-      '[data-message="msg_cycle_0_first"]',
-    )!;
+    const message = element.querySelector('[data-message="msg_cycle_0_first"]');
+    const request = element.querySelector('[data-message="request"]');
+    if (!message || !request) throw new Error("Chat is missing a message");
 
     const box = message.getBoundingClientRect();
-
-    const earlier = element
-      .querySelector('[data-message="request"]')!
-      .getBoundingClientRect();
+    const earlier = request.getBoundingClientRect();
 
     return {
       x: box.x,
@@ -101,7 +107,9 @@ async function settledGeometry(history: Locator) {
     )
     .toBe(true);
 
-  return previous!;
+  if (!previous) throw new Error("Chat geometry was never measured");
+
+  return previous;
 }
 
 test.use({ reducedMotion: "no-preference" });
@@ -117,16 +125,15 @@ for (const width of [1280, 420]) {
     const history = page.getByRole("region", { name: "Chat history" });
     await expect(history).toContainText("Fixture session turn: 1.");
 
-    const taskId = await page
-      .getByRole("region", { name: "Selected task" })
-      .getAttribute("data-task");
-
-    expect(taskId).toBeTruthy();
+    const taskId = await requiredAttribute(
+      page.getByRole("region", { name: "Selected task" }),
+      "data-task",
+    );
 
     const cycle = await installChatCycle(
       page,
       repository,
-      taskId!,
+      taskId,
       inProcessService.announceChange,
     );
 
@@ -153,7 +160,8 @@ for (const width of [1280, 420]) {
         const before = await settledGeometry(history);
 
         const tail = await message.evaluate((element) => {
-          const body = element.querySelector(".markdown-body")!;
+          const body = element.querySelector(".markdown-body");
+          if (!body) throw new Error("The message has no Markdown body");
           const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
           let last: Text | undefined;
 

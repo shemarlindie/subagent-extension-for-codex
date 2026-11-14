@@ -14,6 +14,7 @@ import { expect, test, vi } from "vitest";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { setup } from "../../../app/state/controller-test-harness";
 import { expandedJson } from "../../../shared/components/json-tree/json-tree-test-harness";
+import { controlledElement } from "../../../shared/utils/dom-test-harness";
 import {
   activityMessages,
   assertAbsent,
@@ -113,7 +114,7 @@ test("grouped event counts update without closing debug or remounting raw inspec
   });
 
   fireEvent.click(debug);
-  const panel = document.getElementById(debug.getAttribute("aria-controls")!)!;
+  const panel = controlledElement(debug);
 
   const [raw, older] = Array.from(
     panel.querySelectorAll<HTMLDetailsElement>("details.activity-raw"),
@@ -223,10 +224,10 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
   inspector.scrollTop = 350;
   fireEvent.scroll(inspector);
   assert.ok(fab(), "Scrolling into history unpins");
-  assert.ok(fab()!.classList.contains("activity-scroll-latest"));
+  assert.ok(fab()?.classList.contains("activity-scroll-latest"));
 
   assert.equal(
-    fab()!.dataset.direction,
+    fab()?.dataset.direction,
     "down",
     "The chevron points to the end",
   );
@@ -247,7 +248,10 @@ test("activity pins, anchors and returns to latest when the inspector scrolls in
 
   assert.equal(anchor.getBoundingClientRect().top, before);
   assert.equal(inspector.scrollTop, 250);
-  fireEvent.click(fab()!);
+
+  fireEvent.click(
+    view.getByRole("button", { name: "Scroll to latest activity" }),
+  );
 
   assert.equal(
     inspector.scrollTop,

@@ -16,6 +16,7 @@ import { ControllerContext } from "../../app/state/controller-context";
 import type { Task, Transport } from "../../app/state/types";
 import { LOADING_SKELETON_CONFIG } from "../../shared/components/loading-skeleton/loading-skeleton-config";
 import { MOTION } from "../../shared/components/motion/motion-utils";
+import { getElement } from "../../shared/utils/dom-test-harness";
 import { ChangesPanel } from "./changes-panel";
 import type { Changes, ChangesState } from "./types";
 
@@ -43,18 +44,18 @@ const task: Task = {
   runtime_ms: 0,
 };
 
+const changedFile: Changes["files"][number] = {
+  path: "src/a.ts",
+  status: "modified",
+  additions: 1,
+  deletions: 1,
+  source: "tool",
+  incomplete: false,
+};
+
 const data: Changes = {
   scope: "task",
-  files: [
-    {
-      path: "src/a.ts",
-      status: "modified",
-      additions: 1,
-      deletions: 1,
-      source: "tool",
-      incomplete: false,
-    },
-  ],
+  files: [changedFile],
   additions: 1,
   deletions: 1,
   diff: "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
@@ -355,7 +356,7 @@ test("picking the last collapsed file finishes its jump after diff rows render",
 
   const changes: Changes = {
     ...data,
-    files: paths.map((path) => ({ ...data.files[0]!, path })),
+    files: paths.map((path) => ({ ...changedFile, path })),
     diff: paths
       .map(
         (path) =>
@@ -365,11 +366,12 @@ test("picking the last collapsed file finishes its jump after diff rows render",
   };
 
   const { view } = setup({ ...loaded, data: changes });
-  const scroller = view.container.querySelector<HTMLElement>(".changes")!;
+  const scroller = getElement<HTMLElement>(view.container, ".changes");
 
-  const last = view.container.querySelector<HTMLDetailsElement>(
+  const last = getElement<HTMLDetailsElement>(
+    view.container,
     '[data-changed-file="src/file-8.ts"]',
-  )!;
+  );
 
   scroller.style.overflowY = "auto";
   let scrollTop = 0;

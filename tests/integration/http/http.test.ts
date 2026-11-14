@@ -27,7 +27,12 @@ import { startSchema } from "../../../src/shared/tasks/model.js";
 import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
 import { until } from "../../support/until.js";
-import { httpFixture, panel } from "./http-test-harness.js";
+import {
+  httpFixture,
+  mcpResponseJson,
+  panel,
+  sessionCookie,
+} from "./http-test-harness.js";
 
 describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", () => {
   let fixture: Awaited<ReturnType<typeof httpFixture>>;
@@ -53,10 +58,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     );
 
     const login = await post("/api/login", { token: "private-token" });
-    const [cookie] = login.headers.get("set-cookie")!.split(";");
-
-    assert.ok(cookie);
-    assert.match(login.headers.get("set-cookie")!, /HttpOnly/);
+    const cookie = sessionCookie(login);
+    assert.match(login.headers.get("set-cookie") ?? "", /HttpOnly/);
 
     assert.equal(
       (await post("/api/tools/list_tasks", {}, { Cookie: cookie })).status,
@@ -235,7 +238,8 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       preferredDisplayMode: "inline",
     });
 
-    const starter = tools.tools.find((tool) => tool.name === "start_task")!;
+    const starter = tools.tools.find((tool) => tool.name === "start_task");
+    assert.ok(starter);
 
     assert.equal(
       (starter._meta as any).ui.resourceUri,
@@ -279,7 +283,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.deepEqual(
-      (tools.tools.find((t) => t.name === "list_tasks")!._meta as any).ui
+      (tools.tools.find((t) => t.name === "list_tasks")?._meta as any)?.ui
         .visibility,
       ["model", "app"],
     );
@@ -313,8 +317,6 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.deepEqual(opened(open), { tasks: ["unscoped"], counted: 3 });
-
-    assert.ok(globalOpener);
 
     assert.deepEqual(globalOpener._meta?.ui, {
       resourceUri: (opener._meta as any).ui.resourceUri,
@@ -853,7 +855,8 @@ async function eventStream(base: string, headers: Record<string, string>) {
   });
 
   assert.equal(response.status, 200);
-  const reader = response.body!.getReader();
+  assert.ok(response.body);
+  const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffered = "";
 
@@ -1075,14 +1078,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
 
     const text = await response.text();
 
-    const json = text.startsWith("event:")
-      ? JSON.parse(
-          text
-            .split("\n")
-            .find((line) => line.startsWith("data:"))!
-            .slice(5),
-        )
-      : JSON.parse(text);
+    const json = mcpResponseJson(text);
 
     return { response, json };
   };

@@ -46,6 +46,14 @@ const recordedFixtures = [
   recordedDevPlugin,
 ] as unknown as RecordedFixture[];
 
+/** The fixture an id names. A missing one is a typo in the lists below. */
+function byId<T>(map: Map<string, T>, id: string) {
+  const fixture = map.get(id);
+  if (!fixture) throw new Error(`No preview fixture has the id ${id}.`);
+
+  return fixture;
+}
+
 const tasksById = new Map(
   [
     ...activityTasks,
@@ -83,7 +91,7 @@ export const previewTasks: Task[] = [
   "preview-live-streaming",
   "preview-live-fast-streaming",
 ]
-  .map((id) => tasksById.get(id)!)
+  .map((id) => byId(tasksById, id))
   .concat(
     attachmentTask,
     editLogTask,
@@ -135,7 +143,7 @@ export const previewEvents: Event[] = [
     "preview-live-fast-streaming",
     "preview-policy-limited",
     "preview-policy-lowered",
-  ].flatMap((id) => timelinesById.get(id)!.events),
+  ].flatMap((id) => byId(timelinesById, id).events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),
 ].map(decodedEvent);

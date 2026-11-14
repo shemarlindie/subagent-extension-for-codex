@@ -22,13 +22,14 @@ export function migrate(client: DatabaseSync, folder: string, path: string) {
   // VACUUM INTO can't run inside the migration transaction, so the backup
   // reads the ledger first. Processes starting together may each back up.
   const before = ledger(client);
+  const latest = before.at(-1);
 
   if (
-    before.length &&
+    latest &&
     path !== ":memory:" &&
     migrations.some((m) => !before.includes(m.name))
   ) {
-    backUpDatabase(client, path, before.at(-1)!);
+    backUpDatabase(client, path, latest);
   }
 
   client.exec("BEGIN IMMEDIATE");

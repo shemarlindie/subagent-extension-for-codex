@@ -12,10 +12,17 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { Notice } from "../../../shared/components/notice/notice";
 import { PermissionInputDetails } from "./permission-input-details";
 
-export function InlinePermissionRequest({ task }: { task: Task }) {
+type InlinePermissionRequestProps = {
+  task: Task;
+  request: NonNullable<Task["pending_input"]>;
+};
+
+export function InlinePermissionRequest({
+  task,
+  request,
+}: InlinePermissionRequestProps) {
   const controller = useController();
   const busy = useSnapshot((state) => state.busy);
-  const request = task.pending_input!;
   const presentation = inputPresentation(request);
   const titleId = useId();
   const [message, setMessage] = useState("");

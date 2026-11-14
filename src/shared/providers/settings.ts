@@ -12,7 +12,7 @@ export const providerSettingsSchemas = { claude: claudeSettingsSchema };
 export const providerApprovalRows = [...claudeApprovalRows];
 export const providerRestrictionSections = [claudeRestrictionsSection];
 
-export const preferredSettingsProvider = (providers: string[]) =>
+export const preferredSettingsProvider = (providers: [string, ...string[]]) =>
   providers.includes("claude") ? "claude" : providers[0];
 
 export const providerModelSettingScopes = ["claude", "fixture"] as const;

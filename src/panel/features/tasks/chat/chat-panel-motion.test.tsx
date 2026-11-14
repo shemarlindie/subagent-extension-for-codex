@@ -70,11 +70,11 @@ test("new messages ease into existing history without replaying loaded history",
   updateChat([initial, message("arrival", 2)]);
   expect(entrances("arrival")).toHaveLength(1);
 
-  expect(entrances("arrival")[0]!.element).toBe(
+  expect(entrances("arrival")[0]?.element).toBe(
     view.container.querySelector('[data-message="arrival"]'),
   );
 
-  expect(entrances("arrival")[0]!.frames.map((frame) => frame.height)).toEqual([
+  expect(entrances("arrival")[0]?.frames.map((frame) => frame.height)).toEqual([
     "0px",
     "120px",
   ]);

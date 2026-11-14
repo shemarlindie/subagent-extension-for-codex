@@ -57,16 +57,18 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   // The launch follows the executable check.
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(launches, 1);
-  assert.equal(options!.pathToClaudeCodeExecutable, fakeClaudePath);
-  assert.deepEqual(options!.tools, []);
-  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
-  assert.deepEqual(options!.settings, { disableAllHooks: true });
-  assert.equal(options!.persistSession, false);
-  assert.equal(options!.strictMcpConfig, true);
+  assert.ok(options?.env);
+  assert.ok(discoveryPrompt);
+  assert.equal(options.pathToClaudeCodeExecutable, fakeClaudePath);
+  assert.deepEqual(options.tools, []);
+  assert.deepEqual(options.settingSources, ["user", "project", "local"]);
+  assert.deepEqual(options.settings, { disableAllHooks: true });
+  assert.equal(options.persistSession, false);
+  assert.equal(options.strictMcpConfig, true);
   // Discovery uses the same environment as tasks.
-  assert.equal(options!.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
-  assert.equal(options!.env!.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, undefined);
-  const next = discoveryPrompt![Symbol.asyncIterator]().next();
+  assert.equal(options.env.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
+  assert.equal(options.env.SUBAGENT_EXTENSION_FOR_CODEX_TOKEN, undefined);
+  const next = discoveryPrompt[Symbol.asyncIterator]().next();
   let emitted = false;
 
   void next.then(() => {
@@ -137,12 +139,12 @@ test("Claude discovery keeps concurrent requests, results and failures separate 
     false,
   );
 
-  const launches: Options[] = [];
+  const launches: (Options | undefined)[] = [];
   const releases: ((models: ModelChoice[]) => void)[] = [];
   const failures: ((error: Error) => void)[] = [];
 
   const provider = new ClaudeAgentProvider(({ options }) => {
-    launches.push(options!);
+    launches.push(options);
 
     const result = new Promise<ModelChoice[]>((resolve, reject) => {
       releases.push(resolve);
@@ -159,20 +161,23 @@ test("Claude discovery keeps concurrent requests, results and failures separate 
   assert.equal(launches.length, 2);
 
   assert.deepEqual(
-    launches.map((options) => options.settingSources),
+    launches.map((options) => options?.settingSources),
     [["user", "project", "local"], []],
   );
 
   const loadedFailure = assert.rejects(loaded, /settings discovery failed/);
-  failures[0]!(new Error("settings discovery failed"));
+  const [fail] = failures;
+  const [, release] = releases;
+  assert.ok(fail && release);
+  fail(new Error("settings discovery failed"));
 
-  releases[1]!([
+  release([
     { value: "isolated-model", displayName: "Isolated", description: "" },
   ]);
 
   await loadedFailure;
-  assert.equal((await unloaded)[0]!.value, "isolated-model");
-  assert.equal((await provider.models(isolated))[0]!.value, "isolated-model");
+  assert.equal((await unloaded)[0]?.value, "isolated-model");
+  assert.equal((await provider.models(isolated))[0]?.value, "isolated-model");
   await assert.rejects(provider.models(defaults), /settings discovery failed/);
   assert.equal(launches.length, 2);
 });

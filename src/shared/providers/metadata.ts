@@ -25,7 +25,7 @@ export interface ProviderMetadata {
   };
 }
 
-export const claudeMetadata: ProviderMetadata = {
+export const claudeMetadata = {
   displayName: "Claude",
   defaultEffortLevels: reasoningLevels.filter(
     (level) => level !== "none" && level !== "minimal",
@@ -56,7 +56,7 @@ export const claudeMetadata: ProviderMetadata = {
     approvalDeciderHelp:
       "Who answers permission requests that Claude Code doesn't decide itself.",
   },
-};
+} satisfies ProviderMetadata;
 
 export const fixtureMetadata: ProviderMetadata = {
   displayName: "Fixture",

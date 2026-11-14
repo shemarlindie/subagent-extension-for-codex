@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { sent, setup } from "./chat-panel-test-harness";
 
 test("a running task can steer an existing queued message, keeping its composer draft", async () => {
@@ -22,17 +23,17 @@ test("a running task can steer an existing queued message, keeping its composer 
   });
 
   type("An unsent draft");
-  const row = view.container.querySelector('[data-message="msg_q"]')!;
-  const recorded = view.container.querySelector('[data-message="msg_l"]')!;
+  const row = getElement(view.container, '[data-message="msg_q"]');
+  const recorded = getElement(view.container, '[data-message="msg_l"]');
 
   const button = row.querySelector<HTMLButtonElement>(
     'button[aria-label="Steer"]',
   );
 
-  expect(button).not.toBeNull();
+  assert.ok(button);
   expect(recorded.querySelector('button[aria-label="Steer"]')).toBeNull();
   expect(recorded.querySelector('button[aria-label="Edit"]')).toBeNull();
-  fireEvent.click(button!);
+  fireEvent.click(button);
 
   await waitFor(() =>
     expect(sent(tool)).toEqual([
@@ -43,7 +44,7 @@ test("a running task can steer an existing queued message, keeping its composer 
   expect((composer as HTMLTextAreaElement).value).toBe("An unsent draft");
 
   fireEvent.click(
-    row.querySelector<HTMLButtonElement>('button[aria-label="Edit"]')!,
+    getElement<HTMLButtonElement>(row, 'button[aria-label="Edit"]'),
   );
 
   expect(row.querySelector('button[aria-label="Steer"]')).toBeNull();
@@ -68,7 +69,7 @@ test("queued messages reorder by dragging or Alt+arrows, behind a left-over stee
   });
 
   const row = (id: string) =>
-    view.container.querySelector<HTMLElement>(`[data-message="${id}"]`)!;
+    getElement<HTMLElement>(view.container, `[data-message="${id}"]`);
 
   // The left-over steer stays fixed while queued messages can move.
   assert.equal(row("msg_l").getAttribute("draggable"), "false");

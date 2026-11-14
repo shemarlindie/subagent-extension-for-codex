@@ -21,6 +21,14 @@ import { previewTool } from "./tools";
 const eventsFor = (taskId: string): Event[] =>
   previewEvents.filter((event) => event.task_id === taskId);
 
+/** A preview task by id. */
+function previewTask(id: string) {
+  const task = previewTasks.find((candidate) => candidate.id === id);
+  assert.ok(task, `${id} is a preview task`);
+
+  return task;
+}
+
 test("a preview task has more events than the activity view keeps", () => {
   const longest = Math.max(
     ...previewTasks.map((task) => eventsFor(task.id).length),
@@ -85,7 +93,7 @@ test("each running preview task ends on a different latest activity", () => {
   const seen = new Set<string>();
 
   for (const [id, status] of Object.entries(expected)) {
-    const task = previewTasks.find((candidate) => candidate.id === id)!;
+    const task = previewTask(id);
     assert.equal(task.status, "running", `${id} is not running`);
     const live = currentActivityStatus(eventsFor(id), task);
     assert.equal(live.text, status, `${id} status line`);
@@ -298,16 +306,14 @@ test("fixture task renaming updates listed titles and validates input", () => {
 });
 
 test("fixture queues reorder, edit and remove in memory behind a left-over steer", () => {
-  const task = previewTasks.find(
-    (candidate) => candidate.id === "preview-paused",
-  )!;
+  const task = previewTask("preview-paused");
 
   const original = structuredClone(task.queue);
 
   const order = () =>
     (previewTool("app_list_tasks") as { tasks: Task[] }).tasks
-      .find((entry) => entry.id === task.id)!
-      .queue.map((m) => m.id);
+      .find((entry) => entry.id === task.id)
+      ?.queue.map((m) => m.id);
 
   const call = (name: string, args: Record<string, unknown>) =>
     previewTool(name, { task_id: task.id, ...args });
@@ -346,9 +352,8 @@ test("fixture queues reorder, edit and remove in memory behind a left-over steer
 });
 
 test("fixture sends queue or steer a busy task in memory, never starting a turn", () => {
-  const find = (id: string) => previewTasks.find((task) => task.id === id)!;
-  const running = find("preview-steering");
-  const input = find("preview-input");
+  const running = previewTask("preview-steering");
+  const input = previewTask("preview-input");
 
   const saved = [running, input].map((task) => ({
     task,
@@ -366,9 +371,10 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
   try {
     const queued = send(running, "queue");
     assert.equal(queued.state, "queued");
-    assert.equal(running.queue.at(-1)!.id, queued.message_id);
-    assert.equal(running.queue.at(-1)!.message, "To preview-steering by queue");
-    const message = { ...running.queue.at(-1)! };
+    const message = running.queue.at(-1);
+    assert.ok(message);
+    assert.equal(message.id, queued.message_id);
+    assert.equal(message.message, "To preview-steering by queue");
 
     previewTool("app_steer_queued_message", {
       task_id: running.id,
@@ -388,7 +394,7 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
 
     const steered = send(running, "steer");
     assert.equal(steered.state, "started");
-    assert.equal(running.pending_steers.at(-1)!.id, steered.message_id);
+    assert.equal(running.pending_steers.at(-1)?.id, steered.message_id);
     assert.throws(() => send(running, "interrupt"), /Design preview only/);
     assert.throws(() => send(input, "steer"), /waiting for input/);
     assert.equal(send(input, "queue").state, "queued");
@@ -397,13 +403,13 @@ test("fixture sends queue or steer a busy task in memory, never starting a turn"
       () =>
         previewTool("app_steer_queued_message", {
           task_id: input.id,
-          message_id: input.queue.at(-1)!.id,
+          message_id: input.queue.at(-1)?.id,
         }),
       /busy and accepts input/,
     );
 
     assert.throws(
-      () => send(find("preview-paused"), "queue"),
+      () => send(previewTask("preview-paused"), "queue"),
       /Design preview only/,
     );
   } finally {
@@ -435,7 +441,7 @@ test("successful budget updates can be enabled for preview fixtures", () => {
   ] as const;
 
   for (const { id, raise, raised } of cases) {
-    const task = previewTasks.find((candidate) => candidate.id === id)!;
+    const task = previewTask(id);
     const originalBudget = { ...task.budget };
     const originalRaise = task.budget_raised_for_turn;
 
@@ -507,7 +513,7 @@ test("the Claude unavailable option reports the worker not ready and skips its m
 
   assert.ok(unavailable);
   assert.equal(unavailable.readiness.ready, false);
-  assert.match(unavailable.readiness.message!, /older than the supported/);
+  assert.match(unavailable.readiness.message ?? "", /older than the supported/);
   assert.equal(unavailable.models, undefined);
 
   // The fixtures repeat the supported range, which must follow the service's.
@@ -517,5 +523,5 @@ test("the Claude unavailable option reports the worker not ready and skips its m
     assert.equal(worker.readiness.details.supported_versions, range);
   }
 
-  assert.ok(unavailable.readiness.message!.includes(range));
+  assert.ok(unavailable.readiness.message?.includes(range));
 });

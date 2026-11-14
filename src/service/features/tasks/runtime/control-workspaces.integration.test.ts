@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { test, vi } from "vitest";
 
-import { input, setup, until } from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 
 test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
   const { c, store, repo, dir } = await setup();
@@ -47,7 +47,12 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
 
     const bad = await c.start("alice", input(repo));
     await until(() => store.get(bad.id, "alice").status === "failed");
-    assert.match(store.get(bad.id, "alice").error!, /Invalid worktree branch/);
+
+    assert.match(
+      store.get(bad.id, "alice").error ?? "",
+      /Invalid worktree branch/,
+    );
+
     assert.equal(store.get(bad.id, "alice").workspace, undefined);
   } finally {
     await c.close();
@@ -92,7 +97,8 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     );
 
     // Uncommitted work is listed, not discarded, until the user confirms.
-    await writeFile(join(t.workspace!, "draft.txt"), "draft\n");
+    assert.ok(t.workspace);
+    await writeFile(join(t.workspace, "draft.txt"), "draft\n");
 
     assert.deepEqual(await c.removeWorktree("alice", t.id), {
       status: "uncommitted",
@@ -147,7 +153,8 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     await c.removeWorktree("alice", paused.id);
     await c.send("alice", paused.id, "Carry on", "user");
     await until(() => store.get(paused.id, "alice").status === "completed");
-    assert.ok(existsSync(store.get(paused.id, "alice").workspace!));
+    const resumed = store.get(paused.id, "alice").workspace;
+    assert.ok(resumed && existsSync(resumed));
     await c.removeWorktree("alice", paused.id);
     await c.deleteBranch("alice", paused.id);
     await c.send("alice", paused.id, "Once more", "user");
@@ -155,9 +162,10 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     await until(() => store.get(paused.id, "alice").status === "completed");
     const recreated = store.get(paused.id, "alice");
     assert.equal(branches(), recreated.branch);
+    assert.ok(recreated.workspace);
 
     assert.equal(
-      execFileSync("git", ["-C", recreated.workspace!, "rev-parse", "HEAD"])
+      execFileSync("git", ["-C", recreated.workspace, "rev-parse", "HEAD"])
         .toString()
         .trim(),
       recreated.base_commit,
@@ -176,7 +184,8 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
 });
 
 test("a task is deleted in any state with everything related to it", async () => {
-  const { c, store, repo } = await setup();
+  const provider = new TestProvider();
+  const { c, store, repo } = await setup(provider);
 
   const git = (...args: string[]) =>
     execFileSync("git", ["-C", repo, ...args])
@@ -188,7 +197,7 @@ test("a task is deleted in any state with everything related to it", async () =>
 
   const sessions: string[] = [];
 
-  c.providers.get("fixture")!.deleteSession = async (t) => {
+  provider.deleteSession = async (t) => {
     sessions.push(t.id);
   };
 
@@ -254,10 +263,10 @@ test("a task is deleted in any state with everything related to it", async () =>
 });
 
 test("tasks without a recorded session leave session deletion available for the rest", async () => {
-  const { c, store, repo } = await setup();
+  const fixture = new TestProvider();
+  const { c, store, repo } = await setup(fixture);
   const sessions: string[] = [];
-  const fixture = c.providers.get("fixture")!;
-  const verify = fixture.sessionDeletionStatus!.bind(fixture);
+  const verify = fixture.sessionDeletionStatus.bind(fixture);
 
   fixture.deleteSession = async (t) => {
     sessions.push(t.id);
@@ -308,7 +317,8 @@ test("tasks without a recorded session leave session deletion available for the 
 });
 
 test("deletion locks execution and duplicate cleanup until it finishes", async () => {
-  const { c, store, repo } = await setup();
+  const provider = new TestProvider();
+  const { c, store, repo } = await setup(provider);
   let release!: () => void;
 
   const pending = new Promise<void>((resolve) => {
@@ -317,7 +327,7 @@ test("deletion locks execution and duplicate cleanup until it finishes", async (
 
   let deleting = false;
 
-  c.providers.get("fixture")!.deleteSession = async () => {
+  provider.deleteSession = async () => {
     deleting = true;
     await pending;
   };
@@ -396,13 +406,14 @@ test("deleting a task keeps a worktree outside the managed folder and its branch
     await until(() => store.get(task.id, "alice").status === "completed");
     const moved = store.get(task.id, "alice");
     const outside = join(dir, "outside-worktree");
+    assert.ok(moved.workspace);
 
     execFileSync("git", [
       "-C",
       repo,
       "worktree",
       "move",
-      moved.workspace!,
+      moved.workspace,
       outside,
     ]);
 
@@ -432,12 +443,14 @@ test("changed worktree targets refuse reviewed deletion and keep repurposed chec
     const task = await c.start("alice", input(repo));
     await until(() => store.get(task.id, "alice").status === "completed");
     const stopped = store.get(task.id, "alice");
+    const { workspace, branch } = stopped;
+    assert.ok(workspace && branch);
     const reviewed = await c.workspaces.deletion(stopped);
 
     const commit = (message: string) => {
       execFileSync("git", [
         "-C",
-        stopped.workspace!,
+        workspace,
         "-c",
         "user.name=Test",
         "-c",
@@ -456,44 +469,28 @@ test("changed worktree targets refuse reviewed deletion and keep repurposed chec
       /Worktree or branch changed/,
     );
 
-    assert.equal(existsSync(stopped.workspace!), true);
+    assert.equal(existsSync(workspace), true);
     assert.equal(await c.workspaces.branchExists(stopped), true);
 
-    execFileSync("git", [
-      "-C",
-      stopped.workspace!,
-      "checkout",
-      "-qb",
-      "user-work",
-    ]);
+    execFileSync("git", ["-C", workspace, "checkout", "-qb", "user-work"]);
 
     await assert.rejects(
       c.delete("alice", stopped.id),
       /different branch or repository/,
     );
 
-    assert.equal(existsSync(store.get(stopped.id, "alice").workspace!), true);
+    const kept = store.get(stopped.id, "alice").workspace;
+    assert.ok(kept && existsSync(kept));
     assert.equal(await c.workspaces.branchExists(stopped), true);
 
     assert.equal(
-      execFileSync("git", [
-        "-C",
-        stopped.workspace!,
-        "branch",
-        "--show-current",
-      ])
+      execFileSync("git", ["-C", workspace, "branch", "--show-current"])
         .toString()
         .trim(),
       "user-work",
     );
 
-    execFileSync("git", [
-      "-C",
-      stopped.workspace!,
-      "checkout",
-      "-q",
-      stopped.branch!,
-    ]);
+    execFileSync("git", ["-C", workspace, "checkout", "-q", branch]);
 
     const approved = await c.workspaces.deletion(stopped);
     const inspect = c.workspaces.deletion.bind(c.workspaces);
@@ -513,7 +510,7 @@ test("changed worktree targets refuse reviewed deletion and keep repurposed chec
         /branch changed during cleanup/,
       );
 
-      assert.equal(existsSync(stopped.workspace!), false);
+      assert.equal(existsSync(workspace), false);
       assert.equal(await c.workspaces.branchExists(stopped), true);
     } finally {
       inspection.mockRestore();

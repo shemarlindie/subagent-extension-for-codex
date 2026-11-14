@@ -201,8 +201,8 @@ test("the large-file fixture's changes come in pages and its files read whole", 
 
   assert.equal(
     content,
-    largeFiles().find((file) => file.path === "reports/module-sizes.csv")!
-      .content,
+    largeFiles().find((file) => file.path === "reports/module-sizes.csv")
+      ?.content,
   );
 });
 

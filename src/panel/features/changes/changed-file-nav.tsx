@@ -22,13 +22,18 @@ export function ChangedFileNav({ task, path }: ChangedFileNavProps) {
   // Opened from a reload before the changes were read, or the file is gone.
   if (index < 0) return null;
 
+  const showAt = (position: number) => {
+    const next = entries[position];
+    if (next) controller.showChangedFile(next.file.path);
+  };
+
   return (
     <StepNav
       label="Changed files"
       noun="file"
       index={index}
       count={entries.length}
-      onStep={(step) => controller.showChangedFile(entries[step]!.file.path)}
+      onStep={showAt}
     />
   );
 }

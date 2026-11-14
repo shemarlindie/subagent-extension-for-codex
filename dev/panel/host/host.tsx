@@ -283,7 +283,8 @@ export function Host() {
   ]);
 
   useEffect(() => {
-    const iframe = frame.current!;
+    const iframe = frame.current;
+    if (!iframe) return;
     const current = { ...settings };
 
     const capabilities: McpUiHostCapabilities = {
@@ -413,10 +414,12 @@ export function Host() {
         ).result;
 
         if (name === "app_rename_project") {
-          projectEdits.current.names = {
-            ...projectEdits.current.names,
-            [changed.repository]: changed.name!,
-          };
+          if (changed.name) {
+            projectEdits.current.names = {
+              ...projectEdits.current.names,
+              [changed.repository]: changed.name,
+            };
+          }
         } else {
           projectEdits.current = removeFixtureProject(
             projectEdits.current,

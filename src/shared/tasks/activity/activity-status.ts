@@ -6,6 +6,7 @@ import {
   activityFailed,
   activityKind,
   type ActivityState,
+  lastEvent,
   sentence,
   statusTitle,
   taskEventStates,
@@ -49,7 +50,7 @@ export function currentActivityStatus(
 
   const active = groups
     .filter((g) => g.state === "running")
-    .sort((a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id)
+    .sort((a, b) => lastEvent(a.events).id - lastEvent(b.events).id)
     .at(-1);
 
   const latest = sorted.findLast((e) => {
@@ -74,7 +75,7 @@ export function currentActivityStatus(
     );
   });
 
-  if (latest && (!active || latest.id > active.events.at(-1)!.id)) {
+  if (latest && (!active || latest.id > lastEvent(active.events).id)) {
     const kind = activityKind(latest);
 
     if (kind === "agent.input_required") {

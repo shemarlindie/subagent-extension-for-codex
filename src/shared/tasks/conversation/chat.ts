@@ -70,14 +70,27 @@ const isCompaction = (e: Event) => {
   return e.presentation?.kind === "compact_boundary";
 };
 
-function note(e: Event): ChatNote | undefined {
-  const base = {
-    kind: "note" as const,
-    id: `evt_${e.id}`,
-    event_id: e.id,
-    timestamp: e.timestamp,
-  };
+const noteFields = (e: Event) => ({
+  kind: "note" as const,
+  id: `evt_${e.id}`,
+  event_id: e.id,
+  timestamp: e.timestamp,
+});
 
+/** The note for a failure that no turn outcome shows. */
+function failureNote(
+  e: Event,
+  failed: Pick<Task, "error_code" | "error">,
+): ChatNote {
+  return {
+    ...noteFields(e),
+    note: "failure",
+    text: `Task failed: ${failureMessage(failed) ?? "Unknown error"}`,
+  };
+}
+
+function note(e: Event): ChatNote | undefined {
+  const base = noteFields(e);
   const session = eventPayload(e, "task.session_started");
 
   if (session) {
@@ -108,14 +121,7 @@ function note(e: Event): ChatNote | undefined {
   if (limited) return { ...base, note: "limited", text: limited.reason };
 
   const failed = eventPayload(e, "task.failed");
-
-  if (failed) {
-    return {
-      ...base,
-      note: "failure",
-      text: `Task failed: ${failureMessage(failed) ?? "Unknown error"}`,
-    };
-  }
+  if (failed) return failureNote(e, failed);
 
   if (isCompaction(e)) {
     return { ...base, note: "compaction", text: "Context compacted" };
@@ -163,6 +169,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
 
   for (const e of sorted) {
     const turnEnded = eventPayload(e, "task.turn_ended");
+    const failed = eventPayload(e, "task.failed");
 
     if (turnEnded) {
       flush(e.id);
@@ -180,15 +187,15 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
 
       items.push(outcome);
       failedOutcome = outcome.outcome === "failed" ? outcome : undefined;
-    } else if (eventPayload(e, "task.failed")) {
+    } else if (failed) {
       if (failedOutcome) {
-        failedOutcome.error = failureMessage(eventPayload(e, "task.failed")!);
+        failedOutcome.error = failureMessage(failed);
 
         // A read after the outcome row gets it again, with its error.
         failedOutcome.event_id = e.id;
       } else {
         flush(e.id);
-        items.push(note(e)!);
+        items.push(failureNote(e, failed));
       }
 
       failedOutcome = undefined;

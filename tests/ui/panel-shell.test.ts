@@ -3,6 +3,7 @@ import { expect } from "vitest";
 
 import { LOADING_SKELETON_CONFIG } from "../../src/panel/shared/components/loading-skeleton/loading-skeleton-config";
 import { MOTION } from "../../src/panel/shared/components/motion/motion-utils";
+import { getElement } from "../../src/panel/shared/utils/dom-test-harness";
 import {
   act,
   assert,
@@ -39,7 +40,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
     },
   );
 
-  const header = () => document.querySelector(".task-header")!;
+  const header = () => getElement(document, ".task-header");
 
   assert.ok(!header().textContent?.includes(literal));
   assertAbsent(header().querySelector(".notice, img"));

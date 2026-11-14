@@ -143,7 +143,8 @@ test("fixture events match what the provider derives from their SDK message", ()
   >();
 
   for (const siblings of responses.values()) {
-    const event = siblings[0]!;
+    const [event] = siblings;
+    assert.ok(event);
     let normalize = normalizers.get(event.task_id);
 
     if (!normalize) {
@@ -185,7 +186,8 @@ test("fixture events match what the provider derives from their SDK message", ()
         };
       };
 
-      const candidate = derived[index]!;
+      const candidate = derived[index];
+      assert.ok(candidate);
 
       assert.deepEqual(
         JSON.parse(JSON.stringify(clean(candidate.type, candidate.data))),

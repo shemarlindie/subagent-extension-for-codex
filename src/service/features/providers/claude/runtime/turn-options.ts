@@ -104,7 +104,8 @@ export async function claudeTurnOptions(
   const policy = taskOptions.claude_policy;
   const nativeMode = taskOptions.permission_mode;
 
-  const workspace = c.task.workspace!;
+  const { workspace } = c.task;
+  if (!workspace) throw new Error("The task has no workspace.");
   const adminToken = await claudeAdminToken();
   const attachments = c.attachments;
 

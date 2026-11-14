@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import {
   applyPatch,
   diffLines,
@@ -17,13 +19,12 @@ function patch(before: string, after: string, context = 3) {
 
 function composeVersions(versions: string[], created = false, context = 3) {
   let hunks: Hunk[] = [];
+  const [first = "", ...later] = versions;
+  let previous = first;
 
-  for (let index = 1; index < versions.length; index++) {
-    hunks = composeHunks(
-      hunks,
-      patch(versions[index - 1]!, versions[index]!, context),
-      created,
-    );
+  for (const version of later) {
+    hunks = composeHunks(hunks, patch(previous, version, context), created);
+    previous = version;
   }
 
   return hunks;
@@ -145,7 +146,8 @@ describe("composeHunks", () => {
   });
 
   it("rejects malformed hunk bodies and overlapping coordinates (C5)", () => {
-    const hunk = patch("old\n", "new\n")[0]!;
+    const [hunk] = patch("old\n", "new\n");
+    assert.ok(hunk);
 
     expect(() => composeHunks([], [{ ...hunk, oldLines: 2 }])).toThrow(
       /counts/u,
@@ -243,7 +245,8 @@ function runFuzz(context: number, created: boolean, repeated: boolean) {
       let next: string;
 
       if (random() < 0.15) {
-        const version = versions[pick(versions.length)]!;
+        const version = versions[pick(versions.length)];
+        assert.ok(version);
         lines = version.lines;
         next = version.text;
       } else {

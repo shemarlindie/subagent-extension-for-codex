@@ -20,6 +20,24 @@ import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
+/** The session cookie a login response sets, ready for a Cookie header. */
+export function sessionCookie(login: Response) {
+  const [cookie] = login.headers.get("set-cookie")?.split(";") ?? [];
+  assert.ok(cookie, "The login sets a session cookie");
+
+  return cookie;
+}
+
+/** The JSON body of an MCP response, sent as plain JSON or as one SSE event. */
+export function mcpResponseJson(text: string) {
+  if (!text.startsWith("event:")) return JSON.parse(text);
+
+  const data = text.split("\n").find((line) => line.startsWith("data:"));
+  assert.ok(data, "The event has a data line");
+
+  return JSON.parse(data.slice(5));
+}
+
 // Panel tools return loosely shaped structured content; tests narrow each field.
 export const panel = (response: object) =>
   (response as { structuredContent?: unknown }).structuredContent as
@@ -130,14 +148,18 @@ export async function httpFixture(t: TestContext) {
 
   const opener = tools.tools.find(
     (t) => t.name === "open_subagent_extension_for_codex",
-  )!;
+  );
+
+  assert.ok(opener);
 
   const readUi = () =>
     client.readResource({ uri: (opener._meta as any).ui.resourceUri });
 
   const globalOpener = tools.tools.find(
     (tool) => tool.name === "app_open_subagent_extension_for_codex_global",
-  )!;
+  );
+
+  assert.ok(globalOpener);
 
   const ambientMeta = {
     threadId: "ambient-thread",

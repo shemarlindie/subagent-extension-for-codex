@@ -17,6 +17,7 @@ import type {
 } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { Control } from "../../features/tasks/runtime/control.js";
+import { pendingInput } from "../../features/tasks/runtime/control-test-harness.js";
 import { sendRef } from "../../features/tasks/runtime/timing.js";
 import { captureTiming } from "../../features/tasks/runtime/timing-test-harness.js";
 import { TurnCheckpoints } from "../../features/tasks/runtime/turn-checkpoints-test-harness.js";
@@ -146,8 +147,10 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
       from: "parent",
     });
 
-    assert.match(all.messages.at(-1)!.text, /Fixture task completed/);
-    assert.equal(all.messages.at(-1)!.kind, "reply");
+    const last = all.messages.at(-1);
+    assert.ok(last);
+    assert.match(last.text, /Fixture task completed/);
+    assert.equal(last.kind, "reply");
     assert.equal(all.running, false);
 
     // Nothing after the cursor: an immediate read is empty, and a wait
@@ -488,7 +491,7 @@ test("undo restores removed queued messages with their identity, and never start
 
     await user("app_submit_input", {
       task_id: t.id,
-      request_id: store.get(t.id, "alice").pending_input!.id,
+      request_id: pendingInput(store, t.id).id,
       approved: true,
       input: { answers: {} },
     });
@@ -728,7 +731,8 @@ test("an update wait returns the panel view as of its revision, except for draft
     // Without after, it returns at once.
     const first = await wait({ view: parts });
     assert.equal(first.revision, store.revision("alice"));
-    const { built_at: builtAt, ...view } = first.view!;
+    assert.ok(first.view);
+    const { built_at: builtAt, ...view } = first.view;
     assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
 
     assert.deepEqual(view.projects, await user("list_projects", {}));
@@ -793,7 +797,7 @@ test("an update wait returns the panel view as of its revision, except for draft
       },
     });
 
-    assert.deepEqual(Object.keys(missing.view!).sort(), [
+    assert.deepEqual(Object.keys(missing.view ?? {}).sort(), [
       "built_at",
       "list",
       "pending",

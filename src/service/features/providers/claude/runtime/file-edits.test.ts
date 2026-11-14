@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { applyPatch, structuredPatch } from "diff";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -77,15 +79,16 @@ afterEach(() => vi.restoreAllMocks());
 
 test("M1/M3 captured subagent Write and skipped Git diff preserve their recording outcomes", () => {
   const [subagent, skipped] = capturedHooks.cases;
+  assert.ok(subagent && skipped);
 
-  expect(claudeFileEdits(subagent!.tool, subagent!.response)).toMatchObject({
+  expect(claudeFileEdits(subagent.tool, subagent.response)).toMatchObject({
     edits: [
       { path: "/demo/project/subagent.txt", created: true, source: "tool" },
     ],
     unrecorded: [],
   });
 
-  expect(claudeFileEdits(skipped!.tool, skipped!.response)).toEqual({
+  expect(claudeFileEdits(skipped.tool, skipped.response)).toEqual({
     edits: [],
     unrecorded: [undefined],
   });
@@ -191,10 +194,13 @@ test("M1/M3 captured CLI 2.1.300 responses map text edits and binary omissions",
   // Read-only git status returned no bashEditDiff, so it adds no warning.
   expect(mapped[7]).toEqual({ edits: [], unrecorded: [] });
 
+  const [edited] = mapped[2]?.edits ?? [];
+  assert.ok(edited);
+
   expect(
     applyPatch("one\ntwo\nthree\n", {
       ...structuredPatch("", "", "one\ntwo\nthree\n", "one\n2\nthree\n"),
-      hunks: mapped[2]!.edits[0]!.hunks,
+      hunks: edited.hunks,
     }),
   ).toBe("one\n2\nthree\n");
 });
@@ -244,11 +250,14 @@ test.each(["Write", "Edit"])(
 );
 
 test("M1 Edit creation uses the empty original string and does not need all file content", () => {
+  const [, created] = bashResponse.bashEditDiff.files;
+  assert.ok(created);
+
   const result = claudeFileEdits("Edit", {
     ...edit,
     originalFile: "",
     oldString: "",
-    structuredPatch: bashResponse.bashEditDiff.files[1]!.hunks,
+    structuredPatch: created.hunks,
     contentNotInModelContext: true,
   });
 
@@ -291,10 +300,13 @@ test("M1 NotebookEdit computes a three-context diff of the entire notebook JSON"
     },
   ]);
 
+  const [recorded] = result.edits;
+  assert.ok(recorded);
+
   expect(
     applyPatch(original, {
       ...structuredPatch("", "", original, updated),
-      hunks: result.edits[0]!.hunks,
+      hunks: recorded.hunks,
     }),
   ).toBe(updated);
 });

@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { describe, expect, it } from "vitest";
 
 import type { ModelScope, SettingSection } from "../settings-layout";
@@ -89,13 +91,14 @@ describe("settings search matching", () => {
 
     const search = settingsSearch("researcher");
 
-    expect(
-      search.rowMatch(section, { ...row, label: "Researcher" })?.score,
-    ).toBeLessThan(search.rowMatch(section, { ...row, options: [] })!.score);
+    const labelled = search.rowMatch(section, { ...row, label: "Researcher" });
+    const unlabelled = search.rowMatch(section, { ...row, options: [] });
+    const plain = search.rowMatch(section, { ...choice, options: [] });
+    const chosen = search.rowMatch(section, choice);
+    assert.ok(labelled && unlabelled && plain && chosen);
 
-    expect(
-      search.rowMatch(section, { ...choice, options: [] })?.score,
-    ).toBeGreaterThan(search.rowMatch(section, choice)!.score);
+    expect(labelled.score).toBeLessThan(unlabelled.score);
+    expect(plain.score).toBeGreaterThan(chosen.score);
   });
 
   it("finds a read-only facts section as one result", () => {

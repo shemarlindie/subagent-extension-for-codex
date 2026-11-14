@@ -152,7 +152,10 @@ export async function startedTask(transport: FakeTransport) {
     ),
   );
 
-  return transport.calls.find((call) => call.name === "start_task")!;
+  const call = transport.calls.find(({ name }) => name === "start_task");
+  assert.ok(call);
+
+  return call;
 }
 
 export class FakeTransport implements Transport {
@@ -661,7 +664,7 @@ export const scope = (
   label: string,
   options?: { value: string; label: string; description?: string }[],
 ) => ({
-  id: path.split(".").at(-1)!,
+  id: path.split(".").at(-1) ?? path,
   label,
   model: { path: `${path}.model`, label: `${label} model`, options },
   effort: {

@@ -9,6 +9,7 @@ import type { RunContext } from "../../providers/types.js";
 import {
   eventData,
   input,
+  pendingInput,
   PromptRecorder,
   setup,
   TestProvider,
@@ -24,7 +25,7 @@ test("fixture invalid-session marker triggers the normal continuation recovery p
   );
 
   await until(() => store.get(t.id, "alice").status === "completed");
-  assert.match(store.get(t.id, "alice").session_state_ref!, /:invalid$/);
+  assert.match(store.get(t.id, "alice").session_state_ref ?? "", /:invalid$/);
 
   await c.send("alice", t.id, "Continue", "user");
   await until(() => store.get(t.id, "alice").turn === 2);
@@ -37,7 +38,9 @@ test("fixture invalid-session marker triggers the normal continuation recovery p
     { reason: "session_unavailable" },
   );
 
-  assert.doesNotMatch(store.get(t.id, "alice").session_state_ref!, /:invalid$/);
+  const fresh = store.get(t.id, "alice").session_state_ref;
+  assert.ok(fresh);
+  assert.doesNotMatch(fresh, /:invalid$/);
   await c.close();
 });
 
@@ -45,7 +48,7 @@ test("human input is durable and stale input IDs are rejected", async () => {
   const { c, store, repo } = await setup();
   const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
-  const request = store.get(t.id, "alice").pending_input!;
+  const request = pendingInput(store, t.id);
   assert.throws(() => c.input("alice", t.id, "stale", true));
 
   c.input("alice", t.id, request.id, true, {
@@ -69,7 +72,7 @@ test("interrupt preserves the session, and a follow-up resumes it with only the 
   await c.send("alice", t.id, "Carry on [input]", "parent");
   await until(() => !!store.get(t.id, "alice").pending_input);
 
-  c.input("alice", t.id, store.get(t.id, "alice").pending_input!.id, true, {
+  c.input("alice", t.id, pendingInput(store, t.id).id, true, {
     answer: "yes",
   });
 
@@ -227,7 +230,8 @@ test("cost counts each turn once, though a resumed session reports its running t
   await c.send("alice", t.id, "Again", "user");
   await until(() => store.get(t.id, "alice").turn === 3);
   await until(() => store.get(t.id, "alice").status === "completed");
-  assert.ok(Math.abs(store.get(t.id, "alice").cost_usd! - 1.1) < 1e-9);
+  const cost = store.get(t.id, "alice").cost_usd;
+  assert.ok(cost !== undefined && Math.abs(cost - 1.1) < 1e-9);
   await c.close();
 });
 
@@ -258,7 +262,7 @@ test("a message whose turn never sent its prompt reaches the next turn", async (
   await c.send("alice", t.id, "Second", "parent");
   await until(() => store.get(t.id, "alice").status === "completed");
 
-  const prompt = provider.prompts.at(-1)!;
+  const prompt = provider.prompts.at(-1) ?? "";
   assert.match(prompt, /First/);
   assert.match(prompt, /Second/);
 
@@ -397,7 +401,7 @@ test("cancelled queued input rejects promptly without bypassing the active permi
       () => queuedRejected && !!store.get(task.id, "alice").pending_input,
     );
 
-    const first = store.get(task.id, "alice").pending_input!;
+    const first = pendingInput(store, task.id);
     assert.equal(first.input.command, "first");
     assert.equal(firstApproved, false);
     c.input("alice", task.id, first.id, true);
@@ -409,12 +413,7 @@ test("cancelled queued input rejects promptly without bypassing the active permi
 
     assert.throws(() => c.input("alice", task.id, first.id, true), /stale/);
 
-    c.input(
-      "alice",
-      task.id,
-      store.get(task.id, "alice").pending_input!.id,
-      false,
-    );
+    c.input("alice", task.id, pendingInput(store, task.id).id, false);
 
     await until(() => store.get(task.id, "alice").status === "completed");
     assert.equal(firstApproved, true);
@@ -505,13 +504,12 @@ test("runtime budget expiry retains recorded edits", async () => {
   const provider = new TestProvider();
 
   provider.run = async (context) => {
-    await writeFile(
-      join(context.task.workspace!, "before-budget.txt"),
-      "written\n",
-    );
+    assert.ok(context.task.workspace);
+    const path = join(context.task.workspace, "before-budget.txt");
+    await writeFile(path, "written\n");
 
     context.fileChanged({
-      path: join(context.task.workspace!, "before-budget.txt"),
+      path,
       hunks: structuredPatch("", "", "", "written\n").hunks,
       created: true,
       source: "tool",

@@ -21,7 +21,9 @@ export function reducedMotion(element?: Element | null) {
 }
 
 // Without the Web Animations API (or with reduced motion), changes apply at once.
-export function canAnimate(element: Element | null | undefined) {
+export function canAnimate(
+  element: Element | null | undefined,
+): element is HTMLElement {
   return (
     !!element &&
     typeof (element as HTMLElement).animate === "function" &&

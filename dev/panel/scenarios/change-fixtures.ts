@@ -292,7 +292,8 @@ export const previewChanges: Partial<Record<string, () => ChangeFixture>> = {
 
   // 60 files and about 7,000 changed lines, with a rename and a deletion.
   "preview-build": (): ChangeFixture => {
-    const diff = largeFiles().find((file) => file.path === "changes.diff")!;
+    const diff = largeFiles().find((file) => file.path === "changes.diff");
+    if (!diff) throw new Error("The large file fixtures have no changes.diff.");
 
     return { base: preimage(diff.content), turns: [{ patch: diff.content }] };
   },

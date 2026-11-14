@@ -57,7 +57,7 @@ export function ProjectArchive({
     );
 
     const archived = listed.sort((a, b) =>
-      b.archived_at!.localeCompare(a.archived_at!),
+      (b.archived_at ?? "").localeCompare(a.archived_at ?? ""),
     );
 
     setTasks(archived);

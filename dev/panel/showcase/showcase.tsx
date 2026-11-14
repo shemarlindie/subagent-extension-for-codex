@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 
 import { CodexThread } from "./codex/codex-thread";
 import { threadAt } from "./playback";
-import { story, storyAt, type StoryMoment } from "./story";
+import { story, storyAt, storyClock, type StoryMoment } from "./story";
 import { StoryFeed } from "./story-feed";
 import { StoryPanel, type Theme } from "./story-panel";
 import { usePlayback } from "./use-playback";
@@ -18,6 +18,10 @@ type Frame = { step: number; theme: Theme; capture: boolean; play: boolean };
 
 /** The panel loads behind its closed pane with the task Codex opens it on. */
 const preload: StoryMoment = { step: story.findIndex((s) => s.panel) };
+
+/** A still's position in the story and its step's label. */
+const stillCaption = (step: number) =>
+  `${step + 1}/${story.length} · ${story[step]?.label ?? ""}`;
 
 function readFrame(): Frame {
   const params = new URLSearchParams(location.search);
@@ -53,7 +57,7 @@ export function Showcase() {
   const split = Boolean(shown && !scene?.embed);
   const [feed] = useState(() => new StoryFeed(moment));
   // The panel's clock, a few seconds after the latest event it shows.
-  const now = storyAt(moment)!.now;
+  const now = storyClock(moment);
   // Stills relaunch the panel each step, so a frame never depends on the last
   // one. Playback keeps it open, relaunching only as the story starts over.
   const launch = playback ? `loop-${playback.loop}` : `step-${step}`;
@@ -114,11 +118,7 @@ export function Showcase() {
           >
             ‹
           </button>
-          <span>
-            {play
-              ? "Playing"
-              : `${step + 1}/${story.length} · ${story[step]!.label}`}
-          </span>
+          <span>{play ? "Playing" : stillCaption(step)}</span>
           <button
             type="button"
             disabled={play || step === story.length - 1}

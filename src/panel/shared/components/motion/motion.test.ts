@@ -22,6 +22,12 @@ type Call = {
   animation: { onfinish: (() => void) | null; cancel(): void };
 };
 
+/** Runs an animation's finish handler, as the browser would when it ends. */
+function finish(call: Call) {
+  assert.ok(call.animation.onfinish, "The animation has a finish handler");
+  call.animation.onfinish();
+}
+
 // jsdom has no Web Animations API; record calls so tests can finish them by hand.
 function mockMotion(t: { onTestFinished(fn: () => void): void }) {
   const calls: Call[] = [];
@@ -54,6 +60,12 @@ function mockMotion(t: { onTestFinished(fn: () => void): void }) {
 
   return {
     calls,
+    latest() {
+      const call = calls.at(-1);
+      assert.ok(call, "An animation started");
+
+      return call;
+    },
     reduce() {
       reduced = true;
     },
@@ -82,13 +94,13 @@ test("Presence keeps the last content inert until its exit finishes", (t) => {
     "Exiting content cannot be interacted with",
   );
 
-  const exit = motion.calls.at(-1)!;
+  const exit = motion.latest();
   expect(exit.element).toBe(element);
-  act(() => exit.animation.onfinish!());
+  act(() => finish(exit));
   expect(view.container.querySelector(".notice")).toBeNull();
 
   view.rerender(notice(true, "Claude has a question"));
-  const entrance = motion.calls.at(-1)!;
+  const entrance = motion.latest();
   assert.equal(entrance.element.textContent, "Claude has a question");
 });
 
@@ -137,9 +149,9 @@ test("useAnimatedHeight skips mounting and animates subsequent size changes", (t
   const view = render(createElement(Grow, { open: false }));
   assert.equal(motion.calls.length, 0, "Mounting does not animate");
   view.rerender(createElement(Grow, { open: true }));
-  const grow = motion.calls.at(-1)!;
+  const grow = motion.latest();
   assert.equal(motion.calls.length, 1);
-  act(() => grow.animation.onfinish!());
+  act(() => finish(grow));
   view.rerender(createElement(Grow, { open: false }));
   assert.equal(motion.calls.length, 2);
 });
@@ -160,7 +172,7 @@ test("useAnimatedHeight eases appearing content from zero unless motion is reduc
   render(createElement(Grow, { open: true, appear: true }));
   assert.equal(motion.calls.length, 1);
 
-  expect(motion.calls[0]!.frames.map((frame) => frame.height)).toEqual([
+  expect(motion.calls[0]?.frames.map((frame) => frame.height)).toEqual([
     "0px",
     "120px",
   ]);
@@ -207,7 +219,7 @@ test("useListPresence keeps removed items in place and folds new ones in", (t) =
   assert.equal(exit.element.dataset.row, "b");
   assert.equal(entrance.element.dataset.row, "d");
 
-  act(() => exit.animation.onfinish!());
+  act(() => finish(exit));
   assert.deepEqual(order(), ["a", "c", "d"]);
 
   // A reorder moves rows without folding any.
@@ -220,7 +232,7 @@ test("useListPresence keeps removed items in place and folds new ones in", (t) =
   view.rerender(createElement(List, { items: [] }));
 
   for (const call of motion.calls.slice(count)) {
-    act(() => call.animation.onfinish!());
+    act(() => finish(call));
   }
 
   // The next change drops the finished exits, leaving the list empty.

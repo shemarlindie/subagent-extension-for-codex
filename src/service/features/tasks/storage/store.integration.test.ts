@@ -78,7 +78,7 @@ test("task deletion returns its pages once the database uses incremental vacuum"
   store.eventOpaque(task, "claude.activity", { text: "x".repeat(500_000) });
 
   const pages = () =>
-    store.database.client.prepare("PRAGMA page_count").get()!.page_count;
+    store.database.client.prepare("PRAGMA page_count").get()?.page_count;
 
   const before = pages();
 
@@ -86,8 +86,8 @@ test("task deletion returns its pages once the database uses incremental vacuum"
   assert.ok(Number(pages()) < Number(before));
 
   assert.equal(
-    store.database.client.prepare("PRAGMA freelist_count").get()!
-      .freelist_count,
+    store.database.client.prepare("PRAGMA freelist_count").get()
+      ?.freelist_count,
     0,
   );
 });

@@ -43,7 +43,7 @@ const fixtureEffortLevels: ProviderMetadata["defaultEffortLevels"] = [
   "max",
 ];
 
-const fixturePermissionModes = claudeMetadata.nativePermissions!;
+const fixturePermissionModes = claudeMetadata.nativePermissions;
 
 const fixtureProviderMetadata: ProviderMetadata = {
   ...fixtureMetadata,

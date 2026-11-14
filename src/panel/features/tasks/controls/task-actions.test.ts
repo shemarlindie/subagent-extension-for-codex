@@ -345,8 +345,10 @@ test("undoing a clear restores each message's place, and redo removes only those
   const { actions, context, entries } = setup();
 
   await actions.clearQueue(queued("a", "c"));
-  await entries[0]!.undo();
-  await entries[0]!.redo();
+  const [entry] = entries;
+  assert.ok(entry);
+  await entry.undo();
+  await entry.redo();
 
   expect(context.tool.mock.calls.slice(1)).toEqual([
     [
@@ -384,5 +386,7 @@ test("a refused or failed change leaves nothing to undo, and a failed undo rejec
   await actions.removeQueued(queued("a"), "a");
   fail = true;
 
-  await expect(entries[0]!.undo()).rejects.toThrow("no longer queued");
+  const [entry] = entries;
+  assert.ok(entry);
+  await expect(entry.undo()).rejects.toThrow("no longer queued");
 });

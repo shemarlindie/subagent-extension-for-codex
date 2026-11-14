@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { expect, onTestFinished, test, vi } from "vitest";
 
 import type { ChatRead } from "../../../src/panel/features/tasks/chat/chat-state";
@@ -12,6 +14,21 @@ import {
   liveConversationSnapshot,
   liveConversationTask,
 } from "./live-conversation";
+
+/** The reply streaming at that point, failing the test when there is none. */
+function draftOf({ draft }: { draft?: Draft | null }) {
+  assert.ok(draft, "A reply is streaming");
+
+  return draft;
+}
+
+/** The id of the latest event. */
+function lastEventId(events: { id: number }[]) {
+  const id = events.at(-1)?.id;
+  assert.ok(id, "There are events");
+
+  return id;
+}
 
 test("scheduled activity passes through thinking, responding, tool work and compaction", () => {
   const statusAt = (elapsed: number) => {
@@ -34,20 +51,20 @@ test("the second reply grows under one id and hands off to stored Chat", () => {
   const end = 25_000;
 
   expect(liveConversationSnapshot(start - 1).draft).toBeUndefined();
-  const first = liveConversationSnapshot(start);
-  const growing = liveConversationSnapshot(start + 2000);
-  const last = liveConversationSnapshot(end - 1);
-  expect(first.draft).toBeDefined();
-  expect(growing.draft?.message_id).toBe(first.draft?.message_id);
-  expect(last.draft?.message_id).toBe(first.draft?.message_id);
+  const first = draftOf(liveConversationSnapshot(start));
+  const growing = draftOf(liveConversationSnapshot(start + 2000));
+  const streaming = liveConversationSnapshot(end - 1);
+  const last = draftOf(streaming);
+  expect(growing.message_id).toBe(first.message_id);
+  expect(last.message_id).toBe(first.message_id);
 
-  expect(growing.draft!.text.length).toBeGreaterThan(first.draft!.text.length);
+  expect(growing.text.length).toBeGreaterThan(first.text.length);
 
-  expect(last.draft!.text.startsWith(growing.draft!.text)).toBe(true);
+  expect(last.text.startsWith(growing.text)).toBe(true);
 
   expect(
-    chatItems(last.task, last.events).some(
-      (item) => item.id === last.draft!.message_id,
+    chatItems(streaming.task, streaming.events).some(
+      (item) => item.id === last.message_id,
     ),
   ).toBe(false);
 
@@ -55,21 +72,21 @@ test("the second reply grows under one id and hands off to stored Chat", () => {
   expect(stored.draft).toBeUndefined();
 
   const matching = chatItems(stored.task, stored.events).filter(
-    (item) => item.id === first.draft!.message_id,
+    (item) => item.id === first.message_id,
   );
 
   expect(matching).toHaveLength(1);
 
   expect(matching[0]).toMatchObject({
     kind: "message",
-    message: { text: last.draft!.text },
+    message: { text: last.text },
   });
 
   const finished = liveConversationSnapshot(28_000);
 
   expect(
     chatItems(finished.task, finished.events).filter(
-      (item) => item.id === first.draft!.message_id,
+      (item) => item.id === first.message_id,
     ),
   ).toHaveLength(1);
 });
@@ -81,9 +98,8 @@ test("later loops keep event, message and tool identities distinct", () => {
   expect(new Set(ids).size).toBe(ids.length);
   expect(ids).toEqual([...ids].sort((a, b) => a - b));
 
-  const newEvents = second.events.filter(
-    (event) => event.id > first.events.at(-1)!.id,
-  );
+  const firstLoopEnd = lastEventId(first.events);
+  const newEvents = second.events.filter((event) => event.id > firstLoopEnd);
 
   expect(newEvents.length).toBe(first.events.length);
 
@@ -112,8 +128,8 @@ test("completion restarts cleanly and long-running reads retain three recent tur
   expect(restarted.task).toMatchObject({ status: "running", turn: 2 });
   expect(restarted.draft).toBeUndefined();
 
-  expect(restarted.events.at(-1)!.id).toBeGreaterThan(
-    finished.events.at(-1)!.id,
+  expect(lastEventId(restarted.events)).toBeGreaterThan(
+    lastEventId(finished.events),
   );
 
   expect(restarted.revision).not.toBe(finished.revision);
@@ -166,16 +182,17 @@ test("preview tools share live cursors and replace a growing draft with stored C
   vi.advanceTimersByTime(4000);
   const first = wait();
   const { chat, activity } = view();
-  const cursor = activity.events.at(-1)!.id;
+  const cursor = lastEventId(activity.events);
+  const firstDraft = draftOf(first);
   expect(first.running).toBe(true);
-  expect(first.draft).toBeDefined();
   expect(chat.next_cursor).toBe(cursor);
 
   vi.advanceTimersByTime(2000);
   const growing = wait();
+  const growingDraft = draftOf(growing);
   expect(growing.revision).toBe(first.revision);
-  expect(growing.draft?.message_id).toBe(first.draft?.message_id);
-  expect(growing.draft!.text.length).toBeGreaterThan(first.draft!.text.length);
+  expect(growingDraft.message_id).toBe(firstDraft.message_id);
+  expect(growingDraft.text.length).toBeGreaterThan(firstDraft.text.length);
 
   expect(view(cursor).activity).toMatchObject({ events: [] });
 
@@ -187,7 +204,7 @@ test("preview tools share live cursors and replace a growing draft with stored C
   expect(stored.draft).toBeNull();
   expect(stored.revision).not.toBe(first.revision);
   expect(delta.items).toHaveLength(1);
-  expect(delta.items[0]?.id).toBe(first.draft?.message_id);
+  expect(delta.items[0]?.id).toBe(firstDraft.message_id);
   expect(delta.next_cursor).toBeGreaterThan(chat.next_cursor);
 
   vi.advanceTimersByTime(19_000);

@@ -11,6 +11,7 @@ import {
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
 import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
+import { controlledElement } from "../../../shared/utils/dom-test-harness";
 import { sent, setup } from "./chat-panel-test-harness";
 
 test("Stop explains a pending shutdown", async () => {
@@ -168,7 +169,7 @@ test("while the worker waits for input, Enter and Ctrl+Enter only queue", async 
   );
 });
 
-const questionInput = (id: string): Task["pending_input"] => ({
+const questionInput = (id: string): NonNullable<Task["pending_input"]> => ({
   id,
   tool: "AskUserQuestion",
   kind: "question",
@@ -234,7 +235,8 @@ test("composer expansion and collapse animate directly between their heights wit
   const composerAnimations = () =>
     animations.filter(({ frames }) => frames.some((frame) => frame.height));
 
-  const initialCollapse = composerAnimations().at(-1)!;
+  const initialCollapse = composerAnimations().at(-1);
+  assert.ok(initialCollapse);
 
   act(() => initialCollapse.animation.onfinish?.());
   animations.length = 0;
@@ -440,7 +442,7 @@ test("permission requests auto-hide the composer and restore its draft afterward
 });
 
 test("question toggles preserve the ordinary composer's hidden preference", () => {
-  const pending = questionInput("request")!;
+  const pending = questionInput("request");
 
   const { view, updateTask } = setup({ status: "running" });
   fireEvent.click(view.getByRole("button", { name: "Hide composer" }));
@@ -485,9 +487,7 @@ test("questions collapse the composer while preserving its draft and Stop action
 
   const show = view.getByRole("button", { name: "Show composer (draft)" });
 
-  const controlled = document.getElementById(
-    show.getAttribute("aria-controls")!,
-  );
+  const controlled = controlledElement(show);
 
   assert.ok(controlled);
   fireEvent.click(show);
@@ -501,9 +501,7 @@ test("questions collapse the composer while preserving its draft and Stop action
   const collapse = view.getByRole("button", { name: "Hide composer" });
   const composerBox = composer.closest(".chat-composer-box");
 
-  expect(document.getElementById(collapse.getAttribute("aria-controls")!)).toBe(
-    controlled,
-  );
+  expect(controlledElement(collapse)).toBe(controlled);
 
   expect(collapse.closest(".chat-composer-box")).toBeNull();
   expect(collapse.parentElement).toBe(composerBox?.parentElement);
@@ -522,11 +520,8 @@ test("questions collapse the composer while preserving its draft and Stop action
     view.getByRole("button", { name: "Show composer (draft)" }),
   );
 
-  expect(
-    document.getElementById(
-      document.activeElement!.getAttribute("aria-controls")!,
-    ),
-  ).toBe(controlled);
+  const focused = document.activeElement;
+  expect(focused && controlledElement(focused)).toBe(controlled);
 
   expect(focus.mock.instances.at(-1)).toBe(document.activeElement);
   assert.deepEqual(focus.mock.lastCall, [{ preventScroll: true }]);

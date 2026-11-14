@@ -55,7 +55,8 @@ function event(
   data: Record<string, unknown>,
   id = "one",
 ): ActivityEvent {
-  if (!eventIds.has(id)) eventIds.set(id, eventIds.size + 1);
+  const eventId = eventIds.get(id) ?? eventIds.size + 1;
+  eventIds.set(id, eventId);
 
   const messageData =
     type === "agent.message" || type === "agent.content"
@@ -80,7 +81,7 @@ function event(
       : { ...messageData, content: normalizedContent };
 
   return decodedEvent({
-    id: eventIds.get(id)!,
+    id: eventId,
     task_id: "task",
     timestamp: "2026-10-02T12:00:00.000Z",
     type,

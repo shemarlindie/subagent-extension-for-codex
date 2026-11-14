@@ -10,6 +10,7 @@ import {
 } from "../../../../../shared/providers/claude/permissions.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import {
+  askPermission,
   captureOptions,
   claudeOptions,
   context,
@@ -68,19 +69,21 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   }, readyClaudeCli);
 
   assert.deepEqual(await provider.run(c, "Review"), { reply });
-  assert.equal(options!.cwd, c.task.workspace);
-  assert.equal(options!.resume, "existing-session");
-  assert.equal(options!.maxBudgetUsd, 4);
+  assert.ok(options);
+  assert.equal(options.cwd, c.task.workspace);
+  assert.equal(options.resume, "existing-session");
+  assert.equal(options.maxBudgetUsd, 4);
 
-  assert.deepEqual(options!.settingSources, ["user", "project", "local"]);
-  assert.equal(options!.strictMcpConfig, undefined);
-  assert.equal(options!.mcpServers, undefined);
+  assert.deepEqual(options.settingSources, ["user", "project", "local"]);
+  assert.equal(options.strictMcpConfig, undefined);
+  assert.equal(options.mcpServers, undefined);
 
-  assert.equal(options!.allowedTools, undefined);
+  assert.equal(options.allowedTools, undefined);
 
-  assert.ok(!options!.disallowedTools!.includes("Skill"));
-  assert.equal(options!.permissionMode, "plan");
-  assert.equal(options!.allowDangerouslySkipPermissions, undefined);
+  assert.ok(options.disallowedTools);
+  assert.ok(!options.disallowedTools.includes("Skill"));
+  assert.equal(options.permissionMode, "plan");
+  assert.equal(options.allowDangerouslySkipPermissions, undefined);
   assert.ok(sessions.length);
   assert.ok(events.find((e) => e.type === "tool.started"));
   assert.ok(closed);
@@ -100,17 +103,18 @@ test("Claude forwards the selected model and effort without changing its resolve
   c.task.model = "selected-model";
   c.task.reasoning_effort = "high";
   await provider.run(c, "Review");
-  assert.equal(options!.model, "selected-model");
-  assert.equal(options!.effort, "high");
-  assert.equal(options!.permissionMode, "plan");
+  assert.ok(options);
+  assert.equal(options.model, "selected-model");
+  assert.equal(options.effort, "high");
+  assert.equal(options.permissionMode, "plan");
   c.task.model = "default";
   c.task.reasoning_effort = "default";
   await provider.run(c, "Review");
-  assert.equal(Object.hasOwn(options!, "model"), false);
-  assert.equal(Object.hasOwn(options!, "effort"), false);
+  assert.equal(Object.hasOwn(options, "model"), false);
+  assert.equal(Object.hasOwn(options, "effort"), false);
   delete c.task.reasoning_effort;
   await provider.run(c, "Review");
-  assert.equal(Object.hasOwn(options!, "effort"), false);
+  assert.equal(Object.hasOwn(options, "effort"), false);
 });
 
 test("Claude omits its native cost ceiling only when the task explicitly disables it", async () => {
@@ -137,7 +141,8 @@ test("Claude omits its native cost ceiling only when the task explicitly disable
   }, readyClaudeCli);
 
   assert.deepEqual(await provider.run(c, "Review"), { reply });
-  assert.equal(Object.hasOwn(options!, "maxBudgetUsd"), false);
+  assert.ok(options);
+  assert.equal(Object.hasOwn(options, "maxBudgetUsd"), false);
 });
 
 test("The Claude Agent SDK starts Claude Code as the extension, without private variables", async () => {
@@ -263,25 +268,20 @@ test("Claude asks for a plain reply before the custom instructions, with no stru
     reply: "Reviewed **a.ts**; one check is missing.",
   });
 
-  assert.equal(options!.outputFormat, undefined);
+  assert.ok(options);
+  assert.equal(options.outputFormat, undefined);
 
   assert.match(
-    (options!.systemPrompt as { append: string }).append,
+    (options.systemPrompt as { append: string }).append,
     /End each turn with a plain reply[\s\S]*custom instructions for the reviewer profile:\nCite file paths\.$/,
   );
 
-  const permission = (name: string, input: object) =>
-    options!.canUseTool!(name, input as Record<string, unknown>, {
-      signal: c.signal,
-      toolUseID: "x",
-      requestId: "request",
+  for (const tool of ["StructuredOutput", "mcp__unconfigured__report"]) {
+    const result = await askPermission(options, c.signal, tool, {
+      summary: "Report",
     });
 
-  for (const tool of ["StructuredOutput", "mcp__unconfigured__report"]) {
-    assert.equal(
-      (await permission(tool, { summary: "Report" }))!.behavior,
-      "deny",
-    );
+    assert.equal(result.behavior, "deny");
   }
 });
 

@@ -87,17 +87,17 @@ test("Claude continuation validates filesystem session references without imposi
 
   try {
     await assert.rejects(
-      claudeTaskPolicy.validateSession!({ session_state_ref: path } as Task),
+      claudeTaskPolicy.validateSession({ session_state_ref: path } as Task),
       /ENOENT/,
     );
 
     await writeFile(path, "session");
 
     await assert.doesNotReject(
-      claudeTaskPolicy.validateSession!({ session_state_ref: path } as Task),
+      claudeTaskPolicy.validateSession({ session_state_ref: path } as Task),
     );
 
-    await assert.doesNotReject(claudeTaskPolicy.validateSession!({} as Task));
+    await assert.doesNotReject(claudeTaskPolicy.validateSession({} as Task));
   } finally {
     await rm(dir, { recursive: true });
   }

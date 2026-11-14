@@ -15,6 +15,10 @@ import { expect, test } from "vitest";
 
 import { expandedJson } from "../../../shared/components/json-tree/json-tree-test-harness";
 import {
+  controlledElement,
+  getElement,
+} from "../../../shared/utils/dom-test-harness";
+import {
   assertAbsent,
   event,
   parseHtml,
@@ -287,7 +291,7 @@ test("grouped streams accumulate readable blocks and preserve every frame for in
 
   assert.equal(
     await tooltipText(
-      live.container.querySelector("button.activity-debug-toggle")!,
+      getElement(live.container, "button.activity-debug-toggle"),
     ),
     "Inspect 10 raw responses",
   );
@@ -377,10 +381,10 @@ test("a compact accessible debug toggle hides inspection until opened and preser
 
   assert.equal(toggle.getAttribute("aria-expanded"), "false");
   assert.equal(await tooltipText(toggle), "Inspect 1 raw response");
-  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  const panel = controlledElement(toggle);
   assert.equal(panel.hidden, true);
   assertAbsent(view.queryByText("Event data", { selector: "summary" }));
-  const message = view.container.querySelector(".activity-message")!;
+  const message = getElement(view.container, ".activity-message");
 
   assert.equal(
     message.querySelector(".activity-group-secondary")?.textContent,
@@ -484,12 +488,12 @@ test("opening debug scrolls its panel into view once the height transition settl
 
   const view = render(createElement(GroupedEventList, { events: [read] }));
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
-  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  const panel = controlledElement(toggle);
 
   fireEvent.click(toggle);
 
   // Child transitions and other properties bubble up but do not reveal the panel.
-  fireEvent.transitionEnd(panel.querySelector(".activity-debug-caption")!, {
+  fireEvent.transitionEnd(getElement(panel, ".activity-debug-caption"), {
     propertyName: "height",
   });
 
@@ -608,7 +612,7 @@ test("tool result image previews and individual responses mount on first debug a
 
   const view = render(createElement(GroupedEventList, { events }));
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
-  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  const panel = controlledElement(toggle);
   assert.equal(panel.hidden, true);
   assertAbsent(view.container.querySelector("img.activity-image"));
 
@@ -619,7 +623,7 @@ test("tool result image previews and individual responses mount on first debug a
 
   fireEvent.click(toggle);
   assert.equal(panel.hidden, false);
-  const image = panel.querySelector("img.activity-image")!;
+  const image = getElement(panel, "img.activity-image");
   assert.equal(image.getAttribute("src"), "data:image/png;base64,aGVsbG8=");
 
   assert.equal(
@@ -658,7 +662,7 @@ test("the debug panel's collapse button closes it and brings its row back", asyn
   );
 
   const view = render(createElement(GroupedEventList, { events: [read] }));
-  const group = view.container.querySelector(".activity-group")!;
+  const group = getElement(view.container, ".activity-group");
   const toggle = view.getByRole("button", { name: "Debug activity: Read" });
   assert.equal(group.hasAttribute("data-debug-open"), false);
   fireEvent.click(toggle);
@@ -696,6 +700,12 @@ test("original response details release results on close and ignore replies for 
 
   const pending: ((value: Result) => void)[] = [];
 
+  const settle = (index: number, value: Result) => {
+    const resolve = pending[index];
+    assert.ok(resolve);
+    resolve(value);
+  };
+
   const controller = {
     transport: {
       tool: () => new Promise<Result>((resolve) => pending.push(resolve)),
@@ -732,7 +742,7 @@ test("original response details release results on close and ignore replies for 
   await toggle(false);
 
   await act(async () =>
-    pending[0]!({ available: true, original: { secret: "stale-close" } }),
+    settle(0, { available: true, original: { secret: "stale-close" } }),
   );
 
   expect(
@@ -745,11 +755,11 @@ test("original response details release results on close and ignore replies for 
   await waitFor(() => expect(pending).toHaveLength(3));
 
   await act(async () =>
-    pending[1]!({ available: true, original: { secret: "stale-task" } }),
+    settle(1, { available: true, original: { secret: "stale-task" } }),
   );
 
   expect(view.container.textContent).not.toContain("stale-task");
-  await act(async () => pending[2]!({ available: false }));
+  await act(async () => settle(2, { available: false }));
   expect(view.getByText("Original response unavailable.")).toBeTruthy();
   await toggle(false);
 

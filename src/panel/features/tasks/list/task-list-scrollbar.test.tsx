@@ -9,6 +9,7 @@ import {
 import { useRef } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 
 afterEach(() => {
@@ -57,7 +58,7 @@ function setup(scrollHeight = 300, initialScrollTop = 50) {
   }
 
   const view = render(<Fixture />);
-  const scroller = view.container.querySelector<HTMLElement>("#task-list")!;
+  const scroller = getElement<HTMLElement>(view.container, "#task-list");
 
   return { ...view, scroller };
 }

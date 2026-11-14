@@ -18,7 +18,8 @@ type NewMessagesDividerProps = {
 /** Collapsed, then full size. A negative margin cancels the row gap the divider adds. */
 function frames(element: HTMLElement): Keyframe[] {
   const style = getComputedStyle(element);
-  const gap = parseFloat(getComputedStyle(element.parentElement!).rowGap);
+  const parent = element.parentElement;
+  const gap = parent ? parseFloat(getComputedStyle(parent).rowGap) : 0;
 
   return [
     {

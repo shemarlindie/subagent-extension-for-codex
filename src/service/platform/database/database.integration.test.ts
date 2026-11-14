@@ -287,7 +287,7 @@ test("the service converts a database to incremental vacuum, reclaiming free pag
   t.onTestFinished(() => db.close());
 
   const pragma = (name: string) =>
-    Number(Object.values(db.client.prepare(`PRAGMA ${name}`).get()!)[0]);
+    Number(Object.values(db.client.prepare(`PRAGMA ${name}`).get() ?? {})[0]);
 
   db.client.exec(
     "INSERT INTO tasks(id,owner,body) VALUES('a','alice',json_object('x',printf('%.*c', 500000, 'x'))); DELETE FROM tasks",
@@ -325,8 +325,9 @@ test("migrating existing tasks indexes their status, conversation, creation orde
   const path = join(dir, "service.sqlite");
   const folder = join(dir, "migrations");
   const [initial] = readdirSync(migrationsFolder).sort();
+  assert.ok(initial);
 
-  cpSync(join(migrationsFolder, initial!), join(folder, initial!), {
+  cpSync(join(migrationsFolder, initial), join(folder, initial), {
     recursive: true,
   });
 

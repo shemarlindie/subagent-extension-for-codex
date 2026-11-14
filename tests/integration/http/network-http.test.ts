@@ -3,7 +3,7 @@ import { get } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { assert, expect, test } from "vitest";
+import { expect, test } from "vitest";
 
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -11,6 +11,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
+import { sessionCookie } from "./http-test-harness.js";
 
 // Node's fetch derives Host from the URL; use HTTP directly to emulate a LAN URL.
 function pageAt(base: string, host: string) {
@@ -118,9 +119,7 @@ test.each([
 
         expect(unauthenticated.status).toBe(401);
 
-        const [session] = login.headers.get("set-cookie")!.split(";");
-
-        assert(session);
+        const session = sessionCookie(login);
 
         const csrf = await fetch(`${base}/api/tools/list_tasks`, {
           method: "POST",

@@ -189,8 +189,9 @@ test("project folder selection hides the revision and submits HEAD with the chec
   );
 
   await selectOption(user, "Workspace", "Isolated worktree");
-  await user.clear(revision()!);
-  await pasteText(user, revision()!, "feature-branch");
+  const field = screen.getByLabelText<HTMLInputElement>("Revision");
+  await user.clear(field);
+  await pasteText(user, field, "feature-branch");
   await enterTask(user, "Review my uncommitted edits");
 
   await selectOption(user, "Workspace", "Project folder (uncommitted changes)");

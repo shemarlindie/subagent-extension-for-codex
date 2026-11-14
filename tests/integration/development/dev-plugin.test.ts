@@ -35,6 +35,8 @@ if (!codex && process.platform !== "win32") {
 
 // Exercise the real packaging and CLI with a tiny build and isolated state.
 async function fixture(t: TestContext) {
+  const cli = codex;
+  assert.ok(cli, "The suite runs only with the Codex CLI");
   const root = await realpath(await mkdtemp(join(tmpdir(), "dev-plugin-")));
   t.onTestFinished(() => rm(root, { recursive: true, force: true }));
   const checkout = join(root, "checkout");
@@ -96,7 +98,7 @@ for (const file of ["main.js", "stdio.js", "app.html", process.env.BUILD_ID]) {
         cwd: checkout,
         env: { ...env, ...extra },
       }),
-    codex: (...args: string[]) => exec(codex!, args, { env }),
+    codex: (...args: string[]) => exec(cli, args, { env }),
     installed: () =>
       readdir(
         join(codexHome, "plugins/cache/shemarlindie", name, version, "dist"),

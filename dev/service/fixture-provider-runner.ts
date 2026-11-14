@@ -159,7 +159,8 @@ export async function runFixtureTurn(
 
     failAt("after-tools");
 
-    if (options.beforeReply) await checkpoint(c, () => options.beforeReply!(c));
+    const { beforeReply } = options;
+    if (beforeReply) await checkpoint(c, () => beforeReply(c));
 
     await waitAndTakeSteers(
       c,

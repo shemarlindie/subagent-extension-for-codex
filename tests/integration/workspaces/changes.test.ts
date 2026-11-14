@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,6 +10,7 @@ import { expect, test } from "vitest";
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import { pendingInput } from "../../../src/service/features/tasks/runtime/control-test-harness.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { callTool } from "../../../src/service/platform/server/tools.js";
@@ -90,6 +92,13 @@ async function setup() {
   };
 }
 
+/** A path in the running task's workspace. */
+function inWorkspace(c: RunContext, path: string) {
+  assert.ok(c.task.workspace);
+
+  return join(c.task.workspace, path);
+}
+
 async function edit(
   c: RunContext,
   path: string,
@@ -97,7 +106,7 @@ async function edit(
   after: string,
   source: "tool" | "command" = "tool",
 ) {
-  const full = join(c.task.workspace!, path);
+  const full = inWorkspace(c, path);
   if (after) await writeFile(full, after);
   else await rm(full, { force: true });
 
@@ -118,12 +127,9 @@ test("change tools return sorted recorded edits, incomplete files and command wa
       await edit(c, "z.txt", "", "last\n", "command");
       await edit(c, "existing.txt", "before\n", "after\n");
 
-      await writeFile(
-        join(c.task.workspace!, "binary.bin"),
-        Buffer.from([0, 1]),
-      );
+      await writeFile(inWorkspace(c, "binary.bin"), Buffer.from([0, 1]));
 
-      c.editUnrecorded(join(c.task.workspace!, "binary.bin"));
+      c.editUnrecorded(inWorkspace(c, "binary.bin"));
       c.editUnrecorded();
     });
 
@@ -206,10 +212,10 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
 
     const args = { task_id: t.id };
     const original = await s.tool<Changes>("get_changes", args);
+    const { workspace, branch } = t;
+    assert.ok(workspace && branch);
 
-    expect(s.git(t.workspace!, "branch", "--show-current").trim()).toBe(
-      t.branch,
-    );
+    expect(s.git(workspace, "branch", "--show-current").trim()).toBe(t.branch);
 
     expect(original.files.map((file) => [file.path, file.status])).toEqual([
       ["existing.txt", "modified"],
@@ -227,10 +233,10 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
       "before\n",
     );
 
-    s.git(t.workspace!, "add", "existing.txt");
+    s.git(workspace, "add", "existing.txt");
 
     s.git(
-      t.workspace!,
+      workspace,
       "-c",
       "user.name=Test",
       "-c",
@@ -240,7 +246,7 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
       "task edits",
     );
 
-    expect(s.git(s.repo, "log", "-1", "--format=%s", t.branch!).trim()).toBe(
+    expect(s.git(s.repo, "log", "-1", "--format=%s", branch).trim()).toBe(
       "task edits",
     );
 
@@ -272,15 +278,12 @@ test("file tools read current disk content, page UTF-8, preview images and restr
 
     const t = await s.start(async (c) => {
       await edit(c, "existing.txt", "before\n", "recorded\n");
-      await writeFile(join(c.task.workspace!, "logo.png"), png);
+      await writeFile(inWorkspace(c, "logo.png"), png);
 
-      await writeFile(
-        join(c.task.workspace!, "data.bin"),
-        Buffer.from([1, 0, 2, 0]),
-      );
+      await writeFile(inWorkspace(c, "data.bin"), Buffer.from([1, 0, 2, 0]));
 
-      c.editUnrecorded(join(c.task.workspace!, "logo.png"));
-      c.editUnrecorded(join(c.task.workspace!, "data.bin"));
+      c.editUnrecorded(inWorkspace(c, "logo.png"));
+      c.editUnrecorded(inWorkspace(c, "data.bin"));
     });
 
     const args = { task_id: t.id };
@@ -302,7 +305,7 @@ test("file tools read current disk content, page UTF-8, preview images and restr
     let part = await s.c.changes.changedFile(t, "existing.txt", undefined, 50);
     const firstCursor = part.next_cursor;
     expect(firstCursor).toBeDefined();
-    let joined = part.content!;
+    let joined = part.content ?? "";
 
     while (part.next_cursor) {
       part = await s.c.changes.changedFile(
@@ -381,23 +384,19 @@ test("file tools read current disk content, page UTF-8, preview images and restr
 
 test("starting, steering, waiting for input and finishing create no task snapshot refs", async () => {
   const s = await setup();
-  let steered: (() => void) | undefined;
-
-  const steer = new Promise<void>((resolve) => {
-    steered = resolve;
-  });
+  const steered = Promise.withResolvers<void>();
 
   try {
     s.provider.run = async (c) => {
       c.acceptSteers((message) => {
         c.steerTaken(message.id);
-        steered!();
+        steered.resolve();
 
         return true;
       });
 
       await edit(c, "recorded.txt", "", "worker\n");
-      await steer;
+      await steered.promise;
 
       await c.input(
         "AskUserQuestion",
@@ -420,8 +419,7 @@ test("starting, steering, waiting for input and finishing create no task snapsho
     await until(() => !!s.c.store.get(t.id, "alice").pending_input);
     expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
     await writeFile(join(s.repo, "user-during-wait.txt"), "user\n");
-    const waiting = s.c.store.get(t.id, "alice");
-    s.c.input("alice", t.id, waiting.pending_input!.id, true);
+    s.c.input("alice", t.id, pendingInput(s.c.store, t.id).id, true);
     await s.done(t.id);
     expect(s.git(s.repo, "for-each-ref", "refs/agent-tasks")).toBe("");
 

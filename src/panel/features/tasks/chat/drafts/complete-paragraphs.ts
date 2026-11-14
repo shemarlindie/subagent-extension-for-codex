@@ -62,7 +62,8 @@ export function markdownParts(text: string) {
   let start = 0;
 
   for (const blank of blankLines(text)) {
-    const after = blank + /^(?:[ \t]*\n)*/.exec(text.slice(blank))![0].length;
+    const [run = ""] = /^(?:[ \t]*\n)*/.exec(text.slice(blank)) ?? [];
+    const after = blank + run.length;
 
     if (blank > start && !CONTINUATION.test(text.slice(after))) {
       parts.push(text.slice(start, blank).trimEnd());

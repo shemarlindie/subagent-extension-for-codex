@@ -53,7 +53,7 @@ export const FileViewer = memo(function FileViewer({
         </div>
       );
     case "source":
-      return <CodeView {...source!} />;
+      return source ? <CodeView {...source} /> : null;
     case "changes":
       return (
         diff && (

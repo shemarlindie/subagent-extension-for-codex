@@ -36,7 +36,8 @@ async function fixture(t: TestContext) {
   const store = new Store(join(dir, "test.sqlite"));
   const workspaces = new Workspaces(join(dir, "worktrees"), []);
   const c = new Control(store, workspaces, new Map());
-  c.projects = new Projects(store.database, workspaces);
+  const projects = new Projects(store.database, workspaces);
+  c.projects = projects;
 
   t.onTestFinished(async () => {
     await c.close();
@@ -47,7 +48,7 @@ async function fixture(t: TestContext) {
     const path = join(dir, name);
     await mkdir(path, { recursive: true });
     execFileSync("git", ["init", "-q", path]);
-    if (approved) await c.projects!.register(path);
+    if (approved) await projects.register(path);
 
     return path;
   };
@@ -82,7 +83,7 @@ async function fixture(t: TestContext) {
     return task;
   };
 
-  return { dir, c, repo, seed };
+  return { dir, c, projects, repo, seed };
 }
 
 test("panel defaults use only the latest owned task in the same conversation", async (t) => {
@@ -321,7 +322,7 @@ test("sandbox directory hints resolve approved Git roots without granting access
   }
 
   assert.deepEqual(
-    f.c.projects!.list().map((p) => p.repository),
+    f.projects.list().map((p) => p.repository),
     [a],
   );
 
@@ -448,12 +449,9 @@ test("an unregistered chat Git root is an add-project candidate without granting
     },
   });
 
-  assert.deepEqual(f.c.projects!.list(), []);
+  assert.deepEqual(f.projects.list(), []);
 
-  await assert.rejects(
-    f.c.projects!.resolve(repository),
-    /outside allowed roots/,
-  );
+  await assert.rejects(f.projects.resolve(repository), /outside allowed roots/);
 });
 
 test("explicit task panels ignore ambient chat and directory but reject explicit conflicts", async (t) => {

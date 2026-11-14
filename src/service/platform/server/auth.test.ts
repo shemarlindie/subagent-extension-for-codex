@@ -15,7 +15,9 @@ test("owner-scoped sessions, expiration, pruning and token comparison", () => {
   assert.equal(auth.ownerFor(`ac_session=${bob}; other=value`), "bob");
   assert.equal(auth.ownerFor(undefined), undefined);
   assert.equal(auth.ownerFor("ac_session=unknown"), undefined);
-  auth.sessions.get(alice)!.expires = 0;
+  const session = auth.sessions.get(alice);
+  assert.ok(session);
+  session.expires = 0;
   assert.equal(auth.ownerFor(`ac_session=${alice}`), undefined);
   auth.prune();
   assert.equal(auth.sessions.has(alice), false);

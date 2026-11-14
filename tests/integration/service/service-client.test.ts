@@ -47,7 +47,12 @@ function connections(...list: ServiceConnection[]) {
   let calls = 0;
 
   return {
-    connect: async () => list[Math.min(calls++, list.length - 1)]!,
+    connect: async () => {
+      const connection = list[Math.min(calls++, list.length - 1)];
+      assert.ok(connection);
+
+      return connection;
+    },
     calls: () => calls,
   };
 }

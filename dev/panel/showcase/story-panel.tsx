@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import darkStyles from "../host/host-styles-dark.json";
 import lightStyles from "../host/host-styles-light.json";
 import { connectPanel } from "../host/panel-bridge";
-import { storyAt } from "./story";
+import { storyClock } from "./story";
 import type { StoryFeed } from "./story-feed";
 
 export type Theme = "light" | "dark";
@@ -57,10 +57,12 @@ export function StoryPanel({ feed, theme, mode, tick, now }: StoryPanelProps) {
   const [height, setHeight] = useState<number>();
 
   useEffect(() => {
-    const start = storyAt(feed.current())!.now;
+    const iframe = frame.current;
+    if (!iframe) return;
+    const start = storyClock(feed.current());
 
     const bridge = connectPanel(
-      frame.current!,
+      iframe,
       `./panel.html?now=${start}${tick ? "&tick" : ""}`,
       {
         name: "Showcase",

@@ -93,10 +93,13 @@ test("settings section preference persists separately from dialog drafts", async
   assert.equal(saved.at(-1)?.lastSettingsSection, "models");
   assert.equal(saved.at(-1)?.dialogs, undefined);
 
+  const latest = saved.at(-1);
+  assert.ok(latest);
+
   const restored = new Controller(
     new FakeTransport(),
     { hidden: () => false, wide: () => true },
-    { initial: saved.at(-1)!, save: () => {} },
+    { initial: latest, save: () => {} },
   );
 
   t.onTestFinished(() => restored.dispose());

@@ -1,5 +1,6 @@
 import { memo, useContext } from "react";
 
+import { lastEvent } from "../../../../shared/tasks/activity/activity-events";
 import {
   groupActivity,
   thinkingSpan,
@@ -71,7 +72,7 @@ export const EventList = memo(function EventList({
 
   // Oldest first, like Chat; progress moves an operation to the end.
   const groups = groupActivity(events).sort(
-    (a, b) => a.events.at(-1)!.id - b.events.at(-1)!.id,
+    (a, b) => lastEvent(a.events).id - lastEvent(b.events).id,
   );
 
   controller?.timing.observe(
@@ -92,7 +93,8 @@ export const EventList = memo(function EventList({
   // Progress moves an operation's row, so the first row ending at or after
   // the event is where that event's part of the timeline begins.
   const focusGroup =
-    focus && groups.find((group) => group.events.at(-1)!.id >= focus.eventId);
+    focus &&
+    groups.find((group) => lastEvent(group.events).id >= focus.eventId);
 
   const { viewportRef, pinned, scrollToLatest } = useReadingScroll({
     reading,

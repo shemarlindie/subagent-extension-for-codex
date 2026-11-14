@@ -187,9 +187,11 @@ export async function runFixtureActions(
 
     const safeTaskId = c.task.id.replace(/[^A-Za-z0-9_-]/g, "_");
     const relativePath = `fixture-scenario-${safeTaskId}-turn-${c.task.turn}.md`;
+    const { workspace } = c.task;
+    if (!workspace) throw new Error("The task has no workspace.");
 
     await writeFile(
-      join(c.task.workspace!, relativePath),
+      join(workspace, relativePath),
       `# Fixture change\n\nGenerated for task ${c.task.id}, turn ${c.task.turn}.\n`,
       { flag: "wx" },
     );

@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
@@ -54,7 +55,8 @@ describe("durable change scopes", () => {
     for (const scope of ["task", "turn"] as const) {
       const rows = changes.rows(task, scope);
       expect(rows).toHaveLength(1);
-      const row = rows[0]!;
+      const [row] = rows;
+      assert.ok(row);
 
       expect(
         applyPatch(
@@ -195,8 +197,9 @@ describe("durable change scopes", () => {
     expect(changes.rows(task, "task")).toHaveLength(1);
     changes.record(task, edit("file.txt", "first\n", "second\n"));
 
-    const taskRow = changes.rows(task, "task")[0]!;
-    const turnRow = changes.rows(task, "turn")[0]!;
+    const [taskRow] = changes.rows(task, "task");
+    const [turnRow] = changes.rows(task, "turn");
+    assert.ok(taskRow && turnRow);
 
     expect(
       applyPatch("base\n", formatFileDiff(taskRow.path, taskRow.hunks)),

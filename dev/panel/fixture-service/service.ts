@@ -223,8 +223,8 @@ function seedChanges(
     task.workspace_removed = true;
   }
 
-  if (fixture.branchDeleted) {
-    git(repo, "branch", "-D", task.branch!);
+  if (fixture.branchDeleted && task.branch) {
+    git(repo, "branch", "-D", task.branch);
     task.branch_deleted = true;
   }
 }

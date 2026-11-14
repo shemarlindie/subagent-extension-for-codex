@@ -30,7 +30,8 @@ export function useListMotion(
     for (const element of Array.from(
       container.querySelectorAll<HTMLElement>(`[${attribute}]`),
     )) {
-      const id = element.getAttribute(attribute)!;
+      const id = element.getAttribute(attribute);
+      if (id === null) continue;
       const top = element.getBoundingClientRect().top - origin;
 
       next.set(id, top);

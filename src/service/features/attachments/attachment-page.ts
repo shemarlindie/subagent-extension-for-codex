@@ -21,7 +21,9 @@ function characterBoundary(bytes: Uint8Array, end: number) {
   let start = end;
 
   // Continuation bytes are 10xxxxxx; a character has at most three.
-  while (start > 0 && end - start < 3 && (bytes[start - 1]! & 0xc0) === 0x80) {
+  while (end - start < 3) {
+    const byte = bytes[start - 1];
+    if (byte === undefined || (byte & 0xc0) !== 0x80) break;
     start--;
   }
 

@@ -180,7 +180,7 @@ const covered = (path: string) =>
 /** Set keys no row covers and that can affect tasks, for "Also set". */
 export function otherPolicyKeys(policy: Settings) {
   return setPaths(policy).filter((path) => {
-    const top = path.split(".")[0]!;
+    const [top = path] = path.split(".");
 
     return !covered(path) && !IGNORED.has(top) && !isLogin(top);
   });

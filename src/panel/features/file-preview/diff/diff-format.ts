@@ -40,7 +40,8 @@ function unquoteDiffPath(path: string) {
       bytes.push(...encoder.encode(escaped));
       index += 2;
     } else {
-      const char = String.fromCodePoint(path.codePointAt(index)!);
+      // A string's iterator yields whole code points, keeping surrogate pairs.
+      const [char = ""] = path.slice(index, index + 2);
       bytes.push(...encoder.encode(char));
       index += char.length;
     }

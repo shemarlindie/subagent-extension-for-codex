@@ -157,7 +157,7 @@ test("settings reveals an invalid budget in another section and saves typed mode
   await waitForSettingsSaved();
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")?.args,
     {
       set: {
         task: { budget: { max_cost_usd: { enabled: true, amount: 8 } } },
@@ -203,7 +203,7 @@ test("settings explains invalid disabled budgets and lets the user restore editi
   await waitForSettingsSaved();
 
   assert.deepEqual(
-    transport.calls.find((call) => call.name === "update_settings")!.args,
+    transport.calls.find((call) => call.name === "update_settings")?.args,
     {
       set: {
         task: { budget: { max_cost_usd: { enabled: false, amount: 8 } } },

@@ -5,4 +5,6 @@ import { createRoot } from "react-dom/client";
 
 import { Host } from "./host";
 
-createRoot(document.getElementById("root")!).render(<Host />);
+const container = document.getElementById("root");
+if (!container) throw new Error("The dev host page has no root element.");
+createRoot(container).render(<Host />);

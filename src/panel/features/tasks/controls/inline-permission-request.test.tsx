@@ -21,6 +21,16 @@ test("permission request is actionable inline with a focused optional message", 
     taskActions: { decidePermission },
   } as unknown as Controller;
 
+  const request = {
+    id: "permission-1",
+    tool: "Bash",
+    kind: "permission",
+    input: {
+      command: "npm run typecheck",
+      description: "Run the checks.",
+    },
+  } satisfies Task["pending_input"];
+
   const task: Task = {
     id: "task-1",
     repository: "/repo",
@@ -41,20 +51,12 @@ test("permission request is actionable inline with a focused optional message", 
     queue: [],
     turn: 1,
     runtime_ms: 0,
-    pending_input: {
-      id: "permission-1",
-      tool: "Bash",
-      kind: "permission",
-      input: {
-        command: "npm run typecheck",
-        description: "Run the checks.",
-      },
-    },
+    pending_input: request,
   };
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <InlinePermissionRequest task={task} />
+      <InlinePermissionRequest task={task} request={request} />
     </ControllerContext.Provider>,
   );
 

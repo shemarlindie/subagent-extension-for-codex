@@ -20,6 +20,12 @@ import type { DelegateValues } from "../delegate-values";
 import { newTaskSessionId } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
+const readyDefaults = withSetting(
+  defaults,
+  "providers.claude.permission_mode",
+  "acceptEdits",
+);
+
 const ready: NewTaskState = {
   scope: 0,
   request: 1,
@@ -29,11 +35,7 @@ const ready: NewTaskState = {
     projects: "ready",
     workers: "ready",
   },
-  defaults: withSetting(
-    defaults,
-    "providers.claude.permission_mode",
-    "acceptEdits",
-  ),
+  defaults: readyDefaults,
 };
 
 function setup(
@@ -113,7 +115,7 @@ test("an excluded model saved for the provider reads as the default", async () =
     {
       ...ready,
       defaults: withSetting(
-        ready.defaults!,
+        readyDefaults,
         "models.providers.claude.model",
         "claude-sonnet-5-5",
       ),
@@ -291,7 +293,7 @@ test("a saved level the model doesn't support reads as Default", async () => {
     {
       ...ready,
       defaults: withSetting(
-        ready.defaults!,
+        readyDefaults,
         "models.providers.claude.reasoning_effort",
         "high",
       ),
@@ -325,7 +327,7 @@ test("a saved level above the org's cap goes out as Default", async () => {
     {
       ...ready,
       defaults: withSetting(
-        ready.defaults!,
+        readyDefaults,
         "models.profiles.implementer.reasoning_effort",
         "high",
       ),

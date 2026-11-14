@@ -15,10 +15,11 @@ test("default settings leave the sandbox and tools to the user's configuration a
   assert.equal(options.managedSettings, undefined);
   assert.deepEqual(options.tools, { type: "preset", preset: "claude_code" });
   assert.deepEqual(options.disallowedTools, []);
-  assert.equal(options.env!.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
+  assert.ok(options.env);
+  assert.equal(options.env.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
   for (const name of ["SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "OPENAI_API_KEY"]) {
-    assert.equal(options.env![name], undefined, name);
+    assert.equal(options.env[name], undefined, name);
   }
 
   for (const [tool, input] of [

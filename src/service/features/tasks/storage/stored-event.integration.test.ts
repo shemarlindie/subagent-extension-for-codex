@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,7 +36,10 @@ function storedEvent(
     })
     .run();
 
-  return db.orm.select().from(events).get()!;
+  const row = db.orm.select().from(events).get();
+  assert.ok(row);
+
+  return row;
 }
 
 test("decodes event rows without changing metadata or arbitrary JSON fields", (t) => {

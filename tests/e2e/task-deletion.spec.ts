@@ -8,7 +8,7 @@ import {
   openManageProjects,
   startTask,
 } from "./console-actions";
-import { expect, test } from "./fixtures";
+import { expect, requiredAttribute, test } from "./fixtures";
 
 async function openDeleteTask(page: Page) {
   await page.getByRole("button", { name: "Task actions" }).click();
@@ -39,7 +39,7 @@ test("delete a running task together with its agent session", async ({
   const history = page.getByRole("region", { name: "Chat history" });
   await expect(history).toContainText("Fixture worker running turn 1");
   const row = tasks(page).getByRole("button", { name: /Delete while running/ });
-  const taskId = await row.getAttribute("data-task");
+  const taskId = await requiredAttribute(row, "data-task");
   // The only worktree is the task's, named from its title.
   const [name] = await readdir(actualRoot);
   if (!name) throw new Error("The task has no worktree.");
@@ -50,7 +50,7 @@ test("delete a running task together with its agent session", async ({
     name: "Removal details",
   });
 
-  await expect(details).toContainText(taskId!);
+  await expect(details).toContainText(taskId);
 
   await expect(details).toContainText(
     "Worktree folder and all contents, including uncommitted files:",

@@ -11,6 +11,7 @@ import { Control } from "./control.js";
 import {
   input,
   pause,
+  pendingInput,
   setup,
   TestProvider,
   until,
@@ -234,7 +235,7 @@ test("different requests recheck task state after delayed validation", async () 
     );
 
     assert.equal(stored.queue.length, 1);
-    assert.equal(stored.queue[0]!.message, "Second");
+    assert.equal(stored.queue[0]?.message, "Second");
   } finally {
     await c.close();
   }
@@ -272,8 +273,8 @@ test.each(["queue", "steer"] as const)(
         /receipt failed/,
       );
 
-      assert.equal(c.active.get(task.id)!.task.queue.length, 0);
-      assert.equal(c.active.get(task.id)!.task.pending_steers.length, 0);
+      assert.equal(c.active.get(task.id)?.task.queue.length, 0);
+      assert.equal(c.active.get(task.id)?.task.pending_steers.length, 0);
       store.database.client.exec("DROP TRIGGER fail_send");
 
       await c.send("owner", task.id, "Once", "user", {
@@ -281,7 +282,8 @@ test.each(["queue", "steer"] as const)(
         request_id: "active-rollback",
       });
 
-      const active = c.active.get(task.id)!.task;
+      const active = c.active.get(task.id)?.task;
+      assert.ok(active);
       assert.equal(active.queue.length + active.pending_steers.length, 1);
     } finally {
       finish.resolve();
@@ -342,13 +344,9 @@ test("drain finishes running turns and leaves queued tasks for the next service"
   const queued = await c.start("alice", input(repo, "Queued work"));
   const drained = c.drain(5000);
 
-  c.input(
-    "alice",
-    running.id,
-    store.get(running.id, "alice").pending_input!.id,
-    true,
-    { answer: "yes" },
-  );
+  c.input("alice", running.id, pendingInput(store, running.id).id, true, {
+    answer: "yes",
+  });
 
   await drained;
   assert.equal(store.get(running.id, "alice").status, "completed");
