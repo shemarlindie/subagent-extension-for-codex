@@ -1,3 +1,4 @@
+import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import {
   checkWaitingLimit,
   WAITING_MESSAGE_LIMIT,
@@ -65,6 +66,22 @@ export function leaveOver(t: Task) {
   );
 
   t.pending_steers = [];
+}
+
+/**
+ * Takes the pending steers that interrupt and send starts the next turn with.
+ * A command needs a turn of its own, so it waits at the front of the queue
+ * unless it's all there is.
+ */
+export function takeSteers(t: Task, commands: boolean) {
+  const runs = (m: TaskMessage) => commands && !!slashCommand(m.message);
+  const held = t.pending_steers.filter(runs);
+  const messages = t.pending_steers.filter((m) => !runs(m));
+  const taken = messages.length ? messages : held.splice(0, 1);
+  t.pending_steers = held;
+  leaveOver(t);
+
+  return taken;
 }
 
 export function recordMessage(

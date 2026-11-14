@@ -157,6 +157,20 @@ test("an interrupt with pending steers sends them at once as one new turn", asyn
   await c.close();
 });
 
+test("an interrupt with a command runs the pending steers first, then the command in a turn of its own", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
+  await checkpoints.ready();
+  await c.send("alice", t.id, "First thought", "user");
+  await c.send("alice", t.id, "/compact", "user", { delivery: "interrupt" });
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["First thought", "/compact"]);
+  await c.close();
+});
+
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
   const checkpoints = new TurnCheckpoints(1, 5);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });

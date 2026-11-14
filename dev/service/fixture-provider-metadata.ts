@@ -33,6 +33,7 @@ export const fixtureProviderCapabilities = {
   subagents: true,
   parallel_subagents: true,
   dynamic_subagents: false,
+  slash_commands: true,
 };
 
 const fixtureEffortLevels: ProviderMetadata["defaultEffortLevels"] = [

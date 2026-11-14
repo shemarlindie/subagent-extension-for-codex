@@ -3,6 +3,7 @@ import type { Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import type { Changes } from "../../changes/changes.js";
 import type { Projects } from "../../projects/projects.js";
+import { RunError } from "../../providers/run-error.js";
 import type { Provider } from "../../providers/types.js";
 import { gitState } from "../../workspaces/git.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
@@ -83,6 +84,7 @@ export async function startTurn(
 export function turnPrompt(
   c: TurnStartupContext,
   t: Task,
+  provider: Provider,
   newSession: string | undefined,
   signal: AbortSignal,
 ) {
@@ -90,7 +92,9 @@ export function turnPrompt(
     "prompt_assembly",
     { task_id: t.id, turn: t.turn, session: newSession ? "new" : "resumed" },
     async () =>
-      newSession ? c.prompts.sessionPrompt(t) : c.prompts.resumedPrompt(t),
+      newSession
+        ? c.prompts.sessionPrompt(t)
+        : c.prompts.resumedPrompt(t, provider),
     { signal },
   );
 }
@@ -150,6 +154,13 @@ async function beginTurn(
     provider,
     c.ownerWorker,
   );
+
+  // A new session would run the command without the conversation.
+  if (newSession && t.turn > 1 && c.prompts.unsentCommand(t, provider)) {
+    // The next message mustn't carry the command into its prompt.
+    t.instructions_sent = c.store.messages.count(t.id);
+    throw new RunError("command_needs_session");
+  }
 
   if (newSession) {
     // The session can't continue, so this turn starts another.

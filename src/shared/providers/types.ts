@@ -12,6 +12,8 @@ export interface Capabilities {
   subagents: boolean;
   parallel_subagents: boolean;
   dynamic_subagents: boolean;
+  /** Runs a message that starts with `/name` as a command, in a turn of its own. */
+  slash_commands: boolean;
 }
 
 export interface ModelChoice {

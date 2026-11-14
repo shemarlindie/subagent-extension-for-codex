@@ -9,6 +9,10 @@ const FAILURE_MESSAGES = new Map<string, string>([
     "Claude couldn't produce the structured reply it was asked for.",
   ],
   ["error_during_execution", "Claude stopped because of an error."],
+  [
+    "command_needs_session",
+    "Commands need the current session. Send a message to start a new one.",
+  ],
 ]);
 
 /** Whether a failure code means the task used up its cost or runtime limit. */

@@ -57,6 +57,7 @@ import {
   requeue,
   restoreQueuedMessages,
   steerQueuedMessage,
+  takeSteers,
 } from "./queue.js";
 import { type QueueCause, QueueWaits } from "./queue-wait.js";
 import { commitSend } from "./send-acceptance.js";
@@ -292,7 +293,7 @@ export class Control {
         }, remaining);
       }
 
-      const prompt = await turnPrompt(startup, t, newSession, signal);
+      const prompt = await turnPrompt(startup, t, provider, newSession, signal);
       const sentBefore = t.instructions_sent;
       // The session holds these from now on, so a resumed turn gets only later ones.
       t.instructions_sent = this.store.messages.count(t.id);
@@ -503,10 +504,11 @@ export class Control {
 
   /**
    * What follows a turn. Interrupt and send now starts the next turn with
-   * the pending steers. Otherwise steers the turn didn't take move to the
-   * front of the queue; an interrupted or failed turn pauses the queue, and
-   * a completed one goes straight on to the next queued message, so the task
-   * never shows as completed in between.
+   * the pending steers, though a command among others waits for a turn of
+   * its own at the front of the queue. Otherwise steers the turn didn't take
+   * move to the front of the queue; an interrupted or failed turn pauses the
+   * queue, and a completed one goes straight on to the next queued message,
+   * so the task never shows as completed in between.
    */
   private endTurn(
     t: Task,
@@ -516,8 +518,10 @@ export class Control {
     const before = queueSnapshot(t);
 
     if (sendPending && t.pending_steers.length) {
-      this.store.messages.add(t.id, ...t.pending_steers);
-      t.pending_steers = [];
+      const commands = this.providers.get(t.provider)?.capabilities
+        .slash_commands;
+
+      this.store.messages.add(t.id, ...takeSteers(t, !!commands));
       requeue(t);
       this.queuedAfterCommit(t, "interrupt_send");
     } else {

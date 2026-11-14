@@ -158,6 +158,8 @@ test("a steer goes into the running turn as a priority next message, and is take
     };
 
     assert.equal(ctx.steer({ id: "msg_1", text: "Also this" }), true);
+    // A command waits for a turn of its own.
+    assert.equal(ctx.steer({ id: "msg_2", text: "/compact" }), false);
     const message = await next();
     steerMessage = message;
     yield lifecycle(message.uuid, "queued");
@@ -329,6 +331,24 @@ test("the prompt's own empty result ends the turn", async () => {
       result("Unreached"),
     ]),
     { reply: "" },
+  );
+});
+
+test("a command with an empty result replies with what it printed", async () => {
+  assert.deepEqual(
+    await replyTo(() => [
+      {
+        type: "user",
+        isReplay: true,
+        parent_tool_use_id: null,
+        message: {
+          role: "user",
+          content: "<local-command-stdout>Compacted </local-command-stdout>",
+        },
+      },
+      result(""),
+    ]),
+    { reply: "Compacted" },
   );
 });
 

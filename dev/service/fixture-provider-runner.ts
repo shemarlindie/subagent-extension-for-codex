@@ -5,6 +5,7 @@ import type {
   Steer,
   TurnOutput,
 } from "../../src/service/features/providers/types.js";
+import { slashCommand } from "../../src/shared/tasks/conversation/commands.js";
 import type { FixtureProviderOptions } from "./fixture-provider.js";
 import { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import { createFixtureRunEvents } from "./fixture-run-events.js";
@@ -105,6 +106,8 @@ export async function runFixtureTurn(
   };
 
   c.acceptSteers((steer) => {
+    // Like Claude, a command waits for a turn of its own.
+    if (slashCommand(steer.text)) return false;
     steers.push(steer);
 
     return true;

@@ -152,6 +152,52 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   await c.close();
 });
 
+test("a command is a resumed turn's whole prompt, and a message starting with a path isn't a command", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    workspace_strategy: "current_repo",
+  });
+
+  for (const [turn, message] of [
+    [2, "/compact keep the test plan"],
+    [3, "/tmp/notes.txt is broken"],
+  ] as const) {
+    await until(() => store.get(t.id, "alice").status === "completed");
+    await c.send("alice", t.id, message, "user");
+    await until(() => store.get(t.id, "alice").turn === turn);
+  }
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.equal(recorder.prompts[1], "/compact keep the test plan");
+  assert.match(recorder.prompts[2] ?? "", /^Note: this checkout is shared/);
+  await c.close();
+});
+
+test("a command fails when the session can't resume, and the next message starts a new one", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "Review the parser"));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const moved = store.get(t.id, "alice");
+  moved.session_owner = "another-worker";
+  store.save(moved);
+  await c.send("alice", t.id, "/compact", "user");
+  await until(() => store.get(t.id, "alice").status === "failed");
+  const failed = store.get(t.id, "alice");
+  assert.equal(failed.error_code, "command_needs_session");
+  assert.equal(recorder.prompts.length, 1);
+
+  await c.send("alice", t.id, "Summarise it", "user");
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const prompt = recorder.prompts[1] ?? "";
+  assert.match(prompt, /continues in a new session/);
+  assert.ok(prompt.endsWith("Summarise it"));
+  await c.close();
+});
+
 test("a turn stopped by its budget resumes after a follow-up raises it", async () => {
   const { c, store, repo } = await setup();
 
