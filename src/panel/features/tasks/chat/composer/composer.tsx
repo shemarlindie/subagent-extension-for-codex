@@ -69,7 +69,13 @@ export function Composer({
   onCollapse,
 }: ComposerProps) {
   const controller = useController();
-  const { busy, workers } = useSnapshot(["busy", "workers"]);
+
+  const { busy, workers, conversation } = useSnapshot([
+    "busy",
+    "workers",
+    "conversation",
+  ]);
+
   const provider = task ? providerName(task.provider, workers) : "agent";
   const sessionTaskId = task?.id ?? taskId ?? "loading";
   const mode = task ? composerMode(task) : "idle";
@@ -98,7 +104,7 @@ export function Composer({
 
   const collapsed = inputRequest
     ? expandedRequest !== inputRequest
-    : manuallyCollapsed;
+    : (manuallyCollapsed ?? Boolean(conversation));
 
   const container = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);

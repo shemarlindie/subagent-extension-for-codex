@@ -219,7 +219,8 @@
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    /* Any longer paints an entrance animation's hidden first frame. */
+    animation-duration: 0s !important;
     animation-iteration-count: 1 !important;
     /* Any longer turns every style change into a one-frame transition, which
        leaves layout changes a frame behind. */

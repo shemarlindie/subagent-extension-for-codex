@@ -16,10 +16,37 @@ import {
   selectOption,
   setup,
   setupDelegate,
+  task,
   test,
   waitFor,
   within,
 } from "./panel-test-support";
+
+test("thread composers default to collapsed and honor explicit or new-task expansion", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.tasks.push(task("two"));
+    },
+    { conversation: "chat-1" },
+  );
+
+  expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Show composer" }));
+
+  await act(() => controller.select("two"));
+  await act(() => controller.select("one"));
+  expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
+
+  await user.click(screen.getByRole("button", { name: "New task" }));
+
+  const message = await screen.findByRole("textbox", { name: "Task message" });
+  await pasteText(user, message, "Start a new task");
+  transport.tasks.unshift({ ...task("created"), conversation_id: "chat-1" });
+
+  await user.keyboard("{Enter}");
+  await screen.findByRole("textbox", { name: "Message" });
+});
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
   const { controller, transport, user } = await setup(t);
