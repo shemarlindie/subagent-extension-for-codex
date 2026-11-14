@@ -339,6 +339,7 @@ export function Composer({
             <Icon name="chevron-down" size={12} />
             <span>{expandLabel(spent, message)}</span>
           </Button>
+          {task && <TaskRunSettings task={task} />}
           {mode !== "idle" && stopButton}
           {pendingFeedback && <span role="status">{pendingFeedback}</span>}
         </div>

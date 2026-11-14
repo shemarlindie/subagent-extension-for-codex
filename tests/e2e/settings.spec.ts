@@ -201,6 +201,23 @@ test("advanced task options set the task's model and permission policy", async (
   const settings = page.getByRole("list", { name: "Task settings" });
   // Only Claude reports a permission mode for this list. The denial shows the fixture's.
   await expect(settings).toContainText("Fixture Fast");
+
+  await page.getByRole("button", { name: "Hide composer" }).click();
+
+  await expect(
+    page.getByRole("textbox", { name: "Message", exact: true }),
+  ).toHaveCount(0);
+
+  await expect(settings).toBeVisible();
+  await expect(settings).toContainText("Fixture Fast");
+  await expect(settings).toHaveAttribute("title", /Fixture Fast/);
+
+  await page
+    .getByRole("button", { name: "Show composer", exact: true })
+    .click();
+
+  await expect(settings).toBeVisible();
+  await expect(settings).toContainText("Fixture Fast");
 });
 
 test("custom instructions save under a worker profile and stay with the tasks it starts", async ({
