@@ -17,7 +17,7 @@ import type {
   Transport,
 } from "../../../app/state/types";
 import type { DelegateValues } from "../delegate-values";
-import { NEW_TASK_SESSION_ID } from "./new-task-values";
+import { newTaskSessionId } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
 const ready: NewTaskState = {
@@ -51,7 +51,7 @@ function setup(
   onTestFinished(() => controller.dispose());
 
   if (draft) {
-    controller.session.update("newTask", NEW_TASK_SESSION_ID, { draft });
+    controller.session.update("newTask", newTaskSessionId(), { draft });
   }
 
   const state: Snapshot = {

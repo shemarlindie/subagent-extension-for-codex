@@ -9,7 +9,7 @@ import {
   NewTaskLoader,
   rescopedNewTask,
 } from "../../features/delegation/new-task/new-task-loader";
-import { NEW_TASK_SESSION_ID } from "../../features/delegation/new-task/new-task-values";
+import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
 import {
   renamedProject,
   withoutProject,
@@ -1602,8 +1602,11 @@ export class Controller {
   private selectStarted(task: Task) {
     this.choose();
     this.restoredView = undefined;
+
     // Starting a task while composing, here or from Advanced, sends the draft.
-    if (this.state.newTask) this.session.remove("newTask", NEW_TASK_SESSION_ID);
+    if (this.state.newTask) {
+      this.session.remove("newTask", newTaskSessionId(this.state.conversation));
+    }
 
     this.patch({
       tasks: [task, ...this.state.tasks.filter((item) => item.id !== task.id)],

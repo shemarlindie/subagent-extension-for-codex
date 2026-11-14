@@ -9,7 +9,7 @@ import {
   task,
 } from "../../../app/state/controller-test-harness";
 import type { DelegateValues } from "../delegate-values";
-import { NEW_TASK_SESSION_ID } from "./new-task-values";
+import { newTaskSessionId } from "./new-task-values";
 
 const values: DelegateValues = {
   permission_mode: "acceptEdits",
@@ -49,7 +49,7 @@ test("a failed start keeps the composer and its draft and returns the error", as
   controller.newTasks.open();
   await flush();
 
-  controller.session.update("newTask", NEW_TASK_SESSION_ID, {
+  controller.session.update("newTask", newTaskSessionId(), {
     draft: { description: values.description },
   });
 
@@ -62,9 +62,39 @@ test("a failed start keeps the composer and its draft and returns the error", as
   assert.equal(controller.getSnapshot().busy, false);
 
   assert.equal(
-    controller.session.get("newTask", NEW_TASK_SESSION_ID).draft.description,
+    controller.session.get("newTask", newTaskSessionId()).draft.description,
     values.description,
   );
+});
+
+test("a thread's composer starts the task in that conversation and clears only its draft", async (t) => {
+  const { controller, transport } = await started();
+  t.onTestFinished(() => controller.dispose());
+  transport.handler = (name) => (name === "start_task" ? task("b") : undefined);
+
+  controller.applyScope(
+    { panel_scope: { conversation_id: "chat-1", repository: "/repo/a" } },
+    false,
+  );
+
+  controller.newTasks.open();
+  await flush();
+
+  const draft = { description: values.description };
+  controller.session.update("newTask", newTaskSessionId(), { draft });
+  controller.session.update("newTask", newTaskSessionId("chat-1"), { draft });
+
+  assert.equal(await controller.newTasks.start(values), undefined);
+
+  const start = transport.calls.find((call) => call.name === "start_task");
+  assert.equal(start?.args.conversation_id, "chat-1");
+
+  const saved = (conversation?: string) =>
+    controller.session.get("newTask", newTaskSessionId(conversation)).draft
+      .description;
+
+  assert.equal(saved("chat-1"), undefined);
+  assert.equal(saved(), values.description);
 });
 
 test("a task that starts after the scope changes is not selected", async (t) => {
@@ -92,22 +122,26 @@ test("a task that starts after the scope changes is not selected", async (t) => 
   assert.notEqual(controller.getSnapshot().selected, "late");
 });
 
-test("the composer follows global project changes and closes for a chat scope", async (t) => {
+test("the composer follows project changes and closes for another conversation", async (t) => {
   const { controller } = await started();
   t.onTestFinished(() => controller.dispose());
+
+  const follows = (scope: Record<string, unknown>) => {
+    controller.applyScope({ panel_scope: scope }, false);
+    const { newTask, scopeVersion } = controller.getSnapshot();
+    assert.equal(newTask?.scope, scopeVersion);
+  };
+
   controller.newTasks.open();
   await flush();
-
-  controller.applyScope(
-    { panel_scope: { conversation_id: null, repository: "/repo/a" } },
-    false,
-  );
-
-  const { newTask, scopeVersion } = controller.getSnapshot();
-  assert.equal(newTask?.scope, scopeVersion);
+  follows({ conversation_id: null, repository: "/repo/a" });
 
   controller.applyScope({ panel_scope: { conversation_id: "chat-1" } }, false);
   assert.equal(controller.getSnapshot().newTask, undefined);
+
+  controller.newTasks.open();
+  await flush();
+  follows({ conversation_id: "chat-1", repository: "/repo/a" });
 });
 
 test("a profile choice saves as its default and rolls back when saving fails", async (t) => {

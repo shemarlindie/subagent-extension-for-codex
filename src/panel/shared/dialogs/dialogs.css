@@ -25,6 +25,13 @@
   flex: 1;
   min-width: 0;
 }
+/* A subtitle sits just under the title and takes over its gap to the form. */
+.dialog-heading:has(+ .dialog-subtitle) h2 {
+  margin-bottom: 0;
+}
+.dialog-subtitle {
+  margin-top: 0;
+}
 .dialog-close {
   position: absolute;
   top: 8px;

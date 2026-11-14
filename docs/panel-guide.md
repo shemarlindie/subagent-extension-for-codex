@@ -240,8 +240,9 @@ budgets and deleting can't be undone.
 
 ### Create and rename tasks
 
-Global launch offers **New task** and **Advanced task…** from the split button,
-or from **Panel actions** on narrow panels.
+**New task** and **Advanced task…** are on the split button, or in **Panel
+actions** on narrow panels. In a thread panel, new tasks belong to that
+conversation.
 
 **New task** opens a draft in the inspector. Your first message becomes the
 request. Enter starts the task and Shift+Enter adds a line. Below the message,
@@ -270,8 +271,9 @@ so a response can exceed the limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.
-Switching to chat scope closes it. Existing tasks show their starting profile,
-model, reasoning and permission mode below Chat, and later turns keep them.
+Switching to another conversation closes it. Existing tasks show their starting
+profile, model, reasoning and permission mode below Chat, and later turns keep
+them.
 
 The service derives a title from the request. Click the inspector title to edit
 it. Enter or an outside click saves, Escape cancels, and a blank or failed save

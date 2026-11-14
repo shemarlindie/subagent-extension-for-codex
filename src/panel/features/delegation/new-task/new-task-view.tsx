@@ -1,7 +1,9 @@
 import type { CSSProperties, Ref } from "react";
 
 import animatedGlyph from "../../../../../assets/brand/brand-glyph-animated.svg?raw";
+import { useSnapshot } from "../../../app/state/controller-context";
 import type { NewTaskState } from "../../../app/state/types";
+import { THREAD_TASK_NOTE } from "../delegation";
 import { NewTaskComposer } from "./new-task-composer";
 
 const glyphSource = `data:image/svg+xml,${encodeURIComponent(animatedGlyph)}`;
@@ -22,6 +24,8 @@ type NewTaskViewProps = {
  * once the task starts.
  */
 export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
+  const threadMode = useSnapshot((state) => Boolean(state.conversation));
+
   return (
     <div ref={viewRef} className="task-view new-task-view">
       <div className="evidence">
@@ -34,6 +38,7 @@ export function NewTaskView({ newTask, viewRef }: NewTaskViewProps) {
                 aria-hidden="true"
               />
               <p className="new-task-prompt">What would you like to work on?</p>
+              {threadMode && <p>{THREAD_TASK_NOTE}</p>}
             </div>
             <div className="chat-footer">
               <NewTaskComposer newTask={newTask} />

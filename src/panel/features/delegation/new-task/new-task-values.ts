@@ -13,8 +13,10 @@ import {
   workerChoice,
 } from "../delegation";
 
-/** The session-memory entry that keeps the composer's draft. */
-export const NEW_TASK_SESSION_ID = "draft";
+/** The session-memory entry that keeps the composer's draft, one per chat. */
+export function newTaskSessionId(conversation?: string) {
+  return conversation ?? "draft";
+}
 
 /** A draft's first line, which stands in for the title until the task starts. */
 export function draftTitle(description = "") {

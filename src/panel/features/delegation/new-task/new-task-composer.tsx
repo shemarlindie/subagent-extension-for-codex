@@ -28,7 +28,7 @@ import { projectGit, workerChoice } from "../delegation";
 import { WorkspaceNoteView } from "../fields/workspace-note-view";
 import { useAsyncDefaults, useProfileMode } from "../use-async-defaults";
 import { workspaceNote } from "../workspace-note";
-import { NEW_TASK_SESSION_ID, newTaskInitialValues } from "./new-task-values";
+import { newTaskInitialValues, newTaskSessionId } from "./new-task-values";
 import { NewTaskOptions } from "./options/new-task-options";
 
 type NewTaskComposerProps = { newTask: NewTaskState };
@@ -57,9 +57,14 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
 
   const dialogOpen = useSnapshot((state) => Boolean(state.dialog));
 
+  // A different conversation closes the composer, so the id stays fixed.
+  const sessionId = newTaskSessionId(
+    useSnapshot((state) => state.conversation),
+  );
+
   const [saved, updateSession] = useSessionState(
     "newTask",
-    NEW_TASK_SESSION_ID,
+    sessionId,
     (session) => session.draft,
   );
 
@@ -85,14 +90,14 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
 
       updateSession({
         draft: {
-          ...controller.session.get("newTask", NEW_TASK_SESSION_ID).draft,
+          ...controller.session.get("newTask", sessionId).draft,
           [field]: form.getValues(field),
         },
       });
     });
 
     return () => subscription.unsubscribe();
-  }, [form, controller, updateSession]);
+  }, [form, controller, sessionId, updateSession]);
 
   useEffect(() => {
     input.current?.focus({ preventScroll: true });

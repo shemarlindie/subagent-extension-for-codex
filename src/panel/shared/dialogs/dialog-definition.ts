@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { DialogState } from "../../app/state/types";
+import type { DialogState, Snapshot } from "../../app/state/types";
 
 export type DialogKind = DialogState["kind"];
 
@@ -9,6 +9,8 @@ type DialogOf<K extends DialogKind> = Extract<DialogState, { kind: K }>;
 /** What a dialog variant contributes to the shared `DialogHost` shell. */
 export interface DialogDefinition<K extends DialogKind> {
   title: (dialog: DialogOf<K>) => ReactNode;
+  /** A line under the title that describes the dialog. */
+  subtitle?: (dialog: DialogOf<K>, state: Snapshot) => string | undefined;
   render: (dialog: DialogOf<K>) => ReactNode;
   /** Controls beside the title, which stay mounted as the dialog's content changes. */
   headingActions?: (dialog: DialogOf<K>) => ReactNode;
