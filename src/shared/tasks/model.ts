@@ -81,7 +81,9 @@ export const startSchema = z.object({
     .string()
     .min(1)
     .max(20000)
-    .describe("The full task instructions and details for the worker."),
+    .describe(
+      "A short title line of under 80 characters, a blank line, then the full task instructions and details for the worker. The title line names the task, its branch and its worktree.",
+    ),
   repository: z
     .string()
     .min(1)

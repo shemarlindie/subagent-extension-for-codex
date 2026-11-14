@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 import type { Task } from "../../../shared/tasks/model.js";
 import { pathSymlinks } from "../../platform/filesystem/path-symlinks.js";
@@ -16,18 +16,18 @@ export async function workspaceDeletion(task: Task, managedRoot: string) {
   }
 
   const root = resolve(managedRoot);
-  const expectedPath = resolve(root, task.id);
 
   if (
     !task.workspace ||
     !task.branch ||
-    dirname(expectedPath) !== root ||
-    resolve(task.workspace) !== expectedPath
+    dirname(resolve(task.workspace)) !== root
   ) {
     const retained = retainedWorktree(task);
 
     return { retained, version: JSON.stringify(retained) };
   }
+
+  const expectedPath = resolve(task.workspace);
 
   const entry = await worktreeEntry(task.workspace);
   const repository = await realpath(task.repository);
@@ -46,7 +46,7 @@ export async function workspaceDeletion(task: Task, managedRoot: string) {
     const actual = await realpath(task.workspace);
 
     if (
-      actual !== join(await realpath(root), task.id) ||
+      actual !== join(await realpath(root), basename(expectedPath)) ||
       (await gitRepositoryRoot(actual)) !== actual
     ) {
       throw new Error("The task's worktree location changed.");
