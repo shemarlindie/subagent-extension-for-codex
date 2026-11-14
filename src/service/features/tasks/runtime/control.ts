@@ -7,6 +7,7 @@ import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { withEffectiveOptions } from "../../../../shared/providers/options.js";
+import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
   type BudgetRaise,
@@ -948,6 +949,7 @@ export class Control {
   ): Promise<SentMessage> {
     const delivery = options.delivery ?? "steer";
     const stored = this.mutableTask(owner, id);
+    this.checkCommand(stored, message);
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
@@ -1116,9 +1118,18 @@ export class Control {
   /** Changes a queued message's text before it's sent. */
   editQueued(owner: string, id: string, messageId: string, message: string) {
     const t = this.queueTask(owner, id);
+    this.checkCommand(t, message);
     editQueuedMessage(this.store, t, messageId, message);
 
     return t;
+  }
+
+  /** Refuses a command the task's provider won't run in a task. */
+  private checkCommand(t: Task, message: string) {
+    const name = slashCommand(message);
+    const policy = this.providers.get(t.provider)?.taskPolicy;
+    const refusal = name && policy?.commandRefusal?.(name);
+    if (refusal) throw new Error(refusal);
   }
 
   /** Moves a queued message to `index`, behind steers the worker already has. */

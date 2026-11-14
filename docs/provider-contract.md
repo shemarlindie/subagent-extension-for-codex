@@ -114,6 +114,7 @@ provider identity. The policy:
 - Resolves and validates options at task creation.
 - Decides native permission requests and selects their approver.
 - Classifies questions separately. Questions stay interactive.
+- Refuses slash commands that would change what the task owns, with the reason.
 
 Resolved restrictions are stored with the task, so later settings changes cannot
 broaden an existing task's authority. Native policies own their defaults. A
@@ -124,6 +125,13 @@ A provider may validate local session state before resuming. If it rejects the
 state, or a different service worker owns the session, the task starts a fresh
 session that carries the earlier conversation in its prompt. See
 `ProviderTaskPolicy` in `src/service/features/providers/task-policy.ts`.
+
+A provider with the `slash_commands` capability runs a message that starts with
+`/name` as a command, which needs a turn's whole prompt. The control plane sends
+a lone command bare on a resumed turn, and runs it after the other pending
+steers on interrupt and send. A command fails when the session can't resume,
+since a new session would run it without the conversation. The provider's steer
+sink refuses commands, so they wait at the front of the queue.
 
 ## Presentation and settings
 

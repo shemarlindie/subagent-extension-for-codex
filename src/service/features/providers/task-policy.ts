@@ -27,6 +27,8 @@ export interface ProviderTaskPolicy {
   parentMayApprove(task: Task): boolean;
   inputKind(tool: string): "question" | "permission";
   validateSession?(task: Task): Promise<void>;
+  /** Why a slash command can't run in a task, or undefined when it can. */
+  commandRefusal?(name: string): string | undefined;
 }
 
 /** Whole-execution approval policy for providers without native per-tool permission handling. */

@@ -68,6 +68,22 @@ export function claudeStartOptions(
   });
 }
 
+const modelSettings =
+  "A task runs every turn with the model settings it started with.";
+
+// Clearing would leave the task's stored conversation out of step.
+const conversation = "Start a new task for a fresh conversation.";
+
+/** Commands that would change what the task owns, with why each is refused. */
+const refusedCommands = new Map([
+  ["model", modelSettings],
+  ["effort", modelSettings],
+  ["fast", modelSettings],
+  ["clear", conversation],
+  ["reset", conversation],
+  ["new", conversation],
+]);
+
 export const claudeTaskPolicy = {
   inputKind: (tool) => (tool === "AskUserQuestion" ? "question" : "permission"),
   prepareStart(context) {
@@ -96,5 +112,10 @@ export const claudeTaskPolicy = {
     readClaudeTaskOptions(task).approval_decider === "parent_agent",
   async validateSession(task) {
     if (task.session_state_ref) await access(task.session_state_ref);
+  },
+  commandRefusal: (name) => {
+    const reason = refusedCommands.get(name);
+
+    return reason && `/${name} can't run in a task. ${reason}`;
   },
 } satisfies ProviderTaskPolicy;

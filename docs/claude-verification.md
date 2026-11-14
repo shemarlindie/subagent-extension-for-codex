@@ -23,7 +23,9 @@ when you update the SDK or change the minimum:
 2. Select the version through `PATH` or
    `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` and run the
    [live Claude checks](#live-claude-checks).
-3. In a live task from the panel, steer, interrupt and answer a question.
+3. In a live task from the panel, steer, interrupt, answer a question and run
+   `/compact`. Tasks rely on how Claude Code parses commands, and on the output
+   `/compact` prints in place of a result.
 4. Run `npm run check:claude-policy`. It makes no model calls and needs no org.
    The org policy checks rely on `getSettings`, which the SDK doesn't declare,
    and on how Claude Code words a rejected permission mode. If it fails, the
