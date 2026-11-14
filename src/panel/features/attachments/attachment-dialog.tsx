@@ -163,13 +163,18 @@ type AttachmentNavProps = {
 function AttachmentNav({ attachment, attachments }: AttachmentNavProps) {
   const controller = useController();
 
+  const showAt = (index: number) => {
+    const next = attachments[index];
+    if (next) controller.showAttachment(next);
+  };
+
   return (
     <StepNav
       label="Attachments"
       noun="attachment"
       index={attachments.findIndex((a) => a.position === attachment.position)}
       count={attachments.length}
-      onStep={(step) => controller.showAttachment(attachments[step]!)}
+      onStep={showAt}
     />
   );
 }

@@ -45,7 +45,7 @@ export function MarkdownLink({
   const controller = useContext(ControllerContext);
   const kind = linkKind(href);
 
-  if (kind === "text") {
+  if (!href || kind === "text") {
     return (
       <span className="markdown-link-text" title={href || undefined}>
         {children}
@@ -55,7 +55,7 @@ export function MarkdownLink({
 
   if (kind === "fragment") {
     return (
-      <a {...rest} href={href} onClick={(event) => jumpWithin(event, href!)}>
+      <a {...rest} href={href} onClick={(event) => jumpWithin(event, href)}>
         {children}
       </a>
     );
@@ -64,10 +64,13 @@ export function MarkdownLink({
   const openLink = controller?.transport.openLink?.bind(controller.transport);
 
   // Embedded hosts sandbox the panel, so the host opens the link.
-  const openInHost = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    controller!.run(() => openLink!(href!));
-  };
+  const openInHost =
+    controller && openLink
+      ? (event: MouseEvent<HTMLAnchorElement>) => {
+          event.preventDefault();
+          controller.run(() => openLink(href));
+        }
+      : undefined;
 
   return (
     <a
@@ -75,7 +78,7 @@ export function MarkdownLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={openLink && openInHost}
+      onClick={openInHost}
     >
       {children}
     </a>

@@ -6,7 +6,9 @@ import { Notice } from "../../shared/components/notice/notice";
 export function WorkerReadinessNotice() {
   const workers = useSnapshot((state) => state.workers);
 
-  const unready = workers.filter((worker) => worker.readiness?.ready === false);
+  const unready = workers.flatMap(({ readiness, ...worker }) =>
+    readiness?.ready === false ? [{ ...worker, readiness }] : [],
+  );
 
   if (!unready.length) return null;
 
@@ -19,7 +21,7 @@ export function WorkerReadinessNotice() {
               worker.provider}{" "}
             can't start tasks
           </strong>
-          <p>{worker.readiness!.message}</p>
+          <p>{worker.readiness.message}</p>
         </Notice>
       ))}
     </div>

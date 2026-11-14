@@ -76,7 +76,8 @@ function withOrgDefaults(
   scope: ModelScope,
   policy: ProviderPolicy,
 ): ModelScope {
-  if (scope.id !== "claude" || !policy.default_model) return scope;
+  const defaultModel = policy.default_model;
+  if (scope.id !== "claude" || !defaultModel) return scope;
 
   return {
     ...scope,
@@ -84,7 +85,7 @@ function withOrgDefaults(
       ...scope.model,
       options: scope.model.options?.map((option) =>
         option.value === ""
-          ? { ...option, label: `Inherit (${policy.default_model!.name})` }
+          ? { ...option, label: `Inherit (${defaultModel.name})` }
           : option,
       ),
     },
@@ -102,13 +103,14 @@ function policyFacts(policy: ProviderPolicy) {
     .filter(({ reason }) => reason === MODE_TURNED_OFF_BY_ORG)
     .map(({ value }) => permissionModeName(value));
 
+  const reasoning = defaultReasoning(policy);
+  const limit = reasoningLimit(policy);
+
   return [
     ...(policy.default_model
       ? [{ label: "Default model", detail: `${policy.default_model.name}.` }]
       : []),
-    ...(defaultReasoning(policy)
-      ? [{ label: "Default reasoning", detail: defaultReasoning(policy)! }]
-      : []),
+    ...(reasoning ? [{ label: "Default reasoning", detail: reasoning }] : []),
     ...(modes.length
       ? [
           {
@@ -127,9 +129,7 @@ function policyFacts(policy: ProviderPolicy) {
           },
         ]
       : []),
-    ...(reasoningLimit(policy)
-      ? [{ label: "Reasoning", detail: reasoningLimit(policy)! }]
-      : []),
+    ...(limit ? [{ label: "Reasoning", detail: limit }] : []),
     ...(policy.prompts_denied
       ? [
           {

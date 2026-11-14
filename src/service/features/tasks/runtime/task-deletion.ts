@@ -87,13 +87,22 @@ function sessionTarget(
   includeSession: boolean,
 ): Pick<TaskDeletionTarget, "session" | "sessionRecorded"> {
   if (!session) return { sessionRecorded: false };
-  if (!includeSession || !session.available) return {};
+
+  // An available session always has an id and resources.
+  if (
+    !includeSession ||
+    !session.available ||
+    !task.session_id ||
+    !session.resources
+  ) {
+    return {};
+  }
 
   return {
     session: {
       provider: task.provider,
-      id: task.session_id!,
-      resources: session.resources!,
+      id: task.session_id,
+      resources: session.resources,
     },
   };
 }

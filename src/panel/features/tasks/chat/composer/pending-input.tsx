@@ -48,10 +48,18 @@ export const PendingInput = memo(function PendingInput({
     <>
       <Presence show={Boolean(questions)}>
         {/* Keyed so a new request starts with fresh answers. */}
-        <QuestionForm key={pending?.id} task={task} />
+        {pending && (
+          <QuestionForm key={pending.id} task={task} request={pending} />
+        )}
       </Presence>
       <Presence show={Boolean(pending && !questions && isPermission)}>
-        <InlinePermissionRequest key={pending?.id} task={task} />
+        {pending && (
+          <InlinePermissionRequest
+            key={pending.id}
+            task={task}
+            request={pending}
+          />
+        )}
       </Presence>
       <Presence show={Boolean(pending && !questions && !isPermission)}>
         <Notice>

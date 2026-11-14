@@ -68,11 +68,12 @@ export class ActivityPages {
 
       for (let cursor = after; ;) {
         const older = this.store.taskEvents(taskId, cursor, start);
-        if (!older.length) break;
+        const last = older.at(-1);
+        if (!last) break;
 
         work.tally_rows += older.length;
         dropped = addDropped(dropped, older);
-        cursor = older.at(-1)!.id;
+        cursor = last.id;
       }
 
       const page = {
@@ -111,19 +112,22 @@ export class ActivityPages {
 
     for (;;) {
       const older = this.store.taskEvents(taskId, through, start);
-      if (!older.length) break;
+      const last = older.at(-1);
+      if (!last) break;
 
       work.tally_rows += older.length;
       summary = addDropped(summary, older);
-      through = older.at(-1)!.id;
+      through = last.id;
     }
 
     // Re-inserting keeps the map ordered by last use, so the oldest is evicted.
     this.tallies.delete(taskId);
     this.tallies.set(taskId, { through, summary });
 
-    if (this.tallies.size > TALLY_CACHE_SIZE) {
-      this.tallies.delete(this.tallies.keys().next().value!);
+    const [oldest] = this.tallies.keys();
+
+    if (oldest && this.tallies.size > TALLY_CACHE_SIZE) {
+      this.tallies.delete(oldest);
     }
 
     return summary;

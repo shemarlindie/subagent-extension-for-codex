@@ -85,6 +85,13 @@ import { workerStatus } from "./worker-status.js";
 /** Statuses in which a task has a turn running, starting or about to. */
 const BUSY: Task["status"][] = ["queued", "starting", "running", "waiting"];
 
+const worker = (p: Provider) => ({
+  provider: p.id,
+  capabilities: p.capabilities,
+  metadata: p.metadata,
+  profiles: [...roles],
+});
+
 export class Control {
   changes: Changes;
   /** Which tasks the user archived from the panel's lists. */
@@ -186,22 +193,13 @@ export class Control {
   }
 
   workers() {
-    return [...this.providers.values()].map((p) => ({
-      provider: p.id,
-      capabilities: p.capabilities,
-      metadata: p.metadata,
-      profiles: [...roles],
-    }));
+    return [...this.providers.values()].map(worker);
   }
 
   async availableWorkers(owner: string) {
     return Promise.all(
-      this.workers().map((worker) =>
-        workerStatus(
-          worker,
-          this.providers.get(worker.provider)!,
-          this.settings.values(owner),
-        ),
+      [...this.providers.values()].map((provider) =>
+        workerStatus(worker(provider), provider, this.settings.values(owner)),
       ),
     );
   }
@@ -246,7 +244,7 @@ export class Control {
           input: new PendingInput(
             t,
             this.store,
-            this.providers.get(t.provider)!.taskPolicy,
+            this.providers.get(t.provider)?.taskPolicy,
             abort.signal,
           ),
         };
@@ -281,8 +279,7 @@ export class Control {
     const { signal } = a.abort;
 
     try {
-      validateBudgets(this.providers.get(t.provider), t);
-      const provider = this.providers.get(t.provider)!;
+      const provider = validateBudgets(this.providers.get(t.provider), t);
       const startup = this.turnStartup();
       const newSession = await startTurn(startup, t, provider, begin, signal);
       const remaining = remainingRuntime(t);
@@ -528,10 +525,14 @@ export class Control {
 
       if (outcome !== "completed") {
         if (t.queue.length) t.queue_paused = true;
-      } else if (t.queue.length && !t.queue_paused) {
-        deliverQueued(this.store, t, t.queue.shift()!);
-        requeue(t);
-        this.queuedAfterCommit(t, "queued_message");
+      } else if (!t.queue_paused) {
+        const next = t.queue.shift();
+
+        if (next) {
+          deliverQueued(this.store, t, next);
+          requeue(t);
+          this.queuedAfterCommit(t, "queued_message");
+        }
       }
     }
 
@@ -1043,11 +1044,13 @@ export class Control {
     if (options.budget) raiseBudget(t, options.budget);
     validateBudgets(this.providers.get(t.provider), t);
 
-    if (this.projects) {
+    const { projects } = this;
+
+    if (projects) {
       await measureTaskWait(
         "repository_validation",
         { task_id: id, send_ref: sendRef(options.request_id) },
-        () => this.projects!.resolve(t.repository),
+        () => projects.resolve(t.repository),
       );
     }
 
@@ -1160,8 +1163,12 @@ export class Control {
     const before = queueSnapshot(t);
     delete t.queue_paused;
 
-    if (!this.active.has(id) && !BUSY.includes(t.status) && t.queue.length) {
-      const next = t.queue.shift()!;
+    const next =
+      !this.active.has(id) && !BUSY.includes(t.status)
+        ? t.queue.shift()
+        : undefined;
+
+    if (next) {
       requeue(t);
 
       this.store.transaction(() => {
@@ -1242,11 +1249,11 @@ export class Control {
     this.stopped = true;
 
     const tasks = await Promise.allSettled(
-      [...this.active.keys()].map((id) => {
-        const t = this.store.all().find((t) => t.id === id)!;
+      [...this.active].map(([id, active]) => {
+        const t = this.store.all().find((t) => t.id === id);
 
-        return ["completed", "failed"].includes(t.status)
-          ? this.active.get(id)!.done
+        return !t || ["completed", "failed"].includes(t.status)
+          ? active.done
           : this.interrupt(t.owner, id);
       }),
     );

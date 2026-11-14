@@ -77,13 +77,15 @@ export function restoreReadingAnchor(
 ) {
   container.scrollTop = saved.top + scrolled;
 
-  const element = saved.anchor && findRow(viewport, attribute, saved.anchor.id);
+  const saving = saved.anchor;
+  const element = saving && findRow(viewport, attribute, saving.id);
 
-  const anchor = element
-    ? { element, top: saved.anchor!.top }
-    : [...previous.values()].find(
-        (position) => anchorable(position) && position.element.isConnected,
-      );
+  const anchor =
+    saving && element
+      ? { element, top: saving.top }
+      : [...previous.values()].find(
+          (position) => anchorable(position) && position.element.isConnected,
+        );
 
   if (anchor) {
     container.scrollTop +=

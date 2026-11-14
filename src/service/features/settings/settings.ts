@@ -49,12 +49,16 @@ type JsonSchema = Record<string, unknown> & {
 
 /** A JSON Schema's node for a dotted settings path. */
 function jsonSchemaAt(schema: JsonSchema, path: string) {
-  return path
+  const node = path
     .split(".")
     .reduce<JsonSchema | undefined>(
       (node, key) => node?.properties?.[key],
       schema,
     );
+
+  if (!node) throw new Error(`The settings schema has no ${path}.`);
+
+  return node;
 }
 
 /** A task budget from a saved limit: its amount when on, otherwise no limit. */
@@ -62,7 +66,7 @@ const limit = ({ enabled, amount }: { enabled: boolean; amount: number }) =>
   enabled ? amount : null;
 
 export class Settings {
-  readonly providers: () => string[];
+  readonly providers: () => [string, ...string[]];
   constructor(
     private database: Database,
     providers: () => string[],
@@ -74,15 +78,17 @@ export class Settings {
     // any still needs a valid provider default; tasks can still choose other
     // providers explicitly.
     this.providers = () => {
-      const enabled = providers().filter((provider) => this.metadata(provider));
+      const [first, ...rest] = providers().filter((provider) =>
+        this.metadata(provider),
+      );
 
-      return enabled.length ? enabled : [providerModelSettingScopes[0]];
+      return first ? [first, ...rest] : [providerModelSettingScopes[0]];
     };
   }
 
   /** The values a new user starts with, which resets restore. */
   defaults(): SettingsValues {
-    return settingsDefaults(preferredSettingsProvider(this.providers())!);
+    return settingsDefaults(preferredSettingsProvider(this.providers()));
   }
 
   /** The owner's saved settings, with a provider that's still enabled. */
@@ -112,7 +118,7 @@ export class Settings {
 
     // A saved provider can disappear when the service configuration changes.
     if (!this.providers().includes(values.task.provider)) {
-      values.task.provider = this.providers()[0]!;
+      values.task.provider = this.providers()[0];
     }
 
     return values;
@@ -151,8 +157,8 @@ export class Settings {
 
     // Agents update through this schema, so it lists what an update accepts.
     const schema = z.toJSONSchema(settingsPatchSchema) as JsonSchema;
-    jsonSchemaAt(schema, "task.provider")!.enum = providers;
-    const providerModels = jsonSchemaAt(schema, "models.providers")!;
+    jsonSchemaAt(schema, "task.provider").enum = providers;
+    const providerModels = jsonSchemaAt(schema, "models.providers");
 
     for (const provider of providerModelSettingScopes) {
       if (!modelProviders.includes(provider)) {
@@ -172,8 +178,8 @@ export class Settings {
 
     for (const scope of [...modelProviders, ...roles]) {
       const info = modelScope(scope, scopes);
-      const modelField = jsonSchemaAt(schema, info.modelPath)!;
-      const effortField = jsonSchemaAt(schema, info.effortPath)!;
+      const modelField = jsonSchemaAt(schema, info.modelPath);
+      const effortField = jsonSchemaAt(schema, info.effortPath);
 
       modelField.description = modelNote;
 
@@ -212,7 +218,8 @@ export class Settings {
         : settingPaths(set).find((path) => userOnlySetting(path));
 
     if (userOnly) {
-      const { label } = settingText(settingSchemaAt(userOnly)!);
+      const schema = settingSchemaAt(userOnly);
+      const label = schema ? settingText(schema).label : userOnly;
       throw new Error(`Changing ${label} requires a user decision in settings`);
     }
 

@@ -46,6 +46,7 @@ import {
   readTasks,
   type TaskFilters,
   taskFilters,
+  taskReadState,
 } from "./task-rows.js";
 
 const newest = desc(tasks.created_at);
@@ -374,7 +375,7 @@ export class Store {
    * request they haven't read, and the newest event they had read.
    */
   readState(id: string): ReadState {
-    return readStates(this.orm, eq(tasks.id, id)).get(id)!;
+    return taskReadState(this.orm, id);
   }
 
   /** The read state of each of an owner's tasks matching `filters`, by id. */

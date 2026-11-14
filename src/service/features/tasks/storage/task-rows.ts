@@ -183,6 +183,14 @@ export function readStates(
   );
 }
 
+/** What the owner has read of one task. */
+export function taskReadState(orm: Database["orm"], id: string) {
+  const state = readStates(orm, eq(tasks.id, id)).get(id);
+  if (!state) throw new Error("Task not found");
+
+  return state;
+}
+
 /** Each matching task's newest event of a type, by task id. */
 export function latestEvents(
   orm: Database["orm"],

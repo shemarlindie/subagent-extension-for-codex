@@ -31,8 +31,9 @@ function Prose({ text }: { text: string }): ReactNode {
     }
 
     // FENCE's code group is required, so every match has it.
-    const code = match[2]!.replace(/\n$/, "");
-    const language = match[1]?.trim().split(/\s/)[0];
+    const [, info, body = ""] = match;
+    const code = body.replace(/\n$/, "");
+    const language = info?.trim().split(/\s/)[0];
 
     parts.push(
       <CodeBlock

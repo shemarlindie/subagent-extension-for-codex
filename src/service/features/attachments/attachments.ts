@@ -108,10 +108,12 @@ async function resolveAttachment(
       ATTACHMENT_LIMITS.referenceBytes,
     );
 
+    // A diff of one file is named after it.
+    const [only, ...others] = diff.files;
+
     return {
       title:
-        input.title ??
-        (diff.files.length === 1 ? diff.files[0]! : "Uncommitted changes"),
+        input.title ?? (only && !others.length ? only : "Uncommitted changes"),
       summary: input.summary,
       format: "diff",
       source: "diff",

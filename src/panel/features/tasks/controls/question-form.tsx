@@ -26,14 +26,15 @@ function submitLabel(busy: boolean, sending: boolean) {
 
 interface QuestionFormProps {
   task: Task;
+  request: NonNullable<Task["pending_input"]>;
 }
 
-export function QuestionForm({ task }: QuestionFormProps) {
+export function QuestionForm({ task, request: pending }: QuestionFormProps) {
   const controller = useController();
   const busy = useSnapshot((state) => state.busy);
   const questions = pendingQuestions(task);
   const stacked = questions.length > 1;
-  const request = task.pending_input!.id;
+  const request = pending.id;
 
   // Answers left unsent when this request was last on screen.
   const [draft, updateSession] = useSessionState(

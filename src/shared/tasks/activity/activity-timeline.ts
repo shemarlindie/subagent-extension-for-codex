@@ -11,6 +11,7 @@ import {
   eventRowTitle,
   failureSummary,
   isQuiet,
+  lastEvent,
   replyText,
   sentence,
   serviceSummary,
@@ -36,7 +37,7 @@ export function thinkingSpan(
   events: Event[],
 ): { start: number; end: number | null } | undefined {
   const firstSignal = group.events.find(thinkingSignal);
-  const last = group.events.at(-1)!;
+  const last = lastEvent(group.events);
 
   if (!firstSignal) return undefined;
   const start = Date.parse(firstSignal.timestamp);
@@ -282,7 +283,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
         ) &&
         thinkingSignal(e) === onlyThinkingSignals(previous) &&
         (key === "rate_limit_event") ===
-          (activityKind(previous.events.at(-1)!) === "rate_limit_event") &&
+          (activityKind(lastEvent(previous.events)) === "rate_limit_event") &&
         !boundaries.has(key) &&
         !previous.events.some((event) => boundaries.has(activityKind(event)))
       ) {

@@ -61,9 +61,7 @@ export function composeHunks(
     current = undefined;
   };
 
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index]!;
-
+  for (const [index, item] of items.entries()) {
     if (item.kind === "gap") {
       close();
       oldLine += item.count;
@@ -91,8 +89,8 @@ export function composeHunks(
         before >= 0 && leading.length < context;
         before--
       ) {
-        const candidate = items[before]!;
-        if (candidate.kind !== " ") break;
+        const candidate = items[before];
+        if (candidate?.kind !== " ") break;
         leading.unshift(candidate);
       }
 

@@ -68,7 +68,7 @@ export function claudeStartOptions(
   });
 }
 
-export const claudeTaskPolicy: ProviderTaskPolicy = {
+export const claudeTaskPolicy = {
   inputKind: (tool) => (tool === "AskUserQuestion" ? "question" : "permission"),
   prepareStart(context) {
     const { input } = context;
@@ -97,4 +97,4 @@ export const claudeTaskPolicy: ProviderTaskPolicy = {
   async validateSession(task) {
     if (task.session_state_ref) await access(task.session_state_ref);
   },
-};
+} satisfies ProviderTaskPolicy;

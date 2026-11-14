@@ -40,14 +40,14 @@ export function fitAttachments({
     ends.push((ends[index - 1] ?? -gap) + gap + width);
   }
 
-  if (!count || ends[count - 1]! <= available) return { shown: count };
+  const total = ends.at(-1);
+  if (total === undefined || total <= available) return { shown: count };
   // A lone chip has nothing to hide, so it takes the row.
   if (count === 1) return { shown: 1, firstMax: available };
 
   for (let shown = count - 1; shown >= 1; shown--) {
-    if (ends[shown - 1]! + gap + label(count - shown) <= available) {
-      return { shown };
-    }
+    const end = ends[shown - 1] ?? 0;
+    if (end + gap + label(count - shown) <= available) return { shown };
   }
 
   return {

@@ -16,7 +16,12 @@ import { Field } from "../../../shared/forms/fields";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import { PermissionInputDetails } from "./permission-input-details";
 
-function PermissionForm({ task }: { task: Task }) {
+type PermissionFormProps = {
+  task: Task;
+  request: NonNullable<Task["pending_input"]>;
+};
+
+function PermissionForm({ task, request }: PermissionFormProps) {
   const controller = useController();
 
   const { busy, formError, stale } = useSnapshot(
@@ -26,7 +31,6 @@ function PermissionForm({ task }: { task: Task }) {
     }),
   );
 
-  const request = task.pending_input!;
   const presentation = inputPresentation(request);
 
   const { register, handleSubmit } = usePersistedDialogForm("respond", {
@@ -84,6 +88,9 @@ function PermissionForm({ task }: { task: Task }) {
 export const permissionDialog = defineDialog<"respond">({
   title: () => "Review permission request",
   // Worker questions answer inline in Chat instead.
-  render: ({ task }) => <PermissionForm task={task} />,
+  render: ({ task }) =>
+    task.pending_input && (
+      <PermissionForm task={task} request={task.pending_input} />
+    ),
   initialFocus: firstTextField,
 });

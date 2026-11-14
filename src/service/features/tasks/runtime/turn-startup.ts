@@ -124,8 +124,8 @@ async function prepareWorkspace(c: TurnStartupContext, t: Task) {
   }
 
   // Read each turn, so a later `git init` or a removed `.git` takes effect.
-  if (t.workspace_strategy === "current_repo") {
-    if ((await gitState(t.workspace!)) === "none") t.no_git = true;
+  if (t.workspace_strategy === "current_repo" && t.workspace) {
+    if ((await gitState(t.workspace)) === "none") t.no_git = true;
     else delete t.no_git;
   }
 

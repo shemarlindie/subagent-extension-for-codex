@@ -53,12 +53,12 @@ export async function claudeUpgradeInfo(
   const pinned =
     "This uses a custom launcher or a version-specific path. Updating may leave that path on the old version. Use the installer's launcher, update the configured path if needed, then restart the service.";
 
-  const brew =
-    /^(.*)\/Caskroom\/(claude-code(?:@latest)?)\/[^/]+\/claude$/.exec(selected);
+  const [, prefix, cask] =
+    /^(.*)\/Caskroom\/(claude-code(?:@latest)?)\/[^/]+\/claude$/.exec(
+      selected,
+    ) ?? [];
 
-  if (brew) {
-    const prefix = brew[1]!;
-    const cask = brew[2]!;
+  if (prefix !== undefined && cask) {
     const manager = join(prefix, "bin", "brew");
 
     const installation =

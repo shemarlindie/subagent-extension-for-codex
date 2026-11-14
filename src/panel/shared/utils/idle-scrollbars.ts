@@ -2,7 +2,9 @@ const IDLE_MS = 1000;
 
 /** Show custom scrollbars during interaction, without changing scroll layout. */
 export function trackIdleScrollbars(doc: Document) {
-  const view = doc.defaultView!;
+  const view = doc.defaultView;
+  // A document outside a window has no scrolling to track.
+  if (!view) return () => {};
   const timers = new Map<HTMLElement, number>();
   const pressed = new Map<number, HTMLElement>();
 

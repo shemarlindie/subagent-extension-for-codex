@@ -37,7 +37,9 @@ export function mount() {
   const controller = new Controller(transport, undefined, viewState);
 
   applyBodyLayout(controller.getSnapshot(), transport.embedded);
-  const root = createRoot(document.getElementById("root")!);
+  const container = document.getElementById("root");
+  if (!container) throw new Error("The panel page has no root element.");
+  const root = createRoot(container);
 
   root.render(
     <ControllerContext.Provider value={controller}>

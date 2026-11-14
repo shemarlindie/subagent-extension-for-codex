@@ -52,7 +52,8 @@ export class PendingInput {
   constructor(
     private task: Task,
     private store: Store,
-    private policy: ProviderTaskPolicy,
+    /** Absent when the task's provider is no longer enabled, so its turn fails. */
+    private policy: ProviderTaskPolicy | undefined,
     private abortSignal: AbortSignal,
   ) {}
 
@@ -73,6 +74,7 @@ export class PendingInput {
     }
 
     const policy = this.policy;
+    if (!policy) throw new Error("Provider is not enabled");
     const kind = policy.inputKind(tool);
 
     const approved =

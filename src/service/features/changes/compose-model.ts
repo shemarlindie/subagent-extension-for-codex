@@ -26,8 +26,7 @@ export function createDocument(created: boolean): Document {
 function locate(doc: Document, position: number) {
   let line = 0;
 
-  for (let index = 0; index < doc.nodes.length; index++) {
-    const node = doc.nodes[index]!;
+  for (const [index, node] of doc.nodes.entries()) {
     const size = node.kind === "gap" ? node.count : 1;
 
     if (position < line + size) {
@@ -191,8 +190,12 @@ export function diffItems(doc: Document): DiffItem[] {
   };
 
   const removedBefore = (base: number) => {
-    while (removedIndex < removed.length && removed[removedIndex]![0] < base) {
-      oldSide.push(removed[removedIndex++]![1]);
+    for (
+      let next = removed[removedIndex];
+      next && next[0] < base;
+      next = removed[++removedIndex]
+    ) {
+      oldSide.push(next[1]);
     }
   };
 

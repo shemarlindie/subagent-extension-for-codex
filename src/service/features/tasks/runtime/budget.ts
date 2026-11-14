@@ -9,7 +9,10 @@ import type { Provider } from "../../providers/types.js";
 
 type Budget = Start["budget"];
 
-/** Rejects a budget the task's provider can't enforce. */
+/**
+ * Rejects a missing provider or a budget it can't enforce, and returns the
+ * provider otherwise.
+ */
 export function validateBudgets(
   provider: Provider | undefined,
   task: { budget: Budget },
@@ -29,6 +32,8 @@ export function validateBudgets(
   if (!provider.capabilities.runtime_budget) {
     throw new Error("Provider does not support runtime budgets");
   }
+
+  return provider;
 }
 
 /**

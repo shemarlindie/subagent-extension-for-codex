@@ -15,9 +15,11 @@ export function measureRows(
   for (const element of Array.from(
     viewport.querySelectorAll<HTMLElement>(`[${attribute}]`),
   )) {
+    const id = element.getAttribute(attribute);
+    if (id === null) continue;
     const rect = element.getBoundingClientRect();
 
-    rows.set(element.getAttribute(attribute)!, {
+    rows.set(id, {
       element,
       top: rect.top - top,
       bottom: rect.bottom - top,

@@ -147,21 +147,23 @@ export async function recordEffectiveSettings(
     });
   }
 
-  if (newModel) {
+  const { model } = c.task;
+
+  if (newModel && model) {
     report({
       setting: "model",
-      requested: c.task.model!,
+      requested: model,
       effective: newModel,
-      reason: modelReason(c.task.model!, newModel, policy),
+      reason: modelReason(model, newModel, policy),
     });
   }
 
-  if (newEffort) {
+  if (newEffort && effort) {
     report({
       setting: "reasoning_effort",
-      requested: effort!,
+      requested: effort,
       effective: newEffort,
-      reason: effortReason(effort!, newEffort, policy),
+      reason: effortReason(effort, newEffort, policy),
     });
   }
 }

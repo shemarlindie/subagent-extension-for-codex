@@ -20,7 +20,7 @@ export class Inbox<T> implements AsyncIterable<T> {
 
   async *[Symbol.asyncIterator]() {
     for (;;) {
-      while (this.items.length) yield this.items.shift()!;
+      while (this.items.length) yield* this.items.splice(0);
       if (this.ended) return;
       await new Promise<void>((resolve) => (this.wake = resolve));
       this.wake = undefined;
