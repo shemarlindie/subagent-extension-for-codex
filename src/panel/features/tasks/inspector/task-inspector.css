@@ -9,14 +9,7 @@
   /* The 14px icon is centered in a 32px button: allow 9px beyond the content edge. */
   padding-inline: var(--detail-pad) calc(var(--detail-pad) - 9px);
 }
-.task-heading {
-  display: flex;
-  flex: 1;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-.task-heading .task-title {
+.task-topline > .task-title {
   flex: 1;
   min-width: 0;
 }

@@ -14,14 +14,12 @@ export function TaskHeaderSkeleton({ title }: TaskHeaderSkeletonProps) {
       className="task-inspector-skeleton-header"
     >
       <div className="task-topline">
-        <div className="task-heading">
-          <h1 className="task-title task-inspector-skeleton-title">
-            <SkeletonShape
-              className="task-inspector-skeleton-title-shape"
-              measureText={title ?? ""}
-            />
-          </h1>
-        </div>
+        <h1 className="task-title task-inspector-skeleton-title">
+          <SkeletonShape
+            className="task-inspector-skeleton-title-shape"
+            measureText={title ?? ""}
+          />
+        </h1>
         <SkeletonShape className="task-inspector-skeleton-menu" />
       </div>
     </LoadingSkeleton>

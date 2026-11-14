@@ -62,7 +62,7 @@ function saveCollapsed(collapsed: boolean) {
   }
 }
 
-/** Collapsed state for the task list, shared by the layout and the header toggle. */
+/** Responsive layout and desktop list state, shared by the layout and header. */
 export function useTaskRail() {
   const panelRef = usePanelRef();
 
@@ -146,7 +146,7 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
 
   const { narrow } = rail;
 
-  // Narrow panels switch between the list and a task, so they ignore collapsing.
+  // Mobile navigation ignores the desktop collapse preference.
   const railCollapsed = rail.collapsed && !narrow;
 
   const separatorTitle = rail.collapsed

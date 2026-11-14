@@ -79,9 +79,7 @@ export function TaskInspector() {
               {task ? (
                 <>
                   <div className="task-topline">
-                    <div className="task-heading">
-                      <TaskTitle task={task} />
-                    </div>
+                    <TaskTitle task={task} />
                     <TaskMenu task={task} />
                   </div>
                   {projectRemoved && (
