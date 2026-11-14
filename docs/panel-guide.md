@@ -374,6 +374,9 @@ service rules.
   **Apply** saves a higher limit without sending a message. Limits can only
   increase.
 
+In thread mode, existing tasks start with the composer collapsed. **Show
+composer** opens it, and the panel remembers your choice for each task during
+the session. New task keeps the composer open after sending the first message.
 You can hide the composer and keep its draft. A pending question or permission
 request collapses it.
 

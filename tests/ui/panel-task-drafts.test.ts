@@ -16,10 +16,56 @@ import {
   selectOption,
   setup,
   setupDelegate,
+  task,
   test,
   waitFor,
   within,
 } from "./panel-test-support";
+
+test("thread composers start collapsed, remember visibility and keep new tasks open", async (t) => {
+  const { controller, transport, user } = await setup(
+    t,
+    (transport) => {
+      transport.tasks.push(task("two"));
+    },
+    { conversation: "chat-1" },
+  );
+
+  expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Show composer" }));
+
+  await pasteText(
+    user,
+    screen.getByRole("textbox", { name: "Message" }),
+    "Keep this draft",
+  );
+
+  await act(() => controller.select("two"));
+  expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
+  await act(() => controller.select("one"));
+
+  expect(
+    screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" }).value,
+  ).toBe("Keep this draft");
+
+  await user.click(screen.getByRole("button", { name: "Hide composer" }));
+  await act(() => controller.select("two"));
+  await act(() => controller.select("one"));
+
+  expect(
+    screen.getByRole("button", { name: "Show composer (draft)" }),
+  ).toBeTruthy();
+
+  await user.click(screen.getByRole("button", { name: "New task" }));
+
+  const message = await screen.findByRole("textbox", { name: "Task message" });
+  await pasteText(user, message, "Start a new task");
+  transport.tasks.unshift({ ...task("created"), conversation_id: "chat-1" });
+
+  await user.keyboard("{Enter}");
+  const composer = await screen.findByRole("textbox", { name: "Message" });
+  await waitFor(() => expect(document.activeElement).toBe(composer));
+});
 
 test("dialog focuses task, preserves the draft and field node during refresh, and restores trigger focus", async (t) => {
   const { controller, transport, user } = await setup(t);

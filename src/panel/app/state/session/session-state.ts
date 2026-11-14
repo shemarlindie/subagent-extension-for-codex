@@ -12,7 +12,7 @@ export type TaskSessionState = {
   composerStopping?: boolean;
   /** Retains action failures when Chat closes before the request finishes. */
   composerError?: string;
-  composerCollapsed: boolean;
+  composerCollapsed?: boolean;
   /**
    * The new-task composer box's height when this task started from it, so
    * Chat's composer can ease down from it on arrival.
@@ -63,7 +63,6 @@ const defaults = {
   task: (): TaskSessionState => ({
     tab: "chat",
     composerDraft: "",
-    composerCollapsed: false,
     reading: { chat: {}, activity: {}, changes: { open: new Map() } },
     viewedChanges: new Map(),
   }),

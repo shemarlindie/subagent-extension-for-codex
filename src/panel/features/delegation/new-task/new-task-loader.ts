@@ -182,6 +182,7 @@ export class NewTaskLoader {
 
     // Chat's composer eases down from this box's height and takes over focus.
     await this.context.created(task, {
+      composerCollapsed: false,
       composerArrival: composerHeight,
       composerFocus: true,
     });
