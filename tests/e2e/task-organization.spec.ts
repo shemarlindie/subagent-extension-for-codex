@@ -55,6 +55,12 @@ test("filter, search and rename tasks, keeping the choices across reload", async
   await title.fill("Audit login flow");
   await title.press("Enter");
   await expect(row(/Audit login flow/)).toBeVisible();
+
+  // Undo ignores key presses in the title field, so wait for it to close.
+  await expect(
+    page.getByRole("button", { name: "Edit task title: Audit login flow" }),
+  ).toBeVisible();
+
   await page.keyboard.press("ControlOrMeta+z");
   await expect(row(/Review login flow/)).toBeVisible();
   await page.keyboard.press("ControlOrMeta+Shift+z");
