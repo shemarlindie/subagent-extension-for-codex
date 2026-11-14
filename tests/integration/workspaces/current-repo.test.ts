@@ -93,7 +93,12 @@ test("current repository rejects a non-HEAD revision without altering the checko
     await dirty(s.repo, s.git);
     const before = s.git("status", "--porcelain");
     const t = task(s.repo, s.git("rev-parse", "HEAD").trim());
-    await assert.rejects(s.workspaces.create(t), /HEAD/);
+
+    await assert.rejects(
+      s.workspaces.create(t, "agent/", () => false),
+      /HEAD/,
+    );
+
     assert.equal(t.workspace, undefined);
     assert.equal(s.git("status", "--porcelain"), before);
 

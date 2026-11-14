@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { test, vi } from "vitest";
 
@@ -24,14 +24,16 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
 
     const t = await c.start("alice", input(repo));
     await until(() => store.get(t.id, "alice").status === "completed");
-    assert.equal(store.get(t.id, "alice").branch, `work/${t.id}`);
+    const name = `investigate-${t.id.slice(5, 11)}`;
+    assert.equal(store.get(t.id, "alice").branch, `work/${name}`);
+    assert.equal(basename(store.get(t.id, "alice").workspace!), name);
 
     execFileSync("git", [
       "-C",
       repo,
       "rev-parse",
       "--verify",
-      `refs/heads/work/${t.id}`,
+      `refs/heads/work/${name}`,
     ]);
 
     // Allowed characters can still form an invalid ref.
@@ -90,7 +92,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       status: "removed",
     });
 
-    assert.match(branches(), new RegExp(`agent/${t.id}`));
+    assert.match(branches(), new RegExp(t.branch!));
     assert.equal(store.get(t.id, "alice").workspace_removed, true);
     assert.equal(pins(), "");
 
@@ -141,7 +143,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     await until(() => store.get(paused.id, "alice").turn === 3);
     await until(() => store.get(paused.id, "alice").status === "completed");
     const recreated = store.get(paused.id, "alice");
-    assert.match(branches(), new RegExp(`agent/${paused.id}`));
+    assert.match(branches(), new RegExp(recreated.branch!));
 
     assert.equal(
       execFileSync("git", ["-C", recreated.workspace!, "rev-parse", "HEAD"])
@@ -181,7 +183,12 @@ test("a task is deleted in any state with everything related to it", async () =>
     await until(() => !!store.get(t.id, "alice").pending_input);
     const stopped = store.get(t.id, "alice");
     assert.ok(stopped.workspace && existsSync(stopped.workspace));
-    assert.match(git("branch", "--list", "agent/*"), new RegExp(t.id));
+
+    assert.match(
+      git("branch", "--list", "agent/*"),
+      new RegExp(stopped.branch!),
+    );
+
     assert.equal(git("for-each-ref", "refs/agent-tasks"), "");
 
     await assert.rejects(c.delete("bob", t.id), /not found/);
@@ -213,7 +220,12 @@ test("a task is deleted in any state with everything related to it", async () =>
     assert.equal(receipts(), 0);
 
     assert.equal(existsSync(stopped.workspace), false);
-    assert.equal(git("branch", "--list", "agent/*").includes(t.id), false);
+
+    assert.equal(
+      git("branch", "--list", "agent/*").includes(stopped.branch!),
+      false,
+    );
+
     assert.equal(git("for-each-ref", "refs/agent-tasks").includes(t.id), false);
 
     // Without the option, the provider's session is left alone.

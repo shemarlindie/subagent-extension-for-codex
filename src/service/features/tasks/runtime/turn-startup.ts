@@ -8,6 +8,7 @@ import { gitState } from "../../workspaces/git.js";
 import type { Workspaces } from "../../workspaces/workspace.js";
 import type { SessionPrompts } from "../conversation/session-prompts.js";
 import type { Store } from "../storage/store.js";
+import { worktreeClaimed } from "../storage/task-rows.js";
 import { logStartLimited } from "./execution-logging.js";
 import { limitTurnModel } from "./policy-check.js";
 import { measureTaskWait } from "./timing.js";
@@ -102,7 +103,10 @@ async function prepareWorkspace(c: TurnStartupContext, t: Task) {
   let action: "created" | "recreated" | "reused" = "reused";
 
   if (!t.workspace) {
-    await c.workspaces.create(t, c.branchPrefix(t.owner));
+    await c.workspaces.create(t, c.branchPrefix(t.owner), (branch, path) =>
+      worktreeClaimed(c.store.database.orm, branch, path),
+    );
+
     c.store.save(t);
     action = "created";
   } else if (await c.workspaces.worktreeMissing(t)) {

@@ -97,6 +97,24 @@ export function taskExists(orm: Database["orm"], id: string) {
     .get();
 }
 
+/**
+ * Whether any task records this worktree branch or path. A task whose
+ * worktree or branch was removed still claims both for its recreation.
+ */
+export function worktreeClaimed(
+  orm: Database["orm"],
+  branch: string,
+  workspace: string,
+) {
+  return !!orm
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(
+      sql`json_extract(${tasks.body}, '$.branch') = ${branch} or json_extract(${tasks.body}, '$.workspace') = ${workspace}`,
+    )
+    .get();
+}
+
 /** The decoded tasks matching `where`, in `order`, up to `limit`. */
 export function readTasks(
   orm: Database["orm"],

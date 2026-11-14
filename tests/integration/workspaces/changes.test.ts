@@ -206,7 +206,6 @@ test("recorded worktree diffs survive a commit, workspace removal and branch del
 
     const args = { task_id: t.id };
     const original = await s.tool<Changes>("get_changes", args);
-    expect(t.branch).toBe(`agent/${t.id}`);
 
     expect(s.git(t.workspace!, "branch", "--show-current").trim()).toBe(
       t.branch,

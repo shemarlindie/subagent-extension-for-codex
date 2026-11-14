@@ -1,4 +1,4 @@
-import { mkdir, symlink } from "node:fs/promises";
+import { mkdir, readdir, symlink } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Page } from "@playwright/test";
@@ -40,7 +40,9 @@ test("delete a running task together with its agent session", async ({
   await expect(history).toContainText("Fixture worker running turn 1");
   const row = tasks(page).getByRole("button", { name: /Delete while running/ });
   const taskId = await row.getAttribute("data-task");
-  const worktree = join(actualRoot, taskId!);
+  // The only worktree is the task's, named from its title.
+  const [name] = await readdir(actualRoot);
+  const worktree = join(actualRoot, name!);
   const confirmation = await openDeleteTask(page);
 
   const details = confirmation.getByRole("region", {
@@ -54,7 +56,7 @@ test("delete a running task together with its agent session", async ({
   );
 
   await expect(details).toContainText(worktree);
-  await expect(details).toContainText(`agent/${taskId}`);
+  await expect(details).toContainText(`agent/${name}`);
   await expect(details).toContainText(repository);
 
   await expect(
@@ -86,7 +88,7 @@ test("delete a running task together with its agent session", async ({
     .check();
 
   await expect(details).toContainText(
-    `Session transcript: fixture:${join(linkedRoot, taskId!)}`,
+    `Session transcript: fixture:${join(linkedRoot, name!)}`,
   );
 
   await expect(

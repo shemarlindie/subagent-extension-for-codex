@@ -2,6 +2,7 @@ import { access, mkdir, opendir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 
 import { type Task } from "../../../shared/tasks/model.js";
+import { logEvent } from "../../platform/logging/logger.js";
 import {
   git,
   gitRepositoryRoot,
@@ -49,6 +50,24 @@ export async function accessibleRealpath(path: string) {
 
     throw error;
   }
+}
+
+/**
+ * A worktree folder and branch name: the title as a slug, then the task's
+ * UUID, cut to `idLength` characters when given.
+ */
+function worktreeName(t: Task, idLength?: number) {
+  const id = t.id.replace(/^task_/, "").slice(0, idLength);
+
+  const slug = t.title
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, 40)
+    .replace(/^-+|-+$/g, "");
+
+  return slug ? `${slug}-${id}` : id;
 }
 
 /** Real paths of the roots the service can still reach. Others grant nothing. */
@@ -103,8 +122,16 @@ export class Workspaces {
     return actual;
   }
 
-  /** Creates the task's workspace; worktrees get branch `<prefix><task-id>`. */
-  async create(t: Task, branchPrefix = "agent/") {
+  /**
+   * Creates the task's workspace. A worktree's folder and branch take a name
+   * from the title and part of the task ID, or the whole ID when that name
+   * is taken in Git, on disk or by another task (`claimed`).
+   */
+  async create(
+    t: Task,
+    branchPrefix: string,
+    claimed: (branch: string, workspace: string) => boolean,
+  ) {
     if (t.workspace_strategy === "current_repo" && t.revision !== "HEAD") {
       throw new Error("Project folder workspace requires revision HEAD");
     }
@@ -130,18 +157,35 @@ export class Workspaces {
       return;
     }
 
+    const short = worktreeName(t, 6);
+    const shortPath = join(this.root, short);
+
+    const taken =
+      claimed(`${branchPrefix}${short}`, shortPath) ||
+      (await exists(shortPath)) ||
+      !!(await branchTip(t.repository, `${branchPrefix}${short}`));
+
+    const name = taken ? worktreeName(t) : short;
+
+    if (taken) {
+      logEvent("info", "worktree.short_name_taken", {
+        task_id: t.id,
+        short_name: short,
+      });
+    }
+
     const branch = (
       await git(t.repository, [
         "check-ref-format",
         "--branch",
-        `${branchPrefix}${t.id}`,
+        `${branchPrefix}${name}`,
       ]).catch(() => {
-        throw new Error(`Invalid worktree branch name: ${branchPrefix}${t.id}`);
+        throw new Error(`Invalid worktree branch name: ${branchPrefix}${name}`);
       })
     ).trim();
 
     await mkdir(this.root, { recursive: true, mode: 0o700 });
-    const workspace = join(this.root, t.id);
+    const workspace = join(this.root, name);
 
     await git(t.repository, [
       "worktree",
