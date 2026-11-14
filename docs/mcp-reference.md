@@ -246,10 +246,11 @@ the message stays at the front of the queue.
 
 `app_restore_queued_messages` undoes queued message removals. The panel names
 each message and the position to restore. The service takes the text, sender and
-steer state from the task's recorded events, so it restores only messages that
-were removed and haven't been sent or queued again. A task that isn't busy gets
-a paused queue, so restoring never starts a turn, and an archived task returns
-to the task lists. A restore that would pass the
+steer state from the task's removed messages, which keep the last 10 removals,
+so it restores only messages that were removed and haven't been restored since.
+Task results leave the removed messages out. A task that isn't busy gets a
+paused queue, so restoring never starts a turn, and an archived task returns to
+the task lists. A restore that would pass the
 [waiting message limit](#waiting-message-limit) fails and changes nothing.
 `app_clear_queue` takes optional `message_ids` so redo removes only the restored
 messages.

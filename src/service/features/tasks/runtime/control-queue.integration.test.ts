@@ -602,3 +602,47 @@ test("a busy task refuses new waiting messages past the limit, and only those", 
   assert.equal(interrupt.state, "started");
   await c.close();
 });
+
+test("undo keeps only the latest removed messages", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
+
+  const queue = (message: string) =>
+    c.send("alice", t.id, message, "user", { delivery: "queue" });
+
+  const oldest = await queue("Oldest");
+
+  for (let i = 1; i < WAITING_MESSAGE_LIMIT; i++) await queue(`Queued ${i}`);
+
+  c.clearQueue("alice", t.id);
+  const newest = await queue("Newest");
+  c.removeQueued("alice", t.id, newest.message_id, "user");
+
+  const removed = () =>
+    store.get(t.id, "alice").removed_queue?.map((m) => m.message);
+
+  const kept = Array.from(
+    { length: WAITING_MESSAGE_LIMIT - 1 },
+    (_, i) => `Queued ${i + 1}`,
+  );
+
+  assert.deepEqual(removed(), [...kept, "Newest"]);
+
+  // The oldest removal is gone, so undoing it changes nothing.
+  c.restoreQueued("alice", t.id, [{ message_id: oldest.message_id, index: 0 }]);
+  assert.deepEqual(store.get(t.id, "alice").queue, []);
+
+  c.restoreQueued("alice", t.id, [{ message_id: newest.message_id, index: 0 }]);
+
+  assert.deepEqual(
+    store.get(t.id, "alice").queue.map((m) => m.id),
+    [newest.message_id],
+  );
+
+  assert.deepEqual(removed(), kept);
+
+  await c.close();
+});

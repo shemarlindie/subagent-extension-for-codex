@@ -19,7 +19,7 @@ export const PREVIEW_QUEUE_TOOLS = [
   "app_restore_queued_messages",
 ];
 
-/** Removed messages by ID, standing in for the service's recorded events. */
+/** Removed messages by ID, standing in for the task's `removed_queue`. */
 const removed = new Map<string, QueuedMessage>();
 
 /** Removes queued messages, remembering them for undo. */
