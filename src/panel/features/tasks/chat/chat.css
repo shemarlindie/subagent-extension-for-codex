@@ -791,7 +791,6 @@ body[data-expanded-panel="true"]
 }
 .task-run-settings .prompt-cache-timer {
   gap: 3px;
-  margin-inline-end: 8px;
   font-variant-numeric: tabular-nums;
 }
 .prompt-cache-timer[data-warning] {
@@ -808,6 +807,7 @@ body[data-expanded-panel="true"]
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.prompt-cache-timer + li::before,
 .task-run-setting + li::before {
   content: "·" / "";
   margin-inline: 4px;
