@@ -7,6 +7,7 @@ import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { AgentTaskDeletionOption } from "../tasks/controls/agent-task-deletion-option";
 import { TaskDeletionDetails } from "../tasks/controls/task-deletion-details";
+import { TaskDeletionRefresh } from "../tasks/controls/task-deletion-refresh";
 import { useTaskDeletionPreview } from "../tasks/controls/use-task-deletion-preview";
 import { projectApproved } from "./selectors";
 
@@ -119,8 +120,6 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
             preview={deletion.preview}
             checking={deletion.checking}
             error={deletion.error}
-            onRefresh={deletion.reload}
-            disabled={busy}
           />
         </>
       )}
@@ -132,6 +131,15 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
           "To prevent this parent approval from returning on restart, remove it from service configuration too."}
       </p>
       <FormFooter
+        leading={
+          removeTasks && (
+            <TaskDeletionRefresh
+              checking={deletion.checking}
+              disabled={busy}
+              onRefresh={deletion.reload}
+            />
+          )
+        }
         label={removeTasks ? "Remove project and task data" : "Remove project"}
         disabled={removeTasks && (deletion.checking || !deletion.confirmation)}
       />

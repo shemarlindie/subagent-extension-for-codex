@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../../../shared/components/button/button";
 import { AgentTaskDeletionOption } from "../controls/agent-task-deletion-option";
 import { TaskDeletionDetails } from "../controls/task-deletion-details";
+import { TaskDeletionRefresh } from "../controls/task-deletion-refresh";
 import { useTaskDeletionPreview } from "../controls/use-task-deletion-preview";
 
 type ArchiveDeleteConfirmProps = {
@@ -46,10 +47,15 @@ export function ArchiveDeleteConfirm({
         preview={deletion.preview}
         checking={deletion.checking}
         error={deletion.error}
-        onRefresh={deletion.reload}
-        disabled={pending}
       />
       <div className="archive-delete-actions">
+        <div className="archive-delete-refresh">
+          <TaskDeletionRefresh
+            checking={deletion.checking}
+            disabled={pending}
+            onRefresh={deletion.reload}
+          />
+        </div>
         <Button disabled={pending} onClick={onCancel}>
           Cancel
         </Button>

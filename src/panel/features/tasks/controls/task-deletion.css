@@ -5,11 +5,47 @@
 .task-deletion-targets {
   max-height: 280px;
   overflow: auto;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
 }
 
 .task-deletion-targets > li + li {
-  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.task-deletion-status {
+  min-height: 1lh;
+  margin-block: 4px;
+}
+
+.task-deletion-trigger {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.task-deletion-trigger strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-deletion-trigger .chevron {
+  flex: none;
+}
+
+.task-deletion-trigger[aria-expanded="false"] .chevron {
+  transform: rotate(-90deg);
+}
+
+.task-deletion-targets [data-open] > code {
+  color: var(--muted);
 }
 
 .task-deletion-details code {

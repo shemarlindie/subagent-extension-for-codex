@@ -64,7 +64,12 @@
 .archive-delete-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+.archive-delete-refresh {
+  margin-right: auto;
 }
 .project-archive .archive-delete,
 .project-archive .archive-delete-submit {

@@ -10,6 +10,7 @@ interface FormFooterProps {
   label: string;
   disabled?: boolean;
   dismissLabel?: string;
+  leading?: ReactNode;
   /** Other actions, placed before the submit button. */
   children?: ReactNode;
 }
@@ -18,6 +19,7 @@ export function FormFooter({
   label,
   disabled = false,
   dismissLabel = "Cancel",
+  leading,
   children,
 }: FormFooterProps) {
   const controller = useController();
@@ -35,6 +37,7 @@ export function FormFooter({
         </div>
       </Presence>
       <footer>
+        {leading && <div className="form-footer-leading">{leading}</div>}
         <Dialog.Close
           type="button"
           id="dismiss"

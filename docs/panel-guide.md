@@ -524,10 +524,12 @@ and remote branches stay intact.
   record and leave the provider session alone. If session cleanup fails, the
   local task stays for retry.
 - The confirmation lists each selected task, worktree, local branch and optional
-  session files. Folder removal includes all contents. If a listed resource
-  changes, refresh the removal list and review it again before deleting. An info
-  icon beside a path identifies symbolic links. Hover or activate it to see each
-  link and its resolved target.
+  session files. Bulk confirmations start with task details collapsed. Expand a
+  task to review its resources. **Refresh removal list** is in the footer.
+  Folder removal includes all contents. If a listed resource changes, refresh
+  the removal list and review it again before deleting. An info icon beside a
+  path identifies symbolic links. Hover or activate it to see each link and its
+  resolved target.
 - A worktree outside the managed worktree folder and its local branch stay. The
   confirmation lists them under **Will remain**.
 - A later cleanup failure can leave earlier resources removed.

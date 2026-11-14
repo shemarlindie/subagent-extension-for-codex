@@ -84,9 +84,54 @@ test("delete a running task together with its agent session", async ({
   await linkInfo.press("Escape");
   await expect(linkNote).toHaveCount(0);
 
-  await confirmation
-    .getByRole("switch", { name: "Also delete the agent task" })
-    .check();
+  const previewRelease = Promise.withResolvers<void>();
+  const previewResumed = Promise.withResolvers<void>();
+  const previewRoute = "**/api/tools/app_preview_task_deletion";
+  let previewHeld = false;
+
+  const resources = details.getByRole("list", {
+    name: "Selected task resources",
+  });
+
+  const taskNode = await details
+    .getByText(taskId, { exact: true })
+    .elementHandle();
+
+  const beforeToggle = await resources.boundingBox();
+
+  await page.route(
+    previewRoute,
+    async (route) => {
+      previewHeld = true;
+
+      try {
+        await previewRelease.promise;
+        await route.continue();
+      } finally {
+        previewResumed.resolve();
+      }
+    },
+    { times: 1 },
+  );
+
+  try {
+    await confirmation
+      .getByRole("switch", { name: "Also delete the agent task" })
+      .check();
+
+    await expect.poll(() => previewHeld).toBe(true);
+
+    await expect(
+      confirmation.getByRole("button", { name: "Delete task", exact: true }),
+    ).toBeDisabled();
+
+    expect(await taskNode?.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await resources.boundingBox()).toEqual(beforeToggle);
+  } finally {
+    previewRelease.resolve();
+    if (previewHeld) await previewResumed.promise;
+    await page.unroute(previewRoute);
+  }
 
   await expect(details).toContainText(
     `Session transcript: fixture:${join(linkedRoot, name)}`,
@@ -262,6 +307,18 @@ test.describe("when the session location cannot be verified", () => {
 
     await expect(details).toContainText("First archived task");
     await expect(details).toContainText("Second archived task");
+
+    await expect(
+      details.getByRole("list", { name: "Will remain" }),
+    ).toHaveCount(0);
+
+    for (const title of ["First archived task", "Second archived task"]) {
+      const target = details.getByRole("button", { name: title, exact: true });
+      await expect(target).toHaveAttribute("aria-expanded", "false");
+      await target.click();
+      await expect(target).toHaveAttribute("aria-expanded", "true");
+    }
+
     await expect(details).toContainText(`Project files: ${repository}`);
 
     await expect(
