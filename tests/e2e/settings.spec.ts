@@ -212,6 +212,25 @@ test("advanced task options set the task's model and permission policy", async (
   await expect(settings).toContainText("Fixture Fast");
   await expect(settings).toHaveAttribute("title", /Fixture Fast/);
 
+  await page.setViewportSize({ width: 200, height: 800 });
+  await expect(settings).toBeHidden();
+  const collapsedRow = page.locator(".chat-composer-toggle-row");
+
+  await expect
+    .poll(() => collapsedRow.evaluate((row) => row.clientHeight))
+    .toBe(28);
+
+  await page
+    .getByRole("button", { name: "Show composer", exact: true })
+    .click();
+
+  await expect(settings).toBeVisible();
+  await page.getByRole("button", { name: "Hide composer" }).click();
+  await expect(settings).toBeHidden();
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(settings).toBeVisible();
+
   await page
     .getByRole("button", { name: "Show composer", exact: true })
     .click();
