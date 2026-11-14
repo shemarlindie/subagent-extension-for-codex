@@ -8,7 +8,7 @@ const ago = (ms: number) => new Date(loaded - ms).toISOString();
 
 const countdownReply = "Listed the three retry paths in the upload client.";
 
-// Counts down from 2m 30s, through the last minute's warning, to expired.
+// Counts down from 2m 30s, through the warning under 2 minutes, to expired.
 const countdownTask = new Timeline("preview-cache-countdown", at(150), 2600);
 begin(countdownTask, ["Grep", "Read"]);
 countdownTask.say(countdownReply);

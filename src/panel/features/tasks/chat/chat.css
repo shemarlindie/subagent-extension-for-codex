@@ -789,9 +789,25 @@ body[data-expanded-panel="true"]
   flex: none;
   align-items: center;
 }
-.task-run-settings .prompt-cache-timer {
+.prompt-cache-timer-trigger {
+  display: inline-flex;
+  align-items: center;
   gap: 3px;
+  border-radius: 3px;
   font-variant-numeric: tabular-nums;
+}
+.prompt-cache-timer-trigger:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.prompt-cache-tooltip-status {
+  display: block;
+  font-weight: 600;
+}
+.prompt-cache-tooltip-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
 }
 .prompt-cache-timer[data-warning] {
   color: var(--warn);

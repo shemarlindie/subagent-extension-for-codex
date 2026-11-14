@@ -5,39 +5,61 @@ import {
 } from "../../../../../shared/providers/claude/prompt-cache";
 import type { Task } from "../../../../app/state/types";
 import { Icon } from "../../../../shared/components/icons/icons";
+import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { useNow } from "../../../../shared/utils/use-now";
 
 type PromptCacheTimerProps = { task: Task };
 
 const MINUTE_MS = 60_000;
+/** Time left when the warning color starts, by cache lifetime. */
+const WARNING_MS = { "5m": 2 * MINUTE_MS, "1h": 10 * MINUTE_MS };
 
 /** Whole minutes rounded down, then seconds in the last minute. */
-function timeLeft(ms: number, units: { minutes: string; seconds: string }) {
+function timeLeft(ms: number) {
   return ms >= MINUTE_MS
-    ? `${Math.floor(ms / MINUTE_MS)}${units.minutes}`
-    : `${Math.max(1, Math.floor(ms / 1000))}${units.seconds}`;
+    ? { count: Math.floor(ms / MINUTE_MS), unit: "min" }
+    : { count: Math.max(1, Math.floor(ms / 1000)), unit: "sec" };
 }
 
-const short = (ms: number) => timeLeft(ms, { minutes: "m", seconds: "s" });
+/** `2m` or `45s`. */
+function short(ms: number) {
+  const { count, unit } = timeLeft(ms);
 
-const long = (ms: number) => timeLeft(ms, { minutes: " min", seconds: " sec" });
+  return `${count}${unit[0]}`;
+}
 
+/** `2 more mins` or `1 more sec`. */
+function more(ms: number) {
+  const { count, unit } = timeLeft(ms);
+
+  return `${count} more ${unit}${count === 1 ? "" : "s"}`;
+}
+
+/** The tooltip's status line and the note that explains it. */
 function description(left: PromptCacheLeft) {
   switch (left.state) {
     case "warm":
-      return [
-        `Prompt cache: about ${long(left.ms)} left (${left.ttl === "1h" ? "1 hour" : "5 min"} lifetime).`,
-        "Replies sent before then reuse the cached conversation.",
-        ...(left.earlierMs
-          ? [
-              `The earlier conversation stays cached for about ${long(left.earlierMs)}.`,
-            ]
-          : []),
-      ].join(" ");
+      return {
+        status: `Prompt cache warm for about ${more(left.ms)}`,
+        note: [
+          "Replying before then costs less.",
+          ...(left.earlierMs
+            ? [
+                `Earlier messages stay cached for about ${more(left.earlierMs)}.`,
+              ]
+            : []),
+        ].join(" "),
+      };
     case "partial":
-      return `Prompt cache partly expired. The latest messages need rewriting, and the earlier conversation stays cached for about ${long(left.ms)}.`;
+      return {
+        status: "Prompt cache partly expired",
+        note: `Recent messages need rewriting. Earlier ones stay cached for about ${more(left.ms)}.`,
+      };
     case "expired":
-      return "Prompt cache has probably expired. The next reply rewrites it.";
+      return {
+        status: "Prompt cache probably expired",
+        note: "The next reply costs more.",
+      };
   }
 }
 
@@ -58,21 +80,33 @@ export function PromptCacheTimer({ task }: PromptCacheTimerProps) {
 
   if (!left) return null;
 
-  const text = description(left);
+  const { status, note } = description(left);
 
+  // An empty title keeps the list's own tooltip off the timer.
   return (
     <li
       className="prompt-cache-timer"
       data-warning={
-        left.state === "warm" && left.ms < MINUTE_MS ? "" : undefined
+        left.state === "warm" && left.ms < WARNING_MS[left.ttl] ? "" : undefined
       }
-      title={text}
+      title=""
     >
-      <Icon name={STATE_ICONS[left.state]} size={12} />
-      {left.state !== "expired" && (
-        <span aria-hidden="true">{short(left.ms)}</span>
-      )}
-      <span className="visually-hidden">{text}</span>
+      <TooltipWrapper
+        label={`${status}. ${note}`}
+        content={
+          <>
+            <span className="prompt-cache-tooltip-status">{status}</span>
+            <span className="prompt-cache-tooltip-note">{note}</span>
+          </>
+        }
+      >
+        <span className="prompt-cache-timer-trigger" tabIndex={0}>
+          <Icon name={STATE_ICONS[left.state]} size={12} />
+          {left.state !== "expired" && (
+            <span aria-hidden="true">{short(left.ms)}</span>
+          )}
+        </span>
+      </TooltipWrapper>
     </li>
   );
 }
