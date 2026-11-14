@@ -153,12 +153,15 @@ export function EditableText({
     "aria-label": editing ? label : undefined,
     "aria-invalid": Boolean(error) || undefined,
     "aria-describedby": error ? errorId : undefined,
+    "aria-busy": busy || undefined,
     value: editing ? draft : value,
-    readOnly: !editing,
+    // Saving keeps the field enabled because browsers move focus off a
+    // disabled field, and a retry after a failed save needs it to stay.
+    readOnly: !editing || busy,
     style: layout.multiline ? { height: layout.height } : undefined,
     maxLength,
     required: true,
-    disabled: busy || disabled,
+    disabled,
     ref: focusControl,
     onChange: (event: React.ChangeEvent<TextControl>) => {
       selection.current = {
