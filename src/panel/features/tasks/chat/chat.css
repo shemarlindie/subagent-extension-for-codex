@@ -697,7 +697,7 @@ body[data-expanded-panel="true"]
   align-items: center;
   min-width: 0;
   max-width: 100%;
-  margin: 0 0 0 auto;
+  margin: 0;
   padding: 0;
   list-style: none;
   color: var(--muted);
@@ -727,11 +727,12 @@ body[data-expanded-panel="true"]
 .task-run-settings li[data-compact="hidden"] {
   display: none;
 }
-/* Narrow panels give the settings their own line under the hint. */
-@media (max-width: 640px) {
-  .task-run-settings {
-    flex: 1 0 100%;
-    margin: 0;
+.chat-composer-toggle-row .task-run-settings {
+  margin-inline-start: auto;
+}
+@media (max-width: 360px) {
+  .chat-composer-toggle-row .task-run-settings {
+    display: none;
   }
 }
 .chat-error {
