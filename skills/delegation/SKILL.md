@@ -33,8 +33,8 @@ checkout’s uncommitted changes, attach `{ source: "diff" }`.
 
 ## Write the request
 
-Pass the user's full request in `description`. Its first line or sentence
-becomes the title. The worker does not see this conversation.
+Pass the user's full request in `description`, below the title line the field
+asks for. The worker does not see this conversation.
 
 Give the worker what it can't find itself in `attachments`. Attach project
 content by reference, regardless of size: `{ source: "file", path }` with an
