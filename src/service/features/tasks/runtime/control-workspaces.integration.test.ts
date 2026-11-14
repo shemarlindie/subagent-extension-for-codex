@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 
 import { test, vi } from "vitest";
 
 import { input, setup, until } from "./control-test-harness.js";
 
 test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
-  const { c, store, repo } = await setup();
+  const { c, store, repo, dir } = await setup();
 
   try {
     assert.throws(() =>
@@ -26,7 +26,11 @@ test("worktree branches use the owner's prefix, and Git rejects invalid names", 
     await until(() => store.get(t.id, "alice").status === "completed");
     const name = `investigate-${t.id.slice(5, 11)}`;
     assert.equal(store.get(t.id, "alice").branch, `work/${name}`);
-    assert.equal(basename(store.get(t.id, "alice").workspace!), name);
+
+    assert.equal(
+      store.get(t.id, "alice").workspace,
+      join(dir, "worktrees", name),
+    );
 
     execFileSync("git", [
       "-C",
