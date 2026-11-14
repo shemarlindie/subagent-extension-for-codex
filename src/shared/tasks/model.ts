@@ -270,6 +270,11 @@ export interface Task extends Omit<Start, "attachments"> {
   queue: QueuedMessage[];
   /** An interrupt or failure paused the queue; the next message sent resumes it. */
   queue_paused?: boolean;
+  /**
+   * The latest messages removed from the queue, newest last, kept for the
+   * user's undo. Task reads leave them out.
+   */
+  removed_queue?: QueuedMessage[];
   /** The number of turns started, the current one included. */
   turn: number;
   /** Sum of the finished turns' run times. */

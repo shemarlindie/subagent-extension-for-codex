@@ -7,6 +7,7 @@ import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { withEffectiveOptions } from "../../../../shared/providers/options.js";
+import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
   type BudgetRaise,
   type InputAuthority,
@@ -955,6 +956,9 @@ export class Control {
         "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
       );
     }
+
+    // An interrupt starts a turn with its message, so it never waits.
+    if (delivery !== "interrupt") checkWaitingLimit(t, 1);
 
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
 

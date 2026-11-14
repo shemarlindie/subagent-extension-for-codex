@@ -4,6 +4,7 @@ import type { McpUiDisplayMode } from "@modelcontextprotocol/ext-apps/app-bridge
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import type { ProviderPolicy } from "../../../src/shared/providers/types";
+import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
 import type { Task } from "../../../src/shared/tasks/model";
 import { previewOrgPolicy } from "../scenarios/preview-models";
 import { type PreviewOptions, previewTool } from "../scenarios/tools";
@@ -252,7 +253,7 @@ export function fixtureCall(
   name: string,
   args: Record<string, unknown>,
   options: PreviewOptions,
-) {
+): CallToolResult {
   try {
     const result = previewTool(name, args, options);
 
@@ -272,6 +273,9 @@ export function fixtureCall(
   } catch (error) {
     return {
       isError: true,
+      ...(error instanceof SendRejectedError
+        ? { _meta: { send_rejected: true } }
+        : {}),
       // Matches the service, which reports the message alone.
       content: [{ type: "text", text: errorText(error) }],
     } satisfies CallToolResult;

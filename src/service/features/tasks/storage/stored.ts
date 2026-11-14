@@ -37,6 +37,11 @@ const message = z.looseObject({
   from: sender,
 });
 
+const queuedMessage = message.extend({
+  delivery: z.enum(deliveries),
+  recorded: z.boolean().optional(),
+});
+
 const storedTaskSchema = z.looseObject({
   id: z.string().min(1),
   owner: z.string().min(1),
@@ -80,12 +85,8 @@ const storedTaskSchema = z.looseObject({
   profile_instructions: z.string().optional(),
   instructions_sent: z.number().int().nonnegative(),
   pending_steers: z.array(message),
-  queue: z.array(
-    message.extend({
-      delivery: z.enum(deliveries),
-      recorded: z.boolean().optional(),
-    }),
-  ),
+  queue: z.array(queuedMessage),
+  removed_queue: z.array(queuedMessage).optional(),
   turn: z.number().int().nonnegative(),
   runtime_ms: z.number().nonnegative(),
 });

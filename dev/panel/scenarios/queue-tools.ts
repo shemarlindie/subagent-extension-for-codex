@@ -1,4 +1,6 @@
 import { composerMode } from "../../../src/panel/features/tasks/chat/chat-model";
+import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
+import { checkWaitingLimit } from "../../../src/shared/tasks/conversation/waiting-limit";
 import type {
   Delivery,
   QueuedMessage,
@@ -17,7 +19,7 @@ export const PREVIEW_QUEUE_TOOLS = [
   "app_restore_queued_messages",
 ];
 
-/** Removed messages by ID, standing in for the service's recorded events. */
+/** Removed messages by ID, standing in for the task's `removed_queue`. */
 const removed = new Map<string, QueuedMessage>();
 
 /** Removes queued messages, remembering them for undo. */
@@ -36,6 +38,8 @@ function restoreQueued(task: Task, args: Record<string, unknown>) {
         ![...task.queue, ...task.pending_steers].some((m) => m.id === id),
     )
     .toSorted((a, b) => a.index - b.index);
+
+  checkWaitingLimit(task, placements.length);
 
   for (const { message_id: id, index } of placements) {
     const m = removed.get(id)!;
@@ -154,6 +158,12 @@ function previewSend(task: Task, args: Record<string, unknown>) {
     throw new Error(
       "The worker is waiting for input, so it can't be steered. Answer its request, or queue the message.",
     );
+  }
+
+  try {
+    checkWaitingLimit(task, 1);
+  } catch (error) {
+    throw new SendRejectedError((error as Error).message);
   }
 
   const message: TaskMessage = {
