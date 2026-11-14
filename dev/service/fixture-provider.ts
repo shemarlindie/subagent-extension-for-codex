@@ -16,6 +16,7 @@ import type { Task } from "../../src/shared/tasks/model.js";
 import {
   cloneFixtureModel,
   createFixtureProviderMetadata,
+  fixtureCommands,
   fixtureModels,
   fixtureProviderCapabilities,
 } from "./fixture-provider-metadata.js";
@@ -139,6 +140,10 @@ export class FixtureProvider implements Provider {
     if (this.modelsMode === "empty") return [];
 
     return this.modelChoices.map(cloneFixtureModel);
+  }
+
+  async commands() {
+    return fixtureCommands.map((command) => ({ ...command }));
   }
 
   async sessionDeletionStatus(task: Task): Promise<SessionDeletionStatus> {

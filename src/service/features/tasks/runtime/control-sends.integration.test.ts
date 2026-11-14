@@ -37,6 +37,11 @@ test("commands that change what the task owns are refused on send and queued-mes
 
   await until(() => store.get(t.id, "alice").status === "completed");
 
+  // Suggestions leave them out.
+  assert.ok(
+    !(await c.commands("alice", t.id)).some(({ name }) => name === "model"),
+  );
+
   await assert.rejects(c.send("alice", t.id, "/clear", "user"), {
     message: /^\/clear can't run in a task/,
   });

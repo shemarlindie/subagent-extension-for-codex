@@ -30,6 +30,7 @@ import { ClaudeCli } from "../configuration/executable.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
+import { ClaudeCommands } from "./command-discovery.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
@@ -91,12 +92,15 @@ export class ClaudeAgentProvider implements Provider {
   };
 
   private discoveries = new Map<string, ClaudeDiscovery>();
+  private commandLists: ClaudeCommands;
 
   constructor(
     private launch: typeof query = query,
     private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
     private fullEvents = false,
-  ) {}
+  ) {
+    this.commandLists = new ClaudeCommands(launch, cli);
+  }
 
   async readiness(options?: { refresh?: boolean }): Promise<ProviderReadiness> {
     const status = await this.cli.status(options);
@@ -133,6 +137,10 @@ export class ClaudeAgentProvider implements Provider {
 
   policy(settings?: SettingsValues) {
     return this.discovery(settings).policy();
+  }
+
+  commands(task: Task) {
+    return this.commandLists.list(task);
   }
 
   /** One discovery per configuration, as settings change what a session loads. */

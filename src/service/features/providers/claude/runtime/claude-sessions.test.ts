@@ -7,11 +7,16 @@ import {
   fakeClaudePath,
   readyClaudeCli,
 } from "../../../../../../tests/support/claude-cli.js";
+import {
+  claudeOverrideDefaults,
+  resolveClaudePolicy,
+} from "../../../../../shared/providers/claude/permissions.js";
 import type { ModelChoice } from "../../../../../shared/providers/types.js";
 import {
   settingsDefaults,
   withSetting,
 } from "../../../../../shared/settings/settings-schema.js";
+import type { Task } from "../../../../../shared/tasks/model.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {
@@ -92,6 +97,69 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   await provider.models();
   assert.equal(launches, 2);
   assert.equal(closes, 2);
+});
+
+test("Claude command discovery reads the task's folder as its session would, keeping Claude Code's row for a shared name", async () => {
+  const launches: Options[] = [];
+
+  const command = (name: string, builtin?: boolean) => ({
+    name,
+    description: builtin ? "Built in" : "Skill",
+    argumentHint: "",
+    ...(builtin ? { builtin } : {}),
+  });
+
+  const provider = new ClaudeAgentProvider(({ options }) => {
+    if (options) launches.push(options);
+
+    return {
+      supportedCommands: async () => [
+        command("review", false),
+        command("review", true),
+        { ...command("usage", true), aliases: ["cost"] },
+      ],
+      close() {},
+    } as unknown as Query;
+  }, readyClaudeCli);
+
+  const task = {
+    repository: "/repo",
+    provider_options: {
+      claude: {
+        permission_mode: "plan",
+        approval_decider: "user",
+        permission_source: "task",
+        claude_policy: resolveClaudePolicy({
+          ...claudeOverrideDefaults,
+          settings_files: false,
+        }),
+      },
+    },
+  } as unknown as Task;
+
+  assert.deepEqual(await provider.commands(task), [
+    { name: "review", description: "Built in", argument_hint: "", aliases: [] },
+    {
+      name: "usage",
+      description: "Built in",
+      argument_hint: "",
+      aliases: ["cost"],
+    },
+  ]);
+
+  await provider.commands({ ...task, workspace: "/worktree" });
+
+  assert.deepEqual(
+    launches.map(({ cwd, settingSources, tools }) => [
+      cwd,
+      settingSources,
+      tools,
+    ]),
+    [
+      ["/repo", [], []],
+      ["/worktree", [], []],
+    ],
+  );
 });
 
 test("failed Claude model discovery closes the query and retries after a short cooldown", async () => {

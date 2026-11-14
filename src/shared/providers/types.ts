@@ -26,6 +26,15 @@ export interface ModelChoice {
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
 }
 
+/** A slash command a task's session offers. */
+export interface ProviderCommand {
+  name: string;
+  description: string;
+  /** What the command takes after its name, such as `<file>`, or empty. */
+  argument_hint: string;
+  aliases: string[];
+}
+
 /** Whether a provider can start work. */
 export interface ProviderReadiness {
   ready: boolean;

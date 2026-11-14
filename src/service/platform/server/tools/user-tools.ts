@@ -92,6 +92,13 @@ export function userTools(
         };
       },
     }),
+    app_list_commands: tool({
+      readOnly: true,
+      description:
+        "User interface only: the slash commands the task's session offers, for composer suggestions. Commands a task refuses are left out.",
+      schema: taskId,
+      run: async (a) => ({ commands: await c.commands(owner, a.task_id) }),
+    }),
     app_raise_budget: tool({
       description:
         "User interface only: apply higher task budget limits without sending a message or starting a turn. Each limit can only increase or be set to null to remove the limit.",

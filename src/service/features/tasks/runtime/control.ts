@@ -1124,6 +1124,17 @@ export class Control {
     return t;
   }
 
+  /** The slash commands a task can run, for suggestions. */
+  async commands(owner: string, id: string) {
+    const t = this.store.get(id, owner);
+    const provider = this.providers.get(t.provider);
+    const commands = (await provider?.commands?.(t)) ?? [];
+
+    return commands.filter(
+      ({ name }) => !provider?.taskPolicy.commandRefusal?.(name),
+    );
+  }
+
   /** Refuses a command the task's provider won't run in a task. */
   private checkCommand(t: Task, message: string) {
     const name = slashCommand(message);

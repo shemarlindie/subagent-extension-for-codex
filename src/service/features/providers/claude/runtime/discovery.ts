@@ -4,7 +4,6 @@ import {
   type Query,
   query,
   resolveSettings,
-  type SDKUserMessage,
   type Settings,
 } from "@anthropic-ai/claude-agent-sdk";
 
@@ -20,16 +19,15 @@ import type {
 } from "../../../../../shared/providers/types.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
-import { claudeEnvironment } from "../configuration/execution-environment.js";
 import {
   policyBlocksMode,
   policySettings,
-  READ_TIMEOUT_MS,
   readSessionSettings,
   type SessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
 import { otherPolicyKeys, policyNotes } from "./policy-notes.js";
+import { CachedRead, READ_CACHE_MS, turnlessSession } from "./session-reads.js";
 
 type Discovered = { models: ModelChoice[]; policy?: ProviderPolicy };
 
@@ -222,9 +220,10 @@ async function readPolicy(
  * relaunched on every read.
  */
 export class ClaudeDiscovery {
-  private catalog?: Discovered & { expires: number };
-  private catalogRequest?: Promise<Discovered>;
-  private catalogFailure?: { expires: number; error: Error };
+  private catalog = new CachedRead<Discovered>(
+    () => this.discover(),
+    "provider.discovery_failed",
+  );
 
   constructor(
     private launch: typeof query,
@@ -237,72 +236,21 @@ export class ClaudeDiscovery {
   ) {}
 
   async models() {
-    return (await this.discovered()).models;
+    return (await this.catalog.get()).models;
   }
 
   async policy() {
-    return (await this.discovered()).policy;
+    return (await this.catalog.get()).policy;
   }
 
-  /** Cached briefly. A failed discovery is not retried at once. */
-  private discovered(): Promise<Discovered> {
-    if (this.catalog && this.catalog.expires > Date.now()) {
-      return Promise.resolve(this.catalog);
-    }
-
-    if (this.catalogRequest) return this.catalogRequest;
-
-    if (this.catalogFailure && this.catalogFailure.expires > Date.now()) {
-      return Promise.reject(this.catalogFailure.error);
-    }
-
-    const request = this.discover();
-    this.catalogRequest = request;
-
-    void request
-      .finally(() => {
-        this.catalogRequest = undefined;
-      })
-      .catch((error: unknown) => {
-        logError("provider.discovery_failed", error);
-      });
-
-    return request;
-  }
-
-  private async discover(): Promise<Discovered> {
-    const pathToClaudeCodeExecutable = await this.cli.executable();
-    const abortController = new AbortController();
-    let release!: () => void;
-
-    const pending = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    // Initialize the native harness without submitting a user turn or granting tools.
-    // eslint-disable-next-line require-yield -- an open prompt stream that never sends a turn
-    const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
-      await pending;
-    })();
-
-    const session = this.launch({
-      prompt,
-      options: {
-        pathToClaudeCodeExecutable,
-        // Match the task environment and the user's settings-file policy.
-        env: claudeEnvironment(process.env),
-        abortController,
-        persistSession: false,
+  private async discover() {
+    const turnless = turnlessSession(
+      this.launch,
+      this.configuration.settings_files,
+      {
+        pathToClaudeCodeExecutable: await this.cli.executable(),
         // Outside any project, so one folder's settings don't lock modes for all.
         cwd: tmpdir(),
-        settingSources: this.configuration.settings_files
-          ? ["user", "project", "local"]
-          : [],
-        // Model listing must not run the user's settings-file hooks on every refresh.
-        settings: { disableAllHooks: true },
-        strictMcpConfig: true,
-        mcpServers: {},
-        tools: [],
         permissionMode: "default",
         // Lets the policy check try Bypass. No tool can run without a turn.
         // Claude Code won't start with it as root, where Bypass can't run anyway.
@@ -312,20 +260,11 @@ export class ClaudeDiscovery {
           message: "Model discovery cannot execute tools",
         }),
       },
-    }) as Query & SettingsReader;
+    );
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const { session, timeout } = turnless;
 
     try {
-      // Claude Code answers only once its org policy fetch settles, so this
-      // waits as long as a task would.
-      const timeout = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          abortController.abort();
-          reject(new Error("Claude model discovery timed out"));
-        }, READ_TIMEOUT_MS);
-      });
-
       const models = await Promise.race([session.supportedModels(), timeout]);
 
       // Widened because a callback sets it, which TypeScript can't see.
@@ -344,28 +283,16 @@ export class ClaudeDiscovery {
 
       const policy = read?.policy;
 
-      this.catalog = {
-        models: withAppliedDefault(models, read?.settings),
-        ...(policy ? { policy } : {}),
+      return {
+        result: {
+          models: withAppliedDefault(models, read?.settings),
+          ...(policy ? { policy } : {}),
+        },
         // A failed read tells nothing about policy, so it's retried soon.
-        expires: Date.now() + (policyFailed ? 30000 : 5 * 60 * 1000),
+        expires: Date.now() + (policyFailed ? 30000 : READ_CACHE_MS),
       };
-
-      this.catalogFailure = undefined;
-
-      return this.catalog;
-    } catch (error) {
-      // Polling must not repeatedly launch a failing harness.
-      this.catalogFailure = {
-        expires: Date.now() + 30000,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-
-      throw error;
     } finally {
-      clearTimeout(timer);
-      release();
-      session.close();
+      turnless.close();
     }
   }
 }
