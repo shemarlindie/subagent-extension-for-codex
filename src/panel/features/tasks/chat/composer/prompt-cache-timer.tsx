@@ -43,7 +43,7 @@ function description(left: PromptCacheLeft) {
 
 const STATE_ICONS = {
   warm: "timer",
-  partial: "hourglass",
+  partial: "timer-dashed",
   expired: "timer-off",
 } as const;
 

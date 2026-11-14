@@ -38,7 +38,7 @@ const ICON_NAMES = [
   "clock",
   "timer",
   "timer-off",
-  "hourglass",
+  "timer-dashed",
   "help",
   "info",
   "alert-triangle",
