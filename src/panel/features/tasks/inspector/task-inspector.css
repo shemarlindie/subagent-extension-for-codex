@@ -1,7 +1,7 @@
 .task-header .notice {
   margin-inline: var(--detail-pad);
 }
-/* Desktop keeps the title on the content edge while the task list is visible. */
+/* Keep the title on the content edge. */
 .task-topline {
   display: flex;
   align-items: flex-start;
@@ -9,19 +9,7 @@
   /* The 14px icon is centered in a 32px button: allow 9px beyond the content edge. */
   padding-inline: var(--detail-pad) calc(var(--detail-pad) - 9px);
 }
-.task-topline .task-inspector-back {
-  display: none;
-  /* Center the 32px control on the title's first line and editor padding. */
-  margin-block-start: -2px;
-}
-.task-heading {
-  display: flex;
-  flex: 1;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-.task-heading .task-title {
+.task-topline > .task-title {
   flex: 1;
   min-width: 0;
 }
@@ -30,9 +18,6 @@
 }
 .task-inspector-skeleton-header {
   min-width: 0;
-}
-.task-inspector-skeleton-back {
-  display: none;
 }
 .task-inspector-skeleton-menu {
   flex: none;
@@ -51,22 +36,6 @@
 .task-inspector-skeleton-title-shape {
   width: min(62%, 360px);
   height: 1lh;
-}
-@media (max-width: 640px) {
-  .task-topline .task-inspector-back {
-    display: inline-flex;
-  }
-  /* Narrow layouts show Back; offset its inset with container padding. */
-  .task-topline {
-    padding-inline-start: calc(var(--detail-pad) - 12px);
-  }
-  .task-inspector-skeleton-back {
-    display: block;
-    flex: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-  }
 }
 .detail {
   position: relative;
