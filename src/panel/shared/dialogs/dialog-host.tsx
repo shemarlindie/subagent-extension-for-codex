@@ -10,6 +10,7 @@ import { buttonClass } from "../components/button/button";
 import { Icon } from "../components/icons/icons";
 import { useAnimatedHeight } from "../components/motion/use-animated-height";
 import { dialogDefinition } from "./dialog-registry";
+import { DialogSubtitle } from "./dialog-subtitle";
 
 export function DialogHost({ suspended = false }: { suspended?: boolean }) {
   const controller = useController();
@@ -121,7 +122,6 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
           id="dialog"
           className="dialog"
           data-kind={shownDialog?.kind}
-          aria-describedby={undefined}
           initialFocus={handleInitialFocus}
           finalFocus={handleFinalFocus}
         >
@@ -139,6 +139,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
               <Icon name="close" size={10} />
             </Dialog.Close>
           </div>
+          {shownDialog && <DialogSubtitle dialog={shownDialog} />}
           {shownDialog && definition?.render(shownDialog)}
         </Dialog.Popup>
       </Dialog.Portal>

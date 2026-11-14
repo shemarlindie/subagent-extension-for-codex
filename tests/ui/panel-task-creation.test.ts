@@ -106,6 +106,23 @@ test("task form keeps fractional runtime defaults and rejects cost budgets for u
   assert.equal(call.args.reasoning_effort, "high");
 });
 
+test("a thread's Advanced task notes and starts the task in that conversation", async (t) => {
+  const { transport, user } = await setup(t, undefined, {
+    conversation: "chat-1",
+  });
+
+  await openAdvancedTask(user);
+
+  await screen.findByRole("dialog", {
+    description: "This task will be linked to this conversation.",
+  });
+
+  await enterTask(user, "Investigate failing tests");
+  await user.click(screen.getByRole("button", { name: "Start task" }));
+
+  assert.equal((await startedTask(transport)).args.conversation_id, "chat-1");
+});
+
 test("zero runtime and cost budgets cannot launch a task", async (t) => {
   const { transport, user } = await setupDelegate(t);
   await screen.findByRole("dialog");

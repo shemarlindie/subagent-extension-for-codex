@@ -39,17 +39,18 @@ interface NewTaskLoaderContext extends DelegateReadContext {
 }
 
 /**
- * The composer after a scope change `patch`: it follows global project
- * changes, and a chat scope closes it.
+ * The composer after a scope change `patch`: it follows project changes
+ * within its conversation, and a different conversation closes it.
  */
 export function rescopedNewTask(
   { newTask, conversation }: Snapshot,
   patch: Partial<Snapshot>,
   scope: number,
 ) {
-  const chat = "conversation" in patch ? patch.conversation : conversation;
+  const sameChat =
+    !("conversation" in patch) || patch.conversation === conversation;
 
-  return newTask && !chat ? { ...newTask, scope } : undefined;
+  return newTask && sameChat ? { ...newTask, scope } : undefined;
 }
 
 /**

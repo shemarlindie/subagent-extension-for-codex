@@ -3,7 +3,7 @@ import { FormProvider, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
 import { useController, useSnapshot } from "../../app/state/controller-context";
-import type { Task } from "../../app/state/types";
+import type { Snapshot, Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
@@ -21,7 +21,12 @@ import {
   workerChoices,
 } from "./delegate-initial-values";
 import type { DelegateValues } from "./delegate-values";
-import { projectGit, taskProjects, workerChoice } from "./delegation";
+import {
+  projectGit,
+  taskProjects,
+  THREAD_TASK_NOTE,
+  workerChoice,
+} from "./delegation";
 import { ApprovalField } from "./fields/approval-field";
 import { BudgetFields } from "./fields/budget-fields";
 import { ModelFields } from "./fields/model-fields";
@@ -109,7 +114,8 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         startTaskArguments(
           values,
           scope.workers,
-          openedConversation,
+          // Submitting checks the dialog's scope, so this is the conversation it opened in.
+          conversation,
           projectGit(scope, values.repository),
         ),
       );
@@ -167,8 +173,6 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
   // The project folder runs on its checkout, so only a worktree takes a revision.
   const revisionShown = !inPlace && strategy !== "current_repo";
-
-  const openedConversation = useRef(conversation).current;
 
   return (
     <FormProvider {...form}>
@@ -297,8 +301,12 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   );
 }
 
+const threadSubtitle = (_dialog: unknown, { conversation }: Snapshot) =>
+  conversation ? THREAD_TASK_NOTE : undefined;
+
 export const delegateDialog = defineDialog<"delegate">({
   title: () => "Advanced task",
+  subtitle: threadSubtitle,
   render: (dialog) => <DelegateForm dialog={dialog} />,
   // With a known repository the project is settled, so start on the description.
   initialFocus: (popup, { repository }) =>
@@ -309,6 +317,7 @@ export const delegateDialog = defineDialog<"delegate">({
 
 export const delegateLoadingDialog = defineDialog<"delegate-loading">({
   title: () => "Advanced task",
+  subtitle: threadSubtitle,
   render: (dialog) => <DelegateForm dialog={dialog} />,
   initialFocus: (popup) =>
     popup?.querySelector<HTMLElement>("#description") ?? null,

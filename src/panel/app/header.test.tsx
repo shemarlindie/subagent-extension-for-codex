@@ -85,21 +85,20 @@ test("connection changes announce the new status", () => {
   assert.equal(view.getByRole("status").textContent, CONNECTION.reconnecting);
 });
 
-test("thread header shows settings and omits other global controls", async () => {
+test("thread header offers settings and new tasks without the project scope", async () => {
   const { view, user, settings } = setup({ conversation: "chat-1" });
 
   assert.ok(view.getByText("Delegated Work"));
   expect(view.queryByRole("combobox", { name: "Project scope" })).toBeNull();
   const settingsButton = view.getByRole("button", { name: "Settings" });
-  expect(view.queryByRole("button", { name: "New task" })).toBeNull();
+  assert.ok(view.getByRole("button", { name: "New task" }));
 
   await user.click(settingsButton);
   await waitFor(() => assert.equal(settings.mock.calls.length, 1));
 
   await user.click(view.getByRole("button", { name: "Panel actions" }));
   const settingsItem = await view.findByRole("menuitem", { name: "Settings" });
-  expect(view.queryByRole("menuitem", { name: "New task" })).toBeNull();
-  expect(view.queryByRole("menuitem", { name: "Advanced task…" })).toBeNull();
+  assert.ok(view.getByRole("menuitem", { name: "New task" }));
 
   await user.click(settingsItem);
   await waitFor(() => assert.equal(settings.mock.calls.length, 2));

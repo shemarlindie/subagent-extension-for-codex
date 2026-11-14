@@ -7,6 +7,10 @@ import type {
 } from "../../app/state/types";
 import { projectApproved } from "../projects/selectors";
 
+/** Says where a thread panel's new task goes. Hosts don't share the thread's name. */
+export const THREAD_TASK_NOTE =
+  "This task will be linked to this conversation.";
+
 /** The snapshot fields that decide which projects a task can target. */
 export const PROJECT_TARGET_FIELDS = [
   "projects",

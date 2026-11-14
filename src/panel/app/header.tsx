@@ -42,7 +42,7 @@ export function Header({ taskRail }: HeaderProps) {
   ]);
 
   const blocked = !connected || busy;
-  // Thread mode scopes the panel to the conversation; Settings stays available.
+  // Thread mode scopes the panel to the conversation and its project.
   const threadMode = !!conversation;
 
   const newTaskFocus = useRef(false);
@@ -174,35 +174,29 @@ export function Header({ taskRail }: HeaderProps) {
                 <Menu.Item
                   className="menu-item"
                   disabled={blocked}
+                  onClick={openNewTask}
+                >
+                  New task
+                </Menu.Item>
+                <Menu.Item
+                  className="menu-item"
+                  disabled={blocked}
+                  onClick={() => controller.run(() => controller.delegate())}
+                >
+                  Advanced task…
+                </Menu.Item>
+                <Menu.Item
+                  className="menu-item"
+                  disabled={blocked}
                   onClick={settings}
                 >
                   Settings
                 </Menu.Item>
-                {!threadMode && (
-                  <>
-                    <Menu.Item
-                      className="menu-item"
-                      disabled={blocked}
-                      onClick={openNewTask}
-                    >
-                      New task
-                    </Menu.Item>
-                    <Menu.Item
-                      className="menu-item"
-                      disabled={blocked}
-                      onClick={() =>
-                        controller.run(() => controller.delegate())
-                      }
-                    >
-                      Advanced task…
-                    </Menu.Item>
-                  </>
-                )}
               </Menu.Popup>
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
-        {!threadMode && <NewTaskButton disabled={blocked} />}
+        <NewTaskButton disabled={blocked} />
       </div>
     </header>
   );
