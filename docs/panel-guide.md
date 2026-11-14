@@ -345,6 +345,7 @@ compaction, new sessions and recreated worktrees.
 | Enter                             | Start an idle task's next turn, or steer during a run. |
 | Cmd/Ctrl+Enter during a run       | Queue a later turn.                                    |
 | Shift+Enter                       | Insert a newline.                                      |
+| `/` at the start of a message     | List the task's commands. Enter or Tab completes one.  |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
 A failed send keeps the draft and its error. Unless the service confirms that it
