@@ -727,6 +727,14 @@ body[data-expanded-panel="true"]
 .task-run-settings li[data-compact="hidden"] {
   display: none;
 }
+.chat-composer-toggle-row .task-run-settings {
+  margin-inline-start: auto;
+}
+@media (max-width: 360px) {
+  .chat-composer-toggle-row .task-run-settings {
+    display: none;
+  }
+}
 .chat-error {
   margin: 0;
   font-size: 12px;
