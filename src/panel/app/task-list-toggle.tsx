@@ -53,7 +53,7 @@ export function TaskListToggle({ rail }: TaskListToggleProps) {
         disabled={rail.narrow && !listHidden && !hasTasks}
         onClick={toggle}
       >
-        <Icon name="sidebar" size={14} />
+        <Icon name={listHidden ? "sidebar" : "sidebar-filled"} size={14} />
       </Button>
     </TooltipWrapper>
   );
