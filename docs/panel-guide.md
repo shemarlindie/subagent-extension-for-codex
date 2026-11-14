@@ -123,11 +123,9 @@ The task list offers search and these filters:
 The default is the first nonempty filter after Unread. Counts respect the
 project and search filters. Press `/` to search and Escape to clear it.
 
-Each row shows the title, worker profile icon, runtime and status icon. Runtime
-accumulates across turns and includes the active run. Hover the profile icon for
-the worker's name. Under **All projects**, tasks group under a header for each
-project. Each group appears at the position of its newest task, and its header
-stays visible while its rows scroll.
+Task runtime accumulates across turns and includes the active run. Under **All
+projects**, tasks group by project, ordered by each group's newest task. Project
+headers stay visible as their rows scroll.
 
 - The header shows the project's task count. Click it to collapse the group. The
   panel remembers collapsed groups across reloads where browser storage is
