@@ -131,6 +131,7 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
           budgetApplyVersion={budgetApplyVersion}
           disabled={!ready}
           onSend={resumeFollowing}
+          onCollapse={pinned ? resumeFollowing : undefined}
         />
       </div>
     </div>
