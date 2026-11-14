@@ -162,8 +162,7 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
 
     const railPercent = layout["task-rail-panel"];
 
-    // Narrow panels show one column, so their layout says nothing about the rail.
-    if (narrow || railPercent === undefined) return;
+    if (railPercent === undefined) return;
 
     const collapsed = railPercent === 0;
 
