@@ -59,6 +59,9 @@ const idleGrace = Number(
   process.env.SUBAGENT_EXTENSION_FOR_CODEX_IDLE_GRACE_MS ?? 15000,
 );
 
+/** Checks often enough that a short test grace isn't stretched by the interval. */
+const idleCheck = Math.min(idleGrace / 4, 1000);
+
 /** Streams a client holds open while it runs: proxy presence and console events. */
 const clientStreams = ["/api/service/presence", "/api/events"];
 
@@ -321,7 +324,7 @@ export async function serve({
     idleStop = setInterval(() => {
       if (clients || calls || draining || !c.idle()) use();
       else if (performance.now() - lastUse >= idleGrace) void close("idle");
-    }, 1000);
+    }, idleCheck);
   }
 
   process.on("SIGINT", () => void close("SIGINT"));

@@ -27,7 +27,7 @@ import {
 } from "../../support/service.js";
 
 /** A short idle grace, so the tests don't wait out the real one. */
-const idleGrace = 1000;
+const idleGrace = 500;
 
 async function data(t: import("vitest").TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "stdio-proxy-"));
@@ -265,7 +265,7 @@ test(
     // A killed proxy can't say goodbye. Its closed socket is enough.
     process.kill(first.pid, "SIGKILL");
     // Past the grace and the next idle check, the service would have stopped.
-    await new Promise((done) => setTimeout(done, idleGrace + 2000));
+    await new Promise((done) => setTimeout(done, idleGrace + 500));
     assert.ok(running(pid), "the service stopped while a proxy remained");
 
     await second.client.close();
