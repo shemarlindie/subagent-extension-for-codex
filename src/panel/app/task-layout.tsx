@@ -254,7 +254,7 @@ export function TaskLayout({ rail, list, inspector }: TaskLayoutProps) {
         id="task-inspector-panel"
         className="task-layout-panel"
         style={PANEL_STYLE}
-        minSize={narrow ? 0 : MIN_INSPECTOR_WIDTH}
+        minSize={MIN_INSPECTOR_WIDTH}
       >
         {inspector}
       </Panel>
