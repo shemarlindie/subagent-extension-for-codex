@@ -47,6 +47,7 @@ export const TASK_LIST_FIELDS = [
   "search",
   "filter",
   "selected",
+  "previousTask",
 ] as const;
 
 export type TaskListState = Pick<Snapshot, (typeof TASK_LIST_FIELDS)[number]>;
@@ -95,7 +96,12 @@ export function effectiveFilter(state: TaskListState): Filter {
   return DEFAULT_FILTERS.find((filter) => counts[filter] > 0) ?? "all";
 }
 
-// Under Unread, the open task stays listed once read, until another is chosen.
+/** The task the list marks: the open one, or the one Back just left. */
+export const listedTask = (
+  state: Pick<Snapshot, "selected" | "previousTask">,
+) => state.selected ?? state.previousTask;
+
+// Under Unread, the marked task stays listed once read, until another is chosen.
 // Across projects, tasks come in display order: grouped by project.
 export const visibleTasks = (state: TaskListState) => {
   const filter = effectiveFilter(state);
@@ -103,7 +109,7 @@ export const visibleTasks = (state: TaskListState) => {
   const tasks = scopedTasks(state).filter(
     (task) =>
       matchesFilter(task, filter) ||
-      (filter === "unread" && task.id === state.selected),
+      (filter === "unread" && task.id === listedTask(state)),
   );
 
   return state.repository

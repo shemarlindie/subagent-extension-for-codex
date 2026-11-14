@@ -46,7 +46,12 @@ test("a narrow console switches between the list and the task, without overflowi
   await expect(history).toBeHidden();
   expect(await overflows(page)).toBe(false);
 
-  await tasks.getByRole("button", { name: /Check the narrow layout/ }).click();
+  const taskRow = tasks.getByRole("button", {
+    name: /Check the narrow layout/,
+  });
+
+  await expect(taskRow).toHaveAttribute("aria-current", "true");
+  await taskRow.click();
 
   await expect(history).toBeVisible();
   await expect(tasks).toBeHidden();

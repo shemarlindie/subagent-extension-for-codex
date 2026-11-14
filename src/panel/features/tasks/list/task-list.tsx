@@ -10,6 +10,7 @@ import {
 import {
   effectiveFilter,
   FILTER_LABELS,
+  listedTask,
   profileLabel,
   projectChoices,
   scopedTasks,
@@ -250,7 +251,7 @@ export function TaskList() {
         <TaskRow
           key={task.id}
           task={task}
-          selected={task.id === list.selected}
+          selected={task.id === listedTask(list)}
         />
       );
 
