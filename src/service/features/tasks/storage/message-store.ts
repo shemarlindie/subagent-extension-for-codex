@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, count, eq, gte, lt } from "drizzle-orm";
 
 import type { TaskMessage } from "../../../../shared/tasks/model.js";
 import type { Database } from "../../../platform/database/database.js";
@@ -64,21 +64,5 @@ export class MessageStore {
       )
       .orderBy(taskMessages.seq)
       .all();
-  }
-
-  /** Which of `ids` name a task's messages. */
-  existing(taskId: string, ids: string[]): Set<string> {
-    const rows = this.orm
-      .select({ id: taskMessages.message_id })
-      .from(taskMessages)
-      .where(
-        and(
-          eq(taskMessages.task_id, taskId),
-          inArray(taskMessages.message_id, ids),
-        ),
-      )
-      .all();
-
-    return new Set(rows.map((row) => row.id));
   }
 }

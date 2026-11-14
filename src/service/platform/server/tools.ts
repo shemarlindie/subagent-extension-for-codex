@@ -112,6 +112,17 @@ export function toolRegistration(name: string, d: AnyTool) {
 }
 
 /**
+ * Leaves the queued messages the user removed out of a returned task. The
+ * service keeps them only for the panel's undo, and the parent agent doesn't
+ * see messages the user withdrew.
+ */
+export function withoutRemovedQueue(result: unknown) {
+  return typeof result === "object" && result && "removed_queue" in result
+    ? { ...result, removed_queue: undefined }
+    : result;
+}
+
+/**
  * A tool result's structured content. A declared output schema describes the
  * result itself; panel tools add the context that selects the new task.
  */
@@ -149,7 +160,7 @@ export async function callTool(
 
       if (!d) throw new Error("Unknown tool");
 
-      return d.run(d.schema.parse(args ?? {}));
+      return withoutRemovedQueue(await d.run(d.schema.parse(args ?? {})));
     },
     Object.hasOwn(defs, name) &&
       defs[name as keyof typeof defs]?.readOnly === true,

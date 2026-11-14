@@ -369,6 +369,7 @@ service rules.
   [Undo and redo](#undo-and-redo) to reverse these changes.
 - A paused queue offers **Resume** and **Clear**. Sending the next message also
   resumes it.
+- A task holds at most 10 waiting messages, queued or steered.
 - When a budget runs out, Chat shows the cost and runtime limits in a warning.
   **Apply** saves a higher limit without sending a message. Limits can only
   increase.

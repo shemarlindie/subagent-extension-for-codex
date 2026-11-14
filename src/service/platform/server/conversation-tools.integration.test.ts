@@ -452,6 +452,19 @@ test("undo restores removed queued messages with their identity, and never start
       message_id: first,
     });
 
+    // Task reads leave out the messages the user removed.
+    expect(store.get(t.id, "alice").removed_queue).toHaveLength(1);
+
+    expect(
+      (await parent<Task>("get_task", { task_id: t.id })).removed_queue,
+    ).toBeUndefined();
+
+    const { tasks } = await user<{ tasks: PanelTask[] }>("app_list_tasks", {});
+
+    expect(
+      tasks.find((task) => task.id === t.id)?.removed_queue,
+    ).toBeUndefined();
+
     // A message the user never removed can't be made up.
     await user("app_restore_queued_messages", {
       task_id: t.id,

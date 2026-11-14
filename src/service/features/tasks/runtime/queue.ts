@@ -1,4 +1,7 @@
-import { eventPayload } from "../../../../shared/events/payload.js";
+import {
+  checkWaitingLimit,
+  WAITING_MESSAGE_LIMIT,
+} from "../../../../shared/tasks/conversation/waiting-limit.js";
 import type {
   QueuedMessage,
   Sender,
@@ -201,6 +204,7 @@ export function removeQueuedMessage(
   const before = queueSnapshot(t);
   t.queue = t.queue.filter((q) => q !== m);
   if (!t.queue.length) delete t.queue_paused;
+  keepRemoved(t, [m]);
 
   commitQueue(store, t, before, () =>
     store.event(t, "task.message_removed", { message_id: m.id }),
@@ -221,6 +225,7 @@ export function clearQueuedMessages(
 
   t.queue = t.queue.filter((m) => !removed.includes(m));
   if (!t.queue.length) delete t.queue_paused;
+  keepRemoved(t, removed);
 
   commitQueue(store, t, before, () => {
     for (const m of removed) {
@@ -233,59 +238,21 @@ export function clearQueuedMessages(
 export type QueuePlacement = { message_id: string; index: number };
 
 /**
- * The listed messages the task's queue lost to removal, as they last stood.
- * The task's events supply each one's text and sender, and whether the worker
- * already has it as a steer, so the caller can't change them.
+ * Keeps removed queued messages for undo, dropping the oldest past the limit.
+ * A full queue cleared at once still fits.
  */
-function removedMessages(store: Store, t: Task, ids: Set<string>) {
-  const found = new Map<string, QueuedMessage>();
-  const removed = new Set<string>();
-  const recorded = new Set<string>();
-
-  const events = store.eventsOfTypes(t.id, [
-    "task.queue_changed",
-    "task.message_removed",
-    "task.instruction",
-  ]);
-
-  for (const e of events) {
-    const removal = eventPayload(e, "task.message_removed");
-    const instruction = eventPayload(e, "task.instruction");
-    const queue = eventPayload(e, "task.queue_changed")?.queue ?? [];
-
-    if (removal) removed.add(removal.message_id);
-    if (instruction) recorded.add(instruction.message_id);
-
-    // A later snapshot holds the message's latest text.
-    for (const m of queue) {
-      if (!ids.has(m.message_id)) continue;
-
-      found.set(m.message_id, {
-        id: m.message_id,
-        message: m.message,
-        from: m.from,
-        delivery: "queue",
-      });
-    }
-  }
-
-  return new Map<string, QueuedMessage>(
-    [...found]
-      .filter(([id]) => removed.has(id))
-      .map(([id, m]) => [
-        id,
-        recorded.has(id)
-          ? { ...m, delivery: "steer" as const, recorded: true }
-          : m,
-      ]),
+function keepRemoved(t: Task, removed: readonly QueuedMessage[]) {
+  t.removed_queue = [...(t.removed_queue ?? []), ...removed].slice(
+    -WAITING_MESSAGE_LIMIT,
   );
 }
 
 /**
- * Puts removed queued messages back at their places, with their identity and
- * sender. A message sent, queued or unknown since stays as it is. Restoring
- * never starts a turn: a task that isn't busy keeps its queue paused. Writes
- * `record` adds commit with the queue. Returns whether the queue changed.
+ * Puts removed queued messages back at their places, with the identity,
+ * text, sender and steer state they had when removed. Messages the task no
+ * longer keeps as removed stay as they are. Restoring never starts a turn: a
+ * task that isn't busy keeps its queue paused. Writes `record` adds commit
+ * with the queue. Returns whether the queue changed.
  */
 export function restoreQueuedMessages(
   store: Store,
@@ -294,30 +261,21 @@ export function restoreQueuedMessages(
   busy: boolean,
   record?: () => void,
 ) {
-  const queued = new Set([...t.queue, ...t.pending_steers].map((m) => m.id));
-
-  const removed = placements
-    .map((p) => p.message_id)
-    .filter((id) => !queued.has(id));
-
-  const sent = store.messages.existing(t.id, removed);
-
-  const messages = removedMessages(
-    store,
-    t,
-    new Set(removed.filter((id) => !sent.has(id))),
-  );
+  const removed = new Map(t.removed_queue?.map((m) => [m.id, m]));
 
   const restoring = placements
-    .filter((p) => messages.has(p.message_id))
+    .filter((p) => removed.has(p.message_id))
     .toSorted((a, b) => a.index - b.index);
 
   if (!restoring.length) return false;
 
+  checkWaitingLimit(t, restoring.length);
   const before = queueSnapshot(t);
 
   for (const { message_id: id, index } of restoring) {
-    const m = messages.get(id)!;
+    const m = removed.get(id);
+    if (!m) continue;
+    removed.delete(id);
     const first = t.queue.filter((q) => q.recorded).length;
 
     // Steers the worker already has lead the queue.
@@ -328,6 +286,7 @@ export function restoreQueuedMessages(
     t.queue.splice(at, 0, m);
   }
 
+  t.removed_queue = [...removed.values()];
   if (!busy) t.queue_paused = true;
   commitQueue(store, t, before, record);
 

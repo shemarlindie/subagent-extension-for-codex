@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
+import { WAITING_MESSAGE_LIMIT } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,
@@ -531,4 +533,116 @@ test("a restart mid-turn moves pending steers to the front of a paused queue", a
   } finally {
     await c.close();
   }
+});
+
+test("a busy task refuses new waiting messages past the limit, and only those", async () => {
+  const checkpoints = new TurnCheckpoints(1, 2);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
+
+  await c.send("alice", t.id, "Steer", "user");
+
+  const queue = (message: string) =>
+    c.send("alice", t.id, message, "parent", { delivery: "queue" });
+
+  const first = await queue("First");
+
+  for (let i = 2; i < WAITING_MESSAGE_LIMIT; i++) await queue(`Queued ${i}`);
+
+  const events = () => store.events(t.id, "alice").length;
+  const before = events();
+
+  for (const from of ["user", "parent"] as const) {
+    for (const delivery of ["steer", "queue"] as const) {
+      await assert.rejects(
+        c.send("alice", t.id, "One more", from, {
+          delivery,
+          request_id: `${from}-${delivery}`,
+        }),
+        // A rejection confirms that no receipt was stored.
+        (error) =>
+          error instanceof SendRejectedError &&
+          /at most 10 waiting messages/.test(error.message),
+      );
+    }
+  }
+
+  assert.equal(events(), before);
+
+  // Restoring a removed message past the limit changes nothing.
+  c.removeQueued("alice", t.id, first.message_id, "user");
+  await queue("Replacement");
+  const full = store.get(t.id, "alice").queue;
+
+  assert.throws(
+    () =>
+      c.restoreQueued("alice", t.id, [
+        { message_id: first.message_id, index: 0 },
+      ]),
+    /at most 10 waiting messages/,
+  );
+
+  assert.deepEqual(store.get(t.id, "alice").queue, full);
+
+  // The pending steer moves into the full queue.
+  await c.interrupt("alice", t.id);
+  assert.equal(store.get(t.id, "alice").queue.length, WAITING_MESSAGE_LIMIT);
+
+  // Sends to an idle task and interrupts start a turn with their message.
+  const followUp = await c.send("alice", t.id, "Follow up", "user");
+  assert.equal(followUp.state, "started");
+  await checkpoints.ready(2);
+
+  const interrupt = await c.send("alice", t.id, "Now", "parent", {
+    delivery: "interrupt",
+  });
+
+  assert.equal(interrupt.state, "started");
+  await c.close();
+});
+
+test("undo keeps only the latest removed messages", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo));
+  await checkpoints.ready();
+
+  const queue = (message: string) =>
+    c.send("alice", t.id, message, "user", { delivery: "queue" });
+
+  const oldest = await queue("Oldest");
+
+  for (let i = 1; i < WAITING_MESSAGE_LIMIT; i++) await queue(`Queued ${i}`);
+
+  c.clearQueue("alice", t.id);
+  const newest = await queue("Newest");
+  c.removeQueued("alice", t.id, newest.message_id, "user");
+
+  const removed = () =>
+    store.get(t.id, "alice").removed_queue?.map((m) => m.message);
+
+  const kept = Array.from(
+    { length: WAITING_MESSAGE_LIMIT - 1 },
+    (_, i) => `Queued ${i + 1}`,
+  );
+
+  assert.deepEqual(removed(), [...kept, "Newest"]);
+
+  // The oldest removal is gone, so undoing it changes nothing.
+  c.restoreQueued("alice", t.id, [{ message_id: oldest.message_id, index: 0 }]);
+  assert.deepEqual(store.get(t.id, "alice").queue, []);
+
+  c.restoreQueued("alice", t.id, [{ message_id: newest.message_id, index: 0 }]);
+
+  assert.deepEqual(
+    store.get(t.id, "alice").queue.map((m) => m.id),
+    [newest.message_id],
+  );
+
+  assert.deepEqual(removed(), kept);
+
+  await c.close();
 });

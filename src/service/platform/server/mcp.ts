@@ -27,6 +27,7 @@ import {
   toolRegistration,
   toolStructuredContent,
   withConversation,
+  withoutRemovedQueue,
 } from "./tools.js";
 import type { AnyTool } from "./tools/definition.js";
 
@@ -95,17 +96,19 @@ export function mcp(
           const definition = current[name];
           if (!definition) throw new Error(`Unknown tool: ${name}`);
 
-          const result = await observeTool(
-            name,
-            () =>
-              definition.run(
-                withConversation(
-                  definition.conversation,
-                  args,
-                  ctx.mcpReq._meta,
+          const result = withoutRemovedQueue(
+            await observeTool(
+              name,
+              () =>
+                definition.run(
+                  withConversation(
+                    definition.conversation,
+                    args,
+                    ctx.mcpReq._meta,
+                  ),
                 ),
-              ),
-            definition.readOnly === true,
+              definition.readOnly === true,
+            ),
           );
 
           return {
