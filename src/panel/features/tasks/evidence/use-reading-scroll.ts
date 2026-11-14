@@ -507,18 +507,21 @@ export function useReadingScroll({
   );
 
   const resumeFollowing = useCallback(() => {
+    // Without a glide, a pinned view leaves the end through layout, such as a
+    // collapsing composer clamping it, or a reader scroll within the end slack.
+    // Jump back, since a glide would fight layout that is still animating.
+    const smooth = !pinnedRef.current || glide.current !== undefined;
     endGlide();
     stopAnimations();
     const viewport = viewportRef.current;
     if (!viewport) return;
     const container = scrollContainer(viewport);
-    const target = end(container);
     pin(true);
 
-    if (Math.abs(container.scrollTop - target) >= 1 && canGlide(container)) {
-      startGlide(container, target);
+    if (smooth && distanceFromEnd(container) >= 1 && canGlide(container)) {
+      startGlide(container, end(container));
     } else {
-      correctedScrollTop.current = jump(container, target);
+      correctedScrollTop.current = jump(container, end(container));
     }
 
     remember(viewport, container);
