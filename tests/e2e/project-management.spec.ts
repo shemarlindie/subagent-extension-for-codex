@@ -30,6 +30,7 @@ test("rename a project and remove its approval while retaining task history and 
   repository,
 }) => {
   const title = "Retain project work";
+  const projectName = `Browser-${"project".repeat(20)}`;
   await createProjectWorktree(page, title);
   const worktrees = join(consoleService.directory, "worktrees");
   const retainedWorktrees = await readdir(worktrees);
@@ -44,14 +45,14 @@ test("rename a project and remove its approval while retaining task history and 
 
   await project
     .getByRole("textbox", { name: "Project name", exact: true })
-    .fill("Browser project");
+    .fill(projectName);
 
   await project
     .getByRole("textbox", { name: "Project name", exact: true })
     .press("Enter");
 
   const renamed = project.getByRole("button", {
-    name: "Edit project name: Browser project",
+    name: `Edit project name: ${projectName}`,
   });
 
   await expect(renamed).toBeVisible();
@@ -66,17 +67,27 @@ test("rename a project and remove its approval while retaining task history and 
   await page.reload();
 
   await expect(
-    project.getByRole("button", { name: "Edit project name: Browser project" }),
+    project.getByRole("button", { name: `Edit project name: ${projectName}` }),
   ).toBeVisible();
 
   await project
-    .getByRole("button", { name: "Remove Browser project", exact: true })
+    .getByRole("button", { name: `Remove ${projectName}`, exact: true })
     .click();
 
   const confirmation = page.getByRole("dialog", {
     name: "Remove project?",
     exact: true,
   });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+
+  await expect
+    .poll(() =>
+      confirmation.evaluate(
+        (dialog) => dialog.scrollWidth - dialog.clientWidth,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
 
   await expect(
     confirmation.getByRole("switch", {
@@ -90,10 +101,11 @@ test("rename a project and remove its approval while retaining task history and 
 
   await expect(confirmation).toBeHidden();
   await expect(project).toHaveCount(0);
+  await page.setViewportSize({ width: 1280, height: 800 });
 
-  // Undo approves the project again with its name, after the panel left it.
+  // The toast shortens long names. Undo restores the project's full name.
   await page
-    .getByRole("dialog", { name: "Removed project “Browser project”" })
+    .getByRole("dialog", { name: /^Removed project “Browser-project/ })
     .getByRole("button", { name: "Undo", exact: true })
     .click();
 
@@ -205,10 +217,6 @@ test("remove project task data, worktrees and agent sessions while preserving ch
     name: "Removal details",
   });
 
-  await expect(details).toContainText(
-    `The saved project registration will be removed: ${repository}`,
-  );
-
   await expect(details).toContainText(title);
   await expect(details).toContainText(taskId);
 
@@ -234,7 +242,7 @@ test("remove project task data, worktrees and agent sessions while preserving ch
   ).not.toContainText("Provider session");
 
   await confirmation
-    .getByRole("button", { name: "Remove project and task data", exact: true })
+    .getByRole("button", { name: "Remove project and tasks", exact: true })
     .click();
 
   await expect(confirmation).toBeHidden();

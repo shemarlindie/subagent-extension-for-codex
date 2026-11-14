@@ -20,6 +20,14 @@ textarea {
   height: 32px;
   padding: 5px;
 }
+button.danger-button {
+  color: var(--color-text-danger);
+  border-color: var(--color-border-danger);
+  background: var(--color-background-danger);
+}
+.danger-button:not(:disabled):hover {
+  opacity: 0.85;
+}
 /* Text buttons (variant "text"); the global button:hover fill is overridden on purpose. */
 .text-button {
   padding: 0;

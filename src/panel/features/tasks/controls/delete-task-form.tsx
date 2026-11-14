@@ -10,7 +10,6 @@ import { FormFooter } from "../../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../../shared/forms/use-persisted-dialog-form";
 import { AgentTaskDeletionOption } from "./agent-task-deletion-option";
 import { TaskDeletionDetails } from "./task-deletion-details";
-import { TaskDeletionRefresh } from "./task-deletion-refresh";
 import { useTaskDeletionPreview } from "./use-task-deletion-preview";
 
 type DeleteTaskFormProps = {
@@ -81,15 +80,11 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
         preview={deletion.preview}
         checking={deletion.checking}
         error={deletion.error}
+        disabled={busy}
+        onRefresh={deletion.reload}
       />
       <FormFooter
-        leading={
-          <TaskDeletionRefresh
-            checking={deletion.checking}
-            disabled={busy}
-            onRefresh={deletion.reload}
-          />
-        }
+        variant="danger"
         label="Delete task"
         dismissLabel="Cancel"
         disabled={deletion.checking || !deletion.confirmation}

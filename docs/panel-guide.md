@@ -523,15 +523,9 @@ and remote branches stay intact.
   recorded session don't block it. You can still delete the extension's task
   record and leave the provider session alone. If session cleanup fails, the
   local task stays for retry.
-- The confirmation lists each selected task, worktree, local branch and optional
-  session files. Bulk confirmations start with task details collapsed. Expand a
-  task to review its resources. **Refresh removal list** is in the footer.
-  Folder removal includes all contents. If a listed resource changes, refresh
-  the removal list and review it again before deleting. An info icon beside a
-  path identifies symbolic links. Hover or activate it to see each link and its
-  resolved target.
-- A worktree outside the managed worktree folder and its local branch stay. The
-  confirmation lists them under **Will remain**.
+- Folder removal includes all contents. If a listed resource changes, refresh
+  the removal list and review it again before deleting.
+- A worktree outside the managed worktree folder and its local branch stay.
 - A later cleanup failure can leave earlier resources removed.
 
 ## Transport

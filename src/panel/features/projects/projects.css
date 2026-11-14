@@ -111,8 +111,6 @@
   color: var(--color-text-danger);
 }
 
-.remove-project-form #submit {
-  color: var(--color-text-danger);
-  border-color: var(--color-border-danger);
-  background: var(--color-background-danger);
+.remove-project-name {
+  overflow-wrap: anywhere;
 }

@@ -8,18 +8,18 @@ import { Presence } from "../components/motion/presence";
 
 interface FormFooterProps {
   label: string;
+  variant?: "primary" | "danger";
   disabled?: boolean;
   dismissLabel?: string;
-  leading?: ReactNode;
   /** Other actions, placed before the submit button. */
   children?: ReactNode;
 }
 
 export function FormFooter({
   label,
+  variant = "primary",
   disabled = false,
   dismissLabel = "Cancel",
-  leading,
   children,
 }: FormFooterProps) {
   const controller = useController();
@@ -37,7 +37,6 @@ export function FormFooter({
         </div>
       </Presence>
       <footer>
-        {leading && <div className="form-footer-leading">{leading}</div>}
         <Dialog.Close
           type="button"
           id="dismiss"
@@ -50,7 +49,7 @@ export function FormFooter({
         <Button
           id="submit"
           type="submit"
-          variant="primary"
+          variant={variant}
           disabled={busy || stale || disabled}
         >
           {busy ? "Working…" : label}

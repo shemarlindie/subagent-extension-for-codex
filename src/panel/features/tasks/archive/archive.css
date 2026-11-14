@@ -68,13 +68,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.archive-delete-refresh {
-  margin-right: auto;
-}
-.project-archive .archive-delete,
-.project-archive .archive-delete-submit {
+.project-archive .archive-delete {
   color: var(--color-text-danger);
-}
-.project-archive .archive-delete-submit {
-  border-color: var(--color-border-danger);
 }

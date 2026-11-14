@@ -9,86 +9,84 @@ type TaskDeletionTargetItemProps = {
   defaultOpen: boolean;
 };
 
-/** One task's resources, split into what deletion removes and what remains. */
 export function TaskDeletionTargetItem({
   task,
   defaultOpen,
 }: TaskDeletionTargetItemProps) {
   const retained = task.retainedWorktree;
+  const hasResources = Boolean(task.worktree || task.branch || task.session);
+  const hasRetained = retained?.worktree || retained?.branch;
+
+  const label = (
+    <span className="task-deletion-label">
+      <strong>{task.title}</strong>
+      <code>{task.id}</code>
+    </span>
+  );
+
+  if (!hasResources && !hasRetained) {
+    return <li className="task-deletion-plain">{label}</li>;
+  }
 
   return (
     <Collapsible.Root render={<li />} defaultOpen={defaultOpen}>
       <Collapsible.Trigger className="task-deletion-trigger">
-        <Chevron />
-        <strong>{task.title}</strong>
+        <Chevron size={9} />
+        {label}
       </Collapsible.Trigger>
-      <Collapsible.Panel>
-        <code>{task.id}</code>
-        <span className="task-deletion-group" aria-hidden>
-          Will be removed
-        </span>
-        <ul aria-label="Will be removed">
-          <li>
-            Task record, conversation, activity, requests and recorded changes
-          </li>
-          {task.worktree && (
-            <li>
-              Worktree folder and all contents, including uncommitted files:{" "}
-              <TaskDeletionPath
-                path={task.worktree}
-                symlinks={task.worktreeSymlinks}
-              />
-            </li>
-          )}
-          {task.branch && (
-            <li>
-              Local Git branch: <code>{task.branch}</code>
-            </li>
-          )}
-          {task.session?.resources.map((resource) => (
-            <li key={resource.path}>
-              {resource.kind === "directory"
-                ? "Session folder and all contents"
-                : "Session transcript"}
-              :{" "}
-              <TaskDeletionPath
-                path={resource.path}
-                symlinks={resource.symlinks}
-              />
-            </li>
-          ))}
-          {task.session && task.session.resources.length === 0 && (
-            <li>Provider session, whose files are already gone</li>
-          )}
-        </ul>
-        <span className="task-deletion-group" aria-hidden>
-          Will remain
-        </span>
-        <ul aria-label="Will remain">
-          <li>
-            Project files:{" "}
-            <TaskDeletionPath
-              path={task.repository}
-              symlinks={task.repositorySymlinks}
-            />
-          </li>
-          {retained?.worktree && (
-            <li>
-              Worktree outside the managed folder:{" "}
-              <code>{retained.worktree}</code>
-            </li>
-          )}
-          {retained?.branch && (
-            <li>
-              Local Git branch: <code>{retained.branch}</code>
-            </li>
-          )}
-          {!task.session && task.sessionRecorded !== false && (
-            <li>Provider session</li>
-          )}
-        </ul>
-        {task.sessionRecorded === false && (
-          <span className="form-note">No provider session is recorded.</span>
+      <Collapsible.Panel className="task-deletion-resources">
+        {hasResources && (
+          <ul aria-label={`Resources to remove for ${task.title}`}>
+            {task.worktree && (
+              <li>
+                Worktree folder and all contents, including uncommitted files:{" "}
+                <TaskDeletionPath
+                  path={task.worktree}
+                  symlinks={task.worktreeSymlinks}
+                />
+              </li>
+            )}
+            {task.branch && (
+              <li>
+                Local Git branch: <code>{task.branch}</code>
+              </li>
+            )}
+            {task.session?.resources.map((resource) => (
+              <li key={resource.path}>
+                {resource.kind === "directory"
+                  ? "Session folder and all contents"
+                  : "Session transcript"}
+                :{" "}
+                <TaskDeletionPath
+                  path={resource.path}
+                  symlinks={resource.symlinks}
+                />
+              </li>
+            ))}
+            {task.session && task.session.resources.length === 0 && (
+              <li>Provider session, whose files are already gone</li>
+            )}
+          </ul>
+        )}
+        {hasRetained && (
+          <>
+            <span className="task-deletion-group" aria-hidden>
+              Will remain
+            </span>
+            <ul aria-label="Will remain">
+              {retained.worktree && (
+                <li>
+                  Worktree outside the managed folder:{" "}
+                  <code>{retained.worktree}</code>
+                </li>
+              )}
+              {retained.branch && (
+                <li>
+                  Local Git branch: <code>{retained.branch}</code>
+                </li>
+              )}
+            </ul>
+          </>
         )}
       </Collapsible.Panel>
     </Collapsible.Root>

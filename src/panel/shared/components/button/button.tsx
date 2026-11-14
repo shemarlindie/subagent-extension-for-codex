@@ -3,14 +3,15 @@ import type { ComponentProps } from "react";
 /**
  * - `default`: bordered; the secondary action beside a primary one.
  * - `primary`: filled; the action that submits or confirms.
+ * - `danger`: red; the action that confirms a destructive change.
  * - `ghost`: borderless until hovered; toolbar and navigation buttons.
  * - `text`: muted text with no box; low-emphasis inline actions.
  */
-export type ButtonVariant = "default" | "primary" | "ghost" | "text";
+export type ButtonVariant = "default" | "primary" | "danger" | "ghost" | "text";
 
 // Only text buttons read as links, so only they take an underline.
 type VariantProps =
-  | { variant?: "default" | "primary" | "ghost"; underline?: never }
+  | { variant?: "default" | "primary" | "danger" | "ghost"; underline?: never }
   | { variant: "text"; underline?: boolean };
 
 // ComponentProps includes `ref`, which React 19 passes through like any other prop.
@@ -23,6 +24,7 @@ export type ButtonProps = Omit<ComponentProps<"button">, "type"> & {
 const VARIANT_CLASSES: Record<ButtonVariant, string | undefined> = {
   default: undefined,
   primary: "primary",
+  danger: "danger-button",
   ghost: "ghost",
   text: "text-button",
 };
