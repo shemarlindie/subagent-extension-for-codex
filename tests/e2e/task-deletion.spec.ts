@@ -42,7 +42,8 @@ test("delete a running task together with its agent session", async ({
   const taskId = await row.getAttribute("data-task");
   // The only worktree is the task's, named from its title.
   const [name] = await readdir(actualRoot);
-  const worktree = join(actualRoot, name!);
+  if (!name) throw new Error("The task has no worktree.");
+  const worktree = join(actualRoot, name);
   const confirmation = await openDeleteTask(page);
 
   const details = confirmation.getByRole("region", {
@@ -88,7 +89,7 @@ test("delete a running task together with its agent session", async ({
     .check();
 
   await expect(details).toContainText(
-    `Session transcript: fixture:${join(linkedRoot, name!)}`,
+    `Session transcript: fixture:${join(linkedRoot, name)}`,
   );
 
   await expect(

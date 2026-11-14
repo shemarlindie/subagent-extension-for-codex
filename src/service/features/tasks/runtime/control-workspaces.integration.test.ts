@@ -54,7 +54,14 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
   const { c, store, repo } = await setup();
 
   const branches = () =>
-    execFileSync("git", ["-C", repo, "branch", "--list", "agent/*"])
+    execFileSync("git", [
+      "-C",
+      repo,
+      "branch",
+      "--list",
+      "--format=%(refname:short)",
+      "agent/*",
+    ])
       .toString()
       .trim();
 
@@ -92,7 +99,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
       status: "removed",
     });
 
-    assert.match(branches(), new RegExp(t.branch!));
+    assert.equal(branches(), t.branch);
     assert.equal(store.get(t.id, "alice").workspace_removed, true);
     assert.equal(pins(), "");
 
@@ -143,7 +150,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     await until(() => store.get(paused.id, "alice").turn === 3);
     await until(() => store.get(paused.id, "alice").status === "completed");
     const recreated = store.get(paused.id, "alice");
-    assert.match(branches(), new RegExp(recreated.branch!));
+    assert.equal(branches(), recreated.branch);
 
     assert.equal(
       execFileSync("git", ["-C", recreated.workspace!, "rev-parse", "HEAD"])
@@ -172,6 +179,9 @@ test("a task is deleted in any state with everything related to it", async () =>
       .toString()
       .trim();
 
+  const branches = () =>
+    git("branch", "--list", "--format=%(refname:short)", "agent/*");
+
   const sessions: string[] = [];
 
   c.providers.get("fixture")!.deleteSession = async (t) => {
@@ -184,10 +194,7 @@ test("a task is deleted in any state with everything related to it", async () =>
     const stopped = store.get(t.id, "alice");
     assert.ok(stopped.workspace && existsSync(stopped.workspace));
 
-    assert.match(
-      git("branch", "--list", "agent/*"),
-      new RegExp(stopped.branch!),
-    );
+    assert.equal(branches(), stopped.branch);
 
     assert.equal(git("for-each-ref", "refs/agent-tasks"), "");
 
@@ -221,10 +228,7 @@ test("a task is deleted in any state with everything related to it", async () =>
 
     assert.equal(existsSync(stopped.workspace), false);
 
-    assert.equal(
-      git("branch", "--list", "agent/*").includes(stopped.branch!),
-      false,
-    );
+    assert.equal(branches(), "");
 
     assert.equal(git("for-each-ref", "refs/agent-tasks").includes(t.id), false);
 
