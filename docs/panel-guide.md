@@ -123,10 +123,11 @@ The task list offers search and these filters:
 The default is the first nonempty filter after Unread. Counts respect the
 project and search filters. Press `/` to search and Escape to clear it.
 
-Each row shows the title, worker profile icon, runtime and status icon. Hover
-the profile icon for the worker's name. Under **All projects**, tasks group
-under a header for each project. Each group appears at the position of its
-newest task, and its header stays visible while its rows scroll.
+Each row shows the title, worker profile icon, runtime and status icon. Runtime
+accumulates across turns and includes the active run. Hover the profile icon for
+the worker's name. Under **All projects**, tasks group under a header for each
+project. Each group appears at the position of its newest task, and its header
+stays visible while its rows scroll.
 
 - The header shows the project's task count. Click it to collapse the group. The
   panel remembers collapsed groups across reloads where browser storage is
@@ -146,14 +147,10 @@ toast shows the newest one. Notifications stay quiet while you compose a task,
 have a dialog open, wait for a submitted request or browse the list or another
 page.
 
-Wide panels show the task list and inspector side by side, with a resizable
-divider. Narrow panels switch between them using the header's **Show task list**
-and **Hide task list** toggle. Hiding the list reopens the last viewed task in
-the current list, or its first task. On wide panels, hide the list with **Hide
-task list** at the start of the header or by dragging the divider past the
-list's minimum width. Click the remaining edge or **Show task list** to show it
-again. The panel remembers the width and whether the list is hidden. Runtime
-accumulates across turns and includes the active run.
+Use the header's task list toggle to show or hide the list. Wide panels show a
+resizable list beside the inspector and remember its width and collapsed state.
+Narrow panels switch between the list and task content without changing those
+preferences.
 
 ### Read and unread tasks
 
