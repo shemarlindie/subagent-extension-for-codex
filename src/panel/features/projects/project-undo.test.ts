@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { expect, test, vi } from "vitest";
 
 import type { Project } from "../../app/state/types";
@@ -27,14 +29,17 @@ const project = (patch: Partial<Project> = {}): Project => ({
 test("a project with its folder's name needs no rename, and renames undo to the old name", async () => {
   const { tool, steps } = setup();
 
-  await steps.change(project({ name: "parser" }), undefined)!.undo();
+  const unchanged = steps.change(project({ name: "parser" }), undefined);
+  assert.ok(unchanged);
+  await unchanged.undo();
 
   expect(tool.mock.calls.map(([name]) => name)).toEqual([
     "app_register_project",
     "list_projects",
   ]);
 
-  const rename = steps.change(project(), " Parser ")!;
+  const rename = steps.change(project(), " Parser ");
+  assert.ok(rename);
   expect(rename.label).toBe("Renamed project “Parser tools” to “Parser”");
   expect(rename.toast).toBeUndefined();
   await rename.undo();

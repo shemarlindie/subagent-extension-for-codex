@@ -11,6 +11,7 @@ import { Workspaces } from "../../../src/service/features/workspaces/workspace.j
 import { application } from "../../../src/service/platform/server/app.js";
 import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
+import { sessionCookie } from "./http-test-harness.js";
 
 const token = "drain-test-token-with-enough-length";
 
@@ -80,7 +81,7 @@ test("drain requires a hook and administrator token, then closes connections", a
     body: JSON.stringify({ token }),
   });
 
-  const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+  const cookie = sessionCookie(login);
 
   assert.equal(
     (await post("/api/service/drain", { Cookie: cookie })).status,

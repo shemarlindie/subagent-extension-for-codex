@@ -127,8 +127,9 @@ test("rename a project and remove its approval while retaining task history and 
     );
 
     const bounds = await approvalNotice.evaluate((notice) => {
-      const inspector = notice.closest("#detail")!;
-      const tabs = inspector.querySelector('[role="tablist"]')!;
+      const inspector = notice.closest("#detail");
+      const tabs = inspector?.querySelector('[role="tablist"]');
+      if (!inspector || !tabs) throw new Error("The inspector has no tabs");
       const tabBox = tabs.getBoundingClientRect();
       const tabStyle = getComputedStyle(tabs);
       const box = notice.getBoundingClientRect();
@@ -181,7 +182,8 @@ test("remove project task data, worktrees and agent sessions while preserving ch
   const worktrees = join(consoleService.directory, "worktrees");
   const savedWorktrees = await readdir(worktrees);
   expect(savedWorktrees).toHaveLength(1);
-  const taskId = savedWorktrees[0]!;
+  const [taskId] = savedWorktrees;
+  if (!taskId) throw new Error("No worktree was saved");
 
   await openManageProjects(page);
   const project = page.getByRole("listitem").filter({ hasText: repository });

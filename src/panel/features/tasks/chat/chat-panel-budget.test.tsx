@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { fireEvent, waitFor } from "@testing-library/react";
 import { expect, test } from "vitest";
 
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { base, sent, setup } from "./chat-panel-test-harness";
 
 test("runtime limits above 120 minutes preserve an existing composer draft", async () => {
@@ -85,9 +86,10 @@ test("combined budget notice prompts after both spent dimensions are raised", as
   fireEvent.change(cost, { target: { value: "8" } });
 
   fireEvent.click(
-    view
-      .getByRole("group", { name: "Raise cost limit" })
-      .querySelector(".chat-budget-apply")!,
+    getElement(
+      view.getByRole("group", { name: "Raise cost limit" }),
+      ".chat-budget-apply",
+    ),
   );
 
   await waitFor(() => assert.equal(sent(tool).length, 1));
@@ -108,9 +110,10 @@ test("combined budget notice prompts after both spent dimensions are raised", as
   fireEvent.change(runtime, { target: { value: "24" } });
 
   fireEvent.click(
-    view
-      .getByRole("group", { name: "Raise runtime limit" })
-      .querySelector(".chat-budget-apply")!,
+    getElement(
+      view.getByRole("group", { name: "Raise runtime limit" }),
+      ".chat-budget-apply",
+    ),
   );
 
   await waitFor(() => assert.equal(sent(tool).length, 2));

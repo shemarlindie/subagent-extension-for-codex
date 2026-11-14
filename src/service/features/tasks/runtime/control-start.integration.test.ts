@@ -10,7 +10,13 @@ import type {
 import { Projects } from "../../projects/projects.js";
 import { claudeTaskPolicy } from "../../providers/claude/configuration/task-policy.js";
 import type { Provider } from "../../providers/types.js";
-import { input, setup, TestProvider, until } from "./control-test-harness.js";
+import {
+  input,
+  pendingInput,
+  setup,
+  TestProvider,
+  until,
+} from "./control-test-harness.js";
 
 test("worker discovery exposes SDK metadata and falls back when discovery fails", async () => {
   const provider: Provider = new TestProvider();
@@ -422,7 +428,7 @@ test("ownership enforced across state, events and controls", async () => {
   await assert.rejects(c.interrupt("bob", t.id));
   await assert.rejects(c.send("bob", t.id, "Hi", "user"));
   await assert.rejects(c.delete("bob", t.id));
-  const request = store.get(t.id, "alice").pending_input!;
+  const request = pendingInput(store, t.id);
   assert.throws(() => c.input("bob", t.id, request.id, true));
   await c.close();
 });

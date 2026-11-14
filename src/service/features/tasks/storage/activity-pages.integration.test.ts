@@ -61,10 +61,11 @@ function everything(store: Store, id: string) {
 
   for (let after = 0; ;) {
     const page = store.taskEvents(id, after);
-    if (!page.length) return all;
+    const last = page.at(-1);
+    if (!last) return all;
 
     all.push(...page);
-    after = page.at(-1)!.id;
+    after = last.id;
   }
 }
 
@@ -86,7 +87,8 @@ test("a poll returns only the events after its cursor and extends the tally", (t
 
   const pages = new ActivityPages(store);
   const first = pages.page(task.id, 0);
-  const cursor = first.events.at(-1)!.id;
+  const cursor = first.events.at(-1)?.id;
+  assert.ok(cursor);
 
   write(1200);
 
@@ -103,7 +105,8 @@ test("a poll with nothing new does not count the history again", (t) => {
 
   const pages = new ActivityPages(store);
   const first = pages.page(task.id, 0);
-  const cursor = first.events.at(-1)!.id;
+  const cursor = first.events.at(-1)?.id;
+  assert.ok(cursor);
   const read = vi.spyOn(store, "taskEvents");
 
   const again = pages.page(task.id, cursor);
@@ -145,7 +148,7 @@ test("a turn reads from the previous turn's close through its own close", (t) =>
   assert.deepEqual(second, windowTurnActivity(log, 2));
   assert.equal(second.events.length, EVENT_TAIL_SIZE);
   assert.equal(second.dropped?.count, 33);
-  assert.equal(second.events.at(-1)!.type, "task.completed");
+  assert.equal(second.events.at(-1)?.type, "task.completed");
 
   assert.deepEqual(pages.turn(task.id, 1), windowTurnActivity(log, 1));
   assert.equal(pages.turn(task.id, 1).events.length, 8);

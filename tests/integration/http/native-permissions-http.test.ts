@@ -15,6 +15,7 @@ import { Auth } from "../../../src/service/platform/server/auth.js";
 import { claudeMetadata } from "../../../src/shared/providers/metadata.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
+import { mcpResponseJson, sessionCookie } from "./http-test-harness.js";
 
 const parentMeta = {
   "codex/sandbox-state-meta": {
@@ -104,14 +105,7 @@ async function setup(t: TestContext) {
     assert.equal(res.status, 200);
     const text = await res.text();
 
-    return JSON.parse(
-      text.startsWith("event:")
-        ? text
-            .split("\n")
-            .find((line) => line.startsWith("data:"))!
-            .slice(5)
-        : text,
-    );
+    return mcpResponseJson(text);
   };
 
   const request = {
@@ -175,9 +169,7 @@ test("cookie-authenticated user tasks use the extension permission setting", asy
   });
 
   const login = await post("/api/login", { token: "test-token" });
-  const [cookie] = login.headers.get("set-cookie")!.split(";");
-
-  assert.ok(cookie);
+  const cookie = sessionCookie(login);
 
   const res = await post(
     "/api/user-tools/app_start_task",

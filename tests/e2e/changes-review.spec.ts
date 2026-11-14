@@ -52,7 +52,7 @@ test("review several changed files across scopes, viewed marks and previews", as
     name: "Changed files by folder",
   });
 
-  const firstPath = (await first.textContent())!;
+  const firstPath = (await first.textContent()) ?? "";
   const firstDiff = changes.locator(`[data-changed-file="${firstPath}"]`);
   await expect(files).toHaveCount(0);
   await expect(firstDiff).not.toHaveAttribute("open");
@@ -108,7 +108,7 @@ test("review several changed files across scopes, viewed marks and previews", as
   await expect(picker).toBeFocused();
 
   // The last file reaches the top, clear of the navigator, and reads as current.
-  const secondPath = (await second.textContent())!;
+  const secondPath = (await second.textContent()) ?? "";
 
   const secondPick = files.getByRole("button", {
     name: secondPath,

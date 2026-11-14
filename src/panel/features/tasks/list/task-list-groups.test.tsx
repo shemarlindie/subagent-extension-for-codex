@@ -9,6 +9,7 @@ import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { task } from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task, Transport } from "../../../app/state/types";
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { TaskList } from "./task-list";
 
 const named = (id: string, repository: string, patch: Partial<Task> = {}) => ({
@@ -72,7 +73,7 @@ function setup(patch: Partial<Snapshot> = {}) {
       .filter(Boolean);
 
   const toggle = (name: string) =>
-    group(name).querySelector<HTMLElement>(".task-group-toggle")!;
+    getElement<HTMLElement>(group(name), ".task-group-toggle");
 
   return { view, rows, toggle, update };
 }

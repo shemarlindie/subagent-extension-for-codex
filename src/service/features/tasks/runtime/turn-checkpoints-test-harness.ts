@@ -27,10 +27,17 @@ export class TurnCheckpoints {
   };
 
   ready(turn = 1) {
-    return this.turns.get(turn)!.ready.promise;
+    return this.checkpoint(turn).ready.promise;
   }
 
   release(turn = 1) {
-    this.turns.get(turn)!.finished.resolve();
+    this.checkpoint(turn).finished.resolve();
+  }
+
+  private checkpoint(turn: number) {
+    const checkpoint = this.turns.get(turn);
+    if (!checkpoint) throw new Error(`Turn ${turn} has no checkpoint`);
+
+    return checkpoint;
   }
 }

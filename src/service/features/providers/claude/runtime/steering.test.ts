@@ -98,7 +98,11 @@ async function context() {
     events,
     taken,
     deltas,
-    steer: (steer: Steer) => sink!(steer),
+    steer: (steer: Steer) => {
+      assert.ok(sink, "The turn accepts steers");
+
+      return sink(steer);
+    },
   };
 }
 
@@ -107,7 +111,9 @@ async function context() {
  * CLI frames and can wait for the next prompt message.
  */
 function fakeQuery(
-  script: (next: () => Promise<SDKUserMessage>) => AsyncGenerator<Frame>,
+  script: (
+    next: () => Promise<SDKUserMessage & { uuid: string }>,
+  ) => AsyncGenerator<Frame>,
   controls: Partial<Record<"interrupt" | "cancelAsyncMessage", unknown>> = {},
 ) {
   let options: Options | undefined;
@@ -119,13 +125,23 @@ function fakeQuery(
     options = args.options;
     const reader = args.prompt[Symbol.asyncIterator]();
 
-    const next = async () =>
-      (await reader.next()).value as unknown as SDKUserMessage;
+    const next = async () => {
+      const message = (await reader.next()).value as unknown as SDKUserMessage;
+      assert.ok(message.uuid, "Each prompt message has a uuid");
+
+      return { ...message, uuid: message.uuid };
+    };
 
     return Object.assign(script(next), { close() {}, ...controls });
   }) as unknown as ConstructorParameters<typeof ClaudeAgentProvider>[0];
 
-  return { launch, options: () => options! };
+  const launched = () => {
+    assert.ok(options, "The query launched");
+
+    return options;
+  };
+
+  return { launch, options: launched };
 }
 
 test("a steer goes into the running turn as a priority next message, and is taken when the CLI starts it", async () => {
@@ -142,9 +158,10 @@ test("a steer goes into the running turn as a priority next message, and is take
     };
 
     assert.equal(ctx.steer({ id: "msg_1", text: "Also this" }), true);
-    steerMessage = await next();
-    yield lifecycle(steerMessage.uuid!, "queued");
-    yield lifecycle(steerMessage.uuid!, "started");
+    const message = await next();
+    steerMessage = message;
+    yield lifecycle(message.uuid, "queued");
+    yield lifecycle(message.uuid, "started");
     yield endTurn;
     yield result("Done");
   });
@@ -203,7 +220,7 @@ test("only a turn's first start says which mode the task got, since a later one 
 
   const query = fakeQuery(async function* (next) {
     await next();
-    yield init(ctx.c.task.provider_options!.claude!.permission_mode as string);
+    yield init("plan");
     yield init("acceptEdits");
     yield result("Done");
   });
@@ -225,7 +242,7 @@ test("a steer the turn won't take is withdrawn as the final message ends, and no
     async function* (next) {
       await next();
       ctx.steer({ id: "msg_late", text: "Late" });
-      uuid = (await next()).uuid!;
+      uuid = (await next()).uuid;
       yield lifecycle(uuid, "queued");
       yield endTurn;
       assert.equal(ctx.steer({ id: "msg_later", text: "Later" }), false);
@@ -259,7 +276,7 @@ test("a steer that can't be withdrawn runs after the result, and the turn ends w
       const { uuid } = await next();
       yield endTurn;
       yield result("First");
-      yield lifecycle(uuid!, "started");
+      yield lifecycle(uuid, "started");
       yield endTurn;
       yield result("Second");
     },
@@ -281,7 +298,7 @@ const replyTo = async (frames: (uuid: string) => Frame[]) => {
 
   const query = fakeQuery(async function* (next) {
     const { uuid } = await next();
-    yield* frames(uuid!);
+    yield* frames(uuid);
   });
 
   return new ClaudeAgentProvider(query.launch, readyClaudeCli).run(
@@ -357,7 +374,7 @@ test("an interrupt ends the turn through the query, cancelling queued messages, 
   );
 
   assert.deepEqual(interrupts, [{ cancelQueued: true }]);
-  assert.equal(query.options().abortController!.signal.aborted, false);
+  assert.equal(query.options().abortController?.signal.aborted, false);
 });
 
 test("an interrupt that fails stops the process instead", async () => {
@@ -368,10 +385,11 @@ test("an interrupt that fails stops the process instead", async () => {
       await next();
       ctx.abort.abort();
 
+      const { abortController } = query.options();
+      assert.ok(abortController);
+
       await new Promise<void>((resolve) =>
-        query
-          .options()
-          .abortController!.signal.addEventListener("abort", () => resolve()),
+        abortController.signal.addEventListener("abort", () => resolve()),
       );
 
       yield result("", "error_during_execution");
@@ -388,7 +406,7 @@ test("an interrupt that fails stops the process instead", async () => {
     { code: "error_during_execution", message: "aborted" },
   );
 
-  assert.equal(query.options().abortController!.signal.aborted, true);
+  assert.equal(query.options().abortController?.signal.aborted, true);
 });
 
 test("the main worker's text streams as deltas, and other stream frames are left out", async () => {

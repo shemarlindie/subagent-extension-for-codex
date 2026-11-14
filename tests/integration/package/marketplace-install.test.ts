@@ -45,10 +45,11 @@ function findCodex(): [string, string[]] | undefined {
   }
 
   try {
-    const shim = execFileSync("where", ["codex"])
+    const [first = ""] = execFileSync("where", ["codex"])
       .toString()
-      .split(/\r?\n/)[0]!
-      .trim();
+      .split(/\r?\n/);
+
+    const shim = first.trim();
 
     if (/\.exe$/i.test(shim)) return [shim, []];
 
@@ -88,11 +89,15 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
   let codexHome: string;
   let service: Service;
 
-  const runCodex = (...args: string[]) =>
-    exec(codex![0], [...codex![1], ...args], {
+  const runCodex = (...args: string[]) => {
+    assert.ok(codex);
+    const [command, leading] = codex;
+
+    return exec(command, [...leading, ...args], {
       env: { ...process.env, CODEX_HOME: codexHome },
       maxBuffer: 16 * 1024 * 1024,
     });
+  };
 
   beforeAll(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), "marketplace-")));

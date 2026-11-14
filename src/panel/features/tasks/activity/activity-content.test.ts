@@ -8,6 +8,7 @@ import { expect, test } from "vitest";
 
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { ActivityContent, ActivityValue } from "./activity-content";
 import {
   assertAbsent,
@@ -581,8 +582,8 @@ test("an assistant response bubble contains only its thinking note", () => {
   ];
 
   const view = render(createElement(GroupedEventList, { events }));
-  const group = view.container.querySelector(".activity-message")!;
-  const bubble = group.querySelector(".activity-body")!;
+  const group = getElement(view.container, ".activity-message");
+  const bubble = getElement(group, ".activity-body");
 
   assert.equal(
     group.querySelector(".activity-group-secondary")?.textContent,

@@ -13,6 +13,10 @@ import {
   type TurnOutput,
 } from "../../../src/service/features/providers/types.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
+import {
+  latestReply,
+  pendingInput,
+} from "../../../src/service/features/tasks/runtime/control-test-harness.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { application } from "../../../src/service/platform/server/app.js";
@@ -20,6 +24,7 @@ import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";
+import { sessionCookie } from "./http-test-harness.js";
 
 class PermissionProvider extends FixtureProvider {
   override async run(ctx: RunContext): Promise<TurnOutput> {
@@ -73,9 +78,7 @@ async function setup() {
 
   const login = await post("/api/login", { token: "test-token" });
 
-  const [session] = login.headers.get("set-cookie")!.split(";");
-
-  assert.ok(session);
+  const session = sessionCookie(login);
 
   const cookie = { Cookie: session, "X-Subagent-Extension-For-Codex": "1" };
 
@@ -92,7 +95,7 @@ async function setup() {
 
     return {
       task_id: id,
-      request_id: c.store.get(id, "local").pending_input!.id,
+      request_id: pendingInput(c.store, id, "local").id,
       approved: true,
     };
   };
@@ -173,11 +176,7 @@ test("console cookie can configure modes and approve while generic bearer API ca
 
     await until(() => c.store.get(id, "local").status === "completed");
 
-    assert.equal(
-      JSON.parse(String(c.store.latestEvent(id, "agent.reply")!.data.text))
-        .approved,
-      true,
-    );
+    assert.equal(JSON.parse(latestReply(c.store, id)).approved, true);
   } finally {
     await cleanup();
   }
@@ -227,11 +226,7 @@ test("authenticated admin user-tools route supports user settings, starts, and d
 
     await until(() => c.store.get(id, "local").status === "completed");
 
-    assert.equal(
-      JSON.parse(String(c.store.latestEvent(id, "agent.reply")!.data.text))
-        .approved,
-      true,
-    );
+    assert.equal(JSON.parse(latestReply(c.store, id)).approved, true);
 
     assert.equal(
       (
@@ -295,7 +290,7 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     }
 
     assert.deepEqual(
-      (tools.find((entry) => entry.name === "submit_input")!._meta as any).ui
+      (tools.find((entry) => entry.name === "submit_input")?._meta as any)?.ui
         .visibility,
       ["model", "app"],
     );
@@ -328,12 +323,7 @@ test("MCP advertises app-only aliases and lets the parent agent answer delegated
     assert.notEqual(allowed.isError, true);
     await until(() => c.store.get(delegatedId, "local").status === "completed");
 
-    assert.equal(
-      JSON.parse(
-        String(c.store.latestEvent(delegatedId, "agent.reply")!.data.text),
-      ).approved,
-      true,
-    );
+    assert.equal(JSON.parse(latestReply(c.store, delegatedId)).approved, true);
   } finally {
     await client.close();
     await cleanup();

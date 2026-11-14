@@ -365,7 +365,8 @@ test.each([true, false])(
           },
         ]);
 
-        context!.steerTaken(selected.message_id);
+        assert.ok(context);
+        context.steerTaken(selected.message_id);
 
         assert.equal(
           store.messages.list(task.id).at(-1)?.id,

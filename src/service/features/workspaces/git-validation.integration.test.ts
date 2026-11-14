@@ -53,9 +53,9 @@ vi.mock("node:util", async (importOriginal) => {
         const run = exec(file, args, { ...options, timeout: 0 });
         deadline.child = run.child;
 
-        run.child.stdout!.once("data", () =>
-          run.child.kill(options.killSignal),
-        );
+        assert.ok(run.child.stdout);
+
+        run.child.stdout.once("data", () => run.child.kill(options.killSignal));
 
         return run;
       };

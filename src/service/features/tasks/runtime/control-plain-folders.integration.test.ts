@@ -72,7 +72,11 @@ test("a task runs in place in a plain folder and records its edits", async () =>
   assert.equal(t.workspace, f.plain);
   assert.equal(t.base_commit, undefined);
   assert.equal(t.no_git, true);
-  assert.match(f.provider.prompts.get(t.id)!, /folder with no Git history/);
+
+  assert.match(
+    f.provider.prompts.get(t.id) ?? "",
+    /folder with no Git history/,
+  );
 
   assert.deepEqual(
     f.c.changes.changes(t, "task").files.map((file) => file.path),
@@ -88,7 +92,7 @@ test("a task runs in place in a repository with no commits", async () => {
   assert.equal(t.workspace, f.unborn);
   assert.equal(t.base_commit, undefined);
   assert.equal(t.no_git, undefined);
-  assert.match(f.provider.prompts[0]!, /had no commits/);
+  assert.match(f.provider.prompts[0] ?? "", /had no commits/);
 });
 
 test("an explicit worktree or revision fails at once without commits", async () => {
@@ -171,7 +175,7 @@ test("a removed .git doesn't fail the task's next new session", async () => {
   const second = await f.finished(first.id, 2);
   assert.equal(second.status, "completed", second.error);
   assert.equal(second.no_git, true);
-  assert.match(f.provider.prompts.at(-1)!, /folder with no Git history/);
+  assert.match(f.provider.prompts.at(-1) ?? "", /folder with no Git history/);
 });
 
 test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(

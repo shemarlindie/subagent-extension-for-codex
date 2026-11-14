@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import assert from "node:assert/strict";
+
 import { cleanup, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
@@ -92,11 +94,11 @@ test("streamed text eases new lines into view while same-line deltas keep their 
   view.rerender(content("First words"));
   expect(animations).toHaveLength(1);
 
-  expect(animations[0]!.element).toBe(
+  expect(animations[0]?.element).toBe(
     view.container.querySelector(".chat-message"),
   );
 
-  expect(animations[0]!.frames.map((frame) => frame.height)).toEqual([
+  expect(animations[0]?.frames.map((frame) => frame.height)).toEqual([
     "20px",
     "40px",
   ]);
@@ -115,7 +117,8 @@ test("saving a streamed message continues from its displayed height without repl
   );
 
   const article = view.container.querySelector(".chat-message");
-  const arrival = animations[0]!;
+  const [arrival] = animations;
+  assert.ok(arrival);
   displayed.set(arrival.element, 10);
 
   view.rerender(<ChatMessageView message={message("First")} worker="Claude" />);
@@ -124,7 +127,7 @@ test("saving a streamed message continues from its displayed height without repl
   expect(animations).toHaveLength(2);
   expect(arrival.animation.cancel).toHaveBeenCalledOnce();
 
-  expect(animations[1]!.frames.map((frame) => frame.height)).toEqual([
+  expect(animations[1]?.frames.map((frame) => frame.height)).toEqual([
     "10px",
     "20px",
   ]);
@@ -140,6 +143,9 @@ test("streamed paragraphs fade in without fading the ones already shown", () => 
   const view = render(content("First"));
   view.rerender(content("First\n\nSecond"));
 
-  const fades = animations.filter((entry) => "opacity" in entry.frames[0]!);
+  const fades = animations.filter(
+    (entry) => "opacity" in (entry.frames[0] ?? {}),
+  );
+
   expect(fades.map((entry) => entry.element.textContent)).toEqual(["Second"]);
 });

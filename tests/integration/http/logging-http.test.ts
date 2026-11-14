@@ -7,7 +7,7 @@ import {
   configureLogging,
   flushLogs,
 } from "../../../src/service/platform/logging/logger.js";
-import { httpFixture } from "./http-test-harness.js";
+import { httpFixture, sessionCookie } from "./http-test-harness.js";
 
 interface RejectedAttempt {
   path: string;
@@ -117,7 +117,7 @@ test("records console and MCP authentication rejection reasons without credentia
 
   const login = await post("/api/login", { token: "private-token" });
   await login.text();
-  const cookie = login.headers.get("set-cookie")!.split(";")[0]!;
+  const cookie = sessionCookie(login);
   const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 3_600_001);
   let expired: Response;
 

@@ -226,10 +226,11 @@ test("undoing mark read puts the task back unread from its read point, with the 
 
   await actions.markRead(open);
   const [entry] = entries;
+  assert.ok(entry);
 
-  expect(entry!.label).toBe("Marked “Parser” read");
+  expect(entry.label).toBe("Marked “Parser” read");
   tool.mockResolvedValueOnce({ unread: true, through: 4 } as never);
-  await entry!.undo();
+  await entry.undo();
 
   expect(tool).toHaveBeenLastCalledWith("app_mark_task_unread_from", {
     task_id: "a",
@@ -238,7 +239,9 @@ test("undoing mark read puts the task back unread from its read point, with the 
 
   expect(snapshot().newMark).toMatchObject({ task: "a", through: 4 });
   // Reading the open task doesn't mark it read again at once.
-  await actions.readThrough(snapshot().tasks[0]!, 9);
+  const [current] = snapshot().tasks;
+  assert.ok(current);
+  await actions.readThrough(current, 9);
   expect(tool).toHaveBeenCalledTimes(2);
 });
 

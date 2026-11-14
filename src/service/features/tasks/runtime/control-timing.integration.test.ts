@@ -3,7 +3,13 @@ import { readFile } from "node:fs/promises";
 import { expect, test } from "vitest";
 
 import type { RunContext } from "../../providers/types.js";
-import { input, setup, TestProvider, until } from "./control-test-harness.js";
+import {
+  input,
+  pendingInput,
+  setup,
+  TestProvider,
+  until,
+} from "./control-test-harness.js";
 import { sendRef } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
 
@@ -109,7 +115,7 @@ test("a provider run reports the time it waited for the user", async () => {
   const task = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(task.id, "alice").pending_input);
   await new Promise((resolve) => setTimeout(resolve, 20));
-  const request = store.get(task.id, "alice").pending_input!;
+  const request = pendingInput(store, task.id);
   c.input("alice", task.id, request.id, true, { answer: "yes" });
   await until(() => store.get(task.id, "alice").status === "completed");
   await c.close();

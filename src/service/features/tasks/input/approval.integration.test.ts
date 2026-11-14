@@ -13,6 +13,7 @@ import { callTool } from "../../../platform/server/tools.js";
 import { type RunContext, type TurnOutput } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Control } from "../runtime/control.js";
+import { latestReply, pendingInput } from "../runtime/control-test-harness.js";
 import { Store } from "../storage/store.js";
 
 const baseRequest = {
@@ -84,9 +85,7 @@ for (const mode of approvalModes) {
         await until(() => store.get(task.id, "alice").status === "completed");
 
         assert.equal(
-          JSON.parse(
-            String(store.latestEvent(task.id, "agent.reply")!.data.text),
-          ).approved,
+          JSON.parse(latestReply(store, task.id)).approved,
           mode === "auto_approve",
         );
 
@@ -133,18 +132,16 @@ for (const mode of ["auto_approve", "deny"] as const) {
 
       await callTool(c, "alice", "submit_input", {
         task_id: task.id,
-        request_id: store.get(task.id, "alice").pending_input!.id,
+        request_id: pendingInput(store, task.id).id,
         approved: true,
         input: { answer: "Option A" },
       });
 
       await until(() => store.get(task.id, "alice").status === "completed");
 
-      assert.deepEqual(
-        JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
-          .input,
-        { answer: "Option A" },
-      );
+      assert.deepEqual(JSON.parse(latestReply(store, task.id)).input, {
+        answer: "Option A",
+      });
     } finally {
       await cleanup();
     }
@@ -157,22 +154,18 @@ test("interruption invalidates pending permission IDs across continuation", asyn
   try {
     const task = await c.start("alice", request);
     await until(() => !!store.get(task.id, "alice").pending_input);
-    const oldId = store.get(task.id, "alice").pending_input!.id;
+    const oldId = pendingInput(store, task.id).id;
     await c.interrupt("alice", task.id);
     assert.throws(() => c.input("alice", task.id, oldId, true), /stale/);
     await c.send("alice", task.id, "Continue", "user");
     await until(() => !!store.get(task.id, "alice").pending_input);
-    const currentId = store.get(task.id, "alice").pending_input!.id;
+    const currentId = pendingInput(store, task.id).id;
     assert.notEqual(currentId, oldId);
     assert.throws(() => c.input("alice", task.id, oldId, true), /stale/);
     c.input("alice", task.id, currentId, false);
     await until(() => store.get(task.id, "alice").status === "completed");
 
-    assert.equal(
-      JSON.parse(String(store.latestEvent(task.id, "agent.reply")!.data.text))
-        .approved,
-      false,
-    );
+    assert.equal(JSON.parse(latestReply(store, task.id)).approved, false);
   } finally {
     await cleanup();
   }
@@ -224,7 +217,7 @@ test("parents can restrict approval authority but cannot escalate any saved mode
             c.input(
               "alice",
               task.id,
-              store.get(task.id, "alice").pending_input!.id,
+              pendingInput(store, task.id).id,
               false,
               undefined,
               undefined,

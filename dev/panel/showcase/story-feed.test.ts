@@ -1,8 +1,10 @@
+import assert from "node:assert/strict";
+
 import { expect, test } from "vitest";
 
 import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
-import { storyAt } from "./story";
 import { StoryFeed } from "./story-feed";
+import { panelAt } from "./story-test-harness";
 
 type WaitRead = { revision: string; draft?: Draft | null };
 
@@ -32,23 +34,25 @@ test("an unchanged wait returns its revision when its time runs out", async () =
 
 test("a draft wait returns when the streamed reply grows", async () => {
   const feed = new StoryFeed({ step: 2, streamed: 0.2 });
-  const task_id = storyAt({ step: 2 })!.task.id;
+  const task_id = panelAt({ step: 2 }).task.id;
   const first = await wait(feed, { draft: { task_id } });
+  assert.ok(first.draft);
 
   const held = wait(feed, {
     after: first.revision,
     draft: {
       task_id,
-      message_id: first.draft!.message_id,
-      after_length: first.draft!.text.length,
+      message_id: first.draft.message_id,
+      after_length: first.draft.text.length,
     },
     wait_ms: 20_000,
   });
 
   feed.set({ step: 2, streamed: 0.5 });
   const grown = await held;
+  assert.ok(grown.draft);
 
   expect(grown.revision).toBe(first.revision);
-  expect(grown.draft!.text.startsWith(first.draft!.text)).toBe(true);
-  expect(grown.draft!.text.length).toBeGreaterThan(first.draft!.text.length);
+  expect(grown.draft.text.startsWith(first.draft.text)).toBe(true);
+  expect(grown.draft.text.length).toBeGreaterThan(first.draft.text.length);
 });

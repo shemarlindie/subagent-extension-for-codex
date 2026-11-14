@@ -29,7 +29,8 @@ test("a message that absorbed its thinking marker spans marker to message", () =
     }),
   ];
 
-  const message = groupActivity(events).find((g) => g.kind === "message")!;
+  const message = groupActivity(events).find((g) => g.kind === "message");
+  assert.ok(message);
   const span = thinkingSpan(message, events);
   assert.ok(span && span.end !== null && span.end > span.start);
 });
@@ -42,8 +43,9 @@ test("startup and ordinary statuses remain visible beside a thinking row", () =>
     event(20, "tool.started", { id: "a", name: "Read" }),
   ];
 
-  const group = groupActivity(events).find((g) => g.title === "Thinking…")!;
   const groups = groupActivity(events);
+  const group = groups.find((g) => g.title === "Thinking…");
+  assert.ok(group);
 
   assert.deepEqual(
     groups.map((group) => group.events.map((event) => event.id)),

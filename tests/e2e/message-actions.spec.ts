@@ -1,7 +1,7 @@
 import type { ChatItem } from "../../src/shared/tasks/conversation/chat";
 import { send, startTask } from "./console-actions";
 import { firstReplyTest as test } from "./first-reply-fixtures";
-import { expect } from "./fixtures";
+import { expect, requiredAttribute } from "./fixtures";
 
 test("sent messages copy literal text and show their sent times", async ({
   consolePage: page,
@@ -41,7 +41,7 @@ test("sent messages copy literal text and show their sent times", async ({
   const timestampNote = page.getByRole("dialog");
 
   await expect(timestampNote).toHaveText(
-    (await initialTime.getAttribute("aria-label"))!,
+    await requiredAttribute(initialTime, "aria-label"),
   );
 
   await expect(initialTime).toBeFocused();
@@ -123,6 +123,6 @@ test("sent messages copy literal text and show their sent times", async ({
   await followupTime.click();
 
   await expect(timestampNote).toHaveText(
-    (await followupTime.getAttribute("aria-label"))!,
+    await requiredAttribute(followupTime, "aria-label"),
   );
 });

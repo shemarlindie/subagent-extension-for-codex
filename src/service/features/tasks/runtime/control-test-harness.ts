@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -81,6 +82,22 @@ export function eventData(store: Store, id: string, type: string) {
     .map((e) => e.data);
 }
 
+/** The request a task is waiting on. */
+export function pendingInput(store: Store, id: string, owner = "alice") {
+  const request = store.get(id, owner).pending_input;
+  assert.ok(request, "The task is waiting for input");
+
+  return request;
+}
+
+/** The text of a task's latest reply. */
+export function latestReply(store: Store, id: string) {
+  const reply = store.latestEvent(id, "agent.reply");
+  assert.ok(reply, "The task replied");
+
+  return String(reply.data.text);
+}
+
 /** Records prompts, and writes a file for a task described as "Write". */
 export class FileWriter extends TestProvider {
   readonly prompts = new Map<string, string>();
@@ -96,7 +113,8 @@ export class FileWriter extends TestProvider {
     this.prompts.set(c.task.id, p);
 
     if (c.task.description === "Write") {
-      const path = join(c.task.workspace!, this.path);
+      assert.ok(c.task.workspace);
+      const path = join(c.task.workspace, this.path);
       await writeFile(path, this.content);
 
       c.fileChanged({

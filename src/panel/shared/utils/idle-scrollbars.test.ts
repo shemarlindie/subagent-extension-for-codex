@@ -144,7 +144,7 @@ test("cleanup clears markers and pending timers and removes interaction listener
   expectActive(scroller, true);
   expect(vi.getTimerCount()).toBe(1);
 
-  dispose!();
+  dispose?.();
   dispose = undefined;
 
   expectActive(scroller, false);

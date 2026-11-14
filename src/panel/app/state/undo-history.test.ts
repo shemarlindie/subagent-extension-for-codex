@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import { expect, test, vi } from "vitest";
 
 import { task } from "./controller-test-harness";
@@ -84,7 +86,9 @@ test("undo and redo always show what they did, and steps the same way collect wh
   });
 
   // Once the toast closes, the next step starts afresh.
-  history.dismiss(state().undoNotice!.id);
+  const notice = state().undoNotice;
+  assert.ok(notice);
+  history.dismiss(notice.id);
   await history.redo();
   expect(state().undoNotice?.text).toBe("Redid: Second");
   expect(state().undoRevision).toBe(6);

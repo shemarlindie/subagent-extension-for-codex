@@ -2,7 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-import { expect, type Page, test as base } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  test as base,
+} from "@playwright/test";
 
 import type { FixtureProviderOptions } from "../../dev/service/fixture-provider.js";
 import { CONSOLE_TOKEN, startConsoleService } from "./server";
@@ -35,6 +40,22 @@ export async function createRepository(repository: string) {
     "-qm",
     "initial",
   ]);
+}
+
+/** An attribute the element must have. */
+export async function requiredAttribute(locator: Locator, name: string) {
+  const value = await locator.getAttribute(name);
+  if (value === null) throw new Error(`The element has no ${name} attribute`);
+
+  return value;
+}
+
+/** The bounding box of an element that must be visible. */
+export async function visibleBox(locator: Locator) {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("The element is not visible");
+
+  return box;
 }
 
 export const test = base.extend<ConsoleFixtures>({

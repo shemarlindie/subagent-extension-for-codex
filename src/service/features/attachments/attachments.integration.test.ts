@@ -131,24 +131,24 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
     ],
   );
 
+  const [, diff, , range, , code, link] = attachments;
+  assert.ok(diff && range && code && link);
+
   // A link inside the project reads through its resolved path.
-  assert.equal(attachments[6]!.path, "notes.md");
+  assert.equal(link.path, "notes.md");
 
   // Claude must open this code as text even when its label names an image.
-  assert.match(attachments[5]!.file, /\.txt$/);
-  assert.deepEqual([attachments[1]!.files, attachments[1]!.additions], [2, 4]);
+  assert.match(code.file, /\.txt$/);
+  assert.deepEqual([diff.files, diff.additions], [2, 4]);
 
-  const tail = join(c.attachments.folder(t.id), attachments[3]!.file);
+  const tail = join(c.attachments.folder(t.id), range.file);
   assert.equal(await readFile(tail, "utf8"), "two\nthree\n");
-  assert.equal(attachments[3]!.lines, 2);
+  assert.equal(range.lines, 2);
 
   // The saved range is what was copied, ending at the file's last line.
-  assert.deepEqual(
-    [attachments[3]!.start_line, attachments[3]!.end_line],
-    [2, 3],
-  );
+  assert.deepEqual([range.start_line, range.end_line], [2, 3]);
 
-  assert.deepEqual(attachments[1]!.paths, ["README.md", "notes.md"]);
+  assert.deepEqual(diff.paths, ["README.md", "notes.md"]);
 
   // Rejected starts leave no task and no folder.
   await writeFile(join(repo, "big.txt"), "x".repeat(2 * 1024 * 1024 + 1));
@@ -248,14 +248,15 @@ test("a diff snapshot holds untracked regular files and unusual names, runs no f
   });
 
   const [diff] = c.attachments.list(t.id);
-  assert.equal(diff!.files, 3);
+  assert.ok(diff);
+  assert.equal(diff.files, 3);
 
   assert.deepEqual(
     (await uncommittedDiff(repo, ["with\ttab.txt"], 1024)).files,
     ["with\ttab.txt"],
   );
 
-  const snapshot = join(c.attachments.folder(t.id), diff!.file);
+  const snapshot = join(c.attachments.folder(t.id), diff.file);
   const text = await readFile(snapshot, "utf8");
   assert.ok(!text.includes("untracked-link"));
 
@@ -343,10 +344,11 @@ test("attachments stay out of the task body, go with the task, and legacy contex
   assert.doesNotMatch(body(t.id), /"attachments"|"context"/);
   const folder = c.attachments.folder(t.id);
   const [file] = await readdir(folder);
+  assert.ok(file);
 
   assert.equal(
     recorder.prompts[0],
-    `Investigate\n\nAttachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, file!)}`,
+    `Investigate\n\nAttachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, file)}`,
   );
 
   await c.delete("alice", t.id);
@@ -472,7 +474,8 @@ test("attachment pages keep characters whole, stay with one version and report a
   assert.equal(second.next_cursor, undefined);
 
   const [stored] = c.attachments.list(t.id);
-  const file = join(c.attachments.folder(t.id), stored!.file);
+  assert.ok(stored);
+  const file = join(c.attachments.folder(t.id), stored.file);
   await writeFile(file, `b${text.slice(1)}`);
   await assert.rejects(read("alice", first.next_cursor), /changed/);
 

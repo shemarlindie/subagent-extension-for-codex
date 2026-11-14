@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { getElement } from "../../src/panel/shared/utils/dom-test-harness";
 import { decodedEvent } from "../../src/shared/events/decode.js";
 import {
   act,
@@ -46,7 +47,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
   assert.deepEqual(transport.messages, []);
   await act(() => controller.refresh());
   assert.deepEqual(transport.messages, []);
-  const field = document.getElementById("handoff-message")!;
+  const field = getElement<HTMLElement>(document, "#handoff-message");
   await user.clear(field);
   await pasteText(user, field, "Edited handoff for this chat");
 
@@ -415,28 +416,29 @@ test("pending worker updates send only the checked ones and stay counted until C
   const label = "3 pending worker updates";
   await user.click(await screen.findByRole("button", { name: label }));
   const dialog = within(await screen.findByRole("dialog"));
-  const upload = document.querySelector<HTMLElement>('[data-task="upload"]')!;
-  const loader = document.querySelector<HTMLElement>('[data-task="loader"]')!;
+  const upload = getElement<HTMLElement>(document, '[data-task="upload"]');
+  const loader = getElement<HTMLElement>(document, '[data-task="loader"]');
   const [uploadTask, , older] = within(upload).getAllByRole("checkbox");
   // A task's only update has no checkbox of its own.
   const [loaderTask, ...loaderRest] = within(loader).getAllByRole("checkbox");
   assert.deepEqual(loaderRest, []);
+  assert.ok(uploadTask && older && loaderTask);
   const markSeen = dialog.getByRole("button", { name: "Mark seen" });
   const send = dialog.getByRole("button", { name: "Send to Codex" });
 
-  await user.click(older!);
-  assert.equal(uploadTask!.getAttribute("aria-checked"), "mixed");
+  await user.click(older);
+  assert.equal(uploadTask.getAttribute("aria-checked"), "mixed");
 
   // From partial, the task checkbox checks every update, then clears them.
-  await user.click(uploadTask!);
-  await user.click(uploadTask!);
-  await user.click(loaderTask!);
+  await user.click(uploadTask);
+  await user.click(uploadTask);
+  await user.click(loaderTask);
   assert.equal(markSeen.hasAttribute("disabled"), true);
   assert.equal(send.hasAttribute("disabled"), true);
 
-  await user.click(uploadTask!);
-  await user.click(older!);
-  await user.click(loaderTask!);
+  await user.click(uploadTask);
+  await user.click(older);
+  await user.click(loaderTask);
   await user.click(send);
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
 

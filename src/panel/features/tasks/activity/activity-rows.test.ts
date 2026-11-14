@@ -9,6 +9,7 @@ import { expect, test, vi } from "vitest";
 import { task as buildTask } from "../../../app/state/controller-test-harness";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 import { expandedJsonText } from "../../../shared/components/json-tree/json-tree-test-harness";
+import { getElement } from "../../../shared/utils/dom-test-harness";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
 import { assertAbsent, event, parseHtml } from "./activity-ui-test-harness";
 import { EVENT_TAIL_SIZE } from "./event-history";
@@ -39,9 +40,11 @@ test("the trimmed note summarizes dropped events only for the task being shown",
   };
 
   const note = (summary = dropped) =>
-    render(
-      createElement(GroupedEventList, { events, dropped: summary }),
-    ).container.querySelector(".activity-trimmed-note")!.textContent;
+    getElement(
+      render(createElement(GroupedEventList, { events, dropped: summary }))
+        .container,
+      ".activity-trimmed-note",
+    ).textContent;
 
   assert.match(
     note(),
@@ -154,13 +157,13 @@ test("a reply shows its Markdown preview outside Debug with More and Less contro
     }),
   );
 
-  const group = reply.container.querySelector(".activity-group")!;
+  const group = getElement(reply.container, ".activity-group");
 
   expect(group.querySelector(".activity-group-secondary")).toBeNull();
   expect(group.querySelector(".activity-debug-body")).toBeNull();
 
   const responseBody = () =>
-    group.querySelector(".activity-body .activity-markdown")!;
+    getElement(group, ".activity-body .activity-markdown");
 
   const preview = `${"More detail. ".repeat(6)}More...`;
 
@@ -168,9 +171,7 @@ test("a reply shows its Markdown preview outside Debug with More and Less contro
   expect(responseBody().textContent).toContain(preview);
   expect(responseBody().textContent).not.toContain("**");
 
-  const more = group.querySelector<HTMLButtonElement>(
-    ".activity-reply-toggle",
-  )!;
+  const more = getElement<HTMLButtonElement>(group, ".activity-reply-toggle");
 
   expect(more.textContent).toBe("More");
   fireEvent.click(more);
@@ -181,12 +182,12 @@ test("a reply shows its Markdown preview outside Debug with More and Less contro
   expect(responseBody().textContent).toContain(preview);
   expect(more.textContent).toBe("More");
 
-  fireEvent.click(group.querySelector(".activity-debug-toggle")!);
-  const debug = group.querySelector(".activity-debug-body")!;
+  fireEvent.click(getElement(group, ".activity-debug-toggle"));
+  const debug = getElement(group, ".activity-debug-body");
   expect(debug.querySelector(".activity-reply-toggle")).toBeNull();
   expect(debug.querySelector(".activity-text")).toBeNull();
 
-  expect(expandedJsonText(debug.querySelector(".activity-raw")!)).toContain(
+  expect(expandedJsonText(getElement(debug, ".activity-raw"))).toContain(
     JSON.stringify(text),
   );
 });
@@ -303,9 +304,10 @@ test("Activity user messages use literal Chat bubbles and parent messages render
     ].map((bubble) => bubble.textContent),
   ).toEqual([text, "Follow `up`"]);
 
-  const parent = view.container.querySelector(
+  const parent = getElement(
+    view.container,
     ".activity-group-summary.activity-markdown",
-  )!;
+  );
 
   expect(parent.querySelector("code")?.textContent).toBe("saveUpload");
   expect(parent.textContent).toBe("Check saveUpload callers");
@@ -313,12 +315,12 @@ test("Activity user messages use literal Chat bubbles and parent messages render
   expect(view.container.querySelector(".chat-bubble strong")).toBeNull();
   expect(view.container.querySelector(".chat-bubble pre")).toBeNull();
   expect(view.container.querySelector(".activity-debug-body")).toBeNull();
-  const first = view.container.querySelector(".activity-group")!;
+  const first = getElement(view.container, ".activity-group");
   expect(first.querySelector(":scope > .activity-body")).toBeNull();
-  fireEvent.click(first.querySelector(".activity-debug-toggle")!);
+  fireEvent.click(getElement(first, ".activity-debug-toggle"));
   expect(first.querySelector(".activity-debug-body .chat-bubble")).toBeNull();
 
-  expect(expandedJsonText(first.querySelector(".activity-raw")!)).toContain(
+  expect(expandedJsonText(getElement(first, ".activity-raw"))).toContain(
     JSON.stringify(text),
   );
 });
@@ -366,7 +368,7 @@ test("rate-limit details show the latest update without opening Debug", (t) => {
 
   expect(view.container.querySelectorAll(".activity-group")).toHaveLength(1);
   expect(view.container.querySelector(".activity-debug-body")).toBeNull();
-  fireEvent.click(view.container.querySelector(".activity-debug-toggle")!);
+  fireEvent.click(getElement(view.container, ".activity-debug-toggle"));
 
   expect(
     view.container.querySelector(".activity-debug-body")?.textContent,
@@ -478,18 +480,20 @@ test("a turn completion shows stats and keeps its result in raw JSON", (t) => {
 
   const completion = [...view.querySelectorAll(".activity-group")].find(
     (group) => group.textContent?.includes("Turn completed"),
-  )!;
+  );
+
+  assert.ok(completion);
 
   assert.equal(
     completion.querySelector(".activity-group-stats")?.textContent,
     `1m 05s · ${compact(15_876)} in · ${compact(426)} out tokens · ${cost} session cost`,
   );
 
-  fireEvent.click(completion.querySelector(".activity-debug-toggle")!);
+  fireEvent.click(getElement(completion, ".activity-debug-toggle"));
 
   // The result remains available in JSON, not as a second readable response.
-  const debug = completion.querySelector(".activity-debug-body")!;
-  const raw = debug.querySelector(".activity-raw")!;
+  const debug = getElement(completion, ".activity-debug-body");
+  const raw = getElement(debug, ".activity-raw");
   assert.ok(expandedJsonText(raw)?.includes(result));
   debug.querySelector(".activity-raw")?.remove();
   assert.ok(!debug.textContent?.includes(result));

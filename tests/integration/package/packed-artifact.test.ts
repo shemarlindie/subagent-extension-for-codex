@@ -346,7 +346,9 @@ describe("packed artifact", () => {
         resource.uri.startsWith("ui://"),
       );
 
-      const html = (await client.readResource({ uri: panel!.uri })).contents[0];
+      assert.ok(panel);
+
+      const html = (await client.readResource({ uri: panel.uri })).contents[0];
       assert.match(String((html as { text?: string }).text), /<html/i);
 
       // Bundled diagnostics must work outside the checkout, without node_modules.
@@ -540,7 +542,9 @@ describe("packed artifact", () => {
           resource.uri.startsWith("ui://"),
         );
 
-        const html = (await client.readResource({ uri: panel!.uri }))
+        assert.ok(panel);
+
+        const html = (await client.readResource({ uri: panel.uri }))
           .contents[0];
 
         assert.match(String((html as { text?: string }).text), /<html/i);
@@ -587,7 +591,7 @@ describe("packed artifact", () => {
           await retarget(old);
           worker = await claudeWorker(client);
           assert.equal(worker.readiness.ready, false);
-          assert.match(worker.readiness.message!, /2\.0\.0 .* older than/);
+          assert.match(worker.readiness.message ?? "", /2\.0\.0 .* older than/);
           assert.equal(worker.models, undefined);
 
           const refused = await callError(client, "start_task", {
@@ -613,7 +617,7 @@ describe("packed artifact", () => {
           worker = await claudeWorker(client);
 
           assert.match(
-            worker.readiness.message!,
+            worker.readiness.message ?? "",
             /SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH points to/,
           );
         } finally {
@@ -631,7 +635,7 @@ describe("packed artifact", () => {
           assert.equal(worker.readiness.ready, false);
 
           assert.match(
-            worker.readiness.message!,
+            worker.readiness.message ?? "",
             /not found on the service's PATH/,
           );
         } finally {

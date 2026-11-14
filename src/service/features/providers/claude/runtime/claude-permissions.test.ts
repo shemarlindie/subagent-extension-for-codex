@@ -16,6 +16,7 @@ import {
 import { adminTokenRule } from "../configuration/admin-token.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import {
+  askPermission,
   captureOptions,
   context,
   preToolUseHook,
@@ -78,8 +79,8 @@ test("M6 PostToolUse records subagent edits and returns an empty result after re
 });
 
 test("every task denies the admin token, and its hook denies file tools on it", async () => {
-  const { c } = await context();
-  const data = await realpath(process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA!);
+  const { c, data: folder } = await context();
+  const data = await realpath(folder);
   const token = join(data, "admin-token");
   await writeFile(token, "token");
   // Worktrees live in the data directory.
@@ -140,8 +141,8 @@ test("every task denies the admin token, and its hook denies file tools on it", 
 });
 
 test("a task's attachment folder is readable and fixed: deny rules, the sandbox's write list and the hook", async () => {
-  const { c, workspace } = await context();
-  const data = await realpath(process.env.SUBAGENT_EXTENSION_FOR_CODEX_DATA!);
+  const { c, workspace, data: dataFolder } = await context();
+  const data = await realpath(dataFolder);
   const folder = join(data, "attachments", c.task.id);
   await mkdir(folder, { recursive: true });
   await writeFile(join(folder, "1-note.txt"), "note");
@@ -194,6 +195,8 @@ async function editDecision(options: Options, tool: string, path: string) {
   const input =
     tool === "NotebookEdit" ? { notebook_path: path } : { file_path: path };
 
+  assert.ok(options.cwd);
+
   const output = (await preToolUseHook(options)(
     {
       hook_event_name: "PreToolUse",
@@ -201,7 +204,7 @@ async function editDecision(options: Options, tool: string, path: string) {
       tool_input: input,
       session_id: "x",
       transcript_path: "x",
-      cwd: options.cwd!,
+      cwd: options.cwd,
       tool_use_id: "x",
     },
     "x",
@@ -260,37 +263,22 @@ test("write-profile shell commands require human decision and cannot use edited 
   await provider.run(c, "Implement");
   const command = { command: "npm test" };
 
-  const denied = await options!.canUseTool!("Bash", command, {
-    signal: c.signal,
-    toolUseID: "tool",
-    requestId: "request",
-  });
-
-  assert.equal(denied!.behavior, "deny");
+  const denied = await askPermission(options, c.signal, "Bash", command);
+  assert.equal(denied.behavior, "deny");
 
   c.input = async () => ({
     approved: true,
     input: { command: "other command" },
   });
 
-  const approved = await options!.canUseTool!("Bash", command, {
-    signal: c.signal,
-    toolUseID: "tool",
-    requestId: "request",
-  });
-
-  assert.equal(approved!.behavior, "allow");
+  const approved = await askPermission(options, c.signal, "Bash", command);
+  assert.equal(approved.behavior, "allow");
   assert.deepEqual((approved as any).updatedInput, command);
   // MCP tools follow the same approval routing as shell commands.
   const tool = { query: "status" };
 
-  const mcp = await options!.canUseTool!("mcp__server__tool", tool, {
-    signal: c.signal,
-    toolUseID: "tool",
-    requestId: "request",
-  });
-
-  assert.equal(mcp!.behavior, "allow");
+  const mcp = await askPermission(options, c.signal, "mcp__server__tool", tool);
+  assert.equal(mcp.behavior, "allow");
   assert.deepEqual((mcp as any).updatedInput, tool);
 });
 
@@ -321,14 +309,15 @@ test("Claude forwards each native permission mode and reserves bypass opt-in for
   ] as const) {
     setClaudeOptions(c.task, { permission_mode: mode });
     await provider.run(c, "Implement");
-    assert.equal(options!.permissionMode, mode);
+    assert.ok(options);
+    assert.equal(options.permissionMode, mode);
 
     assert.equal(
-      options!.allowDangerouslySkipPermissions,
+      options.allowDangerouslySkipPermissions,
       mode === "bypassPermissions" ? true : undefined,
     );
 
-    assert.equal(options!.allowedTools, undefined);
+    assert.equal(options.allowedTools, undefined);
   }
 });
 
@@ -351,14 +340,15 @@ test("review and research omit plan exit while implementation keeps plan approva
   for (const profile of ["researcher", "reviewer", "implementer"] as const) {
     c.task.worker_profile = profile;
     await provider.run(c, "Work");
-    assert.deepEqual(options!.tools, { type: "preset", preset: "claude_code" });
+    assert.ok(options?.disallowedTools);
+    assert.deepEqual(options.tools, { type: "preset", preset: "claude_code" });
 
-    const prompt = options!.systemPrompt as { append: string };
+    const prompt = options.systemPrompt as { append: string };
     assert.match(prompt.append, /Follow the configured native permission mode/);
-    assert.equal(options!.permissionMode, "plan");
+    assert.equal(options.permissionMode, "plan");
 
     assert.equal(
-      options!.disallowedTools!.includes("ExitPlanMode"),
+      options.disallowedTools.includes("ExitPlanMode"),
       profile !== "implementer",
     );
   }
@@ -387,14 +377,8 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
   for (const tool of ["Edit", "Write"]) {
     const input = { file_path: "a.ts", content: "approved contents" };
 
-    assert.equal(
-      (await options!.canUseTool!(tool, input, {
-        signal: c.signal,
-        toolUseID: "edit",
-        requestId: "request",
-      }))!.behavior,
-      "deny",
-    );
+    const denied = await askPermission(options, c.signal, tool, input);
+    assert.equal(denied.behavior, "deny");
 
     let requested: unknown;
 
@@ -407,14 +391,9 @@ test("unresolved SDK edits ask the configured decision maker and preserve the or
       };
     };
 
-    const allowed = await options!.canUseTool!(tool, input, {
-      signal: c.signal,
-      toolUseID: "edit",
-      requestId: "request",
-    });
-
+    const allowed = await askPermission(options, c.signal, tool, input);
     assert.deepEqual(requested, { name: tool, payload: input });
-    assert.equal(allowed!.behavior, "allow");
+    assert.equal(allowed.behavior, "allow");
     assert.deepEqual((allowed as any).updatedInput, input);
     c.input = async () => ({ approved: false });
   }
@@ -450,13 +429,14 @@ test("only Claude's own question tool takes answers; other requests stay permiss
     input: { answers: { "Which approach?": "The first" } },
   });
 
-  const answered = await options!.canUseTool!("AskUserQuestion", question, {
-    signal: c.signal,
-    toolUseID: "question",
-    requestId: "request",
-  });
+  const answered = await askPermission(
+    options,
+    c.signal,
+    "AskUserQuestion",
+    question,
+  );
 
-  assert.equal(answered!.behavior, "allow");
+  assert.equal(answered.behavior, "allow");
 
   assert.deepEqual((answered as any).updatedInput, {
     ...question,

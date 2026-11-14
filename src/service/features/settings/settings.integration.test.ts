@@ -161,12 +161,10 @@ test("settings sections have unique IDs and cover every shown value once", async
     (row) => row.kind === "budget" && row.path === "task.budget.max_cost_usd",
   );
 
-  assert.deepEqual(budget?.kind === "budget" && [budget.unit, budget.min], [
-    "USD",
-    0.01,
-  ]);
+  assert.ok(budget?.kind === "budget");
+  assert.deepEqual([budget.unit, budget.min], ["USD", 0.01]);
 
-  assert.deepEqual(sectionPaths({ ...firstSection, rows: [budget!] }), [
+  assert.deepEqual(sectionPaths({ ...firstSection, rows: [budget] }), [
     "task.budget.max_cost_usd.enabled",
     "task.budget.max_cost_usd.amount",
   ]);
@@ -322,7 +320,7 @@ test("native model controls scope discovered models and derive reasoning choices
   ]);
 
   assert.ok(
-    field("models.profiles.reviewer.reasoning_effort").enum!.includes("none"),
+    field("models.profiles.reviewer.reasoning_effort").enum?.includes("none"),
   );
 
   assert.deepEqual(field("models.providers.claude.reasoning_effort").enum, [
@@ -353,8 +351,9 @@ test("native model controls scope discovered models and derive reasoning choices
     assert.equal("default" in node, false);
   }
 
-  const models = result.sections.find((s) => s.id === "models")!;
-  const profiles = result.sections.find((s) => s.id === "profile-models")!;
+  const models = result.sections.find((s) => s.id === "models");
+  const profiles = result.sections.find((s) => s.id === "profile-models");
+  assert.ok(models && profiles);
 
   assert.equal(models.title, "Model defaults");
   assert.ok(sectionPaths(profiles).includes("models.profiles.reviewer.model"));
@@ -402,7 +401,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
   ]);
 
   assert.ok(
-    schemaField(unknown, "models.providers.fixture.model").enum!.includes(
+    schemaField(unknown, "models.providers.fixture.model").enum?.includes(
       "custom-model",
     ),
   );
@@ -412,7 +411,7 @@ test("settings preserve custom models and unknown metadata while disabling effor
     /support is unknown/,
   );
 
-  assert.ok(schemaField(unknown, fixtureEffort).enum!.includes("none"));
+  assert.ok(schemaField(unknown, fixtureEffort).enum?.includes("none"));
 
   f.settings.update("alice", {
     set: {
@@ -836,10 +835,14 @@ test("Claude session restrictions are scalar user-only settings with stored defa
     assert.equal(Object.hasOwn(field, "default"), false, key);
   }
 
+  const restrictions = read.sections.find(
+    (section) => section.id === "restrictions",
+  );
+
+  assert.ok(restrictions);
+
   assert.deepEqual(
-    sectionPaths(
-      read.sections.find((section) => section.id === "restrictions")!,
-    ),
+    sectionPaths(restrictions),
     keys.map((key) => `providers.claude.${key}`),
   );
 

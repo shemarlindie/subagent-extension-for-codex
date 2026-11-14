@@ -161,22 +161,25 @@ test("debounces dialog draft writes, flushes pending drafts, and closes immediat
   const updated = { ...initial, draft: { description: "updated" } };
   const storageKey = "subagent-extension-for-codex.dialog.v1";
 
+  const stored = () =>
+    JSON.parse(browser.storage.getItem(storageKey) ?? "null");
+
   uiState.save({ view: {}, dialogs: [initial] });
   uiState.save({ view: {}, dialogs: [updated] });
 
-  assert.deepEqual(JSON.parse(browser.storage.getItem(storageKey)!), [initial]);
+  assert.deepEqual(stored(), [initial]);
   assert.equal(new URL(browser.href).searchParams.get("dw_dlg_delegate"), "1");
 
   vi.advanceTimersByTime(249);
-  assert.deepEqual(JSON.parse(browser.storage.getItem(storageKey)!), [initial]);
+  assert.deepEqual(stored(), [initial]);
 
   vi.advanceTimersByTime(1);
-  assert.deepEqual(JSON.parse(browser.storage.getItem(storageKey)!), [updated]);
+  assert.deepEqual(stored(), [updated]);
 
   const flushed = { ...initial, draft: { description: "flush on leave" } };
   uiState.save({ view: {}, dialogs: [flushed] });
   uiState.flush?.();
-  assert.deepEqual(JSON.parse(browser.storage.getItem(storageKey)!), [flushed]);
+  assert.deepEqual(stored(), [flushed]);
 
   uiState.save({ view: {}, dialogs: [] });
   assert.equal(browser.storage.getItem(storageKey), null);

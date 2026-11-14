@@ -23,10 +23,10 @@ test("arrivals-only motion fades new rows in place and leaves moved rows still",
   ]);
 
   expect(animateRows(previous, next, view, true)).toHaveLength(1);
-  expect(next.get("kept")!.element.animate).not.toHaveBeenCalled();
+  expect(next.get("kept")?.element.animate).not.toHaveBeenCalled();
 
   // Fading opacity only keeps rows measurable while a stream re-renders.
-  expect(next.get("new")!.element.animate).toHaveBeenCalledExactlyOnceWith(
+  expect(next.get("new")?.element.animate).toHaveBeenCalledExactlyOnceWith(
     [{ opacity: 0 }, { opacity: 1 }],
     expect.any(Object),
   );

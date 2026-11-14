@@ -82,7 +82,7 @@ async function removalFixture(t: import("vitest").TestContext) {
       repository,
     });
 
-  return { ...f, control, repository, task };
+  return { ...f, control, provider, repository, task };
 }
 
 test("removing project task data deletes its tasks, history and approval", async (t) => {
@@ -151,7 +151,7 @@ test("project removal deletes reviewed agent sessions with task data", async (t)
   saved.session_id = "session";
   saved.session_owner = f.control.ownerWorker;
   f.store.save(saved);
-  const provider = f.control.providers.get(saved.provider)!;
+  const { provider } = f;
   const deleted: string[] = [];
 
   provider.sessionDeletionStatus = async () => ({

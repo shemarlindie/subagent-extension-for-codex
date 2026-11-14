@@ -478,7 +478,7 @@ test("save task defaults and reload the settings from the service", async ({
   // A reasoning choice saves the profile's default, which undo puts back.
   await page.getByRole("button", { name: /^Edit / }).click();
   const reasoning = page.getByRole("combobox", { name: /^Reasoning/ });
-  const saved = (await reasoning.textContent())!;
+  const saved = (await reasoning.textContent()) ?? "";
   await reasoning.click();
   await page.getByRole("option", { name: "High", exact: true }).click();
   await expect(reasoning).toContainText("High");

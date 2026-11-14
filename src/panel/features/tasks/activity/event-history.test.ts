@@ -45,7 +45,7 @@ test("new events append and keep only the most recent tail", () => {
   assert.equal(view.events.length, EVENT_TAIL_SIZE);
   assert.ok(oldest);
   assert.equal(oldest.id, 2);
-  assert.equal(view.events.at(-1)!.id, EVENT_TAIL_SIZE + 1);
+  assert.equal(view.events.at(-1)?.id, EVENT_TAIL_SIZE + 1);
   assert.equal(activityCursor(view.events, "task"), EVENT_TAIL_SIZE + 1);
 });
 

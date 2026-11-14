@@ -12,6 +12,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 import { act, cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
 
+import { getElement } from "../../utils/dom-test-harness";
 import { LazyBlock, scrollParent } from "./lazy-block";
 
 type Entry = {
@@ -70,7 +71,7 @@ test("a block mounts its rows in view and keeps its measured height out of view"
     ),
   );
 
-  const block = view.container.firstChild!.firstChild as HTMLElement;
+  const block = getElement<HTMLElement>(view.container, ":scope > div > div");
   const [observer] = observers;
   assert.ok(observer);
   assert.equal(block.textContent, "");
@@ -106,7 +107,7 @@ test("a batch of observer entries leaves a block in its latest state", (t) => {
     ),
   );
 
-  const block = view.container.firstChild!.firstChild as HTMLElement;
+  const block = getElement<HTMLElement>(view.container, ":scope > div > div");
   const [observer] = observers;
   assert.ok(observer);
 

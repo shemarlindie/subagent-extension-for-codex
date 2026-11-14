@@ -56,7 +56,10 @@ async function proxy(
   t.onTestFinished(() => client.close());
   await client.connect(transport);
 
-  return { client, pid: transport.pid!, stderr: () => stderr };
+  const { pid } = transport;
+  assert.ok(pid);
+
+  return { client, pid, stderr: () => stderr };
 }
 
 const token = "test-token";
