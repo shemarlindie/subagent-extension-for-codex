@@ -10,6 +10,7 @@ import {
   modelName,
 } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
+import { PromptCacheTimer } from "./prompt-cache-timer";
 
 type TaskRunSettingsProps = { task: Task };
 
@@ -61,7 +62,8 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
 
 /**
  * The profile, model, reasoning and permission mode a task started with,
- * shown beside the composer. They are fixed for the task's later turns.
+ * shown beside the composer after the prompt cache timer. They are fixed for
+ * the task's later turns.
  * The profile shows as its icon and the rest abbreviate beside it, as the
  * new-task composer's summary reads them. The full labels remain for
  * assistive tech and the tooltip.
@@ -81,12 +83,17 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
       aria-label="Task settings"
       title={runSettingsTitle(task, profile, settings)}
     >
-      <li>
+      <PromptCacheTimer task={task} />
+      <li className="task-run-profile">
         <WorkerProfileIcon profile={task.worker_profile} size={12} />
         <span className="visually-hidden">{profile}</span>
       </li>
       {settings.map(({ label, compact }) => (
-        <li key={label} data-compact={compact ? undefined : "hidden"}>
+        <li
+          key={label}
+          className="task-run-setting"
+          data-compact={compact ? undefined : "hidden"}
+        >
           {compact === label ? (
             label
           ) : (

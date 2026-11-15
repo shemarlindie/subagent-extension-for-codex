@@ -1,0 +1,20 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  width="24"
+  height="24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2.182"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <circle
+    cx="12"
+    cy="14.182"
+    r="8.727"
+    stroke-dasharray="3.48 5.65"
+    stroke-dashoffset="1.74"
+  ></circle>
+  <path d="M9.818 1.091h4.364M12 14.182l3.273-3.273"></path>
+</svg>

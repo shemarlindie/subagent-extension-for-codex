@@ -30,6 +30,18 @@ export type ClaudeEffectiveSettings = z.infer<
   typeof claudeEffectiveSettingsSchema
 >;
 
+/**
+ * When the session's latest main request started and how long its prompt
+ * cache lives. Partial when an older 1h part outlives a newer 5m tail.
+ */
+const claudePromptCacheSchema = z.strictObject({
+  requested_at: z.iso.datetime(),
+  ttl: z.enum(["5m", "1h"]),
+  partial: z.boolean().optional(),
+});
+
+export type ClaudePromptCache = z.infer<typeof claudePromptCacheSchema>;
+
 /** Options stored on a task, with the permission mode resolved. */
 export const claudeTaskOptionsSchema = z.strictObject({
   permission_mode: claudePermissionModeSchema,
@@ -37,6 +49,7 @@ export const claudeTaskOptionsSchema = z.strictObject({
   permission_source: z.enum(["task", "profile", "setting"]),
   claude_policy: claudePolicySchema,
   effective: claudeEffectiveSettingsSchema.optional(),
+  prompt_cache: claudePromptCacheSchema.optional(),
 });
 
 export function readClaudeTaskOptions(task: Pick<Task, "provider_options">) {
