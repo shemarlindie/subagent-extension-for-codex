@@ -190,6 +190,29 @@ test("commands sent during a turn wait at the front of the queue in the order se
   await c.close();
 });
 
+test("commands sent or steered while a task waits to start run as turns of their own", async () => {
+  const recorder = new PromptRecorder();
+  // No concurrency, so the task waits to start.
+  const { c, store, repo } = await setup(recorder, 0);
+  const t = await c.start("alice", input(repo));
+  await c.send("alice", t.id, "Also check the tests", "user");
+  const sent = await c.send("alice", t.id, "/compact", "user");
+
+  const usage = await c.send("alice", t.id, "/usage", "user", {
+    delivery: "queue",
+  });
+
+  c.steerQueued("alice", t.id, usage.message_id);
+  assert.equal(sent.state, "queued");
+  c.concurrency = 1;
+  void c.schedule();
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.match(recorder.prompts[0] ?? "", /Also check the tests$/);
+  assert.deepEqual(recorder.prompts.slice(1), ["/compact", "/usage"]);
+  await c.close();
+});
+
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
   const checkpoints = new TurnCheckpoints(1, 5);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });

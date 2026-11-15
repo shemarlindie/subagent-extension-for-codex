@@ -48,9 +48,12 @@ import {
   commitQueue,
   deliverQueued,
   editQueuedMessage,
+  holdSteer,
+  joinsUnsent,
   leaveOver,
   moveQueuedMessage,
   type QueuePlacement,
+  queueSent,
   queueSnapshot,
   recordMessage,
   recordQueueChange,
@@ -523,10 +526,7 @@ export class Control {
     const before = queueSnapshot(t);
 
     if (sendPending && t.pending_steers.length) {
-      const commands = this.providers.get(t.provider)?.capabilities
-        .slash_commands;
-
-      this.store.messages.add(t.id, ...takeSteers(t, !!commands));
+      this.store.messages.add(t.id, ...takeSteers(t, this.runsCommands(t)));
       requeue(t);
       this.queuedAfterCommit(t, "interrupt_send");
     } else {
@@ -555,24 +555,21 @@ export class Control {
 
   /**
    * Sends a pending steer to the provider. One the turn can't take, such as
-   * a command, waits at the front of the queue instead, after the steers
-   * already waiting there so they run in the order they were sent.
+   * a command, waits at the front of the queue instead.
    */
   private deliver(t: Task, a: Active, steer: TaskMessage) {
     if (!a.sink || a.sink({ id: steer.id, text: steer.message })) return true;
     const before = queueSnapshot(t);
     t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
-    const waiting = t.queue.findIndex((m) => !m.recorded);
-
-    t.queue.splice(waiting === -1 ? t.queue.length : waiting, 0, {
-      ...steer,
-      delivery: "steer",
-      recorded: true,
-    });
-
+    holdSteer(t, steer);
     commitQueue(this.store, t, before);
 
     return false;
+  }
+
+  /** Whether the task's provider runs a message's slash command. */
+  private runsCommands(t: Task) {
+    return !!this.providers.get(t.provider)?.capabilities.slash_commands;
   }
 
   /** Records the successful turn's final reply. */
@@ -981,17 +978,18 @@ export class Control {
 
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
 
-    if (delivery === "queue") {
-      const before = queueSnapshot(t);
+    // A turn waiting to start takes a steer with its unsent messages, unless
+    // one of them is a command, which then waits at the front of the queue.
+    const held =
+      !a && !joinsUnsent(this.store, t, message, this.runsCommands(t));
 
+    if (delivery === "queue" || held) {
       commitSend(
         this.store,
         t,
         () => {
           if (options.budget) raiseBudget(t, options.budget);
-          t.queue.push({ ...m, delivery });
-          this.store.save(t);
-          recordQueueChange(this.store, t, before);
+          queueSent(this.store, t, m, delivery);
           record(m.id, "queued");
         },
         options.request_id,
@@ -1121,7 +1119,8 @@ export class Control {
 
     if (a?.abort.signal.aborted) throw new Error("Task was interrupted.");
 
-    const m = steerQueuedMessage(this.store, t, messageId, !!a);
+    const commands = this.runsCommands(t);
+    const m = steerQueuedMessage(this.store, t, messageId, !!a, commands);
     if (a) this.deliver(t, a, m);
 
     return t;

@@ -131,7 +131,8 @@ A provider with the `slash_commands` capability runs a message that starts with
 a lone command bare on a resumed turn, and runs it after the other pending
 steers on interrupt and send. A command fails when the session can't resume,
 since a new session would run it without the conversation. The provider's steer
-sink refuses commands, so they wait at the front of the queue.
+sink refuses commands, and a turn waiting to start keeps them apart from its
+other messages, so they wait at the front of the queue.
 
 ## Presentation and settings
 

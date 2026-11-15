@@ -69,6 +69,45 @@ export function leaveOver(t: Task) {
 }
 
 /**
+ * Puts a steer that needs a turn of its own, such as a command, at the front
+ * of the queue, after the steers already waiting there so they run in the
+ * order they were sent.
+ */
+export function holdSteer(t: Task, m: TaskMessage) {
+  const waiting = t.queue.findIndex((q) => !q.recorded);
+
+  t.queue.splice(waiting === -1 ? t.queue.length : waiting, 0, {
+    ...m,
+    delivery: "steer",
+    recorded: true,
+  });
+}
+
+/**
+ * Adds a sent message to the queue. Any other delivery lands here only when
+ * the turn waiting to start can't take it, and is recorded as sent and waits
+ * at the front.
+ */
+export function queueSent(
+  store: Store,
+  t: Task,
+  m: TaskMessage,
+  delivery: QueuedMessage["delivery"],
+) {
+  const before = queueSnapshot(t);
+
+  if (delivery === "queue") {
+    t.queue.push({ ...m, delivery });
+  } else {
+    holdSteer(t, m);
+    recordMessage(store, t, m, delivery);
+  }
+
+  store.save(t);
+  recordQueueChange(store, t, before);
+}
+
+/**
  * Takes the pending steers that interrupt and send starts the next turn with.
  * A command needs a turn of its own, so it waits at the front of the queue
  * unless it's all there is.
@@ -119,12 +158,36 @@ function queuedMessage(t: Task, messageId: string) {
   return m;
 }
 
-/** Moves a queued message into the turn's input, recording it exactly once. */
+/**
+ * Whether a steer can join the unsent messages of a turn that hasn't
+ * started. When the provider runs commands, a command needs the turn to
+ * itself.
+ */
+export function joinsUnsent(
+  store: Store,
+  t: Task,
+  message: string,
+  commands: boolean,
+) {
+  const unsent = store.messages.list(t.id, t.instructions_sent);
+
+  return (
+    !commands ||
+    !unsent.length ||
+    ![message, ...unsent.map((m) => m.message)].some(slashCommand)
+  );
+}
+
+/**
+ * Moves a queued message into the turn's input, recording it exactly once.
+ * One a turn waiting to start can't take moves to the front of the queue.
+ */
 export function steerQueuedMessage(
   store: Store,
   t: Task,
   messageId: string,
   active: boolean,
+  commands: boolean,
 ) {
   if (!["queued", "starting", "running", "waiting"].includes(t.status)) {
     throw new Error("Steer a queued message while the task is busy.");
@@ -148,12 +211,14 @@ export function steerQueuedMessage(
     from: message.from,
   };
 
+  const held = !active && !joinsUnsent(store, t, m.message, commands);
   t.queue = t.queue.filter((item) => item.id !== messageId);
-  if (!t.queue.length) delete t.queue_paused;
   if (active) t.pending_steers.push(m);
+  if (held) holdSteer(t, m);
+  if (!t.queue.length) delete t.queue_paused;
 
   commitQueue(store, t, before, () => {
-    if (!active) store.messages.add(t.id, m);
+    if (!active && !held) store.messages.add(t.id, m);
     recordMessage(store, t, m, "steer");
   });
 
