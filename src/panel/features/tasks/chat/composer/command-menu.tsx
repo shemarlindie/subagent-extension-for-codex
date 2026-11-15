@@ -4,6 +4,7 @@ import {
   type ComponentProps,
   type KeyboardEvent,
   type RefObject,
+  type SyntheticEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -12,8 +13,17 @@ import {
 import type { ProviderCommand } from "../../../../../shared/providers/types";
 import { CommandHighlight, draftCommand } from "./command-highlight";
 
-/** The partial command a draft is typing, such as `comp` in `/comp`. */
-const commandQuery = (draft: string) => /^\/([^\s/]*)$/.exec(draft)?.[1];
+/** The command a draft starts with, up to the first space, such as `/comp`. */
+const commandToken = (draft: string) => /^\/[^\s/]*(?=\s|$)/.exec(draft)?.[0];
+
+/** The partial command the caret is in, such as `comp` in `/com|p the plan`. */
+function commandQuery(draft: string, caret: number) {
+  const token = commandToken(draft);
+
+  return token && caret > 0 && caret <= token.length
+    ? token.slice(1)
+    : undefined;
+}
 
 /** Commands whose name, then an alias, starts with what's typed. */
 function matchingCommands(commands: ProviderCommand[], query: string) {
@@ -55,28 +65,60 @@ export function CommandMenu({
   onKeyDown,
   textarea,
 }: CommandMenuProps) {
-  const query = commandQuery(draft);
+  // The caret as of the draft it was read in. Code that sets the draft
+  // leaves the caret at its end.
+  const [caret, setCaret] = useState<{ draft: string; at: number }>();
+
+  const query = commandQuery(
+    draft,
+    caret?.draft === draft ? caret.at : draft.length,
+  );
+
   const items = query === undefined ? [] : matchingCommands(commands, query);
   // Escape hides the menu until the draft changes.
   const [dismissed, setDismissed] = useState<string>();
   const [highlighted, setHighlighted] = useState<ProviderCommand>();
   const open = items.length > 0 && dismissed !== draft;
-  const complete = (name: string) => onDraftChange(`/${name} `);
   const typed = draftCommand(commands, draft);
   const field = useRef<HTMLDivElement>(null);
   const backdrop = useRef<HTMLDivElement>(null);
+  const caretAfterCompletion = useRef<number>(undefined);
+  const input = () => field.current?.querySelector("textarea");
+
+  // Completing keeps the text after the command and puts the caret before it.
+  const complete = (name: string) => {
+    const rest = draft.slice(commandToken(draft)?.length).replace(/^ /, "");
+    const next = `/${name} ${rest}`;
+    const at = name.length + 2;
+    caretAfterCompletion.current = at;
+    setCaret({ draft: next, at });
+    onDraftChange(next);
+  };
 
   // The highlight scrolls with the textarea once the draft outgrows it.
   const syncScroll = () => {
-    const input = field.current?.querySelector("textarea");
-    if (input && backdrop.current) backdrop.current.scrollTop = input.scrollTop;
+    const textarea = input();
+
+    if (textarea && backdrop.current) {
+      backdrop.current.scrollTop = textarea.scrollTop;
+    }
   };
 
-  useLayoutEffect(syncScroll);
+  useLayoutEffect(() => {
+    const position = caretAfterCompletion.current;
+    caretAfterCompletion.current = undefined;
+    if (position !== undefined) input()?.setSelectionRange(position, position);
+    syncScroll();
+  });
 
   const change = (value: string, { reason }: { reason: string }) => {
     if (reason === "item-press") complete(value);
     else onDraftChange(value);
+  };
+
+  const moveCaret = (event: SyntheticEvent<HTMLInputElement>) => {
+    const { value, selectionEnd } = event.currentTarget;
+    setCaret({ draft: value, at: selectionEnd ?? value.length });
   };
 
   const openChange = (next: boolean) => {
@@ -115,6 +157,8 @@ export function CommandMenu({
           render={<textarea {...textarea} />}
           onKeyDown={keys}
           onScroll={syncScroll}
+          onInput={moveCaret}
+          onSelect={moveCaret}
         />
       </div>
       <Autocomplete.Portal>

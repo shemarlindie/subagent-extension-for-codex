@@ -29,6 +29,18 @@ test("the composer suggests slash commands and leaves other keys to the textarea
   await expect(options).toHaveCount(0);
   await expect(composer).toHaveValue("/u");
 
+  // A command with text after it completes in place.
+  await composer.fill("/co keep the plan");
+  await expect(options).toHaveCount(0);
+  for (const _ of " keep the plan") await composer.press("ArrowLeft");
+  await expect(options).toHaveText([/^\/compact/, /^\/context/, /^\/usage/]);
+  await composer.press("Tab");
+  await expect(composer).toHaveValue("/compact keep the plan");
+
+  expect(
+    await composer.evaluate((input: HTMLTextAreaElement) => input.selectionEnd),
+  ).toBe("/compact ".length);
+
   // A closed menu leaves line navigation to the textarea.
   await composer.fill("first line\nsecond");
   await composer.press("ArrowUp");
