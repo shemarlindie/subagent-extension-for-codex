@@ -6,7 +6,7 @@ import type { EventPayloadMap } from "../../../../shared/events/event-contract.j
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
-import { withEffectiveOptions } from "../../../../shared/providers/options.js";
+import { withSessionOption } from "../../../../shared/providers/options.js";
 import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
@@ -440,7 +440,11 @@ export class Control {
         this.store.save(t);
       },
       effectiveOptions: (effective) => {
-        t.provider_options = withEffectiveOptions(t, effective);
+        t.provider_options = withSessionOption(t, "effective", effective);
+        this.store.save(t);
+      },
+      promptCache: (value) => {
+        t.provider_options = withSessionOption(t, "prompt_cache", value);
         this.store.save(t);
       },
       input: a.input.request,

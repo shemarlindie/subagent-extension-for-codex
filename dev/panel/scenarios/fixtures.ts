@@ -30,6 +30,10 @@ import {
 } from "./live-scenarios";
 import { orgPolicyTasks, orgPolicyTimelines } from "./org-policy-scenarios";
 import { projectTasks } from "./project-scenarios";
+import {
+  promptCacheTasks,
+  promptCacheTimelines,
+} from "./prompt-cache-scenarios";
 
 export { previewLiveStatus, previewStreamingDrafts } from "./live-scenarios";
 export { PREVIEW_THREAD, previewProjects } from "./scenario-context";
@@ -102,6 +106,7 @@ export const previewTasks: Task[] = [
     recordedFixtures.map((recorded) => recorded.task),
     projectTasks,
     orgPolicyTasks,
+    promptCacheTasks,
   );
 
 const timelinesById = new Map(
@@ -112,6 +117,7 @@ const timelinesById = new Map(
     ...conversationTimelines,
     ...liveTimelines,
     ...orgPolicyTimelines,
+    ...promptCacheTimelines,
   ].map((timeline) => [timeline.taskId, timeline]),
 );
 
@@ -145,6 +151,8 @@ export const previewEvents: Event[] = [
     "preview-live-fast-streaming",
     "preview-policy-limited",
     "preview-policy-lowered",
+    "preview-cache-countdown",
+    "preview-cache-partial",
   ].flatMap((id) => byId(timelinesById, id).events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),

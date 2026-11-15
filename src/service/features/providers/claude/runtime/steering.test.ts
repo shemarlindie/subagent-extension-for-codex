@@ -85,6 +85,7 @@ async function context() {
     emitOpaque: (type) => events.push({ type }),
     session: () => {},
     effectiveOptions: () => {},
+    promptCache: () => {},
     promptHeld: () => {},
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),

@@ -789,18 +789,42 @@ body[data-expanded-panel="true"]
   flex: none;
   align-items: center;
 }
-.task-run-settings li:first-child {
+.prompt-cache-timer-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.prompt-cache-timer-trigger:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.prompt-cache-tooltip-status {
+  display: block;
+  font-weight: 600;
+}
+.prompt-cache-tooltip-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+.prompt-cache-timer[data-warning] {
+  color: var(--warn);
+}
+.task-run-settings .task-run-profile {
   margin-inline-end: 6px;
 }
 /* The model name is the one that can run long. */
-.task-run-settings li:nth-child(2) {
+.task-run-profile + li {
   display: block;
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.task-run-settings li + li + li::before {
+.prompt-cache-timer + li::before,
+.task-run-setting + li::before {
   content: "·" / "";
   margin-inline: 4px;
 }

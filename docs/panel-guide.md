@@ -383,6 +383,9 @@ service rules.
 You can hide the composer and keep its draft. A pending question or permission
 request collapses it.
 
+The first run setting estimates how long the task's prompt cache stays warm. A
+reply sent before it runs out reuses the cached conversation and costs less.
+
 ### Questions and permissions
 
 Questions appear as inline cards with single or multiple choices, custom

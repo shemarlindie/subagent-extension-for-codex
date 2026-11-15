@@ -15,17 +15,21 @@ export function withProviderOptions(
   return { ...options, [provider]: value };
 }
 
-/** A task's options with what its session runs with, beside what it requested. */
-export function withEffectiveOptions(
+/**
+ * A task's options with one value its session reported, such as what it runs
+ * with, beside what it requested.
+ */
+export function withSessionOption(
   {
     provider,
     provider_options: options,
   }: Pick<Task, "provider" | "provider_options">,
-  effective: Record<string, unknown>,
+  key: "effective" | "prompt_cache",
+  value: Record<string, unknown>,
 ): ProviderOptions {
   return withProviderOptions(options, provider, {
     ...optionsForProvider(options, provider),
-    effective,
+    [key]: value,
   });
 }
 

@@ -34,6 +34,7 @@ import { ClaudeCommands } from "./command-discovery.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
+import { recordPromptCache } from "./prompt-cache.js";
 import {
   claudeSessionDeletionStatus,
   deleteClaudeSession,
@@ -322,6 +323,7 @@ export class ClaudeAgentProvider implements Provider {
           if (m.parent_tool_use_id === null) {
             if (m.event.type === "message_start") {
               streaming = m.event.message.id;
+              recordPromptCache(c, "message_start", m.event.message.usage);
             } else if (
               m.event.type === "content_block_delta" &&
               m.event.delta.type === "text_delta" &&
@@ -372,6 +374,11 @@ export class ClaudeAgentProvider implements Provider {
         if (m.type === "system" && m.subtype === "init" && !started) {
           started = true;
           await recordEffectiveSettings(c, m, stream);
+        }
+
+        // Compaction's own request emits no message_start.
+        if (m.type === "system" && m.subtype === "compact_boundary") {
+          recordPromptCache(c, "compact_boundary");
         }
 
         if (m.type !== "result") continue;

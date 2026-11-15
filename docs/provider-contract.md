@@ -189,6 +189,12 @@ the earlier values, and an `agent.limited` event gives each new difference with
 a sentence for the user. Claude compares the turn's first `init` with the
 request.
 
+`RunContext.promptCache` stores when the session's latest main request started
+and how long its prompt cache lives under
+`provider_options.<provider_id>.prompt_cache`. Claude reads the TTL from each
+`message_start`'s cache writes and also refreshes the time on
+`compact_boundary`.
+
 A provider that ends a turn before sending its prompt calls
 `RunContext.promptHeld`, so the next turn sends those instructions again.
 

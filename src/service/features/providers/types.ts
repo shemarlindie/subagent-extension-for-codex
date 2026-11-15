@@ -69,6 +69,11 @@ export interface RunContext {
    * under `provider_options.<id>.effective`. Replaces the earlier values.
    */
   effectiveOptions(values: Record<string, unknown>): void;
+  /**
+   * Stores when the session's latest request started and how long its prompt
+   * cache lives, under `provider_options.<id>.prompt_cache`.
+   */
+  promptCache(value: Record<string, unknown>): void;
   input: (
     tool: string,
     input: Record<string, unknown>,
