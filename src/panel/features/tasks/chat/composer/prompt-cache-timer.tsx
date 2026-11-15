@@ -33,15 +33,17 @@ function description(left: PromptCacheLeft) {
     case "warm":
       return {
         status: warmStatus(left.ms),
-        note: "Replying while it's warm costs less.",
+        note: "Your next reply reuses the cache.",
       };
     case "expired":
       return {
         status: "Prompt cache probably expired",
-        note: "The next reply costs more.",
+        note: "Your next reply rebuilds the cache.",
       };
   }
 }
+
+const HELP = "Replies that use the cache typically consume less plan usage.";
 
 const STATE_ICONS = { warm: "timer", expired: "timer-off" } as const;
 
@@ -68,11 +70,15 @@ export function PromptCacheTimer({ task }: PromptCacheTimerProps) {
       title=""
     >
       <TooltipWrapper
-        label={`${status}. ${note}`}
+        label={`${status}. ${note} ${HELP}`}
         content={
           <>
             <span className="prompt-cache-tooltip-status">{status}</span>
             <span className="prompt-cache-tooltip-note">{note}</span>
+            <span className="prompt-cache-tooltip-help">
+              <Icon name="info" size={8} />
+              {HELP}
+            </span>
           </>
         }
       >
