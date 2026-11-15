@@ -192,9 +192,9 @@ request.
 
 `RunContext.promptCache` stores when the session's latest main request started
 and how long its prompt cache lives under
-`provider_options.<provider_id>.prompt_cache`. Claude reads the TTL from each
-`message_start`'s cache writes and also refreshes the time on
-`compact_boundary`.
+`provider_options.<provider_id>.prompt_cache`. Claude refreshes it on each
+`message_start` that reads or writes the cache, taking the TTL from its writes,
+and on `compact_boundary`.
 
 A provider that ends a turn before sending its prompt calls
 `RunContext.promptHeld`, so the next turn sends those instructions again.

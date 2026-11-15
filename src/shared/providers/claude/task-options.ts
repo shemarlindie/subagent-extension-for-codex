@@ -32,12 +32,11 @@ export type ClaudeEffectiveSettings = z.infer<
 
 /**
  * When the session's latest main request started and how long its prompt
- * cache lives. Partial when an older 1h part outlives a newer 5m tail.
+ * cache lives.
  */
 const claudePromptCacheSchema = z.strictObject({
   requested_at: z.iso.datetime(),
   ttl: z.enum(["5m", "1h"]),
-  partial: z.boolean().optional(),
 });
 
 export type ClaudePromptCache = z.infer<typeof claudePromptCacheSchema>;

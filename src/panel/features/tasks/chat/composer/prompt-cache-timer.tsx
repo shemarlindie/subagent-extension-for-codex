@@ -19,12 +19,12 @@ function short(ms: number) {
   return ms < MINUTE_MS ? "<1m" : `${Math.floor(ms / MINUTE_MS)}m`;
 }
 
-/** `about 2 more mins`, or `less than a minute` in the last minute. */
-function more(ms: number) {
-  const count = Math.floor(ms / MINUTE_MS);
-  if (count === 0) return "less than a minute";
+/** `Prompt cache warm for about 2 more mins`, or `expires soon` in the last minute. */
+function warmStatus(ms: number) {
+  const minutes = Math.floor(ms / MINUTE_MS);
+  if (minutes === 0) return "Prompt cache expires soon";
 
-  return `about ${count} more min${count === 1 ? "" : "s"}`;
+  return `Prompt cache warm for about ${minutes} more min${minutes === 1 ? "" : "s"}`;
 }
 
 /** The tooltip's status line and the note that explains it. */
@@ -32,21 +32,8 @@ function description(left: PromptCacheLeft) {
   switch (left.state) {
     case "warm":
       return {
-        status:
-          left.ms < MINUTE_MS
-            ? "Prompt cache expires soon"
-            : `Prompt cache warm for ${more(left.ms)}`,
-        note: [
-          "Replying while it's warm costs less.",
-          ...(left.earlierMs
-            ? [`Earlier messages stay cached for ${more(left.earlierMs)}.`]
-            : []),
-        ].join(" "),
-      };
-    case "partial":
-      return {
-        status: "Prompt cache partly expired",
-        note: `Recent messages need rewriting. Earlier ones stay cached for ${more(left.ms)}.`,
+        status: warmStatus(left.ms),
+        note: "Replying while it's warm costs less.",
       };
     case "expired":
       return {
@@ -56,11 +43,7 @@ function description(left: PromptCacheLeft) {
   }
 }
 
-const STATE_ICONS = {
-  warm: "timer",
-  partial: "timer-dashed",
-  expired: "timer-off",
-} as const;
+const STATE_ICONS = { warm: "timer", expired: "timer-off" } as const;
 
 /**
  * Roughly how long the task's prompt cache stays warm, as the first run

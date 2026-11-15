@@ -20,39 +20,19 @@ const task = (prompt_cache?: object) => ({
   },
 });
 
-test("a partial cache's tail expires at its TTL and the earlier part an hour after the request", () => {
-  const partial = task({
+test("a cache expires at its TTL, and a task without a record has none", () => {
+  const cache = task({
     requested_at: new Date(start).toISOString(),
     ttl: "5m",
-    partial: true,
   });
 
-  assert.deepEqual(promptCacheLeft(partial, minutes(4)), {
+  assert.deepEqual(promptCacheLeft(cache, minutes(4)), {
     state: "warm",
     ms: 60_000,
     ttl: "5m",
-    earlierMs: 56 * 60_000,
   });
 
-  assert.deepEqual(promptCacheLeft(partial, minutes(20)), {
-    state: "partial",
-    ms: 40 * 60_000,
-  });
-
-  assert.deepEqual(promptCacheLeft(partial, minutes(60)), {
-    state: "expired",
-  });
-
-  assert.equal(promptCacheEnd(partial), minutes(60));
-});
-
-test("a whole cache expires at its TTL, and a task without a record has none", () => {
-  const whole = task({
-    requested_at: new Date(start).toISOString(),
-    ttl: "5m",
-  });
-
-  assert.deepEqual(promptCacheLeft(whole, minutes(5)), { state: "expired" });
-  assert.equal(promptCacheEnd(whole), minutes(5));
+  assert.deepEqual(promptCacheLeft(cache, minutes(5)), { state: "expired" });
+  assert.equal(promptCacheEnd(cache), minutes(5));
   assert.equal(promptCacheLeft(task(), start), undefined);
 });
