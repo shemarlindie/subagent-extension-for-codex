@@ -304,15 +304,15 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       arguments: {},
     });
 
-    assert.deepEqual(panel(open)?.panel_scope, {
+    assert.deepEqual(panel(open).panel_scope, {
       conversation_id: null,
     });
 
     // Opening data lists the newest task and counts the read completed rest.
     const opened = (result: typeof open) => ({
-      tasks: (panel(result)?.tasks as { id: string }[]).map((task) => task.id),
+      tasks: (panel(result).tasks as { id: string }[]).map((task) => task.id),
       counted: Object.values(
-        panel(result)?.read_completed as Record<string, number>,
+        panel(result).read_completed as Record<string, number>,
       ).reduce((total, count) => total + count, 0),
     });
 
@@ -340,7 +340,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.equal(globalOpen.isError, undefined);
 
-    assert.deepEqual(panel(globalOpen)?.panel_scope, {
+    assert.deepEqual(panel(globalOpen).panel_scope, {
       conversation_id: null,
     });
 
@@ -352,7 +352,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       _meta: ambientMeta,
     });
 
-    assert.deepEqual((panel(globalContext)?.result as any).panel_scope, {
+    assert.deepEqual((panel(globalContext).result as any).panel_scope, {
       conversation_id: null,
     });
 
@@ -363,14 +363,14 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       arguments: { conversation_id: "conversation-a" },
     });
 
-    assert.deepEqual(panel(scopedOpen)?.panel_scope, {
+    assert.deepEqual(panel(scopedOpen).panel_scope, {
       conversation_id: "conversation-a",
       repository: dir,
       revision: "HEAD",
     });
 
     assert.deepEqual(
-      (panel(scopedOpen)?.tasks as { id: string }[]).map((task) => task.id),
+      (panel(scopedOpen).tasks as { id: string }[]).map((task) => task.id),
       ["current-thread"],
     );
 
@@ -384,7 +384,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       _meta: { "openai/session": "conversation-a" },
     });
 
-    assert.deepEqual(panel(nativeOpen)?.panel_scope, {
+    assert.deepEqual(panel(nativeOpen).panel_scope, {
       conversation_id: "conversation-a",
       repository: dir,
       revision: "HEAD",
@@ -397,7 +397,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.deepEqual(
-      (panel(nativeTasks)?.result as { id: string }[]).map((task) => task.id),
+      (panel(nativeTasks).result as { id: string }[]).map((task) => task.id),
       ["current-thread"],
     );
 
@@ -408,7 +408,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.deepEqual(
-      (panel(explicitTasks)?.result as { id: string }[]).map((task) => task.id),
+      (panel(explicitTasks).result as { id: string }[]).map((task) => task.id),
       ["other-thread"],
     );
 
@@ -420,7 +420,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       },
     });
 
-    assert.deepEqual(panel(fromDirectory)?.panel_scope, {
+    assert.deepEqual(panel(fromDirectory).panel_scope, {
       conversation_id: "first-use",
       repository: dir,
       revision: "HEAD",
@@ -442,20 +442,20 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
     });
 
     assert.equal(started.isError, undefined);
-    const startedTask = panel(started)?.result as { id: string };
+    const startedTask = panel(started).result as { id: string };
 
-    assert.deepEqual(panel(started)?.panel_scope, {
+    assert.deepEqual(panel(started).panel_scope, {
       conversation_id: "http-start",
       repository: dir,
       revision: "HEAD",
     });
 
-    assert.deepEqual(panel(started)?.panel_selection, {
+    assert.deepEqual(panel(started).panel_selection, {
       task_id: startedTask.id,
       tab: "chat",
     });
 
-    assert.deepEqual(panel(started)?.tasks, [panel(started)?.result]);
+    assert.deepEqual(panel(started).tasks, [panel(started).result]);
     await checkGlobalCreation(client);
   });
 
@@ -625,11 +625,11 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         arguments: {},
       });
 
-      assert.deepEqual(panel(unscopedProxyOpen)?.panel_scope, {
+      assert.deepEqual(panel(unscopedProxyOpen).panel_scope, {
         conversation_id: null,
       });
 
-      assert.equal(panel(unscopedProxyOpen)?.tasks, undefined);
+      assert.equal(panel(unscopedProxyOpen).tasks, undefined);
 
       const globalProxyOpen = await stdio.callTool({
         name: globalOpener.name,
@@ -639,11 +639,11 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
       assert.equal(globalProxyOpen.isError, undefined);
 
-      assert.deepEqual(panel(globalProxyOpen)?.panel_scope, {
+      assert.deepEqual(panel(globalProxyOpen).panel_scope, {
         conversation_id: null,
       });
 
-      assert.equal(panel(globalProxyOpen)?.tasks, undefined);
+      assert.equal(panel(globalProxyOpen).tasks, undefined);
 
       const globalProxyContext = await stdio.callTool({
         name: "get_panel_context",
@@ -651,7 +651,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         _meta: ambientMeta,
       });
 
-      assert.deepEqual((panel(globalProxyContext)?.result as any).panel_scope, {
+      assert.deepEqual((panel(globalProxyContext).result as any).panel_scope, {
         conversation_id: null,
       });
 
@@ -663,7 +663,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         _meta: { "openai/session": "conversation-a" },
       });
 
-      assert.deepEqual(panel(nativeProxyOpen)?.panel_scope, {
+      assert.deepEqual(panel(nativeProxyOpen).panel_scope, {
         conversation_id: "conversation-a",
         repository: dir,
         revision: "HEAD",
@@ -676,7 +676,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       });
 
       assert.deepEqual(
-        (panel(nativeProxyTasks)?.result as { id: string }[]).map(
+        (panel(nativeProxyTasks).result as { id: string }[]).map(
           (task) => task.id,
         ),
         ["current-thread"],
@@ -687,13 +687,13 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         arguments: { conversation_id: "conversation-a" },
       });
 
-      assert.deepEqual(panel(proxyOpen)?.panel_scope, {
+      assert.deepEqual(panel(proxyOpen).panel_scope, {
         conversation_id: "conversation-a",
         repository: dir,
         revision: "HEAD",
       });
 
-      assert.equal(panel(proxyOpen)?.conversation_id, "conversation-a");
+      assert.equal(panel(proxyOpen).conversation_id, "conversation-a");
 
       const proxyWorkers = await stdio.callTool({
         name: "list_workers",
@@ -708,7 +708,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
         },
       });
 
-      assert.deepEqual(panel(proxyFromDirectory)?.panel_scope, {
+      assert.deepEqual(panel(proxyFromDirectory).panel_scope, {
         conversation_id: "proxy-first-use",
         repository: dir,
         revision: "HEAD",
@@ -740,24 +740,22 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       assert.equal(legacy.isError, true);
       assert.match(JSON.stringify(legacy.content), /replaced by attachments/);
 
-      const proxyTask = panel(proxyStarted)?.result as {
+      const proxyTask = panel(proxyStarted).result as {
         id: string;
       };
 
-      assert.deepEqual(panel(proxyStarted)?.panel_scope, {
+      assert.deepEqual(panel(proxyStarted).panel_scope, {
         conversation_id: "stdio-start",
         repository: dir,
         revision: "HEAD",
       });
 
-      assert.deepEqual(panel(proxyStarted)?.panel_selection, {
+      assert.deepEqual(panel(proxyStarted).panel_selection, {
         task_id: proxyTask.id,
         tab: "chat",
       });
 
-      assert.deepEqual(panel(proxyStarted)?.tasks, [
-        panel(proxyStarted)?.result,
-      ]);
+      assert.deepEqual(panel(proxyStarted).tasks, [panel(proxyStarted).result]);
 
       await checkGlobalCreation(stdio);
       assert.equal(proxyWorkers.isError, false);

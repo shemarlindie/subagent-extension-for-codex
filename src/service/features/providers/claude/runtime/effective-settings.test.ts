@@ -38,6 +38,13 @@ async function bypassTask() {
 const limited = (events: { type: string; data: unknown }[]) =>
   events.filter((event) => event.type === "agent.limited");
 
+function limitReason(events: { type: string; data: unknown }[]) {
+  const [event] = limited(events);
+  assert.ok(event, "The task must record a limit event");
+
+  return (event.data as { reason: string }).reason;
+}
+
 test("a task that asked for a blocked mode records both modes and reports it once, even when resumed", async () => {
   const { c, events } = await bypassTask();
 
@@ -73,7 +80,7 @@ test("a mode change names the organization only when policy turned that mode off
   await recordEffectiveSettings(c, init, { getSettings: undefined });
 
   assert.match(
-    (limited(events)[0]?.data as { reason: string }).reason,
+    limitReason(events),
     /Claude Code doesn't allow Bypass permission prompts for this session/,
   );
 });
@@ -130,7 +137,7 @@ test("a swapped model is reported, and an alias or a blank model isn't", async (
   assert.equal(c.task.model, "opus");
 
   assert.equal(
-    (limited(events)[0]?.data as { reason: string }).reason,
+    limitReason(events),
     "Running with claude-sonnet-5-5. Your organization doesn't allow opus.",
   );
 });
@@ -175,7 +182,7 @@ test("reasoning the session lowers is recorded and reported, naming the org's ca
   );
 
   assert.equal(
-    (limited(plain.events)[0]?.data as { reason: string }).reason,
+    limitReason(plain.events),
     "Running with High reasoning instead of Xhigh.",
   );
 });

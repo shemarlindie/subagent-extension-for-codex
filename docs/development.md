@@ -542,22 +542,25 @@ returned by native APIs can cross VM realms.
 Format edited files with:
 
 ```sh
-npx prettier --write <files> && npx eslint --fix <files> && npx prettier --write <files>
+npx prettier --write <files> && npx oxlint --fix <files> && npx prettier --write <files>
 ```
 
 Prettier runs twice because its wrapping can trigger lint fixes, such as braces,
-that it then formats. ESLint also lints Markdown, but check cross-file links and
+that it then formats. ESLint lints Markdown, but check cross-file links and
 heading fragments yourself after moving documentation.
 
-Lint enforces the [runtime boundaries](architecture.md#code-ownership), React
-hook rules and type-aware checks. TypeScript checks for missing values in
-indexed reads. Type inputs by the data they can contain, and handle missing
-values when reading them.
+Oxlint lints JavaScript and TypeScript, with type-aware rules from tsgolint
+under `--type-aware`. It enforces the
+[runtime boundaries](architecture.md#code-ownership), React hook rules and
+type-aware checks. Editors show these findings through the Oxc extension.
+TypeScript checks for missing values in indexed reads. Type inputs by the data
+they can contain, and handle missing values when reading them.
 
 Lint also limits file length and complexity. Lower or remove exceptions when
-refactoring, and explain any increase a change needs. Remove stale complexity
-suppressions with `npx eslint . --prune-suppressions`. If Knip reports a file
-loaded by path as unused, declare its entry point in `knip.json`.
+refactoring, and explain any increase a change needs. Lint fails on stale
+complexity suppressions in `oxlint-suppressions.json`. Remove them with
+`npx oxlint --type-aware --prune-suppressions`. If Knip reports a file loaded by
+path as unused, declare its entry point in `knip.json`.
 
 Unit tests, including the jsdom suites in `tests/ui/`, time out after 15
 seconds. Integration and browser tests allow 60 seconds for process and worktree

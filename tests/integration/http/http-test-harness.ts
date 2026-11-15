@@ -39,17 +39,19 @@ export function mcpResponseJson(text: string) {
 }
 
 // Panel tools return loosely shaped structured content; tests narrow each field.
-export const panel = (response: object) =>
-  (response as { structuredContent?: unknown }).structuredContent as
-    | {
-        panel_scope?: unknown;
-        panel_selection?: unknown;
-        tasks?: unknown;
-        read_completed?: unknown;
-        result?: unknown;
-        conversation_id?: unknown;
-      }
-    | undefined;
+export function panel(response: object) {
+  const { structuredContent } = response as { structuredContent?: unknown };
+  assert.ok(structuredContent, "Panel tools return structured content");
+
+  return structuredContent as {
+    panel_scope?: unknown;
+    panel_selection?: unknown;
+    tasks?: unknown;
+    read_completed?: unknown;
+    result?: unknown;
+    conversation_id?: unknown;
+  };
+}
 
 export async function httpFixture(t: TestContext) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "ac-http-")));
