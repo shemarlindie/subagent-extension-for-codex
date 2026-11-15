@@ -94,6 +94,32 @@ behavior. Keep search text separate from selected values in lookup fields. When
 selection can change outside a tab strip, reveal the selected tab without
 scrolling its parent.
 
+### Render report
+
+`npm run report:renders` applies each scenario's change to the app shell in
+jsdom and writes `render-report/render-report.md`. A render is wasted when the
+component's output, its direct children and their props, matches its output
+before. Functions count as equal, since handlers read current state when they
+run. For each change, the report lists:
+
+- wasted renders with a likely cause, such as a parent rendering with the same
+  props or a new object equal by value
+- components remounted with equal props
+- components that rendered and ended with the output they started with
+
+It also lists `useSnapshot` selections that change on every patch, and panel
+components no scenario reaches. The report never fails. Fix a finding when the
+fix adds less complexity than the render costs.
+
+The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
+They fail when render isolation regresses: a refresh with unchanged data commits
+nothing, a streamed paragraph renders only its message, and list, timeline and
+Activity rows render only when their own data changes.
+
+The report checks a new component once a scenario renders it. A new kind of
+change, such as a new read or user action, needs a scenario in
+`tests/ui/render-audit/render-scenarios/`.
+
 ### New-task composer
 
 The composer (`features/delegation/new-task/`) and the Advanced task dialog

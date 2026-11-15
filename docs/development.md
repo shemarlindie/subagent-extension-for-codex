@@ -522,13 +522,14 @@ own.
 
 For focused checks during iteration:
 
-| Command                      | Runs                                  |
-| ---------------------------- | ------------------------------------- |
-| `npm run test:e2e`           | Browser flows, after a build          |
-| `npm run test:unit`          | Vitest `unit` and `unit-dom` projects |
-| `npm run test:integration`   | Vitest `integration` project          |
-| `npx vitest run <test-file>` | One test file                         |
-| `npm run test:watch`         | Vitest in watch mode                  |
+| Command                      | Runs                                                                |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `npm run test:e2e`           | Browser flows, after a build                                        |
+| `npm run test:unit`          | Vitest `unit` and `unit-dom` projects                               |
+| `npm run test:integration`   | Vitest `integration` project                                        |
+| `npx vitest run <test-file>` | One test file                                                       |
+| `npm run test:watch`         | Vitest in watch mode                                                |
+| `npm run report:renders`     | [Render report](panel-architecture.md#render-report), informational |
 
 The Vitest commands skip the `npm test` preflight. Regenerate schemas after
 contract edits, and build first when a test reads `dist/`. Vitest hides console
