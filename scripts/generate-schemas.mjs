@@ -2,10 +2,8 @@ import { glob, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { ESLint } from "eslint";
 import { format, resolveConfig } from "prettier";
 import { generate } from "ts-to-zod";
-import tseslint from "typescript-eslint";
 
 async function discover(root, pattern) {
   const paths = [];
@@ -146,15 +144,17 @@ function schemaSource({ input, output }, contracts, publicNames, sourceText) {
     }
   }
 
-  const source = generated.replace(
-    /^export const (\w+Schema)\b/gm,
-    (declaration, name) =>
+  // A blank line separates the package import from local imports, as the
+  // import-sort lint rule requires.
+  const source = generated
+    .replace(/^(import \{ z \} from "zod";\n)(?=import )/m, "$1\n")
+    .replace(/^export const (\w+Schema)\b/gm, (declaration, name) =>
       publicNames.has("*") ||
       publicNames.has(name) ||
       !internalSchemas.has(name)
         ? declaration
         : declaration.replace(/^export /, ""),
-  );
+    );
 
   // Types imported from outside a contract fall back to any; never silently lose validation.
   if (/\bz\.any\(\)/.test(source)) {
@@ -188,14 +188,6 @@ export async function generateSchemas({
 
   const publicSchemas = await collectPublicSchemas(root, contracts);
 
-  // Generated output cannot join a tsconfig before it exists. The lint command
-  // applies type-aware rules after generation.
-  const eslint = new ESLint({
-    cwd: root,
-    fix: true,
-    overrideConfig: tseslint.configs.disableTypeChecked,
-  });
-
   for (const contract of contracts) {
     const { input, output } = contract;
 
@@ -206,13 +198,7 @@ export async function generateSchemas({
       await readFile(input, "utf8"),
     );
 
-    const [linted] = await eslint.lintText(source, { filePath: output });
-
-    if (linted.errorCount) {
-      throw new Error(`Generated schema failed lint: ${output}`);
-    }
-
-    const formatted = await format(linted.output ?? source, {
+    const formatted = await format(source, {
       ...(await resolveConfig(output)),
       filepath: output,
     });
