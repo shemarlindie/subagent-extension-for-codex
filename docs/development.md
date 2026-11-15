@@ -546,8 +546,12 @@ npx prettier --write <files> && npx oxlint --fix <files> && npx prettier --write
 ```
 
 Prettier runs twice because its wrapping can trigger lint fixes, such as braces,
-that it then formats. ESLint lints Markdown, but check cross-file links and
-heading fragments yourself after moving documentation.
+that it then formats. Prettier also sorts imports.
+
+markdownlint checks Markdown for broken heading fragments, missing references,
+empty links, missing alt text and similar mistakes. Its rules are in
+`.markdownlint-cli2.jsonc`. Check cross-file links yourself after moving
+documentation.
 
 Oxlint lints JavaScript and TypeScript, with type-aware rules from tsgolint
 under `--type-aware`. It enforces the
