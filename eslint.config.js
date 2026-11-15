@@ -69,7 +69,7 @@ export default defineConfig(
     languageOptions: {
       parserOptions: {
         project: [
-          "./tsconfig.json",
+          "./tsconfig.service.json",
           "./tsconfig.panel.json",
           "./tsconfig.test.json",
         ],
