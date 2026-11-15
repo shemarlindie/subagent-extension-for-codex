@@ -18,20 +18,7 @@ countdownTask.finish(countdownReply, 1, {
   total_cost_usd: 0.04,
 });
 
-const partialReply =
-  "Drafted the cache section. The examples still need checking.";
-
-// The TTL dropped to 5m after an hour-long cache, and the 5m tail has expired.
-const partialTask = new Timeline("preview-cache-partial", at(160), 2600);
-begin(partialTask, ["Read", "Edit"]);
-partialTask.say(partialReply);
-
-partialTask.finish(partialReply, 1, {
-  duration_ms: 26000,
-  total_cost_usd: 0.06,
-});
-
-export const promptCacheTimelines = [countdownTask, partialTask];
+export const promptCacheTimelines = [countdownTask];
 
 export const promptCacheTasks: Task[] = [
   {
@@ -49,26 +36,5 @@ export const promptCacheTasks: Task[] = [
     runtime_ms: 18000,
     cost_usd: 0.04,
     ...timestamps(150, 2),
-  },
-  {
-    ...taskBase,
-    id: "preview-cache-partial",
-    title: "Draft the caching guide",
-    description: "Write the prompt caching section of the developer guide.",
-    worker_profile: "implementer",
-    status: "completed",
-    provider_options: {
-      claude: {
-        ...settingOptions().claude,
-        prompt_cache: {
-          requested_at: ago(20 * 60_000),
-          ttl: "5m",
-          partial: true,
-        },
-      },
-    },
-    runtime_ms: 26000,
-    cost_usd: 0.06,
-    ...timestamps(160, 2),
   },
 ];

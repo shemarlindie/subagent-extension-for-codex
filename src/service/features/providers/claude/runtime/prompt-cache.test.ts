@@ -14,7 +14,6 @@ import { ClaudeAgentProvider } from "./provider.js";
 
 const start = (
   writes: { m5?: number; h1?: number },
-  reads = 0,
   parent: string | null = null,
 ) => ({
   type: "stream_event",
@@ -24,7 +23,6 @@ const start = (
     message: {
       id: "msg",
       usage: {
-        cache_read_input_tokens: reads,
         cache_creation: {
           ephemeral_5m_input_tokens: writes.m5 ?? 0,
           ephemeral_1h_input_tokens: writes.h1 ?? 0,
@@ -76,7 +74,6 @@ async function record(frames: object[], previous?: object) {
   return rest;
 }
 
-const recent = new Date().toISOString();
 const old = new Date(Date.now() - 2 * 3_600_000).toISOString();
 
 test("a main request records its TTL from its cache writes, and a subagent's records nothing", async () => {
@@ -84,30 +81,16 @@ test("a main request records its TTL from its cache writes, and a subagent's rec
     ttl: "1h",
   });
 
-  assert.equal(await record([start({ m5: 10 }, 0, "toolu_1")]), undefined);
+  // The 5m tail expires first.
+  assert.deepEqual(await record([start({ m5: 10, h1: 10 })]), { ttl: "5m" });
+
+  assert.equal(await record([start({ m5: 10 }, "toolu_1")]), undefined);
 });
 
 test("a request with no writes and compaction keep the previous TTL with a new time", async () => {
-  for (const frame of [start({}, 50), compaction]) {
+  for (const frame of [start({}), compaction]) {
     assert.deepEqual(await record([frame], { requested_at: old, ttl: "5m" }), {
       ttl: "5m",
     });
   }
-});
-
-test("a 5m write is partial beside a 1h write or a read of a live 1h record", async () => {
-  const partial = { ttl: "5m", partial: true };
-
-  assert.deepEqual(await record([start({ m5: 10, h1: 10 })]), partial);
-
-  assert.deepEqual(
-    await record([start({ m5: 10 }, 50)], { requested_at: recent, ttl: "1h" }),
-    partial,
-  );
-
-  // An expired 1h record leaves only the new 5m cache.
-  assert.deepEqual(
-    await record([start({ m5: 10 }, 50)], { requested_at: old, ttl: "1h" }),
-    { ttl: "5m" },
-  );
 });

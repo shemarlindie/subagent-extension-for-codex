@@ -150,7 +150,6 @@ export const previewEvents: Event[] = [
     "preview-policy-limited",
     "preview-policy-lowered",
     "preview-cache-countdown",
-    "preview-cache-partial",
   ].flatMap((id) => byId(timelinesById, id).events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),
