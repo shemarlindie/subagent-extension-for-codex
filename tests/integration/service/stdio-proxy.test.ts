@@ -21,9 +21,9 @@ import { serviceIdentity } from "../../../src/service/platform/service/identity.
 import { waitForListening } from "../../support/helpers.js";
 import {
   freePort,
-  type Service,
   serviceEnv,
   stopService,
+  type Service,
 } from "../../support/service.js";
 
 /** A short idle grace, so the tests don't wait out the real one. */

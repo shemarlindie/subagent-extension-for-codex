@@ -1,4 +1,4 @@
-import { type RefObject, useLayoutEffect } from "react";
+import { useLayoutEffect, type RefObject } from "react";
 
 /** Stack sticky controls using their rendered sizes, including host font overrides. */
 export function useSettingsStickyLayout(

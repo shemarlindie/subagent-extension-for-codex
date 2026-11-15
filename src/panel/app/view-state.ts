@@ -2,9 +2,9 @@ import { DEFAULT_PAGE, parsePage } from "./navigation/pages";
 import { browserComposerDrafts } from "./state/persistence/browser-composer-drafts";
 import {
   parsePersistedDialogs,
-  type PersistedDialogId,
   persistedDialogId,
   persistedDialogIds,
+  type PersistedDialogId,
 } from "./state/persistence/dialog-persistence";
 import type {
   Filter,

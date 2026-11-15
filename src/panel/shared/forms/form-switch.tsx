@@ -1,5 +1,5 @@
 import { Switch } from "@base-ui/react/switch";
-import { type ReactNode, useId } from "react";
+import { useId, type ReactNode } from "react";
 
 import { LoadingSpinner } from "../components/loading-spinner/loading-spinner";
 

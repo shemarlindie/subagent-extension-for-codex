@@ -1,17 +1,17 @@
 import { tmpdir } from "node:os";
 
 import {
-  type Query,
   query,
   resolveSettings,
+  type Query,
   type Settings,
 } from "@anthropic-ai/claude-agent-sdk";
 
 import {
   claudeOverrideDefaults,
-  type ClaudeOverrides,
   claudePermissionModes,
   MODE_TURNED_OFF_BY_ORG,
+  type ClaudeOverrides,
 } from "../../../../../shared/providers/claude/permissions.js";
 import type {
   ModelChoice,

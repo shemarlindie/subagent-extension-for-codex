@@ -6,9 +6,9 @@ import { Icon, type IconName } from "../icons/icons";
 import { LoadingSpinner } from "../loading-spinner/loading-spinner";
 import {
   SELECT_ACTION_VALUE,
+  SelectOptions,
   type SelectAction,
   type SelectOption,
-  SelectOptions,
 } from "./select-field";
 
 type ChipOption = SelectOption & {

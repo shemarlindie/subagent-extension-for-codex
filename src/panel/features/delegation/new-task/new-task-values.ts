@@ -3,14 +3,14 @@ import { scalarText } from "../../../../shared/text";
 import type { NewTaskState } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
 import {
-  type DelegateFormState,
   delegateInitialValues,
+  type DelegateFormState,
 } from "../delegate-initial-values";
 import type { DelegateValues } from "../delegate-values";
 import {
-  type ProjectTargetState,
   taskProjects,
   workerChoice,
+  type ProjectTargetState,
 } from "../delegation";
 
 /** The session-memory entry that keeps the composer's draft, one per chat. */

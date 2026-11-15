@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { test, type TestContext, vi } from "vitest";
+import { test, vi, type TestContext } from "vitest";
 
 import { type Event } from "../../../../shared/events/types.js";
 import {

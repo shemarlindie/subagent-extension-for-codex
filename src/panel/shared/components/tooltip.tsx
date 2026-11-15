@@ -1,10 +1,10 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import {
-  type ReactElement,
-  type ReactNode,
   useCallback,
   useEffect,
   useState,
+  type ReactElement,
+  type ReactNode,
 } from "react";
 
 interface TooltipWrapperProps {

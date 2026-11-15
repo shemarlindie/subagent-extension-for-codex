@@ -25,9 +25,9 @@ import type { Task } from "../../../src/shared/tasks/model";
 import { FIXTURE_SERVICE_TOOLS } from "../host/host-helpers";
 import { previewAttachments } from "../scenarios/attachment-scenarios";
 import {
+  previewChanges,
   type ChangeFixture,
   type Edits,
-  previewChanges,
   type Turn,
 } from "../scenarios/change-fixtures";
 import { previewEvents, previewTasks } from "../scenarios/fixtures";

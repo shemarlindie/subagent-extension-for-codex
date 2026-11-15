@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { groupActivity } from "./activity-timeline.js";
-import { thinkingSpan } from "./activity-timeline.js";
 import { event, sdk } from "./activity-timeline-test-harness.js";
+import { groupActivity, thinkingSpan } from "./activity-timeline.js";
 
 test("a thinking row is open-ended when no event follows", () => {
   const thinking = [event(10, "thinking_tokens"), event(14, "thinking_tokens")];

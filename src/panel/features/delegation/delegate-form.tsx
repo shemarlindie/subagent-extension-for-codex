@@ -1,4 +1,4 @@
-import { type SubmitEvent, useEffect, useRef } from "react";
+import { useEffect, useRef, type SubmitEvent } from "react";
 import { FormProvider, useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
@@ -14,11 +14,11 @@ import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-
 import { runsInPlace } from "../projects/selectors";
 import {
   DELEGATE_FORM_FIELDS,
-  type DelegateFormDialog,
   delegateInitialValues,
   delegateReads,
   delegateTarget,
   workerChoices,
+  type DelegateFormDialog,
 } from "./delegate-initial-values";
 import type { DelegateValues } from "./delegate-values";
 import {

@@ -1,5 +1,5 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { type ReactNode, useContext, useState } from "react";
+import { useContext, useState, type ReactNode } from "react";
 
 import { unsupportedEffortWarning } from "../../../shared/settings/settings-document";
 import { buttonClass } from "../../shared/components/button/button";

@@ -1,10 +1,10 @@
 import {
-  type ReactElement,
-  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type ReactElement,
+  type ReactNode,
 } from "react";
 
 import { MOTION, reducedMotion } from "../motion/motion-utils";

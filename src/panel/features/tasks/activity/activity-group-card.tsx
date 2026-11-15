@@ -1,17 +1,17 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
   memo,
-  type TransitionEvent,
   useEffect,
   useId,
   useRef,
   useState,
+  type TransitionEvent,
 } from "react";
 
 import { eventPayload } from "../../../../shared/events/payload";
 import {
-  type ActivityGroup,
   replyText,
+  type ActivityGroup,
 } from "../../../../shared/tasks/activity/activity-events";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion-content";

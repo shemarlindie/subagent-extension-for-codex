@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { expect, test } from "vitest";
 
-import { measureTaskWait, measureTaskWrite } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
+import { measureTaskWait, measureTaskWrite } from "./timing.js";
 
 test("measured phases report their outcome and rethrow the same error", async () => {
   const timing = await captureTiming();

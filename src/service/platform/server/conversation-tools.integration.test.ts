@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 import { expect, onTestFinished, test } from "vitest";
 
-import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-helpers.js";
+import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
 import { until } from "../../../../tests/support/until.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
@@ -16,10 +16,10 @@ import type {
   TaskSummary,
 } from "../../../shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
-import { Control } from "../../features/tasks/runtime/control.js";
 import { pendingInput } from "../../features/tasks/runtime/control-test-harness.js";
-import { sendRef } from "../../features/tasks/runtime/timing.js";
+import { Control } from "../../features/tasks/runtime/control.js";
 import { captureTiming } from "../../features/tasks/runtime/timing-test-harness.js";
+import { sendRef } from "../../features/tasks/runtime/timing.js";
 import { TurnCheckpoints } from "../../features/tasks/runtime/turn-checkpoints-test-harness.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";

@@ -1,20 +1,19 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, onTestFinished, test, vi } from "vitest";
+
+import type { Controller } from "../../../app/state/controller";
+import { ControllerContext } from "../../../app/state/controller-context";
+import { linkKind } from "./markdown-urls";
+import { MarkdownView } from "./markdown-view";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-
-import type { Controller } from "../../../app/state/controller";
-import { ControllerContext } from "../../../app/state/controller-context";
-import { linkKind } from "./markdown-urls";
-import { MarkdownView } from "./markdown-view";
 
 afterEach(cleanup);
 

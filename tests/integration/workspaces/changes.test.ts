@@ -9,8 +9,8 @@ import { expect, test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { pendingInput } from "../../../src/service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { callTool } from "../../../src/service/platform/server/tools.js";

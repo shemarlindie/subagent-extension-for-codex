@@ -12,8 +12,8 @@ import { approvalModes, type Task } from "../../../../shared/tasks/model.js";
 import { callTool } from "../../../platform/server/tools.js";
 import { type RunContext, type TurnOutput } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
-import { Control } from "../runtime/control.js";
 import { latestReply, pendingInput } from "../runtime/control-test-harness.js";
+import { Control } from "../runtime/control.js";
 import { Store } from "../storage/store.js";
 
 const baseRequest = {

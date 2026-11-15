@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  type SettingRow,
   settingsSections,
+  type SettingRow,
 } from "../../settings/settings-document.js";
 import type { ProviderPolicy } from "../types.js";
 

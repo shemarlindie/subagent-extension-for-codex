@@ -1,7 +1,7 @@
 import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
-import { panelUri } from "../panel/panel.js";
 import { taskPanelContext } from "../panel/panel-context.js";
+import { panelUri } from "../panel/panel.js";
 import { observeTool } from "./tool-logging.js";
 import { agentTools } from "./tools/agent-tools.js";
 import type {

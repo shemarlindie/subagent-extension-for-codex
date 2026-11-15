@@ -39,7 +39,7 @@ import {
   previewReadState,
   previewUnreadTool,
 } from "./unread-tools";
-import { type ViewPart, withPreviewView } from "./view-tools";
+import { withPreviewView, type ViewPart } from "./view-tools";
 
 // A new user's settings with only Claude enabled, as the service reports them.
 const previewSettingsDefaults = (() => {

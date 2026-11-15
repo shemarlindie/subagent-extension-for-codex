@@ -2,8 +2,8 @@ import type { ChangeEvent, CSSProperties, KeyboardEvent } from "react";
 import type { UseFormRegister, UseFormSetValue } from "react-hook-form";
 
 import type {
-  Question,
   QuestionAnswers as Answers,
+  Question,
 } from "../../../app/state/types";
 
 // Cards further back than this stay hidden so the stack reads as a stack, not a pile.

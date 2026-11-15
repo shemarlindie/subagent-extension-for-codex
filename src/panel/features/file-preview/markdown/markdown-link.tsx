@@ -1,4 +1,4 @@
-import { type ComponentProps, type MouseEvent, useContext } from "react";
+import { useContext, type ComponentProps, type MouseEvent } from "react";
 
 import { ControllerContext } from "../../../app/state/controller-context";
 import { linkKind } from "./markdown-urls";

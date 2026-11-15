@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
 
 import {
-  type ClaudeRateLimitInfo,
   decodeClaudeRateLimitWindowInfo,
+  type ClaudeRateLimitInfo,
 } from "./events.js";
 import { claudeRateLimitWindows } from "./rate-limit-windows.js";
 

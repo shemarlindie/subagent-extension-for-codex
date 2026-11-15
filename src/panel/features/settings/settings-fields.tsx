@@ -1,9 +1,9 @@
 import { createContext, useContext } from "react";
 import {
-  type Control,
   Controller,
-  type UseFormRegister,
   useFormState,
+  type Control,
+  type UseFormRegister,
 } from "react-hook-form";
 
 import { Button } from "../../shared/components/button/button";
@@ -16,8 +16,8 @@ import { workerProfileIconName } from "../tasks/list/worker-profile-icon";
 import { SettingsSearchHighlight } from "./search/settings-search-highlight";
 import {
   helpId,
-  type HelpPart,
   rowFieldNames,
+  type HelpPart,
   type SettingRow,
   type Values,
 } from "./settings-layout";

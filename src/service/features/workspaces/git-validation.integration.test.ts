@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import {
-  type ChildProcess,
   execFile,
-  type ExecFileOptions,
   execFileSync,
+  type ChildProcess,
+  type ExecFileOptions,
 } from "node:child_process";
 import { once } from "node:events";
 import {

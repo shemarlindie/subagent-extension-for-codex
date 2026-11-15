@@ -1,5 +1,5 @@
 import { Accordion } from "@base-ui/react/accordion";
-import { type ReactNode, useId } from "react";
+import { useId, type ReactNode } from "react";
 
 import type { Task } from "../../../app/state/types";
 import { Button, buttonClass } from "../../../shared/components/button/button";

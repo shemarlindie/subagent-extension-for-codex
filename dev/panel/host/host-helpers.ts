@@ -7,7 +7,7 @@ import type { ProviderPolicy } from "../../../src/shared/providers/types";
 import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
 import type { Task } from "../../../src/shared/tasks/model";
 import { previewOrgPolicy } from "../scenarios/preview-models";
-import { type PreviewOptions, previewTool } from "../scenarios/tools";
+import { previewTool, type PreviewOptions } from "../scenarios/tools";
 
 export type Settings = {
   source: "fixtures" | "live";

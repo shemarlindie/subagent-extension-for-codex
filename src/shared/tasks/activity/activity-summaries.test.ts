@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { groupActivity } from "./activity-timeline.js";
 import { event, sdk } from "./activity-timeline-test-harness.js";
+import { groupActivity } from "./activity-timeline.js";
 
 test("repeated notifications consolidate only when their summaries match", () => {
   const events = [

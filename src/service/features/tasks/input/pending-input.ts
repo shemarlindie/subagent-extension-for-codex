@@ -5,8 +5,8 @@ import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   recordTaskTiming,
-  type TimingOutcome,
   timingOutcome,
+  type TimingOutcome,
 } from "../runtime/timing.js";
 import type { Store } from "../storage/store.js";
 

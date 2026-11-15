@@ -1,4 +1,4 @@
-import { type CSSProperties, useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
 import { chunks } from "../../../shared/utils/chunks";

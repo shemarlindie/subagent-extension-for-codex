@@ -1,4 +1,4 @@
-import { expect, test as base } from "./fixtures";
+import { test as base, expect } from "./fixtures";
 import { startProcessService } from "./process-service";
 import { CONSOLE_TOKEN } from "./server";
 

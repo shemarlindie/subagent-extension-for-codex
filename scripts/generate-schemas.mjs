@@ -144,17 +144,15 @@ function schemaSource({ input, output }, contracts, publicNames, sourceText) {
     }
   }
 
-  // A blank line separates the package import from local imports, as the
-  // import-sort lint rule requires.
-  const source = generated
-    .replace(/^(import \{ z \} from "zod";\n)(?=import )/m, "$1\n")
-    .replace(/^export const (\w+Schema)\b/gm, (declaration, name) =>
+  const source = generated.replace(
+    /^export const (\w+Schema)\b/gm,
+    (declaration, name) =>
       publicNames.has("*") ||
       publicNames.has(name) ||
       !internalSchemas.has(name)
         ? declaration
         : declaration.replace(/^export /, ""),
-    );
+  );
 
   // Types imported from outside a contract fall back to any; never silently lose validation.
   if (/\bz\.any\(\)/.test(source)) {

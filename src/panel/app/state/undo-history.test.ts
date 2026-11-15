@@ -5,7 +5,7 @@ import { expect, test, vi } from "vitest";
 import { task } from "./controller-test-harness";
 import { initialState } from "./initial-state";
 import type { Snapshot } from "./types";
-import { taskView, type UndoEntry, UndoHistory } from "./undo-history";
+import { taskView, UndoHistory, type UndoEntry } from "./undo-history";
 
 function setup() {
   let state: Snapshot = initialState();

@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { type Settings } from "../../../features/settings/settings.js";
 import {
   saveSettingsFile,
   settingsFileOutputSchema,
@@ -12,6 +11,7 @@ import {
   settingsImportOutputSchema,
   settingsTransferInputSchema,
 } from "../../../features/settings/settings-transfer.js";
+import { type Settings } from "../../../features/settings/settings.js";
 import { tool } from "./definition.js";
 
 /** App-only settings transfer. File destinations and contents belong to the service. */

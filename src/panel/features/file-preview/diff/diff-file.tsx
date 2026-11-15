@@ -1,10 +1,10 @@
 import {
-  type ReactNode,
-  type SyntheticEvent,
   useDeferredValue,
   useLayoutEffect,
   useMemo,
   useState,
+  type ReactNode,
+  type SyntheticEvent,
 } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
@@ -14,8 +14,8 @@ import { highlightLine } from "../highlight";
 import { Progress } from "../progress";
 import {
   diffPath,
-  type DiffRow,
   diffRows,
+  type DiffRow,
   type ParsedDiffFile,
 } from "./diff-format";
 import { DiffStat } from "./diff-stat";

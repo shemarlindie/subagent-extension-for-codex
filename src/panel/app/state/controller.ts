@@ -34,8 +34,8 @@ import {
   canNavigate,
   DEFAULT_PAGE,
   isSettingsPageDialog,
-  type PageId,
   PAGES,
+  type PageId,
 } from "../navigation/pages";
 import { CONNECTION, type ConnectionLabel } from "./connection";
 import { DialogLoader } from "./dialog-loader";
@@ -43,8 +43,8 @@ import { initialState } from "./initial-state";
 import { browserEnvironment, type PanelEnvironment } from "./panel-environment";
 import {
   olderRevision,
-  type UpdateRead,
   viewArgs,
+  type UpdateRead,
   type ViewRead,
   type ViewRequest,
 } from "./panel-view";

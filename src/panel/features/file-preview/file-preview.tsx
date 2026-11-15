@@ -1,12 +1,12 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import {
-  type ReactNode,
   useDeferredValue,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -21,14 +21,14 @@ import {
   fileBytes,
   fileFormat,
   fileName,
-  type FileView,
-  type FileViews,
   fileViews,
   formatName,
   isLargeSvg,
   MAX_SVG_IMAGE_BYTES,
-  type PreviewFile,
   viewLabel,
+  type FileView,
+  type FileViews,
+  type PreviewFile,
 } from "./file-format";
 import { FileViewer } from "./file-viewer";
 import { Progress } from "./progress";

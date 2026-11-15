@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
-import { type Settings } from "./settings.js";
 import { exportSettings } from "./settings-transfer.js";
+import { type Settings } from "./settings.js";
 
 export const settingsFileOutputSchema = z.object({ path: z.string() });
 

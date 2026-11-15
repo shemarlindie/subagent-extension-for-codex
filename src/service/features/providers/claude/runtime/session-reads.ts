@@ -1,7 +1,7 @@
 import {
+  query,
   type Options,
   type Query,
-  query,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 

@@ -9,8 +9,11 @@ import type {
   ActivityPresentation,
 } from "../../../../../shared/providers/activity/types.js";
 import { scalarText } from "../../../../../shared/text.js";
-import { claudeActivityBlock, claudeActivityContent } from "./content.js";
-import { decodeClaudeActivityContent } from "./content.js";
+import {
+  claudeActivityBlock,
+  claudeActivityContent,
+  decodeClaudeActivityContent,
+} from "./content.js";
 
 type ClaudeStreamMessage = Extract<SDKMessage, { type: "stream_event" }>;
 

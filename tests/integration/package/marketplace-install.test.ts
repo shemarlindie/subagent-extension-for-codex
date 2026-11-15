@@ -21,9 +21,9 @@ import { afterAll, beforeAll, describe, test } from "vitest";
 import { npmCommand } from "../../support/npm.js";
 import {
   freePort,
-  type Service,
   serviceEnv,
   stopService,
+  type Service,
 } from "../../support/service.js";
 
 const exec = promisify(execFile);

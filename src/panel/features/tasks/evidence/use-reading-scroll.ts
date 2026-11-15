@@ -15,7 +15,6 @@ import {
   END_SLACK_PX,
   findRow,
   followsEnd,
-  type Glide,
   glideAhead,
   glideProgress,
   glideTarget,
@@ -23,6 +22,7 @@ import {
   jump,
   pendingScroll,
   restoreReadingAnchor,
+  type Glide,
 } from "./scroll-geometry";
 
 // How long a smooth return may go without progress before it counts as stopped.

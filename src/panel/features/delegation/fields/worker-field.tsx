@@ -5,7 +5,7 @@ import type { Worker } from "../../../app/state/types";
 import { Field } from "../../../shared/forms/fields";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormSelect } from "../../../shared/forms/form-select";
-import { type DelegateValues, pendingPlaceholder } from "../delegate-values";
+import { pendingPlaceholder, type DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
 
 interface WorkerFieldProps {

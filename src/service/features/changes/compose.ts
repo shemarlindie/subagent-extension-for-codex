@@ -3,8 +3,8 @@ import { formatPatch, type StructuredPatchHunk as Hunk } from "diff";
 import {
   applyHunks,
   createDocument,
-  type DiffItem,
   diffItems,
+  type DiffItem,
 } from "./compose-model.js";
 
 const context = 3;

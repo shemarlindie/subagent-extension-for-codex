@@ -20,13 +20,13 @@ import { afterEach, beforeEach, test, vi } from "vitest";
 
 import {
   ClaudeCli,
-  type ClaudeCliEnvironment,
-  type ClaudeCliStatus,
   claudeCliSupport,
   claudePathVariable,
   locateClaudeCli,
   parseClaudeVersion,
   validateClaudeCli,
+  type ClaudeCliEnvironment,
+  type ClaudeCliStatus,
 } from "./executable.js";
 
 let root: string;

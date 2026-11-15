@@ -1,16 +1,15 @@
 // @vitest-environment jsdom
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
+
+import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
+import { ChatMessageView } from "./chat-message-view";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-
-import { cleanup, render } from "@testing-library/react";
-
-import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
-import { ChatMessageView } from "./chat-message-view";
 
 afterEach(cleanup);
 

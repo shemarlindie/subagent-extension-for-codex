@@ -6,7 +6,7 @@ import type { Defaults, Worker } from "../../../app/state/types";
 import { AsyncControl } from "../../../shared/forms/async-control";
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
-import { type DelegateValues, pendingPlaceholder } from "../delegate-values";
+import { pendingPlaceholder, type DelegateValues } from "../delegate-values";
 import { modelDefaults, validateReasoning } from "../model-defaults";
 import { ModelAutocomplete } from "./model-autocomplete";
 

@@ -9,7 +9,7 @@ import {
 import { previewTool } from "../../../dev/panel/scenarios/tools";
 import { decodedEvent } from "../events/decode.js";
 import type { Event } from "../events/types.js";
-import { type PanelTask, panelTask } from "./task-list.js";
+import { panelTask, type PanelTask } from "./task-list.js";
 
 test("preview task listing exposes the latest rate limit and provider failure summaries", () => {
   const { tasks } = previewTool("app_list_tasks", {

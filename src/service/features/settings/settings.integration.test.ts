@@ -14,12 +14,12 @@ import {
   settingPaths,
 } from "../../../shared/settings/settings-schema.js";
 import { Store } from "../tasks/storage/store.js";
-import { Settings } from "./settings.js";
 import {
   settingsReadOutputSchema,
   settingsUpdateOutputSchema,
 } from "./settings-tool-schemas.js";
 import { exportSettings, importSettings } from "./settings-transfer.js";
+import { Settings } from "./settings.js";
 
 type Read = ReturnType<Settings["read"]>;
 

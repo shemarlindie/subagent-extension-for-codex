@@ -2,12 +2,12 @@ import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
 import {
-  type ClaudePermissionMode,
   permissionModeName,
+  type ClaudePermissionMode,
 } from "../../../../../shared/providers/claude/permissions.js";
 import {
-  type ClaudeEffectiveSettings,
   readClaudeTaskOptions,
+  type ClaudeEffectiveSettings,
 } from "../../../../../shared/providers/claude/task-options.js";
 import {
   FAMILY_ALIASES,

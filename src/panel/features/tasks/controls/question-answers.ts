@@ -1,6 +1,6 @@
 import type {
-  Question,
   QuestionAnswers as Answers,
+  Question,
 } from "../../../app/state/types";
 
 // The SDK has no per-question skip; an explicit answer tells Claude what happened.

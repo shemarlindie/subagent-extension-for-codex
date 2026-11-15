@@ -1,7 +1,7 @@
 import {
   promptCacheEnd,
-  type PromptCacheLeft,
   promptCacheLeft,
+  type PromptCacheLeft,
 } from "../../../../../shared/providers/claude/prompt-cache";
 import type { Task } from "../../../../app/state/types";
 import { Icon } from "../../../../shared/components/icons/icons";

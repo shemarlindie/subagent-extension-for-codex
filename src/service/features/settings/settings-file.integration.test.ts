@@ -2,11 +2,11 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
-import { expect, test, type TestContext, vi } from "vitest";
+import { expect, test, vi, type TestContext } from "vitest";
 
 import { Store } from "../tasks/storage/store.js";
-import { Settings } from "./settings.js";
 import { saveSettingsFile } from "./settings-file.js";
+import { Settings } from "./settings.js";
 
 function useHomeFolder(folder: string) {
   vi.stubEnv("HOME", folder);

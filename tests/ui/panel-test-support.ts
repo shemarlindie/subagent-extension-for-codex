@@ -1,8 +1,21 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { describe, expect, test, type TestContext, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createElement, Fragment } from "react";
+import { describe, expect, test, vi, type TestContext } from "vitest";
 
+import { AppShell } from "../../src/panel/app/app-shell";
+import { Controller } from "../../src/panel/app/state/controller";
+import { ControllerContext } from "../../src/panel/app/state/controller-context";
 import { defaults } from "../../src/panel/app/state/controller-test-harness";
 import { composeView } from "../../src/panel/app/state/panel-view-test-harness";
 import type {
@@ -17,6 +30,13 @@ import type {
   ChangedFileContent,
   Changes,
 } from "../../src/panel/features/changes/types";
+import { ProjectsPage } from "../../src/panel/features/projects/projects-page";
+import { SettingsPage } from "../../src/panel/features/settings/settings-page";
+import { SKIPPED_ANSWER } from "../../src/panel/features/tasks/controls/question-answers";
+import { TaskInspector } from "../../src/panel/features/tasks/inspector/task-inspector";
+import { TaskFilters } from "../../src/panel/features/tasks/list/task-filters";
+import { TaskList } from "../../src/panel/features/tasks/list/task-list";
+import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
 import { changeCounts } from "../../src/shared/changes/changes.js";
 import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
@@ -91,28 +111,6 @@ if (typeof window.ResizeObserver !== "function") {
     },
   });
 }
-
-import {
-  act,
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { createElement, Fragment } from "react";
-
-import { AppShell } from "../../src/panel/app/app-shell";
-import { Controller } from "../../src/panel/app/state/controller";
-import { ControllerContext } from "../../src/panel/app/state/controller-context";
-import { ProjectsPage } from "../../src/panel/features/projects/projects-page";
-import { SettingsPage } from "../../src/panel/features/settings/settings-page";
-import { SKIPPED_ANSWER } from "../../src/panel/features/tasks/controls/question-answers";
-import { TaskInspector } from "../../src/panel/features/tasks/inspector/task-inspector";
-import { TaskFilters } from "../../src/panel/features/tasks/list/task-filters";
-import { TaskList } from "../../src/panel/features/tasks/list/task-list";
-import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 
 // assert.equal(element, null) diffs the whole jsdom object graph on failure,
 // which never finishes and starves waitFor's timeout.

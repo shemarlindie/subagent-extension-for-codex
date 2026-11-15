@@ -14,11 +14,11 @@ import {
   type TurnOutput,
 } from "../../../service/features/providers/types.js";
 import { Settings } from "../../../service/features/settings/settings.js";
-import { Control } from "../../../service/features/tasks/runtime/control.js";
 import {
   latestReply,
   pendingInput,
 } from "../../../service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../service/features/tasks/runtime/control.js";
 import { Store } from "../../../service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../service/features/workspaces/workspace.js";
 import { settingPaths } from "../../settings/settings-schema.js";

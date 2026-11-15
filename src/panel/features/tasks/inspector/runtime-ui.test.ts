@@ -1,16 +1,9 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { expect, test, vi } from "vitest";
-
-Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
-  configurable: true,
-  writable: true,
-  value: true,
-});
-
 import { act, cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
+import { expect, test, vi } from "vitest";
 
 import { startSchema } from "../../../../shared/tasks/model.js";
 import type { Controller } from "../../../app/state/controller";
@@ -18,6 +11,12 @@ import { ControllerContext } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { TaskRow } from "../list/task-list";
 import { TaskDetails } from "./task-details";
+
+Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
+  configurable: true,
+  writable: true,
+  value: true,
+});
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({

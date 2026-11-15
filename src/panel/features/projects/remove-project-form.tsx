@@ -1,5 +1,5 @@
 import { Switch } from "@base-ui/react/switch";
-import { type SubmitEvent, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type SubmitEvent } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { RemoveProjectDialog } from "../../app/state/types";

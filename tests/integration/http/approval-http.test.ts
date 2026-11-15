@@ -12,11 +12,11 @@ import {
   type RunContext,
   type TurnOutput,
 } from "../../../src/service/features/providers/types.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import {
   latestReply,
   pendingInput,
 } from "../../../src/service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { application } from "../../../src/service/platform/server/app.js";

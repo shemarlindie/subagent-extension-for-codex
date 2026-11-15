@@ -9,7 +9,6 @@
   },
   "jsPlugins": [
     "@stylistic/eslint-plugin",
-    "eslint-plugin-simple-import-sort",
     {
       "name": "eslint-js",
       "specifier": "oxlint-plugin-eslint"
@@ -192,15 +191,6 @@
     // one-liner, oxlint --fix adds braces and a second Prettier pass formats
     // them.
     "eslint/curly": ["error", "multi-line", "consistent"],
-    // Side-effect imports keep their order, then node: built-ins, packages and
-    // relative paths.
-    "simple-import-sort/imports": [
-      "error",
-      {
-        "groups": [["^\\u0000"], ["^node:"], ["^@?\\w"], ["^"], ["^\\."]]
-      }
-    ],
-    "simple-import-sort/exports": "error",
     // Blank-line layout is the one formatting concern Prettier leaves alone.
     "@stylistic/padding-line-between-statements": [
       "error",

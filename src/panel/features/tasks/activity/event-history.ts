@@ -1,8 +1,8 @@
 import {
-  type ActivityPage,
-  type DroppedSummary,
   EVENT_TAIL_SIZE,
   turnCloseIndex,
+  type ActivityPage,
+  type DroppedSummary,
 } from "../../../../shared/tasks/activity/activity-tail";
 import type { Event } from "../../../app/state/types";
 import { formatDuration } from "../list/duration";

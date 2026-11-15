@@ -1,9 +1,9 @@
 import {
   Fragment,
-  type ReactNode,
-  type RefObject,
   useLayoutEffect,
   useMemo,
+  type ReactNode,
+  type RefObject,
 } from "react";
 
 import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
