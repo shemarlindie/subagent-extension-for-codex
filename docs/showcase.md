@@ -140,11 +140,11 @@ also slow 20 ms frames to 100 ms.
 ## README media
 
 The README shows both GIFs and links to the dark MP4 with music. They are GitHub
-attachments, so no media is committed. To replace one, drag the new file into an
-issue, pull request or discussion comment in a browser, copy the
-`user-attachments` URL it inserts without submitting the comment, and update the
-URL in `README.md`. Keep the image's `width` at the GIF's width. The GitHub
-mobile app rejects video uploads.
+attachments, so no media is committed. To replace one, upload the new file to a
+pull request description or comment, and submit it. GitHub serves an attachment
+publicly only while public content references it, so keep that reference. Then
+update the URL in `README.md`. Keep the image's `width` at the GIF's width. The
+GitHub mobile app rejects video uploads.
 
 ## Story and playback
 
