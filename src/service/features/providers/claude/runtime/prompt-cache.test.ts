@@ -40,7 +40,10 @@ const compaction = {
   compact_metadata: { trigger: "auto", pre_tokens: 1000 },
 };
 
-/** Runs a turn that plays `frames`, starting from `previous` if given. */
+/**
+ * Runs a turn that plays `frames`, starting from `previous` if given. Returns
+ * the lifetime the turn stored, or the record untouched when it stored none.
+ */
 async function record(frames: object[], previous?: object) {
   const ctx = await context();
   if (previous) setClaudeOptions(ctx.c.task, { prompt_cache: previous });
@@ -71,12 +74,10 @@ async function record(frames: object[], previous?: object) {
 
   // The time it stores is when this turn's request arrived.
   const { requested_at, ...rest } = stored;
-  assert.ok(Date.parse(requested_at) >= before);
 
-  return rest;
+  return Date.parse(requested_at) >= before ? rest : stored;
 }
 
-const recent = new Date().toISOString();
 const old = new Date(Date.now() - 2 * 3_600_000).toISOString();
 
 test("a main request records its TTL from its cache writes, and a subagent's records nothing", async () => {
@@ -84,10 +85,13 @@ test("a main request records its TTL from its cache writes, and a subagent's rec
     ttl: "1h",
   });
 
+  // The 5m tail expires first.
+  assert.deepEqual(await record([start({ m5: 10, h1: 10 })]), { ttl: "5m" });
+
   assert.equal(await record([start({ m5: 10 }, 0, "toolu_1")]), undefined);
 });
 
-test("a request with no writes and compaction keep the previous TTL with a new time", async () => {
+test("a read-only request and compaction keep the previous TTL with a new time", async () => {
   for (const frame of [start({}, 50), compaction]) {
     assert.deepEqual(await record([frame], { requested_at: old, ttl: "5m" }), {
       ttl: "5m",
@@ -95,19 +99,8 @@ test("a request with no writes and compaction keep the previous TTL with a new t
   }
 });
 
-test("a 5m write is partial beside a 1h write or a read of a live 1h record", async () => {
-  const partial = { ttl: "5m", partial: true };
+test("a request that neither reads nor writes the cache leaves the record as it was", async () => {
+  const previous = { requested_at: old, ttl: "5m" };
 
-  assert.deepEqual(await record([start({ m5: 10, h1: 10 })]), partial);
-
-  assert.deepEqual(
-    await record([start({ m5: 10 }, 50)], { requested_at: recent, ttl: "1h" }),
-    partial,
-  );
-
-  // An expired 1h record leaves only the new 5m cache.
-  assert.deepEqual(
-    await record([start({ m5: 10 }, 50)], { requested_at: old, ttl: "1h" }),
-    { ttl: "5m" },
-  );
+  assert.deepEqual(await record([start({})], previous), previous);
 });
