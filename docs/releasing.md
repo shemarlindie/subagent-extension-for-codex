@@ -30,7 +30,9 @@ otherwise. Before 1.0, a breaking change bumps the minor version. It sets the
 version in `package.json`, `package-lock.json`, `plugin.json` and the
 marketplace. Unless `CHANGELOG.md` already has a `## <version>` section, it
 drafts one with Features and Fixes sections from the `feat` and `fix` commits,
-writing `None` in an empty section. After you confirm, it creates
+writing `None` in an empty section. Breaking commits of any type go in a
+Breaking changes section first, which appears only when there are some. Add what
+users must change to each item. After you confirm, it creates
 `chore/release-v<version>`, commits, pushes and opens a draft pull request to
 `main` that links to the notes. If you decline, it restores the version files
 and keeps `CHANGELOG.md`, so the next run uses your notes. It needs the `gh`

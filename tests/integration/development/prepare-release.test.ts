@@ -122,8 +122,13 @@ test.skipIf(process.platform === "win32")(
   async (t) => {
     const { git, ghArgs, prepare } = await fixture(t);
 
-    for (const subject of ["feat(panel): add a setting", "docs: explain it"]) {
-      await git("commit", "-q", "--allow-empty", "-m", subject);
+    for (const message of [
+      "feat(panel): add a setting",
+      "docs: explain it",
+      "feat(mcp)!: rename a tool",
+      "refactor: rework\n\nBREAKING CHANGE: drops a setting",
+    ]) {
+      await git("commit", "-q", "--allow-empty", "-m", message);
     }
 
     await git("push", "-q");
@@ -150,7 +155,8 @@ plugin.json
 `,
     );
 
-    // Both sections appear, listing only feat and fix commits or saying None.
+    // Breaking commits of any type are listed only under Breaking changes.
+    // Features and Fixes list feat and fix commits or say None.
     assert.equal(
       await show("CHANGELOG.md"),
       `# Changelog
@@ -158,6 +164,11 @@ plugin.json
 Intro.
 
 ## 0.2.0-beta.1
+
+### Breaking changes
+
+- Rework
+- Rename a tool
 
 ### Features
 

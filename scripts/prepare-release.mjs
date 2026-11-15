@@ -99,26 +99,33 @@ const messages = run("git", [
   .map((message) => message.trim())
   .filter(Boolean);
 
-const subjects = messages.map((message) => message.split("\n")[0]);
+/** Conventional commits since the last release. Other commits are left out. */
+const commits = messages.flatMap((message) => {
+  const [, type, bang, description] =
+    message.split("\n")[0].match(/^(\w+)(?:\(.+?\))?(!?): (.+)$/) ?? [];
+
+  if (!type) return [];
+
+  return [
+    {
+      type,
+      description: `${description[0].toUpperCase()}${description.slice(1)}`,
+      breaking: bang === "!" || /^BREAKING CHANGE:/m.test(message),
+    },
+  ];
+});
 
 /** The next version after the last release, by semver from the commit types. */
 function nextVersion() {
   if (!since) fail("There's no release tag yet, so pass a version");
 
   const [major, minor, patch] = since.slice(1).split(".").map(Number);
-
-  const breaking = messages.some(
-    (message) =>
-      /^\w+(\(.+?\))?!:/.test(message) || /^BREAKING CHANGE:/m.test(message),
-  );
+  const breaking = commits.some((commit) => commit.breaking);
 
   // Before 1.0, a breaking change bumps the minor version.
   if (breaking && major > 0) return `${major + 1}.0.0`;
 
-  if (
-    breaking ||
-    subjects.some((subject) => /^feat(\(.+?\))?:/.test(subject))
-  ) {
+  if (breaking || commits.some((commit) => commit.type === "feat")) {
     return `${major}.${minor + 1}.0`;
   }
 
@@ -144,22 +151,31 @@ if (run("git", ["tag", "--list", `v${version}`])) {
 
 /** The changelog with a draft section for the version, from conventional commits. */
 function withDraft(changelog) {
-  const groups = Object.entries({ feat: "Features", fix: "Fixes" }).map(
-    ([type, heading]) => {
-      const items = subjects.flatMap((subject) => {
-        const [, description] =
-          subject.match(new RegExp(`^${type}(?:\\(.+?\\))?!?: (.+)$`)) ?? [];
+  const group = (heading, items) =>
+    [
+      `### ${heading}`,
+      "",
+      ...(items.length
+        ? items.map((commit) => `- ${commit.description}`)
+        : ["None"]),
+    ].join("\n");
 
-        return description
-          ? [`- ${description[0].toUpperCase()}${description.slice(1)}`]
-          : [];
-      });
+  // Breaking commits of any type go only under Breaking changes, which is left
+  // out when there are none.
+  const breaking = commits.filter((commit) => commit.breaking);
+  const other = commits.filter((commit) => !commit.breaking);
 
-      return [`### ${heading}`, "", ...(items.length ? items : ["None"])].join(
-        "\n",
-      );
-    },
-  );
+  const groups = [
+    ...(breaking.length ? [group("Breaking changes", breaking)] : []),
+    group(
+      "Features",
+      other.filter((commit) => commit.type === "feat"),
+    ),
+    group(
+      "Fixes",
+      other.filter((commit) => commit.type === "fix"),
+    ),
+  ];
 
   const section = `## ${version}\n\n${groups.join("\n\n")}\n`;
   const next = changelog.indexOf("\n## ");
