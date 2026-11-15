@@ -17,7 +17,7 @@ import {
   until,
 } from "./control-test-harness.js";
 
-test("commands that change what the task owns are refused on send and queued-message edit", async () => {
+test("refused commands and their aliases fail on send and queued-message edit, and suggestions leave them out", async () => {
   const { c, repo } = await setup();
   const t = await c.start("alice", input(repo, "[late]"));
 
@@ -30,15 +30,36 @@ test("commands that change what the task owns are refused on send and queued-mes
       "/model can't run in a task. A task runs every turn with the model settings it started with.",
   });
 
-  assert.throws(
-    () => c.editQueued("alice", t.id, queued.message_id, "/reset"),
+  // An unchecked built-in command is refused too.
+  await assert.rejects(c.send("alice", t.id, "/color red", "parent"), {
+    message: /^\/color can't run in a task/,
+  });
+
+  await assert.rejects(
+    c.editQueued("alice", t.id, queued.message_id, "/reset"),
     { message: /^\/reset can't run in a task/ },
   );
 
-  // Suggestions leave them out.
-  assert.ok(
-    !(await c.commands("alice", t.id)).some(({ name }) => name === "model"),
+  assert.deepEqual(
+    (await c.commands("alice", t.id)).map(({ name }) => name),
+    ["compact", "context", "review-plan", "usage"],
   );
+
+  await c.close();
+});
+
+test("without the command list, only supported commands run", async () => {
+  const provider = new TestProvider();
+  provider.commands = () => Promise.reject(new Error("Discovery failed"));
+  const { c, repo } = await setup(provider);
+  const t = await c.start("alice", input(repo, "[late]"));
+
+  await assert.rejects(c.send("alice", t.id, "/reset", "parent"), {
+    message:
+      "Couldn't check /reset against the task's commands. Try again shortly.",
+  });
+
+  await c.send("alice", t.id, "/compact", "user", { delivery: "queue" });
 
   await c.close();
 });

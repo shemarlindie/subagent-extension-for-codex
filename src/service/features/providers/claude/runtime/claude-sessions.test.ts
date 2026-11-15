@@ -138,12 +138,19 @@ test("Claude command discovery reads the task's folder as its session would, kee
   } as unknown as Task;
 
   assert.deepEqual(await provider.commands(task), [
-    { name: "review", description: "Built in", argument_hint: "", aliases: [] },
+    {
+      name: "review",
+      description: "Built in",
+      argument_hint: "",
+      aliases: [],
+      builtin: true,
+    },
     {
       name: "usage",
       description: "Built in",
       argument_hint: "",
       aliases: ["cost"],
+      builtin: true,
     },
   ]);
 

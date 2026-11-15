@@ -503,7 +503,10 @@ export function previewTool(
       Number(args.turn),
     ),
     app_list_commands: {
-      commands: fixtureCommands.filter(({ name }) => name !== "model"),
+      // The service leaves out the commands tasks refuse.
+      commands: fixtureCommands.filter(
+        ({ name }) => !["clear", "color", "model"].includes(name),
+      ),
     },
     list_workers: [
       {

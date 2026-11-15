@@ -33,6 +33,8 @@ export interface ProviderCommand {
   /** What the command takes after its name, such as `<file>`, or empty. */
   argument_hint: string;
   aliases: string[];
+  /** True for the provider's own commands, and false for skills and plugins. */
+  builtin: boolean;
 }
 
 /** Whether a provider can start work. */
