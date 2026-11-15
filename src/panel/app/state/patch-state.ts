@@ -14,7 +14,8 @@ const READ_FIELDS = [
 
 /**
  * Applies a patch, keeping the references of read data that holds the same
- * contents, so components selecting it skip rendering.
+ * contents, so components selecting it skip rendering. Returns `state` itself
+ * when the patch changes nothing.
  */
 export function patchState(state: Snapshot, patch: Partial<Snapshot>) {
   const next = { ...state, ...patch };
@@ -27,5 +28,9 @@ export function patchState(state: Snapshot, patch: Partial<Snapshot>) {
     }
   }
 
-  return next;
+  const fields = Object.keys(patch) as (keyof Snapshot)[];
+
+  return fields.some((field) => !Object.is(next[field], state[field]))
+    ? next
+    : state;
 }

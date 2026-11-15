@@ -53,10 +53,11 @@ test("the guarded components mount in the base state", async (t) => {
   }
 });
 
-test("an idle refresh with unchanged data commits nothing", async (t) => {
+test("an idle refresh with unchanged data commits and notifies nothing", async (t) => {
   const result = await run(t, "Idle refresh with unchanged data");
 
   expect(result.commits).toBe(0);
+  expect(result.notifications).toBe(0);
 });
 
 test("a streamed delta inside a paragraph commits nothing", async (t) => {

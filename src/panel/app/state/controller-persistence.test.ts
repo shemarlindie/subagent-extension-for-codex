@@ -344,3 +344,27 @@ test("the file preview moves between changed files and saves where it is", async
     { kind: "file", taskId: "task-1", path: "src/b.ts" },
   ]);
 });
+
+test("a refresh that changes nothing notifies no subscriber and saves no view state", async (t) => {
+  const transport = new FakeTransport();
+  transport.tasks = [task("a", "/repo/a")];
+  const { controller, saved } = setupWithViewState({ view: {} }, transport);
+  t.onTestFinished(() => controller.dispose());
+  await controller.start();
+  await flush();
+
+  const snapshot = controller.getSnapshot();
+  const saves = saved.length;
+  let notifications = 0;
+  controller.subscribe(() => notifications++);
+  await controller.refresh();
+
+  assert.equal(controller.getSnapshot(), snapshot);
+  assert.equal(notifications, 0);
+  assert.equal(saved.length, saves);
+
+  transport.tasks = [{ ...task("a", "/repo/a"), title: "Renamed" }];
+  await controller.refresh();
+
+  assert.ok(notifications > 0);
+});
