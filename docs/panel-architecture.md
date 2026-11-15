@@ -30,8 +30,7 @@ or `dev/`.
 | `dev/panel/`  | Fixtures and the mock host, excluded from production.              |
 
 The panel imports browser-safe contracts and domain functions from
-`src/shared/<feature>/`, never service modules. See
-[Architecture](architecture.md#code-ownership) for that boundary.
+`src/shared/<feature>/`, never service modules.
 
 Keep helpers, focused tests and styles beside the feature or component they
 serve. Global tokens and resets live in `styles/`, and application layouts in
@@ -341,8 +340,7 @@ requests. It uses its own build configuration, separate from the development
 host, and rejects service, development and test code in the bundle. Edit the
 source files and rebuild to regenerate the HTML.
 
-Follow [Local development](development.md#checks) for automated checks.
 Controller and transport tests cover scope, races and lifecycle. Component tests
-cover interactions and draft preservation. These tests don't establish browser
-layout or native host placement, so use [UI verification](ui-verification.md)
-for those.
+cover interactions and draft preservation. Use
+[UI verification](ui-verification.md) for browser layout and native host
+placement.

@@ -32,8 +32,8 @@ client remains and its tasks finish. See
 [Reconnect after a restart](task-continuation.md#reconnect-after-a-restart).
 
 The packaged stdio proxy connects to the service or launches it. It answers the
-MCP handshake from its own tool definitions and connects in the background, so a
-cold service start can't exceed the host's MCP startup timeout.
+MCP handshake itself and connects in the background, so a cold service start
+can't exceed the host's MCP startup timeout.
 
 - Tool calls wait up to 60 seconds for the connection.
 - Each connection holds a `/api/service/presence` stream open, which tells the
@@ -98,13 +98,8 @@ them for verification.
 
 See [Checks](development.md#checks) and
 [Provider contract](provider-contract.md).
-
-### Tests
-
-Focused tests live beside their modules, including feature integration tests
-named `*.integration.test.ts`. `tests/integration/` covers runtime and
-environment boundaries. See
-[Choosing test coverage](development.md#choosing-test-coverage).
+[Choosing test coverage](development.md#choosing-test-coverage) covers test
+placement.
 
 ### Event payloads
 

@@ -293,18 +293,12 @@ including for held waits.
 These elapsed spans do not measure isolated CPU work, rendering completion or
 paint. Do not sum overlapping phases as independent costs.
 
-The reporter keeps at most one request in flight, 20 pending send or interrupt
-records and one pending aggregate per operation and phase, at most 16. While a
-request is stalled, load observations coalesce and excess individual records
-drop. A rejected batch also drops its records. A later successful batch reports
-lost records as `panel_reporting.dropped_count`. Counts and durations saturate
-at the contract's numeric bounds. Closing the panel clears pending diagnostics
-and stops further reporting. No task or owner identifiers partition load
-aggregates.
+The reporter bounds what it holds, so a stalled or rejected batch can drop
+records. A later successful batch reports them as
+`panel_reporting.dropped_count`. Closing the panel clears pending diagnostics.
 
-The panel does not measure time to the first visible reply. It polls the
-selected task for drafts, a later draft can't be matched reliably to a steer or
-queued message, and rendering doesn't prove the screen was painted. Use
+The panel does not measure time to the first visible reply, because it can't
+reliably match a later draft to a steer or queued message. Use
 `provider.first_text` for provider response latency.
 
 ## Add diagnostics

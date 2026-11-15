@@ -186,13 +186,7 @@ plugin, see
 
 ## Documentation
 
-Before working on the codebase, read in this order:
-
-1. [Architecture](docs/architecture.md) for runtime ownership and code
-   boundaries.
-2. [Local development](docs/development.md#choosing-a-development-tool) for
-   choosing a development tool, and its [checks](docs/development.md#checks).
-3. The guide for the area you are changing, listed below.
+Before working on the codebase, see [What to read](AGENTS.md#what-to-read).
 
 ### Use and operate the extension
 
@@ -210,7 +204,7 @@ Before working on the codebase, read in this order:
 | ------------------------------------------------------------- | ------------------------------------------------------------ |
 | Report a problem or propose a change                          | [Contributing](CONTRIBUTING.md)                              |
 | Report a security problem                                     | [Security policy](SECURITY.md)                               |
-| Follow contribution and documentation conventions             | [Agent instructions](AGENTS.md)                              |
+| Follow code, test and writing conventions                     | [Agent instructions](AGENTS.md)                              |
 | Understand runtime ownership and system boundaries            | [Architecture](docs/architecture.md)                         |
 | Build, test, connect or preview the extension                 | [Local development](docs/development.md)                     |
 | Change React components, styling and client state             | [Panel architecture](docs/panel-architecture.md)             |
@@ -219,7 +213,7 @@ Before working on the codebase, read in this order:
 | Change storage, migrations or transactions                    | [Database and migrations](docs/database.md)                  |
 | Qualify Claude CLI/SDK updates or run authenticated scenarios | [Claude execution verification](docs/claude-verification.md) |
 | Capture the README's showcase images and video                | [Showcase captures](docs/showcase.md)                        |
-| Publish a release or maintain the CI runner                   | [Releasing and CI](docs/releasing.md)                        |
+| Publish a release or maintain CI                              | [Releasing and CI](docs/releasing.md)                        |
 
 ### Integrate providers and hosts
 
