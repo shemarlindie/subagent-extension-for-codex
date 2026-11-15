@@ -195,8 +195,8 @@ test("commands sent or steered while a task waits to start run as turns of their
   // No concurrency, so the task waits to start.
   const { c, store, repo } = await setup(recorder, 0);
   const t = await c.start("alice", input(repo));
-  await c.send("alice", t.id, "Also check the tests", "user");
   const sent = await c.send("alice", t.id, "/compact", "user");
+  await c.send("alice", t.id, "Also check the tests", "user");
 
   const usage = await c.send("alice", t.id, "/usage", "user", {
     delivery: "queue",

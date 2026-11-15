@@ -161,7 +161,7 @@ function queuedMessage(t: Task, messageId: string) {
 /**
  * Whether a steer can join the unsent messages of a turn that hasn't
  * started. When the provider runs commands, a command needs the turn to
- * itself.
+ * itself. The first turn already carries the task description.
  */
 export function joinsUnsent(
   store: Store,
@@ -173,7 +173,7 @@ export function joinsUnsent(
 
   return (
     !commands ||
-    !unsent.length ||
+    (!unsent.length && t.turn > 0) ||
     ![message, ...unsent.map((m) => m.message)].some(slashCommand)
   );
 }
