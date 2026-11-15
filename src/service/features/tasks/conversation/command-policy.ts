@@ -35,10 +35,10 @@ export async function checkCommand(
     );
   }
 
-  // An alias runs its command.
-  const command = commands.find(
-    (c) => c.name === name || c.aliases.includes(name),
-  );
+  // An alias runs its command, unless another command has that exact name.
+  const command =
+    commands.find((c) => c.name === name) ??
+    commands.find((c) => c.aliases.includes(name));
 
   const reason = provider.taskPolicy.commandRefusal(
     command?.name ?? name,
