@@ -75,7 +75,7 @@ export function CommandMenu({
   );
 
   const items = query === undefined ? [] : matchingCommands(commands, query);
-  // Escape hides the menu until the draft changes.
+  // Escape hides the menu until the draft is edited or set to another one.
   const [dismissed, setDismissed] = useState<string>();
   const [highlighted, setHighlighted] = useState<ProviderCommand>();
   const open = items.length > 0 && dismissed !== draft;
@@ -112,6 +112,7 @@ export function CommandMenu({
   });
 
   const change = (value: string, { reason }: { reason: string }) => {
+    setDismissed(undefined);
     if (reason === "item-press") complete(value);
     else onDraftChange(value);
   };
@@ -146,7 +147,9 @@ export function CommandMenu({
       open={open}
       onOpenChange={openChange}
       onItemHighlighted={setHighlighted}
-      autoHighlight
+      // The menu also opens when the caret moves into a command, which
+      // highlights only with "always".
+      autoHighlight="always"
       mode="none"
     >
       <div className="command-field" ref={field} data-command={typed && ""}>

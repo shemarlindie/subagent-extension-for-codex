@@ -22,12 +22,16 @@ test("the composer suggests slash commands and leaves other keys to the textarea
   // The textarea's text is transparent over the highlight that paints it.
   await expect(page.locator(".command-highlight")).toHaveText("/context ");
 
-  // Escape hides the menu and keeps the draft.
+  // Escape hides the menu and keeps the draft until the next edit, even one
+  // that returns to the same draft.
   await composer.fill("/u");
   await expect(options).toHaveText([/^\/usage/]);
   await composer.press("Escape");
   await expect(options).toHaveCount(0);
   await expect(composer).toHaveValue("/u");
+  await composer.press("s");
+  await composer.press("Backspace");
+  await expect(options).toHaveText([/^\/usage/]);
 
   // A command with text after it completes in place.
   await composer.fill("/co keep the plan");
