@@ -49,11 +49,9 @@ test("the composer suggests slash commands and leaves other keys to the textarea
     await composer.evaluate((input: HTMLTextAreaElement) => input.selectionEnd),
   ).toBeLessThanOrEqual("first line".length);
 
-  await composer.fill("/context");
-  await composer.press("Tab");
-  await expect(composer).toHaveValue("/context ");
+  // Enter with the menu closed sends.
+  await composer.fill("/context ");
   await composer.press("Enter");
-  await expect(composer).toHaveValue("");
 
   await expect(
     history

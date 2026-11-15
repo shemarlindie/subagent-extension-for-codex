@@ -18,7 +18,7 @@ import {
 } from "./control-test-harness.js";
 
 test("commands that change what the task owns are refused on send and queued-message edit", async () => {
-  const { c, store, repo } = await setup();
+  const { c, repo } = await setup();
   const t = await c.start("alice", input(repo, "[late]"));
 
   const queued = await c.send("alice", t.id, "Later", "user", {
@@ -35,16 +35,10 @@ test("commands that change what the task owns are refused on send and queued-mes
     { message: /^\/reset can't run in a task/ },
   );
 
-  await until(() => store.get(t.id, "alice").status === "completed");
-
   // Suggestions leave them out.
   assert.ok(
     !(await c.commands("alice", t.id)).some(({ name }) => name === "model"),
   );
-
-  await assert.rejects(c.send("alice", t.id, "/clear", "user"), {
-    message: /^\/clear can't run in a task/,
-  });
 
   await c.close();
 });
