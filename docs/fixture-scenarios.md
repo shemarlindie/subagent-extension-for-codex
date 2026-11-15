@@ -126,9 +126,6 @@ These scenarios exercise real task controls with the fake worker. See
 | Queue editing      | Queue several messages during a wait, then edit, drag or remove them. Once a message starts, the service must reject those actions.                                                        |
 | Pending input      | Use `[fixture:question]` or `[fixture:permission]`. A steer must reject while input is pending. After resolving it, submitting its old request ID must also reject.                        |
 
-Concurrency decides when queued tasks run. Queue order decides the order of
-messages within a task.
-
 ## Provider failure scenarios
 
 | Check              | Procedure and expected result                                                                                                                                                                                                 |
@@ -165,7 +162,5 @@ Use real tool calls to check the authority boundaries documented in
   report uncommitted files and preserve them. Use force only to check explicit
   discard in the disposable demo repository.
 
-The demo has a single owner, so service tests check app-only tool access and
-cross-owner isolation. Task control and approval tests and
-`src/service/platform/server/conversation-tools.integration.test.ts` cover
-ownership, permission routing, stale input and queue controls.
+The demo has a single owner, so it can't show app-only tool access or
+cross-owner isolation. Service tests cover those.

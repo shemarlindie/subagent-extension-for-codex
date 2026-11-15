@@ -266,8 +266,7 @@ revision, budgets and the Bash sandbox use your settings defaults.
 and revision, approval decision maker, Bash sandbox and budgets. The mode and
 sandbox apply to this task only. Saving them would change later tasks, including
 those agents start, so change the defaults in **Settings**. The form blocks
-unsupported cost budgets and notes that Claude checks cost after each response,
-so a response can exceed the limit.
+unsupported cost budgets and notes that a response can exceed the cost limit.
 
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.

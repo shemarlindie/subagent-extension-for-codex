@@ -37,9 +37,6 @@ running the service. It avoids the `PLUGIN_DATA` directory Codex gives plugins
 because Codex may delete that directory on uninstall, along with task history
 and worktree records.
 
-See [Local development](development.md) for `.env`, startup conflicts and
-packaging.
-
 ### Service address
 
 The plugin uses port 17317 by default. If another program holds it and no
@@ -220,10 +217,6 @@ export. It can also change permissions and other user-only settings. Import
 skips unknown settings, invalid values and an unavailable default provider, then
 lists what it skipped. Omitted and skipped settings keep their current values.
 If the export uses a newer format, update the extension before importing it.
-Exports from before settings were grouped can't be imported. Export them again.
-
-Tool integrators should see
-[App and user authority](mcp-reference.md#app-and-user-authority).
 
 ## Model and reasoning defaults
 
@@ -237,12 +230,10 @@ value set in this order:
 | Provider | `models.providers.claude.model`   | `models.providers.claude.reasoning_effort`   |
 
 A blank model and `default` reasoning inherit from the next scope. When every
-scope inherits, the provider runtime's default applies. Global model and
-reasoning defaults are no longer supported. Existing saved global values are
-ignored, and imports list their paths as skipped. They are never copied into
-provider or profile defaults. Task values come from `start_task`, the New task
-composer or the Advanced task dialog. Permission mode and session restrictions
-follow their own rules below.
+scope inherits, the provider runtime's default applies. Saved values from the
+removed global defaults are ignored, and imports list them as skipped. Task
+values come from `start_task`, the New task composer or the Advanced task
+dialog. Permission mode and session restrictions follow their own rules below.
 
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
@@ -352,6 +343,13 @@ with an AppArmor profile for `bwrap` or by setting
 `kernel.apparmor_restrict_unprivileged_userns=0`. The second option applies to
 every program on the computer.
 
+Worktrees separate checkouts but do not restrict commands. With default
+settings, a task with a write profile has your full Claude Code capabilities.
+The model and API harness run outside the Bash sandbox, and containment of the
+whole harness is unverified. The service is meant for local, single-user use and
+listens on loopback by default. For trusted LAN development, see
+[Access from your local network](development.md#access-from-your-local-network).
+
 ### Org policy
 
 Org policy outranks these settings, and Claude Code enforces it whether or not
@@ -392,10 +390,3 @@ Limits:
   an older ID of an allowed family. An alias still works.
 - A denied tool call doesn't say who set the rule, so denials aren't attributed
   to the organization.
-
-Worktrees separate checkouts but do not restrict commands. With default
-settings, a task with a write profile has your full Claude Code capabilities.
-The model and API harness run outside the Bash sandbox, and containment of the
-whole harness is unverified. The service is meant for local, single-user use and
-listens on loopback by default. For trusted LAN development, see
-[Access from your local network](development.md#access-from-your-local-network).

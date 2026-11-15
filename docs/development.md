@@ -9,7 +9,7 @@ Use this guide to build, run, change and check the project from a checkout.
   event notifications.
 - [Claude execution verification](claude-verification.md) covers CLI and SDK
   qualification and opt-in authenticated scenarios.
-- [Releasing and CI](releasing.md) covers publishing versions and the CI runner.
+- [Releasing and CI](releasing.md) covers publishing versions and CI.
 - [Showcase captures](showcase.md) covers the README's images and video.
 
 Run every command from the project root. You need Node.js 24 or later and Git.
@@ -535,10 +535,6 @@ contract edits, and build first when a test reads `dist/`. Vitest hides console
 output from passing tests when it detects an agent. Add `--silent=false` to see
 the warnings and logs CI shows.
 
-Vitest keeps file isolation. The `unit-dom` project uses VM threads. Keep
-process, SQLite and native-boundary tests in the Node projects because objects
-returned by native APIs can cross VM realms.
-
 Format edited files with:
 
 ```sh
@@ -566,15 +562,6 @@ complexity suppressions in `oxlint-suppressions.json`. Remove them with
 `npx oxlint --type-aware --prune-suppressions`. If Knip reports a file loaded by
 path as unused, declare its entry point in `knip.json`.
 
-Unit tests, including the jsdom suites in `tests/ui/`, time out after 15
-seconds. Integration and browser tests allow 60 seconds for process and worktree
-setup. Put shared colocated test setup in a `<module>-test-harness.ts` file,
-which lint, type checks and builds treat as test code.
-
-Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
-methods. Formatting a failed Node assertion can hang on jsdom's document graph.
-Use `toBe` for identity, `toEqual` for structure and `toBeNull` for absence.
-
 [UI verification](ui-verification.md) covers manual browser checks, and
 [Live Claude checks](claude-verification.md#live-claude-checks) cover opt-in
 tests that make model calls. Before changing performance behavior, compare
@@ -588,10 +575,8 @@ Before adding a test, name the behavior it protects and inspect existing
 coverage. Give each behavior one primary test layer, starting from the broadest
 that can reliably exercise it. Go broader only when the behavior depends on what
 that layer adds. Extend the test or suite that already owns it when possible.
-
 Add tests or cases only when existing coverage does not adequately protect
-changed behavior or a concrete, relevant failure. Don't add tests that add bloat
-for little protection.
+changed behavior or a concrete, relevant failure.
 
 | Layer             | Location                                                                       | Covers                                                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -599,13 +584,11 @@ for little protection.
 | Integration tests | `*.integration.test.ts` beside the owning code, or `tests/integration/`        | Service, transport, process and Git boundaries that need direct control or the console cannot reach                         |
 | Unit tests        | `*.test.ts` or `*.test.tsx` beside the module, and jsdom suites in `tests/ui/` | Complicated logic and cases broader tests cannot reliably exercise                                                          |
 
-Feature integration tests that combine task control with real SQLite, Git or
-worker execution sit beside their owning code. Cross-runtime, HTTP, MCP, package
-and process suites go in `tests/integration/`. Both run in Vitest's
-`integration` project, which `test:unit` excludes. Classify a test by its
-fixtures and assertions. Real socket and child-process tests belong in
-integration coverage even with fake services or executables. A temporary
-directory alone does not make a test an integration test.
+Feature integration tests with real SQLite, Git or worker execution sit beside
+their owning code. Cross-runtime, HTTP, MCP, package and process suites go in
+`tests/integration/`. Classify a test by its fixtures and assertions. Real
+socket and child-process tests are integration tests even with fake services or
+executables. A temporary directory alone does not make one.
 
 Process tests should launch built `dist/` service entrypoints unless the source
 loader is itself under test. Keep real process, socket and Git boundaries when
@@ -640,6 +623,17 @@ for timing behavior. Held checkpoints must remain interruptible during cleanup.
 Paste incidental fixture text, and keep actual typing for keyboard behavior.
 Mount the owning page for local form checks, and keep the full shell for
 navigation, focus restoration and scope changes.
+
+Unit tests, including the jsdom suites in `tests/ui/`, time out after 15
+seconds. Integration and browser tests allow 60 seconds for process and worktree
+setup. The `unit-dom` project uses VM threads, where objects from native APIs
+can cross VM realms, so keep process, SQLite and native-boundary tests in the
+Node projects. Put shared colocated test setup in a `<module>-test-harness.ts`
+file, which lint, type checks and builds treat as test code.
+
+Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
+methods. Formatting a failed Node assertion can hang on jsdom's document graph.
+Use `toBe` for identity, `toEqual` for structure and `toBeNull` for absence.
 
 #### Test levels
 

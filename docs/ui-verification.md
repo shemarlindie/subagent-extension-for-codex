@@ -8,16 +8,15 @@ service connections and [fixture recording](development.md#recorded-fixtures).
 ## Workflow
 
 1. Reuse the `panel-dev` server from `.claude/launch.json` (port 5317), or start
-   `npm run dev:ui`. Start `service-dev` (port 17317) only for live data. Tell
-   the user when you start or restart a server. Stop only the servers you
-   started.
+   `npm run dev:ui`. Start `service-dev` (port 17317) only for live data. Start
+   or restart a server without asking, and tell the user when you do.
 2. Open `http://127.0.0.1:5317`, set **Data** to **Fixtures**, and **Relaunch**.
    The iframe may stay blank briefly.
 3. Check the relevant scenarios at narrow and wide widths, and in both themes
    when layout or styling changes. Check keyboard navigation, focus, loading,
    error and empty states when the change involves them.
 4. Afterwards, use **Reset projects** and clear **Claude Code unavailable** if
-   you changed them.
+   you changed them. Stop the servers you started, and leave others running.
 
 Fixture mode makes no model calls and sends nothing to a real parent chat. Its
 interactions still update fixture state and temporary Git repositories. Use live

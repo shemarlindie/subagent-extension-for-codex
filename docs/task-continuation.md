@@ -117,15 +117,6 @@ another machine does not ensure native session continuation.
 [Database](database.md) covers migrations and
 [restoring a pre-migration backup](database.md#restore-a-backup).
 
-## Earlier development data
-
-Older builds may have left Git snapshot refs that current builds don't use. Once
-no such build is running, remove them from a repository:
-
-```sh
-git for-each-ref --format='%(refname)' refs/agent-tasks | xargs -n1 git update-ref -d
-```
-
 ## Troubleshooting
 
 | Symptom                                      | Check                                                                                                                                      |

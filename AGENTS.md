@@ -1,212 +1,192 @@
 # Agent instructions
 
-Keep things simple and treat over-engineering as a defect. See
-[Component and change conventions](#component-and-change-conventions).
+Keep things simple and treat over-engineering as a defect.
 
-## Essential reading
+## What to read
 
-- Read the [README overview and task behavior](README.md) to understand the
-  product.
-- Before choosing an approach for design or any implementation work (including
-  creating, extending, fixing and refactoring), inspect the relevant existing
-  code and instructions, and read [Architecture](docs/architecture.md) and the
-  matching guides below for ownership and system boundaries.
-- Before changing code, read the relevant
-  [development workflow](docs/development.md#choosing-a-development-tool) and
-  [checks](docs/development.md#checks). Read setup instructions only when
-  running or configuring the project.
+- To understand the product, read the [README](README.md) introduction and
+  [Start a task](README.md#start-a-task).
+- Before choosing an approach for design or implementation work, including fixes
+  and refactors, inspect the relevant code and instructions and read
+  [Architecture](docs/architecture.md).
+- Before changing code, read
+  [Choosing a development tool](docs/development.md#choosing-a-development-tool)
+  and [Checks](docs/development.md#checks). Read setup only when running or
+  configuring the project.
+- Before adding, changing or removing tests, read
+  [Choosing test coverage](docs/development.md#choosing-test-coverage).
+- Before creating a branch, committing or opening a pull request, read
+  [Commits, pull requests and branches](CONTRIBUTING.md#commits-pull-requests-and-branches).
 
-## Read when relevant
+Also read the guides that match the work area. When unsure whether one applies,
+check it.
 
-Read the matching guide's relevant sections before working in an area. Unrelated
-guides do not need to be loaded.
+- UI components, styles or client state:
+  [Panel architecture](docs/panel-architecture.md) and
+  [Panel behavior](docs/panel-guide.md).
+- Browser checks, fixtures or dev servers:
+  [UI verification](docs/ui-verification.md).
+- Provider execution, permissions or session policy:
+  [Provider contract](docs/provider-contract.md) and relevant
+  [Configuration](docs/configuration.md) sections.
+- Claude executable selection, readiness or SDK/CLI upgrades:
+  [Claude Code CLI](docs/claude-cli.md) and
+  [version qualification](docs/claude-verification.md#qualifying-claude-code-versions).
+- Settings, budgets or repository access: relevant
+  [Configuration](docs/configuration.md) sections.
+- MCP tools, user authority or panel inputs:
+  [MCP reference](docs/mcp-reference.md).
+- Host context, project/chat scope, entrypoints or mentions:
+  [Host capabilities](docs/host-capabilities.md).
+- Startup, continuation, recovery or storage:
+  [Task continuation](docs/task-continuation.md), plus
+  [Database and migrations](docs/database.md) for schema changes or migrations.
+- Capability claims or verification gaps:
+  [Host capabilities](docs/host-capabilities.md) and
+  [Claude execution verification](docs/claude-verification.md). Inspect evidence
+  only for the claim at hand.
 
-| Work area                                                  | Read                                                                                                                                                                 |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UI components, styles or client state                      | Prefer Base UI where suitable. See [Panel architecture](docs/panel-architecture.md) and [Panel behavior](docs/panel-guide.md).                                       |
-| Provider execution, permissions or session policy          | [Provider contract](docs/provider-contract.md) and relevant [Configuration](docs/configuration.md) sections.                                                         |
-| Claude executable selection, readiness or SDK/CLI upgrades | [Claude Code CLI](docs/claude-cli.md) and [version qualification](docs/claude-verification.md#qualifying-claude-code-versions).                                      |
-| Settings, budgets or repository access                     | Relevant [Configuration](docs/configuration.md) sections.                                                                                                            |
-| MCP tools, user authority or panel inputs                  | [MCP reference](docs/mcp-reference.md).                                                                                                                              |
-| Host context, project/chat scope, entrypoints or mentions  | [Host capabilities](docs/host-capabilities.md).                                                                                                                      |
-| Startup, continuation, recovery or storage                 | [Task continuation](docs/task-continuation.md). [Database and migrations](docs/database.md) for schema changes or migration.                                         |
-| Capability claims or verification gaps                     | [Host capabilities](docs/host-capabilities.md) and [Claude execution verification](docs/claude-verification.md). Inspect evidence only for the claim being assessed. |
+## Code conventions
+
+- Follow established patterns when suitable. Keep modules cohesive, and keep
+  responsibility boundaries, state and lifecycle ownership, and dependency
+  direction clear. Fix architectural weaknesses the change introduces or
+  directly affects. Leave broader improvements as recommendations.
+- Build for current requirements. Avoid speculative options, generality, layers
+  and handling for cases that cannot occur, in code, tests, docs and plans.
+  Within the affected area, simplify over-engineered code and remove
+  duplication, obsolete code and needless indirection.
+- Reuse existing components, logic, styles and infrastructure where
+  responsibilities align. Keep distinct behavior and presentation where the
+  domain requires them. Add an abstraction only when it removes real duplication
+  or clarifies ownership, and keep it free of excess configuration or coupling.
+- Organize modules by feature ownership and reasons to change. Keep a feature's
+  logic, types, UI and styles together, and group subfolders by responsibility.
+  - Panel domain logic goes in `src/panel/features`, generic helpers in
+    `src/panel/shared/utils`, and application composition and state in
+    `src/panel/app/state`. Limit panel shared code to stable cross-feature
+    concepts and platform integrations.
+  - Browser-safe contracts and domain functions used by both runtimes go in
+    feature-scoped `src/shared` modules, which must not import service execution
+    or panel rendering.
+- Keep components and utilities small and focused. Components render, and
+  reusable helpers live in their owning modules. Split files by responsibility
+  without needless fragmentation, normally one React component per file, with
+  kebab-case filenames.
+- Name components for their actual scope. Use a generic name only when the
+  component and its styling are genuinely reusable.
+- Prefer Base UI where suitable.
+- Prefer named prop and state types. Use existing types or `satisfies` when they
+  simplify code or replace repeated assertions.
+- Keep large collapsed sections lightweight. Unmount expensive child rows while
+  closed, and show a loader when asynchronous or deferred rendering needs
+  feedback.
+- Follow the repository's Oxlint rules.
+- Put repository skills in `.agents/skills`, which Codex reads. Add a stub with
+  the same frontmatter in `.claude/skills` that links to the shared skill.
 
 ## Validation
 
-- Validate the resulting behavior and relevant architectural boundaries. Match
-  checks to the change and prefer focused checks during iteration. You may skip
-  or defer expensive checks when their runtime outweighs the confidence they
-  add. Report what was skipped and why.
-- Running checks is separate from adding tests. Before adding, changing or
-  removing tests, inspect existing coverage and follow
-  [Choosing test coverage](docs/development.md#choosing-test-coverage).
+- Validate the resulting behavior and the relevant architectural boundaries.
+  Prefer focused checks while iterating. Skip or defer expensive checks when
+  their runtime outweighs the confidence they add, and report what you skipped
+  and why.
 - Before committing, run the relevant formatting, lint, type, test, build and
-  browser checks against the final changes being committed. Unrelated checks do
-  not need to run.
-- Follow the repository's Oxlint rules when editing code.
-- Format changed files as described in [Checks](docs/development.md#checks).
-- Before running HTTP integration suites, ensure the sandbox permits localhost
-  TCP listeners (`127.0.0.1`). Request escalation up front if needed. CI runners
-  need the same access. Do not skip these tests because listener binding is
-  denied.
-- Follow [Documentation style](#documentation-style) to decide whether
-  documentation needs an update. Report meaningful design decisions, intentional
-  differences from established patterns, and remaining concerns in proportion to
-  the change.
-
-### Test and documentation levels
-
-Use the [test levels](docs/development.md#test-levels) and
-[documentation levels](#documentation-levels) when the user says, for example,
-"test at level 1" or "document at level 3". Both scales run from 1 to 5 and
-control the breadth of additions.
-
-- Default to test level 2 and documentation level 2. Without an explicit level,
-  go higher only for a concrete changed contract, failure mode or reader task
-  the default leaves unaddressed. Expand only as far as that need requires and
-  briefly name the reason in the final report.
-- An explicit level is a ceiling, never a quota. Adding nothing is valid at
-  every level when existing coverage or documentation suffices. Levels do not
-  reduce required checks, fixes for broken behavior, accuracy or meaningful
-  assertions.
-- Follow Choosing test coverage for test layers, placement and pruning, and
-  Documentation style for each explanation's canonical home. Higher levels never
-  justify duplicate coverage, repeated explanations or speculative cases.
-- Never weaken an assertion to hide a regression. When the implementation
-  regresses, fix the code.
-- When an explicit ceiling leaves material risk, use existing tests or
-  authorized manual verification where possible and report the precise gap. Ask
-  only when completing the task requires scope beyond the level.
-- Before finishing, remove test and documentation additions in your changes that
-  provide no distinct regression protection or needed reader guidance.
+  browser checks against the final changes. Format changed files as
+  [Checks](docs/development.md#checks) describes.
+- HTTP integration suites need localhost TCP listeners on `127.0.0.1`. Request
+  sandbox escalation up front if needed. Never skip these tests because listener
+  binding is denied. CI runners need the same access.
+- Report meaningful design decisions, intentional departures from established
+  patterns and remaining concerns, in proportion to the change.
 
 ### Browser checks
 
 Check in the browser when a change is large, when seeing it would help, or when
 the user asks. Skip small changes that tests cover.
 
-- For large changes, use the `verify-features` skill. It covers the tools,
-  scripts, and the widths, themes and states to check. For other checks, a
-  screenshot of the affected state is enough.
-- Follow [UI verification](docs/ui-verification.md) for dev-server setup,
-  fixture cases, host controls and browser measurements. Use fixture data. Use
-  live data only for behavior fixtures cannot show, and do not start tasks in
-  live mode.
-- Build preview events with the typed builder in
-  `dev/panel/scenarios/timeline.ts` or
-  [record them](docs/development.md#recorded-fixtures) with
-  `npm run fixture:record`. Add a fixture for every new event or activity row
-  kind. `dev/panel/scenarios/preview-sdk-fixtures.test.ts` replays synthetic and
-  recorded events through the provider.
-- Start or restart a needed dev server without asking for permission and notify
-  the user. Stop any dev server you started for validation when you are done.
-  Leave pre-existing servers running.
+- For large changes, use the `verify-features` skill. Otherwise a screenshot of
+  the affected state is enough.
+- Follow [UI verification](docs/ui-verification.md). Use fixture data, and use
+  live data only for behavior fixtures cannot show. Never start tasks in live
+  mode.
+- Add a fixture for every new event or activity row kind.
 
 ### Large changes
 
-- Before building on an external behavior or an unproven approach, confirm it
-  with a small probe or prototype.
+- Confirm external behavior or an unproven approach with a small probe or
+  prototype before building on it.
 - Plan a verification checklist of expected behaviors with IDs, and list
-  accepted limits separately. In the plan, have each planned commit name the IDs
-  it verifies. Evidence can be a new or existing test or a browser check. Keep
-  IDs in the plan, out of code and test names.
+  accepted limits separately. Have each planned commit name the IDs it verifies.
+  Evidence can be a new or existing test or a browser check. Keep IDs in the
+  plan, out of code and test names.
+
+### Test and documentation levels
+
+Users may ask for a level, such as "test at level 1" or "document at level 3".
+[Test levels](docs/development.md#test-levels) and
+[documentation levels](#documentation-levels) run from 1 to 5 and control the
+breadth of additions.
+
+- Default to level 2 for both. Go higher only for a concrete changed contract,
+  failure mode or reader task the default leaves unaddressed. Expand only as far
+  as that need requires, and name the reason in the final report.
+- A level is a ceiling, never a quota. Adding nothing is valid when existing
+  coverage or documentation suffices. Levels never reduce required checks, fixes
+  for broken behavior, accuracy or meaningful assertions, and never justify
+  duplicate coverage, repeated explanations or speculative cases.
+- Never weaken an assertion to hide a regression. Fix the code.
+- When a ceiling leaves material risk, use existing tests or authorized manual
+  verification where possible and report the precise gap. Ask only when the task
+  requires scope beyond the level.
+- Before finishing, remove test and documentation additions that give no
+  distinct regression protection or needed reader guidance.
 
 ## Writing style
 
 These rules apply to everything you write, including code comments,
 documentation, commit messages, pull requests, plans and chat replies.
 
-Use plain language, active voice, and direct statements. Start with the main
-point. Add the context, reasons, and examples the reader needs.
+- Use plain language, active voice and direct statements. Start with the main
+  point, then add the context, reasons and examples the reader needs.
+- Be concise, precise and consistent. Keep claims accurate, explain uncertainty
+  and avoid repetition. Skip obvious or expected behavior, including what stays
+  the same.
+- Use short paragraphs. Add headings, lists or tables when they help.
+- Avoid semicolons and dashes in sentences. Keep them where needed in code,
+  commands, formatting and hyphenated words.
+- Avoid “not X, but Y” phrasing and equivalents such as “rather than” or “not
+  just,” unless the contrast is the clearest way to make an important point.
 
-Be concise, precise and consistent. Keep claims accurate, explain uncertainty,
-and avoid repetition. Skip obvious or expected behavior, including what stays
-the same.
+## Documentation
 
-Use short paragraphs. Add headings, lists, or tables when they make the writing
-easier to follow.
-
-Avoid semicolons and dashes in sentences. Keep them where needed in code,
-commands, formatting, and hyphenated words. Avoid “not X, but Y” phrasing and
-equivalents such as “rather than” or “not just,” unless the contrast is the
-clearest way to communicate an important distinction.
-
-## Documentation style
-
-- Update documentation when the user asks, or when the change makes guidance
+- Update documentation when the user asks, or when a change makes guidance
   inaccurate or leaves a question readers need answered. Make the smallest
   sufficient edit in the canonical home.
-- Give each guide a clear purpose and audience. Keep the README focused on
-  orientation and setup. Place detailed procedures and contracts in their owning
-  guides. Include implementation details, safeguards and verification results
-  only when readers need them to use, operate or change the feature.
-- Keep one canonical home for each explanation and link to it elsewhere,
-  repeating only a brief summary needed locally. Update explanations in place
-  and remove superseded material after retaining useful details. Check affected
-  links and headings.
+- Give each guide a clear purpose and audience. Keep the README to orientation
+  and setup, and put procedures and contracts in their owning guides. Include
+  implementation details, safeguards and verification results only when readers
+  need them to use, operate or change the feature.
+- Keep one canonical home for each explanation and link to it elsewhere, with
+  only a brief local summary. Update in place, remove superseded material after
+  keeping its useful details, and check affected links and headings.
 - Describe current behavior. Keep history only when it explains a current
   decision or constraint. Check commands, examples, defaults and capability
-  claims against code and tests. State the scope of evidence. Local tests do not
-  establish live-host support.
+  claims against code and tests, and state the scope of evidence. Local tests do
+  not establish live-host support.
 
 ### Documentation levels
 
-Apply the [shared level rules](#test-and-documentation-levels) at every level.
+1. Fix guidance the change made inaccurate. Add no new explanation.
+2. Make small edits covering what readers need.
+3. Explain behavior, usage and necessary constraints.
+4. Add detailed procedures or contracts, with examples and troubleshooting where
+   useful.
+5. Write a comprehensive reference for the explicit scope.
 
-| Level | Scope                                                                                 |
-| ----- | ------------------------------------------------------------------------------------- |
-| 1     | Fix guidance the change made inaccurate. Add no new explanation.                      |
-| 2     | Make small edits covering what readers need.                                          |
-| 3     | Explain behavior, usage and necessary constraints.                                    |
-| 4     | Add detailed procedures or contracts, with examples and troubleshooting where useful. |
-| 5     | Write a comprehensive reference for the explicit scope.                               |
+## Commits
 
-## Component and change conventions
-
-- Keep responsibility boundaries clear, modules cohesive, state and lifecycle
-  ownership appropriate, and dependency direction consistent. Follow established
-  patterns when suitable. Address architectural weaknesses introduced or
-  directly affected by the change. Leave broader improvements as recommendations
-  outside the task's scope.
-- Organize modules around feature ownership and reasons to change. Keep feature
-  logic, types, UI and styles together. Group subfolders by responsibility
-  rather than file type. Put UI domain logic in `src/panel/features` and
-  reusable generic helpers in `src/panel/shared/utils`. Keep browser-safe
-  contracts and domain functions used by both runtimes in feature-scoped
-  `src/shared` modules. These must not import service execution or panel
-  rendering. Keep application composition and state in `src/panel/app/state`.
-  Limit panel shared code to stable cross-feature concepts and platform
-  integrations.
-- Reuse existing components, logic, styles and infrastructure where
-  responsibilities align. Preserve distinct behavior and presentation where the
-  domain requires them. Introduce an abstraction only when it removes real
-  duplication or clarifies ownership, and keep it free of excessive
-  configuration or coupling.
-- Keep new and existing code as simple as the task allows. Build for current
-  requirements and avoid speculative options, generality, layers and handling
-  for cases that cannot occur. Apply the same restraint to tests, documentation
-  and plans. Within the affected area, simplify over-engineered code and remove
-  unnecessary duplication, obsolete code and needless indirection. Keep
-  components and utilities small and focused, with components responsible for
-  rendering and reusable helpers in their owning modules. Split files by
-  responsibility without needless fragmentation, normally keeping one React
-  component per file. Use kebab-case component filenames.
-- Prefer named prop and state types. Use existing types or `satisfies` when they
-  simplify code or replace repeated assertions.
-- Name components for their actual scope. Use a generic name only when the
-  component and its styling are genuinely reusable. Use a domain-specific name
-  when behavior or styling is domain-specific.
-- Keep large collapsed sections lightweight: unmount expensive child rows while
-  closed, and show a loader when asynchronous or deferred rendering needs
-  feedback.
-- Put repository skills in `.agents/skills`, which Codex reads. Claude Code
-  reads `.claude/skills`, so add a stub there with the same frontmatter that
-  links to the shared skill.
-- Categorize changes into coherent, independently understandable commit groups,
-  and make dependencies/order clear so a requested group can be applied first.
-  Do not auto-commit unless implementing a plan already divided into commits or
-  the user explicitly asks.
-- Follow
-  [Commits, pull requests and branches](CONTRIBUTING.md#commits-pull-requests-and-branches)
-  for commit subjects, pull request titles and descriptions, and branch names.
+Do not auto-commit unless you are implementing a plan already divided into
+commits or the user explicitly asks. Group changes into coherent, independently
+understandable commits, and make their order and dependencies clear so a
+requested group can be applied first.

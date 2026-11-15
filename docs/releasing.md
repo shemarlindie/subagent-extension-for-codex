@@ -100,90 +100,31 @@ change them together.
 
 ## npm publishing
 
-The publish job runs on `ubuntu-latest`, since npm trusted publishing doesn't
-support self-hosted runners. It installs npm 11.21.0, because Node 24's bundled
-npm can't set dist-tags through OIDC. The publish step always passes
-`NPM_TOKEN`. While the secret exists, npm publishes with it. Once it's deleted,
-npm uses trusted publishing, so switching needs no workflow change.
+The publish job uses npm trusted publishing, configured on npmjs.com for
+workflow `release.yml` with direct `npm publish` allowed. If a prerelease fails
+to set the `next` tag, also allow `npm dist-tag`. The job installs npm 11.21.0,
+because Node 24's bundled npm can't set dist-tags through OIDC. The publish step
+also passes the `NPM_TOKEN` secret, which isn't configured, so it has no effect.
 
-## Repository and npm setup
+## Repository settings
 
-The workflow relies on settings made by hand before the first release:
+The workflow relies on these settings:
 
-1. Make the repository public. npm generates provenance only for public
-   repositories, and `codex plugin marketplace add owner/repo` fetches without
-   credentials. First uninstall the self-hosted runner and delete the
-   `MACOS_RUNNER` variable, as [CI runner](#ci-runner) describes.
-2. Create the npm account with 2FA.
-3. Create a granular token with publish access, bypass 2FA and an expiry of a
-   few days, and save it as the `NPM_TOKEN` repository secret. The first release
-   publishes with it, because a trusted publisher can only be configured for a
-   package that already exists on npm.
-4. After the first version is published, and no more than 2 days before the next
-   release, configure the trusted publisher on npmjs.com: owner `shemarlindie`,
-   repository `subagent-extension-for-codex`, workflow `release.yml`, with
-   direct `npm publish` allowed. New configurations allow only
-   `npm stage publish` by default, and a new configuration expires unless it
-   publishes within 2 days. Then delete the `NPM_TOKEN` secret and revoke the
-   token. If the first prerelease fails to set the `next` tag, also allow
-   `npm dist-tag`.
-5. Select **Enable release immutability** under **Settings → General →
-   Releases**. Each published release then locks its tag and assets.
-6. Add a tag ruleset for `v*` with **Restrict updates** and **Restrict
-   deletions** and an empty bypass list. It covers tags without a published
-   release. Leave creations unrestricted, because GitHub Actions can't be a
-   bypass actor and the workflow creates the tags.
-7. Add a branch ruleset on `main` that requires the **Listed version published**
-   check, with no bypass actors, so a release pull request can't merge before
-   its publish. The `main` ruleset must allow merge commits, which the Release
-   workflow uses.
+- **Enable release immutability** under **Settings → General → Releases** locks
+  each published release's tag and assets.
+- A tag ruleset for `v*` has **Restrict updates** and **Restrict deletions** and
+  an empty bypass list. It covers tags without a published release. Creations
+  stay unrestricted, because GitHub Actions can't be a bypass actor and the
+  workflow creates the tags.
+- A branch ruleset on `main` requires the **Listed version published** check
+  with no bypass actors, so a release pull request can't merge before its
+  publish. It must allow merge commits, which the Release workflow uses.
 
-## CI runner
+## CI
 
 `.github/workflows/ci.yml` runs the checks on Linux and macOS for pushes to
 `main` and pull requests. Windows runs the build, package tests and focused
 settings file and project file read tests. Other parts of the suite use POSIX
-shell fakes.
-
-The macOS checks run on a self-hosted runner when the `MACOS_RUNNER` repository
-variable names its label, and on `macos-latest` when the variable is unset.
-Release runs reuse these checks, so they follow the same routing. The release
-`publish` and `install` jobs always use GitHub-hosted runners.
-
-Use the self-hosted runner only while the repository is private. In a public
-repository, anyone could open a fork pull request that runs code on the host
-Mac. Before making the repository public, run `install.sh --uninstall` and
-delete the `MACOS_RUNNER` variable, so the macOS checks return to
-`macos-latest`.
-
-The scripts in `dev/ci-runner` host the runner on a Mac. Each job runs in a
-fresh [Tart](https://tart.run) VM cloned from the `macos-tahoe-base` image,
-which includes the Actions runner and Node 24. `run.sh` deletes the VM after the
-job. The scripts use your `gh` login to register runners and set the variable.
-`dev/ci-runner/config.sh` holds the repository, image, label and VM size.
-
-Install Tart and sleepwatcher, then the launchd agents:
-
-```sh
-brew install sleepwatcher
-# Install Tart from https://github.com/cirruslabs/tart/releases
-dev/ci-runner/install.sh
-```
-
-The agents run copies of the scripts, so rerun `install.sh` after changing them.
-`install.sh --uninstall` removes the agents. Logs are in
-`~/Library/Logs/ci-runner`.
-
-The runner agent sets the variable when it starts and deletes it when it stops.
-A sleepwatcher agent deletes it when the Mac sleeps and sets it again on wake. A
-job that is running when the Mac sleeps fails.
-
-If the variable stays set while the runner is offline, for example after a crash
-or power loss, macOS jobs wait in the queue. Delete it under **Settings →
-Secrets and variables → Actions → Variables** or with
-`gh variable delete MACOS_RUNNER`, then cancel and re-run the waiting jobs.
-Changing the variable doesn't move jobs that are already queued.
-
-When GitHub releases a new Actions runner, pull a newer image with
-`tart pull ghcr.io/cirruslabs/macos-tahoe-base:latest`. An outdated runner
-updates itself at the start of every job.
+shell fakes. All jobs run on GitHub-hosted runners, and release runs reuse these
+checks. The self-hosted runner scripts in `dev/ci-runner` and the `MACOS_RUNNER`
+routing in `ci.yml` are unused.
