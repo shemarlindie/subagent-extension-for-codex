@@ -3,6 +3,40 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.5.0
+
+### Features
+
+- Run only supported built-in commands in tasks (#114)
+- Run and suggest slash commands (#110)
+- Show how long a task's prompt cache stays warm (#111)
+- Scroll long message queues (#103)
+- Limit queued messages and simplify undo (#101)
+- Name worktrees and branches from the task title (#100)
+- Start new tasks from thread panels (#99)
+- Fill the sidebar icon while the task list is open (#97)
+- Add user message actions (#85)
+
+### Fixes
+
+- Clarify the prompt cache tooltip (#116)
+- Stop the prompt cache timer overstating how long it stays warm (#112)
+- Stabilize and summarize removal previews (#107)
+- Collapse thread composers by default (#106)
+- Stop reduced motion painting entrance animations' first frame (#105)
+- List the 5-hour rate-limit window before 7-day windows (#102)
+- Keep the last task marked in the mobile task list (#98)
+- Stop chat bouncing when the composer collapses (#96)
+- Retain bottom pin when the composer collapses (#94)
+- Keep the task list toggle on mobile (#93)
+- Show model details in the collapsed composer (#92)
+- Wrap composer details only when needed (#91)
+- Keep read-only profiles from exiting plan mode (#82)
+- Default new tasks to implementer (#83)
+- Mute completed task checks (#81)
+- Resume chat following when sending messages (#80)
+- Swap queue and steer keyboard shortcuts (#79)
+
 ## 0.4.0
 
 ### Features

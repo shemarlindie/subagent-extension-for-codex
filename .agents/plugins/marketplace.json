@@ -7,7 +7,7 @@
       "source": {
         "source": "npm",
         "package": "subagent-extension-for-codex",
-        "version": "0.4.0"
+        "version": "0.5.0"
       },
       "category": "Coding"
     }
