@@ -43,10 +43,12 @@ jobs:
         timeout-minutes: 1
       # These steps run what npm test runs, one after another, so the checks
       # don't compete with the browser tests for the runner's 3 macOS cores.
-      # Later steps still run after a failed check, so one run reports every
-      # failure. The timeouts stop a stuck step well before GitHub's 6 hour
-      # limit.
+      # Source checks give the same result on every OS, so only Ubuntu runs
+      # them. Later steps still run after a failed check, so one run reports
+      # every failure. The timeouts stop a stuck step well before GitHub's 6
+      # hour limit.
       - name: Source checks
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: npm run schemas:check && npm run check:source
         timeout-minutes: 10
       - name: Build
