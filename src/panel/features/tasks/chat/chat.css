@@ -813,6 +813,14 @@ body[data-expanded-panel="true"]
   margin-top: 2px;
   color: var(--muted);
 }
+.prompt-cache-tooltip-help {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.8em;
+}
 .prompt-cache-timer[data-warning] {
   color: var(--warn);
 }
