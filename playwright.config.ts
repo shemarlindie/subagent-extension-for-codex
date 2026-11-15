@@ -9,6 +9,9 @@ export default defineConfig({
   // On CI that leaves the 3-core macOS runner one worker, so CI uses two.
   workers: process.env.CI ? 2 : "50%",
   forbidOnly: Boolean(process.env.CI),
+  // A shared CI runner can stall long enough to time out an action. The
+  // report still marks a test that passes on retry as flaky.
+  retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",
