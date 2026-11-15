@@ -12,7 +12,7 @@
   <a href="#install">Install</a> &ensp;·&ensp;
   <a href="#start-a-task">Start a task</a> &ensp;·&ensp;
   <a href="#documentation">Documentation</a> &ensp;·&ensp;
-  <a href="https://github.com/user-attachments/assets/94f0c927-e352-460e-bda1-da6856e45371">Demo video</a>
+  <a href="https://github.com/user-attachments/assets/a9ea6600-e2ec-4c16-82d8-a0d5c7be26b9">Demo video</a>
 </p>
 
 <p align="center">
