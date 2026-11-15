@@ -32,7 +32,9 @@ To delegate a task:
    `list_tasks` returns summaries, without archived tasks unless `archived` asks
    for them. Read a task's full state with `get_task`.
 4. Continue with `send_message`. Inspect pending input before answering it with
-   `submit_input` and its request ID.
+   `submit_input` and its request ID. A message that starts with a Claude Code
+   command, such as `/compact`, runs it as its own turn. See
+   [Steering, queues and budgets](panel-guide.md#steering-queues-and-budgets).
 
 Start `description` with a short title line and a blank line, then the full
 worker request. The task title is the first sentence of that line, cut to 120

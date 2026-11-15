@@ -114,6 +114,7 @@ provider identity. The policy:
 - Resolves and validates options at task creation.
 - Decides native permission requests and selects their approver.
 - Classifies questions separately. Questions stay interactive.
+- Refuses slash commands that would change what the task owns, with the reason.
 
 Resolved restrictions are stored with the task, so later settings changes cannot
 broaden an existing task's authority. Native policies own their defaults. A
@@ -124,6 +125,14 @@ A provider may validate local session state before resuming. If it rejects the
 state, or a different service worker owns the session, the task starts a fresh
 session that carries the earlier conversation in its prompt. See
 `ProviderTaskPolicy` in `src/service/features/providers/task-policy.ts`.
+
+A provider with the `slash_commands` capability runs a message that starts with
+`/name` as a command, which needs a turn's whole prompt. The control plane sends
+a lone command bare on a resumed turn, and runs it after the other pending
+steers on interrupt and send. A command fails when the session can't resume,
+since a new session would run it without the conversation. The provider's steer
+sink refuses commands, and a turn waiting to start keeps them apart from its
+other messages, so they wait at the front of the queue.
 
 ## Presentation and settings
 
@@ -198,6 +207,7 @@ A provider that ends a turn before sending its prompt calls
 | `readiness()`                          | Optional. Checks the local runtime and can block new tasks while the worker stays visible. Authentication and network failures can still occur. |
 | `models(settings)`                     | Optional. Supplies model and effort suggestions using the requesting user's settings. Custom model IDs are still accepted.                      |
 | `policy(settings)`                     | Optional. What org policy limits for new tasks. Nothing means nothing known, never that everything is allowed, so checks continue as tasks run. |
+| `commands(task)`                       | Optional. Lists the slash commands the task's session offers, for suggestions. The service leaves out commands the task policy refuses.         |
 | `deleteSession(task, expectedVersion)` | Optional. Removes the confirmed session resources. Rejects a changed version.                                                                   |
 | `sessionDeletionStatus(task)`          | Required for session deletion. Lists the verified resources and their version for confirmation.                                                 |
 | `close()`                              | Optional. Releases provider resources during service shutdown.                                                                                  |

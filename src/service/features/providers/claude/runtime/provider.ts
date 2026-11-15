@@ -17,6 +17,7 @@ import {
   type ProviderReadiness,
 } from "../../../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../../../shared/settings/settings-schema.js";
+import { slashCommand } from "../../../../../shared/tasks/conversation/commands.js";
 import { type Task } from "../../../../../shared/tasks/model.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import { RunError } from "../../run-error.js";
@@ -29,6 +30,7 @@ import { ClaudeCli } from "../configuration/executable.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
+import { ClaudeCommands } from "./command-discovery.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
@@ -62,6 +64,14 @@ type CommandLifecycle = {
 /** How long an interrupt may take before the process is stopped instead. */
 const INTERRUPT_GRACE_MS = 10_000;
 
+/** What a command that ran in Claude Code printed, from its replayed message. */
+const localCommandOutput = (content: SDKUserMessage["message"]["content"]) =>
+  typeof content === "string"
+    ? /^<local-command-stdout>([\s\S]*)<\/local-command-stdout>$/
+        .exec(content)?.[1]
+        ?.trim() || undefined
+    : undefined;
+
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
   taskPolicy = claudeTaskPolicy;
@@ -79,15 +89,19 @@ export class ClaudeAgentProvider implements Provider {
     subagents: true,
     parallel_subagents: true,
     dynamic_subagents: false,
+    slash_commands: true,
   };
 
   private discoveries = new Map<string, ClaudeDiscovery>();
+  private commandLists: ClaudeCommands;
 
   constructor(
     private launch: typeof query = query,
     private cli: Pick<ClaudeCli, "status" | "executable"> = new ClaudeCli(),
     private fullEvents = false,
-  ) {}
+  ) {
+    this.commandLists = new ClaudeCommands(launch, cli);
+  }
 
   async readiness(options?: { refresh?: boolean }): Promise<ProviderReadiness> {
     const status = await this.cli.status(options);
@@ -124,6 +138,10 @@ export class ClaudeAgentProvider implements Provider {
 
   policy(settings?: SettingsValues) {
     return this.discovery(settings).policy();
+  }
+
+  commands(task: Task) {
+    return this.commandLists.list(task);
   }
 
   /** One discovery per configuration, as settings change what a session loads. */
@@ -213,6 +231,8 @@ export class ClaudeAgentProvider implements Provider {
     };
 
     let reply: string | undefined;
+    // What a command that ran in Claude Code printed, since its result.
+    let localOutput: string | undefined;
     // The main worker's message being streamed.
     let streaming: string | undefined;
     // A steer the CLI runs as its own turn starts again, in whatever mode
@@ -238,7 +258,12 @@ export class ClaudeAgentProvider implements Provider {
         });
 
         c.acceptSteers((steer) => {
-          if (ending || c.signal.aborted) return false;
+          // The CLI would hold a command until the turn ends, then run it
+          // as a turn of its own, so it waits for its own turn instead.
+          if (ending || c.signal.aborted || slashCommand(steer.text)) {
+            return false;
+          }
+
           const uuid = randomUUID();
           steers.set(uuid, steer.id);
 
@@ -342,6 +367,10 @@ export class ClaudeAgentProvider implements Provider {
 
         normalize(c, m);
 
+        if (m.type === "user" && "isReplay" in m) {
+          localOutput = localCommandOutput(m.message.content) ?? localOutput;
+        }
+
         if (m.type === "system" && m.subtype === "init" && !started) {
           started = true;
           await recordEffectiveSettings(c, m, stream);
@@ -392,7 +421,9 @@ export class ClaudeAgentProvider implements Provider {
           );
         }
 
-        reply = m.result;
+        // A command such as /compact gives its output and an empty result.
+        reply = m.result || localOutput || "";
+        localOutput = undefined;
 
         if (continuing) {
           continuing = false;

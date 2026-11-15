@@ -7,6 +7,7 @@ import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { withSessionOption } from "../../../../shared/providers/options.js";
+import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
   type BudgetRaise,
@@ -47,9 +48,12 @@ import {
   commitQueue,
   deliverQueued,
   editQueuedMessage,
+  holdSteer,
+  joinsUnsent,
   leaveOver,
   moveQueuedMessage,
   type QueuePlacement,
+  queueSent,
   queueSnapshot,
   recordMessage,
   recordQueueChange,
@@ -57,6 +61,7 @@ import {
   requeue,
   restoreQueuedMessages,
   steerQueuedMessage,
+  takeSteers,
 } from "./queue.js";
 import { type QueueCause, QueueWaits } from "./queue-wait.js";
 import { commitSend } from "./send-acceptance.js";
@@ -292,7 +297,7 @@ export class Control {
         }, remaining);
       }
 
-      const prompt = await turnPrompt(startup, t, newSession, signal);
+      const prompt = await turnPrompt(startup, t, provider, newSession, signal);
       const sentBefore = t.instructions_sent;
       // The session holds these from now on, so a resumed turn gets only later ones.
       t.instructions_sent = this.store.messages.count(t.id);
@@ -507,10 +512,11 @@ export class Control {
 
   /**
    * What follows a turn. Interrupt and send now starts the next turn with
-   * the pending steers. Otherwise steers the turn didn't take move to the
-   * front of the queue; an interrupted or failed turn pauses the queue, and
-   * a completed one goes straight on to the next queued message, so the task
-   * never shows as completed in between.
+   * the pending steers, though a command among others waits for a turn of
+   * its own at the front of the queue. Otherwise steers the turn didn't take
+   * move to the front of the queue; an interrupted or failed turn pauses the
+   * queue, and a completed one goes straight on to the next queued message,
+   * so the task never shows as completed in between.
    */
   private endTurn(
     t: Task,
@@ -520,8 +526,7 @@ export class Control {
     const before = queueSnapshot(t);
 
     if (sendPending && t.pending_steers.length) {
-      this.store.messages.add(t.id, ...t.pending_steers);
-      t.pending_steers = [];
+      this.store.messages.add(t.id, ...takeSteers(t, this.runsCommands(t)));
       requeue(t);
       this.queuedAfterCommit(t, "interrupt_send");
     } else {
@@ -549,17 +554,22 @@ export class Control {
   }
 
   /**
-   * Sends a pending steer to the provider. One the turn can't take any more
-   * waits at the front of the queue instead.
+   * Sends a pending steer to the provider. One the turn can't take, such as
+   * a command, waits at the front of the queue instead.
    */
   private deliver(t: Task, a: Active, steer: TaskMessage) {
     if (!a.sink || a.sink({ id: steer.id, text: steer.message })) return true;
     const before = queueSnapshot(t);
     t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
-    t.queue.unshift({ ...steer, delivery: "steer", recorded: true });
+    holdSteer(t, steer);
     commitQueue(this.store, t, before);
 
     return false;
+  }
+
+  /** Whether the task's provider runs a message's slash command. */
+  private runsCommands(t: Task) {
+    return !!this.providers.get(t.provider)?.capabilities.slash_commands;
   }
 
   /** Records the successful turn's final reply. */
@@ -948,6 +958,7 @@ export class Control {
   ): Promise<SentMessage> {
     const delivery = options.delivery ?? "steer";
     const stored = this.mutableTask(owner, id);
+    this.checkCommand(stored, message);
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
@@ -967,17 +978,18 @@ export class Control {
 
     const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
 
-    if (delivery === "queue") {
-      const before = queueSnapshot(t);
+    // A turn waiting to start takes a steer with its unsent messages, unless
+    // one of them is a command, which then waits at the front of the queue.
+    const held =
+      !a && !joinsUnsent(this.store, t, message, this.runsCommands(t));
 
+    if (delivery === "queue" || held) {
       commitSend(
         this.store,
         t,
         () => {
           if (options.budget) raiseBudget(t, options.budget);
-          t.queue.push({ ...m, delivery });
-          this.store.save(t);
-          recordQueueChange(this.store, t, before);
+          queueSent(this.store, t, m, delivery);
           record(m.id, "queued");
         },
         options.request_id,
@@ -1107,7 +1119,8 @@ export class Control {
 
     if (a?.abort.signal.aborted) throw new Error("Task was interrupted.");
 
-    const m = steerQueuedMessage(this.store, t, messageId, !!a);
+    const commands = this.runsCommands(t);
+    const m = steerQueuedMessage(this.store, t, messageId, !!a, commands);
     if (a) this.deliver(t, a, m);
 
     return t;
@@ -1116,9 +1129,29 @@ export class Control {
   /** Changes a queued message's text before it's sent. */
   editQueued(owner: string, id: string, messageId: string, message: string) {
     const t = this.queueTask(owner, id);
+    this.checkCommand(t, message);
     editQueuedMessage(this.store, t, messageId, message);
 
     return t;
+  }
+
+  /** The slash commands a task can run, for suggestions. */
+  async commands(owner: string, id: string) {
+    const t = this.store.get(id, owner);
+    const provider = this.providers.get(t.provider);
+    const commands = (await provider?.commands?.(t)) ?? [];
+
+    return commands.filter(
+      ({ name }) => !provider?.taskPolicy.commandRefusal?.(name),
+    );
+  }
+
+  /** Refuses a command the task's provider won't run in a task. */
+  private checkCommand(t: Task, message: string) {
+    const name = slashCommand(message);
+    const policy = this.providers.get(t.provider)?.taskPolicy;
+    const refusal = name && policy?.commandRefusal?.(name);
+    if (refusal) throw new Error(refusal);
   }
 
   /** Moves a queued message to `index`, behind steers the worker already has. */

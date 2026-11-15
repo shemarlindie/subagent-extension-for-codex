@@ -11,6 +11,7 @@ import {
 import { chatItems } from "../../../src/shared/tasks/conversation/chat";
 import { budgetRaiseSchema, roles } from "../../../src/shared/tasks/model";
 import { panelTask, readFields } from "../../../src/shared/tasks/task-list";
+import { fixtureCommands } from "../../service/fixture-provider-metadata";
 import { previewAbout } from "./about";
 import {
   PREVIEW_ARCHIVE_TOOLS,
@@ -501,6 +502,9 @@ export function previewTool(
       lightEventsFor(args.task_id),
       Number(args.turn),
     ),
+    app_list_commands: {
+      commands: fixtureCommands.filter(({ name }) => name !== "model"),
+    },
     list_workers: [
       {
         provider: "claude",

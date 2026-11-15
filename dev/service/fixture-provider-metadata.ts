@@ -3,7 +3,10 @@ import {
   fixtureMetadata,
   type ProviderMetadata,
 } from "../../src/shared/providers/metadata.js";
-import type { ModelChoice } from "../../src/shared/providers/types.js";
+import type {
+  ModelChoice,
+  ProviderCommand,
+} from "../../src/shared/providers/types.js";
 
 export const fixtureModels: ModelChoice[] = [
   {
@@ -21,6 +24,40 @@ export const fixtureModels: ModelChoice[] = [
   },
 ];
 
+/** Commands like Claude Code's, including one tasks refuse. */
+export const fixtureCommands: ProviderCommand[] = [
+  {
+    name: "compact",
+    description: "Clear conversation history but keep a summary in context",
+    argument_hint: "<optional custom summarization instructions>",
+    aliases: [],
+  },
+  {
+    name: "context",
+    description: "Show current context usage",
+    argument_hint: "",
+    aliases: [],
+  },
+  {
+    name: "model",
+    description: "Set the AI model for Claude Code",
+    argument_hint: "[model]",
+    aliases: [],
+  },
+  {
+    name: "review-plan",
+    description: "Review the project plan against the code",
+    argument_hint: "<plan file>",
+    aliases: [],
+  },
+  {
+    name: "usage",
+    description: "Show plan usage limits",
+    argument_hint: "",
+    aliases: ["cost"],
+  },
+];
+
 export const fixtureProviderCapabilities = {
   interrupt: true,
   session_continue: true,
@@ -33,6 +70,7 @@ export const fixtureProviderCapabilities = {
   subagents: true,
   parallel_subagents: true,
   dynamic_subagents: false,
+  slash_commands: true,
 };
 
 const fixtureEffortLevels: ProviderMetadata["defaultEffortLevels"] = [

@@ -8,6 +8,7 @@ import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import type {
   Capabilities,
   ModelChoice,
+  ProviderCommand,
   ProviderPolicy,
   ProviderReadiness,
   SessionDeletionStatus,
@@ -100,6 +101,8 @@ export interface Provider {
   models?(settings?: SettingsValues): Promise<ModelChoice[]>;
   /** What org policy limits for new tasks. Nothing means nothing known. */
   policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
+  /** The slash commands the task's session offers, for suggestions. */
+  commands?(task: Task): Promise<ProviderCommand[]>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task, expectedVersion?: string): Promise<void>;

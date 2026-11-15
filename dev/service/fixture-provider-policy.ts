@@ -1,4 +1,7 @@
-import { claudeStartOptions } from "../../src/service/features/providers/claude/configuration/task-policy.js";
+import {
+  claudeStartOptions,
+  claudeTaskPolicy,
+} from "../../src/service/features/providers/claude/configuration/task-policy.js";
 import type { ProviderTaskPolicy } from "../../src/service/features/providers/task-policy.js";
 import { executionTaskPolicy } from "../../src/service/features/providers/task-policy.js";
 import { claudeTaskOptionsSchema } from "../../src/shared/providers/claude/task-options.js";
@@ -27,6 +30,7 @@ export const fixtureTaskPolicy: ProviderTaskPolicy = {
 
     return { ...execution, provider_options };
   },
+  commandRefusal: claudeTaskPolicy.commandRefusal,
   decideInput(task, tool) {
     if (tool === "AskUserQuestion") return undefined;
 

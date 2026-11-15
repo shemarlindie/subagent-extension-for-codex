@@ -2,6 +2,7 @@
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
 import type { Task } from "../../../src/shared/tasks/model";
+import recordedCompact from "../recorded/compact.json";
 import recordedDevPlugin from "../recorded/dev-plugin.json";
 import recordedMcp from "../recorded/mcp.json";
 import recordedResume from "../recorded/resume.json";
@@ -48,6 +49,7 @@ const recordedFixtures = [
   recordedResume,
   recordedMcp,
   recordedDevPlugin,
+  recordedCompact,
 ] as unknown as RecordedFixture[];
 
 /** The fixture an id names. A missing one is a typo in the lists below. */

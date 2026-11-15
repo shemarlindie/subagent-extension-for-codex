@@ -12,6 +12,8 @@ export interface Capabilities {
   subagents: boolean;
   parallel_subagents: boolean;
   dynamic_subagents: boolean;
+  /** Runs a message that starts with `/name` as a command, in a turn of its own. */
+  slash_commands: boolean;
 }
 
 export interface ModelChoice {
@@ -22,6 +24,15 @@ export interface ModelChoice {
   description: string;
   supportsEffort?: boolean;
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
+}
+
+/** A slash command a task's session offers. */
+export interface ProviderCommand {
+  name: string;
+  description: string;
+  /** What the command takes after its name, such as `<file>`, or empty. */
+  argument_hint: string;
+  aliases: string[];
 }
 
 /** Whether a provider can start work. */

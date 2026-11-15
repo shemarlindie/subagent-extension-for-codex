@@ -345,6 +345,7 @@ compaction, new sessions and recreated worktrees.
 | Enter                             | Start an idle task's next turn, or steer during a run. |
 | Cmd/Ctrl+Enter during a run       | Queue a later turn.                                    |
 | Shift+Enter                       | Insert a newline.                                      |
+| `/` at the start of a message     | List the task's commands. Enter or Tab completes one.  |
 | Waiting for a question/permission | Messages can only be queued.                           |
 
 A failed send keeps the draft and its error. Unless the service confirms that it
@@ -370,6 +371,11 @@ service rules.
 - A paused queue offers **Resume** and **Clear**. Sending the next message also
   resumes it.
 - A task holds at most 10 waiting messages, queued or steered.
+- A message that starts with a Claude Code command, such as `/compact` or a
+  skill's `/name`, runs in a turn of its own. Sent while the task is busy, it
+  waits at the front of the queue. A command fails when the task's session can't
+  resume. `/model`, `/effort`, `/fast` and `/clear` are refused because the task
+  owns its model settings and conversation.
 - When a budget runs out, Chat shows the cost and runtime limits in a warning.
   **Apply** saves a higher limit without sending a message. Limits can only
   increase.

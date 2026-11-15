@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
+import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import type { Task } from "../../../../shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
@@ -108,8 +109,25 @@ export class SessionPrompts {
       .map((m) => m.message);
   }
 
+  /**
+   * The turn's only unsent message when the provider runs it as a command,
+   * which needs the whole prompt to itself.
+   */
+  unsentCommand(t: Task, provider: Provider) {
+    const [message, ...rest] = this.unsent(t);
+
+    return provider.capabilities.slash_commands &&
+      message !== undefined &&
+      !rest.length &&
+      slashCommand(message)
+      ? message
+      : undefined;
+  }
+
   /** A resumed session's prompt: only the messages it hasn't received. */
-  resumedPrompt(t: Task) {
+  resumedPrompt(t: Task, provider: Provider) {
+    const command = this.unsentCommand(t, provider);
+    if (command) return command;
     const unsent = this.unsent(t);
 
     return [

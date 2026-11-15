@@ -1,0 +1,63 @@
+.command-menu-popup {
+  width: var(--anchor-width);
+}
+/* One line, or two with an argument hint, truncating what doesn't fit. */
+.command-menu-text {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+.command-menu-text > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.command-menu-args,
+.command-menu-description {
+  color: var(--muted);
+  font-size: 11px;
+}
+.command-menu-args {
+  font-family: var(--font-mono);
+}
+.command-menu-text[data-args] .command-menu-description {
+  grid-column: 1 / -1;
+}
+.command-field {
+  position: relative;
+  flex: 1;
+  align-self: center;
+  display: flex;
+  min-width: 0;
+}
+/* Keeps the caret and selection above the highlight. */
+.command-field textarea {
+  position: relative;
+}
+/* The textarea's text goes transparent so the highlight under it shows. */
+.command-field[data-command] textarea {
+  color: transparent;
+  caret-color: var(--text);
+}
+/* Wraps exactly like the textarea above it, so its padding matches
+   `.chat-composer textarea`. */
+.command-highlight {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 3px 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
+}
+.command-highlight-name {
+  color: var(--accent);
+}
+.command-highlight-hint {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}

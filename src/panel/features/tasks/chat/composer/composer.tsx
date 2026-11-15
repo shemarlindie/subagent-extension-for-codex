@@ -26,7 +26,9 @@ import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { descriptionIds } from "../../../../shared/utils/description-ids";
 import { providerName } from "../../../providers/provider-name";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
+import { CommandMenu } from "./command-menu";
 import { TaskRunSettings } from "./task-run-settings";
+import { useTaskCommands } from "./use-task-commands";
 
 const QUEUE_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
   ? "⌘ + Enter"
@@ -108,6 +110,7 @@ export function Composer({
 
   const container = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   const showComposer = useRef<HTMLButtonElement>(null);
   const focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined);
 
@@ -118,6 +121,7 @@ export function Composer({
   );
 
   const canContinue = !spent;
+  const commands = useTaskCommands(task?.id, text.startsWith("/"));
 
   const [error] = useSessionState(
     "task",
@@ -307,7 +311,7 @@ export function Composer({
     }
   };
 
-  const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+  const keys = (event: KeyboardEvent) => {
     if (event.nativeEvent.isComposing) return;
 
     if (event.key === "Enter" && !event.shiftKey) {
@@ -381,22 +385,26 @@ export function Composer({
                 <Icon name="chevron-down" size={12} />
               </Button>
             </TooltipWrapper>
-            <div className="chat-composer-box">
-              <textarea
-                ref={input}
-                id="chat-composer"
-                aria-label="Message"
-                disabled={disabled}
-                aria-describedby={descriptionIds(
-                  spent ? undefined : "chat-composer-hint",
-                  error ? "chat-composer-error" : undefined,
-                )}
-                rows={1}
-                maxLength={20000}
-                placeholder={`Work with ${provider}`}
-                value={text}
-                onChange={(event) => edit(event.target.value)}
+            <div className="chat-composer-box" ref={box}>
+              <CommandMenu
+                anchor={box}
+                commands={commands}
+                draft={text}
+                onDraftChange={edit}
                 onKeyDown={keys}
+                textarea={{
+                  ref: input,
+                  id: "chat-composer",
+                  "aria-label": "Message",
+                  disabled,
+                  "aria-describedby": descriptionIds(
+                    spent ? undefined : "chat-composer-hint",
+                    error ? "chat-composer-error" : undefined,
+                  ),
+                  rows: 1,
+                  maxLength: 20000,
+                  placeholder: `Work with ${provider}`,
+                }}
               />
               <div className="chat-composer-actions">
                 {/* While a turn runs, an empty composer's button stops it. */}

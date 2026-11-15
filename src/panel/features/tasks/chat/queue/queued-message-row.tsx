@@ -1,5 +1,6 @@
 import { type DragEvent, type KeyboardEvent, useRef, useState } from "react";
 
+import { slashCommand } from "../../../../../shared/tasks/conversation/commands";
 import type { QueuedMessage } from "../../../../../shared/tasks/model";
 import {
   useController,
@@ -57,6 +58,12 @@ export function QueuedMessageRow({
   const editing = draft !== undefined;
   const canMove = movable && !editing;
   const swap = switched ? " motion-swap" : "";
+  const command = slashCommand(message.message);
+
+  // A command the running turn couldn't take waits at the front, and runs as
+  // its own turn when this one ends.
+  const runsNext =
+    command && message.recorded && task.queue[0]?.id === message.id;
 
   useAnimatedHeight(row, editing);
 
@@ -163,7 +170,15 @@ export function QueuedMessageRow({
           {message.from === "parent" && (
             <span className="chat-queue-sender">Parent agent · </span>
           )}
-          {message.message}
+          {runsNext && <span className="chat-queue-note">Runs next · </span>}
+          {command ? (
+            <>
+              <span className="chat-queue-command">/{command}</span>
+              {message.message.slice(command.length + 1)}
+            </>
+          ) : (
+            message.message
+          )}
         </p>
       ) : (
         <textarea

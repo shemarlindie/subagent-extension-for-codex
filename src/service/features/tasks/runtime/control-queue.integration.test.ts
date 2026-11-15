@@ -157,6 +157,62 @@ test("an interrupt with pending steers sends them at once as one new turn", asyn
   await c.close();
 });
 
+test("an interrupt with a command runs the pending steers first, then the command in a turn of its own", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
+  await checkpoints.ready();
+  await c.send("alice", t.id, "First thought", "user");
+  await c.send("alice", t.id, "/compact", "user", { delivery: "interrupt" });
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.deepEqual(recorder.prompts.slice(1), ["First thought", "/compact"]);
+  await c.close();
+});
+
+test("commands sent during a turn wait at the front of the queue in the order sent", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
+  await checkpoints.ready();
+  await c.send("alice", t.id, "Afterwards", "user", { delivery: "queue" });
+  await c.send("alice", t.id, "/compact", "user");
+  await c.send("alice", t.id, "/context", "user");
+
+  assert.deepEqual(
+    store.get(t.id, "alice").queue.map((m) => m.message),
+    ["/compact", "/context", "Afterwards"],
+  );
+
+  checkpoints.release();
+  await c.close();
+});
+
+test("commands sent or steered while a task waits to start run as turns of their own", async () => {
+  const recorder = new PromptRecorder();
+  // No concurrency, so the task waits to start.
+  const { c, store, repo } = await setup(recorder, 0);
+  const t = await c.start("alice", input(repo));
+  const sent = await c.send("alice", t.id, "/compact", "user");
+  await c.send("alice", t.id, "Also check the tests", "user");
+
+  const usage = await c.send("alice", t.id, "/usage", "user", {
+    delivery: "queue",
+  });
+
+  c.steerQueued("alice", t.id, usage.message_id);
+  assert.equal(sent.state, "queued");
+  c.concurrency = 1;
+  void c.schedule();
+  await until(() => store.get(t.id, "alice").turn === 3);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  assert.match(recorder.prompts[0] ?? "", /Also check the tests$/);
+  assert.deepEqual(recorder.prompts.slice(1), ["/compact", "/usage"]);
+  await c.close();
+});
+
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
   const checkpoints = new TurnCheckpoints(1, 5);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });

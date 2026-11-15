@@ -17,6 +17,32 @@ import {
   until,
 } from "./control-test-harness.js";
 
+test("commands that change what the task owns are refused on send and queued-message edit", async () => {
+  const { c, repo } = await setup();
+  const t = await c.start("alice", input(repo, "[late]"));
+
+  const queued = await c.send("alice", t.id, "Later", "user", {
+    delivery: "queue",
+  });
+
+  await assert.rejects(c.send("alice", t.id, "/model opus", "parent"), {
+    message:
+      "/model can't run in a task. A task runs every turn with the model settings it started with.",
+  });
+
+  assert.throws(
+    () => c.editQueued("alice", t.id, queued.message_id, "/reset"),
+    { message: /^\/reset can't run in a task/ },
+  );
+
+  // Suggestions leave them out.
+  assert.ok(
+    !(await c.commands("alice", t.id)).some(({ name }) => name === "model"),
+  );
+
+  await c.close();
+});
+
 test("send receipts survive restart, scope senders and reject conflicting retries", async () => {
   const { c, repo, db, dir } = await setup(undefined, 0);
   const task = await c.start("owner", input(repo));

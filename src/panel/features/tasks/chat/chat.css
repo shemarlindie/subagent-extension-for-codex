@@ -575,8 +575,12 @@ body[data-expanded-panel="true"]
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
-.chat-queue-sender {
+.chat-queue-sender,
+.chat-queue-note {
   color: var(--muted);
+}
+.chat-queue-command {
+  color: var(--accent);
 }
 .chat-queue-edit {
   flex: 1;
