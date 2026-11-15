@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { type FieldErrors, useWatch } from "react-hook-form";
+import { useWatch, type FieldErrors } from "react-hook-form";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { SettingsPageDialog } from "../../app/state/types";

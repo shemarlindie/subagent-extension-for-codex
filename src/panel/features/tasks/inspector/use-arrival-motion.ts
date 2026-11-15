@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
 
 import { useController } from "../../../app/state/controller-context";
 import {

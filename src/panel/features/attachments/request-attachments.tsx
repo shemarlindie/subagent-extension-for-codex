@@ -5,9 +5,9 @@ import { useController } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
 import {
-  type AttachmentFit,
   fitAttachments,
   moreLabel,
+  type AttachmentFit,
 } from "./attachment-fit";
 
 type RequestAttachmentsProps = {

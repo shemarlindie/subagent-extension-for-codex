@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { type FileHandle, open } from "node:fs/promises";
+import { open, type FileHandle } from "node:fs/promises";
 
 import {
   ATTACHMENT_LIMITS,

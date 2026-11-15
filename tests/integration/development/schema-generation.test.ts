@@ -34,8 +34,6 @@ function fixture(t: TestContext) {
 
   for (const file of [
     "scripts/generate-schemas.mjs",
-    "eslint.config.js",
-    "scripts/lint/source-boundaries.mjs",
     "package.json",
     ...contracts.map((contract) => `${contract}.ts`),
   ]) {
@@ -91,7 +89,7 @@ async function run(directory: string, args: string[]): Promise<Run> {
 
 // The CLI smoke check below covers --check dispatch and its failure exit.
 // Behavioral cases reuse the generator and import its validators in this worker
-// so each assertion does not reload TypeScript and ESLint in Node.
+// so each assertion does not reload TypeScript in Node.
 const { generateSchemas } = await import(
   new URL("../../../scripts/generate-schemas.mjs", import.meta.url).href
 );

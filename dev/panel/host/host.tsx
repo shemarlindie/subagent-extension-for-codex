@@ -12,14 +12,14 @@ import type {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import type { UiStatePersistence } from "../../../src/panel/app/state/types";
 import { browserUiState } from "../../../src/panel/app/view-state";
 import {
   Icon,
-  type IconName,
   ICONS,
+  type IconName,
 } from "../../../src/panel/shared/components/icons/icons";
 import type { Task } from "../../../src/shared/tasks/model";
 import { PREVIEW_THREAD } from "../scenarios/fixtures";
@@ -35,13 +35,13 @@ import {
   parseOrgPolicy,
   parseStyles,
   removeFixtureProject,
-  type Settings,
   settingsFrom,
-  type Thread,
   threadLabel,
   threadsOf,
   urlSettings,
   WIDTHS,
+  type Settings,
+  type Thread,
 } from "./host-helpers";
 import { OrgPolicyField } from "./org-policy-field";
 import { connectPanel } from "./panel-bridge";

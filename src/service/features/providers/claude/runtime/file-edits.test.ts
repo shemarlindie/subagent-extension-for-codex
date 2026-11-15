@@ -4,9 +4,9 @@ import { applyPatch, structuredPatch } from "diff";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { RunContext } from "../../types.js";
-import { claudeFileEdits, recordClaudeFileEdits } from "./file-edits.js";
-import captured from "./file-edits-fixtures/cli-2.1.300.json";
 import capturedHooks from "./file-edits-fixtures/cli-2.1.300-hooks.json";
+import captured from "./file-edits-fixtures/cli-2.1.300.json";
+import { claudeFileEdits, recordClaudeFileEdits } from "./file-edits.js";
 
 // Synthetic responses follow the SDK output declarations and the probe shapes
 // documented in the edit-log plan. They are not captured live-run evidence.

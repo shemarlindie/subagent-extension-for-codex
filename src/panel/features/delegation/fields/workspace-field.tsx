@@ -2,7 +2,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
-import { type DelegateValues, pendingPlaceholder } from "../delegate-values";
+import { pendingPlaceholder, type DelegateValues } from "../delegate-values";
 
 interface WorkspaceFieldProps {
   settingsReady?: boolean;

@@ -12,8 +12,8 @@ import {
 } from "./process-info.js";
 import {
   formatStartupPrompt,
-  type StartupOutputBlock,
   writeStartupOutput,
+  type StartupOutputBlock,
 } from "./startup-output.js";
 
 type Signal = "SIGTERM" | "SIGKILL";

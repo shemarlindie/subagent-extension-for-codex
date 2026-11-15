@@ -4,8 +4,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
-  type Query,
   query,
+  type Query,
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";

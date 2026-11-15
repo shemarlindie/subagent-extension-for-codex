@@ -1,13 +1,13 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import type { BaseUIEvent } from "@base-ui/react/types";
 import {
+  useLayoutEffect,
+  useRef,
+  useState,
   type ComponentProps,
   type KeyboardEvent,
   type RefObject,
   type SyntheticEvent,
-  useLayoutEffect,
-  useRef,
-  useState,
 } from "react";
 
 import type { ProviderCommand } from "../../../../../shared/providers/types";

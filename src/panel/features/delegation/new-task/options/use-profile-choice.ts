@@ -1,7 +1,7 @@
 import {
-  type PathValue,
   useController as useFieldController,
   useFormContext,
+  type PathValue,
 } from "react-hook-form";
 
 import { titleCase } from "../../../../../shared/text";

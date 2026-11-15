@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { currentActivityStatus } from "./activity-status.js";
-import { groupActivity } from "./activity-timeline.js";
 import { event, sdk, stream, task } from "./activity-timeline-test-harness.js";
+import { groupActivity } from "./activity-timeline.js";
 
 test("adjacent thinking events of each alias retain every token update", () => {
   for (const type of [

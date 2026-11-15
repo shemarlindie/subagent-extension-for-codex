@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useContext } from "react";
+import { Fragment, useContext, type ReactNode } from "react";
 
 import type { AboutInfo } from "../../../shared/about/types";
 import { useSnapshot } from "../../app/state/controller-context";

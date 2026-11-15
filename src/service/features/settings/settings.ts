@@ -13,9 +13,9 @@ import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js
 import { settingText } from "../../../shared/settings/setting-text.js";
 import {
   modelScope,
-  type ScopeInput,
   settingsSections,
   unsupportedEffortWarning,
+  type ScopeInput,
 } from "../../../shared/settings/settings-document.js";
 import {
   mergeSettings,
@@ -25,14 +25,14 @@ import {
   settingsDefaults,
   settingsPatchSchema,
   settingsSchema,
-  type SettingsValues,
   userOnlySetting,
+  type SettingsValues,
 } from "../../../shared/settings/settings-schema.js";
 import {
-  type InputAuthority,
   modelNameSchema,
   reasoningSchema,
   roles,
+  type InputAuthority,
 } from "../../../shared/tasks/model.js";
 import { scalarText } from "../../../shared/text.js";
 import { type Database } from "../../platform/database/database.js";

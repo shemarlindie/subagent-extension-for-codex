@@ -9,10 +9,10 @@ import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { withSessionOption } from "../../../../shared/providers/options.js";
 import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
-  type BudgetRaise,
-  type InputAuthority,
   pendingInputKind,
   roles,
+  type BudgetRaise,
+  type InputAuthority,
   type Sender,
   type Task,
   type TaskMessage,
@@ -43,6 +43,7 @@ import {
 } from "./budget.js";
 import { observeExecution } from "./execution-logging.js";
 import { ProjectGuard } from "./project-guard.js";
+import { QueueWaits, type QueueCause } from "./queue-wait.js";
 import {
   clearQueuedMessages,
   commitQueue,
@@ -52,7 +53,6 @@ import {
   joinsUnsent,
   leaveOver,
   moveQueuedMessage,
-  type QueuePlacement,
   queueSent,
   queueSnapshot,
   recordMessage,
@@ -62,24 +62,24 @@ import {
   restoreQueuedMessages,
   steerQueuedMessage,
   takeSteers,
+  type QueuePlacement,
 } from "./queue.js";
-import { type QueueCause, QueueWaits } from "./queue-wait.js";
 import { commitSend } from "./send-acceptance.js";
 import {
+  SendRequests,
   type RecordSend,
   type SendOptions,
-  SendRequests,
   type SentMessage,
 } from "./send-requests.js";
 import {
   confirmedTaskDeletion,
-  type DeletionVersions,
   projectDeletionTasks,
   taskDeletionPreview,
+  type DeletionVersions,
 } from "./task-deletion.js";
 import { startTask } from "./task-start.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
-import { type Active, recordStatusEvent } from "./turn-outcome.js";
+import { recordStatusEvent, type Active } from "./turn-outcome.js";
 import {
   startTurn,
   turnPrompt,

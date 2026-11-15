@@ -5,10 +5,10 @@ import "./field-error-demo.css";
 
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
-  type TransitionEvent,
   useEffect,
   useLayoutEffect,
   useState,
+  type TransitionEvent,
 } from "react";
 import { createRoot } from "react-dom/client";
 

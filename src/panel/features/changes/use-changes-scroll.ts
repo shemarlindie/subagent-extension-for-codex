@@ -3,9 +3,9 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { reducedMotion } from "../../shared/components/motion/motion-utils";
 import { scrollContainer } from "../../shared/utils/scroll-container";
 import {
-  type ChangesReading,
   measurePosition,
   restorePosition,
+  type ChangesReading,
 } from "./changes-reading";
 
 const TOP_SLACK_PX = 48;

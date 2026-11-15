@@ -12,8 +12,8 @@ import { challengeHeader, newChallenge, provesToken } from "./health-proof.js";
 import {
   handoff,
   launcherEnv,
-  type RunningService,
   serviceIdentity,
+  type RunningService,
 } from "./identity.js";
 import { rotateStartupLog } from "./log-rotation.js";
 import { freeLoopbackPort, PortInUseError } from "./port.js";

@@ -86,7 +86,7 @@ features and limits.
 
 ### Import rules
 
-ESLint and production builds enforce these boundaries. Test harnesses may cross
+Oxlint and production builds enforce these boundaries. Test harnesses may cross
 them for verification.
 
 - The service and panel are separate runtimes. Neither imports the other's

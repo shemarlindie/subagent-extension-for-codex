@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, type TestContext, vi } from "vitest";
+import { expect, vi, type TestContext } from "vitest";
 
 import {
   claudeActivityPresentation,

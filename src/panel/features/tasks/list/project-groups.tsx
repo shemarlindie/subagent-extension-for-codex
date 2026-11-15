@@ -1,5 +1,5 @@
 import { Accordion } from "@base-ui/react/accordion";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";

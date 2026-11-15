@@ -1,5 +1,5 @@
 import { Tabs } from "@base-ui/react/tabs";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { TabList } from "../../shared/components/tabs/tab-list";
 import { useActiveTabInView } from "../../shared/components/tabs/use-active-tab-in-view";

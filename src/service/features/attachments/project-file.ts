@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { type FileHandle, open, realpath, stat } from "node:fs/promises";
+import { open, realpath, stat, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";

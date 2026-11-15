@@ -1,19 +1,18 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
+import { act, cleanup, render } from "@testing-library/react";
+import { createElement } from "react";
 import { expect, test } from "vitest";
+
+import { getElement } from "../../utils/dom-test-harness";
+import { LazyBlock, scrollParent } from "./lazy-block";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-
-import { act, cleanup, render } from "@testing-library/react";
-import { createElement } from "react";
-
-import { getElement } from "../../utils/dom-test-harness";
-import { LazyBlock, scrollParent } from "./lazy-block";
 
 type Entry = {
   isIntersecting: boolean;

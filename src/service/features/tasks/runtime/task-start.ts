@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
 import {
   assertNoLegacyContext,
-  type InputAuthority,
   startSchema,
+  type InputAuthority,
   type Task,
 } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";

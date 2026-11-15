@@ -8,7 +8,7 @@ import type { Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import { taskArchive, tasks } from "./schema.js";
 import type { Store } from "./store.js";
-import { type TaskFilters, taskFilters } from "./task-rows.js";
+import { taskFilters, type TaskFilters } from "./task-rows.js";
 
 /**
  * Which tasks the user archived, and when. Archiving changes only what the

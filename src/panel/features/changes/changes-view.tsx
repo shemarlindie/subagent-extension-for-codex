@@ -8,9 +8,9 @@ import { ChangedFileNavigator } from "./changed-file-navigator";
 import { ChangedFileSection } from "./changed-file-section";
 import { changedFileEntries, opensByDefault } from "./changed-files";
 import {
-  type ChangesReading,
   FILE_ATTRIBUTE,
   measurePosition,
+  type ChangesReading,
 } from "./changes-reading";
 import type { Changes } from "./types";
 import {

@@ -14,8 +14,8 @@ import { useReadingScroll } from "../evidence/use-reading-scroll";
 import { ActivityGroupCard } from "./activity-group-card";
 import {
   describeDropped,
-  type DroppedSummary,
   EVENT_TAIL_SIZE,
+  type DroppedSummary,
 } from "./event-history";
 import { TaskRequestActivity } from "./task-request-activity";
 import { Timeline } from "./timeline";

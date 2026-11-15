@@ -1,10 +1,10 @@
 import {
-  type KeyboardEvent,
-  type PointerEvent,
-  type RefObject,
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type RefObject,
 } from "react";
 
 interface ScrollbarMetrics {

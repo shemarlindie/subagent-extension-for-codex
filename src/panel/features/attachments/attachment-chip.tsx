@@ -1,4 +1,4 @@
-import { type CSSProperties, useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 
 import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import { Icon } from "../../shared/components/icons/icons";

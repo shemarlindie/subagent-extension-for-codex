@@ -7,7 +7,6 @@ import { SendRejectedError } from "../../../../shared/tasks/conversation/send-er
 import type { RunContext } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
-import { Control } from "./control.js";
 import {
   input,
   pause,
@@ -16,6 +15,7 @@ import {
   TestProvider,
   until,
 } from "./control-test-harness.js";
+import { Control } from "./control.js";
 
 test("refused commands and their aliases fail on send and queued-message edit, and suggestions leave them out", async () => {
   const { c, repo } = await setup();

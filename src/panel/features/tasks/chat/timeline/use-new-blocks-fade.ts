@@ -1,4 +1,4 @@
-import { type RefObject, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 
 import {
   canAnimate,

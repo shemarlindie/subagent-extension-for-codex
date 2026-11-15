@@ -3,8 +3,8 @@ import { activityPresentation } from "../../../../shared/providers/activity/pres
 import type {
   ActivityContent,
   ActivityContentBlock,
+  ActivityRateLimitWindow,
 } from "../../../../shared/providers/activity/types";
-import type { ActivityRateLimitWindow } from "../../../../shared/providers/activity/types";
 import type { Event } from "../../../app/state/types";
 import {
   formatUserDateTime,

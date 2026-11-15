@@ -24,8 +24,8 @@ import type { ReadState } from "../../../../shared/tasks/conversation/unread.js"
 import { type Task } from "../../../../shared/tasks/model.js";
 import { now } from "../../../../shared/time.js";
 import {
-  type Database,
   openDatabase,
+  type Database,
 } from "../../../platform/database/database.js";
 import { chatEvents } from "./chat-events.js";
 import {
@@ -44,9 +44,9 @@ import {
   readCompletedFlags,
   readStates,
   readTasks,
-  type TaskFilters,
   taskFilters,
   taskReadState,
+  type TaskFilters,
 } from "./task-rows.js";
 
 const newest = desc(tasks.created_at);

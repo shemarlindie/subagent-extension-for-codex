@@ -1,10 +1,10 @@
 import {
-  type ActivityPage,
   addDropped,
-  type DroppedSummary,
   EVENT_TAIL_SIZE,
   TURN_CLOSE_STOPS,
   TURN_CLOSING_EVENTS,
+  type ActivityPage,
+  type DroppedSummary,
   type TurnActivityPage,
 } from "../../../../shared/tasks/activity/activity-tail.js";
 import type { ReadWork } from "./read-metrics.js";

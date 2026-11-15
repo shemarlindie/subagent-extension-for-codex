@@ -1,18 +1,18 @@
 import {
-  type KeyboardEvent,
-  type ReactNode,
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import {
   Group,
-  type Layout,
-  type LayoutChangedMeta,
   Panel,
   Separator,
   usePanelRef,
+  type Layout,
+  type LayoutChangedMeta,
 } from "react-resizable-panels";
 
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";

@@ -1,7 +1,7 @@
 import {
   diffPath,
-  type ParsedDiffFile,
   parseDiffFiles,
+  type ParsedDiffFile,
 } from "../file-preview/diff/diff-format";
 import type { ChangedFile, Changes } from "./types";
 

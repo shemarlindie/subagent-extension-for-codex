@@ -1,0 +1,475 @@
+// Code-quality lint only. Formatting belongs to Prettier. The rules mirror
+// ESLint's recommended and typescript-eslint's recommended sets, and the
+// listed type-aware rules run through tsgolint with --type-aware.
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react"],
+  "categories": {
+    "correctness": "off"
+  },
+  "jsPlugins": [
+    "@stylistic/eslint-plugin",
+    {
+      "name": "eslint-js",
+      "specifier": "oxlint-plugin-eslint"
+    },
+    "./scripts/lint/project-plugin.mjs"
+  ],
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "eslint/for-direction": "error",
+    "eslint/no-async-promise-executor": "error",
+    "eslint/no-case-declarations": "error",
+    "eslint/no-compare-neg-zero": "error",
+    "eslint/no-cond-assign": ["error", "except-parens"],
+    "eslint/no-constant-binary-expression": [
+      "error",
+      {
+        "checkRelationalComparisons": false
+      }
+    ],
+    "eslint/no-constant-condition": [
+      "error",
+      {
+        "checkLoops": "allExceptWhileTrue"
+      }
+    ],
+    "eslint/no-control-regex": "error",
+    "eslint/no-debugger": "error",
+    "eslint/no-delete-var": "error",
+    "eslint/no-dupe-else-if": "error",
+    "eslint/no-duplicate-case": "error",
+    // Best-effort cleanup and probing deliberately ignore failures.
+    "eslint/no-empty": [
+      "error",
+      {
+        "allowEmptyCatch": true
+      }
+    ],
+    "eslint/no-empty-character-class": "error",
+    "eslint/no-empty-pattern": [
+      "error",
+      {
+        "allowObjectPatternsAsParameters": false
+      }
+    ],
+    "eslint/no-empty-static-block": "error",
+    "eslint/no-ex-assign": "error",
+    "eslint/no-extra-boolean-cast": ["error", {}],
+    "eslint/no-fallthrough": [
+      "error",
+      {
+        "allowEmptyCase": false,
+        "reportUnusedFallthroughComment": false
+      }
+    ],
+    "eslint/no-global-assign": [
+      "error",
+      {
+        "exceptions": []
+      }
+    ],
+    "eslint/no-invalid-regexp": ["error", {}],
+    "eslint/no-irregular-whitespace": [
+      "error",
+      {
+        "skipComments": false,
+        "skipJSXText": false,
+        "skipRegExps": false,
+        "skipStrings": true,
+        "skipTemplates": false
+      }
+    ],
+    "eslint/no-loss-of-precision": "error",
+    "eslint/no-misleading-character-class": [
+      "error",
+      {
+        "allowEscape": false
+      }
+    ],
+    "eslint/no-nonoctal-decimal-escape": "error",
+    "eslint/no-prototype-builtins": "error",
+    "eslint/no-regex-spaces": "error",
+    "eslint/no-self-assign": [
+      "error",
+      {
+        "props": true
+      }
+    ],
+    "eslint/no-shadow-restricted-names": [
+      "error",
+      {
+        "reportGlobalThis": true
+      }
+    ],
+    "eslint/no-sparse-arrays": "error",
+    "eslint/no-unassigned-vars": "error",
+    "eslint/no-unsafe-finally": "error",
+    "eslint/no-unsafe-optional-chaining": [
+      "error",
+      {
+        "disallowArithmeticOperators": false
+      }
+    ],
+    "eslint/no-unused-labels": "error",
+    "eslint/no-unused-private-class-members": "error",
+    "eslint/no-useless-assignment": "error",
+    "eslint/no-useless-backreference": "error",
+    "eslint/no-useless-catch": "error",
+    "eslint/no-useless-escape": [
+      "error",
+      {
+        "allowRegexCharacters": []
+      }
+    ],
+    "eslint/preserve-caught-error": "error",
+    "eslint/require-yield": "error",
+    "eslint/use-isnan": [
+      "error",
+      {
+        "enforceForIndexOf": false,
+        "enforceForSwitchCase": true
+      }
+    ],
+    "eslint/valid-typeof": [
+      "error",
+      {
+        "requireStringLiterals": false
+      }
+    ],
+    "eslint/no-var": "error",
+    "eslint/prefer-const": [
+      "error",
+      {
+        "destructuring": "any",
+        "ignoreReadBeforeAssign": false
+      }
+    ],
+    "eslint/prefer-rest-params": "error",
+    "eslint/prefer-spread": "error",
+    "typescript/ban-ts-comment": "error",
+    "eslint/no-array-constructor": "error",
+    "typescript/no-duplicate-enum-values": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-extra-non-null-assertion": "error",
+    "typescript/no-misused-new": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-this-alias": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unsafe-declaration-merging": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "eslint/no-unused-expressions": [
+      "error",
+      {
+        "allowShortCircuit": false,
+        "allowTaggedTemplates": false,
+        "allowTernary": false
+      }
+    ],
+    "eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "typescript/no-wrapper-object-types": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-namespace-keyword": "error",
+    "typescript/triple-slash-reference": "error",
+    "eslint/no-nested-ternary": "error",
+    "eslint/one-var": ["error", "never"],
+    // One-line statements may omit braces. Anything spanning lines needs them,
+    // and every branch of an if/else matches. When Prettier wraps a long
+    // one-liner, oxlint --fix adds braces and a second Prettier pass formats
+    // them.
+    "eslint/curly": ["error", "multi-line", "consistent"],
+    // Blank-line layout is the one formatting concern Prettier leaves alone.
+    "@stylistic/padding-line-between-statements": [
+      "error",
+      {
+        "blankLine": "always",
+        "prev": "import",
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": "import",
+        "next": "import"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": [
+          "function",
+          "class",
+          "interface",
+          "type",
+          "multiline-block-like",
+          "multiline-export",
+          "multiline-const",
+          "multiline-expression"
+        ]
+      },
+      {
+        "blankLine": "always",
+        "prev": [
+          "function",
+          "class",
+          "interface",
+          "type",
+          "multiline-block-like",
+          "multiline-export",
+          "multiline-const",
+          "multiline-expression"
+        ],
+        "next": "*"
+      },
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "return"
+      }
+    ],
+    // Methods and fields are separated, except consecutive single-line fields.
+    "@stylistic/lines-between-class-members": [
+      "error",
+      "always",
+      {
+        "exceptAfterSingleLine": true
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.{ts,mts,cts,tsx}"],
+      "rules": {
+        "typescript/await-thenable": "error",
+        "typescript/no-base-to-string": "error",
+        "typescript/no-deprecated": "error",
+        "typescript/no-floating-promises": "error",
+        "typescript/no-misused-promises": "error",
+        "typescript/no-unnecessary-type-assertion": [
+          "error",
+          {
+            "checkLiteralConstAssertions": true
+          }
+        ],
+        "typescript/prefer-promise-reject-errors": "error",
+        "typescript/restrict-template-expressions": "error",
+        "typescript/switch-exhaustiveness-check": "error",
+        // Narrow missing values instead.
+        "typescript/no-non-null-assertion": "error"
+      }
+    },
+    {
+      // A detached method loses `this` when called, and tests pass mocked
+      // methods to `expect`, which never calls them. Tests also re-check
+      // values they built to fail with a clearer message.
+      "files": ["**/*.{ts,mts,cts,tsx}"],
+      "excludeFiles": [
+        "tests/**/*.ts",
+        "**/*.test.{ts,tsx}",
+        "**/*-test-harness.ts"
+      ],
+      "rules": {
+        "typescript/unbound-method": "error",
+        "typescript/no-unnecessary-condition": "error"
+      }
+    },
+    {
+      // These ceilings block growth without requiring immediate refactors.
+      // Existing over-budget functions are counted in oxlint-suppressions.json.
+      // Lower or remove the per-file ceilings below when files are refactored,
+      // and don't raise them without a review rationale.
+      "files": ["src/**/*.{ts,tsx}", "dev/**/*.{ts,tsx}"],
+      "excludeFiles": [
+        "tests/**/*.ts",
+        "**/*.test.{ts,tsx}",
+        "**/*-test-harness.ts",
+        "**/*.generated.ts"
+      ],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 400,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ],
+        "eslint/complexity": ["error", 20]
+      }
+    },
+    {
+      "files": ["src/panel/app/state/controller.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 1339,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/service/features/tasks/runtime/control.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 1000,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/host/host.tsx"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 800,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/scenarios/activity-scenarios.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 575,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/scenarios/conversation-scenarios.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 450,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/scenarios/lifecycle-scenarios.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 575,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/scenarios/timeline.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 450,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": ["dev/panel/scenarios/tools.ts"],
+      "rules": {
+        "eslint/max-lines": [
+          "error",
+          {
+            "max": 460,
+            "skipBlankLines": true,
+            "skipComments": true
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/panel/**/*.{ts,tsx}",
+        "dev/panel/host/**/*.{ts,tsx}",
+        "dev/panel/showcase/**/*.{ts,tsx}"
+      ],
+      // Node scripts beside the showcase they capture.
+      "excludeFiles": [
+        "dev/panel/showcase/capture.ts",
+        "dev/panel/showcase/frame-check.ts"
+      ],
+      "env": {
+        "browser": true
+      },
+      "rules": {
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "error"
+      }
+    },
+    {
+      // One-expression handlers read as part of the markup. Anything longer is
+      // logic that belongs in a named function. Empty no-ops and
+      // one-expression blocks, such as a ref callback's assignment, stay
+      // inline. The second handler selector also covers handlers chosen by a
+      // condition, as in `cond ? () => { … } : undefined`. A destructured
+      // useSnapshot selection lets no-unused-vars flag fields the component
+      // stopped reading.
+      "files": ["src/panel/**/*.{ts,tsx}", "dev/panel/**/*.{ts,tsx}"],
+      "rules": {
+        "eslint-js/no-restricted-syntax": [
+          "error",
+          {
+            "selector": "JSXAttribute > JSXExpressionContainer > :function > BlockStatement:not([body.length=0]):not([body.length=1][body.0.type=\"ExpressionStatement\"])",
+            "message": "Move multi-statement handlers out of JSX into a named function."
+          },
+          {
+            "selector": "JSXAttribute > JSXExpressionContainer > :matches(ConditionalExpression, LogicalExpression) > :function > BlockStatement:not([body.length=0]):not([body.length=1][body.0.type=\"ExpressionStatement\"])",
+            "message": "Move multi-statement handlers out of JSX into a named function."
+          },
+          {
+            "selector": "VariableDeclarator[id.type=\"Identifier\"] > CallExpression[callee.name=\"useSnapshot\"]:matches([arguments.0.type=\"ArrayExpression\"], [arguments.length=2], [arguments.0.body.type=\"ObjectExpression\"])",
+            "message": "Destructure the selection so lint flags unused fields. Pass a helper a named field constant."
+          }
+        ]
+      }
+    },
+    {
+      // Tests cast loosely typed protocol results and build partial fakes.
+      "files": ["tests/**/*.ts", "**/*.test.{ts,tsx}", "**/*-test-harness.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["src/**/*.{ts,tsx}"],
+      "rules": {
+        "project/source-boundaries": "error"
+      }
+    }
+  ]
+}

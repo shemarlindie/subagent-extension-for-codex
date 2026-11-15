@@ -1,4 +1,4 @@
-import { type RefObject, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 /** Keep browsing position separate from the temporary search-results view. */
 export function useSettingsSearchView(form: RefObject<HTMLFormElement | null>) {

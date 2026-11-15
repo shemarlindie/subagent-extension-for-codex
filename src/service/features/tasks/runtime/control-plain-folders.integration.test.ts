@@ -10,8 +10,8 @@ import { copyCommittedRepository } from "../../../../../tests/support/repository
 import type { Provider } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";
-import { Control } from "./control.js";
 import { FileWriter, PromptRecorder, until } from "./control-test-harness.js";
+import { Control } from "./control.js";
 
 /** Approved folders in each Git state, with a provider that records prompts. */
 async function folders<P extends Provider>(provider: P) {

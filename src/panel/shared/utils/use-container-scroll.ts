@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, type RefObject } from "react";
 
 import { scrollContainer } from "./scroll-container";
 

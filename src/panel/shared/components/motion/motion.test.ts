@@ -1,20 +1,19 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
+import { act, cleanup, render } from "@testing-library/react";
+import { createElement, useRef } from "react";
 import { expect, test } from "vitest";
+
+import { Presence } from "./presence";
+import { useAnimatedHeight } from "./use-animated-height";
+import { useListPresence } from "./use-list-presence";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-
-import { act, cleanup, render } from "@testing-library/react";
-import { createElement, useRef } from "react";
-
-import { Presence } from "./presence";
-import { useAnimatedHeight } from "./use-animated-height";
-import { useListPresence } from "./use-list-presence";
 
 type Call = {
   element: HTMLElement;

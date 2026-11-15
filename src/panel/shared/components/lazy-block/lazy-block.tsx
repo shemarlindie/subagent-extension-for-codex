@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /** How far outside the scroll area blocks mount, so scrolling finds them ready. */
 const MARGIN = "1200px 0px";

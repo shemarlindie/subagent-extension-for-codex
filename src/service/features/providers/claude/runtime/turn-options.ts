@@ -1,8 +1,8 @@
 import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
 import {
-  type ClaudePolicy,
   readOnlyProfile,
+  type ClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
 import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
 import type { Task } from "../../../../../shared/tasks/model.js";

@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import type { ClaudeUpgradeInfo } from "../../../../../shared/about/types.js";
-import { type ClaudeCliEnvironment, locateClaudeCli } from "./executable.js";
+import { locateClaudeCli, type ClaudeCliEnvironment } from "./executable.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 

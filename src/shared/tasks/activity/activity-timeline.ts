@@ -4,9 +4,7 @@ import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
 import {
   activityFailed,
-  type ActivityGroup,
   activityKind,
-  type ActivityState,
   boundaries,
   eventRowTitle,
   failureSummary,
@@ -19,6 +17,8 @@ import {
   string,
   thinkingSignal,
   toolTitle,
+  type ActivityGroup,
+  type ActivityState,
 } from "./activity-events.js";
 
 function onlyThinkingSignals(group: ActivityGroup) {

@@ -1,26 +1,68 @@
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
+import { execFile } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
-import { ESLint } from "eslint";
-import tseslint from "typescript-eslint";
-import { test } from "vitest";
+import { afterAll, test } from "vitest";
 
-// Fixture paths don't exist, so they can't join a tsconfig program.
-const eslint = new ESLint({
-  overrideConfig: tseslint.configs.disableTypeChecked,
-});
+const repository = fileURLToPath(new URL("../../../", import.meta.url));
+const oxlint = join(repository, "node_modules/oxlint/bin/oxlint");
+const execFileAsync = promisify(execFile);
+
+// The rule reads paths relative to the working directory, so each fixture is
+// written at its repository path inside a scratch root that loads only it.
+const root = mkdtempSync(join(tmpdir(), "source-boundaries-"));
+
+writeFileSync(
+  join(root, ".oxlintrc.json"),
+  JSON.stringify({
+    jsPlugins: [join(repository, "scripts/lint/project-plugin.mjs")],
+    categories: { correctness: "off" },
+    rules: { "project/source-boundaries": "error" },
+  }),
+);
+
+afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+type Diagnostic = { code: string; message: string };
 
 async function boundaryMessages(filePath: string, source: string) {
-  const [result] = await eslint.lintText(source, {
-    filePath: resolve(filePath),
-  });
+  const file = join(root, filePath);
 
-  assert.ok(result, "ESLint must return a result for the fixture");
-  assert.equal(result.fatalErrorCount, 0, "Fixture must parse as TypeScript");
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, source);
 
-  return result.messages.filter(
-    (message) => message.ruleId === "project/source-boundaries",
+  let stdout: string;
+
+  try {
+    ({ stdout } = await execFileAsync(
+      process.execPath,
+      [oxlint, "--format", "json", filePath],
+      { cwd: root, encoding: "utf8" },
+    ));
+  } catch (error) {
+    // Oxlint exits 1 when it reports a violation.
+    ({ stdout } = error as { stdout: string });
+  } finally {
+    rmSync(file);
+  }
+
+  const { diagnostics } = JSON.parse(stdout) as { diagnostics: Diagnostic[] };
+
+  const messages = diagnostics.filter(
+    ({ code }) => code === "project(source-boundaries)",
   );
+
+  assert.deepEqual(
+    diagnostics.filter((diagnostic) => !messages.includes(diagnostic)),
+    [],
+    "Fixture must parse as TypeScript",
+  );
+
+  return messages;
 }
 
 const importForms = [

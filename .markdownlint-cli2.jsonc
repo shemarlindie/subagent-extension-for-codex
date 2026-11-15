@@ -1,0 +1,21 @@
+// Content mistakes only, such as broken fragments and missing references.
+// Prettier owns Markdown formatting, so style rules stay off.
+{
+  "config": {
+    "default": false,
+    "MD001": true,
+    "MD011": true,
+    "MD018": true,
+    "MD025": true,
+    "MD037": true,
+    "MD040": true,
+    "MD042": true,
+    "MD045": true,
+    "MD051": { "ignore_case": true },
+    "MD052": true,
+    "MD053": true,
+    "MD056": true,
+  },
+  "globs": ["**/*.md"],
+  "gitignore": true,
+}

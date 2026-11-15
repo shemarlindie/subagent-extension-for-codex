@@ -235,25 +235,12 @@ test("delegation starts a read-only profile in plan mode, keeps a chosen mode an
   await enterTask(user, "Review authentication with parent approvals");
   await user.click(screen.getByRole("button", { name: "Start task" }));
 
-  await waitFor(() =>
-    assert.equal(
-      (transport.calls.find((call) => call.name === "start_task")?.args as any)
-        .provider_options.claude.approval_decider,
-      "parent_agent",
-    ),
-  );
+  const { claude } = ((await startedTask(transport)).args as any)
+    .provider_options;
 
-  assert.equal(
-    (transport.calls.find((call) => call.name === "start_task")?.args as any)
-      .provider_options.claude.permission_mode,
-    "acceptEdits",
-  );
-
-  assert.equal(
-    (transport.calls.find((call) => call.name === "start_task")?.args as any)
-      .provider_options.claude.sandbox,
-    true,
-  );
+  assert.equal(claude.approval_decider, "parent_agent");
+  assert.equal(claude.permission_mode, "acceptEdits");
+  assert.equal(claude.sandbox, true);
 });
 
 /** Serves a profile that can write, since read-only tasks lose no isolation. */

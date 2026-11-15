@@ -22,8 +22,8 @@ import {
 } from "./fixture-provider-metadata.js";
 import { fixtureTaskPolicy } from "./fixture-provider-policy.js";
 import {
-  type FixtureProviderRunState,
   runFixtureTurn,
+  type FixtureProviderRunState,
 } from "./fixture-provider-runner.js";
 
 export interface FixtureProviderOptions {

@@ -7,8 +7,8 @@ import { DiffView } from "./diff/diff-view";
 import {
   delimiterOf,
   fileSource,
-  type FileView,
   imageSource,
+  type FileView,
   type PreviewFile,
 } from "./file-format";
 import { MarkdownView } from "./markdown/markdown-view";

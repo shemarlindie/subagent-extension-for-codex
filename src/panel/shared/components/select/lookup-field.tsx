@@ -7,9 +7,9 @@ import { LoadingSpinner } from "../loading-spinner/loading-spinner";
 import { matchesLookupOption } from "./lookup-matching";
 import {
   SELECT_ACTION_VALUE,
+  selectTriggerClass,
   type SelectAction,
   type SelectFieldProps,
-  selectTriggerClass,
 } from "./select-field";
 
 type LookupFieldProps = SelectFieldProps &

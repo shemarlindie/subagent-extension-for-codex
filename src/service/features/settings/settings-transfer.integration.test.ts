@@ -6,8 +6,8 @@ import { join } from "node:path";
 import { test, type TestContext } from "vitest";
 
 import { Store } from "../tasks/storage/store.js";
-import { Settings } from "./settings.js";
 import { exportSettings, importSettings } from "./settings-transfer.js";
+import { Settings } from "./settings.js";
 
 async function fixture(t: TestContext) {
   const dir = await mkdtemp(join(tmpdir(), "settings-transfer-"));

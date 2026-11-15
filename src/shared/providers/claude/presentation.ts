@@ -1,6 +1,6 @@
 import type { TaskView } from "../../tasks/model.js";
 import { optionsForProvider } from "../options.js";
-import { type ClaudePermissionMode, permissionLabel } from "./permissions.js";
+import { permissionLabel, type ClaudePermissionMode } from "./permissions.js";
 import { claudeTaskOptionsSchema } from "./task-options.js";
 
 /** A task's native permission facts, or none when its stored options are invalid. */

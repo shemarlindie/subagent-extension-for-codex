@@ -1,23 +1,22 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createElement } from "react";
 import { expect, test } from "vitest";
+
+import type { Controller } from "../../app/state/controller";
+import { ControllerContext } from "../../app/state/controller-context";
+import { parseDiffFiles, type ParsedDiffFile } from "./diff/diff-format";
+import { type PreviewFile } from "./file-format";
+import { FilePreview } from "./file-preview";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   configurable: true,
   writable: true,
   value: true,
 });
-
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { createElement } from "react";
-
-import type { Controller } from "../../app/state/controller";
-import { ControllerContext } from "../../app/state/controller-context";
-import { type ParsedDiffFile, parseDiffFiles } from "./diff/diff-format";
-import { type PreviewFile } from "./file-format";
-import { FilePreview } from "./file-preview";
 
 const controller = {
   transport: { embedded: true },

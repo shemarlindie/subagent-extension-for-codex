@@ -4,9 +4,9 @@ import { test } from "vitest";
 
 import type { Worker } from "../../app/state/types";
 import {
-  type DelegateFormDialog,
   delegateInitialValues,
   delegateTarget,
+  type DelegateFormDialog,
 } from "./delegate-initial-values";
 
 const workers: Worker[] = [

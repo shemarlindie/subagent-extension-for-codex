@@ -1,9 +1,9 @@
 import {
-  type KeyboardEvent,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type KeyboardEvent,
 } from "react";
 
 import type { Delivery } from "../../../../../shared/tasks/model";
@@ -25,7 +25,7 @@ import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { descriptionIds } from "../../../../shared/utils/description-ids";
 import { providerName } from "../../../providers/provider-name";
-import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
+import { composerMode, spentBudget, type SpentBudget } from "../chat-model";
 import { CommandMenu } from "./command-menu";
 import { TaskRunSettings } from "./task-run-settings";
 import { useTaskCommands } from "./use-task-commands";

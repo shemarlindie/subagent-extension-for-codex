@@ -5,6 +5,10 @@ import { join } from "node:path";
 
 import { beforeEach, expect, test, vi } from "vitest";
 
+import { ExistingServiceError } from "./lease.js";
+import type { ProcessInfo } from "./process-info.js";
+import { startService } from "./startup.js";
+
 const mocks = vi.hoisted(() => ({
   serve: vi.fn(async () => undefined),
   inspectProcess: vi.fn((_pid: number): unknown => undefined),
@@ -26,10 +30,6 @@ vi.mock("./process-info.js", () => ({
 vi.mock("node:readline/promises", () => ({
   createInterface: mocks.createInterface,
 }));
-
-import { ExistingServiceError } from "./lease.js";
-import type { ProcessInfo } from "./process-info.js";
-import { startService } from "./startup.js";
 
 function setTerminalInput(t: import("vitest").TestContext) {
   const inputTTY = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");

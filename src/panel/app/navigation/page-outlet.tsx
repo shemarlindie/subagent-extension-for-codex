@@ -1,10 +1,10 @@
-import { type ComponentType, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ComponentType } from "react";
 
 import { ProjectsPage } from "../../features/projects/projects-page";
 import { SettingsPage } from "../../features/settings/settings-page";
 import { useSnapshot } from "../state/controller-context";
 import { TasksPage } from "../tasks-page";
-import { type PageId, PAGES } from "./pages";
+import { PAGES, type PageId } from "./pages";
 
 const CONTENT: Record<PageId, ComponentType> = {
   tasks: TasksPage,

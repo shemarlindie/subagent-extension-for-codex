@@ -1,4 +1,3 @@
-/* eslint-disable simple-import-sort/exports */
 import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import type { Event } from "../../../shared/events/types.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";

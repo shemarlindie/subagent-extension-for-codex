@@ -1,8 +1,8 @@
 import { Input } from "@base-ui/react/input";
 import {
-  type KeyboardEvent as ReactKeyboardEvent,
   useEffect,
   useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
 import { Button } from "../button/button";

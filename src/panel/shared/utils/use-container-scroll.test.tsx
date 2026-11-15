@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { type KeyboardEvent, useRef } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { useContainerScroll } from "./use-container-scroll";

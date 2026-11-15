@@ -2,10 +2,10 @@
 // panel runs its real HostTransport. Shared by the dev host and the showcase.
 import {
   AppBridge,
+  PostMessageTransport,
   type McpUiDisplayMode,
   type McpUiHostCapabilities,
   type McpUiHostContext,
-  PostMessageTransport,
 } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 

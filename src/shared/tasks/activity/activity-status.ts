@@ -5,13 +5,13 @@ import type { TaskView } from "../model.js";
 import {
   activityFailed,
   activityKind,
-  type ActivityState,
   lastEvent,
   sentence,
   statusTitle,
   taskEventStates,
   thinking,
   thinkingSignal,
+  type ActivityState,
 } from "./activity-events.js";
 import { groupActivity } from "./activity-timeline.js";
 

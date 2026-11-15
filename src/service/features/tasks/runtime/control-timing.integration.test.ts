@@ -10,8 +10,8 @@ import {
   TestProvider,
   until,
 } from "./control-test-harness.js";
-import { sendRef } from "./timing.js";
 import { captureTiming } from "./timing-test-harness.js";
+import { sendRef } from "./timing.js";
 
 /** Holds "Hold" turns until released or interrupted. */
 class Held extends TestProvider {

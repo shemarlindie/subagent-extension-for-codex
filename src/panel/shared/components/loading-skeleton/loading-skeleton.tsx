@@ -1,11 +1,11 @@
 import {
   createContext,
-  type ReactNode,
   useContext,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 
 import { blockUserScroll } from "../../utils/block-user-scroll";

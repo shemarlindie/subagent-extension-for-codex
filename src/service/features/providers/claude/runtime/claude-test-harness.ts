@@ -10,8 +10,8 @@ import { onTestFinished, vi } from "vitest";
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import {
   claudeOverrideDefaults,
-  type ClaudePolicy,
   resolveClaudePolicy,
+  type ClaudePolicy,
 } from "../../../../../shared/providers/claude/permissions.js";
 import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
 import { now } from "../../../../../shared/time.js";

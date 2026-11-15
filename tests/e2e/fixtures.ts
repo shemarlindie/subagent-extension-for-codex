@@ -3,10 +3,10 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
+  test as base,
   expect,
   type Locator,
   type Page,
-  test as base,
 } from "@playwright/test";
 
 import type { FixtureProviderOptions } from "../../dev/service/fixture-provider.js";

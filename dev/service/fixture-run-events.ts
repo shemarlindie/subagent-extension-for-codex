@@ -13,9 +13,9 @@ import {
   fixtureStreamPayload,
 } from "./fixture-events.js";
 import {
+  safeToolName,
   type FixtureContentScenario,
   type FixtureStreamFrame,
-  safeToolName,
 } from "./fixture-scenarios.js";
 
 export interface FixtureRunEvents {

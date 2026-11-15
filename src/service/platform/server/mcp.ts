@@ -1,14 +1,14 @@
 import {
-  type CallToolResult,
   McpServer,
+  type CallToolResult,
   type ServerContext,
 } from "@modelcontextprotocol/server";
 
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
-import { delegationPanel } from "../panel/panel.js";
 import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";
+import { delegationPanel } from "../panel/panel.js";
 import { packageVersion } from "../service/runtime.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import {

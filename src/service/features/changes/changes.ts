@@ -3,11 +3,7 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
-  type ChangeCounts,
-  type ChangedFileContent,
-  type Changes as ChangesResult,
   CHANGES_PAGE_CHARS,
-  type ChangeScope,
   decodeCursor,
   decodeFileCursor,
   diffPage,
@@ -15,6 +11,10 @@ import {
   encodeFileCursor,
   imageMime,
   isBinary,
+  type ChangeCounts,
+  type ChangedFileContent,
+  type ChangeScope,
+  type Changes as ChangesResult,
 } from "../../../shared/changes/changes.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
