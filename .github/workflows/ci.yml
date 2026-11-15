@@ -41,13 +41,30 @@ jobs:
       # for minutes before failing.
       - run: npx playwright install --with-deps chromium
         timeout-minutes: 1
-      # npm test checks schemas, formatting, lint, types and unused code, and builds.
-      # It usually takes 4 to 10 minutes and has taken up to 15 on macOS. The
-      # timeout stops a stuck test well before GitHub's 6 hour limit.
-      - run: npm test
-        timeout-minutes: 20
+      # These steps run what npm test runs, one after another, so the checks
+      # don't compete with the browser tests for the runner's 3 macOS cores.
+      # Later steps still run after a failed check, so one run reports every
+      # failure. The timeouts stop a stuck step well before GitHub's 6 hour
+      # limit.
+      - name: Source checks
+        run: npm run schemas:check && npm run check:source
+        timeout-minutes: 10
+      - name: Build
+        id: build
+        if: ${{ !cancelled() }}
+        run: npm run build:bundles
+        timeout-minutes: 5
+      - name: Unit and integration tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npx vitest run
+        timeout-minutes: 10
+      - name: Browser tests
+        id: browser
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npx playwright test
+        timeout-minutes: 15
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: ${{ !cancelled() && steps.browser.outcome == 'failure' }}
         with:
           name: browser-failures-${{ matrix.os }}
           path: test-results/
