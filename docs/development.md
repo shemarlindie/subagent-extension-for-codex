@@ -607,12 +607,14 @@ retained tests for the behavior they protect.
 
 Test behavior and documented contracts. Skip assertions that only copy constant
 tables, property projections, CSS declarations, SVG artwork or placeholder
-markup. Derive expected results independently of the production helper being
-tested. Keep parameterized cases, including viewport and theme loops, only when
-they protect distinct rules or boundaries. Leave framework and standard-library
-behavior to their own tests. Use the smallest fixtures that cross the relevant
-boundary, such as one row past a rendering block, unless the test checks scale
-itself.
+markup. Skip tests for code too simple to fail in a meaningful way, such as
+getters, pass-through wrappers, one-line mappings and plain prop forwarding.
+Test them through the callers that depend on them. Derive expected results
+independently of the production helper being tested. Keep parameterized cases,
+including viewport and theme loops, only when they protect distinct rules or
+boundaries. Leave framework and standard-library behavior to their own tests.
+Use the smallest fixtures that cross the relevant boundary, such as one row past
+a rendering block, unless the test checks scale itself.
 
 Keep fixture replay and preview simulation tests when production flows cannot
 exercise their behavior.

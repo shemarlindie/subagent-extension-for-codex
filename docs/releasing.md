@@ -95,7 +95,7 @@ The workflow (`.github/workflows/release.yml`):
    the release branch and starts CI on `main`. GitHub doesn't start CI for
    merges made by the workflow.
 
-The workflows pin the Codex CLI to the version the README lists as tested, so
+The workflows pin the Codex CLI to the minimum version the README lists, so
 change them together.
 
 ## npm publishing

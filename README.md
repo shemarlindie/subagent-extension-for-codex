@@ -12,7 +12,7 @@
   <a href="#install">Install</a> &ensp;·&ensp;
   <a href="#start-a-task">Start a task</a> &ensp;·&ensp;
   <a href="#documentation">Documentation</a> &ensp;·&ensp;
-  <a href="https://github.com/user-attachments/assets/94f0c927-e352-460e-bda1-da6856e45371">Demo video</a>
+  <a href="https://github.com/user-attachments/assets/a9ea6600-e2ec-4c16-82d8-a0d5c7be26b9">Demo video</a>
 </p>
 
 <p align="center">
@@ -35,8 +35,9 @@ And yes, some of us still use Codex.
 </picture>
 
 **Is this allowed?** Yes, when you run it on your own computer for your own
-work. It uses your local copy of Claude Code and your own sign-in, and it never
-collects or stores your Claude credentials. Anthropic's
+work. It uses your local copy of Claude Code and your own sign-in. The extension
+passes your environment to Claude Code, and it doesn't save your Claude
+credentials. Anthropic's
 [usage policy for Claude Code and the Agent SDK](https://code.claude.com/docs/en/legal-and-compliance#usage-policy)
 covers this kind of individual use.
 
@@ -59,11 +60,6 @@ You need:
   downloads the plugin with npm.
 - Git.
 - Codex CLI 0.162.1 or later, or a Codex desktop app with plugin marketplaces.
-  CI installs the plugin with 0.162.1, and older builds are untested.
-
-macOS is the primary platform. CI runs the full test suite on macOS and Linux.
-Windows CI covers builds, plugin installation, packaged-service checks, settings
-file exports and project file reads.
 
 Add the marketplace, then install the plugin:
 
@@ -77,22 +73,15 @@ Codex desktop app. You can also ask Codex to install it: _"Install the Codex
 plugin subagent-extension-for-codex from the marketplace at
 github.com/shemarlindie/subagent-extension-for-codex."_
 
-Then approve a folder, with or without Git. Use **Allow tasks here** in a chat's
-Delegated Work panel, or **Manage projects… → Add project** in the global panel.
-The plugin starts its local service the first time Codex connects.
+Tasks run only in approved projects. By default, starting a task from a chat
+approves its Git repository.
 
-While the service runs, you can also use the standalone console at
-`http://127.0.0.1:17317`. If that port is taken, see
-[Service address](docs/configuration.md#service-address) to find the console.
-Sign in with the token in
-`~/.local/share/subagent-extension-for-codex/admin-token`. Treat the token as a
-credential and keep it out of chats and commits.
-
-Claude uses the host's Claude Code credentials. By default, it also loads user,
+Claude uses the host's Claude Code credentials. If `ANTHROPIC_API_KEY` is set,
+Claude Code uses it over the subscription login. By default, it also loads user,
 project and local settings, including instructions, skills, hooks and MCP
 servers. The extension doesn't manage provider credentials. Read
-[Configuration and permissions](docs/configuration.md) before changing execution
-authority or session restrictions.
+[Configuration and permissions](docs/configuration.md) before changing task
+access.
 
 ## Start a task
 
@@ -107,27 +96,12 @@ Start a task in any of these ways:
 3. **Use the sidebar.** In the Codex desktop app, select **Delegated Work** in
    the sidebar to see tasks from every chat. **New task** starts one there.
 
-Before you start:
-
-- Tasks work in your checkout by default, including uncommitted changes. A
-  worktree keeps a task's changes separate but isn't a security sandbox. The
-  service never merges changes.
-- In a folder without Git, edits apply directly and can't be undone with Git,
-  and worktrees aren't available.
-- The researcher and reviewer profiles start in plan mode, which asks before
-  edits.
-- Usage and billing follow your Claude Code sign-in. A set `ANTHROPIC_API_KEY`
-  takes priority over a subscription login. Shown costs are estimates at API
-  list prices, and cost limits apply to these estimates. See
-  [authentication](https://code.claude.com/docs/en/authentication) and
-  [costs](https://code.claude.com/docs/en/costs).
-
 See [How tasks run](docs/panel-guide.md#how-tasks-run) for details.
 
 ## Update
 
 Codex checks the marketplace when it starts and installs new releases on its
-own. To check now:
+own, unless you pinned a version below. To check now:
 
 ```sh
 codex plugin marketplace upgrade shemarlindie
@@ -144,15 +118,11 @@ Codex keeps that version:
 
 ```sh
 codex plugin marketplace remove shemarlindie
-codex plugin marketplace add shemarlindie/subagent-extension-for-codex@v0.1.0
+codex plugin marketplace add shemarlindie/subagent-extension-for-codex@v0.5.0
 codex plugin add subagent-extension-for-codex@shemarlindie
 ```
 
 To follow new releases again, remove the marketplace and add it without a tag.
-
-Prereleases such as `v0.2.0-beta.1` are marked as prereleases on GitHub, and the
-repository's marketplace never lists them. To try one, add the marketplace at
-its tag.
 
 ## Uninstall
 
@@ -166,9 +136,10 @@ sooner, run
 `kill "$(cat ~/.local/share/subagent-extension-for-codex/service.pid)"`, which
 interrupts running turns.
 
-Tasks, settings and worktrees stay in
-`~/.local/share/subagent-extension-for-codex`. Delete that directory to remove
-them. Branches that tasks created stay in their repositories.
+Tasks, settings and the worktrees the service creates are stored in
+`~/.local/share/subagent-extension-for-codex`. If you delete that directory,
+repositories still keep their task branches and worktree records. To clean up,
+run `git worktree prune` and delete the branches.
 
 ## Troubleshooting
 
@@ -179,10 +150,7 @@ them. Branches that tasks created stay in their repositories.
 | `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port. |
 | `Port … is already in use`                     | Choose a free port or remove the address override. See [Service address](docs/configuration.md#service-address).                         |
 | Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                           |
-
-To connect a checkout over stdio or Streamable HTTP instead of installing the
-plugin, see
-[Connect Codex from a checkout](docs/development.md#connect-codex-from-a-checkout).
+| Panel shows Reconnecting… after an update      | The new service starts once the old one's running turns finish. Wait for it to reconnect.                                                |
 
 ## Documentation
 
@@ -194,7 +162,7 @@ Before working on the codebase, see [What to read](AGENTS.md#what-to-read).
 | ------------------------------------------------------ | ---------------------------------------------- |
 | Start, recover, back up or continue tasks              | [Task continuation](docs/task-continuation.md) |
 | Configure permissions, budgets and repository access   | [Configuration](docs/configuration.md)         |
-| Delegate and review work in Codex or the console       | [Panel guide](docs/panel-guide.md)             |
+| Delegate and review work in Codex                      | [Panel guide](docs/panel-guide.md)             |
 | Diagnose service errors, authentication or performance | [Logging and diagnostics](docs/logging.md)     |
 | Diagnose Claude executable readiness                   | [Claude Code CLI](docs/claude-cli.md)          |
 

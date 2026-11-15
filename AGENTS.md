@@ -1,6 +1,6 @@
 # Agent instructions
 
-Keep things simple and treat over-engineering as a defect.
+Keep things simple. Avoid over-engineering.
 
 ## What to read
 
@@ -52,10 +52,11 @@ check it.
   responsibility boundaries, state and lifecycle ownership, and dependency
   direction clear. Fix architectural weaknesses the change introduces or
   directly affects. Leave broader improvements as recommendations.
-- Build for current requirements. Avoid speculative options, generality, layers
-  and handling for cases that cannot occur, in code, tests, docs and plans.
-  Within the affected area, simplify over-engineered code and remove
-  duplication, obsolete code and needless indirection.
+- Before implementing, choose the simplest approach that meets the current
+  requirements. Avoid speculative options, generality, layers and handling for
+  cases that cannot occur, in code, tests, docs and plans. Within the affected
+  area, simplify over-engineered code and remove duplication, obsolete code and
+  needless indirection.
 - Reuse existing components, logic, styles and infrastructure where
   responsibilities align. Keep distinct behavior and presentation where the
   domain requires them. Add an abstraction only when it removes real duplication
@@ -93,7 +94,8 @@ check it.
   and why.
 - Before committing, run the relevant formatting, lint, type, test, build and
   browser checks against the final changes. Format changed files as
-  [Checks](docs/development.md#checks) describes.
+  [Checks](docs/development.md#checks) describes, and run the
+  `review-and-improve` skill on the changes.
 - HTTP integration suites need localhost TCP listeners on `127.0.0.1`. Request
   sandbox escalation up front if needed. Never skip these tests because listener
   binding is denied. CI runners need the same access.
@@ -141,6 +143,20 @@ breadth of additions.
   requires scope beyond the level.
 - Before finishing, remove test and documentation additions that give no
   distinct regression protection or needed reader guidance.
+
+## Working environment
+
+- Zsh does not split unquoted variables and fails on unmatched globs. Pipe file
+  lists to `xargs`, use arrays such as `"${files[@]}"`, and quote glob patterns
+  such as `--include='*.ts'`.
+- In a worktree session, keep git commands inside the session worktree, such as
+  with `git -C <worktree path>`.
+- Check for a running dev server before starting one. If the port belongs to
+  this app, open its URL instead.
+- If needed, check that the built-in browser pane is shown before taking
+  screenshots or running page scripts. Ask the user to show it when it is
+  hidden.
+- Write scratch files to the session scratchpad, not `/tmp`.
 
 ## Writing style
 
