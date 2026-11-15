@@ -54,10 +54,16 @@ test("the guarded components mount in the base state", async (t) => {
 });
 
 test("an idle refresh with unchanged data commits and notifies nothing", async (t) => {
-  const result = await run(t, "Idle refresh with unchanged data");
+  // A conversation's panel also reads pending updates.
+  for (const label of [
+    "Idle refresh with unchanged data",
+    "Idle refresh with unchanged data (scoped)",
+  ]) {
+    const result = await run(t, label);
 
-  expect(result.commits).toBe(0);
-  expect(result.notifications).toBe(0);
+    expect(result.commits, label).toBe(0);
+    expect(result.notifications, label).toBe(0);
+  }
 });
 
 test("a streamed delta inside a paragraph commits nothing", async (t) => {

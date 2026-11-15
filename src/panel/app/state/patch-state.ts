@@ -10,6 +10,7 @@ const READ_FIELDS = [
   "events",
   "droppedEvents",
   "chat",
+  "pendingUpdates",
 ] satisfies (keyof Snapshot)[];
 
 /**
