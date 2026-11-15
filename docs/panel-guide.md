@@ -374,8 +374,9 @@ service rules.
 - A message that starts with a Claude Code command, such as `/compact` or a
   skill's `/name`, runs in a turn of its own. Sent while the task is busy, it
   waits at the front of the queue. A command fails when the task's session can't
-  resume. `/model`, `/effort`, `/fast` and `/clear` are refused because the task
-  owns its model settings and conversation.
+  resume. Skills and plugin commands always run. Claude Code's own commands run
+  only once checked to work in a task. The rest, such as `/model`, `/clear` and
+  `/config`, are refused and left out of suggestions.
 - When a budget runs out, Chat shows the cost and runtime limits in a warning.
   **Apply** saves a higher limit without sending a message. Limits can only
   increase.

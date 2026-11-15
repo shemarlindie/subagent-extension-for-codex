@@ -25,7 +25,10 @@ when you update the SDK or change the minimum:
    [live Claude checks](#live-claude-checks).
 3. In a live task from the panel, steer, interrupt, answer a question and run
    `/compact`. Tasks rely on how Claude Code parses commands, and on the output
-   `/compact` prints in place of a result.
+   `/compact` prints in place of a result. Compare the built-in commands the
+   SDK's `supportedCommands()` lists with `supportedCommands` in
+   `src/service/features/providers/claude/configuration/task-policy.ts`, and add
+   new ones that work in a task. Tasks refuse the rest.
 4. Run `npm run check:claude-policy`. It makes no model calls and needs no org.
    The org policy checks rely on `getSettings`, which the SDK doesn't declare,
    and on how Claude Code words a rejected permission mode. If it fails, the

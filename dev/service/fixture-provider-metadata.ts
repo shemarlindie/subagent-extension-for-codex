@@ -24,37 +24,56 @@ export const fixtureModels: ModelChoice[] = [
   },
 ];
 
-/** Commands like Claude Code's, including one tasks refuse. */
+/** Commands like Claude Code's, including ones tasks refuse. */
 export const fixtureCommands: ProviderCommand[] = [
+  {
+    name: "clear",
+    description: "Start a new session with empty context",
+    argument_hint: "",
+    aliases: ["reset", "new"],
+    builtin: true,
+  },
+  {
+    name: "color",
+    description: "Set the prompt bar color for this session",
+    argument_hint: "[color]",
+    aliases: [],
+    builtin: true,
+  },
   {
     name: "compact",
     description: "Clear conversation history but keep a summary in context",
     argument_hint: "<optional custom summarization instructions>",
     aliases: [],
+    builtin: true,
   },
   {
     name: "context",
     description: "Show current context usage",
     argument_hint: "",
     aliases: [],
+    builtin: true,
   },
   {
     name: "model",
     description: "Set the AI model for Claude Code",
     argument_hint: "[model]",
     aliases: [],
+    builtin: true,
   },
   {
     name: "review-plan",
     description: "Review the project plan against the code",
     argument_hint: "<plan file>",
     aliases: [],
+    builtin: false,
   },
   {
     name: "usage",
     description: "Show plan usage limits",
     argument_hint: "",
     aliases: ["cost"],
+    builtin: true,
   },
 ];
 

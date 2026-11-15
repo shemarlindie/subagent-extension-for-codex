@@ -25,6 +25,7 @@ function commandsByName(commands: SlashCommand[]): ProviderCommand[] {
     description: c.description,
     argument_hint: c.argumentHint,
     aliases: c.aliases ?? [],
+    builtin: !!c.builtin,
   }));
 }
 

@@ -7,7 +7,6 @@ import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { providerMetadata } from "../../../../shared/providers/metadata.js";
 import { withSessionOption } from "../../../../shared/providers/options.js";
-import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import {
   type BudgetRaise,
@@ -27,6 +26,7 @@ import { RunError } from "../../providers/run-error.js";
 import { type Provider, type RunContext } from "../../providers/types.js";
 import { Settings } from "../../settings/settings.js";
 import { Workspaces } from "../../workspaces/workspace.js";
+import { checkCommand, taskCommands } from "../conversation/command-policy.js";
 import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
 import { PendingInput } from "../input/pending-input.js";
@@ -957,8 +957,8 @@ export class Control {
     record: RecordSend,
   ): Promise<SentMessage> {
     const delivery = options.delivery ?? "steer";
+    await this.checkCommand(this.mutableTask(owner, id), message);
     const stored = this.mutableTask(owner, id);
-    this.checkCommand(stored, message);
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
@@ -1127,31 +1127,32 @@ export class Control {
   }
 
   /** Changes a queued message's text before it's sent. */
-  editQueued(owner: string, id: string, messageId: string, message: string) {
+  async editQueued(
+    owner: string,
+    id: string,
+    messageId: string,
+    message: string,
+  ) {
+    await this.checkCommand(this.queueTask(owner, id), message);
     const t = this.queueTask(owner, id);
-    this.checkCommand(t, message);
     editQueuedMessage(this.store, t, messageId, message);
 
     return t;
   }
 
   /** The slash commands a task can run, for suggestions. */
-  async commands(owner: string, id: string) {
+  commands(owner: string, id: string) {
     const t = this.store.get(id, owner);
-    const provider = this.providers.get(t.provider);
-    const commands = (await provider?.commands?.(t)) ?? [];
 
-    return commands.filter(
-      ({ name }) => !provider?.taskPolicy.commandRefusal?.(name),
-    );
+    return taskCommands(this.providers.get(t.provider), t);
   }
 
-  /** Refuses a command the task's provider won't run in a task. */
+  /**
+   * Refuses a command the task's provider won't run in a task. It may wait for
+   * command discovery, so callers read the task again afterwards.
+   */
   private checkCommand(t: Task, message: string) {
-    const name = slashCommand(message);
-    const policy = this.providers.get(t.provider)?.taskPolicy;
-    const refusal = name && policy?.commandRefusal?.(name);
-    if (refusal) throw new Error(refusal);
+    return checkCommand(this.providers.get(t.provider), t, message);
   }
 
   /** Moves a queued message to `index`, behind steers the worker already has. */

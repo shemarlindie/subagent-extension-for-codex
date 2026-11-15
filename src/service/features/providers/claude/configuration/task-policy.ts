@@ -74,14 +74,65 @@ const modelSettings =
 // Clearing would leave the task's stored conversation out of step.
 const conversation = "Start a new task for a fresh conversation.";
 
-/** Commands that would change what the task owns, with why each is refused. */
-const refusedCommands = new Map([
+// Each turn launches Claude Code anew, so session state ends with the turn.
+const acrossTurns = "Each turn starts a new Claude Code process.";
+
+const userSettings = "It changes Claude Code settings outside the task.";
+const outsideWork = "It starts work outside the task and its budget.";
+const account = "It changes your Claude account.";
+
+/**
+ * Claude Code's own commands that tasks run. Its other commands are refused
+ * until checked, since one may change settings outside the task or need the
+ * terminal. Skills and plugin commands are the user's own and always run.
+ */
+const supportedCommands = new Set([
+  "artifact-capabilities",
+  "artifact-diagramming",
+  "claude-api",
+  "code-review",
+  "compact",
+  "context",
+  "dataviz",
+  "debug",
+  "fewer-permission-prompts",
+  "init",
+  "insights",
+  "list-agents",
+  "recap",
+  "run",
+  "run-skill-generator",
+  "security-review",
+  "simplify",
+  "skill-doctor",
+  "team-onboarding",
+  "usage",
+  "verify",
+]);
+
+/** Why some of Claude Code's own commands are refused, where it helps. */
+const refusalReasons = new Map([
   ["model", modelSettings],
   ["effort", modelSettings],
   ["fast", modelSettings],
   ["clear", conversation],
-  ["reset", conversation],
-  ["new", conversation],
+  ["rename", "Rename the task instead."],
+  ["loop", acrossTurns],
+  ["goal", acrossTurns],
+  ["config", userSettings],
+  ["autocompact", userSettings],
+  ["output-style", userSettings],
+  ["import", userSettings],
+  ["auto-mode-setup", userSettings],
+  ["update-config", userSettings],
+  ["doctor", userSettings],
+  ["ultrareview", outsideWork],
+  ["batch", outsideWork],
+  ["schedule", outsideWork],
+  ["design-consent", account],
+  ["design-revoke", account],
+  ["extra-usage", account],
+  ["usage-credits", account],
 ]);
 
 export const claudeTaskPolicy = {
@@ -113,9 +164,9 @@ export const claudeTaskPolicy = {
   async validateSession(task) {
     if (task.session_state_ref) await access(task.session_state_ref);
   },
-  commandRefusal: (name) => {
-    const reason = refusedCommands.get(name);
-
-    return reason && `/${name} can't run in a task. ${reason}`;
-  },
+  commandRefusal: (name, builtin) =>
+    refusalReasons.get(name) ??
+    (builtin && !supportedCommands.has(name)
+      ? "Tasks run only the Claude Code commands checked to work in them."
+      : undefined),
 } satisfies ProviderTaskPolicy;
