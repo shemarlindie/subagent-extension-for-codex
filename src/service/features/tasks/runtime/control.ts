@@ -554,14 +554,22 @@ export class Control {
   }
 
   /**
-   * Sends a pending steer to the provider. One the turn can't take any more
-   * waits at the front of the queue instead.
+   * Sends a pending steer to the provider. One the turn can't take, such as
+   * a command, waits at the front of the queue instead, after the steers
+   * already waiting there so they run in the order they were sent.
    */
   private deliver(t: Task, a: Active, steer: TaskMessage) {
     if (!a.sink || a.sink({ id: steer.id, text: steer.message })) return true;
     const before = queueSnapshot(t);
     t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
-    t.queue.unshift({ ...steer, delivery: "steer", recorded: true });
+    const waiting = t.queue.findIndex((m) => !m.recorded);
+
+    t.queue.splice(waiting === -1 ? t.queue.length : waiting, 0, {
+      ...steer,
+      delivery: "steer",
+      recorded: true,
+    });
+
     commitQueue(this.store, t, before);
 
     return false;

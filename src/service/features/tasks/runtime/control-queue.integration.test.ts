@@ -171,6 +171,25 @@ test("an interrupt with a command runs the pending steers first, then the comman
   await c.close();
 });
 
+test("commands sent during a turn wait at the front of the queue in the order sent", async () => {
+  const checkpoints = new TurnCheckpoints(1);
+  const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
+  const { c, store, repo } = await setup(recorder);
+  const t = await c.start("alice", input(repo, "[late]"));
+  await checkpoints.ready();
+  await c.send("alice", t.id, "Afterwards", "user", { delivery: "queue" });
+  await c.send("alice", t.id, "/compact", "user");
+  await c.send("alice", t.id, "/context", "user");
+
+  assert.deepEqual(
+    store.get(t.id, "alice").queue.map((m) => m.message),
+    ["/compact", "/context", "Afterwards"],
+  );
+
+  checkpoints.release();
+  await c.close();
+});
+
 test("a plain interrupt pauses the queue, keeping pending steers at its front, until resumed or a message is sent", async () => {
   const checkpoints = new TurnCheckpoints(1, 5);
   const recorder = new PromptRecorder({ beforeReply: checkpoints.beforeReply });
