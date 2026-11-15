@@ -19,6 +19,8 @@ test("the composer suggests slash commands and leaves other keys to the textarea
   await composer.press("Enter");
   await expect(composer).toHaveValue("/context ");
   await expect(options).toHaveCount(0);
+  // The textarea's text is transparent over the highlight that paints it.
+  await expect(page.locator(".command-highlight")).toHaveText("/context ");
 
   // Escape hides the menu and keeps the draft.
   await composer.fill("/u");

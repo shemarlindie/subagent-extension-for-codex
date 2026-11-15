@@ -4,13 +4,16 @@ import {
   type ComponentProps,
   type KeyboardEvent,
   type RefObject,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 
 import type { ProviderCommand } from "../../../../../shared/providers/types";
+import { CommandHighlight, draftCommand } from "./command-highlight";
 
 /** The partial command a draft is typing, such as `comp` in `/comp`. */
-export const commandQuery = (draft: string) => /^\/([^\s/]*)$/.exec(draft)?.[1];
+const commandQuery = (draft: string) => /^\/([^\s/]*)$/.exec(draft)?.[1];
 
 /** Commands whose name, then an alias, starts with what's typed. */
 function matchingCommands(commands: ProviderCommand[], query: string) {
@@ -40,7 +43,10 @@ type CommandMenuProps = {
   textarea: ComponentProps<"textarea">;
 };
 
-/** The composer's textarea, suggesting commands while the draft is `/` and a partial name. */
+/**
+ * The composer's textarea, suggesting commands while the draft is `/` and a
+ * partial name, and highlighting a command the draft starts with.
+ */
 export function CommandMenu({
   anchor,
   commands,
@@ -56,6 +62,17 @@ export function CommandMenu({
   const [highlighted, setHighlighted] = useState<ProviderCommand>();
   const open = items.length > 0 && dismissed !== draft;
   const complete = (name: string) => onDraftChange(`/${name} `);
+  const typed = draftCommand(commands, draft);
+  const field = useRef<HTMLDivElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+
+  // The highlight scrolls with the textarea once the draft outgrows it.
+  const syncScroll = () => {
+    const input = field.current?.querySelector("textarea");
+    if (input && backdrop.current) backdrop.current.scrollTop = input.scrollTop;
+  };
+
+  useLayoutEffect(syncScroll);
 
   const change = (value: string, { reason }: { reason: string }) => {
     if (reason === "item-press") complete(value);
@@ -90,10 +107,16 @@ export function CommandMenu({
       autoHighlight
       mode="none"
     >
-      <Autocomplete.Input
-        render={<textarea {...textarea} />}
-        onKeyDown={keys}
-      />
+      <div className="command-field" ref={field} data-command={typed && ""}>
+        {typed && (
+          <CommandHighlight ref={backdrop} command={typed} draft={draft} />
+        )}
+        <Autocomplete.Input
+          render={<textarea {...textarea} />}
+          onKeyDown={keys}
+          onScroll={syncScroll}
+        />
+      </div>
       <Autocomplete.Portal>
         <Autocomplete.Positioner
           className="autocomplete-positioner"

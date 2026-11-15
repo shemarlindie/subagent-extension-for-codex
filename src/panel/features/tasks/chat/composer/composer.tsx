@@ -26,7 +26,7 @@ import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { descriptionIds } from "../../../../shared/utils/description-ids";
 import { providerName } from "../../../providers/provider-name";
 import { composerMode, type SpentBudget, spentBudget } from "../chat-model";
-import { CommandMenu, commandQuery } from "./command-menu";
+import { CommandMenu } from "./command-menu";
 import { TaskRunSettings } from "./task-run-settings";
 import { useTaskCommands } from "./use-task-commands";
 
@@ -121,7 +121,7 @@ export function Composer({
   );
 
   const canContinue = !spent;
-  const commands = useTaskCommands(task?.id, commandQuery(text) !== undefined);
+  const commands = useTaskCommands(task?.id, text.startsWith("/"));
 
   const [error] = useSessionState(
     "task",
