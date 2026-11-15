@@ -37,6 +37,23 @@ both when the change is small within the panel. Use `deviceScaleFactor: 2` for
 screenshots people will see. Add other widths or themes only where they look
 different.
 
+## Design review
+
+Check the rendered panel against these points during the workflow above:
+
+- The next step is obvious, and each state the workflow checks has a designed
+  view, per
+  [Loading and pending UI](panel-architecture.md#loading-and-pending-ui).
+- Hierarchy, spacing, alignment and typography match nearby UI.
+- Controls reuse [Shared controls](panel-architecture.md#shared-controls),
+  icon-only controls have accessible names, and focus order and touch targets
+  work.
+- Text meets WCAG AA contrast (4.5:1 for body text, 3:1 for large text and UI
+  components) in each host theme.
+
+Compare before and after screenshots for visible changes. Where these docs are
+silent, recommend a fix and leave the rules as they are.
+
 ## Scope and host controls
 
 The dev host saves its settings in browser storage. Changing a setting
