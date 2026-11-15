@@ -193,10 +193,10 @@ jobs:
       - run: npm ci
       - run: npm install --global @openai/codex@0.162.1
 
-      # A new version can take a moment to reach every registry mirror.
+      # A new version can take several minutes to appear on npm.
       - name: Wait for npm to serve the version
         run: |
-          for attempt in {1..10}; do
+          for attempt in {1..30}; do
             npm view "subagent-extension-for-codex@${VERSION}" version && exit 0
             sleep 30
           done
