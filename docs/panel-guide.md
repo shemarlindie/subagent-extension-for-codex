@@ -1,7 +1,8 @@
 # Delegated Work panel
 
 Use this guide to operate Delegated Work or check its user-visible behavior. The
-embedded panel and standalone console share one frontend.
+embedded panel and [standalone console](development.md#run-the-service) share
+one frontend.
 
 - [Panel architecture](panel-architecture.md) covers implementation, including
   [loading and pending UI](panel-architecture.md#loading-and-pending-ui).
