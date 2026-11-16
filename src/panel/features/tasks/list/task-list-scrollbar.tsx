@@ -7,6 +7,8 @@ import {
   type RefObject,
 } from "react";
 
+import { shallowEqual } from "../../../app/state/controller-context";
+
 interface ScrollbarMetrics {
   height: number;
   maxScroll: number;
@@ -59,12 +61,15 @@ export function TaskListScrollbar({ scrollerRef }: TaskListScrollbarProps) {
       const value =
         maxScroll > 0 ? Math.round((scroller.scrollTop / maxScroll) * 100) : 0;
 
-      setMetrics({
+      const next = {
         height,
         maxScroll,
         top: maxScroll > 0 ? (scroller.scrollTop / maxScroll) * trackRange : 0,
         value,
-      });
+      };
+
+      // List updates that leave the geometry unchanged keep the state, so they don't render.
+      setMetrics((current) => (shallowEqual(current, next) ? current : next));
     };
 
     scroller.addEventListener("scroll", update, { passive: true });
