@@ -367,6 +367,16 @@ scenario, measured in jsdom with React's development build. It varies by a few
 percent between runs, so treat smaller differences as noise. The report never
 fails. Fix a finding when the fix adds less complexity than the render costs.
 
+To measure a change, save the report's results on each version, then compare
+them. `save` runs the report 7 times by default and keeps each scenario's median
+render time.
+
+```sh
+node scripts/compare-renders.mjs save before
+node scripts/compare-renders.mjs save after
+node scripts/compare-renders.mjs before after
+```
+
 The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
 They fail when render isolation regresses: a refresh with unchanged data commits
 nothing, a streamed paragraph renders only its message, list, timeline and
