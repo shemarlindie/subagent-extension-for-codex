@@ -91,12 +91,13 @@ function summary(rows: Row[]) {
       result.remounts.filter(({ ours }) => ours).length,
       result.transients.filter(({ ours }) => ours).length,
       result.warnings,
+      result.renderMs.toFixed(2),
     ].join(" | ");
   });
 
   return [
-    "| Scenario | Group | Commits | Notifications | Renders | Wasted | Remounts | Transient | Warnings |",
-    "| --- | --- | --: | --: | --: | --: | --: | --: | --: |",
+    "| Scenario | Group | Commits | Notifications | Renders | Wasted | Remounts | Transient | Warnings | Render ms |",
+    "| --- | --- | --: | --: | --: | --: | --: | --: | --: | --: |",
     ...lines.map((line) => `| ${line} |`),
   ];
 }

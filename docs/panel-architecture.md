@@ -360,8 +360,10 @@ run. For each change, the report lists:
 - components that rendered and ended with the output they started with
 
 It also lists `useSnapshot` selections that change on every patch, and panel
-components no scenario reaches. The report never fails. Fix a finding when the
-fix adds less complexity than the render costs.
+components no scenario reaches. The summary shows React's render time for each
+scenario, measured in jsdom with React's development build. It varies by a few
+percent between runs, so compare medians of several runs. The report never
+fails. Fix a finding when the fix adds less complexity than the render costs.
 
 The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
 They fail when render isolation regresses: a refresh with unchanged data commits
