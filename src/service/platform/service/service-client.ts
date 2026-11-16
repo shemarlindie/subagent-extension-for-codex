@@ -66,25 +66,7 @@ export function serviceClient(
 
     attempt.then(
       ({ draining }) => {
-        // Reconnecting through `connect` starts this version and sets up the
-        // connection fully, including the proxy's presence stream, which
-        // keeps the new service from stopping as idle. Proxies from the
-        // replaced installation can't start their own once the update
-        // removes it, so they rely on finding this one.
-        void draining?.()
-          .then(() => {
-            if (current === attempt) current = undefined;
-
-            return connection();
-          })
-          .then(
-            ({ origin }) =>
-              console.error(`Replaced the extension service at ${origin}`),
-            (error: unknown) =>
-              console.error(
-                `Could not start the extension service after the handoff: ${String(error)}`,
-              ),
-          );
+        if (draining) void replaceAfter(draining, attempt);
       },
       () => {
         if (current === attempt) current = undefined;
@@ -92,6 +74,29 @@ export function serviceClient(
     );
 
     return attempt;
+  }
+
+  /**
+   * Reconnects once the draining service exits. Reconnecting through `connect`
+   * starts this version and sets up the connection fully, including the
+   * proxy's presence stream, which keeps the new service from stopping as
+   * idle. Proxies from the replaced installation can't start their own once
+   * the update removes it, so they rely on finding this one.
+   */
+  async function replaceAfter(
+    draining: () => Promise<void>,
+    attempt: Promise<ServiceConnection>,
+  ) {
+    try {
+      await draining();
+      if (current === attempt) current = undefined;
+      const { origin } = await connection();
+      console.error(`Replaced the extension service at ${origin}`);
+    } catch (error) {
+      console.error(
+        `Could not start the extension service after the handoff: ${String(error)}`,
+      );
+    }
   }
 
   /** The connection, or an error once a call has waited `connectTimeout` for it. */
