@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { setTasksArchived } from "../../../features/tasks/runtime/task-archive.js";
+import {
+  deleteTaskBranch,
+  removeTaskWorktree,
+} from "../../../features/tasks/runtime/task-worktree.js";
 import { taskId, tool } from "./definition.js";
 
 /**
@@ -15,7 +19,7 @@ export function taskLifecycleTools(c: Control, owner: string) {
       description:
         "User interface only: remove a stopped worktree task's worktree and keep its branch. With uncommitted changes it removes nothing and returns status uncommitted with the files, unless force discards them.",
       schema: taskId.extend({ force: z.boolean().default(false) }),
-      run: (a) => c.removeWorktree(owner, a.task_id, a.force),
+      run: (a) => removeTaskWorktree(c, owner, a.task_id, a.force),
     }),
     app_rename_task: tool({
       description: "User interface only: change a task's display title.",
@@ -115,7 +119,7 @@ export function taskLifecycleTools(c: Control, owner: string) {
       description:
         "User interface only: delete a stopped worktree task's local branch once its worktree is removed. Remote branches are not changed.",
       schema: taskId,
-      run: (a) => c.deleteBranch(owner, a.task_id),
+      run: (a) => deleteTaskBranch(c, owner, a.task_id),
     }),
   };
 }

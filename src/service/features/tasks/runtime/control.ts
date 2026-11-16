@@ -78,6 +78,7 @@ import {
   type DeletionVersions,
 } from "./task-deletion.js";
 import { startTask } from "./task-start.js";
+import { settleWorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { recordStatusEvent, type Active } from "./turn-outcome.js";
 import {
@@ -105,6 +106,8 @@ export class Control {
   parentSeen: ParentSeenStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
+  /** Worktree and branch changes in progress. Turns and deletion wait for them. */
+  worktreeChanges = new Map<string, Promise<unknown>>();
   private sendRequests: SendRequests;
   /** Observes queue waits for the timing log. */
   private queueWaits = new QueueWaits();
@@ -235,7 +238,10 @@ export class Control {
       for (const t of tasks) {
         scannedCount++;
         if (this.active.size >= this.concurrency) break;
-        if (this.deleting.has(t.id)) continue;
+
+        if (this.deleting.has(t.id) || this.worktreeChanges.has(t.id)) {
+          continue;
+        }
 
         t.status = "starting";
         t.turn++;
@@ -604,7 +610,7 @@ export class Control {
   }
 
   /** Worktree actions and deletion wait until the task isn't running or about to. */
-  private idleWorktreeTask(
+  idleWorktreeTask(
     owner: string,
     id: string,
     action = "changing its worktree",
@@ -616,6 +622,10 @@ export class Control {
       ["queued", "starting", "running", "waiting"].includes(t.status)
     ) {
       throw new Error(`Wait until the task stops before ${action}.`);
+    }
+
+    if (this.worktreeChanges.has(id)) {
+      throw new Error("Wait until the current worktree change finishes.");
     }
 
     return t;
@@ -640,6 +650,7 @@ export class Control {
     for (const id of doomed) this.deleting.add(id);
 
     try {
+      await settleWorktreeChanges(this, doomed);
       let versions: Map<string, DeletionVersions> | undefined;
 
       if (confirmation) {
@@ -728,6 +739,8 @@ export class Control {
     for (const id of ids) this.deleting.add(id);
 
     try {
+      await settleWorktreeChanges(this, ids);
+
       if (confirmation) {
         await confirmedTaskDeletion(
           this,
@@ -817,39 +830,6 @@ export class Control {
     } finally {
       this.deleting.delete(id);
     }
-  }
-
-  /**
-   * Removes a task's worktree and keeps its branch. With uncommitted
-   * changes, it removes nothing and lists them, unless `force` is set.
-   */
-  async removeWorktree(owner: string, id: string, force = false) {
-    const t = this.idleWorktreeTask(owner, id);
-    const result = await this.workspaces.removeWorktree(t, force);
-
-    if (result.status === "removed") {
-      t.workspace_removed = true;
-      this.store.save(t);
-
-      this.store.event(t, "task.worktree_removed", {
-        path: t.workspace,
-        branch: t.branch,
-        forced: force,
-      });
-    }
-
-    return result;
-  }
-
-  /** Deletes a task's branch, once its worktree is removed. */
-  async deleteBranch(owner: string, id: string) {
-    const t = this.idleWorktreeTask(owner, id);
-    await this.workspaces.deleteBranch(t);
-    t.branch_deleted = true;
-    this.store.save(t);
-    this.store.event(t, "task.branch_deleted", { branch: t.branch });
-
-    return { status: "deleted" as const };
   }
 
   /**
