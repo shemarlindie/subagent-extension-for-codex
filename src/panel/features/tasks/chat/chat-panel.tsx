@@ -13,6 +13,7 @@ import { NEW_MESSAGES_ID } from "../unread/new-messages";
 import { UnreadDot } from "../unread/unread-dot";
 import { useMarkRead } from "../unread/use-mark-read";
 import { useNewMessagesFrom } from "../unread/use-new-messages-from";
+import { composerMode } from "./chat-model";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
@@ -129,7 +130,16 @@ export const ChatPanel = memo(function ChatPanel({
           onClick={scrollToLatest}
         />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
-        {task && <MessageQueue key={`queue:${task.id}`} task={task} />}
+        {task && (
+          <MessageQueue
+            key={`queue:${task.id}`}
+            taskId={task.id}
+            pending={task.pending_steers}
+            queue={task.queue}
+            paused={Boolean(task.queue_paused)}
+            steerable={composerMode(task) === "busy"}
+          />
+        )}
         {/* Keyed so draft and errors stay with their task. */}
         <Composer
           key={`composer:${taskId}`}
