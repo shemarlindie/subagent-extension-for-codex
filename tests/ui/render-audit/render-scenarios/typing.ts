@@ -11,13 +11,19 @@ async function focusComposer({ user }: Mounted) {
   await user.click(await screen.findByRole("textbox", { name: "Message" }));
 }
 
-/** Keystrokes in the panel's text fields. */
+/**
+ * Keystrokes in the panel's text fields. Composer keystrokes follow the first,
+ * since the first one enables sending.
+ */
 export const typingScenarios: Scenario[] = [
   {
     label: "A keystroke in the task composer",
     group: "Typing",
-    prepare: focusComposer,
-    change: ({ user }) => user.keyboard("a"),
+    prepare: async (mounted) => {
+      await focusComposer(mounted);
+      await mounted.user.keyboard("a");
+    },
+    change: ({ user }) => user.keyboard("b"),
   },
   {
     label: "A keystroke in the new-task composer",
@@ -28,8 +34,10 @@ export const typingScenarios: Scenario[] = [
       await user.click(
         await screen.findByRole("textbox", { name: "Task message" }),
       );
+
+      await user.keyboard("a");
     },
-    change: ({ user }) => user.keyboard("a"),
+    change: ({ user }) => user.keyboard("b"),
   },
   {
     label: "A keystroke in search",
