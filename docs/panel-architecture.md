@@ -78,7 +78,8 @@ wrapped in `memo`. Give them data, ids and stable callbacks, so a function the
 parent builds for each row doesn't render every row again. A row that acts on
 its task takes the task's id and looks the task up when the user acts. Pure
 rendering components can take props directly. Transport revisions and draft
-following stay outside rendering.
+following stay outside rendering. The [render report](#render-report) shows
+which components each kind of change renders.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 write partial updates. Select stable fields or references to avoid unrelated
@@ -344,3 +345,29 @@ Controller and transport tests cover scope, races and lifecycle. Component tests
 cover interactions and draft preservation. Use
 [UI verification](ui-verification.md) for browser layout and native host
 placement.
+
+### Render report
+
+`npm run report:renders` applies each scenario's change to the app shell in
+jsdom and writes `render-report/render-report.md`. A render is wasted when the
+component's output, its direct children and their props, matches its output
+before. Functions count as equal, since handlers read current state when they
+run. For each change, the report lists:
+
+- wasted renders with a likely cause, such as a parent rendering with the same
+  props or a new object equal by value
+- components remounted with equal props
+- components that rendered and ended with the output they started with
+
+It also lists `useSnapshot` selections that change on every patch, and panel
+components no scenario reaches. The report never fails. Fix a finding when the
+fix adds less complexity than the render costs.
+
+The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
+They fail when render isolation regresses: a refresh with unchanged data commits
+nothing, a streamed paragraph renders only its message, and list, timeline and
+Activity rows render only when their own data changes.
+
+The report checks a new component once a scenario renders it. A new kind of
+change, such as a new read or user action, needs a scenario in
+`tests/ui/render-audit/render-scenarios/`.

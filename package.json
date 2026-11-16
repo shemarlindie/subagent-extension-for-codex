@@ -59,6 +59,7 @@
     "projects": "node --enable-source-maps --env-file-if-exists=.env dist/projects-cli.js",
     "release:assemble": "node scripts/assemble-release.mjs",
     "release:prepare": "node scripts/prepare-release.mjs",
+    "report:renders": "vitest run --config vitest.render-report.config.ts",
     "schemas:check": "node scripts/generate-schemas.mjs --check",
     "schemas:generate": "node scripts/generate-schemas.mjs",
     "showcase:capture": "tsx dev/panel/showcase/capture.ts",

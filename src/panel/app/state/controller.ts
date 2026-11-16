@@ -291,8 +291,10 @@ export class Controller {
       this.dialogs.shown(this.state.dialog, patch.dialog);
     }
 
-    const wasBusy = this.state.busy;
-    this.state = patchState(this.state, patch);
+    const previous = this.state;
+    this.state = patchState(previous, patch);
+    // Every notification reruns each subscriber's selector.
+    if (this.state === previous) return;
 
     if (this.state.selected) {
       this.session.update("task", this.state.selected, { tab: this.state.tab });
@@ -300,7 +302,7 @@ export class Controller {
 
     this.listeners.forEach((listener) => listener());
     if (this.viewStateReady) this.saveViewState();
-    if (wasBusy && !this.state.busy) this.revisions.resume();
+    if (previous.busy && !this.state.busy) this.revisions.resume();
   }
 
   private saveViewState() {

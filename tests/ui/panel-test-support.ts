@@ -158,6 +158,8 @@ export async function startedTask(transport: FakeTransport) {
 
 export class FakeTransport implements Transport {
   embedded = true;
+  /** Set when a test sends drafts through `events.draft`. */
+  streamsDrafts = false;
   events!: TransportEvents;
   tasks = [task()];
   /** The events a view's Activity windows and tallies. */
