@@ -1,6 +1,6 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useState } from "react";
-import { useController, useFormContext } from "react-hook-form";
+import { useController, type Control } from "react-hook-form";
 
 import { modelAllowed } from "../../../../shared/providers/policy";
 import type {
@@ -21,6 +21,7 @@ function matches(model: ModelChoice, query: string) {
 
 /** Discovered models are suggestions; custom model IDs and aliases remain valid. */
 interface ModelAutocompleteProps {
+  control: Control<DelegateValues>;
   models: ModelChoice[];
   policy?: ProviderPolicy;
   placeholder: string;
@@ -29,14 +30,13 @@ interface ModelAutocompleteProps {
 }
 
 export function ModelAutocomplete({
+  control,
   models,
   policy,
   placeholder,
   describedBy,
   disabled = false,
 }: ModelAutocompleteProps) {
-  const { control } = useFormContext<DelegateValues>();
-
   const { field, fieldState } = useController({
     control,
     name: "model",

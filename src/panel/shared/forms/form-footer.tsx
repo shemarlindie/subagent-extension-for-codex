@@ -1,5 +1,5 @@
 import { Dialog } from "@base-ui/react/dialog";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { dialogStale } from "../../app/state/scope-reconciliation";
@@ -15,7 +15,7 @@ interface FormFooterProps {
   children?: ReactNode;
 }
 
-export function FormFooter({
+export const FormFooter = memo(function FormFooter({
   label,
   variant = "primary",
   disabled = false,
@@ -57,4 +57,4 @@ export function FormFooter({
       </footer>
     </>
   );
-}
+});

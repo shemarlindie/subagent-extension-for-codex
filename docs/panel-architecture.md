@@ -64,24 +64,20 @@ obsolete. Components use these entry points:
 - `controller.undo` holds the undo history and the undo toast's notice.
 
 Components read the immutable snapshot with `useSnapshot` and call controller
-actions. The hook rerenders a component only when its selection changes, so
-select the fields it renders, usually by name, as in
-`const { busy, dialog } = useSnapshot(["busy", "dialog"])`. Lint requires
-destructuring the result, so it flags a field the component no longer reads. A
-helper that takes several fields gets them as its own selection of a named field
-constant, such as `useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs
-state only when the user acts reads `controller.getSnapshot()`. An effect that
-copies state outside React, such as the page title, reads it the same way from a
-`controller.subscribe` listener, so the change renders nothing. Patches keep the
-references of unchanged read data, listed in `READ_FIELDS` in
-`app/state/patch-state.ts`, so a refresh renders only what changed. Rows of
-lists that change one item at a time, such as task rows and Chat messages, are
-wrapped in `memo`. Give them data, ids and stable callbacks, so a function the
-parent builds for each row doesn't render every row again. A row that acts on
-its task takes the task's id and looks the task up when the user acts. Pure
-rendering components can take props directly. Transport revisions and draft
-following stay outside rendering. The [render report](#render-report) shows
-which components each kind of change renders.
+actions. To keep a change from rendering what it doesn't affect:
+
+- Select only the fields a component renders, as in
+  `useSnapshot(["busy", "dialog"])`. A helper that needs several fields takes a
+  named field constant, such as `TASK_LIST_FIELDS`.
+- Read state needed only when the user acts with `controller.getSnapshot()` in
+  the handler. Copy state outside React, such as the page title, from a
+  `controller.subscribe` listener.
+- List read data that each refresh rebuilds in `READ_FIELDS`
+  (`app/state/patch-state.ts`), so patches keep its unchanged references.
+- Wrap rows of lists that change one item at a time in `memo`, and give them
+  data, ids and stable callbacks. A row that acts on its task takes the task's
+  id and looks the task up when the user acts.
+- Keep transport revisions and draft following outside rendering.
 
 Components read session memory with `useSessionState(scope, id, select?)` and
 write partial updates. Select stable fields or references to avoid unrelated
@@ -89,9 +85,12 @@ rerenders. Scroll hooks update stable reading cells without notifying on every
 scroll. Answered questions clear their entry.
 
 Forms keep editable drafts in React Hook Form, so refreshes preserve field nodes
-and unsent input. Only the field reads its text. Components around it watch what
-they show about it, such as whether it's empty, through `useWatch` with
-`compute` or a session state selector, so a keystroke renders only the field.
+and unsent input. A keystroke renders only its field: components around it watch
+only what they show, such as whether it's empty, with `useWatch` and `compute`
+or a session state selector. A form with many fields memoizes them and passes
+them the `useForm` object, since `useFormContext` renders every field whenever
+the form state changes.
+
 Use Base UI (`@base-ui/react`) with project styling for dialogs, tabs,
 selection, autocomplete and switches. Keep simple buttons, text inputs and
 textareas native, except the shared Base UI search field. Reuse the shared
@@ -353,27 +352,16 @@ placement.
 
 ### Render report
 
-`npm run report:renders` applies each scenario's change to the app shell in
-jsdom and writes `render-report/render-report.md`. A render is wasted when the
-component's output, its direct children and their props, matches its output
-before. Functions count as equal, since handlers read current state when they
-run. For each change, the report lists:
+`npm run report:renders` runs each scenario in
+`tests/ui/render-audit/render-scenarios/` against the app shell in jsdom and
+writes `render-report/render-report.md`. It lists wasted renders, whose output
+matches the output before, with a likely cause. The report never fails. Fix a
+finding when the fix adds less complexity than the render costs, and add a
+scenario for a new kind of change, such as a new read or user action.
 
-- wasted renders with a likely cause, such as a parent rendering with the same
-  props or a new object equal by value
-- components remounted with equal props
-- components that rendered and ended with the output they started with
-
-It also lists the components that waste the most renders across all scenarios,
-`useSnapshot` selections that change on every patch, and panel components no
-scenario reaches. The summary shows React's render time for each scenario,
-measured in jsdom with React's development build. It varies by a few percent
-between runs, so treat smaller differences as noise. The report never fails. Fix
-a finding when the fix adds less complexity than the render costs.
-
-To measure a change, save the report's results on each version, then compare
-them. `save` runs the report 7 times by default and keeps each scenario's median
-render time.
+To measure a change, save results on each version and compare them. `save` keeps
+each scenario's median render time over 7 runs. Times come from React's
+development build and vary by a few percent between runs.
 
 ```sh
 node scripts/compare-renders.mjs save before
@@ -381,13 +369,6 @@ node scripts/compare-renders.mjs save after
 node scripts/compare-renders.mjs before after
 ```
 
-The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
-They fail when render isolation regresses: a refresh with unchanged data commits
-nothing, a streamed paragraph renders only its message, list, timeline and
-Activity rows render only when their own data changes, the shell's pages, Chat's
-panel and its message queue skip changes they don't show, and a keystroke in a
-composer draft renders only the composer's field.
-
-The report checks a new component once a scenario renders it. A new kind of
-change, such as a new read or user action, needs a scenario in
-`tests/ui/render-audit/render-scenarios/`.
+`tests/ui/render-audit/render-guards.test.ts` runs with `npm test` and fails
+when a protected isolation result regresses. Add a guard with a fix worth
+keeping.

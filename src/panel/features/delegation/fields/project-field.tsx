@@ -1,4 +1,5 @@
-import { useFormContext } from "react-hook-form";
+import { memo } from "react";
+import type { UseFormReturn } from "react-hook-form";
 
 import type { Project } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
@@ -12,6 +13,7 @@ import type { DelegateValues } from "../delegate-values";
 import { ProjectAutocomplete } from "./project-autocomplete";
 
 interface ProjectFieldProps {
+  form: UseFormReturn<DelegateValues>;
   projects: Project[];
   allowParent: boolean;
   loading?: boolean;
@@ -23,7 +25,8 @@ interface ProjectFieldProps {
   onBrowse?: () => void;
 }
 
-export function ProjectField({
+export const ProjectField = memo(function ProjectField({
+  form: { control },
   projects,
   allowParent,
   loading = false,
@@ -34,7 +37,6 @@ export function ProjectField({
   browseDisabled = disabled,
   onBrowse,
 }: ProjectFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
   const options = projects.filter((project) => project.kind === "repository");
 
   return (
@@ -51,6 +53,7 @@ export function ProjectField({
               }
             >
               <ProjectAutocomplete
+                control={control}
                 disabled={disabled || loading || contextLoading}
                 projects={options}
               />
@@ -123,4 +126,4 @@ export function ProjectField({
       )}
     </Field>
   );
-}
+});

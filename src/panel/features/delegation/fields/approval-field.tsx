@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { memo, useEffect } from "react";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
 import {
@@ -15,6 +15,7 @@ import { workerChoice } from "../delegation";
 import { SandboxField } from "./sandbox-field";
 
 interface ApprovalFieldProps {
+  form: UseFormReturn<DelegateValues>;
   workers: Worker[];
   disabled?: boolean;
   loading?: boolean;
@@ -26,12 +27,12 @@ const fallbackPermissions = (
   unresolved: boolean,
 ) => options ?? (unresolved ? [] : [{ value: "inherit", label: "Inherit" }]);
 
-export function ApprovalField({
+export const ApprovalField = memo(function ApprovalField({
+  form: { control, setValue },
   workers,
   disabled = false,
   loading = false,
 }: ApprovalFieldProps) {
-  const { control, setValue } = useFormContext<DelegateValues>();
   const worker = useWatch({ control, name: "worker" });
   const mode = useWatch({ control, name: "permission_mode" });
   const { provider } = workerChoice(worker);
@@ -75,6 +76,7 @@ export function ApprovalField({
           </p>
         </Field>
         <SandboxField
+          control={control}
           permissions={permissions}
           unresolved={unresolved}
           disabled={disabled}
@@ -110,4 +112,4 @@ export function ApprovalField({
       </Presence>
     </>
   );
-}
+});

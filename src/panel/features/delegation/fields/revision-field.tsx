@@ -1,20 +1,22 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { memo } from "react";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { AsyncControl } from "../../../shared/forms/async-control";
 import { Field } from "../../../shared/forms/fields";
 import type { DelegateValues } from "../delegate-values";
 
 interface RevisionFieldProps {
+  form: UseFormReturn<DelegateValues>;
   disabled?: boolean;
   loading?: boolean;
 }
 
 /** The commit an isolated worktree starts from. */
-export function RevisionField({
+export const RevisionField = memo(function RevisionField({
+  form: { register, control },
   disabled = false,
   loading = false,
 }: RevisionFieldProps) {
-  const { register, control } = useFormContext<DelegateValues>();
   const revision = useWatch({ control, name: "revision" });
 
   return (
@@ -33,4 +35,4 @@ export function RevisionField({
       </AsyncControl>
     </Field>
   );
-}
+});

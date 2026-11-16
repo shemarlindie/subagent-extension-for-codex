@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import {
   FormFieldFeedback,
   type FormFieldFeedbackProps,
@@ -6,7 +8,7 @@ import {
 type FormFieldErrorProps = Omit<FormFieldFeedbackProps, "kind">;
 
 /** Renders a field error with alert semantics and shared enter/exit motion. */
-export function FormFieldError({
+export const FormFieldError = memo(function FormFieldError({
   id,
   message,
   className,
@@ -19,4 +21,4 @@ export function FormFieldError({
       kind="error"
     />
   );
-}
+});

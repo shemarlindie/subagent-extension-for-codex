@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { Notice } from "../../../shared/components/notice/notice";
 import type { workspaceNote } from "../workspace-note";
 
@@ -6,7 +8,9 @@ type WorkspaceNoteViewProps = {
 };
 
 /** Says how a task will edit a project with no commit, when it matters. */
-export function WorkspaceNoteView({ note }: WorkspaceNoteViewProps) {
+export const WorkspaceNoteView = memo(function WorkspaceNoteView({
+  note,
+}: WorkspaceNoteViewProps) {
   if (!note) return null;
 
   return (
@@ -17,4 +21,4 @@ export function WorkspaceNoteView({ note }: WorkspaceNoteViewProps) {
       <p>{note.message}</p>
     </Notice>
   );
-}
+});

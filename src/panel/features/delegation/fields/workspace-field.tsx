@@ -1,22 +1,24 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { memo } from "react";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import { pendingPlaceholder, type DelegateValues } from "../delegate-values";
 
 interface WorkspaceFieldProps {
+  form: UseFormReturn<DelegateValues>;
   settingsReady?: boolean;
   settingsLoading?: boolean;
   /** The project has no commit, so this is the only valid choice. */
   inPlace?: boolean;
 }
 
-export function WorkspaceField({
+export const WorkspaceField = memo(function WorkspaceField({
+  form: { control },
   settingsReady = true,
   settingsLoading = false,
   inPlace = false,
 }: WorkspaceFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
   const value = useWatch({ control, name: "workspace_strategy" });
   const unresolved = !settingsReady && !value;
 
@@ -52,4 +54,4 @@ export function WorkspaceField({
       />
     </Field>
   );
-}
+});

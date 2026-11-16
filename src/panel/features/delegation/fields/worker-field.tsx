@@ -1,4 +1,5 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { memo } from "react";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { profileLabel } from "../../../app/state/selectors";
 import type { Worker } from "../../../app/state/types";
@@ -9,19 +10,20 @@ import { pendingPlaceholder, type DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
 
 interface WorkerFieldProps {
+  form: UseFormReturn<DelegateValues>;
   workers: Worker[];
   loading?: boolean;
   error?: string;
   disabled?: boolean;
 }
 
-export function WorkerField({
+export const WorkerField = memo(function WorkerField({
+  form: { control },
   workers,
   loading = false,
   error,
   disabled = false,
 }: WorkerFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
   const selected = useWatch({ control, name: "worker" });
 
   const readiness = workers.find(
@@ -66,4 +68,4 @@ export function WorkerField({
       />
     </Field>
   );
-}
+});

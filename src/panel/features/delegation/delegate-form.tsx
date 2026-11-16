@@ -1,5 +1,5 @@
-import { useEffect, useRef, type SubmitEvent } from "react";
-import { FormProvider, useWatch } from "react-hook-form";
+import { useCallback, useEffect, useRef, type SubmitEvent } from "react";
+import { useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
 import { useController, useSnapshot } from "../../app/state/controller-context";
@@ -7,7 +7,6 @@ import type { Snapshot, Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
-import { Field } from "../../shared/forms/fields";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
@@ -29,6 +28,7 @@ import {
 } from "./delegation";
 import { ApprovalField } from "./fields/approval-field";
 import { BudgetFields } from "./fields/budget-fields";
+import { DescriptionField } from "./fields/description-field";
 import { ModelFields } from "./fields/model-fields";
 import { ProjectField } from "./fields/project-field";
 import { RevisionField } from "./fields/revision-field";
@@ -153,6 +153,25 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     if (strategy === "current_repo") form.setValue("revision", "HEAD");
   }, [strategy, repository, form]);
 
+  // Fields are memoized, so this form's renders reach only the fields whose
+  // props change. They take the form as a prop, since the form context would
+  // render them on every form state change, such as the form becoming ready.
+  const browse = useCallback(
+    () =>
+      controller.run(async () => {
+        const repository = await controller.browseTaskProject();
+
+        // Keep selection in this draft; changing panel scope would discard it.
+        if (repository) {
+          form.setValue("repository", repository, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+      }),
+    [controller, form],
+  );
+
   // A project with no commit has one valid workspace. Leaving it restores the
   // saved default, the value the form would have started with.
   const git = projectGit(scope, repository);
@@ -175,129 +194,106 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const revisionShown = !inPlace && strategy !== "current_repo";
 
   return (
-    <FormProvider {...form}>
-      <form noValidate onSubmit={handleSubmit}>
-        <Presence show={failedReads.length > 0}>
-          <div className="form-error form-field-error" role="alert">
-            <span>
-              {errors?.settings
-                ? `Task defaults could not be loaded: ${errors.settings}`
-                : "Some task options could not be loaded. See the affected field."}
-            </span>
-            <Button variant="text" onClick={() => controller.retryDialogLoad()}>
-              Retry loading
-            </Button>
-          </div>
-        </Presence>
-        <FormFieldError message={message} />
-        <ProjectField
-          projects={taskProjects(scope)}
-          loading={statuses.projects === "loading"}
-          contextLoading={statuses.context === "loading"}
-          error={errors?.projects}
-          contextError={errors?.context}
-          disabled={
-            busy ||
-            statuses.projects !== "ready" ||
-            statuses.context === "loading"
-          }
-          browseDisabled={busy || loading}
-          onBrowse={() =>
-            controller.run(async () => {
-              const repository = await controller.browseTaskProject();
-
-              // Keep selection in this draft; changing panel scope would discard it.
-              if (repository) {
-                form.setValue("repository", repository, {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                });
-              }
-            })
-          }
-          allowParent={scope.projects.some(
-            (project) => project.kind === "parent",
-          )}
-        />
-        <Field id="description" label="Description">
-          <textarea
-            id="description"
-            required
-            maxLength={20000}
-            placeholder="Review the authentication boundary. Cite findings with file paths and suggest next steps."
-            {...form.register("description", { required: true })}
+    <form noValidate onSubmit={handleSubmit}>
+      <Presence show={failedReads.length > 0}>
+        <div className="form-error form-field-error" role="alert">
+          <span>
+            {errors?.settings
+              ? `Task defaults could not be loaded: ${errors.settings}`
+              : "Some task options could not be loaded. See the affected field."}
+          </span>
+          <Button variant="text" onClick={() => controller.retryDialogLoad()}>
+            Retry loading
+          </Button>
+        </div>
+      </Presence>
+      <FormFieldError message={message} />
+      <ProjectField
+        form={form}
+        projects={taskProjects(scope)}
+        loading={statuses.projects === "loading"}
+        contextLoading={statuses.context === "loading"}
+        error={errors?.projects}
+        contextError={errors?.context}
+        disabled={
+          busy ||
+          statuses.projects !== "ready" ||
+          statuses.context === "loading"
+        }
+        browseDisabled={busy || loading}
+        onBrowse={browse}
+        allowParent={scope.projects.some(
+          (project) => project.kind === "parent",
+        )}
+      />
+      <DescriptionField form={form} />
+      <div className={revisionShown ? "two task-workspace-fields" : undefined}>
+        <div>
+          <WorkspaceField
+            form={form}
+            settingsReady={statuses.settings === "ready"}
+            settingsLoading={statuses.settings === "loading"}
+            inPlace={inPlace}
           />
-        </Field>
-        <div
-          className={revisionShown ? "two task-workspace-fields" : undefined}
-        >
+        </div>
+        {revisionShown && (
           <div>
-            <WorkspaceField
-              settingsReady={statuses.settings === "ready"}
-              settingsLoading={statuses.settings === "loading"}
-              inPlace={inPlace}
+            <RevisionField
+              form={form}
+              disabled={
+                statuses.context !== "ready" || statuses.settings !== "ready"
+              }
+              loading={
+                statuses.context === "loading" ||
+                statuses.settings === "loading"
+              }
             />
           </div>
-          {revisionShown && (
-            <div>
-              <RevisionField
-                disabled={
-                  statuses.context !== "ready" || statuses.settings !== "ready"
-                }
-                loading={
-                  statuses.context === "loading" ||
-                  statuses.settings === "loading"
-                }
-              />
-            </div>
-          )}
-        </div>
-        <WorkspaceNoteView
-          note={workspaceNote({
-            git,
-            savedStrategy,
-            readOnly: readOnlyProfile(
-              workerChoice(selectedWorker).profile ?? "",
-            ),
-          })}
-        />
-        <WorkerField
-          workers={scope.workers}
-          loading={
-            statuses.workers === "loading" ||
-            (statuses.settings === "loading" && !selectedWorker)
-          }
-          error={errors?.workers}
-          disabled={
-            statuses.workers !== "ready" || statuses.settings !== "ready"
-          }
-        />
-        <ModelFields
-          defaults={defaults}
-          workers={scope.workers}
-          settingsReady={statuses.settings === "ready"}
-          workersReady={statuses.workers === "ready"}
-          settingsLoading={statuses.settings === "loading"}
-          workersLoading={statuses.workers === "loading"}
-        />
-        <ApprovalField
-          workers={scope.workers}
-          disabled={
-            statuses.workers !== "ready" || statuses.settings !== "ready"
-          }
-          loading={
-            statuses.workers === "loading" || statuses.settings === "loading"
-          }
-        />
-        <BudgetFields
-          workers={scope.workers}
-          settingsReady={statuses.settings === "ready"}
-          workersReady={statuses.workers === "ready"}
-          settingsLoading={statuses.settings === "loading"}
-        />
-        <FormFooter label="Start task" disabled={!canSubmit} />
-      </form>
-    </FormProvider>
+        )}
+      </div>
+      <WorkspaceNoteView
+        note={workspaceNote({
+          git,
+          savedStrategy,
+          readOnly: readOnlyProfile(workerChoice(selectedWorker).profile ?? ""),
+        })}
+      />
+      <WorkerField
+        form={form}
+        workers={scope.workers}
+        loading={
+          statuses.workers === "loading" ||
+          (statuses.settings === "loading" && !selectedWorker)
+        }
+        error={errors?.workers}
+        disabled={statuses.workers !== "ready" || statuses.settings !== "ready"}
+      />
+      <ModelFields
+        form={form}
+        defaults={defaults}
+        workers={scope.workers}
+        settingsReady={statuses.settings === "ready"}
+        workersReady={statuses.workers === "ready"}
+        settingsLoading={statuses.settings === "loading"}
+        workersLoading={statuses.workers === "loading"}
+      />
+      <ApprovalField
+        form={form}
+        workers={scope.workers}
+        disabled={statuses.workers !== "ready" || statuses.settings !== "ready"}
+        loading={
+          statuses.workers === "loading" || statuses.settings === "loading"
+        }
+      />
+      <BudgetFields
+        form={form}
+        workers={scope.workers}
+        settingsReady={statuses.settings === "ready"}
+        workersReady={statuses.workers === "ready"}
+        settingsLoading={statuses.settings === "loading"}
+      />
+      <FormFooter label="Start task" disabled={!canSubmit} />
+    </form>
   );
 }
 

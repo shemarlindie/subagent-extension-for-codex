@@ -9,6 +9,7 @@ import { useController, useSnapshot } from "../../app/state/controller-context";
 import { buttonClass } from "../components/button/button";
 import { Icon } from "../components/icons/icons";
 import { useAnimatedHeight } from "../components/motion/use-animated-height";
+import { DialogContent } from "./dialog-content";
 import { dialogDefinition } from "./dialog-registry";
 import { DialogSubtitle } from "./dialog-subtitle";
 
@@ -140,7 +141,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
             </Dialog.Close>
           </div>
           {shownDialog && <DialogSubtitle dialog={shownDialog} />}
-          {shownDialog && definition?.render(shownDialog)}
+          {shownDialog && <DialogContent dialog={shownDialog} />}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
