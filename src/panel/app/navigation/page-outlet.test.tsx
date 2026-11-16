@@ -1,16 +1,44 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { PageFrame } from "../../shared/components/navigation/page-frame";
 import { PageOutlet } from "./page-outlet";
 
-const state = vi.hoisted(() => ({
-  page: "tasks",
-  selected: undefined as string | undefined,
+const store = vi.hoisted(() => ({
+  snapshot: { page: "tasks", selected: undefined as string | undefined },
+  listeners: new Set<() => void>(),
 }));
 
-vi.mock("../state/controller-context", () => ({ useSnapshot: () => state }));
+vi.mock("../state/controller-context", async () => {
+  const { useSyncExternalStore } = await import("react");
+
+  const subscribe = (listener: () => void) => {
+    store.listeners.add(listener);
+
+    return () => {
+      store.listeners.delete(listener);
+    };
+  };
+
+  return {
+    useSnapshot: () => useSyncExternalStore(subscribe, () => store.snapshot),
+  };
+});
+
+/** Changes the snapshot and notifies subscribers, as a controller patch does. */
+function patch(changes: Partial<typeof store.snapshot> = {}) {
+  act(() => {
+    store.snapshot = { ...store.snapshot, ...changes };
+    store.listeners.forEach((listener) => listener());
+  });
+}
 
 vi.mock("../tasks-page", () => ({
   TasksPage: () => (
@@ -41,17 +69,15 @@ vi.mock("../../features/settings/settings-page", () => ({
 
 afterEach(() => {
   cleanup();
-  state.page = "tasks";
-  state.selected = undefined;
+  store.snapshot = { page: "tasks", selected: undefined };
 });
 
 test("retains task inputs while making the inactive page hidden and inert", () => {
-  const view = render(<PageOutlet />);
+  render(<PageOutlet />);
   const draft = screen.getByRole("textbox", { name: "Task draft" });
   fireEvent.change(draft, { target: { value: "Unsent message" } });
 
-  state.page = "projects";
-  view.rerender(<PageOutlet />);
+  patch({ page: "projects" });
 
   const slot = draft.closest("[data-page]");
   expect(slot?.hasAttribute("hidden")).toBe(true);
@@ -59,8 +85,7 @@ test("retains task inputs while making the inactive page hidden and inert", () =
   expect(screen.queryByRole("textbox", { name: "Task draft" })).toBeNull();
   expect(draft.isConnected).toBe(true);
 
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
+  patch({ page: "tasks" });
 
   expect(screen.getByRole("textbox", { name: "Task draft" })).toBe(draft);
   expect((draft as HTMLInputElement).value).toBe("Unsent message");
@@ -69,24 +94,22 @@ test("retains task inputs while making the inactive page hidden and inert", () =
 });
 
 test("focuses the arrival heading and returns focus to the retained task opener", () => {
-  const view = render(<PageOutlet />);
+  render(<PageOutlet />);
   const opener = screen.getByRole("button", { name: "Project scope" });
   opener.focus();
 
-  state.page = "projects";
-  view.rerender(<PageOutlet />);
+  patch({ page: "projects" });
 
   expect(document.activeElement).toBe(
     screen.getByRole("heading", { name: "Projects" }),
   );
 
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
+  patch({ page: "tasks" });
   expect(document.activeElement).toBe(opener);
 });
 
 test("an initial Projects URL focuses its heading and retains the task workspace", () => {
-  state.page = "projects";
+  store.snapshot.page = "projects";
   const view = render(<PageOutlet />);
 
   expect(document.activeElement).toBe(
@@ -101,16 +124,15 @@ test("an initial Projects URL focuses its heading and retains the task workspace
 });
 
 test("unmounts Settings on departure and focuses the task navigation entry", () => {
-  state.page = "settings";
-  const view = render(<PageOutlet />);
+  store.snapshot.page = "settings";
+  render(<PageOutlet />);
   const draft = screen.getByRole("textbox", { name: "Settings draft" });
 
   expect(document.activeElement).toBe(
     screen.getByRole("heading", { name: "Settings" }),
   );
 
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
+  patch({ page: "tasks" });
 
   expect(draft.isConnected).toBe(false);
 
@@ -118,8 +140,7 @@ test("unmounts Settings on departure and focuses the task navigation entry", () 
     screen.getByRole("button", { name: "Project scope" }),
   );
 
-  state.page = "settings";
-  view.rerender(<PageOutlet />);
+  patch({ page: "settings" });
 
   const nextDraft = screen.getByRole("textbox", { name: "Settings draft" });
   expect(nextDraft).not.toBe(draft);
@@ -127,20 +148,17 @@ test("unmounts Settings on departure and focuses the task navigation entry", () 
 });
 
 test("preserves return state through polling until the selected task changes", () => {
-  state.selected = "task-1";
+  store.snapshot.selected = "task-1";
   const view = render(<PageOutlet />);
   const slot = view.container.querySelector('[data-page="tasks"]');
 
-  state.page = "projects";
-  view.rerender(<PageOutlet />);
-  state.page = "tasks";
-  view.rerender(<PageOutlet />);
+  patch({ page: "projects" });
+  patch({ page: "tasks" });
   expect(slot?.getAttribute("data-returning")).toBe("true");
 
-  view.rerender(<PageOutlet />);
+  patch();
   expect(slot?.getAttribute("data-returning")).toBe("true");
 
-  state.selected = "task-2";
-  view.rerender(<PageOutlet />);
+  patch({ selected: "task-2" });
   expect(slot?.hasAttribute("data-returning")).toBe(false);
 });

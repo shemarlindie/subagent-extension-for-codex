@@ -1,5 +1,5 @@
 import { Tooltip } from "@base-ui/react/tooltip";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { createElement } from "react";
 import { onTestFinished, vi } from "vitest";
 
@@ -75,6 +75,23 @@ function setup(
     return visibleSnapshot;
   });
 
+  // The snapshot changes below bypass `patch`, so they notify subscribers here.
+  const listeners = new Set<() => void>();
+  const subscribe = controller.subscribe;
+
+  vi.spyOn(controller, "subscribe").mockImplementation((listener) => {
+    listeners.add(listener);
+    const unsubscribe = subscribe(listener);
+
+    return () => {
+      listeners.delete(listener);
+
+      return unsubscribe();
+    };
+  });
+
+  const notify = () => act(() => listeners.forEach((listener) => listener()));
+
   // Chat remounts for each opening, as the inspector keys it by task.
   let opening = 0;
 
@@ -100,12 +117,13 @@ function setup(
     snapshot.tasks = [current];
     visibleSnapshot = { ...snapshot };
     view.rerender(panel(current));
+    notify();
   };
 
   const updateChat = (items: ChatItem[]) => {
     snapshot.chat = { task: task.id, items, cursor: items.length };
     visibleSnapshot = { ...snapshot };
-    view.rerender(panel(task));
+    notify();
   };
 
   const reopen = (patch: Partial<Task>) => {

@@ -70,7 +70,9 @@ select the fields it renders, usually by name, as in
 destructuring the result, so it flags a field the component no longer reads. A
 helper that takes several fields gets them as its own selection of a named field
 constant, such as `useSnapshot(TASK_LIST_FIELDS)`. An event handler that needs
-state only when the user acts reads `controller.getSnapshot()`. Patches keep the
+state only when the user acts reads `controller.getSnapshot()`. An effect that
+copies state outside React, such as the page title, reads it the same way from a
+`controller.subscribe` listener, so the change renders nothing. Patches keep the
 references of unchanged read data, listed in `READ_FIELDS` in
 `app/state/patch-state.ts`, so a refresh renders only what changed. Rows of
 lists that change one item at a time, such as task rows and Chat messages, are
@@ -367,8 +369,9 @@ fails. Fix a finding when the fix adds less complexity than the render costs.
 
 The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
 They fail when render isolation regresses: a refresh with unchanged data commits
-nothing, a streamed paragraph renders only its message, and list, timeline and
-Activity rows render only when their own data changes.
+nothing, a streamed paragraph renders only its message, list, timeline and
+Activity rows render only when their own data changes, and the shell's pages and
+Chat's panel skip changes they don't show.
 
 The report checks a new component once a scenario renders it. A new kind of
 change, such as a new read or user action, needs a scenario in

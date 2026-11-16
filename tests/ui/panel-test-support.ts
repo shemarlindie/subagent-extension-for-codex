@@ -226,7 +226,11 @@ export class FakeTransport implements Transport {
       const view = await composeView(args.view, (part, partArgs) => {
         if (part === "projects") return this.tool("list_projects");
         if (part === "list") return this.tool("app_list_tasks", partArgs);
-        if (part === "chat") return { items: this.chat, next_cursor: 0 };
+
+        if (part === "chat") {
+          return { items: this.chat, next_cursor: this.taskEvents.length };
+        }
+
         if (part === "pending") return { tasks: this.pendingUpdates };
 
         return windowActivity(

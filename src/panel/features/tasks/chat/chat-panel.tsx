@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import type { BudgetRaise } from "../../../../shared/tasks/model";
 import {
@@ -21,8 +21,15 @@ type ChatPanelProps = { task?: Task; taskId: string };
 
 type BudgetRaiseDraft = { taskId: string; value: BudgetRaise };
 
-/** The task as a conversation, with the composer always at the bottom. */
-export function ChatPanel({ task, taskId }: ChatPanelProps) {
+/**
+ * The task as a conversation, with the composer always at the bottom.
+ * Memoized because `EvidenceTabs` renders for every Activity, changes or host
+ * update, which the Chat footer doesn't show.
+ */
+export const ChatPanel = memo(function ChatPanel({
+  task,
+  taskId,
+}: ChatPanelProps) {
   const controller = useController();
 
   const [budgetDraft, setBudgetDraft] = useState<BudgetRaiseDraft>(() => ({
@@ -136,4 +143,4 @@ export function ChatPanel({ task, taskId }: ChatPanelProps) {
       </div>
     </div>
   );
-}
+});

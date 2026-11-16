@@ -1,31 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import {
-  useController,
-  useSnapshot,
-} from "../../../app/state/controller-context";
+import { useController } from "../../../app/state/controller-context";
 
 /**
  * Leads the standalone console's tab title with its unread task count, as
- * in "(2) Delegated Work". A host names the embedded panel itself.
+ * in "(2) Delegated Work". A host names the embedded panel itself. The count
+ * is read through a store subscription, so a change renders nothing.
  */
 export function useUnreadTitle() {
   const controller = useController();
-  const [base] = useState(() => document.title);
-
-  const unread = useSnapshot(
-    (state) => state.tasks.filter((task) => task.unread).length,
-  );
 
   useEffect(() => {
     if (controller.transport.embedded) return;
-    document.title = unread ? `(${unread}) ${base}` : base;
-  }, [controller, base, unread]);
+    const base = document.title;
 
-  useEffect(
-    () => () => {
+    const update = () => {
+      const unread = controller
+        .getSnapshot()
+        .tasks.filter((task) => task.unread).length;
+
+      document.title = unread ? `(${unread}) ${base}` : base;
+    };
+
+    update();
+    const unsubscribe = controller.subscribe(update);
+
+    return () => {
+      unsubscribe();
       document.title = base;
-    },
-    [base],
-  );
+    };
+  }, [controller]);
 }
