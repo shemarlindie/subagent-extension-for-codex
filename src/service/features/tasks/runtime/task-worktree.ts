@@ -7,8 +7,37 @@ export type WorktreeContext = Pick<
 >;
 
 /**
- * Runs a change to a stopped task's worktree or branch. Turns and deletion
- * wait for it, so a message sent meanwhile stays queued until it finishes.
+ * The worktree and branch changes in progress, at most one per task. Turns,
+ * deletion and shutdown wait for them.
+ */
+export class WorktreeChanges {
+  private running = new Map<string, Promise<unknown>>();
+
+  has(id: string) {
+    return this.running.has(id);
+  }
+
+  /** Runs a task's change and records it until it settles. */
+  async run<T>(id: string, change: () => Promise<T>) {
+    const running = change();
+    this.running.set(id, running);
+
+    try {
+      return await running;
+    } finally {
+      this.running.delete(id);
+    }
+  }
+
+  /** Waits for the tasks' changes, or every change, whatever their outcome. */
+  async settle(ids: Iterable<string> = this.running.keys()) {
+    for (const id of [...ids]) await this.running.get(id)?.catch(() => {});
+  }
+}
+
+/**
+ * Runs a change to a stopped task's worktree or branch. A message sent
+ * meanwhile stays queued, and its turn starts once the change finishes.
  */
 async function changeWorktree<T>(
   c: WorktreeContext,
@@ -16,13 +45,11 @@ async function changeWorktree<T>(
   id: string,
   change: (t: Task) => Promise<T>,
 ) {
-  const running = change(c.idleWorktreeTask(owner, id));
-  c.worktreeChanges.set(id, running);
+  const t = c.idleWorktreeTask(owner, id);
 
   try {
-    return await running;
+    return await c.worktreeChanges.run(id, () => change(t));
   } finally {
-    c.worktreeChanges.delete(id);
     void c.schedule();
   }
 }
@@ -72,12 +99,4 @@ export function deleteTaskBranch(
 
     return { status: "deleted" as const };
   });
-}
-
-/** Waits for the tasks' worktree changes, whatever their outcome. */
-export async function settleWorktreeChanges(
-  c: Pick<Control, "worktreeChanges">,
-  ids: Iterable<string>,
-) {
-  for (const id of ids) await c.worktreeChanges.get(id)?.catch(() => {});
 }

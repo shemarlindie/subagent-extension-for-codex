@@ -206,13 +206,15 @@ test("archiving removes clean worktrees and keeps those with uncommitted changes
     assert.ok(dirtyPath);
     await writeFile(join(dirtyPath, "draft.txt"), "draft\n");
 
-    assert.deepEqual(
-      await setTasksArchived(c, "alice", [clean.id, dirty.id], true),
-      {
-        task_ids: [clean.id, dirty.id],
-        skipped: [],
-      },
+    const { result, cleanup } = setTasksArchived(
+      c,
+      "alice",
+      [clean.id, dirty.id],
+      true,
     );
+
+    assert.deepEqual(result, { task_ids: [clean.id, dirty.id], skipped: [] });
+    await cleanup;
 
     const archivedClean = store.get(clean.id, "alice");
     assert.equal(archivedClean.workspace_removed, true);
@@ -259,12 +261,12 @@ test("a worktree removal holds the task's next turn and its deletion until it fi
     await until(() => store.get(t.id, "alice").status === "completed");
 
     // Unarchiving and messaging the task during cleanup queues the turn.
-    const archiving = setTasksArchived(c, "alice", [t.id], true);
+    const { cleanup } = setTasksArchived(c, "alice", [t.id], true);
     await until(() => removals.held() === 1);
     await c.send("alice", t.id, "Carry on", "user");
     assert.equal(store.get(t.id, "alice").status, "queued");
     removals.release();
-    await archiving;
+    await cleanup;
 
     await until(() => {
       const task = store.get(t.id, "alice");
@@ -304,19 +306,48 @@ test("archive cleanup continues past a task deleted during an earlier removal", 
       ids.every((id) => store.get(id, "alice").status === "completed"),
     );
 
-    const archiving = setTasksArchived(c, "alice", ids, true);
+    const { cleanup } = setTasksArchived(c, "alice", ids, true);
     await until(() => removals.held() === 1);
     await c.delete("alice", deleted);
     removals.release();
     await until(() => removals.held() === 1);
     removals.release();
+    await cleanup;
 
-    assert.deepEqual(await archiving, { task_ids: ids, skipped: [] });
     assert.equal(store.get(first, "alice").workspace_removed, true);
     assert.equal(store.get(last, "alice").workspace_removed, true);
   } finally {
     await c.close();
   }
+});
+
+test("shutdown waits for a worktree removal and stops archive cleanup", async () => {
+  const provider = new TestProvider();
+  const closeProvider = vi.fn(async () => {});
+  provider.close = closeProvider;
+  const { c, store, repo } = await setup(provider);
+  const removals = holdRemovals(c);
+  const closeStore = vi.spyOn(store, "close");
+
+  const first = (await c.start("alice", input(repo))).id;
+  const second = (await c.start("alice", input(repo))).id;
+
+  await until(() =>
+    [first, second].every(
+      (id) => store.get(id, "alice").status === "completed",
+    ),
+  );
+
+  const { cleanup } = setTasksArchived(c, "alice", [first, second], true);
+  await until(() => removals.held() === 1);
+  const closing = c.close();
+
+  // The removal still has to save the task, so the store stays open.
+  await until(() => closeProvider.mock.calls.length === 1);
+  assert.equal(closeStore.mock.calls.length, 0);
+  removals.release();
+  await Promise.all([closing, cleanup]);
+  assert.equal(vi.mocked(c.workspaces.removeWorktree).mock.calls.length, 1);
 });
 
 test("a task is deleted in any state with everything related to it", async () => {

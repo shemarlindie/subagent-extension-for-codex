@@ -78,7 +78,7 @@ import {
   type DeletionVersions,
 } from "./task-deletion.js";
 import { startTask } from "./task-start.js";
-import { settleWorktreeChanges } from "./task-worktree.js";
+import { WorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import { recordStatusEvent, type Active } from "./turn-outcome.js";
 import {
@@ -106,8 +106,7 @@ export class Control {
   parentSeen: ParentSeenStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
-  /** Worktree and branch changes in progress. Turns and deletion wait for them. */
-  worktreeChanges = new Map<string, Promise<unknown>>();
+  worktreeChanges = new WorktreeChanges();
   private sendRequests: SendRequests;
   /** Observes queue waits for the timing log. */
   private queueWaits = new QueueWaits();
@@ -609,19 +608,14 @@ export class Control {
     return task;
   }
 
-  /** Worktree actions and deletion wait until the task isn't running or about to. */
-  idleWorktreeTask(
-    owner: string,
-    id: string,
-    action = "changing its worktree",
-  ) {
+  /** Worktree actions wait until the task isn't running or about to. */
+  idleWorktreeTask(owner: string, id: string) {
     const t = this.mutableTask(owner, id);
 
-    if (
-      this.active.has(id) ||
-      ["queued", "starting", "running", "waiting"].includes(t.status)
-    ) {
-      throw new Error(`Wait until the task stops before ${action}.`);
+    if (this.active.has(id) || BUSY.includes(t.status)) {
+      throw new Error(
+        "Wait until the task stops before changing its worktree.",
+      );
     }
 
     if (this.worktreeChanges.has(id)) {
@@ -650,7 +644,7 @@ export class Control {
     for (const id of doomed) this.deleting.add(id);
 
     try {
-      await settleWorktreeChanges(this, doomed);
+      await this.worktreeChanges.settle(doomed);
       let versions: Map<string, DeletionVersions> | undefined;
 
       if (confirmation) {
@@ -739,7 +733,7 @@ export class Control {
     for (const id of ids) this.deleting.add(id);
 
     try {
-      await settleWorktreeChanges(this, ids);
+      await this.worktreeChanges.settle(ids);
 
       if (confirmation) {
         await confirmedTaskDeletion(
@@ -1280,6 +1274,8 @@ export class Control {
       [...this.providers.values()].map(async (provider) => provider.close?.()),
     );
 
+    // A worktree change saves the task when it finishes.
+    await this.worktreeChanges.settle();
     this.store.close();
 
     const errors = [...tasks, ...providers].flatMap((result) =>
