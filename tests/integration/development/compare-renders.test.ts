@@ -47,7 +47,7 @@ writeFileSync("render-report/render-report.md", \`# Panel render report
 
 | Scenario | Group | Commits | Notifications | Renders | Wasted | Remounts | Transient | Warnings | Render ms |
 | --- | --- | --: | --: | --: | --: | --: | --: | --: | --: |
-| Open a dialog | One-off | 10 | 3 | 341 | 257 | 0 | 0 | 0 | \${[3, 1, 2][run]}.00 |
+| Open a dialog | One-off | 10 | 3 | 341 | 257 | 0 | 0 | 0 | \${[3, 1, 4, 2][run]}.00 |
 
 ## Findings
 
@@ -58,13 +58,13 @@ writeFileSync("render-report/render-report.md", \`# Panel render report
 `,
   );
 
-  run(cwd, "save", "main", "3");
+  run(cwd, "save", "main", "4");
 
   assert.deepEqual(
     JSON.parse(
       await readFile(join(cwd, "render-report/runs/main.json"), "utf8"),
     ),
-    { "Open a dialog": { renders: 341, wasted: 257, ms: 2 } },
+    { "Open a dialog": { renders: 341, wasted: 257, ms: 2.5 } },
   );
 });
 

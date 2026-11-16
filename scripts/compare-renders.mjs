@@ -31,8 +31,13 @@ function readSummary() {
   );
 }
 
-const median = (values) =>
-  values.toSorted((a, b) => a - b)[Math.floor(values.length / 2)];
+function median(values) {
+  const sorted = values.toSorted((a, b) => a - b);
+  const middle = sorted.length / 2;
+
+  // An even count averages the two middle values.
+  return (sorted[Math.floor(middle)] + sorted[Math.ceil(middle) - 1]) / 2;
+}
 
 /** Runs the report `runs` times and saves each scenario's results as `name`. */
 function save(name, runs) {
