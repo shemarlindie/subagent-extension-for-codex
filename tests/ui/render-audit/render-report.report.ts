@@ -18,7 +18,9 @@ import {
 // Vitest runs from the repository root.
 const OUTPUT = join(process.cwd(), "render-report");
 
-const results: { scenario: Scenario; result: ScenarioResult }[] = [];
+type Row = { scenario: Scenario; result: ScenarioResult };
+
+const results: Row[] = [];
 const unstable = new Set<string>();
 
 beforeAll(async () => {
@@ -71,8 +73,12 @@ function tally<T>(rows: T[], key: (row: T) => string) {
   return [...counts].sort(([, a], [, b]) => b - a);
 }
 
-function summary() {
-  const rows = results.map(({ scenario, result }) => {
+const wastedCount = ({ result }: Row) =>
+  updates(result.renders).filter(({ wasted }) => wasted).length;
+
+function summary(rows: Row[]) {
+  const lines = rows.map((row) => {
+    const { scenario, result } = row;
     const renders = updates(result.renders);
 
     return [
@@ -81,7 +87,7 @@ function summary() {
       result.commits,
       result.notifications,
       renders.length,
-      renders.filter(({ wasted }) => wasted).length,
+      wastedCount(row),
       result.remounts.filter(({ ours }) => ours).length,
       result.transients.filter(({ ours }) => ours).length,
       result.warnings,
@@ -91,12 +97,12 @@ function summary() {
   return [
     "| Scenario | Group | Commits | Notifications | Renders | Wasted | Remounts | Transient | Warnings |",
     "| --- | --- | --: | --: | --: | --: | --: | --: | --: |",
-    ...rows.map((row) => `| ${row} |`),
+    ...lines.map((line) => `| ${line} |`),
   ];
 }
 
-function findings() {
-  return results.flatMap(({ scenario, result }) => {
+function findings(rows: Row[]) {
+  return rows.flatMap(({ scenario, result }) => {
     const wasted = tally(
       updates(result.renders).filter(({ wasted }) => wasted),
       ({ name, cause, path: names }) =>
@@ -132,19 +138,21 @@ function findings() {
 
 function report() {
   const unreached = unreachedComponents();
+  // Most wasted renders first. Ties keep the scenario order.
+  const ranked = results.toSorted((a, b) => wastedCount(b) - wastedCount(a));
 
   return [
     "# Panel render report",
     "",
-    `${results.length} scenarios. Counts cover components declared in \`src/panel\`. A render is wasted when its output matches the output before it. See [Panel architecture](../docs/panel-architecture.md#render-report).`,
+    `${results.length} scenarios, most wasted renders first. Counts cover components declared in \`src/panel\`. A render is wasted when its output matches the output before it. See [Panel architecture](../docs/panel-architecture.md#render-report).`,
     "",
     "## Summary",
     "",
-    ...summary(),
+    ...summary(ranked),
     "",
     "## Findings",
     "",
-    ...findings(),
+    ...findings(ranked),
     "## Selections that change on every patch",
     "",
     ...(unstable.size
