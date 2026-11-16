@@ -11,6 +11,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 
+import { format, resolveConfig } from "prettier";
+
 const run = (command, args) =>
   execFileSync(command, args, { encoding: "utf8" }).trim();
 
@@ -267,6 +269,15 @@ if (!yes) {
     );
   }
 }
+
+// Formats the notes after any hand edits, so CI's format check passes.
+writeFileSync(
+  "CHANGELOG.md",
+  await format(readFileSync("CHANGELOG.md", "utf8"), {
+    ...(await resolveConfig("CHANGELOG.md")),
+    filepath: "CHANGELOG.md",
+  }),
+);
 
 run("git", ["switch", "--quiet", "--create", branch]);
 
