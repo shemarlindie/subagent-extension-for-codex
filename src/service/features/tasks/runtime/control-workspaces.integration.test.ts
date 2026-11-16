@@ -235,21 +235,32 @@ test("archiving removes clean worktrees and keeps those with uncommitted changes
   }
 });
 
-/** Holds each worktree removal after Git removes it, until released in order. */
+/**
+ * Holds each worktree removal after Git removes it, until released in order.
+ * `releaseAll` stops holding, so closing never waits on a held removal.
+ */
 function holdRemovals(c: Control) {
   const remove = c.workspaces.removeWorktree.bind(c.workspaces);
   const held: (() => void)[] = [];
+  let holding = true;
 
   vi.spyOn(c.workspaces, "removeWorktree").mockImplementation(
     async (t, force) => {
       const result = await remove(t, force);
-      await new Promise<void>((resolve) => held.push(resolve));
+      if (holding) await new Promise<void>((resolve) => held.push(resolve));
 
       return result;
     },
   );
 
-  return { held: () => held.length, release: () => held.shift()?.() };
+  return {
+    held: () => held.length,
+    release: () => held.shift()?.(),
+    releaseAll: () => {
+      holding = false;
+      for (const resolve of held.splice(0)) resolve();
+    },
+  };
 }
 
 test("a worktree removal holds the task's next turn and its deletion until it finishes", async () => {
@@ -294,6 +305,7 @@ test("a worktree removal holds the task's next turn and its deletion until it fi
     await Promise.all([removing, deleting]);
     assert.equal(store.find(t.id, "alice"), undefined);
   } finally {
+    removals.releaseAll();
     await c.close();
   }
 });
@@ -323,6 +335,7 @@ test("archive cleanup continues past a task deleted during an earlier removal", 
     assert.equal(store.get(first, "alice").workspace_removed, true);
     assert.equal(store.get(last, "alice").workspace_removed, true);
   } finally {
+    removals.releaseAll();
     await c.close();
   }
 });
@@ -335,25 +348,30 @@ test("shutdown waits for a worktree removal and stops archive cleanup", async ()
   const removals = holdRemovals(c);
   const closeStore = vi.spyOn(store, "close");
 
-  const first = (await c.start("alice", input(repo))).id;
-  const second = (await c.start("alice", input(repo))).id;
+  try {
+    const first = (await c.start("alice", input(repo))).id;
+    const second = (await c.start("alice", input(repo))).id;
 
-  await until(() =>
-    [first, second].every(
-      (id) => store.get(id, "alice").status === "completed",
-    ),
-  );
+    await until(() =>
+      [first, second].every(
+        (id) => store.get(id, "alice").status === "completed",
+      ),
+    );
 
-  const { cleanup } = setTasksArchived(c, "alice", [first, second], true);
-  await until(() => removals.held() === 1);
-  const closing = c.close();
+    const { cleanup } = setTasksArchived(c, "alice", [first, second], true);
+    await until(() => removals.held() === 1);
+    const closing = c.close();
 
-  // The removal still has to save the task, so the store stays open.
-  await until(() => closeProvider.mock.calls.length === 1);
-  assert.equal(closeStore.mock.calls.length, 0);
-  removals.release();
-  await Promise.all([closing, cleanup]);
-  assert.equal(vi.mocked(c.workspaces.removeWorktree).mock.calls.length, 1);
+    // The removal still has to save the task, so the store stays open.
+    await until(() => closeProvider.mock.calls.length === 1);
+    assert.equal(closeStore.mock.calls.length, 0);
+    removals.release();
+    await Promise.all([closing, cleanup]);
+    assert.equal(vi.mocked(c.workspaces.removeWorktree).mock.calls.length, 1);
+  } finally {
+    // The harness closes the service after the test.
+    removals.releaseAll();
+  }
 });
 
 test("a task is deleted in any state with everything related to it", async () => {
