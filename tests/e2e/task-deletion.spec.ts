@@ -298,8 +298,9 @@ test.describe("when the session location cannot be verified", () => {
     repository,
   }) => {
     // Only the first task gets a worktree, so only it expands to resources.
+    // Its uncommitted change keeps the worktree when the task is archived.
     for (const [title, worktree] of [
-      ["First archived task", true],
+      ["First archived task [fixture:change]", true],
       ["Second archived task", false],
     ] as const) {
       await openAdvancedTask(page, title);
