@@ -19,6 +19,7 @@ import { rotateStartupLog } from "./log-rotation.js";
 import { freeLoopbackPort, PortInUseError } from "./port.js";
 import { isProcessRunning } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
+import type { ServiceConnection } from "./service-client.js";
 
 /** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
@@ -70,7 +71,7 @@ function loopbackUrl(origin: string) {
   return url;
 }
 
-export async function connectService() {
+export async function connectService(): Promise<ServiceConnection> {
   const data = dataDirectory();
   const explicit = process.env.SUBAGENT_EXTENSION_FOR_CODEX_URL;
 
@@ -284,21 +285,13 @@ export async function connectService() {
       );
     }
 
-    // A compatible service keeps serving until it exits. This version starts
-    // then, so proxies from the replaced installation, which can't start
-    // their own once the update removes it, find this one.
+    // A compatible service keeps serving until it exits.
     if (decision.forward) {
-      void waitForExit()
-        .then(() => connectService())
-        .then(
-          () => console.error(`Replaced the extension service at ${origin}`),
-          (error: unknown) =>
-            console.error(
-              `Could not start the extension service after the handoff: ${String(error)}`,
-            ),
-        );
-
-      return { origin: found.origin, token: found.token };
+      return {
+        origin: found.origin,
+        token: found.token,
+        draining: waitForExit,
+      };
     }
 
     await waitForExit();

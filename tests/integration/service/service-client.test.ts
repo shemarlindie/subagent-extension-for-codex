@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer, type RequestListener } from "node:http";
 
-import { test, type TestContext } from "vitest";
+import { test, vi, type TestContext } from "vitest";
 
 import {
   serviceClient,
@@ -77,6 +77,29 @@ test("a call to a stopped service reconnects and is sent again", async (t) => {
 
   assert.deepEqual(await response.json(), { result: "ok" });
   assert.equal(calls(), 2);
+});
+
+test("a connection to a draining service reconnects as soon as it exits", async (t) => {
+  let exited = () => {};
+  const exit = new Promise<void>((resolve) => (exited = resolve));
+  const old = await fakeService(t, ok);
+  const live = await fakeService(t, ok);
+
+  const { connect, calls } = connections(
+    { ...old.connection, draining: () => exit },
+    live.connection,
+  );
+
+  const client = serviceClient(connect);
+  await client.connect();
+  assert.equal(calls(), 1);
+
+  // Without another call, the client connects again, which starts this version.
+  exited();
+  await vi.waitFor(() => assert.equal(calls(), 2));
+  await client.post("tools/list_tasks", {}, { timeout: 5000 });
+  assert.equal(old.requests(), 0);
+  assert.equal(live.requests(), 1);
 });
 
 test("a reset write is not sent again, but a reset read is", async (t) => {
