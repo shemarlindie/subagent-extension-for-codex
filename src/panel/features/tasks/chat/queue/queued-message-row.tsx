@@ -12,12 +12,18 @@ import { Icon } from "../../../../shared/components/icons/icons";
 import { Presence } from "../../../../shared/components/motion/presence";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
-import { composerMode } from "../chat-model";
+
+/** A change to the queue, which resolves an error message when it fails. */
+export type QueueAction = (task: Task) => Promise<string | undefined>;
 
 type QueuedMessageRowProps = {
-  task: Task;
   message: QueuedMessage;
-  onError: (error?: string) => void;
+  /** Whether the message is at the front of the queue. */
+  front: boolean;
+  /** Whether the task is running a turn that the message can steer. */
+  steerable: boolean;
+  /** Runs a change on the task and shows its error. Resolves whether it worked. */
+  act: (action: QueueAction) => Promise<boolean>;
   /** Whether the queue can be reordered, so every row keeps a grip slot. */
   reorderable: boolean;
   /** Whether the row can change places with another queued message. */
@@ -37,9 +43,10 @@ type QueuedMessageRowProps = {
  * A message waiting for its turn, which can be steered, edited, moved or removed.
  */
 export function QueuedMessageRow({
-  task,
   message,
-  onError,
+  front,
+  steerable,
+  act,
   reorderable,
   movable,
   dragging,
@@ -62,8 +69,7 @@ export function QueuedMessageRow({
 
   // A command the running turn couldn't take waits at the front, and runs as
   // its own turn when this one ends.
-  const runsNext =
-    command && message.recorded && task.queue[0]?.id === message.id;
+  const runsNext = command && message.recorded && front;
 
   useAnimatedHeight(row, editing);
 
@@ -76,23 +82,20 @@ export function QueuedMessageRow({
   const save = async () => {
     if (!draft?.trim()) return;
 
-    const error = await controller.taskActions.editQueued(
-      task,
-      message.id,
-      draft.trim(),
+    const text = draft.trim();
+
+    const saved = await act((task) =>
+      controller.taskActions.editQueued(task, message.id, text),
     );
 
-    onError(error);
-    if (!error) toggleEditing();
+    if (saved) toggleEditing();
   };
 
-  const remove = async () => {
-    onError(await controller.taskActions.removeQueued(task, message.id));
-  };
+  const remove = () =>
+    act((task) => controller.taskActions.removeQueued(task, message.id));
 
-  const steer = async () => {
-    onError(await controller.taskActions.steerQueued(task, message.id));
-  };
+  const steer = () =>
+    act((task) => controller.taskActions.steerQueued(task, message.id));
 
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
     if (!canMove || busy) return;
@@ -195,7 +198,7 @@ export function QueuedMessageRow({
       <div key={String(editing)} className={`chat-queue-actions${swap}`}>
         {!editing ? (
           <>
-            {!message.recorded && composerMode(task) === "busy" && (
+            {!message.recorded && steerable && (
               <TooltipWrapper label="Steer">
                 <Button
                   variant="ghost"

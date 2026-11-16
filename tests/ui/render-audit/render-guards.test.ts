@@ -43,6 +43,7 @@ test("the guarded components mount in the base state", async (t) => {
     "PageOutlet",
     "EvidenceTabs",
     "ChatPanel",
+    "MessageQueue",
     "TaskRow",
     "TaskFilters",
     "ChatTimeline",
@@ -136,7 +137,7 @@ test("unread and host changes leave the shell's pages alone", async (t) => {
   expect(renders(host.renders, "PageOutlet")).toEqual([]);
 });
 
-test("the selected task's runtime change renders no Chat message", async (t) => {
+test("the selected task's runtime change renders no Chat message or queue", async (t) => {
   const result = await run(t, "The selected task's runtime changes");
 
   expect(renders(result.renders, "ChatTimeline")).not.toEqual([]);
@@ -144,6 +145,8 @@ test("the selected task's runtime change renders no Chat message", async (t) => 
   expect(
     renders(result.renders, "ChatMessageView", { within: "ChatTimeline" }),
   ).toEqual([]);
+
+  expect(renders(result.renders, "MessageQueue")).toEqual([]);
 });
 
 test("checking an archived task renders only its row", async (t) => {

@@ -381,8 +381,8 @@ node scripts/compare-renders.mjs before after
 The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
 They fail when render isolation regresses: a refresh with unchanged data commits
 nothing, a streamed paragraph renders only its message, list, timeline and
-Activity rows render only when their own data changes, and the shell's pages and
-Chat's panel skip changes they don't show.
+Activity rows render only when their own data changes, and the shell's pages,
+Chat's panel and its message queue skip changes they don't show.
 
 The report checks a new component once a scenario renders it. A new kind of
 change, such as a new read or user action, needs a scenario in
