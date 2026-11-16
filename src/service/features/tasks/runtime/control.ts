@@ -683,6 +683,8 @@ export class Control {
       }
     } finally {
       for (const id of doomed) this.deleting.delete(id);
+      // A task queued while held starts if deletion failed.
+      void this.schedule();
     }
 
     return { status: "deleted" as const };
@@ -789,6 +791,7 @@ export class Control {
     } finally {
       this.projectGuard.endRemoval(repository);
       for (const id of ids) this.deleting.delete(id);
+      void this.schedule();
     }
   }
 

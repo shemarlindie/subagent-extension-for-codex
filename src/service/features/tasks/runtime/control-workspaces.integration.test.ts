@@ -292,6 +292,34 @@ test("a worktree removal holds the task's next turn and its deletion until it fi
   }
 });
 
+test("a turn queued during a failed deletion starts once deletion releases the task", async () => {
+  const { c, store, repo } = await setup();
+  const removals = holdRemovals(c);
+
+  try {
+    const t = await c.start("alice", input(repo));
+    await until(() => store.get(t.id, "alice").status === "completed");
+    const preview = await c.taskDeletionPreview("alice", [t.id], false);
+
+    // Removing the worktree makes the earlier preview stale.
+    const { cleanup } = setTasksArchived(c, "alice", [t.id], true);
+    await until(() => removals.held() === 1);
+    await c.send("alice", t.id, "Carry on", "user");
+    const deleting = c.delete("alice", t.id, false, preview.confirmation);
+    removals.release();
+    await assert.rejects(deleting, /changed/);
+    await cleanup;
+
+    await until(() => {
+      const task = store.get(t.id, "alice");
+
+      return task.turn === 2 && task.status === "completed";
+    });
+  } finally {
+    await c.close();
+  }
+});
+
 test("archive cleanup continues past a task deleted during an earlier removal", async () => {
   const { c, store, repo } = await setup();
   const removals = holdRemovals(c);
