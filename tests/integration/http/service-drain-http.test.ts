@@ -127,15 +127,18 @@ test("draining ends held update waits with a view that says the service is updat
   const { control, base } = await service(t);
 
   const wait = async (body: Record<string, unknown>) => {
-    const response = await fetch(`${base}/api/user-tools/app_wait_for_updates`, {
-      method: "POST",
-      headers: {
-        ...bearer,
-        "Content-Type": "application/json",
-        "X-Subagent-Extension-For-Codex": "1",
+    const response = await fetch(
+      `${base}/api/user-tools/app_wait_for_updates`,
+      {
+        method: "POST",
+        headers: {
+          ...bearer,
+          "Content-Type": "application/json",
+          "X-Subagent-Extension-For-Codex": "1",
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     return (await response.json()).result;
   };
