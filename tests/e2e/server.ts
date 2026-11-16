@@ -72,7 +72,7 @@ export async function startConsoleService(
     const dropConnections = () => server.closeAllConnections();
 
     // Announces a new revision, as a service write would, so the panel refreshes.
-    const announceChange = () => control.store.projectsChanged();
+    const announceChange = () => control.store.sharedChanged();
 
     return { origin, directory, close, dropConnections, announceChange };
   } catch (error) {

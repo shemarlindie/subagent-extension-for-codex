@@ -51,7 +51,7 @@ export function application(
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "no-store");
     // A draining service is about to exit, so clients shouldn't reuse its connections.
-    if (app.locals.draining) res.setHeader("Connection", "close");
+    if (c.draining) res.setHeader("Connection", "close");
     const requestOrigin = req.headers.origin;
 
     if (requestOrigin && !allowed.has(requestOrigin)) {
@@ -138,7 +138,7 @@ export function application(
       status = "stopping";
     } else if (app.locals.ready === false) {
       status = "starting";
-    } else if (app.locals.draining) {
+    } else if (c.draining) {
       status = "draining";
     }
 

@@ -23,6 +23,8 @@ export type PanelView = {
   chat?: ChatRead;
   activity?: ActivityPage;
   pending?: { tasks: PendingTaskUpdates[] };
+  /** Set while a newer service waits for running turns to end before it takes over. */
+  updating?: true;
 };
 
 /** An `app_wait_for_updates` result. */

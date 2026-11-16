@@ -20,6 +20,7 @@ export function initialState(): Snapshot {
     scopeKnown: false,
     busy: false,
     connection: CONNECTION.connecting,
+    updating: false,
     error: "",
     loginRequired: false,
     formError: "",

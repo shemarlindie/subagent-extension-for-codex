@@ -158,7 +158,7 @@ export async function serve({
   );
 
   c.projects = new Projects(store.database, c.workspaces, () =>
-    store.projectsChanged(),
+    store.sharedChanged(),
   );
 
   for (const root of JSON.parse(
@@ -302,7 +302,6 @@ export async function serve({
   // turns (for at most drainLimit), then exit so it can start its own.
   app.locals.drain = () => {
     draining ??= (async () => {
-      app.locals.draining = true;
       logEvent("info", "service.draining", { active_tasks: c.active.size });
       const started = performance.now();
       await c.drain(drainLimit);

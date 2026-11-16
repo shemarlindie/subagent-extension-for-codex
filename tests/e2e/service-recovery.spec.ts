@@ -99,3 +99,37 @@ test("recover running and queued tasks and preserve follow-up order after a serv
   await expect(instructions.nth(1)).toContainText("First recovered follow-up");
   await expect(instructions.nth(2)).toContainText("Second recovered follow-up");
 });
+
+test("show that the service is updating while it finishes a running turn", async ({
+  consolePage: page,
+  processService,
+}) => {
+  await page.getByRole("button", { name: "New task", exact: true }).click();
+
+  await page
+    .getByRole("textbox", { name: "Task message" })
+    .fill("Keep running through the update [fixture:wait ms=60000]");
+
+  await page.getByRole("button", { name: "Start task", exact: true }).click();
+  const history = page.getByRole("region", { name: "Chat history" });
+  await expect(history).toContainText("Fixture worker running turn 1");
+
+  // A newer plugin's proxy asks the service to hand over.
+  await fetch(`${processService.origin}/api/service/drain`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${CONSOLE_TOKEN}`,
+      "Content-Type": "application/json",
+      "X-Subagent-Extension-For-Codex": "1",
+    },
+    body: "{}",
+  });
+
+  const updating = page.getByRole("button", { name: "Updating…" });
+  await expect(updating).toBeVisible();
+  await updating.hover();
+
+  await expect(page.getByRole("dialog")).toContainText(
+    "takes over once running turns finish",
+  );
+});

@@ -549,7 +549,10 @@ reading positions, and hidden or submitting panels wait to refresh. The header
 shows connection status only when there is a problem. A failed connection shows
 **Reconnecting…** in the header toolbar and retries, and a failed first
 connection shows **Connection failed**. Narrow panels show a warning icon
-instead, and hovering or tapping it shows the status. Changes has
+instead, and hovering or tapping it shows the status. While a
+[plugin update](task-continuation.md#updates-and-service-handoff) waits for
+running turns to finish, the header shows **Updating…**, and hovering or tapping
+it explains that new turns start after the update. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how

@@ -57,7 +57,7 @@ const PAGE = 1000;
 /**
  * Task and event persistence, and the bus that announces committed changes:
  * `event` for each event, and `change` with the owner whose tasks changed,
- * or no owner when the shared project list did.
+ * or no owner when something every owner shares did.
  * Methods taking an owner are the public, owner-checked reads; the others
  * are internal reads for code that already holds the task.
  */
@@ -75,7 +75,7 @@ export class Store {
   /** Distinguishes this process's revisions from a restarted service's. */
   private readonly bootId = randomUUID();
   private revisions = new Map<string, number>();
-  private projectRevision = 0;
+  private sharedRevision = 0;
   // Long-poll reads each listen while they wait, so there can be many.
   bus = new EventEmitter().setMaxListeners(0);
   constructor(path: string) {
@@ -184,19 +184,22 @@ export class Store {
     }
   }
 
-  /** Announces a change to the project list, which every owner shares. */
-  projectsChanged() {
-    this.projectRevision++;
+  /**
+   * Announces a change every owner's panel shows, such as the project list
+   * or the service draining for an update.
+   */
+  sharedChanged() {
+    this.sharedRevision++;
     this.publish("change", undefined);
   }
 
   /**
-   * A token for the state of an owner's tasks and the project list,
+   * A token for the state of an owner's tasks and what every owner shares,
    * `bootId:count`. It differs whenever either has changed, including across
    * a restart, and the count only grows within a boot.
    */
   revision(owner: string) {
-    const count = (this.revisions.get(owner) ?? 0) + this.projectRevision;
+    const count = (this.revisions.get(owner) ?? 0) + this.sharedRevision;
 
     return `${this.bootId}:${count}`;
   }
