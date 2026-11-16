@@ -1,17 +1,25 @@
-import { useState, type DragEvent } from "react";
+import { memo, useState, type DragEvent } from "react";
 
 import {
   useController,
   useSnapshot,
 } from "../../../../app/state/controller-context";
+import { findTask } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import { Presence } from "../../../../shared/components/motion/presence";
-import { QueuedMessageRow } from "./queued-message-row";
+import { QueuedMessageRow, type QueueAction } from "./queued-message-row";
 import { useQueueScroll } from "./use-queue-scroll";
 
-type MessageQueueProps = { task: Task };
+type MessageQueueProps = {
+  taskId: string;
+  pending: Task["pending_steers"];
+  queue: Task["queue"];
+  paused: boolean;
+  /** Whether the task is running a turn that queued messages can steer. */
+  steerable: boolean;
+};
 
 /** The queued message being dragged and the insertion point it's over. */
 type QueueDrag = { id: string; over?: number };
@@ -32,14 +40,20 @@ function dropEdge(
  * Messages not sent yet, above the composer: steers the running turn takes
  * after its next tool call, then queued messages that each start a turn.
  * Queued messages can be reordered by dragging or with Alt+Up/Down.
+ * Memoized and given only the queue, so the task's other changes, such as its
+ * runtime, render nothing here.
  */
-export function MessageQueue({ task }: MessageQueueProps) {
+export const MessageQueue = memo(function MessageQueue({
+  taskId,
+  pending,
+  queue,
+  paused,
+  steerable,
+}: MessageQueueProps) {
   const controller = useController();
   const busy = useSnapshot((state) => state.busy);
   const [error, setError] = useState<string>();
   const [drag, setDrag] = useState<QueueDrag>();
-  const pending = task.pending_steers;
-  const queue = task.queue;
   // Steers the worker already has lead the queue and stay there.
   const first = queue.filter((message) => message.recorded).length;
   const reorderable = queue.length - first > 1;
@@ -48,29 +62,24 @@ export function MessageQueue({ task }: MessageQueueProps) {
   const [pendingList] = useAutoList<HTMLUListElement>();
   const { ref: queueList, arrival } = useQueueScroll(queue);
 
-  const move = async (messageId: string, index: number) => {
-    const error = await controller.taskActions.moveQueued(
-      task,
-      messageId,
-      index,
-    );
+  /** Runs `action` on the task as it is now, and resolves whether it worked. */
+  const act = async (action: QueueAction) => {
+    const task = findTask(controller.getSnapshot(), taskId);
+    const error = task && (await action(task));
 
     setError(error);
 
-    return !error;
+    return Boolean(task) && !error;
   };
 
-  const interrupt = async () => {
-    setError(await controller.taskActions.interruptTask(task, true));
-  };
+  const move = (messageId: string, index: number) =>
+    act((task) => controller.taskActions.moveQueued(task, messageId, index));
 
-  const resume = async () => {
-    setError(await controller.taskActions.resumeQueue(task));
-  };
+  const interrupt = () =>
+    act((task) => controller.taskActions.interruptTask(task, true));
 
-  const clear = async () => {
-    setError(await controller.taskActions.clearQueue(task));
-  };
+  const resume = () => act((task) => controller.taskActions.resumeQueue(task));
+  const clear = () => act((task) => controller.taskActions.clearQueue(task));
 
   const drop = () => {
     if (!drag || drag.over === undefined) return setDrag(undefined);
@@ -137,13 +146,13 @@ export function MessageQueue({ task }: MessageQueueProps) {
           <div
             className="chat-queue-group"
             data-group="queue"
-            data-paused={task.queue_paused || undefined}
+            data-paused={paused || undefined}
           >
             <div className="chat-queue-header">
               <span>
-                {task.queue_paused ? "Queue paused" : "Queued"} · {queue.length}
+                {paused ? "Queue paused" : "Queued"} · {queue.length}
               </span>
-              {task.queue_paused && (
+              {paused && (
                 <span className="chat-queue-controls">
                   <Button
                     variant="text"
@@ -177,9 +186,10 @@ export function MessageQueue({ task }: MessageQueueProps) {
                   return (
                     <li key={key}>
                       <QueuedMessageRow
-                        task={task}
                         message={message}
-                        onError={setError}
+                        front={index === 0}
+                        steerable={steerable}
+                        act={act}
                         reorderable={reorderable}
                         movable={reorderable && !message.recorded}
                         dragging={drag?.id === key}
@@ -217,4 +227,4 @@ export function MessageQueue({ task }: MessageQueueProps) {
       </section>
     </Presence>
   );
-}
+});
