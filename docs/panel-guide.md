@@ -183,6 +183,10 @@ Archiving hides a stopped task with nothing waiting from the task list.
   **Archive all** archives every stopped one. Search and filters don't limit
   either action.
 
+Archiving also removes a task's worktree when it has no uncommitted changes,
+keeping its branch. A worktree with uncommitted changes stays. Unarchiving or
+undoing leaves a removed worktree removed, and the next message recreates it.
+
 The **View archived tasks** icon beside a project on the Projects page lists
 that project's archived tasks from any chat, newest first. Select tasks to act
 on them, or select none to act on all.

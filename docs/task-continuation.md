@@ -41,9 +41,9 @@ omitting the oldest entries when the conversation is too long.
 The Claude transcript is provider state, so copying the extension database alone
 does not preserve it.
 
-A worktree removed with **Remove worktree** is recreated on the next turn from
-the task's branch, or from its base commit if the branch was deleted too.
-Uncommitted changes discarded during removal do not return.
+A worktree removed with **Remove worktree** or by archiving is recreated on the
+next turn from the task's branch, or from its base commit if the branch was
+deleted too. Uncommitted changes discarded during removal do not return.
 
 ## Reconnect after a restart
 

@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { test, vi } from "vitest";
 
 import { input, setup, TestProvider, until } from "./control-test-harness.js";
+import { setTasksArchived } from "./task-archive.js";
 
 test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
   const { c, store, repo, dir } = await setup();
@@ -178,6 +179,50 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
         .map((e) => e.data),
       [{ from: "branch" }, { from: "base" }],
     );
+  } finally {
+    await c.close();
+  }
+});
+
+test("archiving removes clean worktrees and keeps those with uncommitted changes", async () => {
+  const { c, store, repo } = await setup();
+
+  try {
+    const clean = await c.start("alice", input(repo));
+    const dirty = await c.start("alice", input(repo));
+
+    await until(() =>
+      [clean, dirty].every(
+        (t) => store.get(t.id, "alice").status === "completed",
+      ),
+    );
+
+    const dirtyPath = store.get(dirty.id, "alice").workspace;
+    assert.ok(dirtyPath);
+    await writeFile(join(dirtyPath, "draft.txt"), "draft\n");
+
+    assert.deepEqual(
+      await setTasksArchived(c, "alice", [clean.id, dirty.id], true),
+      {
+        task_ids: [clean.id, dirty.id],
+        skipped: [],
+      },
+    );
+
+    const archivedClean = store.get(clean.id, "alice");
+    assert.equal(archivedClean.workspace_removed, true);
+    assert.ok(archivedClean.workspace && !existsSync(archivedClean.workspace));
+
+    execFileSync("git", [
+      "-C",
+      repo,
+      "rev-parse",
+      "--verify",
+      `refs/heads/${archivedClean.branch}`,
+    ]);
+
+    assert.equal(store.get(dirty.id, "alice").workspace_removed, undefined);
+    assert.ok(existsSync(join(dirtyPath, "draft.txt")));
   } finally {
     await c.close();
   }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { Control } from "../../../features/tasks/runtime/control.js";
+import { setTasksArchived } from "../../../features/tasks/runtime/task-archive.js";
 import { taskId, tool } from "./definition.js";
 
 /**
@@ -67,12 +68,12 @@ export function taskLifecycleTools(c: Control, owner: string) {
     }),
     app_set_tasks_archived: tool({
       description:
-        "User interface only: archive or unarchive tasks. Archived tasks leave the panel's task lists until unarchived or sent a message. Archiving skips tasks that haven't stopped or that have a pending request or queued messages. Returns task_ids, the tasks changed, and skipped.",
+        "User interface only: archive or unarchive tasks. Archived tasks leave the panel's task lists until unarchived or sent a message. Archiving skips tasks that haven't stopped or that have a pending request or queued messages, and removes an archived task's worktree when it has no uncommitted changes, keeping its branch. Returns task_ids, the tasks changed, and skipped.",
       schema: z.strictObject({
         task_ids: z.array(z.string()).min(1).max(1000),
         archived: z.boolean(),
       }),
-      run: (a) => c.archive.setArchived(owner, a.task_ids, a.archived),
+      run: (a) => setTasksArchived(c, owner, a.task_ids, a.archived),
     }),
     app_preview_task_deletion: tool({
       readOnly: true,
