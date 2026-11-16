@@ -89,13 +89,9 @@ check it.
 ## Validation
 
 - Validate the resulting behavior and the relevant architectural boundaries.
-  Prefer focused checks while iterating. Skip or defer expensive checks when
-  their runtime outweighs the confidence they add, and report what you skipped
-  and why.
-- Before committing, run the relevant formatting, lint, type, test, build and
-  browser checks against the final changes. Format changed files as
-  [Checks](docs/development.md#checks) describes, and run the
-  `review-and-improve` skill on the changes.
+  Focused checks are enough while iterating.
+- Before any commit, push or pull request, you must run the full
+  `review-and-improve` skill on changes not yet reviewed.
 - HTTP integration suites need localhost TCP listeners on `127.0.0.1`. Request
   sandbox escalation up front if needed. Never skip these tests because listener
   binding is denied. CI runners need the same access.

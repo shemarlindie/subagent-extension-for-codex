@@ -14,6 +14,11 @@ type Fiber = {
   child: Fiber | null;
   sibling: Fiber | null;
   return: Fiber | null;
+  /**
+   * Render time of the fiber's subtree in this commit. React sets it while a
+   * DevTools hook is present.
+   */
+  actualDuration?: number;
 };
 
 type Output = { type: unknown; key: string | null; props: unknown }[];
@@ -42,6 +47,8 @@ export type Finding = { name: string; ours: boolean; path: string[] };
 
 export type RenderResult = {
   commits: number;
+  /** React's render time across the recorded commits, in milliseconds. */
+  renderMs: number;
   renders: Render[];
   /** Components unmounted and mounted again with equal props in one commit. */
   remounts: Finding[];
@@ -115,7 +122,9 @@ Object.defineProperty(globalThis, "__REACT_DEVTOOLS_GLOBAL_HOOK__", {
     },
     onCommitFiberRoot(_renderer: number, root: { current: Fiber }) {
       commitCount++;
-      active?.commit(root.current);
+      if (active) active.commit(root.current);
+      // A component that only a scenario's setup renders still counts as reached.
+      else walk(root.current.child, (fiber) => reached.add(fiber.type));
     },
   },
 });
@@ -157,6 +166,7 @@ type Instance = {
 
 class Recorder {
   private commitIndex = 0;
+  private renderMs = 0;
   private renders: Render[] = [];
   private remounts: Finding[] = [];
   /** Unmounts in the current commit, with the fields React clears later. */
@@ -181,6 +191,7 @@ class Recorder {
   commit(root: Fiber) {
     const index = ++this.commitIndex;
     const mounts: Fiber[] = [];
+    this.renderMs += root.actualDuration ?? 0;
 
     walk(root.child, (fiber) => {
       const previous = fiber.alternate;
@@ -254,6 +265,7 @@ class Recorder {
 
     return {
       commits: this.commitIndex,
+      renderMs: this.renderMs,
       renders: this.renders,
       remounts: this.remounts,
       transients,
