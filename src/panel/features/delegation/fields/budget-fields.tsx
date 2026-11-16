@@ -1,4 +1,10 @@
-import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { memo } from "react";
+import {
+  Controller,
+  useFormState,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
 
 import { providerMetadata } from "../../../../shared/providers/metadata";
 import type { Worker } from "../../../app/state/types";
@@ -35,23 +41,24 @@ function costNote(
 }
 
 interface BudgetFieldsProps {
+  form: UseFormReturn<DelegateValues>;
   workers: Worker[];
   settingsReady?: boolean;
   workersReady?: boolean;
   settingsLoading?: boolean;
 }
 
-export function BudgetFields({
+export const BudgetFields = memo(function BudgetFields({
+  form: { register, control },
   workers,
   settingsReady = true,
   workersReady = true,
   settingsLoading = false,
 }: BudgetFieldsProps) {
-  const {
-    register,
+  const { errors } = useFormState({
     control,
-    formState: { errors },
-  } = useFormContext<DelegateValues>();
+    name: ["costMode", "runtime", "cost"],
+  });
 
   const [worker, mode, runtimeMode, cost, runtime] = useWatch({
     control,
@@ -196,4 +203,4 @@ export function BudgetFields({
       </div>
     </div>
   );
-}
+});

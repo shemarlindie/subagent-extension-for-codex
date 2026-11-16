@@ -1,5 +1,5 @@
 import { Autocomplete } from "@base-ui/react/autocomplete";
-import { useController, useFormContext } from "react-hook-form";
+import { useController, type Control } from "react-hook-form";
 
 import {
   matchesProjectQuery,
@@ -10,16 +10,16 @@ import type { DelegateValues } from "../delegate-values";
 
 /** Suggestions never restrict a path inside an approved parent; the service validates it. */
 interface ProjectAutocompleteProps {
+  control: Control<DelegateValues>;
   projects: Project[];
   disabled?: boolean;
 }
 
 export function ProjectAutocomplete({
+  control,
   projects,
   disabled = false,
 }: ProjectAutocompleteProps) {
-  const { control } = useFormContext<DelegateValues>();
-
   const projectByRepository = new Map(
     projects.map((project) => [project.repository, project]),
   );

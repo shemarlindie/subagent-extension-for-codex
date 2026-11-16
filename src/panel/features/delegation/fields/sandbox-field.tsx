@@ -1,10 +1,11 @@
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, type Control } from "react-hook-form";
 
 import type { ProviderMetadata } from "../../../../shared/providers/metadata";
 import { FormSwitch } from "../../../shared/forms/form-switch";
 import type { DelegateValues } from "../delegate-values";
 
 interface SandboxFieldProps {
+  control: Control<DelegateValues>;
   /** The worker's native permissions, which may offer a sandbox toggle. */
   permissions: ProviderMetadata["nativePermissions"];
   /** The worker isn't known yet. */
@@ -15,12 +16,12 @@ interface SandboxFieldProps {
 
 /** Turns the worker's Bash sandbox on or off for the task, inline beside its mode. */
 export function SandboxField({
+  control,
   permissions,
   unresolved,
   disabled,
   loading,
 }: SandboxFieldProps) {
-  const { control } = useFormContext<DelegateValues>();
   const sandbox = permissions?.sandbox;
 
   if (!sandbox && !unresolved) return null;

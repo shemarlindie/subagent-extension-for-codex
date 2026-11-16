@@ -163,6 +163,37 @@ test("a keystroke in a composer draft leaves the composer alone", async (t) => {
   expect(renders(newTask.renders, "NewTaskComposer")).toEqual([]);
 });
 
+test("a dialog's fields render only when their props change", async (t) => {
+  const open = await run(t, "Open a dialog");
+
+  // The form renders as its reads finish and its defaults fill in.
+  expect(renders(open.renders, "DelegateForm")).not.toEqual([]);
+
+  const passedDown = open.renders.filter(
+    ({ name, wasted, cause }) =>
+      [
+        "ProjectField",
+        "DescriptionField",
+        "WorkspaceField",
+        "RevisionField",
+        "WorkerField",
+        "ModelFields",
+        "ApprovalField",
+        "BudgetFields",
+      ].includes(name) &&
+      wasted &&
+      cause !== "own state, context or store selection",
+  );
+
+  expect(passedDown).toEqual([]);
+
+  // Closing keeps showing the form for its animation without rendering it.
+  const close = await run(t, "Close a dialog");
+
+  expect(renders(close.renders, "DialogHost")).not.toEqual([]);
+  expect(renders(close.renders, "DelegateForm")).toEqual([]);
+});
+
 test("checking an archived task renders only its row", async (t) => {
   const result = await run(t, "Check an archived task");
 

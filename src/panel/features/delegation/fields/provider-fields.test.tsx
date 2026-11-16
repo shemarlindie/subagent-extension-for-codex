@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { expect, test } from "vitest";
 
 import type { Worker } from "../../providers/types";
@@ -23,10 +23,10 @@ function ProviderFields({ worker }: { worker: Worker }) {
   });
 
   return (
-    <FormProvider {...form}>
-      <ApprovalField workers={[worker]} />
-      <BudgetFields workers={[worker]} />
-    </FormProvider>
+    <>
+      <ApprovalField form={form} workers={[worker]} />
+      <BudgetFields form={form} workers={[worker]} />
+    </>
   );
 }
 
@@ -62,11 +62,7 @@ test("a blocked mode left in the form becomes the mode that would run", async (t
 
     mode = form.watch("permission_mode");
 
-    return (
-      <FormProvider {...form}>
-        <ApprovalField workers={[worker]} />
-      </FormProvider>
-    );
+    return <ApprovalField form={form} workers={[worker]} />;
   }
 
   render(<Form />);
@@ -209,9 +205,12 @@ test("known budget selections stay visible while workers finish loading", (t) =>
     });
 
     return (
-      <FormProvider {...form}>
-        <BudgetFields workers={[]} settingsReady workersReady={false} />
-      </FormProvider>
+      <BudgetFields
+        form={form}
+        workers={[]}
+        settingsReady
+        workersReady={false}
+      />
     );
   }
 

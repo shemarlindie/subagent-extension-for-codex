@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import {
   FormFieldFeedback,
   type FormFieldFeedbackProps,
@@ -6,7 +8,11 @@ import {
 type FormFieldHintProps = Omit<FormFieldFeedbackProps, "kind">;
 
 /** Renders supporting field guidance with the shared enter/exit motion. */
-export function FormFieldHint({ id, message, className }: FormFieldHintProps) {
+export const FormFieldHint = memo(function FormFieldHint({
+  id,
+  message,
+  className,
+}: FormFieldHintProps) {
   return (
     <FormFieldFeedback
       id={id}
@@ -15,4 +21,4 @@ export function FormFieldHint({ id, message, className }: FormFieldHintProps) {
       kind="hint"
     />
   );
-}
+});

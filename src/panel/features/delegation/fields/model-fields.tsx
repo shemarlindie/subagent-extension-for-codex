@@ -1,4 +1,5 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { memo } from "react";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 
 import { withEffortCap } from "../../../../shared/providers/policy";
 import { reasoningLevels } from "../../../../shared/tasks/reasoning";
@@ -11,6 +12,7 @@ import { modelDefaults, validateReasoning } from "../model-defaults";
 import { ModelAutocomplete } from "./model-autocomplete";
 
 interface ModelFieldsProps {
+  form: UseFormReturn<DelegateValues>;
   defaults: Defaults;
   workers: Worker[];
   settingsReady?: boolean;
@@ -19,7 +21,8 @@ interface ModelFieldsProps {
   workersLoading?: boolean;
 }
 
-export function ModelFields({
+export const ModelFields = memo(function ModelFields({
+  form: { control },
   defaults,
   workers,
   settingsReady = true,
@@ -27,8 +30,6 @@ export function ModelFields({
   settingsLoading = false,
   workersLoading = false,
 }: ModelFieldsProps) {
-  const { control } = useFormContext<DelegateValues>();
-
   const [worker, selectedModel, selectedEffort] = useWatch({
     control,
     name: ["worker", "model", "reasoning_effort"],
@@ -48,6 +49,7 @@ export function ModelFields({
             label="Loading model defaults and available models"
           >
             <ModelAutocomplete
+              control={control}
               models={workerInfo?.models ?? []}
               policy={workerInfo?.policy}
               placeholder={
@@ -114,4 +116,4 @@ export function ModelFields({
       </p>
     </div>
   );
-}
+});
