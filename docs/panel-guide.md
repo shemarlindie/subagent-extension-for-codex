@@ -551,8 +551,7 @@ shows connection status only when there is a problem. A failed connection shows
 connection shows **Connection failed**. Narrow panels show a warning icon
 instead, and hovering or tapping it shows the status. While a
 [plugin update](task-continuation.md#updates-and-service-handoff) waits for
-running turns to finish, the header shows **Updating…**, and hovering or tapping
-it explains that new turns start after the update. Changes has
+running turns to finish, the header shows **Updating…**. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how

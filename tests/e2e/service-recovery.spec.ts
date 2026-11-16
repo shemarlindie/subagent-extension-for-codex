@@ -125,11 +125,5 @@ test("show that the service is updating while it finishes a running turn", async
     body: "{}",
   });
 
-  const updating = page.getByRole("button", { name: "Updating…" });
-  await expect(updating).toBeVisible();
-  await updating.hover();
-
-  await expect(page.getByRole("dialog")).toContainText(
-    "takes over once running turns finish",
-  );
+  await expect(page.getByRole("button", { name: "Updating…" })).toBeVisible();
 });

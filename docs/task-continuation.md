@@ -87,9 +87,7 @@ A draining service starts no new turns. It lets running turns finish for up to
 queued, and the new service starts them. Meanwhile the panel header shows
 **Updating…**. Proxies keep using a draining service that speaks the same API.
 Once it exits, the proxy that asked it to drain starts the new version, and the
-other proxies reconnect to it. Panels served by older proxies stay connected,
-even after the update removes their installation. Proxies on another API wait
-for the new service.
+other proxies reconnect to it. Proxies on another API wait for the new service.
 
 Give development services their own `SUBAGENT_EXTENSION_FOR_CODEX_DATA` and
 `PORT` so an installed plugin never finds them.
