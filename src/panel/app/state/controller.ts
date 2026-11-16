@@ -639,6 +639,7 @@ export class Controller {
     }
 
     this.viewRevision = revision;
+    this.patch({ updating: view.updating ?? false });
     const projectUpdate = this.reconcileProjects(view.projects);
 
     if (this.state.conversation && projectUpdate.removed) {

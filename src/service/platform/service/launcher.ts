@@ -19,6 +19,7 @@ import { rotateStartupLog } from "./log-rotation.js";
 import { freeLoopbackPort, PortInUseError } from "./port.js";
 import { isProcessRunning } from "./process-info.js";
 import { dataDirectory, defaultPort, packagePath } from "./runtime.js";
+import type { ServiceConnection } from "./service-client.js";
 
 /** A service that is starting or stopping, which the launcher waits for. */
 class ServiceTransitionError extends Error {}
@@ -70,7 +71,7 @@ function loopbackUrl(origin: string) {
   return url;
 }
 
-export async function connectService() {
+export async function connectService(): Promise<ServiceConnection> {
   const data = dataDirectory();
   const explicit = process.env.SUBAGENT_EXTENSION_FOR_CODEX_URL;
 
@@ -284,8 +285,15 @@ export async function connectService() {
       );
     }
 
-    // A compatible service keeps serving until it exits. The proxy then reconnects and starts this version.
-    if (decision.forward) return { origin: found.origin, token: found.token };
+    // A compatible service keeps serving until it exits.
+    if (decision.forward) {
+      return {
+        origin: found.origin,
+        token: found.token,
+        draining: waitForExit,
+      };
+    }
+
     await waitForExit();
     needsLaunch = true;
   } catch (error) {

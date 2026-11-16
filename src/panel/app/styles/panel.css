@@ -39,6 +39,15 @@ header .connection-icon,
 header .connection-icon:hover {
   color: var(--warn);
 }
+header .service-updating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
 /* Lines the icon up with the header's padding and pulls the title closer. */
 header .task-rail-toggle {
   margin: 0 -4px 0 -9px;

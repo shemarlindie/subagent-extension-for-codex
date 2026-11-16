@@ -268,6 +268,8 @@ the projects match `list_projects`. Chat and Activity take the selected
 `task_id` and an `after` cursor, and pending updates take a `conversation_id`.
 Only the first Chat read (cursor 0) includes the request. Its `attachments`
 carry each attachment's metadata, minus where the service stores its content.
+The view has `updating: true` while the service
+[drains for an update](task-continuation.md#updates-and-service-handoff).
 
 `app_get_attachment` reads an attachment by `task_id` and its `position` in the
 request, in pages of at most 512 KiB that end on whole characters. Each page

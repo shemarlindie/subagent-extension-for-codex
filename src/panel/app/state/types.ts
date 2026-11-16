@@ -313,6 +313,8 @@ export type Snapshot = {
   scopeKnown: boolean;
   busy: boolean;
   connection: ConnectionLabel;
+  /** Whether a newer service takes over once running turns end. */
+  updating: boolean;
   error: string;
   loginRequired: boolean;
   dialog?: DialogState;

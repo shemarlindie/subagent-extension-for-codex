@@ -266,15 +266,25 @@ test("launcher refuses an incompatible service it didn't start", async (t) => {
   await assert.rejects(access(join(dir, "service.log")));
 });
 
-test("launcher drains an older plugin service and keeps using it while it speaks the same API", async (t) => {
-  const { origin, drains } = await identified(t, {
-    version: "0.0.1",
-    apiVersion,
-    launcher: "stdio",
-  });
+test("launcher keeps using an older plugin service on the same API while it drains, and reports its exit", async (t) => {
+  let exit = () => {};
+
+  const { origin, drains } = await identified(
+    t,
+    { version: "0.0.1", apiVersion, launcher: "stdio" },
+    (server) => {
+      exit = () => {
+        server.close();
+        server.closeAllConnections();
+      };
+    },
+  );
 
   const dir = await serviceData(t, origin, resolve("."));
-  const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
+
+  const { draining, ...result } = await connect({
+    SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir,
+  });
 
   assert.deepEqual(result, {
     origin,
@@ -282,6 +292,9 @@ test("launcher drains an older plugin service and keeps using it while it speaks
   });
 
   assert.deepEqual(drains, ["Bearer handoff-token"]);
+  assert.ok(draining);
+  exit();
+  await draining();
 });
 
 test(

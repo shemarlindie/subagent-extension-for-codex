@@ -112,6 +112,8 @@ export class Control {
   private queueWaits = new QueueWaits();
   scheduling = false;
   stopped = false;
+  /** Whether a newer service is taking over once running turns end. */
+  draining = false;
   ownerWorker = hostname();
   private prompts: SessionPrompts;
   settings: Settings;
@@ -1250,6 +1252,9 @@ export class Control {
    */
   async drain(limit: number) {
     this.stopped = true;
+    this.draining = true;
+    // Panels show that the service is updating.
+    this.store.sharedChanged();
     let timer: NodeJS.Timeout | undefined;
 
     await Promise.race([

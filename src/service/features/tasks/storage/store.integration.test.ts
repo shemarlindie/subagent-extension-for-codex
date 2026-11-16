@@ -328,14 +328,14 @@ test("writes outside a transaction, and deletions, change only their owner's rev
   assert.notEqual(store.revision("bob"), bob);
 });
 
-test("a project change reaches every owner, and another store's revisions differ", (t) => {
+test("a shared change reaches every owner, and another store's revisions differ", (t) => {
   const { store } = transactionFixture(t);
   const changes: (string | undefined)[] = [];
   store.bus.on("change", (owner?: string) => changes.push(owner));
   const alice = store.revision("alice");
   const bob = store.revision("bob");
 
-  store.projectsChanged();
+  store.sharedChanged();
   assert.deepEqual(changes, [undefined]);
   assert.notEqual(store.revision("alice"), alice);
   assert.notEqual(store.revision("bob"), bob);

@@ -1,5 +1,13 @@
 /** Where the service listens and the token its API takes. */
-export type ServiceConnection = { origin: string; token: string };
+export type ServiceConnection = {
+  origin: string;
+  token: string;
+  /**
+   * Set when the service is draining for this version. Resolves once it
+   * exits, when the caller should reconnect to start this version.
+   */
+  draining?: () => Promise<void>;
+};
 
 export type ServiceCall = {
   /** How long the call may take once connected, in milliseconds. */
@@ -43,7 +51,8 @@ export function holdPresence({ origin, token }: ServiceConnection) {
  * use, or early through `connect`, so the MCP handshake never waits for a
  * cold service start. A failed connection attempt is forgotten, and a call
  * that finds the service gone reconnects, starting a new service, and is
- * sent once more when that is safe.
+ * sent once more when that is safe. When the service drains for this
+ * version, the client reconnects as soon as it exits.
  */
 export function serviceClient(
   connect: () => Promise<ServiceConnection>,
@@ -52,13 +61,42 @@ export function serviceClient(
   let current: Promise<ServiceConnection> | undefined;
 
   function connection() {
-    const attempt = (current ??= connect());
+    if (current) return current;
+    const attempt = (current = connect());
 
-    attempt.catch(() => {
-      if (current === attempt) current = undefined;
-    });
+    attempt.then(
+      ({ draining }) => {
+        if (draining) void replaceAfter(draining, attempt);
+      },
+      () => {
+        if (current === attempt) current = undefined;
+      },
+    );
 
     return attempt;
+  }
+
+  /**
+   * Reconnects once the draining service exits. Reconnecting through `connect`
+   * starts this version and sets up the connection fully, including the
+   * proxy's presence stream, which keeps the new service from stopping as
+   * idle. Proxies from the replaced installation can't start their own once
+   * the update removes it, so they rely on finding this one.
+   */
+  async function replaceAfter(
+    draining: () => Promise<void>,
+    attempt: Promise<ServiceConnection>,
+  ) {
+    try {
+      await draining();
+      if (current === attempt) current = undefined;
+      const { origin } = await connection();
+      console.error(`Replaced the extension service at ${origin}`);
+    } catch (error) {
+      console.error(
+        `Could not start the extension service after the handoff: ${String(error)}`,
+      );
+    }
   }
 
   /** The connection, or an error once a call has waited `connectTimeout` for it. */

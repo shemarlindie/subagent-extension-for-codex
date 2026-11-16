@@ -779,7 +779,7 @@ async function changeService(prefix: string) {
   );
 
   c.projects = new Projects(c.store.database, c.workspaces, () =>
-    c.store.projectsChanged(),
+    c.store.sharedChanged(),
   );
 
   const auth = new Auth("token");

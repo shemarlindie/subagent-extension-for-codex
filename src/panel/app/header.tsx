@@ -6,10 +6,8 @@ import { ProjectScope } from "../features/projects/project-scope";
 import { PendingUpdatesIndicator } from "../features/tasks/pending-updates/pending-updates-indicator";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
-import { Infotip } from "../shared/components/infotip";
-import { MotionContent } from "../shared/components/motion/motion-content";
 import { TooltipWrapper } from "../shared/components/tooltip";
-import { connectionTrouble } from "./state/connection";
+import { HeaderStatus } from "./header-status";
 import { useController, useSnapshot } from "./state/controller-context";
 import { projectChoices } from "./state/selectors";
 import { TaskListToggle, type TaskListToggleProps } from "./task-list-toggle";
@@ -27,7 +25,6 @@ export function Header({ taskRail }: HeaderProps) {
     conversation,
     projects,
     repository,
-    connection,
     projectCandidate,
     scopeKnown,
   } = useSnapshot([
@@ -36,7 +33,6 @@ export function Header({ taskRail }: HeaderProps) {
     "conversation",
     "projects",
     "repository",
-    "connection",
     "projectCandidate",
     "scopeKnown",
   ]);
@@ -69,29 +65,6 @@ export function Header({ taskRail }: HeaderProps) {
     repository?.split("/").at(-1) ??
     "All projects";
 
-  // Only connection problems are visible. The task list explains a missing connection.
-  const trouble = connectionTrouble(connection);
-
-  const status = (
-    <>
-      <span
-        id="connection"
-        className={trouble ? "connection" : "visually-hidden"}
-        role="status"
-      >
-        <MotionContent changeKey={connection}>{connection}</MotionContent>
-      </span>
-      {/* Narrow panels show this icon in place of the text, which stays announced. */}
-      {trouble && (
-        <Infotip label={connection}>
-          <button type="button" className="text-button connection-icon">
-            <Icon name="alert-triangle" size={14} />
-          </button>
-        </Infotip>
-      )}
-    </>
-  );
-
   return (
     <header>
       <TaskListToggle rail={taskRail} />
@@ -110,7 +83,7 @@ export function Header({ taskRail }: HeaderProps) {
         )}
       </div>
       <div className="toolbar">
-        {status}
+        <HeaderStatus />
         {/* Outside the inline toolbar, so narrow panels keep it. */}
         {threadMode && <PendingUpdatesIndicator />}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}

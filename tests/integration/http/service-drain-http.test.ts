@@ -22,8 +22,14 @@ async function service(t: import("vitest").TestContext) {
   await writeFile(html, "<html>__API_ORIGIN__</html>");
   const store = new Store(join(dir, "test.sqlite"));
 
+  const control = new Control(
+    store,
+    new Workspaces(join(dir, "worktrees"), []),
+    new Map(),
+  );
+
   const app = application(
-    new Control(store, new Workspaces(join(dir, "worktrees"), []), new Map()),
+    control,
     new Auth(token),
     "http://127.0.0.1:17317",
     html,
@@ -58,19 +64,19 @@ async function service(t: import("vitest").TestContext) {
     return { status: response.status, body: await response.json() };
   };
 
-  return { app, base, post, health };
+  return { app, control, base, post, health };
 }
 
 const bearer = { Authorization: `Bearer ${token}` };
 
 test("drain requires a hook and administrator token, then closes connections", async (t) => {
-  const { app, base, post, health } = await service(t);
+  const { app, control, base, post, health } = await service(t);
   assert.equal((await post("/api/service/drain", bearer)).status, 501);
   let drains = 0;
 
   app.locals.drain = () => {
     drains++;
-    app.locals.draining = true;
+    control.draining = true;
 
     return 2;
   };
@@ -115,4 +121,40 @@ test("a stopping service reports it and refuses calls", async (t) => {
   const call = await post("/api/tools/list_tasks", bearer);
   assert.equal(call.status, 503);
   assert.deepEqual(await call.json(), { error: "The service is stopping" });
+});
+
+test("draining ends held update waits with a view that says the service is updating", async (t) => {
+  const { control, base } = await service(t);
+
+  const wait = async (body: Record<string, unknown>) => {
+    const response = await fetch(
+      `${base}/api/user-tools/app_wait_for_updates`,
+      {
+        method: "POST",
+        headers: {
+          ...bearer,
+          "Content-Type": "application/json",
+          "X-Subagent-Extension-For-Codex": "1",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    return (await response.json()).result;
+  };
+
+  const view = { list: {} };
+  const first = await wait({ view });
+  assert.equal(first.view.updating, undefined);
+
+  // Whether the drain lands before or after the wait starts, only a new
+  // revision returns it early.
+  const held = wait({ after: first.revision, view, wait_ms: 20000 });
+  const started = Date.now();
+  await control.drain(0);
+  const read = await held;
+
+  assert.ok(Date.now() - started < 5000);
+  assert.notEqual(read.revision, first.revision);
+  assert.equal(read.view.updating, true);
 });
