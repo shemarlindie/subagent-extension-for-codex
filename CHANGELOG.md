@@ -3,6 +3,18 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.6.0
+
+### Features
+
+- Remove clean worktrees when archiving tasks (#131)
+
+### Fixes
+
+- Keep panels connected through plugin updates (#132)
+- Archive tasks without waiting for worktree cleanup (#134)
+- Make the panel more responsive while typing and as tasks update (#123, #125, #126, #128, #129)
+
 ## 0.5.0
 
 ### Features
