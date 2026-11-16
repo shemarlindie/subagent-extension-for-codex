@@ -12,7 +12,6 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { NewTaskState } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
@@ -62,13 +61,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     useSnapshot((state) => state.conversation),
   );
 
-  const [saved, updateSession] = useSessionState(
-    "newTask",
-    sessionId,
-    (session) => session.draft,
+  // Read once: the draft saved on each keystroke must not render the composer.
+  const [savedAtMount] = useState(
+    () => controller.session.get("newTask", sessionId).draft,
   );
 
-  const savedAtMount = useRef(saved).current;
   const initialValues = newTaskInitialValues(newTask, scope);
 
   const form = useForm<DelegateValues>({
@@ -88,24 +85,33 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       if (!name) return;
       const field = name.split(".")[0] as keyof DelegateValues;
 
-      updateSession({
+      const { session } = controller;
+
+      session.update("newTask", sessionId, {
         draft: {
-          ...controller.session.get("newTask", sessionId).draft,
+          ...session.get("newTask", sessionId).draft,
           [field]: form.getValues(field),
         },
       });
     });
 
     return () => subscription.unsubscribe();
-  }, [form, controller, sessionId, updateSession]);
+  }, [form, controller, sessionId]);
 
   useEffect(() => {
     input.current?.focus({ preventScroll: true });
   }, []);
 
-  const [description, chosenRepository, worker] = useWatch({
+  const [chosenRepository, worker] = useWatch({
     control: form.control,
-    name: ["description", "repository", "worker"],
+    name: ["repository", "worker"],
+  });
+
+  // Whether there's a message, so a keystroke renders only the textarea.
+  const hasMessage = useWatch({
+    control: form.control,
+    name: "description",
+    compute: (description) => Boolean(description.trim()),
   });
 
   // A scoped panel targets its project; the chip only shows for All projects.
@@ -126,7 +132,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   const canSubmit =
     readsReady &&
     !busy &&
-    Boolean(description.trim()) &&
+    hasMessage &&
     Boolean(repository) &&
     workerChoices(scope.workers).includes(worker) &&
     readiness?.ready !== false;
@@ -158,7 +164,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (canSubmit) void submit();
-    } else if (event.key === "Escape" && !description) {
+    } else if (event.key === "Escape" && !form.getValues("description")) {
       event.preventDefault();
       controller.back();
     }

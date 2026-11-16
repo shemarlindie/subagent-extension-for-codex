@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import type { ProviderCommand } from "../../../../../shared/providers/types";
+import { useSessionState } from "../../../../app/state/session/use-session-state";
 import { CommandHighlight, draftCommand } from "./command-highlight";
 
 /** The command a draft starts with, up to the first space, such as `/comp`. */
@@ -46,8 +47,8 @@ type CommandMenuProps = {
   /** What the menu opens above. */
   anchor: RefObject<HTMLElement | null>;
   commands: ProviderCommand[];
-  draft: string;
-  onDraftChange: (value: string) => void;
+  /** The task session that holds the draft. */
+  sessionId: string;
   /** Keys the textarea gets while the menu is closed. */
   onKeyDown: (event: KeyboardEvent) => void;
   textarea: ComponentProps<"textarea">;
@@ -55,18 +56,26 @@ type CommandMenuProps = {
 
 /**
  * The composer's textarea, suggesting commands while the draft is `/` and a
- * partial name, and highlighting a command the draft starts with.
+ * partial name, and highlighting a command the draft starts with. It reads
+ * the draft itself, so a keystroke renders only the textarea and its menu.
  */
 export function CommandMenu({
   anchor,
   commands,
-  draft,
-  onDraftChange,
+  sessionId,
   onKeyDown,
   textarea,
 }: CommandMenuProps) {
-  // The caret as of the draft it was read in. Code that sets the draft
-  // leaves the caret at its end.
+  const [draft, updateSession] = useSessionState(
+    "task",
+    sessionId,
+    (state) => state.composerDraft,
+  );
+
+  const setDraft = (value: string) => updateSession({ composerDraft: value });
+
+  // The caret as of the draft it was read in. Without one, the caret is at the
+  // draft's end, where code that sets the draft leaves it.
   const [caret, setCaret] = useState<{ draft: string; at: number }>();
 
   const query = commandQuery(
@@ -92,7 +101,7 @@ export function CommandMenu({
     const at = name.length + 2;
     caretAfterCompletion.current = at;
     setCaret({ draft: next, at });
-    onDraftChange(next);
+    setDraft(next);
   };
 
   // The highlight scrolls with the textarea once the draft outgrows it.
@@ -114,12 +123,14 @@ export function CommandMenu({
   const change = (value: string, { reason }: { reason: string }) => {
     setDismissed(undefined);
     if (reason === "item-press") complete(value);
-    else onDraftChange(value);
+    else setDraft(value);
   };
 
   const moveCaret = (event: SyntheticEvent<HTMLInputElement>) => {
     const { value, selectionEnd } = event.currentTarget;
-    setCaret({ draft: value, at: selectionEnd ?? value.length });
+    const at = selectionEnd ?? value.length;
+    // Typing at the end keeps no caret, so it doesn't render the menu again.
+    setCaret(at === value.length ? undefined : { draft: value, at });
   };
 
   const openChange = (next: boolean) => {

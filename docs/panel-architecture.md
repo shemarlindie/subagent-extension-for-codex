@@ -89,13 +89,16 @@ rerenders. Scroll hooks update stable reading cells without notifying on every
 scroll. Answered questions clear their entry.
 
 Forms keep editable drafts in React Hook Form, so refreshes preserve field nodes
-and unsent input. Use Base UI (`@base-ui/react`) with project styling for
-dialogs, tabs, selection, autocomplete and switches. Keep simple buttons, text
-inputs and textareas native, except the shared Base UI search field. Reuse the
-shared selection fields and `TabList` for consistent keyboard and focus
-behavior. Keep search text separate from selected values in lookup fields. When
-selection can change outside a tab strip, reveal the selected tab without
-scrolling its parent.
+and unsent input. Only the field reads its text. Components around it watch what
+they show about it, such as whether it's empty, through `useWatch` with
+`compute` or a session state selector, so a keystroke renders only the field.
+Use Base UI (`@base-ui/react`) with project styling for dialogs, tabs,
+selection, autocomplete and switches. Keep simple buttons, text inputs and
+textareas native, except the shared Base UI search field. Reuse the shared
+selection fields and `TabList` for consistent keyboard and focus behavior. Keep
+search text separate from selected values in lookup fields. When selection can
+change outside a tab strip, reveal the selected tab without scrolling its
+parent.
 
 ### New-task composer
 
@@ -381,8 +384,9 @@ node scripts/compare-renders.mjs before after
 The guards in `tests/ui/render-audit/render-guards.test.ts` run with `npm test`.
 They fail when render isolation regresses: a refresh with unchanged data commits
 nothing, a streamed paragraph renders only its message, list, timeline and
-Activity rows render only when their own data changes, and the shell's pages,
-Chat's panel and its message queue skip changes they don't show.
+Activity rows render only when their own data changes, the shell's pages, Chat's
+panel and its message queue skip changes they don't show, and a keystroke in a
+composer draft renders only the composer's field.
 
 The report checks a new component once a scenario renders it. A new kind of
 change, such as a new read or user action, needs a scenario in

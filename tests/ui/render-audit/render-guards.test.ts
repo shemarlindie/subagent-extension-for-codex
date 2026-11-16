@@ -149,6 +149,20 @@ test("the selected task's runtime change renders no Chat message or queue", asyn
   expect(renders(result.renders, "MessageQueue")).toEqual([]);
 });
 
+test("a keystroke in a composer draft leaves the composer alone", async (t) => {
+  const task = await run(t, "A keystroke in the task composer");
+  const menu = renders(task.renders, "CommandMenu");
+
+  expect(menu).not.toEqual([]);
+  expect(menu.filter(({ wasted }) => wasted)).toEqual([]);
+  expect(renders(task.renders, "Composer")).toEqual([]);
+
+  const newTask = await run(t, "A keystroke in the new-task composer");
+
+  expect(renders(newTask.renders, "NewTaskRow")).not.toEqual([]);
+  expect(renders(newTask.renders, "NewTaskComposer")).toEqual([]);
+});
+
 test("checking an archived task renders only its row", async (t) => {
   const result = await run(t, "Check an archived task");
 

@@ -2,14 +2,19 @@ import { useEffect, useRef, useState } from "react";
 
 import type { ProviderCommand } from "../../../../../shared/providers/types";
 import { useController } from "../../../../app/state/controller-context";
+import { useSessionState } from "../../../../app/state/session/use-session-state";
 
 /**
- * The task's slash commands, read when the draft first starts a command and
- * kept for the task while the composer stays mounted. Until they arrive, or
- * if the read fails, there are none and the composer works as usual.
+ * The task's slash commands, read when the draft in `sessionId` first starts a
+ * command and kept for the task while the composer stays mounted. Until they
+ * arrive, or if the read fails, there are none and the composer works as usual.
  */
-export function useTaskCommands(taskId: string | undefined, typing: boolean) {
+export function useTaskCommands(taskId: string | undefined, sessionId: string) {
   const controller = useController();
+
+  const [typing] = useSessionState("task", sessionId, (state) =>
+    state.composerDraft.startsWith("/"),
+  );
 
   const [read, setRead] = useState<{
     taskId: string;

@@ -41,10 +41,10 @@ const HINTS = {
 };
 
 /** The label on the button that reopens a collapsed composer. */
-function expandLabel(spent: SpentBudget | undefined, draft: string) {
+function expandLabel(spent: SpentBudget | undefined, hasMessage: boolean) {
   if (spent) return "Show composer (limit reached)";
 
-  return draft ? "Show composer (draft)" : "Show composer";
+  return hasMessage ? "Show composer (draft)" : "Show composer";
 }
 
 type ComposerProps = {
@@ -114,14 +114,15 @@ export function Composer({
   const showComposer = useRef<HTMLButtonElement>(null);
   const focusAfterToggle = useRef<"input" | "toggle" | undefined>(undefined);
 
-  const [text, updateSession] = useSessionState(
+  // Only facts about the draft, so typing renders `CommandMenu` alone.
+  const [hasMessage, updateSession] = useSessionState(
     "task",
     sessionTaskId,
-    (state) => state.composerDraft,
+    (state) => Boolean(state.composerDraft.trim()),
   );
 
   const canContinue = !spent;
-  const commands = useTaskCommands(task?.id, text.startsWith("/"));
+  const commands = useTaskCommands(task?.id, sessionTaskId);
 
   const [error] = useSessionState(
     "task",
@@ -149,7 +150,6 @@ export function Composer({
 
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
   const previousBudgetApply = useRef(budgetApplyVersion);
-  const message = text.trim();
   const feedback = spent ? undefined : hint;
 
   // Animate one footprint so switching layouts never reserves both heights.
@@ -199,10 +199,6 @@ export function Composer({
     else updateComposerSession({ composerCollapsed: hide });
   };
 
-  const edit = (value: string) => {
-    updateSession({ composerDraft: value });
-  };
-
   useEffect(() => {
     if (disabled) {
       previousBudgetApply.current = budgetApplyVersion;
@@ -215,7 +211,7 @@ export function Composer({
     }
 
     previousBudgetApply.current = budgetApplyVersion;
-    if (!message) updateSession({ composerDraft: "Continue" });
+    if (!hasMessage) updateSession({ composerDraft: "Continue" });
     setShowContinuePrompt(true);
 
     if (collapsed) {
@@ -230,18 +226,25 @@ export function Composer({
     canContinue,
     collapsed,
     disabled,
-    message,
+    hasMessage,
     inputRequest,
     updateComposerSession,
     updateSession,
   ]);
 
   const send = async (delivery: Delivery) => {
+    const { composerDraft: text, composerSending } = controller.session.get(
+      "task",
+      sessionTaskId,
+    );
+
+    const message = text.trim();
+
     if (
       disabled ||
       !task ||
       !message ||
-      controller.session.get("task", sessionTaskId).composerSending ||
+      composerSending ||
       controller.getSnapshot().busy ||
       !canContinue
     ) {
@@ -363,7 +366,7 @@ export function Composer({
             onClick={() => toggle(false)}
           >
             <Icon name="chevron-down" size={12} />
-            <span>{expandLabel(spent, message)}</span>
+            <span>{expandLabel(spent, hasMessage)}</span>
           </Button>
           {task && <TaskRunSettings task={task} />}
           {mode !== "idle" && stopButton}
@@ -389,8 +392,7 @@ export function Composer({
               <CommandMenu
                 anchor={box}
                 commands={commands}
-                draft={text}
-                onDraftChange={edit}
+                sessionId={sessionTaskId}
                 onKeyDown={keys}
                 textarea={{
                   ref: input,
@@ -408,7 +410,9 @@ export function Composer({
               />
               <div className="chat-composer-actions">
                 {/* While a turn runs, an empty composer's button stops it. */}
-                {sending || mode === "idle" || (mode === "busy" && message) ? (
+                {sending ||
+                mode === "idle" ||
+                (mode === "busy" && hasMessage) ? (
                   <TooltipWrapper
                     label={
                       showContinuePrompt
@@ -434,7 +438,11 @@ export function Composer({
                       data-action="send"
                       aria-label={sending ? "Sending…" : continueLabel}
                       disabled={
-                        disabled || busy || sending || !message || !canContinue
+                        disabled ||
+                        busy ||
+                        sending ||
+                        !hasMessage ||
+                        !canContinue
                       }
                       onClick={() => controller.run(() => send("steer"))}
                     >
