@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ComponentType } from "react";
+import { memo, useLayoutEffect, useRef, type ComponentType } from "react";
 
 import { ProjectsPage } from "../../features/projects/projects-page";
 import { SettingsPage } from "../../features/settings/settings-page";
@@ -12,8 +12,11 @@ const CONTENT: Record<PageId, ComponentType> = {
   settings: SettingsPage,
 };
 
-/** Retained pages preserve forms and reading positions while inactive. */
-export function PageOutlet() {
+/**
+ * Retained pages preserve forms and reading positions while inactive.
+ * Memoized because `AppShell` renders for host, error and layout changes.
+ */
+export const PageOutlet = memo(function PageOutlet() {
   const { page, selected } = useSnapshot(["page", "selected"]);
 
   const previous = useRef(page);
@@ -97,4 +100,4 @@ export function PageOutlet() {
       })}
     </div>
   );
-}
+});

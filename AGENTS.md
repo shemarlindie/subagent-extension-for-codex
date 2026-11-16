@@ -53,10 +53,10 @@ check it.
   direction clear. Fix architectural weaknesses the change introduces or
   directly affects. Leave broader improvements as recommendations.
 - Before implementing, choose the simplest approach that meets the current
-  requirements. Avoid speculative options, generality, layers and handling for
-  cases that cannot occur, in code, tests, docs and plans. Within the affected
-  area, simplify over-engineered code and remove duplication, obsolete code and
-  needless indirection.
+  requirements without a hack or workaround. Avoid speculative options,
+  generality, layers and handling for cases that cannot occur, in code, tests,
+  docs and plans. Within the affected area, simplify over-engineered code and
+  remove duplication, obsolete code and needless indirection.
 - Reuse existing components, logic, styles and infrastructure where
   responsibilities align. Keep distinct behavior and presentation where the
   domain requires them. Add an abstraction only when it removes real duplication

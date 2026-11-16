@@ -36,9 +36,12 @@ export function useNewMessagesFrom(
   task: Task | undefined,
   ready: boolean,
 ): NewMessages {
-  const { chat, newMark } = useSnapshot(["chat", "newMark"]);
-
   const [opened, setOpened] = useState<OpenedChat>();
+
+  // Chat is read only until it loads, so later messages don't render Chat's panel.
+  const { chat, newMark } = useSnapshot(["newMark"], (state) => ({
+    chat: opened?.loaded ? undefined : state.chat,
+  }));
 
   // The service sends a marker with every unread task. Only a task the user
   // just marked unread lacks one until the service answers, and it has

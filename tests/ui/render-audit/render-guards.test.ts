@@ -39,6 +39,10 @@ test("the guarded components mount in the base state", async (t) => {
   const mounted = new Set(recording.stop().renders.map(({ name }) => name));
 
   for (const name of [
+    "AppShell",
+    "PageOutlet",
+    "EvidenceTabs",
+    "ChatPanel",
     "TaskRow",
     "TaskFilters",
     "ChatTimeline",
@@ -105,6 +109,31 @@ test("storing a Chat message renders no other timeline row", async (t) => {
   for (const name of ["ChatMessageView", "TurnOutcomeRow", "ChatNoteRow"]) {
     expect(renders(result.renders, name, { within }), name).toEqual([]);
   }
+});
+
+test("Chat and Activity updates leave Chat's panel alone", async (t) => {
+  for (const label of [
+    "A Chat message is stored",
+    "Activity events append with Chat shown",
+  ]) {
+    const result = await run(t, label);
+
+    expect(renders(result.renders, "EvidenceTabs"), label).not.toEqual([]);
+    expect(renders(result.renders, "ChatPanel"), label).toEqual([]);
+  }
+});
+
+test("unread and host changes leave the shell's pages alone", async (t) => {
+  // The unread count sets the page title without rendering the shell.
+  const unread = await run(t, "A task becomes unread");
+
+  expect(renders(unread.renders, "TaskRow")).toHaveLength(1);
+  expect(renders(unread.renders, "AppShell")).toEqual([]);
+
+  const host = await run(t, "The host's state changes");
+
+  expect(renders(host.renders, "AppShell")).toHaveLength(1);
+  expect(renders(host.renders, "PageOutlet")).toEqual([]);
 });
 
 test("the selected task's runtime change renders no Chat message", async (t) => {

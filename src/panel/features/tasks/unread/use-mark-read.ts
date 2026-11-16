@@ -28,10 +28,9 @@ export function useMarkRead({ task, ready, atLatest }: MarkReadOptions) {
   const unread = controller.taskActions.unread;
   const taskId = task?.id;
 
-  const { cursor, chatShown } = useSnapshot((state) => ({
-    cursor: state.chat?.task === taskId ? state.chat?.cursor : undefined,
-    chatShown: state.page === "tasks" && state.tab === "chat",
-  }));
+  const chatShown = useSnapshot(
+    (state) => state.page === "tasks" && state.tab === "chat",
+  );
 
   const showing = ready && visible && chatShown;
 
@@ -55,10 +54,27 @@ export function useMarkRead({ task, ready, atLatest }: MarkReadOptions) {
     return () => unread.watch(undefined);
   }, [unread, watching]);
 
-  // On screen at the latest message: mark the task read through what Chat
-  // has shown. UnreadActions sends each cursor once, so rerenders don't repeat it.
+  // On screen at the latest message: mark the task read through Chat's
+  // cursor, and again as messages arrive. The cursor is read through a store
+  // subscription, so new messages don't render the caller. UnreadActions sends
+  // each cursor once, so repeated calls don't repeat it.
   useEffect(() => {
-    if (!task || !showing || !atLatest || cursor === undefined) return;
-    controller.run(() => unread.readThrough(task, cursor));
-  }, [controller, unread, task, showing, atLatest, cursor]);
+    if (!task || !showing || !atLatest) return;
+
+    const read = () => {
+      const { chat } = controller.getSnapshot();
+      const cursor = chat?.task === task.id ? chat.cursor : undefined;
+
+      if (cursor !== undefined) {
+        controller.run(() => unread.readThrough(task, cursor));
+      }
+    };
+
+    read();
+    const unsubscribe = controller.subscribe(read);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [controller, unread, task, showing, atLatest]);
 }
