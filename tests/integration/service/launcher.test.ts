@@ -266,23 +266,46 @@ test("launcher refuses an incompatible service it didn't start", async (t) => {
   await assert.rejects(access(join(dir, "service.log")));
 });
 
-test("launcher drains an older plugin service and keeps using it while it speaks the same API", async (t) => {
-  const { origin, drains } = await identified(t, {
-    version: "0.0.1",
-    apiVersion,
-    launcher: "stdio",
-  });
+test(
+  "launcher keeps using an older plugin service on the same API while it drains, then starts its own",
+  { timeout: 30000 },
+  async (t) => {
+    let exit = () => {};
 
-  const dir = await serviceData(t, origin, resolve("."));
-  const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
+    const { origin, drains } = await identified(
+      t,
+      { version: "0.0.1", apiVersion, launcher: "stdio" },
+      (server) => {
+        exit = () => {
+          server.close();
+          server.closeAllConnections();
+        };
+      },
+    );
 
-  assert.deepEqual(result, {
-    origin,
-    token: "handoff-token",
-  });
+    const dir = await serviceData(t, origin, resolve("."));
+    stopOnFinish(t, dir);
+    const result = await connect({ SUBAGENT_EXTENSION_FOR_CODEX_DATA: dir });
 
-  assert.deepEqual(drains, ["Bearer handoff-token"]);
-});
+    assert.deepEqual(result, {
+      origin,
+      token: "handoff-token",
+    });
+
+    assert.deepEqual(drains, ["Bearer handoff-token"]);
+
+    // Once the drained service exits, this version starts without another call.
+    exit();
+
+    await vi.waitFor(
+      async () => {
+        const health = await (await fetch(`${origin}/health`)).json();
+        assert.equal(health.version, serviceIdentity().version);
+      },
+      { timeout: 20000, interval: 200 },
+    );
+  },
+);
 
 test(
   "launcher replaces an uninstalled plugin service with an incompatible API once it exits",

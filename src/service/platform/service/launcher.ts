@@ -284,8 +284,23 @@ export async function connectService() {
       );
     }
 
-    // A compatible service keeps serving until it exits. The proxy then reconnects and starts this version.
-    if (decision.forward) return { origin: found.origin, token: found.token };
+    // A compatible service keeps serving until it exits. This version starts
+    // then, so proxies from the replaced installation, which can't start
+    // their own once the update removes it, find this one.
+    if (decision.forward) {
+      void waitForExit()
+        .then(() => connectService())
+        .then(
+          () => console.error(`Replaced the extension service at ${origin}`),
+          (error: unknown) =>
+            console.error(
+              `Could not start the extension service after the handoff: ${String(error)}`,
+            ),
+        );
+
+      return { origin: found.origin, token: found.token };
+    }
+
     await waitForExit();
     needsLaunch = true;
   } catch (error) {
