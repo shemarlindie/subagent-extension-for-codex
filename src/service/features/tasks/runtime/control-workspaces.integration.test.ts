@@ -7,7 +7,9 @@ import { join } from "node:path";
 import { test, vi } from "vitest";
 
 import { input, setup, TestProvider, until } from "./control-test-harness.js";
+import type { Control } from "./control.js";
 import { setTasksArchived } from "./task-archive.js";
+import { deleteTaskBranch, removeTaskWorktree } from "./task-worktree.js";
 
 test("worktree branches use the owner's prefix, and Git rejects invalid names", async () => {
   const { c, store, repo, dir } = await setup();
@@ -85,7 +87,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     await until(() => !!store.get(running.id, "alice").pending_input);
 
     await assert.rejects(
-      c.removeWorktree("alice", running.id),
+      removeTaskWorktree(c, "alice", running.id),
       /Wait until the task stops/,
     );
 
@@ -93,7 +95,7 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     const t = store.get(running.id, "alice");
 
     await assert.rejects(
-      c.deleteBranch("alice", t.id),
+      deleteTaskBranch(c, "alice", t.id),
       /Remove the worktree before deleting its branch/,
     );
 
@@ -101,12 +103,12 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     assert.ok(t.workspace);
     await writeFile(join(t.workspace, "draft.txt"), "draft\n");
 
-    assert.deepEqual(await c.removeWorktree("alice", t.id), {
+    assert.deepEqual(await removeTaskWorktree(c, "alice", t.id), {
       status: "uncommitted",
       files: ["draft.txt"],
     });
 
-    assert.deepEqual(await c.removeWorktree("alice", t.id, true), {
+    assert.deepEqual(await removeTaskWorktree(c, "alice", t.id, true), {
       status: "removed",
     });
 
@@ -114,9 +116,12 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     assert.equal(store.get(t.id, "alice").workspace_removed, true);
     assert.equal(pins(), "");
 
-    await assert.rejects(c.removeWorktree("alice", t.id), /already removed/);
+    await assert.rejects(
+      removeTaskWorktree(c, "alice", t.id),
+      /already removed/,
+    );
 
-    assert.deepEqual(await c.deleteBranch("alice", t.id), {
+    assert.deepEqual(await deleteTaskBranch(c, "alice", t.id), {
       status: "deleted",
     });
 
@@ -144,20 +149,20 @@ test("a stopped task's worktree is removed, keeping the branch, then the branch 
     );
 
     // Another user can't act on the task.
-    await assert.rejects(c.removeWorktree("bob", t.id));
+    await assert.rejects(removeTaskWorktree(c, "bob", t.id));
 
     // The next message recreates the worktree: from its branch, or from the
     // base commit once the branch is gone too.
     const paused = await c.start("alice", input(repo, "[input]"));
     await until(() => !!store.get(paused.id, "alice").pending_input);
     await c.interrupt("alice", paused.id);
-    await c.removeWorktree("alice", paused.id);
+    await removeTaskWorktree(c, "alice", paused.id);
     await c.send("alice", paused.id, "Carry on", "user");
     await until(() => store.get(paused.id, "alice").status === "completed");
     const resumed = store.get(paused.id, "alice").workspace;
     assert.ok(resumed && existsSync(resumed));
-    await c.removeWorktree("alice", paused.id);
-    await c.deleteBranch("alice", paused.id);
+    await removeTaskWorktree(c, "alice", paused.id);
+    await deleteTaskBranch(c, "alice", paused.id);
     await c.send("alice", paused.id, "Once more", "user");
     await until(() => store.get(paused.id, "alice").turn === 3);
     await until(() => store.get(paused.id, "alice").status === "completed");
@@ -201,13 +206,15 @@ test("archiving removes clean worktrees and keeps those with uncommitted changes
     assert.ok(dirtyPath);
     await writeFile(join(dirtyPath, "draft.txt"), "draft\n");
 
-    assert.deepEqual(
-      await setTasksArchived(c, "alice", [clean.id, dirty.id], true),
-      {
-        task_ids: [clean.id, dirty.id],
-        skipped: [],
-      },
+    const { result, cleanup } = setTasksArchived(
+      c,
+      "alice",
+      [clean.id, dirty.id],
+      true,
     );
+
+    assert.deepEqual(result, { task_ids: [clean.id, dirty.id], skipped: [] });
+    await cleanup;
 
     const archivedClean = store.get(clean.id, "alice");
     assert.equal(archivedClean.workspace_removed, true);
@@ -225,6 +232,145 @@ test("archiving removes clean worktrees and keeps those with uncommitted changes
     assert.ok(existsSync(join(dirtyPath, "draft.txt")));
   } finally {
     await c.close();
+  }
+});
+
+/**
+ * Holds each worktree removal after Git removes it, until released in order.
+ * `releaseAll` stops holding, so closing never waits on a held removal.
+ */
+function holdRemovals(c: Control) {
+  const remove = c.workspaces.removeWorktree.bind(c.workspaces);
+  const held: (() => void)[] = [];
+  let holding = true;
+
+  vi.spyOn(c.workspaces, "removeWorktree").mockImplementation(
+    async (t, force) => {
+      const result = await remove(t, force);
+      if (holding) await new Promise<void>((resolve) => held.push(resolve));
+
+      return result;
+    },
+  );
+
+  return {
+    held: () => held.length,
+    release: () => held.shift()?.(),
+    releaseAll: () => {
+      holding = false;
+      for (const resolve of held.splice(0)) resolve();
+    },
+  };
+}
+
+test("a worktree removal holds the task's next turn and its deletion until it finishes", async () => {
+  const { c, store, repo } = await setup();
+  const removals = holdRemovals(c);
+
+  try {
+    const t = await c.start("alice", input(repo));
+    await until(() => store.get(t.id, "alice").status === "completed");
+    const preview = await c.taskDeletionPreview("alice", [t.id], false);
+
+    // Unarchiving and messaging the task during cleanup queues the turn.
+    const { cleanup } = setTasksArchived(c, "alice", [t.id], true);
+    await until(() => removals.held() === 1);
+    await c.send("alice", t.id, "Carry on", "user");
+    assert.equal(store.get(t.id, "alice").status, "queued");
+
+    // The removal makes the earlier preview stale, so deletion fails after
+    // holding the task, and the queued turn still starts.
+    const staleDeletion = c.delete("alice", t.id, false, preview.confirmation);
+    removals.release();
+    await assert.rejects(staleDeletion, /changed/);
+    await cleanup;
+
+    await until(() => {
+      const task = store.get(t.id, "alice");
+
+      return task.turn === 2 && task.status === "completed";
+    });
+
+    const resumed = store.get(t.id, "alice");
+    assert.ok(resumed.workspace && existsSync(resumed.workspace));
+    assert.equal(resumed.workspace_removed, undefined);
+
+    // Deletion waits too, so removal can't save the deleted task again.
+    const discard = vi.spyOn(c.workspaces, "discard");
+    const removing = removeTaskWorktree(c, "alice", t.id);
+    await until(() => removals.held() === 1);
+    const deleting = c.delete("alice", t.id);
+    assert.equal(discard.mock.calls.length, 0);
+    removals.release();
+    await Promise.all([removing, deleting]);
+    assert.equal(store.find(t.id, "alice"), undefined);
+  } finally {
+    removals.releaseAll();
+    await c.close();
+  }
+});
+
+test("archive cleanup continues past a task deleted during an earlier removal", async () => {
+  const { c, store, repo } = await setup();
+  const removals = holdRemovals(c);
+
+  try {
+    const first = (await c.start("alice", input(repo))).id;
+    const deleted = (await c.start("alice", input(repo))).id;
+    const last = (await c.start("alice", input(repo))).id;
+    const ids = [first, deleted, last];
+
+    await until(() =>
+      ids.every((id) => store.get(id, "alice").status === "completed"),
+    );
+
+    const { cleanup } = setTasksArchived(c, "alice", ids, true);
+    await until(() => removals.held() === 1);
+    await c.delete("alice", deleted);
+    removals.release();
+    await until(() => removals.held() === 1);
+    removals.release();
+    await cleanup;
+
+    assert.equal(store.get(first, "alice").workspace_removed, true);
+    assert.equal(store.get(last, "alice").workspace_removed, true);
+  } finally {
+    removals.releaseAll();
+    await c.close();
+  }
+});
+
+test("shutdown waits for a worktree removal and stops archive cleanup", async () => {
+  const provider = new TestProvider();
+  const closeProvider = vi.fn(async () => {});
+  provider.close = closeProvider;
+  const { c, store, repo } = await setup(provider);
+  const removals = holdRemovals(c);
+  const closeStore = vi.spyOn(store, "close");
+
+  try {
+    const first = (await c.start("alice", input(repo))).id;
+    const second = (await c.start("alice", input(repo))).id;
+
+    await until(() =>
+      [first, second].every(
+        (id) => store.get(id, "alice").status === "completed",
+      ),
+    );
+
+    const { cleanup } = setTasksArchived(c, "alice", [first, second], true);
+    await until(() => removals.held() === 1);
+    const closing = c.close();
+
+    // The removal still has to save the task, so the store stays open.
+    await until(() => closeProvider.mock.calls.length === 1);
+    assert.equal(closeStore.mock.calls.length, 0);
+    removals.release();
+    await Promise.all([closing, cleanup]);
+    assert.equal(vi.mocked(c.workspaces.removeWorktree).mock.calls.length, 1);
+  } finally {
+    // The harness closes the service after the test.
+    removals.releaseAll();
   }
 });
 
