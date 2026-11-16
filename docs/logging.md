@@ -211,6 +211,7 @@ Records exclude message text and repository paths.
 | `provider_run`          | The provider run, through its reply or failure                             | `input_wait_ms`                          |
 | `input_wait`            | One permission or question request waiting for the user                    | `input_kind`, `queued_ms`                |
 | `transport`             | A panel call, measured by the panel                                        | `operation`, `outcome`, `ui_timed_out`   |
+| `archive_cleanup`       | Removing archived tasks' clean worktrees after an archive                  | `worktree_count`, `removed_count`        |
 
 `send_ref` is the first 16 hexadecimal digits of the SHA-256 hash of the send's
 request ID. The service never records the ID itself. A retried send reuses its
