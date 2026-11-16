@@ -74,8 +74,8 @@ export function CommandMenu({
 
   const setDraft = (value: string) => updateSession({ composerDraft: value });
 
-  // The caret as of the draft it was read in. Code that sets the draft
-  // leaves the caret at its end.
+  // The caret as of the draft it was read in. Without one, the caret is at the
+  // draft's end, where code that sets the draft leaves it.
   const [caret, setCaret] = useState<{ draft: string; at: number }>();
 
   const query = commandQuery(
@@ -128,7 +128,9 @@ export function CommandMenu({
 
   const moveCaret = (event: SyntheticEvent<HTMLInputElement>) => {
     const { value, selectionEnd } = event.currentTarget;
-    setCaret({ draft: value, at: selectionEnd ?? value.length });
+    const at = selectionEnd ?? value.length;
+    // Typing at the end keeps no caret, so it doesn't render the menu again.
+    setCaret(at === value.length ? undefined : { draft: value, at });
   };
 
   const openChange = (next: boolean) => {

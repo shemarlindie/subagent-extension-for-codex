@@ -151,8 +151,10 @@ test("the selected task's runtime change renders no Chat message or queue", asyn
 
 test("a keystroke in a composer draft leaves the composer alone", async (t) => {
   const task = await run(t, "A keystroke in the task composer");
+  const menu = renders(task.renders, "CommandMenu");
 
-  expect(renders(task.renders, "CommandMenu")).not.toEqual([]);
+  expect(menu).not.toEqual([]);
+  expect(menu.filter(({ wasted }) => wasted)).toEqual([]);
   expect(renders(task.renders, "Composer")).toEqual([]);
 
   const newTask = await run(t, "A keystroke in the new-task composer");
