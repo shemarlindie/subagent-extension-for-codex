@@ -102,6 +102,38 @@ function summary(rows: Row[]) {
   ];
 }
 
+/**
+ * The 20 largest totals of wasted renders by component and cause across all
+ * scenarios, so waste spread thinly over many scenarios stands out.
+ */
+function mostWasted(rows: Row[]) {
+  const totals = new Map<string, { count: number; scenarios: Set<string> }>();
+
+  for (const { scenario, result } of rows) {
+    for (const { name, cause, wasted } of updates(result.renders)) {
+      if (!wasted) continue;
+      const key = `${name} | ${cause ?? ""}`;
+      const total = totals.get(key) ?? { count: 0, scenarios: new Set() };
+
+      total.count++;
+      total.scenarios.add(scenario.label);
+      totals.set(key, total);
+    }
+  }
+
+  return [
+    "| Wasted | Cause | Count | Scenarios |",
+    "| --- | --- | --: | --: |",
+    ...[...totals]
+      .sort(([, a], [, b]) => b.count - a.count)
+      .slice(0, 20)
+      .map(
+        ([key, { count, scenarios }]) =>
+          `| ${key} | ${count} | ${scenarios.size} |`,
+      ),
+  ];
+}
+
 function findings(rows: Row[]) {
   return rows.flatMap(({ scenario, result }) => {
     const wasted = tally(
@@ -150,6 +182,10 @@ function report() {
     "## Summary",
     "",
     ...summary(ranked),
+    "",
+    "## Most wasted across scenarios",
+    "",
+    ...mostWasted(ranked),
     "",
     "## Findings",
     "",
