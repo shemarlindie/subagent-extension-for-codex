@@ -4,8 +4,8 @@ type ProgressRingProps = {
   size?: number;
 };
 
-/** Radius of the ring in its 12-unit viewBox, inside the 2-unit stroke. */
-const RADIUS = 4.5;
+/** The 2-unit stroke on this radius reaches the 12-unit viewBox's edges. */
+const RADIUS = 5;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
