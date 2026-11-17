@@ -17,6 +17,7 @@ import type {
   Transport,
 } from "../../../app/state/types";
 import type { DelegateValues } from "../delegate-values";
+import { ProjectWorkerReads } from "../project-worker-reads";
 import { newTaskSessionId } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
@@ -105,6 +106,38 @@ function setup(
     saveProfileSetting,
   };
 }
+
+test("opening the composer or choosing a project reads its latest workers", async () => {
+  const load = vi.spyOn(ProjectWorkerReads.prototype, "load");
+  onTestFinished(() => load.mockRestore());
+
+  const workers = [
+    { provider: "claude", profiles: [...roles], capabilities: {} },
+  ];
+
+  // Both projects' workers are already shown.
+  const { view, user } = setup(
+    ready,
+    {
+      repository: undefined,
+      projects: [
+        { repository: "/repo", kind: "repository" },
+        { repository: "/docs", kind: "repository" },
+      ],
+      workers,
+      projectWorkers: { "/repo": workers, "/docs": workers },
+    },
+    { repository: "/repo" },
+  );
+
+  expect(load).toHaveBeenCalledWith("/repo");
+  expect(load).not.toHaveBeenCalledWith("/docs");
+
+  await user.click(view.getByRole("combobox", { name: /^Project/ }));
+  await user.click(await view.findByRole("option", { name: /^docs/ }));
+
+  await waitFor(() => expect(load).toHaveBeenCalledWith("/docs"));
+});
 
 test("Shift+Enter adds a line instead of sending", async () => {
   const { view, user, start } = setup();

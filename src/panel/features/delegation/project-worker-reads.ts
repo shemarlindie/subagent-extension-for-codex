@@ -14,21 +14,25 @@ const current = (basis: ReadBasis, state: Snapshot) =>
   basis.projects === state.projects && basis.workers === state.workers;
 
 /**
- * Reads workers as tasks in a project folder would find them, for the new-task
- * forms, once per folder until the project list or global workers change.
+ * Reads workers as tasks in a project folder would find them, when a new-task
+ * form opens on the folder, and again when the project list or global workers
+ * change.
  */
 export class ProjectWorkerReads {
   private pending = new Map<string, ReadBasis>();
 
   constructor(private context: ProjectWorkerReadsContext) {}
 
-  /** A failed read keeps the global workers, whose own read reports failures. */
+  /**
+   * Reads a folder's workers, unless a current read is pending. A failed read
+   * keeps what the folder showed, or the global workers, whose own read
+   * reports failures, until a form asks again.
+   */
   load(repository: string) {
     const { pending, context } = this;
     const state = context.snapshot();
     const reading = pending.get(repository);
 
-    if (state.projectWorkers[repository]) return;
     if (reading && current(reading, state)) return;
 
     const basis = { projects: state.projects, workers: state.workers };
@@ -36,7 +40,7 @@ export class ProjectWorkerReads {
 
     void context
       .tool<Worker[]>("list_workers", { repository })
-      .catch(() => context.snapshot().workers)
+      .catch(() => undefined)
       .then((workers) => {
         if (pending.get(repository) !== basis) return;
         pending.delete(repository);
@@ -44,12 +48,14 @@ export class ProjectWorkerReads {
         const now = context.snapshot();
         if (!current(basis, now)) return;
 
+        const read = workers ?? now.projectWorkers[repository] ?? now.workers;
+
         // Workers matching the global ones keep their reference, so fields
         // switching to them don't render again.
         context.patch({
           projectWorkers: {
             ...now.projectWorkers,
-            [repository]: reuseUnchanged(now.workers, workers),
+            [repository]: reuseUnchanged(now.workers, read),
           },
         });
       });

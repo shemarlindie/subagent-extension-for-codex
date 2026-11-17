@@ -323,16 +323,17 @@ test("workers are read again each refresh while one can't start tasks or list mo
   await controller.refresh();
   assert.equal(workerReads(), 4);
 
-  // Within the hour, a ready list is reused.
+  // Within five minutes, a ready list is reused.
   const start = Date.now();
-  const clock = vi.spyOn(Date, "now").mockReturnValue(start + 59 * 60_000);
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start + 4 * 60_000);
   await controller.refresh();
   assert.equal(workerReads(), 4);
   clock.mockRestore();
 
-  // A ready list is still read again after an hour, so a runtime that breaks shows.
+  // A ready list is still read again after five minutes, so a runtime that
+  // breaks shows.
   const now = Date.now();
-  vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60_000 + 1000);
+  vi.spyOn(Date, "now").mockReturnValue(now + 5 * 60_000 + 1000);
   ready = false;
   await controller.refresh();
   await flush();
@@ -447,7 +448,7 @@ test("a held wait's view older than the one applied is ignored", async (t) => {
   );
 });
 
-test("a project's workers are read once, and again once the global workers change", async (t) => {
+test("a pending project read is shared, and dropped once the global workers change", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
 
@@ -495,4 +496,52 @@ test("a project's workers are read once, and again once the global workers chang
     controller.getSnapshot().projectWorkers["/repo"]?.[0]?.readiness?.ready,
     true,
   );
+});
+
+test("a project's workers are read each time a form asks, and a failed read keeps what it showed", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  const worker = (ready: boolean) => ({
+    provider: "claude",
+    profiles: [],
+    capabilities: {},
+    readiness: ready
+      ? { ready: true, details: {} }
+      : { ready: false, message: "Claude Code not found", details: {} },
+  });
+
+  const answers: (() => unknown)[] = [
+    () => [worker(false)],
+    () => Promise.reject(new Error("Service restarting")),
+  ];
+
+  transport.handler = (name, args) => {
+    if (name !== "list_workers") return undefined;
+
+    return args.repository ? answers.shift()?.() : [worker(true)];
+  };
+
+  const projectReads = () =>
+    transport.calls.filter(
+      (call) => call.name === "list_workers" && call.args.repository,
+    ).length;
+
+  const shownReady = () =>
+    controller.getSnapshot().projectWorkers["/repo"]?.[0]?.readiness?.ready;
+
+  await controller.start();
+  controller.projectWorkerReads.load("/repo");
+  await flush();
+  assert.equal(shownReady(), false);
+
+  controller.projectWorkerReads.load("/repo");
+  await flush();
+  assert.equal(projectReads(), 2);
+  assert.equal(shownReady(), false);
+
+  // Refreshes leave project reads to the forms.
+  await controller.refresh();
+  await flush();
+  assert.equal(projectReads(), 2);
 });

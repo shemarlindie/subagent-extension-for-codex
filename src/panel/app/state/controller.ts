@@ -20,6 +20,7 @@ import {
   type ProjectRemoval,
 } from "../../features/projects/project-mutation";
 import { projectUndoSteps } from "../../features/projects/project-undo";
+import { workersStale } from "../../features/providers/worker-freshness";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
 import {
   handoffMessage,
@@ -92,9 +93,6 @@ const READS_STOPPED = {
   chatHistoryLoading: undefined,
   activityHistoryLoading: undefined,
 } satisfies Partial<Snapshot>;
-
-/** How long a ready worker list is reused before it is read again. */
-const WORKERS_FRESH_MS = 60 * 60_000;
 
 /** Owns async lifecycles and reviewed scope; components own presentation and drafts. */
 export class Controller {
@@ -659,7 +657,8 @@ export class Controller {
 
     this.restoreProject(view.projects);
     const version = this.state.scopeVersion;
-    if (this.workersStale()) this.run(() => this.refreshWorkers(version));
+    const stale = workersStale(this.state.workers, this.workersReadAt);
+    if (stale) this.run(() => this.refreshWorkers(version));
     if (version !== request.scope) return true;
 
     const lacking = lacksNewSelection(
@@ -795,21 +794,6 @@ export class Controller {
     if (this.stale(version)) return;
     this.workersReadAt = Date.now();
     this.patch({ workers, workersLoaded: true });
-  }
-
-  /**
-   * Retries workers that are unready or missing models each refresh, and
-   * checks the rest once an hour.
-   */
-  private workersStale() {
-    return (
-      !this.state.workers.length ||
-      this.state.workers.some(
-        (worker) =>
-          worker.readiness?.ready === false || worker.model_discovery_error,
-      ) ||
-      Date.now() - this.workersReadAt >= WORKERS_FRESH_MS
-    );
   }
 
   /** Publishes a task list with the user's selection intent and restored view. */
