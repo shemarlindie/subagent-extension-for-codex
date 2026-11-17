@@ -184,17 +184,17 @@ whole-execution approval. Changing the execution approval default does not
 change Claude's native defaults.
 
 A session can run with less than a task asked for, such as when org policy rules
-out its mode. Requested values stay as they were. `RunContext.effectiveOptions`
-stores what differs under `provider_options.<provider_id>.effective`, replacing
-the earlier values, and an `agent.limited` event gives each new difference with
-a sentence for the user. Claude compares the turn's first `init` with the
-request.
+out its mode. Requested values stay as they were.
+`RunContext.sessionOption(key, value)` stores what a session reports under
+`provider_options.<provider_id>.<key>`, replacing the earlier value.
 
-`RunContext.promptCache` stores when the session's latest main request started
-and how long its prompt cache lives under
-`provider_options.<provider_id>.prompt_cache`. Claude refreshes it on each
-`message_start` that reads or writes the cache, taking the TTL from its writes,
-and on `compact_boundary`.
+`effective` holds what differs from the request, and an `agent.limited` event
+gives each new difference with a sentence for the user. Claude compares the
+turn's first `init` with the request.
+
+`prompt_cache` holds when the session's latest main request started and how long
+its prompt cache lives. Claude refreshes it on each `message_start` that reads
+or writes the cache, taking the TTL from its writes, and on `compact_boundary`.
 
 A provider that ends a turn before sending its prompt calls
 `RunContext.promptHeld`, so the next turn sends those instructions again.

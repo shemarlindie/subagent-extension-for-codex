@@ -84,8 +84,7 @@ async function context() {
     emit: (type) => events.push({ type }),
     emitOpaque: (type) => events.push({ type }),
     session: () => {},
-    effectiveOptions: () => {},
-    promptCache: () => {},
+    sessionOption: () => {},
     promptHeld: () => {},
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),
@@ -213,7 +212,9 @@ test("only a turn's first start says which mode the task got, since a later one 
 
   // An explicit model it runs, so only the mode could be recorded.
   ctx.c.task.model = "model";
-  ctx.c.effectiveOptions = (values) => effective.push(values);
+  ctx.c.sessionOption = (key, values) => {
+    if (key === "effective") effective.push(values);
+  };
 
   const init = (permissionMode: string) => ({
     type: "system",

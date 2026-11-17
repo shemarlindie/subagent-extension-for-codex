@@ -16,15 +16,18 @@ export function withProviderOptions(
 }
 
 /**
- * A task's options with one value its session reported, such as what it runs
- * with, beside what it requested.
+ * What a session reports beside what its task requested: what it runs with,
+ * and its latest prompt cache record.
  */
+export type SessionOptionKey = "effective" | "prompt_cache";
+
+/** A task's options with one value its session reported. */
 export function withSessionOption(
   {
     provider,
     provider_options: options,
   }: Pick<Task, "provider" | "provider_options">,
-  key: "effective" | "prompt_cache",
+  key: SessionOptionKey,
   value: Record<string, unknown>,
 ): ProviderOptions {
   return withProviderOptions(options, provider, {

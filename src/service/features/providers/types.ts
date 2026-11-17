@@ -5,6 +5,7 @@ import type {
   OpaqueEventEmitter,
 } from "../../../shared/events/event-types.js";
 import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
+import type { SessionOptionKey } from "../../../shared/providers/options.js";
 import type {
   Capabilities,
   ModelChoice,
@@ -65,15 +66,10 @@ export interface RunContext {
   emitOpaque: OpaqueEventEmitter;
   session: (id: string, stateRef?: string) => void;
   /**
-   * Stores what the session runs with where it differs from the task's request,
-   * under `provider_options.<id>.effective`. Replaces the earlier values.
+   * Stores a value the session reports under `provider_options.<id>.<key>`,
+   * replacing the earlier one.
    */
-  effectiveOptions(values: Record<string, unknown>): void;
-  /**
-   * Stores when the session's latest request started and how long its prompt
-   * cache lives, under `provider_options.<id>.prompt_cache`.
-   */
-  promptCache(value: Record<string, unknown>): void;
+  sessionOption(key: SessionOptionKey, value: Record<string, unknown>): void;
   input: (
     tool: string,
     input: Record<string, unknown>,

@@ -320,8 +320,8 @@ test("a session's effective options and prompt cache are stored apart from what 
 
   class Limited extends TestProvider {
     override async run(c: RunContext, p: string) {
-      c.effectiveOptions({ model: "other" });
-      c.promptCache(promptCache);
+      c.sessionOption("effective", { model: "other" });
+      c.sessionOption("prompt_cache", promptCache);
 
       return super.run(c, p);
     }
