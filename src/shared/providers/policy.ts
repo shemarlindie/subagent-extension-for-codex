@@ -4,6 +4,13 @@ import type { ModelChoice, ProviderPolicy } from "./types.js";
 
 export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
 
+/** Whether a model choice names no fixed model, so any model can honor it. */
+export const flexibleModel = (value: string | undefined) => {
+  const name = value?.replace(/\[.*\]$/, "");
+
+  return !name || ["default", "best", "opusplan"].includes(name);
+};
+
 /** Under a model menu when the org's allowlist shortens it. */
 export const MODELS_LIMITED = "Your organization limits these models.";
 

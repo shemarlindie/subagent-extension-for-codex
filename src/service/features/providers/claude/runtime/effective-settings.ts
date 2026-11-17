@@ -11,6 +11,7 @@ import {
 } from "../../../../../shared/providers/claude/task-options.js";
 import {
   FAMILY_ALIASES,
+  flexibleModel,
   isModelVariant,
 } from "../../../../../shared/providers/policy.js";
 import { titleCase } from "../../../../../shared/text.js";
@@ -23,19 +24,17 @@ import {
   type SettingsReader,
 } from "../configuration/session-settings.js";
 
-/** Model choices that name no fixed model, so any model can honor them. */
-const FLEXIBLE_MODELS = ["default", "best", "opusplan"];
-
 /**
  * Whether a session runs the model asked for: `opus[1m]` matches
  * `claude-opus-5-5`, and `claude-opus-5-5-fast` matches `claude-opus-5-5`. An
  * alias can be remapped to any ID, so only another family counts against it.
  */
 export function modelHonored(requested: string | undefined, actual: string) {
-  const name = requested?.replace(/\[.*\]$/, "");
+  if (!requested || flexibleModel(requested)) return true;
+
+  const name = requested.replace(/\[.*\]$/, "");
   const ran = actual.replace(/\[.*\]$/, "");
 
-  if (!name || FLEXIBLE_MODELS.includes(name)) return true;
   if (ran.includes(name) || isModelVariant(name, ran)) return true;
 
   return (
@@ -81,9 +80,38 @@ const effortReason = (requested: string, actual: string, policy?: Settings) =>
 const EFFECTIVE_KEYS = ["permission_mode", "model", "effort"] as const;
 
 /**
+ * What the session runs where the task asked for something else, or for a
+ * Default or flexible model or reasoning.
+ */
+function runsOtherwise(
+  task: RunContext["task"],
+  requestedMode: string,
+  init: { permissionMode?: string; model: string },
+  appliedEffort: string | null | undefined,
+) {
+  const after: ClaudeEffectiveSettings = {};
+
+  if (init.permissionMode && init.permissionMode !== requestedMode) {
+    after.permission_mode = init.permissionMode;
+  }
+
+  if (!modelHonored(task.model, init.model) || flexibleModel(task.model)) {
+    after.model = init.model;
+  }
+
+  if (appliedEffort && appliedEffort !== task.reasoning_effort) {
+    after.effort = appliedEffort;
+  }
+
+  return after;
+}
+
+/**
  * Compares what a session started with to what the task asked for, stores the
  * difference and reports each new one. Claude Code changes these silently when
- * policy rules them out. The requested values stay as the task's record.
+ * policy rules them out. The requested values stay as the task's record. A
+ * Default or flexible choice stores the model and reasoning it ran, for the
+ * panel to name, without a report.
  */
 export async function recordEffectiveSettings(
   c: RunContext,
@@ -92,23 +120,17 @@ export async function recordEffectiveSettings(
 ) {
   const options = readClaudeTaskOptions(c.task);
   const before = options.effective;
-  const after: ClaudeEffectiveSettings = {};
-  const effort = c.task.reasoning_effort;
-
-  if (init.permissionMode && init.permissionMode !== options.permission_mode) {
-    after.permission_mode = init.permissionMode;
-  }
-
-  if (!modelHonored(c.task.model, init.model)) after.model = init.model;
+  const { model, reasoning_effort: effort } = c.task;
 
   // Claude Code reports the effort it runs only when asked.
-  const settings =
-    effort && effort !== "default"
-      ? await readSessionSettings(session)
-      : undefined;
+  const settings = await readSessionSettings(session);
 
-  const applied = settings?.applied?.effort;
-  if (applied && applied !== effort) after.effort = applied;
+  const after = runsOtherwise(
+    c.task,
+    options.permission_mode,
+    init,
+    settings?.applied?.effort,
+  );
 
   const changed = EFFECTIVE_KEYS.filter((key) => after[key] !== before?.[key]);
   if (!changed.length) return;
@@ -117,14 +139,16 @@ export async function recordEffectiveSettings(
   const fresh = (key: (typeof EFFECTIVE_KEYS)[number]) =>
     changed.includes(key) ? after[key] : undefined;
 
+  // Only an explicit choice Claude Code changed is worth a notice.
   const newMode = fresh("permission_mode");
-  const newModel = fresh("model");
-  const newEffort = fresh("effort");
+  const newModel = flexibleModel(model) ? undefined : fresh("model");
+
+  const newEffort =
+    !effort || effort === "default" ? undefined : fresh("effort");
+
   if (!newMode && !newModel && !newEffort) return;
 
-  const policy = policySettings(
-    settings ?? (await readSessionSettings(session)),
-  );
+  const policy = policySettings(settings);
 
   const report = (limit: EventPayloadMap["agent.limited"]) => {
     const { setting, requested, effective } = limit;
@@ -146,8 +170,6 @@ export async function recordEffectiveSettings(
       reason: modeReason(options.permission_mode, newMode, policy),
     });
   }
-
-  const { model } = c.task;
 
   if (newModel && model) {
     report({

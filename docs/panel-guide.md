@@ -276,8 +276,8 @@ unsupported cost budgets and notes that a response can exceed the cost limit.
 Neither form attaches conversation text, and Advanced task does not change
 settings. The composer keeps its draft until you send it or the panel reloads.
 Switching to another conversation closes it. Existing tasks show their starting
-profile, model, reasoning and permission mode below Chat, and later turns keep
-them.
+profile, model, reasoning and permission mode below Chat, naming what a Default
+choice ran, and later turns keep them.
 
 The service derives a title from the request. Click the inspector title to edit
 it. Enter or an outside click saves, Escape cancels, and a blank or failed save
