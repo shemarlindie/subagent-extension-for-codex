@@ -1,18 +1,6 @@
 import { slashCommand } from "../../../../shared/tasks/conversation/commands";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
-
-/** Text with its leading command, if any, highlighted as in the composer. */
-export function CommandText({ text }: { text: string }) {
-  const command = slashCommand(text);
-  if (!command) return text;
-
-  return (
-    <>
-      <span className="message-command">/{command}</span>
-      {text.slice(command.length + 1)}
-    </>
-  );
-}
+import { CommandText } from "./command-text";
 
 type MessageTextProps = {
   text: string;

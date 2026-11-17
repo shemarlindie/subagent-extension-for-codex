@@ -12,7 +12,7 @@ import { Icon } from "../../../../shared/components/icons/icons";
 import { Presence } from "../../../../shared/components/motion/presence";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
-import { CommandText } from "../../shared/message-text";
+import { CommandText } from "../../shared/command-text";
 
 /** A change to the queue, which resolves an error message when it fails. */
 export type QueueAction = (task: Task) => Promise<string | undefined>;
