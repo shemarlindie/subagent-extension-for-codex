@@ -87,8 +87,23 @@ function orgDefault({
   };
 }
 
-/** What discovery reports for a worker, with the policy's allowlist applied. */
-export const previewCatalog = (policy?: ProviderPolicy) =>
+/** The docs site's own Claude Code settings choose Sonnet with Low reasoning. */
+const projectDefaults: Record<string, Partial<ModelChoice>> = {
+  "/demo/docs": {
+    resolvedModel: "claude-sonnet-5-5",
+    resolvedEffort: "low",
+    supportedEffortLevels: ["low", "medium", "high"],
+  },
+};
+
+/**
+ * What discovery reports for a worker in `repository`, with the policy's
+ * allowlist applied.
+ */
+export const previewCatalog = (
+  policy?: ProviderPolicy,
+  repository?: unknown,
+) =>
   policy
     ? {
         models: [
@@ -102,4 +117,10 @@ export const previewCatalog = (policy?: ProviderPolicy) =>
         ],
         policy,
       }
-    : { models: previewModels };
+    : {
+        models: previewModels.map((model) =>
+          model.value === "default"
+            ? { ...model, ...projectDefaults[String(repository)] }
+            : model,
+        ),
+      };

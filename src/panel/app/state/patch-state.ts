@@ -29,6 +29,12 @@ export function patchState(state: Snapshot, patch: Partial<Snapshot>) {
     }
   }
 
+  // Approving or removing a project changes what its folder's read finds, and
+  // new global workers, such as Claude becoming ready, call for a reread.
+  if (next.projects !== state.projects || next.workers !== state.workers) {
+    next.projectWorkers = {};
+  }
+
   const fields = Object.keys(patch) as (keyof Snapshot)[];
 
   return fields.some((field) => !Object.is(next[field], state[field]))

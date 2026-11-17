@@ -37,6 +37,7 @@ import { WorkspaceField } from "./fields/workspace-field";
 import { WorkspaceNoteView } from "./fields/workspace-note-view";
 import { startTaskArguments } from "./start-task";
 import { useAsyncDefaults, useProfileMode } from "./use-async-defaults";
+import { useProjectWorkers } from "./use-project-workers";
 import { workspaceNote } from "./workspace-note";
 
 interface DelegateFormProps {
@@ -79,6 +80,17 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   });
 
   const previous = useRef(repository);
+
+  // Models and policy follow a listed project or the panel's own folder. A
+  // path being typed reads nothing until it matches one.
+  const listed =
+    repository === scope.repository ||
+    scope.projects.some((project) => project.repository === repository);
+
+  const project = useProjectWorkers(
+    listed ? repository : undefined,
+    scope.workers,
+  );
 
   const requiredReadsReady =
     statuses.context === "ready" &&
@@ -271,18 +283,20 @@ function DelegateForm({ dialog }: DelegateFormProps) {
       <ModelFields
         form={form}
         defaults={defaults}
-        workers={scope.workers}
+        workers={project.workers}
         settingsReady={statuses.settings === "ready"}
         workersReady={statuses.workers === "ready"}
         settingsLoading={statuses.settings === "loading"}
-        workersLoading={statuses.workers === "loading"}
+        workersLoading={statuses.workers === "loading" || project.pending}
       />
       <ApprovalField
         form={form}
-        workers={scope.workers}
+        workers={project.workers}
         disabled={statuses.workers !== "ready" || statuses.settings !== "ready"}
         loading={
-          statuses.workers === "loading" || statuses.settings === "loading"
+          statuses.workers === "loading" ||
+          statuses.settings === "loading" ||
+          project.pending
         }
       />
       <BudgetFields

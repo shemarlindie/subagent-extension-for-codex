@@ -56,6 +56,10 @@ function setup(
     controller.session.update("newTask", newTaskSessionId(), { draft });
   }
 
+  const workers = overrides.workers ?? [
+    { provider: "claude", profiles: [...roles], capabilities: {} },
+  ];
+
   const state: Snapshot = {
     ...controller.getSnapshot(),
     connected: true,
@@ -63,7 +67,9 @@ function setup(
     repository: "/repo",
     projects: [{ repository: "/repo", kind: "repository" }],
     projectsLoaded: true,
-    workers: [{ provider: "claude", profiles: [...roles], capabilities: {} }],
+    workers,
+    // The project reads what the panel does.
+    projectWorkers: { "/repo": workers },
     workersLoaded: true,
     newTask,
     ...overrides,

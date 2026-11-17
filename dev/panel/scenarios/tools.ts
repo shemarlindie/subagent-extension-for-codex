@@ -516,7 +516,7 @@ export function previewTool(
         ...(options.claudeUnavailable
           ? { readiness: previewClaudeUnavailable }
           : {
-              ...previewCatalog(options.orgPolicy),
+              ...previewCatalog(options.orgPolicy, args.repository),
               readiness: previewClaudeReady,
             }),
         capabilities: {

@@ -7,6 +7,7 @@ export function initialState(): Snapshot {
     page: DEFAULT_PAGE,
     tasks: [],
     workers: [],
+    projectWorkers: {},
     workersLoaded: false,
     projects: [],
     projectsLoaded: false,

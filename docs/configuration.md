@@ -249,7 +249,8 @@ turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
 runs in a task's approved project folder, so that project's settings apply, and
 caches each folder for five minutes. Without a project, or for an unapproved
-folder, it runs outside any project. Settings show what applies outside any
+folder, it runs outside any project. The New task composer and Advanced task
+dialog read the chosen project, and Settings show what applies outside any
 project. A worktree task can still differ, for example by a local settings file
 that exists only in the main checkout. Custom model IDs work when discovery is
 unavailable, but reasoning support may then be unknown.

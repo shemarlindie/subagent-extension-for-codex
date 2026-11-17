@@ -10,6 +10,7 @@ import {
   rescopedNewTask,
 } from "../../features/delegation/new-task/new-task-loader";
 import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
+import { ProjectWorkerReads } from "../../features/delegation/project-worker-reads";
 import {
   renamedProject,
   withoutProject,
@@ -178,6 +179,8 @@ export class Controller {
   private readWorkers = sharedRequest(() =>
     this.tool<Worker[]>("list_workers"),
   );
+
+  readonly projectWorkerReads = new ProjectWorkerReads(this.stateContext);
 
   /** Shared reads for the new-task composer and Advanced task dialog. */
   private formContext = {

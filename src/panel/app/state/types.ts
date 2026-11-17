@@ -261,6 +261,11 @@ export type Snapshot = {
    */
   readCompleted?: Record<string, number>;
   workers: Worker[];
+  /**
+   * Workers as tasks in a folder would find them, by folder, for the new-task
+   * forms. Cleared when the project list or global workers change.
+   */
+  projectWorkers: Record<string, Worker[]>;
   projects: Project[];
   /** True once the project registry has been read successfully. */
   projectsLoaded: boolean;

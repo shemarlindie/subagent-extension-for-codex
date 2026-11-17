@@ -23,6 +23,7 @@ import { workerChoice } from "../../delegation";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
+import { useProjectWorkers } from "../../use-project-workers";
 import { newTaskProjects, profileValues } from "../new-task-values";
 import { ModelChip, modelChipLabel } from "./model-chip";
 import { PermissionChip, permissionChipLabel } from "./permission-chip";
@@ -153,6 +154,11 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
 
   const [worker, model, reasoning, mode] = values;
 
+  // A scoped panel targets its project. Models and policy follow the project.
+  const chosenRepository = useWatch({ control, name: "repository" });
+  const repository = state.repository ?? (chosenRepository || undefined);
+  const project = useProjectWorkers(repository, state.workers);
+
   // A draft that already overrides the profile opens with its settings shown.
   // Reasoning stays blank until settings load.
   const [expanded, setExpanded] = useState(() => {
@@ -170,10 +176,20 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
   const loading =
     statuses.workers === "loading" || statuses.settings === "loading";
 
+  // The model, reasoning and mode chips wait for the project's read.
+  const settingsLoading = loading || project.pending;
+
   const disabled =
     busy || statuses.settings !== "ready" || statuses.workers !== "ready";
 
-  const resolved = resolvedOptions(newTask, state, worker, model, mode);
+  const resolved = resolvedOptions(
+    newTask,
+    { workers: project.workers },
+    worker,
+    model,
+    mode,
+  );
+
   const { modelExcluded, allowedMode, cap } = resolved;
   const capped = aboveEffortCap(reasoning, cap);
 
@@ -227,19 +243,19 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
             models={resolved.models}
             inherited={resolved.model}
             footer={resolved.modelsFooter}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
           <ReasoningChip
             supported={resolved.supported}
             inherited={resolved.reasoning}
             cap={resolved.cap}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
           <PermissionChip
             options={resolved.permissions}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
         </>
@@ -254,7 +270,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           .join(" ")}
         expanded={expanded}
         {...settingsSummary(resolved, values.slice(1))}
-        loading={loading}
+        loading={settingsLoading}
         onToggle={() => setExpanded(!expanded)}
       />
     </div>

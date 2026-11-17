@@ -446,3 +446,53 @@ test("a held wait's view older than the one applied is ignored", async (t) => {
     ["current"],
   );
 });
+
+test("a project's workers are read once, and again once the global workers change", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+
+  let ready = false;
+  const projectRead = deferred<unknown>();
+
+  transport.handler = (name, args) => {
+    if (name !== "list_workers") return undefined;
+    if (args.repository && !ready) return projectRead.promise;
+
+    return [
+      {
+        provider: "claude",
+        profiles: [],
+        capabilities: {},
+        readiness: ready
+          ? { ready: true, details: {} }
+          : { ready: false, message: "Claude Code not found", details: {} },
+      },
+    ];
+  };
+
+  const projectReads = () =>
+    transport.calls.filter(
+      (call) => call.name === "list_workers" && call.args.repository,
+    ).length;
+
+  await controller.start();
+  controller.projectWorkerReads.load("/repo");
+  controller.projectWorkerReads.load("/repo");
+  assert.equal(projectReads(), 1);
+
+  // Claude becoming ready drops the pending read, which arrives stale.
+  ready = true;
+  await controller.refresh();
+  projectRead.resolve([]);
+  await flush();
+  assert.deepEqual(controller.getSnapshot().projectWorkers, {});
+
+  controller.projectWorkerReads.load("/repo");
+  await flush();
+  assert.equal(projectReads(), 2);
+
+  assert.equal(
+    controller.getSnapshot().projectWorkers["/repo"]?.[0]?.readiness?.ready,
+    true,
+  );
+});
