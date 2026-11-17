@@ -342,8 +342,6 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       completedTurns.delete(e.task_id);
     }
 
-    if (key === "local_command_output") commandOutputs.set(e.task_id, group);
-
     // A reply that repeats a command's output takes in its row.
     if (reply) {
       const output = commandOutputs.get(e.task_id);
@@ -390,6 +388,11 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       }
 
       if (onlyThinkingSignals(adjacentEvent)) adjacentThinking = adjacentEvent;
+    }
+
+    // The row the output ended up in, which may have taken in an equal one.
+    if (key === "local_command_output") {
+      commandOutputs.set(e.task_id, adjacentEvent ?? group);
     }
   }
 

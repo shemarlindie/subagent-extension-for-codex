@@ -714,3 +714,23 @@ test("a turn completion keeps its result when no matching reply follows", () => 
   assert.ok(replyEvent);
   assert.equal(replyEvent.data.text, "Something else.");
 });
+
+test("a reply takes in the command output it repeats, even when equal outputs merged", () => {
+  const output = (id: number) =>
+    sdk(id, "local_command_output", { content: "Context Usage" });
+
+  const groups = groupActivity([
+    output(1),
+    output(2),
+    event(3, "agent.completed", { result: "" }),
+    event(4, "agent.reply", { text: "Context Usage", turn: 1 }),
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [group.title, group.events.map((e) => e.id)]),
+    [
+      ["Turn completed", [3]],
+      ["Reply", [1, 2, 4]],
+    ],
+  );
+});
