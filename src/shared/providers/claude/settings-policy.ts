@@ -54,7 +54,7 @@ const whose = (org: boolean) => (org ? "your organization's" : "Claude Code's");
  */
 export function inheritHelp(
   policy: ProviderPolicy | undefined,
-  runtime: { model?: string; effort?: string },
+  runtime: { model?: string; effort?: string; modelReasons?: boolean },
 ): string[] {
   const orgModel = policy?.default_model?.name;
   const orgEffort = policy?.default_effort;
@@ -65,7 +65,10 @@ export function inheritHelp(
     return ["the worker's own default. This applies to model and reasoning."];
   }
 
-  if (model && effort && !orgModel === !orgEffort) {
+  // A default model without reasoning levels doesn't run the reasoning.
+  const together = runtime.modelReasons !== false && !orgModel === !orgEffort;
+
+  if (model && effort && together) {
     return [
       `${whose(!!orgModel)} default, ${model} with ${titleCase(effort)} reasoning.`,
     ];

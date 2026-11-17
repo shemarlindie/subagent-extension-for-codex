@@ -22,6 +22,7 @@ function discovery({
   modelsAfter = 0,
   catalog = models,
   applied,
+  switchFails = false,
 }: {
   policy?: object;
   /** The merged settings, which include policy. */
@@ -32,8 +33,15 @@ function discovery({
   catalog?: object[];
   /** What the session reports it will run. */
   applied?: { model: string; effort: string | null };
+  switchFails?: boolean;
 }) {
+  let model: string | undefined;
+
   const launch = () => ({
+    setModel: async (value: string) => {
+      if (switchFails) throw new Error("Session ended");
+      model = value;
+    },
     supportedModels: () =>
       new Promise((resolve) => setTimeout(() => resolve(catalog), modelsAfter)),
     setPermissionMode: () => {
@@ -41,7 +49,10 @@ function discovery({
     },
     getSettings: async () => ({
       effective: effective ?? {},
-      ...(applied ? { applied } : {}),
+      // A model with effort support reports the session's level.
+      ...(applied
+        ? { applied: model ? { model, effort: "high" } : applied }
+        : {}),
       sources: [
         { source: "flagSettings", settings: {} },
         ...(policy ? [{ source: "policySettings", settings: policy }] : []),
@@ -310,6 +321,38 @@ test("Claude Code's own reasoning reaches an unchanged Default entry", async () 
     resolvedEffort: "medium",
   });
 });
+
+test.for([
+  { switchFails: false, effort: "high" },
+  { switchFails: true, effort: undefined },
+])(
+  "a Default model without reasoning levels names the session's reasoning when the switch works: %o",
+  async ({ switchFails, effort }) => {
+    const read = discovery({
+      policy: { model: "claude-haiku-4-5" },
+      catalog: [
+        ...defaultCatalog,
+        {
+          value: "claude-haiku-4-5",
+          resolvedModel: "claude-haiku-4-5",
+          displayName: "Haiku 4.5",
+          description: "",
+          supportsEffort: false,
+        },
+      ],
+      applied: { model: "claude-haiku-4-5", effort: null },
+      switchFails,
+    });
+
+    const entry = await defaultEntry(read);
+
+    assert.equal(entry?.resolvedModel, "claude-haiku-4-5");
+    assert.equal(entry?.supportsEffort, false);
+    assert.equal(entry?.resolvedEffort, effort);
+    // A failed switch keeps the policy read.
+    assert.equal((await read.policy())?.default_model?.id, "claude-haiku-4-5");
+  },
+);
 
 test("a default from the user's settings doesn't name the organization", async () => {
   const read = discovery({

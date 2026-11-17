@@ -69,8 +69,9 @@ export function modelName(models: readonly ModelChoice[], value: string) {
 }
 
 /**
- * The model, by name, and reasoning the catalog's Default entry runs: the
- * provider's own default, or the org's.
+ * The model, by name, the catalog's Default entry runs, and the reasoning
+ * models with effort support run: the provider's own defaults, or the org's.
+ * `modelReasons` is false when the default model has no reasoning levels.
  */
 export function runtimeDefault(models: readonly ModelChoice[]) {
   const entry = models.find(({ value }) => value === "default");
@@ -78,6 +79,7 @@ export function runtimeDefault(models: readonly ModelChoice[]) {
   return {
     model: entry?.resolvedModel && modelName(models, entry.resolvedModel),
     effort: entry?.resolvedEffort,
+    modelReasons: entry?.supportsEffort !== false,
   };
 }
 

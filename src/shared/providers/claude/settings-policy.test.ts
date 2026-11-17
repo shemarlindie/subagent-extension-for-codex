@@ -209,6 +209,21 @@ const help = (all: ReturnType<typeof sections>, id: string) =>
     ?.help?.map((part) => (typeof part === "string" ? part : part.text))
     .join("");
 
+test("a default model without reasoning levels names the reasoning apart", () => {
+  const catalog = runtimeCatalog("claude-sonnet-5-5", "high").map((model) =>
+    model.value === "default"
+      ? { ...model, supportsEffort: false, supportedEffortLevels: [] }
+      : model,
+  );
+
+  const all = sections({}, null, catalog);
+
+  assert.equal(
+    help(all, "models"),
+    "The task's worker profile defaults override these. Inherit uses Claude Code's default model, Sonnet 5.5, and Claude Code's default reasoning, High. Task choices override all defaults.",
+  );
+});
+
 test("Inherit names Claude Code's default model and reasoning", () => {
   const catalog = runtimeCatalog("claude-opus-5-5", "high");
   let all = sections({}, null, catalog);

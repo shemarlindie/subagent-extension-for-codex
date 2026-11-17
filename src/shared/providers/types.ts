@@ -24,7 +24,10 @@ export interface ModelChoice {
   description: string;
   supportsEffort?: boolean;
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
-  /** The reasoning the Default entry runs, when the provider reports it. */
+  /**
+   * On the Default entry, the reasoning models with effort support run by
+   * default, when the provider reports it.
+   */
   resolvedEffort?: string;
 }
 

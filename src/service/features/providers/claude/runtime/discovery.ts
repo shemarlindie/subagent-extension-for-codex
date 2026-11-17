@@ -183,6 +183,40 @@ async function policyFrom(
   };
 }
 
+/**
+ * The session's settings with the reasoning models with effort support run by
+ * default. Claude Code reports it only while the session's model supports
+ * effort, so a Default model without it asks again on a model that does.
+ */
+async function withSessionEffort(
+  session: Query & SettingsReader,
+  settings: SessionSettings | undefined,
+  models: ModelChoice[],
+) {
+  const applied = settings?.applied;
+  if (!applied || applied.effort) return settings;
+
+  const reasoning = models.find(
+    ({ value, supportsEffort, supportedEffortLevels }) =>
+      value !== "default" &&
+      supportsEffort !== false &&
+      !!supportedEffortLevels?.length,
+  );
+
+  if (!reasoning) return settings;
+
+  // The policy read stands without it.
+  const effort = await session
+    .setModel(reasoning.value)
+    .then(() => readSessionSettings(session))
+    .then((read) => read?.applied?.effort)
+    .catch((error: unknown) => {
+      logError("provider.effort_read_failed", error);
+    });
+
+  return effort ? { ...settings, applied: { ...applied, effort } } : settings;
+}
+
 /** Reads the session's settings and policy, and logs what was found. */
 async function readPolicy(
   session: Query & SettingsReader,
@@ -191,7 +225,12 @@ async function readPolicy(
   scoped: boolean,
   started: number,
 ) {
-  const settings = await readSessionSettings(session);
+  const settings = await withSessionEffort(
+    session,
+    await readSessionSettings(session),
+    models,
+  );
+
   const found = await policyFrom(settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
