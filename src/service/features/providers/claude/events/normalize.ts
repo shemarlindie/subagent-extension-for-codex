@@ -1,4 +1,7 @@
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  SDKMessage,
+  SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 
 import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../../shared/events/event-types.js";
@@ -21,15 +24,81 @@ const fileContentFields = new Set([
 
 export const fileContentOmitted = "File content isn't stored.";
 
+type ToolResultBlock = Extract<
+  Exclude<SDKUserMessage["message"]["content"], string>[number],
+  { type: "tool_result" }
+>;
+
+/** What a command that ran in Claude Code printed, from its replayed message. */
+export function localCommandOutput(m: SDKMessage) {
+  if (m.type !== "user" || !("isReplay" in m)) return undefined;
+  const content = m.message.content;
+
+  return typeof content === "string"
+    ? /^<local-command-stdout>([\s\S]*)<\/local-command-stdout>$/
+        .exec(content)?.[1]
+        ?.trim() || undefined
+    : undefined;
+}
+
 /**
  * Creates the normalizer for one run. Outside full events it leaves out file
  * contents, so it remembers file tool calls to recognize their results.
  */
 export function claudeMessageNormalizer(fullEvents = false) {
-  const fileToolIds = fullEvents ? undefined : new Set<string>();
+  const state: NormalizerState = {
+    fileToolIds: fullEvents ? undefined : new Set<string>(),
+    compacted: false,
+  };
 
   return (c: RunContext, m: SDKMessage) =>
-    normalizeClaudeMessage(c, m, fullEvents, fileToolIds);
+    normalizeClaudeMessage(c, m, fullEvents, state);
+}
+
+type NormalizerState = {
+  fileToolIds: Set<string> | undefined;
+  /** A compaction ran, so the next synthetic user message is its summary. */
+  compacted: boolean;
+};
+
+/**
+ * A system message that stands in for a user message Claude Code adds itself:
+ * a command's output, or the summary a compaction continues from.
+ */
+function standInMessage(m: SDKMessage, state: NormalizerState) {
+  if (m.type === "system" && m.subtype === "compact_boundary") {
+    state.compacted = true;
+  }
+
+  if (m.type !== "user") return undefined;
+  const output = localCommandOutput(m);
+
+  if (output !== undefined) {
+    // The same shape as the SDK's own local_command_output message.
+    return {
+      type: "system",
+      subtype: "local_command_output",
+      uuid: m.uuid,
+      content: output,
+    };
+  }
+
+  if (
+    state.compacted &&
+    m.isSynthetic &&
+    typeof m.message.content === "string"
+  ) {
+    state.compacted = false;
+
+    return {
+      type: "system",
+      subtype: "compact_summary",
+      uuid: m.uuid,
+      text: m.message.content,
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -41,8 +110,9 @@ function normalizeClaudeMessage(
   c: RunContext,
   m: SDKMessage,
   fullEvents: boolean,
-  fileToolIds: Set<string> | undefined,
+  state: NormalizerState,
 ) {
+  const { fileToolIds } = state;
   const responseRef = fullEvents ? globalThis.crypto.randomUUID() : undefined;
   let recorded = false;
 
@@ -83,7 +153,9 @@ function normalizeClaudeMessage(
     c.emit(type, { ...payload, activity });
   };
 
-  const emitActivity = (message: SDKMessage) => {
+  // `message` can be a system message that stands in for `m`, such as a
+  // command's output in place of its replayed user message.
+  const emitActivity = (message: object) => {
     const payload = {
       ...normalizedClaudeFields(message),
       ...originalResponseFields(),
@@ -105,7 +177,26 @@ function normalizeClaudeMessage(
     else emit("agent.content", { role: "user", text, content });
   };
 
-  if (m.type === "assistant" || m.type === "user") {
+  const emitToolResult = (b: ToolResultBlock) => {
+    const content = Array.isArray(b.content)
+      ? b.content.map(claudeActivityContent)
+      : b.content;
+
+    // A failed file tool keeps its error text.
+    const fileResult = fileToolIds?.delete(b.tool_use_id) && !b.is_error;
+
+    emit("tool.completed", {
+      id: b.tool_use_id,
+      error: b.is_error,
+      content: fileResult ? fileContentOmitted : content,
+    });
+  };
+
+  const standIn = standInMessage(m, state);
+
+  if (standIn) {
+    emitActivity(standIn);
+  } else if (m.type === "assistant" || m.type === "user") {
     const content = m.message.content;
 
     if (typeof content === "string") {
@@ -121,18 +212,7 @@ function normalizeClaudeMessage(
             input: storedToolInput(b.id, b.name, b.input, fileToolIds),
           });
         } else if (b.type === "tool_result") {
-          const content = Array.isArray(b.content)
-            ? b.content.map(claudeActivityContent)
-            : b.content;
-
-          // A failed file tool keeps its error text.
-          const fileResult = fileToolIds?.delete(b.tool_use_id) && !b.is_error;
-
-          emit("tool.completed", {
-            id: b.tool_use_id,
-            error: b.is_error,
-            content: fileResult ? fileContentOmitted : content,
-          });
+          emitToolResult(b);
         } else {
           emit("agent.content", {
             role: m.type,

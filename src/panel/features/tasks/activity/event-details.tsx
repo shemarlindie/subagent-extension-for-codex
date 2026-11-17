@@ -4,6 +4,7 @@ import { eventPayload } from "../../../../shared/events/payload";
 import { activityPresentation } from "../../../../shared/providers/activity/presentation";
 import {
   activityFailed,
+  compactionSummary,
   replyText,
 } from "../../../../shared/tasks/activity/activity-events";
 import { scalarText } from "../../../../shared/text";
@@ -92,10 +93,10 @@ export function EventBody({ event }: { event: Event }) {
     );
   }
 
-  const reply = replyText(event);
+  const preview = replyText(event) ?? compactionSummary(event);
 
-  if (reply !== undefined) {
-    return <ReplyResult text={reply} />;
+  if (preview !== undefined) {
+    return <ReplyResult text={preview} />;
   }
 
   const toolStarted = eventPayload(event, "tool.started");

@@ -12,6 +12,7 @@ import { Icon } from "../../../../shared/components/icons/icons";
 import { Presence } from "../../../../shared/components/motion/presence";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
+import { CommandText } from "../../shared/message-text";
 
 /** A change to the queue, which resolves an error message when it fails. */
 export type QueueAction = (task: Task) => Promise<string | undefined>;
@@ -174,14 +175,7 @@ export function QueuedMessageRow({
             <span className="chat-queue-sender">Parent agent · </span>
           )}
           {runsNext && <span className="chat-queue-note">Runs next · </span>}
-          {command ? (
-            <>
-              <span className="chat-queue-command">/{command}</span>
-              {message.message.slice(command.length + 1)}
-            </>
-          ) : (
-            message.message
-          )}
+          <CommandText text={message.message} />
         </p>
       ) : (
         <textarea

@@ -79,6 +79,28 @@ const thinking = new Set([
   "agent.thinking_tokens",
 ]);
 
+const tokenCount = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** Names a compaction, with how it started and what it saved where known. */
+function compactionTitle(raw: SDKMessage | undefined) {
+  const metadata =
+    raw?.type === "system" && raw.subtype === "compact_boundary"
+      ? raw.compact_metadata
+      : undefined;
+
+  const title =
+    metadata?.trigger === "auto"
+      ? "Context compacted automatically"
+      : "Context compacted";
+
+  if (metadata?.post_tokens === undefined) return title;
+
+  return `${title} · ${tokenCount.format(metadata.pre_tokens)} → ${tokenCount.format(metadata.post_tokens)} tokens`;
+}
+
 function statusTitle(e: ActivityEvent) {
   const key = activityKind(e);
   const d = object(e.data);
@@ -87,6 +109,7 @@ function statusTitle(e: ActivityEvent) {
 
   if (key === "status") {
     if (d.compact_result === "failed") return "Context compaction failed";
+    if (d.compact_result === "success") return "Compaction finished";
     if (d.status === "compacting") return "Compacting context";
     if (d.status === "requesting") return "Requesting";
 
@@ -97,7 +120,7 @@ function statusTitle(e: ActivityEvent) {
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
   }
 
-  if (key === "compact_boundary") return "Context compacted";
+  if (key === "compact_boundary") return compactionTitle(e.rawResponse);
 
   if (key === "auth_status") {
     return d.isAuthenticating
@@ -154,9 +177,9 @@ function hasThinkingContent(e: ActivityEvent) {
 const sdkTitles: Record<string, string> = {
   init: "Claude connected",
   status: "Claude status",
-  compact_boundary: "Context compacted",
   api_retry: "Retrying API request",
   local_command_output: "Command output",
+  compact_summary: "Compaction summary",
   hook_started: "Hook started",
   hook_progress: "Hook progress",
   hook_response: "Hook finished",
@@ -222,6 +245,8 @@ function activityBodyContent(value: unknown): ActivityContent[] | undefined {
 
 /** Labels an SDK activity event, or a transcript content row. */
 function activityTitle(e: ActivityEvent, key: string) {
+  if (key === "compact_boundary") return compactionTitle(e.rawResponse);
+
   if (e.type === "claude.activity") {
     return (
       sdkTitles[key] ??
@@ -293,6 +318,7 @@ export function claudeActivityPresentation(
     (failed ? failureSummary(e) : undefined) ??
     string(d.compact_error) ??
     payloadSummary ??
+    (key === "local_command_output" ? string(d.content) : undefined) ??
     (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
   const presentation: ActivityPresentation = {

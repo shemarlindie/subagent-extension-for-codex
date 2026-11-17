@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import { compactionSummary } from "./activity-events.js";
 import { currentActivityStatus } from "./activity-status.js";
 import { event, sdk, stream, task } from "./activity-timeline-test-harness.js";
 import { groupActivity } from "./activity-timeline.js";
@@ -713,4 +714,36 @@ test("a turn completion keeps its result when no matching reply follows", () => 
   const [replyEvent] = reply.events;
   assert.ok(replyEvent);
   assert.equal(replyEvent.data.text, "Something else.");
+});
+
+test("a compaction summary previews without model reminders, and a command's output joins the reply that repeats it", () => {
+  const groups = groupActivity([
+    sdk(1, "compact_summary", {
+      text: "Continued.\n\n<system-reminder>\nRead\n</system-reminder>\nSummary:\n1. Read files.",
+    }),
+    sdk(2, "local_command_output", { content: "Compacted" }),
+    event(3, "agent.completed", {}),
+    event(4, "agent.reply", { text: "Compacted", turn: 2 }),
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [
+      group.title,
+      group.summary,
+      group.events.map((e) => e.id),
+    ]),
+    [
+      ["Compaction summary", undefined, [1]],
+      ["Turn completed", undefined, [3]],
+      ["Reply", undefined, [2, 4]],
+    ],
+  );
+
+  const [summary] = groups;
+  assert.ok(summary);
+
+  assert.equal(
+    compactionSummary(summary.events[0]),
+    "Continued.\n\nSummary:\n1. Read files.",
+  );
 });

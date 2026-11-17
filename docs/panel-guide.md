@@ -340,7 +340,9 @@ or keyboard focus, and stay visible on touch devices.
 Turn outcomes show duration, estimated cost and time. Their actions copy the
 response, ask Codex about it or open that turn's activity. Hover or activate a
 timestamp for its full date and time. Failures keep their error. Notes mark
-compaction, new sessions and recreated worktrees.
+compaction, new sessions and recreated worktrees. A compaction note shows the
+context size before and after, in place of the output of the `/compact` that ran
+it. Commands in sent and queued messages are highlighted.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
@@ -420,6 +422,8 @@ cancelled work never appears successful.
 - Worker and parent-agent text renders as Markdown, as in Chat. Your messages
   and tool output show as written.
 - Thinking shows elapsed time.
+- A compaction's summary and a long reply show a preview that expands. A reply
+  that repeats a command's output absorbs its row.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
 - File tool rows show the path and options. Successful results show "File

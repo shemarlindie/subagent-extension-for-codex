@@ -5,6 +5,7 @@ import type { ConversationMessage } from "../../../../../shared/tasks/conversati
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { RequestAttachments } from "../../../attachments/request-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
+import { MessageText } from "../../shared/message-text";
 import { markdownParts } from "../drafts/complete-paragraphs";
 import { AskReplyButton } from "./ask-reply-button";
 import { ChatMessageActions } from "./chat-message-actions";
@@ -125,16 +126,14 @@ function messageBody(
   message: ConversationMessage,
   content: string | readonly string[],
 ) {
-  if (message.from === "user") {
-    return <p className="chat-bubble">{message.text}</p>;
-  }
-
-  if (message.from === "parent") {
+  if (message.from !== "worker") {
     // The parent agent writes Markdown briefs; what the user typed stays literal.
     return (
-      <div className="chat-bubble">
-        <MarkdownView content={message.text} />
-      </div>
+      <MessageText
+        className="chat-bubble"
+        text={message.text}
+        markdown={message.from === "parent"}
+      />
     );
   }
 
