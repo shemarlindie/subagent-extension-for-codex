@@ -53,17 +53,17 @@ export const policySettings = (settings: SessionSettings | undefined) =>
   settings?.sources?.find(({ source }) => source === "policySettings")
     ?.settings;
 
-/** Whether policy is what turned this mode off. A user's settings can too. */
-export function policyBlocksMode(
+/** Whether these settings turn the mode off, such as policy or merged settings. */
+export function settingsBlockMode(
   mode: ClaudePermissionMode,
-  policy: Settings | undefined,
+  settings: Settings | undefined,
 ) {
   if (mode === "bypassPermissions") {
-    return !!policy?.permissions?.disableBypassPermissionsMode;
+    return !!settings?.permissions?.disableBypassPermissionsMode;
   }
 
   return (
     mode === "auto" &&
-    !!(policy?.disableAutoMode ?? policy?.permissions?.disableAutoMode)
+    !!(settings?.disableAutoMode ?? settings?.permissions?.disableAutoMode)
   );
 }

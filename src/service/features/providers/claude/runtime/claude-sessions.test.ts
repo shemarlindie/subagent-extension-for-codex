@@ -50,7 +50,7 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
 
     return {
       supportedModels: () => pending,
-      setPermissionMode: async () => {},
+      getSettings: async () => ({ effective: {} }),
       close: () => {
         closes++;
       },

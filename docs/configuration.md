@@ -384,7 +384,9 @@ runs. A model it now excludes gives way to Default, with a note.
 
 Limits:
 
-- Discovery runs outside any project, so project settings can differ. A mode
+- Discovery runs outside any project, so project settings can differ.
+- Claude Code doesn't report which permission modes it allows. The panel locks a
+  mode the settings turn off, and Bypass when the service runs as root. A mode
   that reads as allowed may still fall back, and Chat then says so.
 - The extension's model matching is simpler than Claude Code's, so it can refuse
   an older ID of an allowed family. An alias still works.

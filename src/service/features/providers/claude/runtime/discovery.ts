@@ -20,9 +20,9 @@ import type {
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import {
-  policyBlocksMode,
   policySettings,
   readSessionSettings,
+  settingsBlockMode,
   type SessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
@@ -36,29 +36,26 @@ const SETTINGS_REASON = "Not available with your Claude Code setup";
 const runsAsRoot = () =>
   process.getuid?.() === 0 && process.env.IS_SANDBOX !== "1";
 
-/** Modes the session refuses to switch to, which a task would lose too. */
-async function blockedModes(session: Query, policy: Settings | undefined) {
-  const blocked: ProviderPolicy["blocked"] = [];
+/**
+ * Modes the session's settings turn off, which a task would lose too. Claude
+ * Code doesn't report which modes it allows, and refuses Bypass as root.
+ */
+function blockedModes(settings: SessionSettings | undefined) {
+  const policy = policySettings(settings);
 
-  for (const value of claudePermissionModes) {
-    if (value === "default") continue;
-
-    try {
-      await session.setPermissionMode(value);
-    } catch (error) {
-      // Anything else, such as the session ending, says nothing about the mode.
-      if (!/permission mode/i.test(String(error))) throw error;
-
-      blocked.push({
-        value,
-        reason: policyBlocksMode(value, policy)
-          ? MODE_TURNED_OFF_BY_ORG
-          : SETTINGS_REASON,
-      });
-    }
-  }
-
-  return blocked;
+  return claudePermissionModes.flatMap((value) =>
+    settingsBlockMode(value, settings?.effective) ||
+    (value === "bypassPermissions" && runsAsRoot())
+      ? [
+          {
+            value,
+            reason: settingsBlockMode(value, policy)
+              ? MODE_TURNED_OFF_BY_ORG
+              : SETTINGS_REASON,
+          },
+        ]
+      : [],
+  );
 }
 
 /**
@@ -140,14 +137,13 @@ function withAppliedDefault(
 
 /** What applies to new tasks, given the session's settings. */
 async function policyFrom(
-  session: Query,
   settings: SessionSettings | undefined,
   models: ModelChoice[],
   resolve: typeof resolveSettings,
 ): Promise<ProviderPolicy | undefined> {
   const policy = policySettings(settings);
   const applied = settings?.applied;
-  const modes = await blockedModes(session, policy);
+  const modes = blockedModes(settings);
 
   if (!policy) {
     return modes.length
@@ -194,7 +190,7 @@ async function readPolicy(
   resolve: typeof resolveSettings,
 ) {
   const settings = await readSessionSettings(session);
-  const found = await policyFrom(session, settings, models, resolve);
+  const found = await policyFrom(settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
     // Without the session's settings, whether policy applies is unknown.
@@ -252,9 +248,6 @@ export class ClaudeDiscovery {
         // Outside any project, so one folder's settings don't lock modes for all.
         cwd: tmpdir(),
         permissionMode: "default",
-        // Lets the policy check try Bypass. No tool can run without a turn.
-        // Claude Code won't start with it as root, where Bypass can't run anyway.
-        allowDangerouslySkipPermissions: !runsAsRoot(),
         canUseTool: async () => ({
           behavior: "deny",
           message: "Model discovery cannot execute tools",
@@ -267,16 +260,12 @@ export class ClaudeDiscovery {
     try {
       const models = await Promise.race([session.supportedModels(), timeout]);
 
-      // Widened because a callback sets it, which TypeScript can't see.
-      let policyFailed = false as boolean;
-
       // Models stay useful without it, and tasks are still checked as they run.
       const read = await Promise.race([
         readPolicy(session, models, this.resolve),
         timeout,
       ]).catch((error: unknown) => {
         logError("provider.policy_read_failed", error);
-        policyFailed = true;
 
         return undefined;
       });
@@ -288,8 +277,8 @@ export class ClaudeDiscovery {
           models: withAppliedDefault(models, read?.settings),
           ...(policy ? { policy } : {}),
         },
-        // A failed read tells nothing about policy, so it's retried soon.
-        expires: Date.now() + (policyFailed ? 30000 : READ_CACHE_MS),
+        // Without settings nothing is known about policy, so it's retried soon.
+        expires: Date.now() + (read?.settings ? READ_CACHE_MS : 30000),
       };
     } finally {
       turnless.close();

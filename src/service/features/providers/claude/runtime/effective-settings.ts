@@ -17,9 +17,9 @@ import { titleCase } from "../../../../../shared/text.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {
-  policyBlocksMode,
   policySettings,
   readSessionSettings,
+  settingsBlockMode,
   type SettingsReader,
 } from "../configuration/session-settings.js";
 
@@ -49,7 +49,7 @@ function modeReason(
   actual: string,
   policy?: Settings,
 ) {
-  const why = policyBlocksMode(requested, policy)
+  const why = settingsBlockMode(requested, policy)
     ? `Your organization turned off ${permissionModeName(requested)}.`
     : `Claude Code doesn't allow ${permissionModeName(requested)} for this session.`;
 
