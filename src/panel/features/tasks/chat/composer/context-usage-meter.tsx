@@ -27,22 +27,25 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
 
   const share = usage.total_tokens / usage.window_tokens;
   const used = percent(usage.total_tokens, usage.window_tokens);
-  const status = `${formatCount(usage.total_tokens)} of ${formatCount(usage.window_tokens)} tokens used (${used}%)`;
+  const status = `Context window ${used}% full`;
+  const count = `${formatCount(usage.total_tokens)} of ${formatCount(usage.window_tokens)} tokens used`;
 
   const compaction = usage.auto_compact_tokens
     ? `Auto-compacts at ${percent(usage.auto_compact_tokens, usage.window_tokens)}%`
     : "Auto-compact is off";
+
+  const note = `${count}. ${compaction}.`;
 
   const categories = usage.categories.toSorted((a, b) => b.tokens - a.tokens);
 
   // The whole item, separator included, opens the tooltip.
   return (
     <TooltipWrapper
-      label={`Context window: ${status}. ${compaction}.`}
+      label={`${status}. ${note}`}
       content={
         <>
           <span className="run-setting-tooltip-status">{status}</span>
-          <span className="run-setting-tooltip-note">{compaction}</span>
+          <span className="run-setting-tooltip-note">{note}</span>
           <span className="run-setting-tooltip-rows context-usage-tooltip-rows">
             {categories.map(({ name, tokens }) => (
               <span key={name}>
