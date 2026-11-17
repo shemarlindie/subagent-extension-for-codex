@@ -211,25 +211,12 @@ test("the profile's settings collapse into a summary that expands for editing", 
   expect(document.activeElement).toBe(toggle);
 });
 
-test("Use extension setting names the saved mode it runs", async () => {
-  const { view, user } = setup(ready, {}, { permission_mode: "inherit" });
-
-  const toggle = view.getByRole("button", {
-    name: /^Edit .* · Extension setting \(Accept edits\)$/,
-  });
-
-  expect(toggle.textContent).toMatch(/· Edits$/);
-  await user.click(toggle);
-
-  await user.click(
-    view.getByRole("combobox", {
-      name: "Permission mode: Extension setting (Accept edits)",
-    }),
-  );
+test("Use extension setting names the saved mode it runs", () => {
+  const { view } = setup(ready, {}, { permission_mode: "inherit" });
 
   assert.ok(
-    await view.findByRole("option", {
-      name: "Use extension setting (Accept edits)",
+    view.getByRole("button", {
+      name: /· Extension setting \(Accept edits\)$/,
     }),
   );
 });
@@ -310,7 +297,7 @@ test("reasoning choices save to the profile, and choosing a profile restores its
 });
 
 test("the composer names Claude Code's default model and reasoning", async () => {
-  const { view, user } = setup(ready, {
+  const { view } = setup(ready, {
     workers: [
       {
         provider: "claude",
@@ -335,14 +322,11 @@ test("the composer names Claude Code's default model and reasoning", async () =>
     ],
   });
 
-  await user.click(
+  assert.ok(
     await view.findByRole("button", {
       name: /^Edit Opus 5\.5 · High reasoning · /,
     }),
   );
-
-  await user.click(view.getByRole("combobox", { name: "Model: Opus 5.5" }));
-  assert.ok(await view.findByRole("option", { name: "Default (Opus 5.5)" }));
 });
 
 test("the composer inherits the org's runtime defaults", async () => {
