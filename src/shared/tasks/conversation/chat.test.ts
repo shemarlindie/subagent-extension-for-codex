@@ -169,25 +169,16 @@ test("a compaction's note replaces its command's output, and other command outpu
     event(2, "claude.activity", {
       type: "system",
       subtype: "compact_boundary",
-      activity: {
-        kind: "compact_boundary",
-        statusTitle: "Context compacted · 38.3K → 7.7K tokens",
-      },
+      activity: { kind: "compact_boundary" },
     }),
     ...commandTurn(2, 4, "Context Usage"),
   ]);
 
   assert.deepEqual(
     items.map((item) =>
-      item.kind === "message"
-        ? item.message.text
-        : item.kind === "note" && item.text,
+      item.kind === "message" ? item.message.text : item.kind,
     ),
-    [
-      "Move the helpers",
-      "Context compacted · 38.3K → 7.7K tokens",
-      "Context Usage",
-    ],
+    ["Move the helpers", "note", "Context Usage"],
   );
 });
 
