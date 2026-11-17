@@ -115,6 +115,31 @@ test("an unfamiliar worker supplies its native permissions and budget presentati
   );
 });
 
+test("Use extension setting names the mode a read-only profile runs", (t) => {
+  t.onTestFinished(cleanup);
+
+  function Form() {
+    const form = useForm<DelegateValues>({
+      defaultValues: { worker: "claude:reviewer", permission_mode: "inherit" },
+    });
+
+    return (
+      <ApprovalField
+        form={form}
+        workers={[{ provider: "claude", profiles: [], capabilities: {} }]}
+        defaults={{}}
+      />
+    );
+  }
+
+  const view = render(<Form />);
+
+  assert.match(
+    view.container.textContent ?? "",
+    /Use extension setting \(Plan\)/,
+  );
+});
+
 test("workers without native mode selection do not offer approval delegation", (t) => {
   t.onTestFinished(cleanup);
 

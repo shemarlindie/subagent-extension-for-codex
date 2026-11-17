@@ -292,6 +292,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
       <ApprovalField
         form={form}
         workers={project.workers}
+        defaults={defaults}
         disabled={statuses.workers !== "ready" || statuses.settings !== "ready"}
         loading={
           statuses.workers === "loading" ||

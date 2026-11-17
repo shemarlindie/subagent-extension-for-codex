@@ -68,7 +68,10 @@ export const permissionModeName = (mode: string) =>
  * "Plan", and the default mode reads by what it does, "Ask for approval".
  */
 export function shortPermissionLabel(label: string) {
-  if (label === "Use extension setting") return "Extension setting";
+  // Keeps the mode it names, as in "Extension setting (Auto)".
+  if (label.startsWith("Use extension setting")) {
+    return label.replace("Use extension setting", "Extension setting");
+  }
 
   const [name = label, detail] = label.split(" — ");
 

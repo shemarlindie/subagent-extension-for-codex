@@ -211,6 +211,67 @@ test("the profile's settings collapse into a summary that expands for editing", 
   expect(document.activeElement).toBe(toggle);
 });
 
+test("Use extension setting names the saved mode it runs", async () => {
+  const { view, user } = setup(ready, {}, { permission_mode: "inherit" });
+
+  const toggle = view.getByRole("button", {
+    name: /^Edit .* · Extension setting \(Accept edits\)$/,
+  });
+
+  expect(toggle.textContent).toMatch(/· Edits$/);
+  await user.click(toggle);
+
+  await user.click(
+    view.getByRole("combobox", {
+      name: "Permission mode: Extension setting (Accept edits)",
+    }),
+  );
+
+  assert.ok(
+    await view.findByRole("option", {
+      name: "Use extension setting (Accept edits)",
+    }),
+  );
+});
+
+test("Use extension setting names Plan for a read-only profile, and a blocked mode's fallback", async () => {
+  const blocked: Partial<Snapshot> = {
+    workers: [
+      {
+        provider: "claude",
+        profiles: [...roles],
+        capabilities: {},
+        policy: {
+          managed: true,
+          blocked: [{ value: "acceptEdits", reason: "Turned off" }],
+          notes: [],
+        },
+      },
+    ],
+  };
+
+  const reviewer = setup(ready, blocked, {
+    worker: "claude:reviewer",
+    permission_mode: "inherit",
+  });
+
+  assert.ok(
+    reviewer.view.getByRole("button", {
+      name: /· Extension setting \(Plan\)$/,
+    }),
+  );
+
+  cleanup();
+
+  const implementer = setup(ready, blocked, { permission_mode: "inherit" });
+
+  assert.ok(
+    implementer.view.getByRole("button", {
+      name: /· Extension setting \(Ask for approval\)$/,
+    }),
+  );
+});
+
 test("reasoning choices save to the profile, and choosing a profile restores its saved settings", async () => {
   const { view, user, start, saveProfileSetting } = setup({
     ...ready,

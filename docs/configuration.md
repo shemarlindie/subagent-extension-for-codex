@@ -275,7 +275,8 @@ inherited either.
 
 - `providers.claude.permission_mode` sets the default for new tasks.
 - `provider_options.claude.permission_mode` overrides it for one task. `inherit`
-  uses the saved setting.
+  uses the saved setting. The panel names the mode it runs, such as
+  `Use extension setting (Auto)`.
 - The read-only profiles, `researcher` and `reviewer`, start in `plan` unless
   the task names another mode. These profiles return findings directly and
   cannot call `ExitPlanMode` to request implementation approval. Use

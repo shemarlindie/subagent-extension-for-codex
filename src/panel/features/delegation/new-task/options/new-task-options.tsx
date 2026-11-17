@@ -20,6 +20,10 @@ import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateFormState } from "../../delegate-initial-values";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
+import {
+  inheritedPermissionMode,
+  withInheritedMode,
+} from "../../inherited-permission";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
@@ -90,6 +94,20 @@ function resolvedOptions(
   const models = workerInfo?.models ?? [];
   const policy = workerInfo?.policy;
 
+  const options = policyOptions(
+    provider,
+    workerInfo,
+    models,
+    providerModel,
+    runtimeModel,
+  );
+
+  const inheritedMode = inheritedPermissionMode(
+    worker,
+    newTask.defaults,
+    workerInfo,
+  );
+
   return {
     models,
     modelExcluded: !modelAllowed(policy, models, model),
@@ -100,7 +118,9 @@ function resolvedOptions(
     modelsFooter: modelsFooter(workerInfo),
     // The model and reasoning chips edit the profile's settings, so Default
     // clears them and inherits the provider's, or the runtime default.
-    ...policyOptions(provider, workerInfo, models, providerModel, runtimeModel),
+    model: options.model,
+    permissions: withInheritedMode(options.permissions, inheritedMode),
+    inheritedMode,
   };
 }
 
@@ -119,6 +139,12 @@ function settingsSummary(
   const reasoningText = reasoningChipLabel(reasoning, resolved.reasoning);
   const permissionText = permissionChipLabel(resolved.permissions, permission);
 
+  // The summary names the mode an inherited choice runs.
+  const runs =
+    permission === "inherit" && resolved.inheritedMode
+      ? permissionChipLabel(resolved.permissions, resolved.inheritedMode)
+      : permissionText;
+
   const line = (parts: (string | false | undefined)[]) =>
     parts.filter(Boolean).join(" · ");
 
@@ -126,7 +152,7 @@ function settingsSummary(
     summary: line([
       modelLabel,
       supportsReasoning && reasoningShort,
-      permissionText && compactPermissionLabel(permissionText),
+      runs && compactPermissionLabel(runs),
     ]),
     description: line([
       modelLabel,
