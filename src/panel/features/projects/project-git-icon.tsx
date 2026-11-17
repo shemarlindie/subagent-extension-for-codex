@@ -28,7 +28,7 @@ export function ProjectGitIcon({ git, folder, name }: ProjectGitIconProps) {
       <Popover.Portal>
         <Popover.Positioner className="tooltip-positioner" sideOffset={6}>
           <Popover.Popup
-            className="tooltip-popup project-git-note"
+            className="tooltip-popup tooltip-popup-rich project-git-note"
             initialFocus={false}
           >
             {git === "none" ? (

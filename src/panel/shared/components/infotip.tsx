@@ -25,7 +25,11 @@ export function Infotip({ label, children, triggerLabel }: InfotipProps) {
         <Popover.Positioner className="tooltip-positioner" sideOffset={6}>
           {/* The note has nothing to focus, so focus stays on the trigger. */}
           <Popover.Popup
-            className="tooltip-popup"
+            className={
+              typeof label === "string"
+                ? "tooltip-popup"
+                : "tooltip-popup tooltip-popup-rich"
+            }
             initialFocus={false}
             aria-label={triggerLabel}
           >
