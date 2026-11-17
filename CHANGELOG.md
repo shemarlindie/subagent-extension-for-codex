@@ -3,6 +3,17 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.7.0
+
+### Features
+
+- Show context usage beside run settings (#138)
+- Name the resolved default model, reasoning and permission mode (#137)
+
+### Fixes
+
+- Clean up compaction and command output in chat and activity (#139)
+
 ## 0.6.0
 
 ### Features
