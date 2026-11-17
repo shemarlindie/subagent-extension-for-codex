@@ -31,6 +31,7 @@ import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import { claudeMessageNormalizer } from "../events/normalize.js";
 import { ClaudeCommands } from "./command-discovery.js";
+import { contextUsageRecorder } from "./context-usage.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
@@ -200,6 +201,8 @@ export class ClaudeAgentProvider implements Provider {
       options,
     }) as unknown as SteerableQuery & AsyncIterable<SDKMessage>;
 
+    const contextUsage = contextUsageRecorder(c, stream);
+
     // Steers sent into the turn and not yet taken, by the uuid they went with.
     const steers = new Map<string, string>();
     // The final message is ending, so the turn takes no more steers.
@@ -351,6 +354,9 @@ export class ClaudeAgentProvider implements Provider {
               }
 
               c.delta(streaming, m.event.delta.text);
+            } else if (m.event.type === "message_delta") {
+              // The CLI has the response's usage from here on.
+              contextUsage.measure();
             }
           }
 
@@ -389,9 +395,10 @@ export class ClaudeAgentProvider implements Provider {
           await recordEffectiveSettings(c, m, stream);
         }
 
-        // Compaction's own request emits no message_start.
+        // Compaction's own request emits no stream events.
         if (m.type === "system" && m.subtype === "compact_boundary") {
           recordPromptCache(c, "compact_boundary");
+          contextUsage.measure();
         }
 
         if (m.type !== "result") continue;
@@ -452,6 +459,7 @@ export class ClaudeAgentProvider implements Provider {
     } finally {
       clearTimeout(fallback);
       c.signal.removeEventListener("abort", interrupt);
+      await contextUsage.settle();
       inbox.end();
       stream.close();
     }

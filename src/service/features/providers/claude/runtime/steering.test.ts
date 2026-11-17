@@ -15,6 +15,7 @@ import {
 import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
 import { now } from "../../../../../shared/time.js";
 import { type RunContext, type Steer } from "../../types.js";
+import { contextUsage } from "./claude-test-harness.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 type Frame = Record<string, unknown>;
@@ -132,7 +133,11 @@ function fakeQuery(
       return { ...message, uuid: message.uuid };
     };
 
-    return Object.assign(script(next), { close() {}, ...controls });
+    return Object.assign(script(next), {
+      close() {},
+      getContextUsage: async () => contextUsage(10_000),
+      ...controls,
+    });
   }) as unknown as ConstructorParameters<typeof ClaudeAgentProvider>[0];
 
   const launched = () => {
@@ -212,6 +217,7 @@ test("only a turn's first start says which mode the task got, since a later one 
 
   // An explicit model it runs, so only the mode could be recorded.
   ctx.c.task.model = "model";
+
   ctx.c.sessionOption = (key, values) => {
     if (key === "effective") effective.push(values);
   };

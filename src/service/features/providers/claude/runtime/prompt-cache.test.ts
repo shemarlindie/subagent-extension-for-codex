@@ -7,6 +7,7 @@ import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import {
   claudeOptions,
   context,
+  contextUsage,
   reply,
   setClaudeOptions,
 } from "./claude-test-harness.js";
@@ -61,7 +62,7 @@ async function record(frames: object[], previous?: object) {
           usage: {},
         };
       })(),
-      { close: () => {} },
+      { close: () => {}, getContextUsage: async () => contextUsage(10_000) },
     ) as unknown as Query;
 
   const before = Date.now();

@@ -41,6 +41,25 @@ const claudePromptCacheSchema = z.strictObject({
 
 export type ClaudePromptCache = z.infer<typeof claudePromptCacheSchema>;
 
+/**
+ * How full the session's context window was after its latest main response,
+ * as Claude Code's `/context` reports it. `auto_compact_tokens` is absent when
+ * auto-compact is off.
+ */
+const claudeContextUsageSchema = z.strictObject({
+  total_tokens: z.number().nonnegative(),
+  window_tokens: z.number().positive(),
+  auto_compact_tokens: z.number().positive().optional(),
+  categories: z.array(
+    z.strictObject({
+      name: z.string(),
+      tokens: z.number().positive(),
+    }),
+  ),
+});
+
+export type ClaudeContextUsage = z.infer<typeof claudeContextUsageSchema>;
+
 /** Options stored on a task, with the permission mode resolved. */
 export const claudeTaskOptionsSchema = z.strictObject({
   permission_mode: claudePermissionModeSchema,
@@ -49,6 +68,7 @@ export const claudeTaskOptionsSchema = z.strictObject({
   claude_policy: claudePolicySchema,
   effective: claudeEffectiveSettingsSchema.optional(),
   prompt_cache: claudePromptCacheSchema.optional(),
+  context_usage: claudeContextUsageSchema.optional(),
 });
 
 export function readClaudeTaskOptions(task: Pick<Task, "provider_options">) {

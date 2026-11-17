@@ -4,7 +4,11 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type Options, type Query } from "@anthropic-ai/claude-agent-sdk";
+import {
+  type Options,
+  type Query,
+  type SDKControlGetContextUsageResponse,
+} from "@anthropic-ai/claude-agent-sdk";
 import { onTestFinished, vi } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
@@ -32,6 +36,20 @@ export const setClaudeOptions = (
 
 export const claudeOptions = (task: Task) =>
   task.provider_options?.claude ?? {};
+
+/** What `getContextUsage` answers, with the fields the provider reads. */
+export const contextUsage = (totalTokens: number) =>
+  ({
+    totalTokens,
+    rawMaxTokens: 200_000,
+    isAutoCompactEnabled: true,
+    autoCompactThreshold: 167_000,
+    categories: [
+      { name: "System prompt", tokens: 3_000, kind: "used" },
+      { name: "Messages", tokens: totalTokens - 3_000, kind: "used" },
+      { name: "Free space", tokens: 200_000 - totalTokens, kind: "free" },
+    ],
+  }) as unknown as SDKControlGetContextUsageResponse;
 
 // The first PreToolUse hook callback the provider registered.
 export function preToolUseHook(options: Options | undefined) {

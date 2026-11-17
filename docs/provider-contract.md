@@ -196,6 +196,11 @@ turn's first `init` with the request.
 its prompt cache lives. Claude refreshes it on each `message_start` that reads
 or writes the cache, taking the TTL from its writes, and on `compact_boundary`.
 
+`context_usage` holds how full the context window was after the latest main
+response, as `/context` reports it. Claude measures with
+`getContextUsage({ detail: "summary" })`, which makes no API call, on each main
+`message_delta` and on `compact_boundary`.
+
 A provider that ends a turn before sending its prompt calls
 `RunContext.promptHeld`, so the next turn sends those instructions again.
 

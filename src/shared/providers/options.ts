@@ -17,9 +17,9 @@ export function withProviderOptions(
 
 /**
  * What a session reports beside what its task requested: what it runs with,
- * and its latest prompt cache record.
+ * and its latest prompt cache and context usage records.
  */
-export type SessionOptionKey = "effective" | "prompt_cache";
+export type SessionOptionKey = "effective" | "prompt_cache" | "context_usage";
 
 /** A task's options with one value its session reported. */
 export function withSessionOption(
