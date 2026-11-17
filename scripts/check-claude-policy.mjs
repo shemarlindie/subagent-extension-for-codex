@@ -55,7 +55,6 @@ async function idleSession(cached, read) {
       strictMcpConfig: true,
       mcpServers: {},
       permissionMode: "default",
-      allowDangerouslySkipPermissions: true,
       env: {
         PATH: process.env.PATH,
         HOME: home,
@@ -71,15 +70,10 @@ async function idleSession(cached, read) {
   } finally {
     release();
     session.close();
-    rmSync(home, { recursive: true, force: true });
+    // Claude Code can still be writing to its config directory as it exits.
+    rmSync(home, { recursive: true, force: true, maxRetries: 5 });
   }
 }
-
-const modeRejection = (session, mode) =>
-  session.setPermissionMode(mode).then(
-    () => undefined,
-    (error) => String(error),
-  );
 
 async function read(session) {
   if (typeof session.getSettings !== "function") return undefined;
@@ -89,9 +83,6 @@ async function read(session) {
   return {
     settings,
     models: (await session.supportedModels()).map(({ value }) => value),
-    bypass: await modeRejection(session, "bypassPermissions"),
-    auto: await modeRejection(session, "auto"),
-    plan: await modeRejection(session, "plan"),
   };
 }
 
@@ -104,20 +95,18 @@ if (!open) {
 
   check(true, "Query.getSettings exists");
 
-  check(!open.bypass && !open.auto, "no policy: Bypass and Auto are accepted");
-
   check(
     limited.settings.sources?.some(({ source }) => source === "policySettings"),
     "policy: sources lists policySettings",
   );
 
-  check(
-    /permission mode/i.test(limited.bypass ?? "") &&
-      /permission mode/i.test(limited.auto ?? ""),
-    "policy: setPermissionMode rejects Bypass and Auto, naming the permission mode",
-  );
+  const { effective } = limited.settings;
 
-  check(!limited.plan, "policy: setPermissionMode still accepts Plan");
+  check(
+    !!effective?.disableAutoMode &&
+      !!effective.permissions?.disableBypassPermissionsMode,
+    "policy: effective settings turn off Auto and Bypass",
+  );
 
   check(
     limited.models.includes("haiku") && !limited.models.includes("opus"),

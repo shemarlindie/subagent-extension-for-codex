@@ -245,9 +245,9 @@ may fail the task when it runs.
 Claude model suggestions come from the installed CLI. Discovery submits no user
 turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
-runs in the service directory, so project-specific model configuration can
-differ from a task workspace. Custom model IDs work when discovery is
-unavailable, but reasoning support may then be unknown.
+runs in the task's approved project folder, so that project's settings apply.
+Settings show what applies outside any project. Custom model IDs work when
+discovery is unavailable, but reasoning support may then be unknown.
 
 ## Custom instructions for worker profiles
 
@@ -365,7 +365,7 @@ is cached for five minutes.
 | Policy                                                                                                                     | New tasks                                                                                                          | Panel                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `permissions.disableBypassPermissionsMode`, `disableAutoMode` or `permissions.disableAutoMode`                             | An explicit request fails. A saved mode falls back.                                                                | The mode stays listed and locked, with the reason.                                                                                                                                                     |
-| `model`                                                                                                                    | It supplies the runtime default. Saved Claude and profile models still apply.                                      | Claude's Inherit names it, and the composer starts on it unless a saved model applies. The Default model names it, and **Organization policy** lists it.                                               |
+| `model`                                                                                                                    | It supplies the runtime default. Saved Claude and profile models still apply.                                      | Inherit and the composer name it where no saved model applies. The Default model names it, and **Organization policy** lists it.                                                                       |
 | `effortLevel`                                                                                                              | It supplies the runtime default. Saved Claude and profile reasoning still apply.                                   | Inherit and the composer name it where the model supports it, and **Organization policy** lists it.                                                                                                    |
 | `modelSettings.<model>.effortLevel`                                                                                        | Its model runs it in place of `effortLevel` when no saved reasoning applies.                                       | Inherit and the composer name it where that model runs, and **Organization policy** lists it.                                                                                                          |
 | `maxEffortLevel`, `modelSettings.<model>.maxEffortLevel`                                                                   | An explicit level above it fails. A saved one starts, and Claude Code lowers it.                                   | Reasoning menus lock higher levels. A saved level above it gets a warning, and **Organization policy** lists the limit. A lowered level gets a note in Chat, and the run settings show the level used. |
@@ -384,8 +384,7 @@ runs. A model it now excludes gives way to Default, with a note.
 
 Limits:
 
-- Discovery runs outside any project, so project settings can differ. A mode
-  that reads as allowed may still fall back, and Chat then says so.
+- A mode that reads as allowed may still fall back, and Chat then says so.
 - The extension's model matching is simpler than Claude Code's, so it can refuse
   an older ID of an allowed family. An alias still works.
 - A denied tool call doesn't say who set the rule, so denials aren't attributed

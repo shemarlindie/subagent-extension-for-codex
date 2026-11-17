@@ -37,6 +37,14 @@ export async function startTask(
   const provider = c.providers.get(parsed.provider);
   if (!provider) throw new Error("Provider is not enabled");
 
+  const readiness = await provider.readiness?.();
+  if (readiness?.ready === false) throw new Error(readiness.message);
+
+  // Before the start checks, so they follow the project's own settings.
+  const repository = c.projects
+    ? await c.projects.resolve(parsed.repository)
+    : await c.workspaces.repository(parsed.repository);
+
   const {
     req: { attachments, ...req },
     limited,
@@ -49,11 +57,8 @@ export async function startTask(
       model: !!(input as { model?: unknown }).model,
       effort: effortRequested(input),
     },
+    repository,
   );
-
-  const repository = c.projects
-    ? await c.projects.resolve(req.repository)
-    : await c.workspaces.repository(req.repository);
 
   // Repository resolution can yield while the project is being deleted.
   return guard.start(repository, c.projects, async (check) => {

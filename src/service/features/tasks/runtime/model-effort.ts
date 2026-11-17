@@ -5,16 +5,18 @@ import type { Provider } from "../../providers/types.js";
 type ModelEffort = Pick<Task, "model" | "reasoning_effort">;
 
 /**
- * The model known not to support the chosen reasoning, if any. Unknown or
- * unavailable metadata leaves final validation to the provider.
+ * The model known not to support the chosen reasoning in the task's project
+ * folder, if any. Unknown or unavailable metadata leaves final validation to
+ * the provider.
  */
 export async function modelRejectingEffort(
   provider: Provider,
   { model, reasoning_effort: effort }: ModelEffort,
   settings: SettingsValues,
+  repository: string,
 ) {
   if (!provider.models || !effort || effort === "default") return undefined;
-  const models = await provider.models(settings).catch(() => []);
+  const models = await provider.models(settings, repository).catch(() => []);
   const known = models.find((item) => item.value === (model || "default"));
 
   return known &&
@@ -30,8 +32,14 @@ export async function assertModelEffort(
   provider: Provider,
   request: ModelEffort,
   settings: SettingsValues,
+  repository: string,
 ) {
-  const model = await modelRejectingEffort(provider, request, settings);
+  const model = await modelRejectingEffort(
+    provider,
+    request,
+    settings,
+    repository,
+  );
 
   if (model) {
     throw new Error(

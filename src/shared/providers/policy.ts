@@ -4,6 +4,13 @@ import type { ModelChoice, ProviderPolicy } from "./types.js";
 
 export const FAMILY_ALIASES = ["opus", "sonnet", "haiku", "fable"];
 
+/** Whether a model choice names no fixed model, so any model can honor it. */
+export const flexibleModel = (value: string | undefined) => {
+  const name = value?.replace(/\[.*\]$/, "");
+
+  return !name || ["default", "best", "opusplan"].includes(name);
+};
+
 /** Under a model menu when the org's allowlist shortens it. */
 export const MODELS_LIMITED = "Your organization limits these models.";
 
@@ -45,6 +52,35 @@ export function modelAllowed(
         choice.resolvedModel === model,
     ) || entries.some((entry) => entryAllows(entry, model, exact))
   );
+}
+
+/**
+ * A model's display name, by its value or the full ID an alias stands for,
+ * falling back to the ID for undiscovered models.
+ */
+export function modelName(models: readonly ModelChoice[], value: string) {
+  const match =
+    models.find((model) => model.value === value) ??
+    models.find(
+      (model) => model.value !== "default" && model.resolvedModel === value,
+    );
+
+  return match?.displayName ?? value;
+}
+
+/**
+ * The model, by name, the catalog's Default entry runs, and that model's
+ * default reasoning: the provider's own defaults, or the org's.
+ * `modelReasons` is false when the default model has no reasoning levels.
+ */
+export function runtimeDefault(models: readonly ModelChoice[]) {
+  const entry = models.find(({ value }) => value === "default");
+
+  return {
+    model: entry?.resolvedModel && modelName(models, entry.resolvedModel),
+    effort: entry?.resolvedEffort,
+    modelReasons: entry?.supportsEffort !== false,
+  };
 }
 
 /** The model ID a choice runs, from the catalog. Blank runs Default. */

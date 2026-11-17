@@ -7,9 +7,11 @@ import type {
 const previewModels: [ModelChoice, ...ModelChoice[]] = [
   {
     value: "default",
+    resolvedModel: "claude-opus-5-5",
     displayName: "Default (recommended)",
     description: "Opus 5.5 · Best for everyday, complex tasks",
     supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+    resolvedEffort: "high",
   },
   {
     value: "opus",
@@ -17,6 +19,7 @@ const previewModels: [ModelChoice, ...ModelChoice[]] = [
     displayName: "Opus 5.5",
     description: "For complex work and everyday tasks",
     supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+    resolvedEffort: "high",
   },
   {
     value: "sonnet",
@@ -24,6 +27,7 @@ const previewModels: [ModelChoice, ...ModelChoice[]] = [
     displayName: "Sonnet 5.5",
     description: "Most efficient for simpler tasks",
     supportedEffortLevels: ["low", "medium", "high"],
+    resolvedEffort: "medium",
   },
   {
     value: "haiku",
@@ -60,6 +64,19 @@ export const previewOrgPolicy: ProviderPolicy = {
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 };
 
+/**
+ * Gives every model with reasoning levels `effort`, as a top-level level such
+ * as an org's or a project's does.
+ */
+const runningEffort = (models: ModelChoice[], effort?: string) =>
+  effort
+    ? models.map((model) =>
+        model.supportsEffort === false
+          ? model
+          : { ...model, resolvedEffort: effort },
+      )
+    : models;
+
 /** Default as discovery reports it, naming the org's default model. */
 function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
   const plain = previewModels[0];
@@ -79,19 +96,46 @@ function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
   };
 }
 
-/** What discovery reports for a worker, with the policy's allowlist applied. */
-export const previewCatalog = (policy?: ProviderPolicy) =>
+/** The docs site's own Claude Code settings choose Sonnet, and Low reasoning for every model. */
+const projectDefaults: Record<string, Partial<ModelChoice>> = {
+  "/demo/docs": {
+    resolvedModel: "claude-sonnet-5-5",
+    resolvedEffort: "low",
+    supportedEffortLevels: ["low", "medium", "high"],
+  },
+};
+
+/**
+ * What discovery reports for a worker in `repository`, with the policy's
+ * allowlist applied.
+ */
+export const previewCatalog = (
+  policy?: ProviderPolicy,
+  repository?: unknown,
+) =>
   policy
     ? {
-        models: [
-          orgDefault(policy),
-          ...previewModels.filter(
-            ({ value, resolvedModel = value }) =>
-              value !== "default" &&
-              (modelAllowed(policy, [], value) ||
-                modelAllowed(policy, [], resolvedModel)),
-          ),
-        ],
+        models: runningEffort(
+          [
+            orgDefault(policy),
+            ...previewModels.filter(
+              ({ value, resolvedModel = value }) =>
+                value !== "default" &&
+                (modelAllowed(policy, [], value) ||
+                  modelAllowed(policy, [], resolvedModel)),
+            ),
+          ],
+          policy.default_effort,
+        ),
         policy,
       }
-    : { models: previewModels };
+    : {
+        models: runningEffort(
+          previewModels.map((model) =>
+            model.value === "default"
+              ? { ...model, ...projectDefaults[String(repository)] }
+              : model,
+          ),
+          projectDefaults[String(repository)]?.resolvedEffort,
+        ),
+      };

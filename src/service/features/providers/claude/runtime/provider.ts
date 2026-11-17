@@ -132,31 +132,44 @@ export class ClaudeAgentProvider implements Provider {
     return claudeSessionDeletionStatus(task);
   }
 
-  models(settings?: SettingsValues): Promise<ModelChoice[]> {
-    return this.discovery(settings).models();
+  models(
+    settings?: SettingsValues,
+    repository?: string,
+  ): Promise<ModelChoice[]> {
+    return this.discovery(settings, repository).models();
   }
 
-  policy(settings?: SettingsValues) {
-    return this.discovery(settings).policy();
+  policy(settings?: SettingsValues, repository?: string) {
+    return this.discovery(settings, repository).policy();
   }
 
   commands(task: Task) {
     return this.commandLists.list(task);
   }
 
-  /** One discovery per configuration, as settings change what a session loads. */
-  private discovery(settings?: SettingsValues) {
+  /**
+   * One discovery per project folder and configuration, as both change what a
+   * session loads.
+   */
+  private discovery(settings?: SettingsValues, repository?: string) {
     const configuration = {
       settings_files:
         settings?.providers.claude.settings_files ??
         claudeOverrideDefaults.settings_files,
     };
 
-    const key = JSON.stringify(configuration);
+    const key = JSON.stringify([repository, configuration.settings_files]);
     let discovery = this.discoveries.get(key);
 
     if (!discovery) {
-      discovery = new ClaudeDiscovery(this.launch, this.cli, configuration);
+      discovery = new ClaudeDiscovery(
+        this.launch,
+        this.cli,
+        configuration,
+        undefined,
+        repository,
+      );
+
       this.discoveries.set(key, discovery);
     }
 

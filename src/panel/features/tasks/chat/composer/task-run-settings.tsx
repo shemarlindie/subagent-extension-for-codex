@@ -1,14 +1,15 @@
 import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
+import {
+  flexibleModel,
+  modelName,
+} from "../../../../../shared/providers/policy";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { titleCase } from "../../../../../shared/text";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { compactPermissionLabel } from "../../../delegation/permission-label";
-import {
-  compactReasoningLabel,
-  modelName,
-} from "../../../delegation/setting-labels";
+import { compactReasoningLabel } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
 import { PromptCacheTimer } from "./prompt-cache-timer";
 
@@ -43,15 +44,21 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
   ];
 }
 
-/** What the task runs with, and what it asked for where that differs. */
+/**
+ * What the task runs with, and what it explicitly asked for where that
+ * differs. A Default choice records what it ran without asking for it.
+ */
 function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
   const facts = providerTaskFacts(task);
+  const effort = task.reasoning_effort;
 
   const requested = [
     facts["Requested permission mode"],
-    facts["Effective model"] && task.model,
+    facts["Effective model"] && !flexibleModel(task.model) && task.model,
     facts["Effective reasoning"] &&
-      `${titleCase(task.reasoning_effort ?? "")} reasoning`,
+      effort &&
+      effort !== "default" &&
+      `${titleCase(effort)} reasoning`,
   ].filter(Boolean);
 
   return [

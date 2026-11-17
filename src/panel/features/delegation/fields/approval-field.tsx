@@ -12,11 +12,17 @@ import { Field } from "../../../shared/forms/fields";
 import { FormSelect } from "../../../shared/forms/form-select";
 import type { DelegateValues } from "../delegate-values";
 import { workerChoice } from "../delegation";
+import {
+  inheritedPermissionMode,
+  withInheritedMode,
+} from "../inherited-permission";
 import { SandboxField } from "./sandbox-field";
 
 interface ApprovalFieldProps {
   form: UseFormReturn<DelegateValues>;
   workers: Worker[];
+  /** Saved settings, which name the mode "Use extension setting" runs. */
+  defaults?: unknown;
   disabled?: boolean;
   loading?: boolean;
 }
@@ -30,6 +36,7 @@ const fallbackPermissions = (
 export const ApprovalField = memo(function ApprovalField({
   form: { control, setValue },
   workers,
+  defaults,
   disabled = false,
   loading = false,
 }: ApprovalFieldProps) {
@@ -45,6 +52,11 @@ export const ApprovalField = memo(function ApprovalField({
 
   const unresolved = loading && !info;
   const allowedMode = allowedPermissionMode(info?.policy, mode);
+
+  const options = withInheritedMode(
+    permissions?.options,
+    inheritedPermissionMode(worker, defaults, info),
+  );
 
   // A restored draft or late policy can leave a blocked mode, which won't run.
   useEffect(() => {
@@ -65,7 +77,7 @@ export const ApprovalField = memo(function ApprovalField({
             loadingLabel="Loading permission options"
             placeholder={unresolved ? "Loading…" : undefined}
             options={withBlockedOptions(
-              fallbackPermissions(permissions?.options, unresolved),
+              fallbackPermissions(options, unresolved),
               info?.policy,
             )}
           />

@@ -31,6 +31,7 @@ const init = { permissionMode: "default", model: "claude-opus-5-5" };
 async function bypassTask() {
   const ctx = await context();
   setClaudeOptions(ctx.c.task, { permission_mode: "bypassPermissions" });
+  ctx.c.task.model = "opus";
 
   return ctx;
 }
@@ -153,6 +154,7 @@ test("reasoning the session lowers is recorded and reported, naming the org's ca
 
   const { c, events } = await context();
   setClaudeOptions(c.task, { permission_mode: "default" });
+  c.task.model = "opus";
   c.task.reasoning_effort = "xhigh";
 
   await recordEffectiveSettings(
@@ -185,4 +187,29 @@ test("reasoning the session lowers is recorded and reported, naming the org's ca
     limitReason(plain.events),
     "Running with High reasoning instead of Xhigh.",
   );
+});
+
+test("a Default task records the model and reasoning it ran, without a report", async () => {
+  const { c, events } = await context();
+  setClaudeOptions(c.task, { permission_mode: "default" });
+  c.task.model = "default";
+  c.task.reasoning_effort = "default";
+
+  await recordEffectiveSettings(
+    c,
+    { permissionMode: "default", model: "claude-opus-5-5" },
+    {
+      getSettings: async () => ({
+        effective: {},
+        applied: { model: "claude-opus-5-5", effort: "medium" },
+      }),
+    },
+  );
+
+  assert.deepEqual(claudeOptions(c.task).effective, {
+    model: "claude-opus-5-5",
+    effort: "medium",
+  });
+
+  assert.deepEqual(limited(events), []);
 });

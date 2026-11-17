@@ -10,13 +10,6 @@ import { ClaudeDiscovery } from "./discovery.js";
 
 const models = [{ value: "haiku", displayName: "Haiku", description: "" }];
 
-/** Rejections as Claude Code words them. */
-const REJECTIONS: Partial<Record<string, string>> = {
-  bypassPermissions:
-    "Cannot set permission mode to bypassPermissions because it is disabled by settings or configuration",
-  auto: "Cannot set permission mode to auto: auto mode disabled by settings",
-};
-
 const orgPolicy = {
   permissions: { disableBypassPermissionsMode: "disable" },
   disableAutoMode: "disable",
@@ -24,30 +17,52 @@ const orgPolicy = {
 
 function discovery({
   policy,
-  rejected = [],
+  effective = policy,
   resolved = [],
   modelsAfter = 0,
   catalog = models,
   applied,
+  efforts = {},
+  switchFails = false,
 }: {
   policy?: object;
-  rejected?: string[];
+  /** The merged settings, which include policy. */
+  effective?: object;
   resolved?: object[];
   /** How long Claude Code takes to answer, in milliseconds. */
   modelsAfter?: number;
-  catalog?: object[];
+  catalog?: { value: string; resolvedModel?: string }[];
   /** What the session reports it will run. */
   applied?: { model: string; effort: string | null };
+  /** Each model's default reasoning, by model ID. */
+  efforts?: Record<string, string>;
+  switchFails?: boolean;
 }) {
+  let flagModel: string | undefined;
+
+  const running = () => {
+    if (!flagModel || !applied) return applied;
+
+    const model =
+      catalog.find(({ value }) => value === flagModel)?.resolvedModel ??
+      flagModel;
+
+    return { model, effort: efforts[model] ?? null };
+  };
+
   const launch = () => ({
+    applyFlagSettings: async ({ model }: { model: string }) => {
+      if (switchFails) throw new Error("Session ended");
+      flagModel = model;
+    },
     supportedModels: () =>
       new Promise((resolve) => setTimeout(() => resolve(catalog), modelsAfter)),
-    setPermissionMode: async (mode: string) => {
-      if (rejected.includes(mode)) throw new Error(REJECTIONS[mode]);
+    setPermissionMode: () => {
+      throw new Error("Discovery must not switch modes");
     },
     getSettings: async () => ({
-      effective: {},
-      ...(applied ? { applied } : {}),
+      effective: effective ?? {},
+      ...(applied ? { applied: running() } : {}),
       sources: [
         { source: "flagSettings", settings: {} },
         ...(policy ? [{ source: "policySettings", settings: policy }] : []),
@@ -87,11 +102,8 @@ test("discovery outlasts Claude Code's wait for a hung org policy fetch", async 
   assert.deepEqual(await read, models);
 });
 
-test("modes the session rejects are blocked, naming the organization when its policy did it", async () => {
-  const policy = await discovery({
-    policy: orgPolicy,
-    rejected: ["bypassPermissions", "auto"],
-  }).policy();
+test("modes policy turns off are blocked, naming the organization", async () => {
+  const policy = await discovery({ policy: orgPolicy }).policy();
 
   assert.deepEqual(blockedModes(policy), ["auto", "bypassPermissions"]);
 
@@ -102,14 +114,54 @@ test("modes the session rejects are blocked, naming the organization when its po
 test("auto mode turned off under permissions names the organization", async () => {
   const policy = await discovery({
     policy: { permissions: { disableAutoMode: "disable" } },
-    rejected: ["auto"],
   }).policy();
 
   assert.equal(policy?.blocked[0]?.reason, "Turned off by your organization");
 });
 
-test("discovery runs outside any project, without the Bypass flag as root", async () => {
-  let options: { cwd?: string; allowDangerouslySkipPermissions?: boolean } = {};
+test("a mode the user's settings turn off doesn't name the organization", async () => {
+  const policy = await discovery({
+    effective: { disableAutoMode: "disable" },
+  }).policy();
+
+  assert.deepEqual(policy, {
+    managed: false,
+    blocked: [
+      {
+        value: "auto",
+        reason: "Not available with your Claude Code setup",
+      },
+    ],
+    notes: [],
+  });
+});
+
+test("Bypass is blocked as root, unless Claude Code is sandboxed", async () => {
+  vi.spyOn(process, "getuid").mockReturnValue(0);
+  vi.stubEnv("IS_SANDBOX", "");
+
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  assert.deepEqual((await discovery({}).policy())?.blocked, [
+    {
+      value: "bypassPermissions",
+      reason: "Not available with your Claude Code setup",
+    },
+  ]);
+
+  // Claude Code only accepts this exact value.
+  vi.stubEnv("IS_SANDBOX", "0");
+  assert.equal((await discovery({}).policy())?.blocked.length, 1);
+
+  vi.stubEnv("IS_SANDBOX", "1");
+  assert.equal(await discovery({}).policy(), undefined);
+});
+
+test("discovery runs outside any project", async () => {
+  let options: { cwd?: string } = {};
 
   const launch = (args: { options: typeof options }) => {
     options = args.options;
@@ -120,36 +172,13 @@ test("discovery runs outside any project, without the Bypass flag as root", asyn
     };
   };
 
-  const read = () =>
-    new ClaudeDiscovery(
-      launch as unknown as typeof query,
-      readyClaudeCli,
-      claudeOverrideDefaults,
-    ).models();
+  await new ClaudeDiscovery(
+    launch as unknown as typeof query,
+    readyClaudeCli,
+    claudeOverrideDefaults,
+  ).models();
 
-  await read();
   assert.equal(options.cwd, tmpdir());
-  assert.equal(options.allowDangerouslySkipPermissions, true);
-
-  vi.spyOn(process, "getuid").mockReturnValue(0);
-  vi.stubEnv("IS_SANDBOX", "");
-
-  onTestFinished(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-
-  await read();
-  assert.equal(options.allowDangerouslySkipPermissions, false);
-
-  // Claude Code only accepts this exact value.
-  vi.stubEnv("IS_SANDBOX", "0");
-  await read();
-  assert.equal(options.allowDangerouslySkipPermissions, false);
-
-  vi.stubEnv("IS_SANDBOX", "1");
-  await read();
-  assert.equal(options.allowDangerouslySkipPermissions, true);
 });
 
 test("a session that ends during the policy read keeps its models and is retried soon", async () => {
@@ -157,14 +186,15 @@ test("a session that ends during the policy read keeps its models and is retried
 
   const launch = () => ({
     supportedModels: async () => models,
-    setPermissionMode: async () => {
+    getSettings: async () => {
       reads += 1;
       if (reads === 1) throw new Error("Query closed before response received");
+
+      return {
+        effective: {},
+        sources: [{ source: "policySettings", settings: orgPolicy }],
+      };
     },
-    getSettings: async () => ({
-      effective: {},
-      sources: [{ source: "policySettings", settings: orgPolicy }],
-    }),
     close: () => {},
   });
 
@@ -188,21 +218,6 @@ test("a session that ends during the policy read keeps its models and is retried
 
   clock.mockReturnValue(started + 60_000);
   assert.equal((await reader.policy())?.managed, true);
-});
-
-test("a mode blocked outside policy doesn't name the organization", async () => {
-  const policy = await discovery({ rejected: ["auto"] }).policy();
-
-  assert.deepEqual(policy, {
-    managed: false,
-    blocked: [
-      {
-        value: "auto",
-        reason: "Not available with your Claude Code setup",
-      },
-    ],
-    notes: [],
-  });
 });
 
 test("policy only the session sees is the console's, and policy on this computer is the device's", async () => {
@@ -285,6 +300,7 @@ test("the org's default model and reasoning reach the Default entry and the poli
       "Use the default model (currently Sonnet) · Set by your organization",
     supportsEffort: undefined,
     supportedEffortLevels: ["low", "medium", "high"],
+    resolvedEffort: "low",
   });
 
   const policy = await read.policy();
@@ -302,6 +318,55 @@ test("the org's default model and reasoning reach the Default entry and the poli
   });
 
   assert.deepEqual(policy?.model_max_effort, { "claude-sonnet-5-5": "high" });
+});
+
+test("Claude Code's own reasoning reaches an unchanged Default entry", async () => {
+  const read = discovery({
+    catalog: defaultCatalog,
+    applied: { model: "claude-opus-5-5", effort: "medium" },
+  });
+
+  assert.deepEqual(await defaultEntry(read), {
+    ...defaultCatalog[0],
+    resolvedEffort: "medium",
+  });
+});
+
+const opus = {
+  value: "opus",
+  resolvedModel: "claude-opus-5-5",
+  displayName: "Opus 5.5",
+  description: "",
+  supportedEffortLevels: ["low", "medium", "high"],
+};
+
+test("each model's own default reasoning reaches its entry", async () => {
+  const read = discovery({
+    catalog: [...defaultCatalog, opus],
+    applied: { model: "claude-opus-5-5", effort: "low" },
+    efforts: { "claude-opus-5-5": "low", "claude-sonnet-5-5": "high" },
+  });
+
+  assert.deepEqual(
+    (await read.models()).map(({ resolvedEffort }) => resolvedEffort),
+    ["low", "high", "low"],
+  );
+});
+
+test("a session that can't switch models keeps the Default reasoning and the policy", async () => {
+  const read = discovery({
+    policy: { model: "sonnet" },
+    catalog: [...defaultCatalog, opus],
+    applied: { model: "claude-sonnet-5-5", effort: "high" },
+    switchFails: true,
+  });
+
+  assert.deepEqual(
+    (await read.models()).map(({ resolvedEffort }) => resolvedEffort),
+    ["high", undefined, undefined],
+  );
+
+  assert.equal((await read.policy())?.default_model?.id, "claude-sonnet-5-5");
 });
 
 test("a default from the user's settings doesn't name the organization", async () => {

@@ -17,6 +17,7 @@ import type {
   Transport,
 } from "../../../app/state/types";
 import type { DelegateValues } from "../delegate-values";
+import { ProjectWorkerReads } from "../project-worker-reads";
 import { newTaskSessionId } from "./new-task-values";
 import { NewTaskView } from "./new-task-view";
 
@@ -56,6 +57,10 @@ function setup(
     controller.session.update("newTask", newTaskSessionId(), { draft });
   }
 
+  const workers = overrides.workers ?? [
+    { provider: "claude", profiles: [...roles], capabilities: {} },
+  ];
+
   const state: Snapshot = {
     ...controller.getSnapshot(),
     connected: true,
@@ -63,7 +68,9 @@ function setup(
     repository: "/repo",
     projects: [{ repository: "/repo", kind: "repository" }],
     projectsLoaded: true,
-    workers: [{ provider: "claude", profiles: [...roles], capabilities: {} }],
+    workers,
+    // The project reads what the panel does.
+    projectWorkers: { "/repo": workers },
     workersLoaded: true,
     newTask,
     ...overrides,
@@ -99,6 +106,38 @@ function setup(
     saveProfileSetting,
   };
 }
+
+test("opening the composer or choosing a project reads its latest workers", async () => {
+  const load = vi.spyOn(ProjectWorkerReads.prototype, "load");
+  onTestFinished(() => load.mockRestore());
+
+  const workers = [
+    { provider: "claude", profiles: [...roles], capabilities: {} },
+  ];
+
+  // Both projects' workers are already shown.
+  const { view, user } = setup(
+    ready,
+    {
+      repository: undefined,
+      projects: [
+        { repository: "/repo", kind: "repository" },
+        { repository: "/docs", kind: "repository" },
+      ],
+      workers,
+      projectWorkers: { "/repo": workers, "/docs": workers },
+    },
+    { repository: "/repo" },
+  );
+
+  expect(load).toHaveBeenCalledWith("/repo");
+  expect(load).not.toHaveBeenCalledWith("/docs");
+
+  await user.click(view.getByRole("combobox", { name: /^Project/ }));
+  await user.click(await view.findByRole("option", { name: /^docs/ }));
+
+  await waitFor(() => expect(load).toHaveBeenCalledWith("/docs"));
+});
 
 test("Shift+Enter adds a line instead of sending", async () => {
   const { view, user, start } = setup();
@@ -205,6 +244,43 @@ test("the profile's settings collapse into a summary that expands for editing", 
   expect(document.activeElement).toBe(toggle);
 });
 
+test("Use extension setting names the saved mode it runs", () => {
+  const { view } = setup(ready, {}, { permission_mode: "inherit" });
+
+  assert.ok(
+    view.getByRole("button", {
+      name: /· Extension setting \(Accept edits\)$/,
+    }),
+  );
+});
+
+test("Use extension setting names the fallback for a saved mode policy blocks", () => {
+  const { view } = setup(
+    ready,
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [{ value: "acceptEdits", reason: "Turned off" }],
+            notes: [],
+          },
+        },
+      ],
+    },
+    { permission_mode: "inherit" },
+  );
+
+  assert.ok(
+    view.getByRole("button", {
+      name: /· Extension setting \(Ask for approval\)$/,
+    }),
+  );
+});
+
 test("reasoning choices save to the profile, and choosing a profile restores its saved settings", async () => {
   const { view, user, start, saveProfileSetting } = setup({
     ...ready,
@@ -253,6 +329,57 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
+test.for([
+  { model: undefined, runs: /^Edit Opus 5\.5 · High reasoning · / },
+  { model: "sonnet", runs: /^Edit Sonnet 5\.5 · Low reasoning · / },
+])(
+  "the composer names the model that runs and its own default reasoning ($model)",
+  async ({ model, runs }) => {
+    const { view } = setup(
+      {
+        ...ready,
+        defaults: model
+          ? withSetting(readyDefaults, "models.providers.claude.model", model)
+          : readyDefaults,
+      },
+      {
+        workers: [
+          {
+            provider: "claude",
+            profiles: [...roles],
+            capabilities: {},
+            models: [
+              {
+                value: "default",
+                resolvedModel: "claude-opus-5-5",
+                resolvedEffort: "high",
+                displayName: "Default",
+                description: "",
+              },
+              {
+                value: "opus",
+                resolvedModel: "claude-opus-5-5",
+                resolvedEffort: "high",
+                displayName: "Opus 5.5",
+                description: "",
+              },
+              {
+                value: "sonnet",
+                resolvedModel: "claude-sonnet-5-5",
+                resolvedEffort: "low",
+                displayName: "Sonnet 5.5",
+                description: "",
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    assert.ok(await view.findByRole("button", { name: runs }));
+  },
+);
+
 test("the composer inherits the org's runtime defaults", async () => {
   const { view } = setup(ready, {
     workers: [
@@ -267,8 +394,15 @@ test("the composer inherits the org's runtime defaults", async () => {
             displayName: "Default",
             description: "",
           },
+          {
+            value: "sonnet",
+            resolvedModel: "claude-sonnet-5-5",
+            displayName: "Sonnet 5.5",
+            description: "",
+          },
         ],
-        // The running model's own level wins over the top-level one.
+        // Without a level read from Claude Code, the running model's own
+        // level wins over the top-level one.
         policy: {
           managed: true,
           blocked: [],

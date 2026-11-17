@@ -6,7 +6,7 @@ import {
   settingsSections,
   type SettingRow,
 } from "../../settings/settings-document.js";
-import type { ProviderPolicy } from "../types.js";
+import type { ModelChoice, ProviderPolicy } from "../types.js";
 
 const policy: ProviderPolicy = {
   managed: true,
@@ -24,14 +24,18 @@ const policy: ProviderPolicy = {
 
 const models = [{ value: "haiku", displayName: "Haiku", description: "" }];
 
-function sections(saved: object, catalogPolicy?: ProviderPolicy | null) {
+function sections(
+  saved: object,
+  catalogPolicy?: ProviderPolicy | null,
+  catalog: ModelChoice[] = models,
+) {
   return settingsSections({
     values: { task: { provider: "claude" }, ...saved },
     providers: ["claude"],
     catalogs: [
       {
         provider: "claude",
-        models,
+        models: catalog,
         ...(catalogPolicy === null ? {} : { policy: catalogPolicy ?? policy }),
       },
     ],
@@ -175,6 +179,110 @@ const scopes = (all: ReturnType<typeof sections>) =>
       .map((scope) => [scope.id, scope]),
   );
 
+/** The catalog as discovery reports it, with Default naming what it runs. */
+const runtimeCatalog = (model: string, effort: string): ModelChoice[] => [
+  {
+    value: "default",
+    resolvedModel: model,
+    resolvedEffort: effort,
+    displayName: "Default",
+    description: "",
+  },
+  {
+    value: "opus",
+    resolvedModel: "claude-opus-5-5",
+    displayName: "Opus 5.5",
+    description: "",
+  },
+  {
+    value: "sonnet",
+    resolvedModel: "claude-sonnet-5-5",
+    resolvedEffort: "medium",
+    displayName: "Sonnet 5.5",
+    description: "",
+    supportedEffortLevels: ["low", "medium", "high"],
+  },
+];
+
+const help = (all: ReturnType<typeof sections>, id: string) =>
+  all
+    .find((section) => section.id === id)
+    ?.help?.map((part) => (typeof part === "string" ? part : part.text))
+    .join("");
+
+test("a default model without reasoning levels names the reasoning apart", () => {
+  const catalog = runtimeCatalog("claude-sonnet-5-5", "high").map(
+    ({ resolvedEffort: _, ...model }) =>
+      model.value === "default"
+        ? { ...model, supportsEffort: false, supportedEffortLevels: [] }
+        : model,
+  );
+
+  const all = sections(
+    {},
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "high",
+    },
+    catalog,
+  );
+
+  assert.equal(
+    help(all, "models"),
+    "The task's worker profile defaults override these. Inherit uses your organization's default model, Sonnet 5.5, and your organization's default reasoning, High. Task choices override all defaults.",
+  );
+});
+
+test("Inherit names Claude Code's default model and reasoning", () => {
+  const catalog = runtimeCatalog("claude-opus-5-5", "high");
+  let all = sections({}, null, catalog);
+  let rows = scopes(all);
+
+  assert.equal(rows.claude?.model.options?.[0]?.label, "Inherit (Opus 5.5)");
+  assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (High)");
+
+  assert.equal(
+    help(all, "models"),
+    "The task's worker profile defaults override these. Inherit uses Claude Code's default, Opus 5.5 with High reasoning. Task choices override all defaults.",
+  );
+
+  // A profile inherits the provider's saved choices first. A level its model
+  // doesn't support gives way to that model's own default.
+  all = sections(
+    {
+      models: {
+        providers: { claude: { model: "sonnet", reasoning_effort: "xhigh" } },
+      },
+    },
+    null,
+    catalog,
+  );
+
+  rows = scopes(all);
+
+  assert.equal(
+    rows.reviewer?.model.options?.[0]?.label,
+    "Inherit (Sonnet 5.5)",
+  );
+
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Medium)");
+
+  rows = scopes(
+    sections(
+      {
+        models: {
+          providers: { claude: { model: "sonnet", reasoning_effort: "low" } },
+        },
+      },
+      null,
+      catalog,
+    ),
+  );
+
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Low)");
+});
+
 test("the org's default is Claude's Inherit", () => {
   const all = sections(
     {},
@@ -183,31 +291,33 @@ test("the org's default is Claude's Inherit", () => {
       default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
       default_effort: "low",
     },
+    runtimeCatalog("claude-sonnet-5-5", "low"),
   );
 
   const rows = scopes(all);
 
   assert.equal(rows.claude?.model.options?.[0]?.label, "Inherit (Sonnet 5.5)");
-
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
 
-  assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit");
-  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Low)");
-
-  const help = (id: string) =>
-    all
-      .find((section) => section.id === id)
-      ?.help?.map((part) => (typeof part === "string" ? part : part.text))
-      .join("");
-
   assert.equal(
-    help("models"),
-    "The task's worker profile defaults override these. Inherit uses your organization's default, Sonnet 5.5 with Low reasoning. Task choices override all defaults.",
+    help(all, "profile-models"),
+    "Inherit uses the task's provider default, then your organization's default, Sonnet 5.5 with Low reasoning. Task choices override profile defaults.",
   );
 
+  // The org sets only the model, and Claude Code the reasoning.
   assert.equal(
-    help("profile-models"),
-    "Inherit uses the task's provider default, then your organization's default, Sonnet 5.5 with Low reasoning. Task choices override profile defaults.",
+    help(
+      sections(
+        {},
+        {
+          ...policy,
+          default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+        },
+        runtimeCatalog("claude-sonnet-5-5", "medium"),
+      ),
+      "models",
+    ),
+    "The task's worker profile defaults override these. Inherit uses your organization's default model, Sonnet 5.5, and Claude Code's default reasoning, Medium. Task choices override all defaults.",
   );
 });
 
@@ -218,7 +328,7 @@ test("a model's own org reasoning shows where Inherit lands on it", () => {
   let rows = scopes(sections({ models: { providers: { claude } } }, perModel));
 
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (Low)");
-  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit");
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (High)");
 
   rows = scopes(
     sections(

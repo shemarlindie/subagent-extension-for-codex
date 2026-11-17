@@ -20,9 +20,14 @@ import { useAutoList } from "../../../../shared/components/motion/auto-list";
 import type { DelegateFormState } from "../../delegate-initial-values";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
+import {
+  inheritedPermissionMode,
+  withInheritedMode,
+} from "../../inherited-permission";
 import { modelDefaults } from "../../model-defaults";
 import { compactPermissionLabel } from "../../permission-label";
 import { compactReasoningLabel } from "../../setting-labels";
+import { useProjectWorkers } from "../../use-project-workers";
 import { newTaskProjects, profileValues } from "../new-task-values";
 import { ModelChip, modelChipLabel } from "./model-chip";
 import { PermissionChip, permissionChipLabel } from "./permission-chip";
@@ -49,13 +54,14 @@ function modelsFooter(workerInfo: Worker | undefined) {
 
 /**
  * The choices org policy changes: locked modes, and a saved model it
- * excludes, which gives way to the org's default.
+ * excludes, which gives way to the runtime default.
  */
 function policyOptions(
   provider: string,
   workerInfo: Worker | undefined,
   models: ModelChoice[],
   model: string | undefined,
+  runtimeModel: string | undefined,
 ) {
   const policy = workerInfo?.policy;
 
@@ -65,7 +71,7 @@ function policyOptions(
   const allowed = model && modelAllowed(policy, models, model);
 
   return {
-    model: allowed ? model : policy?.default_model?.name,
+    model: allowed ? model : runtimeModel,
     permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
@@ -84,9 +90,23 @@ function resolvedOptions(
     ? modelDefaults(newTask.defaults, state.workers, worker, model)
     : undefined;
 
-  const { workerInfo, providerModel } = resolved ?? {};
+  const { workerInfo, providerModel, runtimeModel } = resolved ?? {};
   const models = workerInfo?.models ?? [];
   const policy = workerInfo?.policy;
+
+  const options = policyOptions(
+    provider,
+    workerInfo,
+    models,
+    providerModel,
+    runtimeModel,
+  );
+
+  const inheritedMode = inheritedPermissionMode(
+    worker,
+    newTask.defaults,
+    workerInfo,
+  );
 
   return {
     models,
@@ -97,8 +117,10 @@ function resolvedOptions(
     cap: resolved?.cap,
     modelsFooter: modelsFooter(workerInfo),
     // The model and reasoning chips edit the profile's settings, so Default
-    // clears them and inherits the provider's, or the org's.
-    ...policyOptions(provider, workerInfo, models, providerModel),
+    // clears them and inherits the provider's, or the runtime default.
+    model: options.model,
+    permissions: withInheritedMode(options.permissions, inheritedMode),
+    inheritedMode,
   };
 }
 
@@ -117,6 +139,12 @@ function settingsSummary(
   const reasoningText = reasoningChipLabel(reasoning, resolved.reasoning);
   const permissionText = permissionChipLabel(resolved.permissions, permission);
 
+  // The summary names the mode an inherited choice runs.
+  const runs =
+    permission === "inherit" && resolved.inheritedMode
+      ? permissionChipLabel(resolved.permissions, resolved.inheritedMode)
+      : permissionText;
+
   const line = (parts: (string | false | undefined)[]) =>
     parts.filter(Boolean).join(" · ");
 
@@ -124,7 +152,7 @@ function settingsSummary(
     summary: line([
       modelLabel,
       supportsReasoning && reasoningShort,
-      permissionText && compactPermissionLabel(permissionText),
+      runs && compactPermissionLabel(runs),
     ]),
     description: line([
       modelLabel,
@@ -152,6 +180,11 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
 
   const [worker, model, reasoning, mode] = values;
 
+  // A scoped panel targets its project. Models and policy follow the project.
+  const chosenRepository = useWatch({ control, name: "repository" });
+  const repository = state.repository ?? (chosenRepository || undefined);
+  const project = useProjectWorkers(repository, state.workers);
+
   // A draft that already overrides the profile opens with its settings shown.
   // Reasoning stays blank until settings load.
   const [expanded, setExpanded] = useState(() => {
@@ -169,10 +202,20 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
   const loading =
     statuses.workers === "loading" || statuses.settings === "loading";
 
+  // The model, reasoning and mode chips wait for the project's read.
+  const settingsLoading = loading || project.pending;
+
   const disabled =
     busy || statuses.settings !== "ready" || statuses.workers !== "ready";
 
-  const resolved = resolvedOptions(newTask, state, worker, model, mode);
+  const resolved = resolvedOptions(
+    newTask,
+    { workers: project.workers },
+    worker,
+    model,
+    mode,
+  );
+
   const { modelExcluded, allowedMode, cap } = resolved;
   const capped = aboveEffortCap(reasoning, cap);
 
@@ -226,19 +269,19 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
             models={resolved.models}
             inherited={resolved.model}
             footer={resolved.modelsFooter}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
           <ReasoningChip
             supported={resolved.supported}
             inherited={resolved.reasoning}
             cap={resolved.cap}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
           <PermissionChip
             options={resolved.permissions}
-            loading={loading}
+            loading={settingsLoading}
             disabled={disabled}
           />
         </>
@@ -253,7 +296,7 @@ export function NewTaskOptions({ newTask, state }: NewTaskOptionsProps) {
           .join(" ")}
         expanded={expanded}
         {...settingsSummary(resolved, values.slice(1))}
-        loading={loading}
+        loading={settingsLoading}
         onToggle={() => setExpanded(!expanded)}
       />
     </div>

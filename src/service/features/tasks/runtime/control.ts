@@ -205,12 +205,34 @@ export class Control {
     return [...this.providers.values()].map(worker);
   }
 
-  async availableWorkers(owner: string) {
+  /**
+   * Workers as tasks in `repository` would find them. An unapproved or unknown
+   * folder reads what applies outside any project, so nothing launches there.
+   */
+  async availableWorkers(owner: string, repository?: string) {
+    const folder = repository && (await this.approvedFolder(repository));
+
     return Promise.all(
       [...this.providers.values()].map((provider) =>
-        workerStatus(worker(provider), provider, this.settings.values(owner)),
+        workerStatus(
+          worker(provider),
+          provider,
+          this.settings.values(owner),
+          folder || undefined,
+        ),
       ),
     );
+  }
+
+  /** The project folder a path resolves to, or nothing when it isn't approved. */
+  private async approvedFolder(path: string) {
+    try {
+      return await (this.projects
+        ? this.projects.resolve(path)
+        : this.workspaces.repository(path));
+    } catch {
+      return undefined;
+    }
   }
 
   async start(

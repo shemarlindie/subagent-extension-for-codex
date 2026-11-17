@@ -4,6 +4,7 @@ import {
   effortCap,
   effortCapReason,
   orgEffort,
+  runtimeDefault,
 } from "../../../shared/providers/policy";
 import type { ModelChoice } from "../../../shared/providers/types";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
@@ -23,13 +24,13 @@ function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
 
 /**
  * What a worker choice inherits when its model and reasoning are left at
- * default: the profile's setting, then the provider's, then the org's
- * default. `providerModel` and `providerReasoning` skip the
- * profile's setting. The org's model is a name, as it has no value of its
- * own. A saved level the model doesn't support is skipped, and the org's
- * reasoning for the model that runs fills in last, where the model supports
- * it. Also returns the selected model's metadata and its supported effort
- * levels.
+ * default: the profile's setting, then the provider's, then the runtime
+ * default the Default entry reports, which includes an org's.
+ * `providerModel` and `providerReasoning` skip the profile's setting. The
+ * runtime model is a name, as it has no value of its own. A saved level the
+ * model doesn't support is skipped. The reasoning the model that runs has by
+ * default fills in next, where the model supports it. Also returns the
+ * selected model's metadata and its supported effort levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -44,7 +45,9 @@ export function modelDefaults(
 
   // Blank runs Default, which is the org's model when it sets one.
   const runs = selectedModel.trim() || saved.model || "default";
-  const metadata = workerInfo?.models?.find((item) => item.value === runs);
+  const models = workerInfo?.models ?? [];
+  const metadata = models.find((item) => item.value === runs);
+  const runtime = runtimeDefault(models);
 
   const supported =
     metadata?.supportsEffort === false
@@ -54,16 +57,21 @@ export function modelDefaults(
         reasoningLevels);
 
   const model = metadata?.resolvedModel ?? runs;
-  const org = orgEffort(policy, model);
-  const orgLevel = supported.find((level) => level === org);
+
+  // The model's own default includes the org's, which covers an unlisted model.
+  const inheritedLevel = supported.find(
+    (level) => level === (metadata?.resolvedEffort ?? orgEffort(policy, model)),
+  );
 
   return {
     provider,
-    model: saved.model ?? policy?.default_model?.name,
-    reasoning: runnableLevel(metadata, saved.reasoning_effort) ?? orgLevel,
+    model: saved.model ?? runtime.model,
+    reasoning:
+      runnableLevel(metadata, saved.reasoning_effort) ?? inheritedLevel,
     providerModel: saved.providerModel,
     providerReasoning:
-      runnableLevel(metadata, saved.providerReasoning) ?? orgLevel,
+      runnableLevel(metadata, saved.providerReasoning) ?? inheritedLevel,
+    runtimeModel: runtime.model,
     workerInfo,
     metadata,
     supported,

@@ -20,9 +20,9 @@ import type {
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import {
-  policyBlocksMode,
   policySettings,
   readSessionSettings,
+  settingsBlockMode,
   type SessionSettings,
   type SettingsReader,
 } from "../configuration/session-settings.js";
@@ -36,29 +36,26 @@ const SETTINGS_REASON = "Not available with your Claude Code setup";
 const runsAsRoot = () =>
   process.getuid?.() === 0 && process.env.IS_SANDBOX !== "1";
 
-/** Modes the session refuses to switch to, which a task would lose too. */
-async function blockedModes(session: Query, policy: Settings | undefined) {
-  const blocked: ProviderPolicy["blocked"] = [];
+/**
+ * Modes the session's settings turn off, which a task would lose too. Claude
+ * Code doesn't report which modes it allows, and refuses Bypass as root.
+ */
+function blockedModes(settings: SessionSettings | undefined) {
+  const policy = policySettings(settings);
 
-  for (const value of claudePermissionModes) {
-    if (value === "default") continue;
-
-    try {
-      await session.setPermissionMode(value);
-    } catch (error) {
-      // Anything else, such as the session ending, says nothing about the mode.
-      if (!/permission mode/i.test(String(error))) throw error;
-
-      blocked.push({
-        value,
-        reason: policyBlocksMode(value, policy)
-          ? MODE_TURNED_OFF_BY_ORG
-          : SETTINGS_REASON,
-      });
-    }
-  }
-
-  return blocked;
+  return claudePermissionModes.flatMap((value) =>
+    settingsBlockMode(value, settings?.effective) ||
+    (value === "bypassPermissions" && runsAsRoot())
+      ? [
+          {
+            value,
+            reason: settingsBlockMode(value, policy)
+              ? MODE_TURNED_OFF_BY_ORG
+              : SETTINGS_REASON,
+          },
+        ]
+      : [],
+  );
 }
 
 /**
@@ -80,6 +77,10 @@ async function policySource(
     return undefined;
   }
 }
+
+/** The model ID a catalog entry runs. */
+const modelId = ({ value, resolvedModel }: ModelChoice) =>
+  resolvedModel ?? value;
 
 /** The catalog's entry for a model ID, other than Default. */
 const catalogEntry = (models: ModelChoice[], model: string) =>
@@ -103,29 +104,34 @@ function byModel(
 }
 
 /**
- * The Default entry as the model it runs. Claude Code's own description
- * follows an org's allowlist, and misses a model that settings or policy set.
+ * Each entry with the reasoning it runs by default, and the Default entry as
+ * the model it runs. Claude Code's own description follows an org's
+ * allowlist, and misses a model that settings or policy set.
  */
-function withAppliedDefault(
+function withResolvedDefaults(
   models: ModelChoice[],
   settings: SessionSettings | undefined,
+  efforts: Map<string, string> = new Map(),
 ) {
   const applied = settings?.applied?.model;
   const org = !!policySettings(settings)?.model;
 
   return models.map((choice) => {
-    if (
-      choice.value !== "default" ||
-      !applied ||
-      choice.resolvedModel === applied
-    ) {
-      return choice;
-    }
+    const effort =
+      choice.value === "default"
+        ? settings?.applied?.effort
+        : efforts.get(modelId(choice));
+
+    const withEffort = effort ? { ...choice, resolvedEffort: effort } : choice;
+
+    if (choice.value !== "default") return withEffort;
+
+    if (!applied || choice.resolvedModel === applied) return withEffort;
 
     const match = catalogEntry(models, applied);
 
     return {
-      ...choice,
+      ...withEffort,
       resolvedModel: applied,
       description: `Use the default model (currently ${match?.displayName ?? applied})${org ? " · Set by your organization" : ""}`,
       ...(match
@@ -140,14 +146,13 @@ function withAppliedDefault(
 
 /** What applies to new tasks, given the session's settings. */
 async function policyFrom(
-  session: Query,
   settings: SessionSettings | undefined,
   models: ModelChoice[],
   resolve: typeof resolveSettings,
 ): Promise<ProviderPolicy | undefined> {
   const policy = policySettings(settings);
   const applied = settings?.applied;
-  const modes = await blockedModes(session, policy);
+  const modes = blockedModes(settings);
 
   if (!policy) {
     return modes.length
@@ -187,16 +192,71 @@ async function policyFrom(
   };
 }
 
+/**
+ * The reasoning a model runs by default, read with the session switched to it.
+ * The `model` flag switches the session itself, even over an org's model, and
+ * far faster than `setModel`.
+ */
+async function effortOn(session: Query & SettingsReader, choice: ModelChoice) {
+  await session.applyFlagSettings({ model: choice.value });
+  const applied = (await readSessionSettings(session))?.applied;
+
+  return applied?.model === modelId(choice)
+    ? (applied.effort ?? undefined)
+    : undefined;
+}
+
+/**
+ * The reasoning each model with effort support runs by default, by model ID.
+ * Claude Code reports only the session model's, and each model has its own.
+ */
+async function modelEfforts(
+  session: Query & SettingsReader,
+  models: ModelChoice[],
+) {
+  const efforts = new Map<string, string>();
+
+  // An alias and its full ID read once.
+  const reasoning = new Map(
+    models
+      .filter(
+        (choice) =>
+          choice.value !== "default" &&
+          choice.supportsEffort !== false &&
+          !!choice.supportedEffortLevels?.length,
+      )
+      .map((choice) => [modelId(choice), choice]),
+  );
+
+  try {
+    for (const [id, choice] of reasoning) {
+      const effort = await effortOn(session, choice);
+      if (effort) efforts.set(id, effort);
+    }
+  } catch (error) {
+    // Models stay useful with the levels read so far.
+    logError("provider.effort_read_failed", error);
+  }
+
+  return efforts;
+}
+
 /** Reads the session's settings and policy, and logs what was found. */
 async function readPolicy(
   session: Query & SettingsReader,
   models: ModelChoice[],
   resolve: typeof resolveSettings,
+  scoped: boolean,
+  started: number,
 ) {
   const settings = await readSessionSettings(session);
-  const found = await policyFrom(session, settings, models, resolve);
+  const efforts = settings ? await modelEfforts(session, models) : new Map();
+  const found = await policyFrom(settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
+    // Whether a project's own settings applied, without naming the project.
+    scoped,
+    duration_ms: Math.round(performance.now() - started),
     // Without the session's settings, whether policy applies is unknown.
     settings_read: !!settings,
     managed: settings ? (found?.managed ?? false) : undefined,
@@ -207,15 +267,17 @@ async function readPolicy(
     other_keys: otherPolicyKeys(policySettings(settings) ?? {}).join(","),
     applied_model: settings?.applied?.model,
     applied_effort: settings?.applied?.effort ?? undefined,
+    model_efforts: efforts.size,
   });
 
-  return { settings, policy: found };
+  return { settings, efforts, policy: found };
 }
 
 /**
  * The models the installed Claude Code offers and the policy that applies, read
  * by starting the native harness without a turn. It follows the same rules as a
- * task's session, so its answer is what a task would get. Polling reads the
+ * task's session in `cwd`, so its answer is what a task there would get.
+ * Without a project folder it reads outside any project. Polling reads the
  * cache, and a failure is remembered briefly so a broken runtime isn't
  * relaunched on every read.
  */
@@ -233,6 +295,7 @@ export class ClaudeDiscovery {
       "settings_files"
     > = claudeOverrideDefaults,
     private resolve: typeof resolveSettings = resolveSettings,
+    private cwd?: string,
   ) {}
 
   async models() {
@@ -244,17 +307,17 @@ export class ClaudeDiscovery {
   }
 
   private async discover() {
+    const started = performance.now();
+
     const turnless = turnlessSession(
       this.launch,
       this.configuration.settings_files,
       {
         pathToClaudeCodeExecutable: await this.cli.executable(),
-        // Outside any project, so one folder's settings don't lock modes for all.
-        cwd: tmpdir(),
+        // Outside any project unless one is given, as a folder's own settings
+        // apply only to tasks there.
+        cwd: this.cwd ?? tmpdir(),
         permissionMode: "default",
-        // Lets the policy check try Bypass. No tool can run without a turn.
-        // Claude Code won't start with it as root, where Bypass can't run anyway.
-        allowDangerouslySkipPermissions: !runsAsRoot(),
         canUseTool: async () => ({
           behavior: "deny",
           message: "Model discovery cannot execute tools",
@@ -267,16 +330,12 @@ export class ClaudeDiscovery {
     try {
       const models = await Promise.race([session.supportedModels(), timeout]);
 
-      // Widened because a callback sets it, which TypeScript can't see.
-      let policyFailed = false as boolean;
-
       // Models stay useful without it, and tasks are still checked as they run.
       const read = await Promise.race([
-        readPolicy(session, models, this.resolve),
+        readPolicy(session, models, this.resolve, !!this.cwd, started),
         timeout,
       ]).catch((error: unknown) => {
         logError("provider.policy_read_failed", error);
-        policyFailed = true;
 
         return undefined;
       });
@@ -285,11 +344,11 @@ export class ClaudeDiscovery {
 
       return {
         result: {
-          models: withAppliedDefault(models, read?.settings),
+          models: withResolvedDefaults(models, read?.settings, read?.efforts),
           ...(policy ? { policy } : {}),
         },
-        // A failed read tells nothing about policy, so it's retried soon.
-        expires: Date.now() + (policyFailed ? 30000 : READ_CACHE_MS),
+        // Without settings nothing is known about policy, so it's retried soon.
+        expires: Date.now() + (read?.settings ? READ_CACHE_MS : 30000),
       };
     } finally {
       turnless.close();

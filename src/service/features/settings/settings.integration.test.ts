@@ -358,7 +358,8 @@ test("native model controls scope discovered models and derive reasoning choices
   assert.equal(models.title, "Model defaults");
   assert.ok(sectionPaths(profiles).includes("models.profiles.reviewer.model"));
 
-  // Model options carry display names and keep a saved custom ID.
+  // Model options carry display names and keep a saved custom ID. Inherit
+  // names the provider's saved model.
   const scopes = profiles.rows.flatMap((row) =>
     row.kind === "models" ? row.scopes : [],
   );
@@ -371,7 +372,7 @@ test("native model controls scope discovered models and derive reasoning choices
 
   assert.deepEqual(
     reviewer.model.options?.map((option) => option.label),
-    ["Inherit", "Claude", "Default", "custom-saved-model"],
+    ["Inherit (Claude)", "Claude", "Default", "custom-saved-model"],
   );
 
   assert.deepEqual(f.stored(), persisted);

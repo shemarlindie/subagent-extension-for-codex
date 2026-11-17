@@ -31,8 +31,8 @@ when you update the SDK or change the minimum:
    new ones that work in a task. Tasks refuse the rest.
 4. Run `npm run check:claude-policy`. It makes no model calls and needs no org.
    The org policy checks rely on `getSettings`, which the SDK doesn't declare,
-   and on how Claude Code words a rejected permission mode. If it fails, the
-   panel stops locking blocked modes.
+   and on the settings keys that turn modes off. If it fails, the panel stops
+   locking blocked modes.
 
 Record the SDK's paired version, `claudeCodeVersion` in the SDK's
 `package.json`, as `paired`, and keep the minimum at or below it. About mutes

@@ -211,6 +211,8 @@ test("only a turn's first start says which mode the task got, since a later one 
   const ctx = await context();
   const effective: unknown[] = [];
 
+  // An explicit model it runs, so only the mode could be recorded.
+  ctx.c.task.model = "model";
   ctx.c.effectiveOptions = (values) => effective.push(values);
 
   const init = (permissionMode: string) => ({

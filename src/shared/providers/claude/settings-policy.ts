@@ -1,5 +1,4 @@
 import type {
-  ModelScope,
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
@@ -47,49 +46,43 @@ function withPolicy(
   };
 }
 
-/** The runtime defaults inherited after provider and profile settings. */
-export function inheritHelp(policy: ProviderPolicy | undefined): string[] {
-  const model = policy?.default_model?.name;
-  const effort = policy?.default_effort && titleCase(policy.default_effort);
+const whose = (org: boolean) => (org ? "your organization's" : "Claude Code's");
 
-  if (model && effort) {
-    return [`your organization's default, ${model} with ${effort} reasoning.`];
+/**
+ * The runtime defaults inherited after provider and profile settings, naming
+ * whether the org or Claude Code sets each.
+ */
+export function inheritHelp(
+  policy: ProviderPolicy | undefined,
+  runtime: { model?: string; effort?: string; modelReasons?: boolean },
+): string[] {
+  const orgModel = policy?.default_model?.name;
+  const orgEffort = policy?.default_effort;
+  const model = orgModel ?? runtime.model;
+  const effort = orgEffort ?? runtime.effort;
+
+  if (!model && !effort) {
+    return ["the worker's own default. This applies to model and reasoning."];
   }
 
-  if (model) {
+  // A default model without reasoning levels doesn't run the reasoning.
+  const together = runtime.modelReasons !== false && !orgModel === !orgEffort;
+
+  if (model && effort && together) {
     return [
-      `your organization's default model, ${model}, and the worker's own reasoning.`,
+      `${whose(!!orgModel)} default, ${model} with ${titleCase(effort)} reasoning.`,
     ];
   }
 
-  if (effort) {
-    return [
-      `the worker's own model and your organization's default reasoning, ${effort}.`,
-    ];
-  }
+  const modelPart = model
+    ? `${whose(!!orgModel)} default model, ${model}`
+    : "the worker's own model";
 
-  return ["the worker's own default. This applies to model and reasoning."];
-}
+  const effortPart = effort
+    ? `${whose(!!orgEffort)} default reasoning, ${titleCase(effort)}`
+    : "the worker's own reasoning";
 
-/** Claude's Inherit names the organization's default model. */
-function withOrgDefaults(
-  scope: ModelScope,
-  policy: ProviderPolicy,
-): ModelScope {
-  const defaultModel = policy.default_model;
-  if (scope.id !== "claude" || !defaultModel) return scope;
-
-  return {
-    ...scope,
-    model: {
-      ...scope.model,
-      options: scope.model.options?.map((option) =>
-        option.value === ""
-          ? { ...option, label: `Inherit (${defaultModel.name})` }
-          : option,
-      ),
-    },
-  };
+  return [`${modelPart}, and ${effortPart}.`];
 }
 
 const SOURCE_HELP = {
@@ -190,14 +183,7 @@ export function withClaudePolicy(
 
   const applied = sections.map((section) => ({
     ...section,
-    rows: section.rows.map((row) =>
-      row.kind === "models"
-        ? {
-            ...row,
-            scopes: row.scopes.map((scope) => withOrgDefaults(scope, policy)),
-          }
-        : withPolicy(row, policy, values),
-    ),
+    rows: section.rows.map((row) => withPolicy(row, policy, values)),
   }));
 
   if (!policy.managed) return applied;
