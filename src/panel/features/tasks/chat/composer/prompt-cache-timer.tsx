@@ -43,7 +43,7 @@ function description(left: PromptCacheLeft) {
   }
 }
 
-const HELP = "Replies that use the cache typically consume less plan usage.";
+const HELP = "Replies that use the cache consume less plan usage.";
 
 const STATE_ICONS = { warm: "timer", expired: "timer-off" } as const;
 

@@ -884,7 +884,7 @@ body[data-expanded-panel="true"]
 .context-usage-meter + li::before,
 .task-run-setting + .task-run-setting::before {
   content: "·" / "";
-  margin-inline: 4px;
+  margin-inline: 6px;
 }
 .task-run-summary [data-compact="hidden"] {
   display: none;
