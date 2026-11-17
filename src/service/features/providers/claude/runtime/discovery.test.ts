@@ -279,6 +279,7 @@ test("the org's default model and reasoning reach the Default entry and the poli
       "Use the default model (currently Sonnet) · Set by your organization",
     supportsEffort: undefined,
     supportedEffortLevels: ["low", "medium", "high"],
+    resolvedEffort: "low",
   });
 
   const policy = await read.policy();
@@ -296,6 +297,18 @@ test("the org's default model and reasoning reach the Default entry and the poli
   });
 
   assert.deepEqual(policy?.model_max_effort, { "claude-sonnet-5-5": "high" });
+});
+
+test("Claude Code's own reasoning reaches an unchanged Default entry", async () => {
+  const read = discovery({
+    catalog: defaultCatalog,
+    applied: { model: "claude-opus-5-5", effort: "medium" },
+  });
+
+  assert.deepEqual(await defaultEntry(read), {
+    ...defaultCatalog[0],
+    resolvedEffort: "medium",
+  });
 });
 
 test("a default from the user's settings doesn't name the organization", async () => {

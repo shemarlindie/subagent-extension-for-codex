@@ -253,6 +253,42 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
+test("the composer names Claude Code's default model and reasoning", async () => {
+  const { view, user } = setup(ready, {
+    workers: [
+      {
+        provider: "claude",
+        profiles: [...roles],
+        capabilities: {},
+        models: [
+          {
+            value: "default",
+            resolvedModel: "claude-opus-5-5",
+            resolvedEffort: "high",
+            displayName: "Default",
+            description: "",
+          },
+          {
+            value: "opus",
+            resolvedModel: "claude-opus-5-5",
+            displayName: "Opus 5.5",
+            description: "",
+          },
+        ],
+      },
+    ],
+  });
+
+  await user.click(
+    await view.findByRole("button", {
+      name: /^Edit Opus 5\.5 · High reasoning · /,
+    }),
+  );
+
+  await user.click(view.getByRole("combobox", { name: "Model: Opus 5.5" }));
+  assert.ok(await view.findByRole("option", { name: "Default (Opus 5.5)" }));
+});
+
 test("the composer inherits the org's runtime defaults", async () => {
   const { view } = setup(ready, {
     workers: [
@@ -264,7 +300,14 @@ test("the composer inherits the org's runtime defaults", async () => {
           {
             value: "default",
             resolvedModel: "claude-sonnet-5-5",
+            resolvedEffort: "medium",
             displayName: "Default",
+            description: "",
+          },
+          {
+            value: "sonnet",
+            resolvedModel: "claude-sonnet-5-5",
+            displayName: "Sonnet 5.5",
             description: "",
           },
         ],

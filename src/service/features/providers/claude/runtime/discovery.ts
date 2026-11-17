@@ -100,29 +100,29 @@ function byModel(
 }
 
 /**
- * The Default entry as the model it runs. Claude Code's own description
- * follows an org's allowlist, and misses a model that settings or policy set.
+ * The Default entry as the model and reasoning it runs. Claude Code's own
+ * description follows an org's allowlist, and misses a model that settings or
+ * policy set. Every model with effort support runs the applied reasoning.
  */
 function withAppliedDefault(
   models: ModelChoice[],
   settings: SessionSettings | undefined,
 ) {
   const applied = settings?.applied?.model;
+  const effort = settings?.applied?.effort;
   const org = !!policySettings(settings)?.model;
 
   return models.map((choice) => {
-    if (
-      choice.value !== "default" ||
-      !applied ||
-      choice.resolvedModel === applied
-    ) {
-      return choice;
-    }
+    if (choice.value !== "default") return choice;
+
+    const withEffort = effort ? { ...choice, resolvedEffort: effort } : choice;
+
+    if (!applied || choice.resolvedModel === applied) return withEffort;
 
     const match = catalogEntry(models, applied);
 
     return {
-      ...choice,
+      ...withEffort,
       resolvedModel: applied,
       description: `Use the default model (currently ${match?.displayName ?? applied})${org ? " · Set by your organization" : ""}`,
       ...(match

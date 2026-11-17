@@ -49,13 +49,14 @@ function modelsFooter(workerInfo: Worker | undefined) {
 
 /**
  * The choices org policy changes: locked modes, and a saved model it
- * excludes, which gives way to the org's default.
+ * excludes, which gives way to the runtime default.
  */
 function policyOptions(
   provider: string,
   workerInfo: Worker | undefined,
   models: ModelChoice[],
   model: string | undefined,
+  runtimeModel: string | undefined,
 ) {
   const policy = workerInfo?.policy;
 
@@ -65,7 +66,7 @@ function policyOptions(
   const allowed = model && modelAllowed(policy, models, model);
 
   return {
-    model: allowed ? model : policy?.default_model?.name,
+    model: allowed ? model : runtimeModel,
     permissions: permissions && withBlockedOptions(permissions, policy),
   };
 }
@@ -84,7 +85,7 @@ function resolvedOptions(
     ? modelDefaults(newTask.defaults, state.workers, worker, model)
     : undefined;
 
-  const { workerInfo, providerModel } = resolved ?? {};
+  const { workerInfo, providerModel, runtimeModel } = resolved ?? {};
   const models = workerInfo?.models ?? [];
   const policy = workerInfo?.policy;
 
@@ -97,8 +98,8 @@ function resolvedOptions(
     cap: resolved?.cap,
     modelsFooter: modelsFooter(workerInfo),
     // The model and reasoning chips edit the profile's settings, so Default
-    // clears them and inherits the provider's, or the org's.
-    ...policyOptions(provider, workerInfo, models, providerModel),
+    // clears them and inherits the provider's, or the runtime default.
+    ...policyOptions(provider, workerInfo, models, providerModel, runtimeModel),
   };
 }
 

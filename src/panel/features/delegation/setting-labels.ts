@@ -1,9 +1,18 @@
 import type { ModelChoice } from "../../../shared/providers/types";
 import { titleCase } from "../../../shared/text";
 
-/** A model's display name, falling back to its ID for undiscovered models. */
+/**
+ * A model's display name, by its value or the full ID an alias stands for,
+ * falling back to the ID for undiscovered models.
+ */
 export function modelName(models: readonly ModelChoice[], value: string) {
-  return models.find((model) => model.value === value)?.displayName ?? value;
+  const match =
+    models.find((model) => model.value === value) ??
+    models.find(
+      (model) => model.value !== "default" && model.resolvedModel === value,
+    );
+
+  return match?.displayName ?? value;
 }
 
 const compactLevels: Record<string, string> = {

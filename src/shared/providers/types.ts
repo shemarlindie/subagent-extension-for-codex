@@ -24,6 +24,8 @@ export interface ModelChoice {
   description: string;
   supportsEffort?: boolean;
   supportedEffortLevels?: (typeof reasoningLevels)[number][];
+  /** The reasoning the Default entry runs, when the provider reports it. */
+  resolvedEffort?: string;
 }
 
 /** A slash command a task's session offers. */

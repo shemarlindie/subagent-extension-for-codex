@@ -7,9 +7,11 @@ import type {
 const previewModels: [ModelChoice, ...ModelChoice[]] = [
   {
     value: "default",
+    resolvedModel: "claude-opus-5-5",
     displayName: "Default (recommended)",
     description: "Opus 5.5 · Best for everyday, complex tasks",
     supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+    resolvedEffort: "high",
   },
   {
     value: "opus",
@@ -60,9 +62,15 @@ export const previewOrgPolicy: ProviderPolicy = {
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 };
 
-/** Default as discovery reports it, naming the org's default model. */
-function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
-  const plain = previewModels[0];
+/** Default as discovery reports it, naming the org's default model and reasoning. */
+function orgDefault({
+  default_model,
+  default_effort,
+}: ProviderPolicy): ModelChoice {
+  const plain = {
+    ...previewModels[0],
+    ...(default_effort ? { resolvedEffort: default_effort } : {}),
+  };
 
   if (!default_model) return plain;
 
