@@ -37,31 +37,31 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
 
   const categories = usage.categories.toSorted((a, b) => b.tokens - a.tokens);
 
-  // An empty title keeps the list's own tooltip off the meter.
+  // The whole item, separator included, opens the tooltip.
   return (
-    <li
-      className="context-usage-meter"
-      data-warning={share >= WARNING_SHARE ? "" : undefined}
-      title=""
+    <TooltipWrapper
+      label={`Context window: ${status}. ${compaction}.`}
+      content={
+        <>
+          <span className="run-setting-tooltip-status">{status}</span>
+          <span className="run-setting-tooltip-note">{compaction}</span>
+          <span className="run-setting-tooltip-rows context-usage-tooltip-rows">
+            {categories.map(({ name, tokens }) => (
+              <span key={name}>
+                <span>{name}</span>
+                <span>{formatCount(tokens)}</span>
+              </span>
+            ))}
+          </span>
+        </>
+      }
     >
-      <TooltipWrapper
-        label={`Context window: ${status}. ${compaction}.`}
-        content={
-          <>
-            <span className="run-setting-tooltip-status">{status}</span>
-            <span className="run-setting-tooltip-note">{compaction}</span>
-            <span className="context-usage-tooltip-categories">
-              {categories.map(({ name, tokens }) => (
-                <span key={name}>
-                  <span>{name}</span>
-                  <span>{formatCount(tokens)}</span>
-                </span>
-              ))}
-            </span>
-          </>
-        }
+      <li
+        className="context-usage-meter run-setting-trigger"
+        data-warning={share >= WARNING_SHARE ? "" : undefined}
+        tabIndex={0}
       >
-        <span className="run-setting-trigger" tabIndex={0}>
+        <span className="run-setting-value">
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <circle
               className="context-usage-ring-track"
@@ -81,7 +81,7 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
             {used}%
           </span>
         </span>
-      </TooltipWrapper>
-    </li>
+      </li>
+    </TooltipWrapper>
   );
 }

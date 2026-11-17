@@ -793,12 +793,15 @@ body[data-expanded-panel="true"]
   flex: none;
   align-items: center;
 }
-/* The prompt cache timer and context usage meter: an icon, a short value and a tooltip. */
-.run-setting-trigger {
+/* Each item opens its tooltip from anywhere on it. */
+.task-run-settings .run-setting-trigger {
+  border-radius: 3px;
+  cursor: default;
+}
+.run-setting-value {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  border-radius: 3px;
   font-variant-numeric: tabular-nums;
 }
 .run-setting-trigger:focus-visible {
@@ -829,16 +832,31 @@ body[data-expanded-panel="true"]
 .context-usage-ring-fill {
   stroke: currentColor;
 }
-.context-usage-tooltip-categories {
+/* Name and value pairs in a run setting's tooltip. */
+.run-setting-tooltip-rows {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0 12px;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  gap: 2px 12px;
   margin-top: 6px;
+}
+.run-setting-tooltip-rows > span {
+  display: contents;
+}
+.run-setting-tooltip-rows > span > :first-child {
   color: var(--muted);
+}
+.run-setting-tooltip-rows + .run-setting-tooltip-note {
+  margin-top: 6px;
+}
+/* Token counts line up on the right. */
+.context-usage-tooltip-rows {
+  grid-template-columns: 1fr auto;
+  justify-content: stretch;
   font-variant-numeric: tabular-nums;
 }
-.context-usage-tooltip-categories > span {
-  display: contents;
+.context-usage-tooltip-rows > span > :last-child {
+  text-align: end;
 }
 /* Narrow panels show the ring alone, leaving the model name room. */
 @media (max-width: 400px) {
@@ -854,11 +872,20 @@ body[data-expanded-panel="true"]
   color: var(--muted);
   font-size: 0.8em;
 }
-.task-run-settings .task-run-profile {
+.task-run-settings .task-run-summary {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.task-run-summary > span {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+.task-run-summary .task-run-profile {
   margin-inline-end: 6px;
 }
 /* The model name is the one that can run long. */
-.task-run-profile + li {
+.task-run-summary .task-run-profile + span {
   display: block;
   flex: 0 1 auto;
   min-width: 0;
@@ -867,11 +894,11 @@ body[data-expanded-panel="true"]
 }
 .prompt-cache-timer + li::before,
 .context-usage-meter + li::before,
-.task-run-setting + li::before {
+.task-run-setting + .task-run-setting::before {
   content: "·" / "";
   margin-inline: 4px;
 }
-.task-run-settings li[data-compact="hidden"] {
+.task-run-summary [data-compact="hidden"] {
   display: none;
 }
 .chat-composer-toggle-row .task-run-settings {

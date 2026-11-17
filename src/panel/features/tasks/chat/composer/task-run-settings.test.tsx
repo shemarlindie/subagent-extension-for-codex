@@ -57,25 +57,31 @@ function settingsOf(overrides: Partial<Task>, effective: object) {
     </ControllerContext.Provider>,
   );
 
-  return view.getByRole("list", { name: "Task settings" });
+  return {
+    list: view.getByRole("list", { name: "Task settings" }),
+    // The summary item names what the task started with, and its tooltip shows it.
+    summary: view.getByRole("listitem", { name: /^Set when the task started/ }),
+  };
 }
 
 test("a Default task names what it ran, without a requested line", () => {
-  const list = settingsOf(
+  const { list, summary } = settingsOf(
     { model: "default", reasoning_effort: "default" },
     { model: "claude-opus-5-5", effort: "medium" },
   );
 
   expect(list.textContent).toContain("Opus 5.5");
   expect(list.textContent).toContain("Medium");
-  expect(list.title).not.toContain("Requested");
+  expect(summary.getAttribute("aria-label")).not.toContain("Requested");
 });
 
 test("an explicit choice Claude Code changed lists what was requested", () => {
-  const list = settingsOf(
+  const { summary } = settingsOf(
     { model: "sonnet", reasoning_effort: "xhigh" },
     { model: "claude-opus-5-5", effort: "high" },
   );
 
-  expect(list.title).toContain("Requested: sonnet, Xhigh reasoning");
+  expect(summary.getAttribute("aria-label")).toContain(
+    "Requested: sonnet, Xhigh reasoning",
+  );
 });
