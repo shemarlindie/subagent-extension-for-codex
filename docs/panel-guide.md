@@ -292,9 +292,8 @@ sections, and failed reads offer a retry. See [Configuration](configuration.md)
 for permission and approval defaults.
 
 **Inherit** names the model and reasoning a row lands on: a profile's Claude
-setting, then the runtime default. Claude Code supplies the runtime default,
-unless your organization sets a default model or reasoning, including reasoning
-for a single model. See [Org policy](configuration.md#org-policy).
+setting, then the runtime default, which Claude Code or your organization sets.
+See [Org policy](configuration.md#org-policy).
 
 Search settings by section name, label, description, setting path or choice.
 Press `/` to start searching. Results appear together under section headings and

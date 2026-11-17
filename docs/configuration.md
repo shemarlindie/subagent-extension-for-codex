@@ -230,12 +230,10 @@ value set in this order:
 | Provider | `models.providers.claude.model`   | `models.providers.claude.reasoning_effort`   |
 
 A blank model and `default` reasoning inherit from the next scope. When every
-scope inherits, the provider runtime's default applies. Settings, the New task
-composer and the Advanced task dialog name the value an inherited choice lands
-on, such as `Inherit (Opus 5.5)`. Saved values from the removed global defaults
-are ignored, and imports list them as skipped. Task values come from
-`start_task`, the New task composer or the Advanced task dialog. Permission mode
-and session restrictions follow their own rules below.
+scope inherits, the provider runtime's default applies. Saved values from the
+removed global defaults are ignored, and imports list them as skipped. Task
+values come from `start_task`, the New task composer or the Advanced task
+dialog. Permission mode and session restrictions follow their own rules below.
 
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
@@ -247,13 +245,11 @@ may fail the task when it runs.
 Claude model suggestions come from the installed CLI. Discovery submits no user
 turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
-runs in a task's approved project folder, so that project's settings apply, and
-caches each folder for five minutes. Without a project, or for an unapproved
-folder, it runs outside any project. The New task composer and Advanced task
-dialog read the chosen project, and Settings show what applies outside any
-project. A worktree task can still differ, for example by a local settings file
-that exists only in the main checkout. Custom model IDs work when discovery is
-unavailable, but reasoning support may then be unknown.
+runs in the approved project folder a task or New task form uses, so that
+project's settings apply. Settings and unapproved folders read what applies
+outside any project. A worktree task can still differ, for example by a local
+settings file that exists only in the main checkout. Custom model IDs work when
+discovery is unavailable, but reasoning support may then be unknown.
 
 ## Custom instructions for worker profiles
 
@@ -275,8 +271,7 @@ inherited either.
 
 - `providers.claude.permission_mode` sets the default for new tasks.
 - `provider_options.claude.permission_mode` overrides it for one task. `inherit`
-  uses the saved setting. The panel names the mode it runs, such as
-  `Use extension setting (Auto)`.
+  uses the saved setting.
 - The read-only profiles, `researcher` and `reviewer`, start in `plan` unless
   the task names another mode. These profiles return findings directly and
   cannot call `ExitPlanMode` to request implementation approval. Use
@@ -391,8 +386,6 @@ runs. A model it now excludes gives way to Default, with a note.
 
 Limits:
 
-- Settings show what applies outside any project, so a project's own settings
-  can differ there. Start checks use the task's project.
 - Claude Code doesn't report which permission modes it allows. The panel locks a
   mode the settings turn off, and Bypass when the service runs as root. A mode
   that reads as allowed may still fall back, and Chat then says so.
