@@ -22,6 +22,7 @@ function discovery({
   modelsAfter = 0,
   catalog = models,
   applied,
+  efforts = {},
   switchFails = false,
 }: {
   policy?: object;
@@ -30,17 +31,29 @@ function discovery({
   resolved?: object[];
   /** How long Claude Code takes to answer, in milliseconds. */
   modelsAfter?: number;
-  catalog?: object[];
+  catalog?: { value: string; resolvedModel?: string }[];
   /** What the session reports it will run. */
   applied?: { model: string; effort: string | null };
+  /** Each model's default reasoning, by model ID. */
+  efforts?: Record<string, string>;
   switchFails?: boolean;
 }) {
-  let model: string | undefined;
+  let flagModel: string | undefined;
+
+  const running = () => {
+    if (!flagModel || !applied) return applied;
+
+    const model =
+      catalog.find(({ value }) => value === flagModel)?.resolvedModel ??
+      flagModel;
+
+    return { model, effort: efforts[model] ?? null };
+  };
 
   const launch = () => ({
-    setModel: async (value: string) => {
+    applyFlagSettings: async ({ model }: { model: string }) => {
       if (switchFails) throw new Error("Session ended");
-      model = value;
+      flagModel = model;
     },
     supportedModels: () =>
       new Promise((resolve) => setTimeout(() => resolve(catalog), modelsAfter)),
@@ -49,10 +62,7 @@ function discovery({
     },
     getSettings: async () => ({
       effective: effective ?? {},
-      // A model with effort support reports the session's level.
-      ...(applied
-        ? { applied: model ? { model, effort: "high" } : applied }
-        : {}),
+      ...(applied ? { applied: running() } : {}),
       sources: [
         { source: "flagSettings", settings: {} },
         ...(policy ? [{ source: "policySettings", settings: policy }] : []),
@@ -322,32 +332,42 @@ test("Claude Code's own reasoning reaches an unchanged Default entry", async () 
   });
 });
 
-test.for([
-  { switchFails: false, effort: "high" },
-  { switchFails: true, effort: undefined },
-])(
-  "a Default model without reasoning levels reads the reasoning on another model, keeping the policy (switch fails: $switchFails)",
-  async ({ switchFails, effort }) => {
-    const read = discovery({
-      policy: { model: "claude-haiku-4-5" },
-      catalog: [
-        ...defaultCatalog,
-        {
-          value: "claude-haiku-4-5",
-          resolvedModel: "claude-haiku-4-5",
-          displayName: "Haiku 4.5",
-          description: "",
-          supportsEffort: false,
-        },
-      ],
-      applied: { model: "claude-haiku-4-5", effort: null },
-      switchFails,
-    });
+const opus = {
+  value: "opus",
+  resolvedModel: "claude-opus-5-5",
+  displayName: "Opus 5.5",
+  description: "",
+  supportedEffortLevels: ["low", "medium", "high"],
+};
 
-    assert.equal((await defaultEntry(read))?.resolvedEffort, effort);
-    assert.equal((await read.policy())?.default_model?.id, "claude-haiku-4-5");
-  },
-);
+test("each model's own default reasoning reaches its entry", async () => {
+  const read = discovery({
+    catalog: [...defaultCatalog, opus],
+    applied: { model: "claude-opus-5-5", effort: "low" },
+    efforts: { "claude-opus-5-5": "low", "claude-sonnet-5-5": "high" },
+  });
+
+  assert.deepEqual(
+    (await read.models()).map(({ resolvedEffort }) => resolvedEffort),
+    ["low", "high", "low"],
+  );
+});
+
+test("a session that can't switch models keeps the Default reasoning and the policy", async () => {
+  const read = discovery({
+    policy: { model: "sonnet" },
+    catalog: [...defaultCatalog, opus],
+    applied: { model: "claude-sonnet-5-5", effort: "high" },
+    switchFails: true,
+  });
+
+  assert.deepEqual(
+    (await read.models()).map(({ resolvedEffort }) => resolvedEffort),
+    ["high", undefined, undefined],
+  );
+
+  assert.equal((await read.policy())?.default_model?.id, "claude-sonnet-5-5");
+});
 
 test("a default from the user's settings doesn't name the organization", async () => {
   const read = discovery({

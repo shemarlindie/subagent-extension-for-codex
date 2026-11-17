@@ -19,6 +19,7 @@ const previewModels: [ModelChoice, ...ModelChoice[]] = [
     displayName: "Opus 5.5",
     description: "For complex work and everyday tasks",
     supportedEffortLevels: ["low", "medium", "high", "xhigh", "max"],
+    resolvedEffort: "high",
   },
   {
     value: "sonnet",
@@ -26,6 +27,7 @@ const previewModels: [ModelChoice, ...ModelChoice[]] = [
     displayName: "Sonnet 5.5",
     description: "Most efficient for simpler tasks",
     supportedEffortLevels: ["low", "medium", "high"],
+    resolvedEffort: "medium",
   },
   {
     value: "haiku",
@@ -62,15 +64,22 @@ export const previewOrgPolicy: ProviderPolicy = {
   notes: [{ label: "Hooks", detail: "Only your organization's hooks run." }],
 };
 
-/** Default as discovery reports it, naming the org's default model and reasoning. */
-function orgDefault({
-  default_model,
-  default_effort,
-}: ProviderPolicy): ModelChoice {
-  const plain = {
-    ...previewModels[0],
-    ...(default_effort ? { resolvedEffort: default_effort } : {}),
-  };
+/**
+ * Gives every model with reasoning levels `effort`, as a top-level level such
+ * as an org's or a project's does.
+ */
+const runningEffort = (models: ModelChoice[], effort?: string) =>
+  effort
+    ? models.map((model) =>
+        model.supportsEffort === false
+          ? model
+          : { ...model, resolvedEffort: effort },
+      )
+    : models;
+
+/** Default as discovery reports it, naming the org's default model. */
+function orgDefault({ default_model }: ProviderPolicy): ModelChoice {
+  const plain = previewModels[0];
 
   if (!default_model) return plain;
 
@@ -87,7 +96,7 @@ function orgDefault({
   };
 }
 
-/** The docs site's own Claude Code settings choose Sonnet with Low reasoning. */
+/** The docs site's own Claude Code settings choose Sonnet, and Low reasoning for every model. */
 const projectDefaults: Record<string, Partial<ModelChoice>> = {
   "/demo/docs": {
     resolvedModel: "claude-sonnet-5-5",
@@ -106,21 +115,27 @@ export const previewCatalog = (
 ) =>
   policy
     ? {
-        models: [
-          orgDefault(policy),
-          ...previewModels.filter(
-            ({ value, resolvedModel = value }) =>
-              value !== "default" &&
-              (modelAllowed(policy, [], value) ||
-                modelAllowed(policy, [], resolvedModel)),
-          ),
-        ],
+        models: runningEffort(
+          [
+            orgDefault(policy),
+            ...previewModels.filter(
+              ({ value, resolvedModel = value }) =>
+                value !== "default" &&
+                (modelAllowed(policy, [], value) ||
+                  modelAllowed(policy, [], resolvedModel)),
+            ),
+          ],
+          policy.default_effort,
+        ),
         policy,
       }
     : {
-        models: previewModels.map((model) =>
-          model.value === "default"
-            ? { ...model, ...projectDefaults[String(repository)] }
-            : model,
+        models: runningEffort(
+          previewModels.map((model) =>
+            model.value === "default"
+              ? { ...model, ...projectDefaults[String(repository)] }
+              : model,
+          ),
+          projectDefaults[String(repository)]?.resolvedEffort,
         ),
       };

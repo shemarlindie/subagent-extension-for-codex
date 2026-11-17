@@ -296,38 +296,56 @@ test("reasoning choices save to the profile, and choosing a profile restores its
   });
 });
 
-test("the composer names Claude Code's default model and reasoning", async () => {
-  const { view } = setup(ready, {
-    workers: [
+test.for([
+  { model: undefined, runs: /^Edit Opus 5\.5 · High reasoning · / },
+  { model: "sonnet", runs: /^Edit Sonnet 5\.5 · Low reasoning · / },
+])(
+  "the composer names the model that runs and its own default reasoning ($model)",
+  async ({ model, runs }) => {
+    const { view } = setup(
       {
-        provider: "claude",
-        profiles: [...roles],
-        capabilities: {},
-        models: [
+        ...ready,
+        defaults: model
+          ? withSetting(readyDefaults, "models.providers.claude.model", model)
+          : readyDefaults,
+      },
+      {
+        workers: [
           {
-            value: "default",
-            resolvedModel: "claude-opus-5-5",
-            resolvedEffort: "high",
-            displayName: "Default",
-            description: "",
-          },
-          {
-            value: "opus",
-            resolvedModel: "claude-opus-5-5",
-            displayName: "Opus 5.5",
-            description: "",
+            provider: "claude",
+            profiles: [...roles],
+            capabilities: {},
+            models: [
+              {
+                value: "default",
+                resolvedModel: "claude-opus-5-5",
+                resolvedEffort: "high",
+                displayName: "Default",
+                description: "",
+              },
+              {
+                value: "opus",
+                resolvedModel: "claude-opus-5-5",
+                resolvedEffort: "high",
+                displayName: "Opus 5.5",
+                description: "",
+              },
+              {
+                value: "sonnet",
+                resolvedModel: "claude-sonnet-5-5",
+                resolvedEffort: "low",
+                displayName: "Sonnet 5.5",
+                description: "",
+              },
+            ],
           },
         ],
       },
-    ],
-  });
+    );
 
-  assert.ok(
-    await view.findByRole("button", {
-      name: /^Edit Opus 5\.5 · High reasoning · /,
-    }),
-  );
-});
+    assert.ok(await view.findByRole("button", { name: runs }));
+  },
+);
 
 test("the composer inherits the org's runtime defaults", async () => {
   const { view } = setup(ready, {
@@ -340,7 +358,6 @@ test("the composer inherits the org's runtime defaults", async () => {
           {
             value: "default",
             resolvedModel: "claude-sonnet-5-5",
-            resolvedEffort: "medium",
             displayName: "Default",
             description: "",
           },
@@ -351,7 +368,8 @@ test("the composer inherits the org's runtime defaults", async () => {
             description: "",
           },
         ],
-        // The running model's own level wins over the top-level one.
+        // Without a level read from Claude Code, the running model's own
+        // level wins over the top-level one.
         policy: {
           managed: true,
           blocked: [],

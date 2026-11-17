@@ -197,6 +197,7 @@ const runtimeCatalog = (model: string, effort: string): ModelChoice[] => [
   {
     value: "sonnet",
     resolvedModel: "claude-sonnet-5-5",
+    resolvedEffort: "medium",
     displayName: "Sonnet 5.5",
     description: "",
     supportedEffortLevels: ["low", "medium", "high"],
@@ -210,17 +211,26 @@ const help = (all: ReturnType<typeof sections>, id: string) =>
     .join("");
 
 test("a default model without reasoning levels names the reasoning apart", () => {
-  const catalog = runtimeCatalog("claude-sonnet-5-5", "high").map((model) =>
-    model.value === "default"
-      ? { ...model, supportsEffort: false, supportedEffortLevels: [] }
-      : model,
+  const catalog = runtimeCatalog("claude-sonnet-5-5", "high").map(
+    ({ resolvedEffort: _, ...model }) =>
+      model.value === "default"
+        ? { ...model, supportsEffort: false, supportedEffortLevels: [] }
+        : model,
   );
 
-  const all = sections({}, null, catalog);
+  const all = sections(
+    {},
+    {
+      ...policy,
+      default_model: { id: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+      default_effort: "high",
+    },
+    catalog,
+  );
 
   assert.equal(
     help(all, "models"),
-    "The task's worker profile defaults override these. Inherit uses Claude Code's default model, Sonnet 5.5, and Claude Code's default reasoning, High. Task choices override all defaults.",
+    "The task's worker profile defaults override these. Inherit uses your organization's default model, Sonnet 5.5, and your organization's default reasoning, High. Task choices override all defaults.",
   );
 });
 
@@ -238,7 +248,7 @@ test("Inherit names Claude Code's default model and reasoning", () => {
   );
 
   // A profile inherits the provider's saved choices first. A level its model
-  // doesn't support gives way to the runtime default.
+  // doesn't support gives way to that model's own default.
   all = sections(
     {
       models: {
@@ -256,7 +266,7 @@ test("Inherit names Claude Code's default model and reasoning", () => {
     "Inherit (Sonnet 5.5)",
   );
 
-  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (High)");
+  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (Medium)");
 
   rows = scopes(
     sections(

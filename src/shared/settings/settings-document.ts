@@ -86,14 +86,14 @@ export interface ScopeInput {
 
 /**
  * What a scope's Inherit lands on: a profile's provider setting, then the
- * runtime default. Reasoning takes the org's level for the model the scope
- * runs before the runtime's, and only a level the model supports.
+ * runtime default. Reasoning falls back to `modelEffort`, the level the model
+ * the scope runs has by default, and only a level the model supports.
  */
 function inherited(
   values: unknown,
   scope: { provider: string; providerScope: boolean },
   catalog: Catalog | undefined,
-  model: string,
+  modelEffort: string | undefined,
   levels: readonly string[] | undefined,
 ) {
   // Provider scopes inherit the runtime default.
@@ -110,9 +110,7 @@ function inherited(
 
   return {
     model: parent.model ? modelName(models, parent.model) : runtime.model,
-    effort:
-      fits(parent.reasoning_effort) ??
-      fits(orgEffort(catalog?.policy, model) ?? runtime.effort),
+    effort: fits(parent.reasoning_effort) ?? fits(modelEffort),
   };
 }
 
@@ -159,11 +157,12 @@ export function modelScope(
   const runs = resolvedModel(catalog?.models ?? [], effectiveModel);
   const cap = effortCap(catalog?.policy, runs);
 
+  // The model's own default includes the org's, which covers an unlisted model.
   const inherits = inherited(
     values,
     { provider, providerScope },
     catalog,
-    runs,
+    metadata?.resolvedEffort ?? orgEffort(catalog?.policy, runs),
     levels,
   );
 

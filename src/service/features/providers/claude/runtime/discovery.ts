@@ -78,6 +78,10 @@ async function policySource(
   }
 }
 
+/** The model ID a catalog entry runs. */
+const modelId = ({ value, resolvedModel }: ModelChoice) =>
+  resolvedModel ?? value;
+
 /** The catalog's entry for a model ID, other than Default. */
 const catalogEntry = (models: ModelChoice[], model: string) =>
   models.find(
@@ -100,22 +104,27 @@ function byModel(
 }
 
 /**
- * The Default entry as the model and reasoning it runs. Claude Code's own
- * description follows an org's allowlist, and misses a model that settings or
- * policy set. Every model with effort support runs the applied reasoning.
+ * Each entry with the reasoning it runs by default, and the Default entry as
+ * the model it runs. Claude Code's own description follows an org's
+ * allowlist, and misses a model that settings or policy set.
  */
-function withAppliedDefault(
+function withResolvedDefaults(
   models: ModelChoice[],
   settings: SessionSettings | undefined,
+  efforts: Map<string, string> = new Map(),
 ) {
   const applied = settings?.applied?.model;
-  const effort = settings?.applied?.effort;
   const org = !!policySettings(settings)?.model;
 
   return models.map((choice) => {
-    if (choice.value !== "default") return choice;
+    const effort =
+      choice.value === "default"
+        ? settings?.applied?.effort
+        : efforts.get(modelId(choice));
 
     const withEffort = effort ? { ...choice, resolvedEffort: effort } : choice;
+
+    if (choice.value !== "default") return withEffort;
 
     if (!applied || choice.resolvedModel === applied) return withEffort;
 
@@ -184,37 +193,52 @@ async function policyFrom(
 }
 
 /**
- * The session's settings with the reasoning models with effort support run by
- * default. Claude Code reports it only while the session's model supports
- * effort, so a Default model without it asks again on a model that does.
+ * The reasoning a model runs by default, read with the session switched to it.
+ * The `model` flag switches the session itself, even over an org's model, and
+ * far faster than `setModel`.
  */
-async function withSessionEffort(
+async function effortOn(session: Query & SettingsReader, choice: ModelChoice) {
+  await session.applyFlagSettings({ model: choice.value });
+  const applied = (await readSessionSettings(session))?.applied;
+
+  return applied?.model === modelId(choice)
+    ? (applied.effort ?? undefined)
+    : undefined;
+}
+
+/**
+ * The reasoning each model with effort support runs by default, by model ID.
+ * Claude Code reports only the session model's, and each model has its own.
+ */
+async function modelEfforts(
   session: Query & SettingsReader,
-  settings: SessionSettings | undefined,
   models: ModelChoice[],
 ) {
-  const applied = settings?.applied;
-  if (!applied || applied.effort) return settings;
+  const efforts = new Map<string, string>();
 
-  const reasoning = models.find(
-    ({ value, supportsEffort, supportedEffortLevels }) =>
-      value !== "default" &&
-      supportsEffort !== false &&
-      !!supportedEffortLevels?.length,
+  // An alias and its full ID read once.
+  const reasoning = new Map(
+    models
+      .filter(
+        (choice) =>
+          choice.value !== "default" &&
+          choice.supportsEffort !== false &&
+          !!choice.supportedEffortLevels?.length,
+      )
+      .map((choice) => [modelId(choice), choice]),
   );
 
-  if (!reasoning) return settings;
+  try {
+    for (const [id, choice] of reasoning) {
+      const effort = await effortOn(session, choice);
+      if (effort) efforts.set(id, effort);
+    }
+  } catch (error) {
+    // Models stay useful with the levels read so far.
+    logError("provider.effort_read_failed", error);
+  }
 
-  // The policy read stands without it.
-  const effort = await session
-    .setModel(reasoning.value)
-    .then(() => readSessionSettings(session))
-    .then((read) => read?.applied?.effort)
-    .catch((error: unknown) => {
-      logError("provider.effort_read_failed", error);
-    });
-
-  return effort ? { ...settings, applied: { ...applied, effort } } : settings;
+  return efforts;
 }
 
 /** Reads the session's settings and policy, and logs what was found. */
@@ -225,12 +249,8 @@ async function readPolicy(
   scoped: boolean,
   started: number,
 ) {
-  const settings = await withSessionEffort(
-    session,
-    await readSessionSettings(session),
-    models,
-  );
-
+  const settings = await readSessionSettings(session);
+  const efforts = settings ? await modelEfforts(session, models) : new Map();
   const found = await policyFrom(settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
@@ -247,9 +267,10 @@ async function readPolicy(
     other_keys: otherPolicyKeys(policySettings(settings) ?? {}).join(","),
     applied_model: settings?.applied?.model,
     applied_effort: settings?.applied?.effort ?? undefined,
+    model_efforts: efforts.size,
   });
 
-  return { settings, policy: found };
+  return { settings, efforts, policy: found };
 }
 
 /**
@@ -323,7 +344,7 @@ export class ClaudeDiscovery {
 
       return {
         result: {
-          models: withAppliedDefault(models, read?.settings),
+          models: withResolvedDefaults(models, read?.settings, read?.efforts),
           ...(policy ? { policy } : {}),
         },
         // Without settings nothing is known about policy, so it's retried soon.

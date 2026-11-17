@@ -28,10 +28,9 @@ function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
  * default the Default entry reports, which includes an org's.
  * `providerModel` and `providerReasoning` skip the profile's setting. The
  * runtime model is a name, as it has no value of its own. A saved level the
- * model doesn't support is skipped. The org's reasoning for the model that
- * runs fills in next, then the runtime reasoning, where the model supports
- * them. Also returns the selected model's metadata and its supported effort
- * levels.
+ * model doesn't support is skipped. The reasoning the model that runs has by
+ * default fills in next, where the model supports it. Also returns the
+ * selected model's metadata and its supported effort levels.
  */
 export function modelDefaults(
   defaults: Defaults,
@@ -58,10 +57,10 @@ export function modelDefaults(
         reasoningLevels);
 
   const model = metadata?.resolvedModel ?? runs;
-  const org = orgEffort(policy, model);
 
+  // The model's own default includes the org's, which covers an unlisted model.
   const inheritedLevel = supported.find(
-    (level) => level === (org ?? runtime.effort),
+    (level) => level === (metadata?.resolvedEffort ?? orgEffort(policy, model)),
   );
 
   return {
