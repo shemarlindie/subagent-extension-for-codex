@@ -6,6 +6,7 @@ import {
   activityFailed,
   activityKind,
   boundaries,
+  compactionSummary,
   eventRowTitle,
   failureSummary,
   isQuiet,
@@ -74,6 +75,8 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
   const streams = new Map<string, ActivityGroup>();
   // A turn's result row, by task, until the service records the reply that repeats it.
   const completedTurns = new Map<string, ActivityGroup>();
+  // A command's output row, by task, until the reply that repeats it.
+  const commandOutputs = new Map<string, ActivityGroup>();
 
   const add = (
     event: Event,
@@ -324,8 +327,12 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       ) ??
       (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
-    // Replies carry their own text, so no summary repeats it.
-    if (replyText(e) !== undefined || thinkingSignal(e)) {
+    // Replies and compaction summaries carry their own text, so no summary repeats it.
+    if (
+      replyText(e) !== undefined ||
+      compactionSummary(e) !== undefined ||
+      thinkingSignal(e)
+    ) {
       group.summary = undefined;
     }
 
@@ -333,6 +340,18 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       completedTurns.set(e.task_id, group);
     } else if (boundaries.has(key)) {
       completedTurns.delete(e.task_id);
+    }
+
+    // A reply that repeats a command's output takes in its row.
+    if (reply) {
+      const output = commandOutputs.get(e.task_id);
+      commandOutputs.delete(e.task_id);
+
+      if (output?.summary?.trim() === reply.text.trim()) {
+        groups.splice(groups.indexOf(output), 1);
+        group.events.push(...output.events);
+        group.events.sort((a, b) => a.id - b.id);
+      }
     }
 
     // Generic updates need matching readable summaries; SDK messages and actionable
@@ -369,6 +388,11 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       }
 
       if (onlyThinkingSignals(adjacentEvent)) adjacentThinking = adjacentEvent;
+    }
+
+    // The row the output ended up in, which may have taken in an equal one.
+    if (key === "local_command_output") {
+      commandOutputs.set(e.task_id, adjacentEvent ?? group);
     }
   }
 

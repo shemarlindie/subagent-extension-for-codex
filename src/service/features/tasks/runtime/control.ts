@@ -340,7 +340,14 @@ export class Control {
       );
 
       signal.throwIfAborted();
-      this.recordReply(t, output.reply, signal);
+      this.drafts.clear(t.id);
+
+      this.store.event(t, "agent.reply", {
+        text: output.reply,
+        turn: t.turn,
+        ...(output.commandOutput ? { command_output: true as const } : {}),
+      });
+
       t.status = "completed";
     } catch (caught) {
       const error: unknown = signal.aborted ? signal.reason : caught;
@@ -595,13 +602,6 @@ export class Control {
   /** Whether the task's provider runs a message's slash command. */
   private runsCommands(t: Task) {
     return !!this.providers.get(t.provider)?.capabilities.slash_commands;
-  }
-
-  /** Records the successful turn's final reply. */
-  private recordReply(t: Task, text: string, signal: AbortSignal) {
-    signal.throwIfAborted();
-    this.drafts.clear(t.id);
-    this.store.event(t, "agent.reply", { text, turn: t.turn });
   }
 
   /** Holds execution controls while asynchronous deletion removes task resources. */

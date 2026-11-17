@@ -124,7 +124,11 @@ function note(e: Event): ChatNote | undefined {
   if (failed) return failureNote(e, failed);
 
   if (isCompaction(e)) {
-    return { ...base, note: "compaction", text: "Context compacted" };
+    return {
+      ...base,
+      note: "compaction",
+      text: e.presentation?.statusTitle ?? "Context compacted",
+    };
   }
 
   if (
@@ -141,11 +145,21 @@ function note(e: Event): ChatNote | undefined {
  * Chat for a task, in order: its conversation (see `conversation`), an
  * outcome row where each turn ended, with a failed turn's error, standalone
  * task failures, and small notes for a new session, worktree recreation,
- * compaction and a session limited to less than the task asked for.
+ * compaction and a session limited to less than the task asked for. A
+ * compaction's note stands in for the output of the command that ran it.
  */
 export function chatItems(task: Task, events: Event[]): ChatItem[] {
   const sorted = [...events].sort((a, b) => a.id - b.id);
   const messages = conversation(task, sorted);
+
+  const commandReplies = new Set(
+    sorted
+      .filter((e) => eventPayload(e, "agent.reply")?.command_output)
+      .map((e) => e.id),
+  );
+
+  const compactedTurns = new Set<number>();
+  let turn = 1;
 
   const items: ChatItem[] = [];
   let next = 0;
@@ -158,6 +172,13 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       message && message.event_id <= until;
       message = messages[++next]
     ) {
+      if (
+        commandReplies.has(message.event_id) &&
+        compactedTurns.has(message.turn)
+      ) {
+        continue;
+      }
+
       items.push({
         kind: "message",
         id: message.id,
@@ -170,6 +191,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
   for (const e of sorted) {
     const turnEnded = eventPayload(e, "task.turn_ended");
     const failed = eventPayload(e, "task.failed");
+    turn = eventPayload(e, "task.started")?.turn ?? turn;
 
     if (turnEnded) {
       flush(e.id);
@@ -213,6 +235,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       if (marker) {
         flush(e.id);
         items.push(marker);
+        if (marker.note === "compaction") compactedTurns.add(turn);
       }
     }
   }

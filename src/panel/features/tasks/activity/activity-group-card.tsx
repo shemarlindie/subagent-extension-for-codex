@@ -10,6 +10,7 @@ import {
 
 import { eventPayload } from "../../../../shared/events/payload";
 import {
+  compactionSummary,
   replyText,
   type ActivityGroup,
 } from "../../../../shared/tasks/activity/activity-events";
@@ -21,8 +22,8 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { reuseUnchanged } from "../../../shared/utils/reuse-unchanged";
 import { useNow } from "../../../shared/utils/use-now";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
-import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { formatDuration } from "../list/duration";
+import { MessageText } from "../shared/message-text";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
 import {
@@ -123,7 +124,11 @@ function GroupCard({
 
   useEffect(() => () => cancelReveal.current?.(), []);
 
-  const reply = group.events.find((event) => replyText(event) !== undefined);
+  // A reply or compaction summary shows as a preview that expands.
+  const preview = group.events.find(
+    (event) =>
+      replyText(event) !== undefined || compactionSummary(event) !== undefined,
+  );
 
   const userMessages = group.events.flatMap((event) => {
     const text = userMessageText(event);
@@ -136,14 +141,17 @@ function GroupCard({
   const showsOwnText =
     conversational ||
     userMessages.length > 0 ||
-    reply !== undefined ||
+    preview !== undefined ||
     ((group.kind === "event" || group.kind === "status") &&
       group.summary !== undefined);
 
-  const markdownSummary =
+  const parentMessage =
     group.summary !== undefined &&
-    (summaryIsResponse(group.events, group.summary) ||
-      summaryIsParentMessage(group.events, group.summary));
+    summaryIsParentMessage(group.events, group.summary);
+
+  const responseSummary =
+    group.summary !== undefined &&
+    summaryIsResponse(group.events, group.summary);
 
   const contentEvents = group.events.filter(
     (event) => event.type === "agent.message" || event.type === "agent.content",
@@ -263,23 +271,27 @@ function GroupCard({
           </Collapsible.Trigger>
         </TooltipWrapper>
       </div>
-      {reply && (
+      {preview && (
         <div className="activity-body">
-          <EventBody event={reply} />
+          <EventBody event={preview} />
         </div>
       )}
       {userMessages.map((message) => (
         <div key={message.id} className="chat-message" data-from="user">
-          <p className="chat-bubble">{message.text}</p>
+          <MessageText className="chat-bubble" text={message.text} />
         </div>
       ))}
       {group.summary &&
         userMessages.length === 0 &&
-        (markdownSummary ? (
-          // The worker's response and the parent agent's messages are written in Markdown.
-          <div className="activity-group-summary activity-markdown">
-            <MarkdownView content={group.summary} />
-          </div>
+        (parentMessage || responseSummary ? (
+          // The worker's response and the parent agent's messages are written
+          // in Markdown, and the parent's commands stand out.
+          <MessageText
+            className="activity-group-summary activity-markdown"
+            text={group.summary}
+            markdown
+            commands={parentMessage}
+          />
         ) : (
           <p
             className={

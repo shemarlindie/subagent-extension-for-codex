@@ -43,6 +43,8 @@ interface AgentContentPayload extends AgentMessageFields {
 interface AgentReplyPayload {
   text: string;
   turn: number;
+  /** The text is what a command such as /compact printed. */
+  command_output?: true;
 }
 
 interface AgentStartedPayload {

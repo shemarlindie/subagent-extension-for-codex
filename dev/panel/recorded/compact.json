@@ -3,43 +3,60 @@
     "id": "preview-recorded-compact",
     "owner": "preview",
     "title": "Recorded: compact command",
-    "description": "Name three primary colors in one short sentence. Use no tools.",
+    "description": "Read math.js and README.md, then briefly describe the project in two sentences.",
     "provider": "claude",
     "provider_options": {
       "claude": {
         "approval_decider": "user",
-        "permission_mode": "plan",
-        "permission_source": "profile",
+        "permission_mode": "auto",
+        "permission_source": "setting",
         "claude_policy": {
           "sandbox": false,
           "subagents": true,
-          "settings_files": false,
-          "user_mcp": false
+          "settings_files": true,
+          "user_mcp": true
+        },
+        "effective": { "effort": "medium" },
+        "prompt_cache": {
+          "requested_at": "2026-11-17T07:55:32.508Z",
+          "ttl": "1h"
+        },
+        "context_usage": {
+          "total_tokens": 37724,
+          "window_tokens": 1000000,
+          "auto_compact_tokens": 967000,
+          "categories": [
+            { "name": "System prompt", "tokens": 4074 },
+            { "name": "System tools", "tokens": 16256 },
+            { "name": "MCP server instructions", "tokens": 631 },
+            { "name": "Memory files", "tokens": 55 },
+            { "name": "Skills", "tokens": 5916 },
+            { "name": "Messages", "tokens": 10792 }
+          ]
         }
       }
     },
-    "worker_profile": "reviewer",
+    "worker_profile": "implementer",
     "repository": "/demo/project",
     "revision": "HEAD",
-    "workspace_strategy": "worktree",
-    "budget": { "max_runtime_minutes": 5, "max_cost_usd": 1 },
-    "created_by": "user",
+    "workspace_strategy": "current_repo",
+    "budget": { "max_runtime_minutes": null, "max_cost_usd": null },
+    "created_by": "parent",
     "status": "completed",
     "created_at": "2026-10-02T11:39:59.999Z",
-    "updated_at": "2026-10-02T11:40:09.647Z",
-    "instructions_sent": 1,
+    "updated_at": "2026-10-02T11:40:14.182Z",
+    "instructions_sent": 2,
     "pending_steers": [],
     "queue": [],
-    "turn": 2,
-    "runtime_ms": 9562,
-    "model": "haiku",
-    "reasoning_effort": "medium",
-    "started_at": "2026-10-02T11:40:00.060Z",
+    "turn": 3,
+    "runtime_ms": 12198,
+    "model": "claude-haiku-5-5",
+    "started_at": "2026-10-02T11:40:00.056Z",
     "session_owner": "preview-host",
     "session_id": "preview-session",
-    "cost_usd": 0.0733351,
-    "session_cost_usd": 0.0733351,
-    "completed_at": "2026-10-02T11:40:09.646Z",
+    "cost_usd": 0.007775475,
+    "session_cost_usd": 0.007775475,
+    "completed_at": "2026-10-02T11:40:14.182Z",
     "conversation_id": "dev-thread"
   },
   "events": [
@@ -47,21 +64,21 @@
       "id": 3400,
       "task_id": "preview-recorded-compact",
       "type": "task.queued",
-      "timestamp": "2026-10-02T11:40:00.000Z",
+      "timestamp": "2026-10-02T11:39:59.999Z",
       "data": {}
     },
     {
       "id": 3401,
       "task_id": "preview-recorded-compact",
       "type": "task.started",
-      "timestamp": "2026-10-02T11:40:00.060Z",
+      "timestamp": "2026-10-02T11:40:00.056Z",
       "data": { "turn": 1 }
     },
     {
       "id": 3402,
       "task_id": "preview-recorded-compact",
       "type": "agent.started",
-      "timestamp": "2026-10-02T11:40:00.272Z",
+      "timestamp": "2026-10-02T11:40:00.296Z",
       "data": {
         "model": "claude-haiku-5-5",
         "tools": [
@@ -78,6 +95,7 @@
           "Edit",
           "EnterPlanMode",
           "EnterWorktree",
+          "ExitPlanMode",
           "ExitWorktree",
           "ListAgents",
           "Monitor",
@@ -103,14 +121,14 @@
           "thinking": false,
           "liveStatus": false,
           "statusTitle": "Claude connected",
-          "messageId": "f02b513a-8821-45e9-b792-774c06cfc0b3",
+          "messageId": "3bd19c27-e825-4c45-864f-0868b2b42bd0",
           "hasThinking": false
         },
         "response_ref": "response-3402",
         "raw_response": {
           "type": "system",
           "subtype": "init",
-          "cwd": "/demo/data/worktrees/preview-recorded-compact",
+          "cwd": "/demo/project",
           "session_id": "preview-session",
           "tools": [
             "Task",
@@ -126,6 +144,7 @@
             "Edit",
             "EnterPlanMode",
             "EnterWorktree",
+            "ExitPlanMode",
             "ExitWorktree",
             "ListAgents",
             "Monitor",
@@ -146,12 +165,12 @@
           ],
           "mcp_servers": [],
           "model": "claude-haiku-5-5",
-          "permissionMode": "plan",
+          "permissionMode": "auto",
           "slash_commands": [],
           "terminal_slash_commands": [],
           "apiKeySource": "none",
           "claude_code_version": "2.1.325",
-          "output_style": "default",
+          "output_style": "Concise",
           "agents": ["general-purpose"],
           "skills": [],
           "plugins": [],
@@ -178,8 +197,8 @@
           ],
           "analytics_disabled": false,
           "product_feedback_disabled": false,
-          "uuid": "f02b513a-8821-45e9-b792-774c06cfc0b3",
-          "original_cwd": "/demo/data/worktrees/preview-recorded-compact",
+          "uuid": "3bd19c27-e825-4c45-864f-0868b2b42bd0",
+          "original_cwd": "/demo/project",
           "additional_directories": [],
           "fast_mode_state": "off",
           "fast_mode_disabled_reason": "sdk_opt_in_required",
@@ -195,94 +214,96 @@
             "sdk_mcp_dial_runs": 0,
             "sdk_mcp_servers_dialed": 0,
             "flag_fetch_kick": "not_eligible",
-            "flag_fetch_kick_judged_at_ms": 57,
+            "flag_fetch_kick_judged_at_ms": 61,
             "hooks_init_source": "startup",
             "phases": {
-              "node_boot_ms": 38,
+              "node_boot_ms": 41,
               "settings_load_ms": 0,
               "pre_action_mdm_keychain_ms": 1,
-              "pre_action_init_ms": 17,
+              "pre_action_init_ms": 18,
               "pre_action_client_data_url_ms": 0,
               "pre_action_migrations_ms": 0,
-              "pre_action_managed_settings_ms": 17,
-              "pre_action_ms": 38,
-              "permission_context_ms": 23,
+              "pre_action_managed_settings_ms": 18,
+              "pre_action_ms": 40,
+              "permission_context_ms": 13,
               "setup_import_ms": 1,
-              "skills_load_ms": 7,
-              "setup_uds_dir_ms": 8,
-              "setup_uds_listen_ms": 0,
-              "setup_uds_publish_ms": 2,
-              "setup_uds_messaging_ms": 12,
+              "setup_uds_dir_ms": 14,
+              "setup_uds_listen_ms": 2,
+              "skills_load_ms": 17,
+              "setup_uds_publish_ms": 1,
+              "setup_uds_messaging_ms": 19,
               "setup_hooks_snapshot_ms": 0,
               "setup_file_watcher_ms": 0,
-              "setup_release_notes_ms": 6,
-              "setup_ms": 18,
-              "tools_commands_load_ms": 6,
-              "model_catalog_decision_ms": 6,
-              "mcp_config_wait_ms": 4,
-              "mcp_config_load_ms": 0,
-              "mcp_connect_ms": 0,
-              "hooks_init_ms": 2,
-              "print_import_ms": 2,
+              "setup_release_notes_ms": 5,
+              "setup_ms": 24,
+              "tools_commands_load_ms": 5,
+              "model_catalog_decision_ms": 4,
+              "mcp_config_wait_ms": 2,
+              "mcp_config_load_ms": 17,
+              "mcp_connect_ms": 1,
+              "hooks_init_ms": 7,
+              "print_import_ms": 3,
               "grove_check_ms": 0,
-              "headless_prologue_ms": 2,
+              "headless_prologue_ms": 1,
               "initial_messages_load_ms": 0,
               "headless_post_load_ms": 1,
-              "input_ready_ms": 157,
-              "first_message_read_ms": 177,
+              "input_ready_ms": 164,
+              "mcp_client_module_load_ms": 0,
+              "first_message_read_ms": 187,
               "sdk_mcp_update_ms": 0,
               "first_message_handle_ms": 0,
-              "first_message_handle_cpu_ms": 0,
+              "first_message_handle_cpu_ms": 1,
               "first_message_handle_loop_lag_ms": 0,
               "mcp_prewait_ms": 0,
-              "qe_system_prompt_ms": 3,
+              "qe_system_prompt_ms": 22,
               "prompt_submit_hooks_ms": 1,
               "qe_plugin_skills_load_ms": 1,
-              "init_emit_ms": 0
+              "init_emit_ms": 1
             },
-            "time_origin_ms": 1794692238140.149,
+            "time_origin_ms": 1794902119214.154,
             "phase_start_ms": {
               "node_boot_ms": 0,
-              "settings_load_ms": 38,
-              "pre_action_mdm_keychain_ms": 39,
-              "pre_action_init_ms": 40,
-              "pre_action_client_data_url_ms": 57,
-              "pre_action_migrations_ms": 58,
-              "pre_action_managed_settings_ms": 58,
-              "pre_action_ms": 39,
-              "permission_context_ms": 79,
-              "setup_import_ms": 103,
-              "skills_load_ms": 105,
-              "setup_uds_dir_ms": 105,
-              "setup_uds_listen_ms": 114,
-              "setup_uds_publish_ms": 114,
-              "setup_uds_messaging_ms": 104,
-              "setup_hooks_snapshot_ms": 116,
-              "setup_file_watcher_ms": 116,
-              "setup_release_notes_ms": 117,
-              "setup_ms": 105,
-              "tools_commands_load_ms": 128,
-              "model_catalog_decision_ms": 134,
-              "mcp_config_wait_ms": 141,
-              "mcp_connect_ms": 148,
-              "hooks_init_ms": 146,
-              "print_import_ms": 148,
-              "grove_check_ms": 152,
-              "headless_prologue_ms": 151,
-              "initial_messages_load_ms": 152,
-              "headless_post_load_ms": 152,
+              "settings_load_ms": 41,
+              "pre_action_mdm_keychain_ms": 42,
+              "pre_action_init_ms": 43,
+              "pre_action_client_data_url_ms": 61,
+              "pre_action_migrations_ms": 61,
+              "pre_action_managed_settings_ms": 61,
+              "pre_action_ms": 42,
+              "permission_context_ms": 84,
+              "setup_import_ms": 97,
+              "setup_uds_dir_ms": 100,
+              "setup_uds_listen_ms": 115,
+              "skills_load_ms": 100,
+              "setup_uds_publish_ms": 117,
+              "setup_uds_messaging_ms": 99,
+              "setup_hooks_snapshot_ms": 119,
+              "setup_file_watcher_ms": 119,
+              "setup_release_notes_ms": 119,
+              "setup_ms": 100,
+              "tools_commands_load_ms": 130,
+              "model_catalog_decision_ms": 135,
+              "mcp_config_wait_ms": 140,
+              "mcp_connect_ms": 153,
+              "hooks_init_ms": 148,
+              "print_import_ms": 154,
+              "grove_check_ms": 157,
+              "headless_prologue_ms": 157,
+              "initial_messages_load_ms": 158,
+              "headless_post_load_ms": 158,
               "input_ready_ms": 0,
+              "mcp_client_module_load_ms": 174,
               "first_message_read_ms": 0,
-              "sdk_mcp_update_ms": 177,
-              "first_message_handle_ms": 177,
-              "mcp_prewait_ms": 177,
-              "qe_system_prompt_ms": 180,
-              "prompt_submit_hooks_ms": 188,
-              "qe_plugin_skills_load_ms": 200,
-              "init_emit_ms": 201
+              "sdk_mcp_update_ms": 187,
+              "first_message_handle_ms": 187,
+              "mcp_prewait_ms": 188,
+              "qe_system_prompt_ms": 191,
+              "prompt_submit_hooks_ms": 222,
+              "qe_plugin_skills_load_ms": 228,
+              "init_emit_ms": 228
             }
           },
-          "user_message_uuids": ["d81db77f-0870-4c58-9e79-1bd229f83fa5"]
+          "user_message_uuids": ["aa38532b-5e34-457f-8936-b94adb825892"]
         }
       }
     },
@@ -290,12 +311,12 @@
       "id": 3403,
       "task_id": "preview-recorded-compact",
       "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:00.281Z",
+      "timestamp": "2026-10-02T11:40:00.306Z",
       "data": {
         "type": "system",
         "subtype": "status",
         "status": "requesting",
-        "uuid": "77d8d525-e31f-487a-a9d9-a4363f08fce8",
+        "uuid": "5464bc93-9b7b-4c08-8ab7-4055690ae906",
         "activity": {
           "kind": "status",
           "quiet": true,
@@ -304,7 +325,7 @@
           "liveStatus": true,
           "statusTitle": "Requesting",
           "title": "Claude status",
-          "messageId": "77d8d525-e31f-487a-a9d9-a4363f08fce8",
+          "messageId": "5464bc93-9b7b-4c08-8ab7-4055690ae906",
           "hasThinking": false
         },
         "response_ref": "response-3403",
@@ -313,42 +334,44 @@
           "subtype": "status",
           "status": "requesting",
           "session_id": "preview-session",
-          "uuid": "77d8d525-e31f-487a-a9d9-a4363f08fce8",
-          "user_message_uuids": ["d81db77f-0870-4c58-9e79-1bd229f83fa5"]
+          "uuid": "5464bc93-9b7b-4c08-8ab7-4055690ae906",
+          "user_message_uuids": ["aa38532b-5e34-457f-8936-b94adb825892"]
         }
       }
     },
     {
       "id": 3404,
       "task_id": "preview-recorded-compact",
-      "type": "agent.message",
-      "timestamp": "2026-10-02T11:40:02.704Z",
+      "type": "tool.started",
+      "timestamp": "2026-10-02T11:40:01.330Z",
       "data": {
-        "message_id": "msg_011Ch3YQEoXrnkA4iaihr35s",
-        "parent_tool_use_id": null,
-        "role": "assistant",
-        "text": "Red, blue, and yellow are three primary colors.",
+        "id": "toolu_016GL7KEDKAGgDjARBKMsvUG",
+        "name": "Read",
+        "input": { "file_path": "/demo/project/math.js" },
         "activity": {
-          "kind": "agent.message",
+          "kind": "tool.started",
           "quiet": false,
           "failed": false,
           "thinking": false,
           "liveStatus": false,
-          "messageId": "msg_011Ch3YQEoXrnkA4iaihr35s",
+          "messageId": "msg_011Ch899UKYu7YMk2ejhRcrY",
           "hasThinking": false
         },
         "response_ref": "response-3404",
         "raw_response": {
           "type": "assistant",
           "message": {
-            "model": "claude-sonnet-5-5",
-            "id": "msg_011Ch3YQEoXrnkA4iaihr35s",
+            "model": "claude-haiku-5-5",
+            "id": "msg_011Ch899UKYu7YMk2ejhRcrY",
             "type": "message",
             "role": "assistant",
             "content": [
               {
-                "type": "text",
-                "text": "Red, blue, and yellow are three primary colors."
+                "type": "tool_use",
+                "id": "toolu_016GL7KEDKAGgDjARBKMsvUG",
+                "name": "Read",
+                "input": { "file_path": "/demo/project/math.js" },
+                "caller": { "type": "direct" }
               }
             ],
             "container": null,
@@ -357,13 +380,13 @@
             "stop_details": null,
             "usage": {
               "input_tokens": 2,
-              "cache_creation_input_tokens": 9913,
-              "cache_read_input_tokens": 23160,
+              "cache_creation_input_tokens": 12796,
+              "cache_read_input_tokens": 23169,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 9913
+                "ephemeral_1h_input_tokens": 12796
               },
-              "output_tokens": 4,
+              "output_tokens": 20,
               "service_tier": "standard",
               "inference_geo": "global",
               "speed": "standard"
@@ -374,27 +397,158 @@
           },
           "parent_tool_use_id": null,
           "session_id": "preview-session",
-          "uuid": "cca37934-3a98-47a1-a0c1-700baef8486a",
-          "timestamp": "2026-11-14T21:37:20.766Z",
+          "uuid": "7d6cc733-bea4-4e07-9505-f1e62f808878",
+          "timestamp": "2026-11-17T07:55:20.474Z",
           "request_id": "req_preview_0001",
-          "user_message_uuid": "d81db77f-0870-4c58-9e79-1bd229f83fa5",
-          "user_message_uuids": ["d81db77f-0870-4c58-9e79-1bd229f83fa5"]
+          "wire_tool_inputs": {
+            "toolu_016GL7KEDKAGgDjARBKMsvUG": {
+              "file_path": "/demo/project/math.js"
+            }
+          },
+          "user_message_uuid": "aa38532b-5e34-457f-8936-b94adb825892",
+          "user_message_uuids": ["aa38532b-5e34-457f-8936-b94adb825892"]
         }
       }
     },
     {
       "id": 3405,
       "task_id": "preview-recorded-compact",
+      "type": "tool.completed",
+      "timestamp": "2026-10-02T11:40:01.355Z",
+      "data": {
+        "id": "toolu_016GL7KEDKAGgDjARBKMsvUG",
+        "content": "File content isn't stored.",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "d750a6c5-0e6d-40c5-af31-3b77d5184e08",
+          "hasThinking": false
+        },
+        "response_ref": "response-3405",
+        "raw_response": {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_016GL7KEDKAGgDjARBKMsvUG",
+                "type": "tool_result",
+                "content": "1\texport const add = (a, b) => a + b;\n2\t"
+              }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "d750a6c5-0e6d-40c5-af31-3b77d5184e08",
+          "timestamp": "2026-11-17T07:55:20.502Z",
+          "tool_use_result": {
+            "type": "text",
+            "file": {
+              "filePath": "/demo/project/math.js",
+              "content": "export const add = (a, b) => a + b;\n",
+              "numLines": 2,
+              "startLine": 1,
+              "totalLines": 2
+            }
+          },
+          "tool_result_meta": [
+            {
+              "id": "toolu_016GL7KEDKAGgDjARBKMsvUG",
+              "permission_decision": {
+                "decision": "accept",
+                "source": "config",
+                "reason_type": "mode"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3406,
+      "task_id": "preview-recorded-compact",
+      "type": "tool.started",
+      "timestamp": "2026-10-02T11:40:01.697Z",
+      "data": {
+        "id": "toolu_01KscTpkkruTo2eBDVg9qGgp",
+        "name": "Read",
+        "input": { "file_path": "/demo/project/README.md" },
+        "activity": {
+          "kind": "tool.started",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011Ch899UKYu7YMk2ejhRcrY",
+          "hasThinking": false
+        },
+        "response_ref": "response-3406",
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-haiku-5-5",
+            "id": "msg_011Ch899UKYu7YMk2ejhRcrY",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_01KscTpkkruTo2eBDVg9qGgp",
+                "name": "Read",
+                "input": { "file_path": "/demo/project/README.md" },
+                "caller": { "type": "direct" }
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 12796,
+              "cache_read_input_tokens": 23169,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 12796
+              },
+              "output_tokens": 20,
+              "service_tier": "standard",
+              "inference_geo": "global",
+              "speed": "standard"
+            },
+            "input_transformations": [],
+            "diagnostics": null,
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "4d84eeab-8157-4438-bf64-0ae29388b892",
+          "timestamp": "2026-11-17T07:55:20.843Z",
+          "request_id": "req_preview_0001",
+          "wire_tool_inputs": {
+            "toolu_01KscTpkkruTo2eBDVg9qGgp": {
+              "file_path": "/demo/project/README.md"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 3407,
+      "task_id": "preview-recorded-compact",
       "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:02.714Z",
+      "timestamp": "2026-10-02T11:40:01.715Z",
       "data": {
         "type": "rate_limit_event",
         "rate_limit_info": {
           "status": "allowed",
           "rateLimitType": "five_hour",
-          "resetsAt": 1790959200
+          "resetsAt": 1790959199
         },
-        "uuid": "9104f6c7-b49a-465d-898f-f491c4c8302f",
+        "uuid": "df521329-c448-4e83-b62f-2db96db7dff0",
         "activity": {
           "kind": "rate_limit_event",
           "quiet": true,
@@ -403,34 +557,185 @@
           "liveStatus": true,
           "statusTitle": "Rate limit updated",
           "title": "Rate limit update",
-          "messageId": "9104f6c7-b49a-465d-898f-f491c4c8302f",
+          "messageId": "df521329-c448-4e83-b62f-2db96db7dff0",
           "hasThinking": false
         },
-        "response_ref": "response-3405",
+        "response_ref": "response-3407",
         "raw_response": {
           "type": "rate_limit_event",
           "rate_limit_info": {
             "status": "allowed",
             "rateLimitType": "five_hour",
-            "resetsAt": 1790959200
+            "resetsAt": 1790959199
           },
-          "uuid": "9104f6c7-b49a-465d-898f-f491c4c8302f",
+          "uuid": "df521329-c448-4e83-b62f-2db96db7dff0",
           "session_id": "preview-session"
         }
       }
     },
     {
-      "id": 3406,
+      "id": 3408,
+      "task_id": "preview-recorded-compact",
+      "type": "tool.completed",
+      "timestamp": "2026-10-02T11:40:01.737Z",
+      "data": {
+        "id": "toolu_01KscTpkkruTo2eBDVg9qGgp",
+        "content": "File content isn't stored.",
+        "activity": {
+          "kind": "tool.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "3c50050e-7bae-4280-81c3-f4c24999f566",
+          "hasThinking": false
+        },
+        "response_ref": "response-3408",
+        "raw_response": {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_01KscTpkkruTo2eBDVg9qGgp",
+                "type": "tool_result",
+                "content": "1\t# Demo\n2\t\n3\tA tiny demo project.\n4\t"
+              }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "3c50050e-7bae-4280-81c3-f4c24999f566",
+          "timestamp": "2026-11-17T07:55:20.885Z",
+          "tool_use_result": {
+            "type": "text",
+            "file": {
+              "filePath": "/demo/project/README.md",
+              "content": "# Demo\n\nA tiny demo project.\n",
+              "numLines": 4,
+              "startLine": 1,
+              "totalLines": 4
+            }
+          },
+          "tool_result_meta": [
+            {
+              "id": "toolu_01KscTpkkruTo2eBDVg9qGgp",
+              "permission_decision": {
+                "decision": "accept",
+                "source": "config",
+                "reason_type": "mode"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 3409,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:01.742Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": "requesting",
+        "uuid": "7e3e4139-1c00-4679-9ed1-3b43a6069148",
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Requesting",
+          "title": "Claude status",
+          "messageId": "7e3e4139-1c00-4679-9ed1-3b43a6069148",
+          "hasThinking": false
+        },
+        "response_ref": "response-3409",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "7e3e4139-1c00-4679-9ed1-3b43a6069148",
+          "user_message_uuids": ["aa38532b-5e34-457f-8936-b94adb825892"]
+        }
+      }
+    },
+    {
+      "id": 3410,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.message",
+      "timestamp": "2026-10-02T11:40:02.794Z",
+      "data": {
+        "message_id": "msg_011Ch899a5atMQ2fMVRbA5sB",
+        "parent_tool_use_id": null,
+        "role": "assistant",
+        "text": "`math.js` exports one function, `add(a, b)`, which returns `a + b`. `README.md` is a placeholder titled \"Demo\" that describes it as \"A tiny demo project.\"\n\nTwo-sentence description: The project is a tiny demo library whose only code is `math.js`, which exports an `add` function that sums two values. The README gives no further detail beyond calling it a tiny demo project.",
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011Ch899a5atMQ2fMVRbA5sB",
+          "hasThinking": false
+        },
+        "response_ref": "response-3410",
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-haiku-5-5",
+            "id": "msg_011Ch899a5atMQ2fMVRbA5sB",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "`math.js` exports one function, `add(a, b)`, which returns `a + b`. `README.md` is a placeholder titled \"Demo\" that describes it as \"A tiny demo project.\"\n\nTwo-sentence description: The project is a tiny demo library whose only code is `math.js`, which exports an `add` function that sums two values. The README gives no further detail beyond calling it a tiny demo project."
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 2180,
+              "cache_read_input_tokens": 35965,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 2180
+              },
+              "output_tokens": 1,
+              "service_tier": "standard",
+              "inference_geo": "global",
+              "speed": "standard"
+            },
+            "input_transformations": [],
+            "diagnostics": null,
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "44608668-0bb5-41e8-afcc-3662d22d6922",
+          "timestamp": "2026-11-17T07:55:21.939Z",
+          "request_id": "req_preview_0002"
+        }
+      }
+    },
+    {
+      "id": 3411,
       "task_id": "preview-recorded-compact",
       "type": "agent.completed",
-      "timestamp": "2026-10-02T11:40:02.726Z",
+      "timestamp": "2026-10-02T11:40:02.822Z",
       "data": {
-        "total_cost_usd": 0.042162,
+        "total_cost_usd": 0.0037734400000000003,
         "usage": {
-          "input_tokens": 2,
-          "cache_creation_input_tokens": 9913,
-          "cache_read_input_tokens": 23160,
-          "output_tokens": 19,
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 14976,
+          "cache_read_input_tokens": 59134,
+          "output_tokens": 373,
           "output_tokens_details": { "thinking_tokens": 0 },
           "server_tool_use": {
             "web_search_requests": 0,
@@ -438,19 +743,19 @@
           },
           "service_tier": "standard",
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 9913,
+            "ephemeral_1h_input_tokens": 14976,
             "ephemeral_5m_input_tokens": 0
           },
           "inference_geo": "global",
           "iterations": [
             {
               "input_tokens": 2,
-              "output_tokens": 19,
-              "cache_read_input_tokens": 23160,
-              "cache_creation_input_tokens": 9913,
+              "output_tokens": 128,
+              "cache_read_input_tokens": 35965,
+              "cache_creation_input_tokens": 2180,
               "cache_creation": {
                 "ephemeral_5m_input_tokens": 0,
-                "ephemeral_1h_input_tokens": 9913
+                "ephemeral_1h_input_tokens": 2180
               },
               "type": "message"
             }
@@ -461,29 +766,29 @@
         "is_error": false,
         "subtype": "success",
         "type": "result",
-        "duration_ms": 2477,
-        "uuid": "ba586a8b-ea8f-42ab-bf50-1cbb8c764ca8",
-        "cost_usd": 0.042162,
+        "duration_ms": 2565,
+        "uuid": "d2dc0950-790d-413a-98e9-f983b0232113",
+        "cost_usd": 0.0037734400000000003,
         "activity": {
           "kind": "agent.completed",
           "quiet": false,
           "failed": false,
           "thinking": false,
           "liveStatus": false,
-          "messageId": "ba586a8b-ea8f-42ab-bf50-1cbb8c764ca8",
+          "messageId": "d2dc0950-790d-413a-98e9-f983b0232113",
           "hasThinking": false
         },
-        "response_ref": "response-3406",
+        "response_ref": "response-3411",
         "raw_response": {
-          "duration_api_ms": 2267,
+          "duration_api_ms": 2383,
           "stop_reason": "end_turn",
           "session_id": "preview-session",
-          "total_cost_usd": 0.042162,
+          "total_cost_usd": 0.0037734400000000003,
           "usage": {
-            "input_tokens": 2,
-            "cache_creation_input_tokens": 9913,
-            "cache_read_input_tokens": 23160,
-            "output_tokens": 19,
+            "input_tokens": 4,
+            "cache_creation_input_tokens": 14976,
+            "cache_read_input_tokens": 59134,
+            "output_tokens": 373,
             "output_tokens_details": { "thinking_tokens": 0 },
             "server_tool_use": {
               "web_search_requests": 0,
@@ -491,19 +796,19 @@
             },
             "service_tier": "standard",
             "cache_creation": {
-              "ephemeral_1h_input_tokens": 9913,
+              "ephemeral_1h_input_tokens": 14976,
               "ephemeral_5m_input_tokens": 0
             },
             "inference_geo": "global",
             "iterations": [
               {
                 "input_tokens": 2,
-                "output_tokens": 19,
-                "cache_read_input_tokens": 23160,
-                "cache_creation_input_tokens": 9913,
+                "output_tokens": 128,
+                "cache_read_input_tokens": 35965,
+                "cache_creation_input_tokens": 2180,
                 "cache_creation": {
                   "ephemeral_5m_input_tokens": 0,
-                  "ephemeral_1h_input_tokens": 9913
+                  "ephemeral_1h_input_tokens": 2180
                 },
                 "type": "message"
               }
@@ -512,19 +817,1420 @@
             "fallback_credit": null
           },
           "modelUsage": {
-            "claude-sonnet-5-5": {
-              "inputTokens": 2,
-              "outputTokens": 19,
-              "cacheReadInputTokens": 23160,
-              "cacheCreationInputTokens": 9913,
+            "claude-haiku-5-5": {
+              "inputTokens": 4,
+              "outputTokens": 373,
+              "cacheReadInputTokens": 59134,
+              "cacheCreationInputTokens": 14976,
               "webSearchRequests": 0,
-              "costUSD": 0.042162,
+              "costUSD": 0.0037734400000000003,
               "contextWindow": 1000000,
               "maxOutputTokens": 128000,
               "thinkingTokens": 0,
               "cacheCreationEphemeral5mInputTokens": 0,
-              "cacheCreationEphemeral1hInputTokens": 9913,
-              "canonicalModel": "claude-sonnet-5-5",
+              "cacheCreationEphemeral1hInputTokens": 14976,
+              "canonicalModel": "claude-haiku-5-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "permission_denials": [],
+          "terminal_reason": "completed",
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "subagent_stats": {
+            "spawned": 0,
+            "requested": { "background": 0, "foreground": 0, "unset": 0 },
+            "started_in_background": 0,
+            "max_depth": 0,
+            "spawned_by_subagents": 0,
+            "completed": 0,
+            "failed": 0,
+            "killed": { "parent": 0, "user": 0, "system": 0 },
+            "refused": {
+              "depth_limit": 0,
+              "concurrency_limit": 0,
+              "budget": 0
+            },
+            "by_type": {}
+          },
+          "safety_stops": 0,
+          "is_error": false,
+          "num_turns": 3,
+          "subtype": "success",
+          "api_error_status": null,
+          "result": "`math.js` exports one function, `add(a, b)`, which returns `a + b`. `README.md` is a placeholder titled \"Demo\" that describes it as \"A tiny demo project.\"\n\nTwo-sentence description: The project is a tiny demo library whose only code is `math.js`, which exports an `add` function that sums two values. The README gives no further detail beyond calling it a tiny demo project.",
+          "ttft_ms": 1071,
+          "type": "result",
+          "duration_ms": 2565,
+          "uuid": "d2dc0950-790d-413a-98e9-f983b0232113",
+          "ttft_stream_ms": 726,
+          "time_to_request_ms": 122,
+          "time_to_request_phases_ms": {
+            "other": 2,
+            "system_prompt": 23,
+            "resume_other": 0,
+            "process_user_input": 1,
+            "input_attachments": 7,
+            "input_hooks": 1,
+            "conversation_append": 0,
+            "transcript_persist": 3,
+            "tool_pool_refresh": 1,
+            "init_message": 2,
+            "init_frame_send": 1,
+            "engine_pickup": 0,
+            "loop_entry": 2,
+            "message_prep": 0,
+            "model_config_wait": 0,
+            "autocompact": 1,
+            "request_announcements": 2,
+            "query_setup": 3,
+            "auto_mode_context_wait": 18,
+            "model_gates": 41,
+            "tool_schema_build": 7,
+            "message_normalization": 1,
+            "client_creation": 1,
+            "request_build": 5
+          },
+          "turn_start_resume_kind": "none",
+          "process_turn_index": 0,
+          "time_to_request_loop_lag_ms": 1,
+          "time_to_request_cpu_ms": 113,
+          "time_to_request_major_faults": 197,
+          "input_attachments_detail": {
+            "slowest_producer": "skill_listing",
+            "slowest_producer_ms": 2,
+            "cpu_ms": 9,
+            "major_faults": 32,
+            "setup_ms": 1,
+            "prompt_producers_ms": 0,
+            "ambient_start_ms": 3,
+            "ambient_wait_ms": 1,
+            "render_ms": 0,
+            "producers": 40,
+            "token_counts": 0
+          },
+          "tool_schema_build_detail": {
+            "betas_ms": 0,
+            "waits_ms": 0,
+            "placement_ms": 1,
+            "render_ms": 5,
+            "after_ms": 0,
+            "other_ms": 1,
+            "tools": 12,
+            "new_schemas": 12
+          },
+          "message_normalization_detail": {
+            "before_ms": 0,
+            "normalize_ms": 1,
+            "images_ms": 0,
+            "post_process_ms": 0,
+            "after_ms": 0,
+            "other_ms": 0,
+            "messages": 14,
+            "wire_messages": 2
+          },
+          "request_build_detail": {
+            "records_ms": 0,
+            "system_ms": 1,
+            "headers_ms": 0,
+            "cache_break_record_ms": 0,
+            "plans_ms": 1,
+            "retry_setup_ms": 0,
+            "sent_build_ms": 1,
+            "record_attempt_ms": 2,
+            "other_ms": 0,
+            "sent_build_safety_context_ms": 0,
+            "sent_build_cache_breakpoints_ms": 0,
+            "sent_build_surrogate_scan_ms": 0
+          },
+          "first_content_frame_ms": 727,
+          "user_message_uuid": "aa38532b-5e34-457f-8936-b94adb825892",
+          "user_message_uuids": ["aa38532b-5e34-457f-8936-b94adb825892"],
+          "request_sent_wall_ms": 1794902119526,
+          "first_request_input_tokens": 35967,
+          "first_request_cache_read_input_tokens": 23169,
+          "queued_turn_count": 0,
+          "result_index": 0,
+          "model_usage_since_last_result": {
+            "claude-haiku-5-5": {
+              "inputTokens": 4,
+              "outputTokens": 373,
+              "cacheReadInputTokens": 59134,
+              "cacheCreationInputTokens": 14976,
+              "webSearchRequests": 0,
+              "costUSD": 0.0037734400000000003,
+              "contextWindow": 1000000,
+              "maxOutputTokens": 128000,
+              "thinkingTokens": 0,
+              "cacheCreationEphemeral5mInputTokens": 0,
+              "cacheCreationEphemeral1hInputTokens": 14976,
+              "canonicalModel": "claude-haiku-5-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "credential_expires_at": "2026-12-11T13:26:03.371Z"
+        }
+      }
+    },
+    {
+      "id": 3412,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.reply",
+      "timestamp": "2026-10-02T11:40:03.399Z",
+      "data": {
+        "text": "`math.js` exports one function, `add(a, b)`, which returns `a + b`. `README.md` is a placeholder titled \"Demo\" that describes it as \"A tiny demo project.\"\n\nTwo-sentence description: The project is a tiny demo library whose only code is `math.js`, which exports an `add` function that sums two values. The README gives no further detail beyond calling it a tiny demo project.",
+        "turn": 1
+      }
+    },
+    {
+      "id": 3413,
+      "task_id": "preview-recorded-compact",
+      "type": "task.turn_ended",
+      "timestamp": "2026-10-02T11:40:03.400Z",
+      "data": {
+        "turn": 1,
+        "outcome": "completed",
+        "runtime_ms": 3399,
+        "cost_usd": 0.0037734400000000003
+      }
+    },
+    {
+      "id": 3414,
+      "task_id": "preview-recorded-compact",
+      "type": "task.completed",
+      "timestamp": "2026-10-02T11:40:03.402Z",
+      "data": {}
+    },
+    {
+      "id": 3415,
+      "task_id": "preview-recorded-compact",
+      "type": "task.instruction",
+      "timestamp": "2026-10-02T11:40:04.176Z",
+      "data": {
+        "message_id": "msg_7bd110ed-6230-4217-ae01-b9148ef212d2",
+        "message": "/compact focus on math.js",
+        "from": "parent",
+        "delivery": "steer"
+      }
+    },
+    {
+      "id": 3416,
+      "task_id": "preview-recorded-compact",
+      "type": "task.queued",
+      "timestamp": "2026-10-02T11:40:04.176Z",
+      "data": {}
+    },
+    {
+      "id": 3417,
+      "task_id": "preview-recorded-compact",
+      "type": "task.started",
+      "timestamp": "2026-10-02T11:40:04.201Z",
+      "data": { "turn": 2 }
+    },
+    {
+      "id": 3418,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:04.452Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": "compacting",
+        "uuid": "c67c4359-3deb-440e-8658-dcc127fabcb6",
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Compacting context",
+          "title": "Claude status",
+          "messageId": "c67c4359-3deb-440e-8658-dcc127fabcb6",
+          "hasThinking": false
+        },
+        "response_ref": "response-3418",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "compacting",
+          "session_id": "preview-session",
+          "uuid": "c67c4359-3deb-440e-8658-dcc127fabcb6"
+        }
+      }
+    },
+    {
+      "id": 3419,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:10.663Z",
+      "data": {
+        "type": "rate_limit_event",
+        "rate_limit_info": {
+          "status": "allowed",
+          "rateLimitType": "five_hour",
+          "resetsAt": 1790959199
+        },
+        "uuid": "3c308958-bd95-4f51-97f9-ac1b3bdf747d",
+        "activity": {
+          "kind": "rate_limit_event",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Rate limit updated",
+          "title": "Rate limit update",
+          "messageId": "3c308958-bd95-4f51-97f9-ac1b3bdf747d",
+          "hasThinking": false
+        },
+        "response_ref": "response-3419",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790959199
+          },
+          "uuid": "3c308958-bd95-4f51-97f9-ac1b3bdf747d",
+          "session_id": "preview-session"
+        }
+      }
+    },
+    {
+      "id": 3420,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:10.694Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": null,
+        "compact_result": "success",
+        "uuid": "9248a2d9-45ae-41fb-a523-fb9b954a0678",
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Compaction finished",
+          "title": "Claude status",
+          "messageId": "9248a2d9-45ae-41fb-a523-fb9b954a0678",
+          "hasThinking": false
+        },
+        "response_ref": "response-3420",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": null,
+          "compact_result": "success",
+          "session_id": "preview-session",
+          "uuid": "9248a2d9-45ae-41fb-a523-fb9b954a0678"
+        }
+      }
+    },
+    {
+      "id": 3421,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.started",
+      "timestamp": "2026-10-02T11:40:10.711Z",
+      "data": {
+        "model": "claude-haiku-5-5",
+        "tools": [
+          "Task",
+          "Artifact",
+          "ArtifactComments",
+          "ArtifactData",
+          "AskUserQuestion",
+          "Bash",
+          "CronCreate",
+          "CronDelete",
+          "CronList",
+          "DesignSync",
+          "Edit",
+          "EnterPlanMode",
+          "EnterWorktree",
+          "ExitPlanMode",
+          "ExitWorktree",
+          "ListAgents",
+          "Monitor",
+          "NotebookEdit",
+          "PushNotification",
+          "Read",
+          "RemoteTrigger",
+          "ReportFindings",
+          "ScheduleWakeup",
+          "SendMessage",
+          "SendToProject",
+          "SendToProjectContext",
+          "Skill",
+          "TaskStop",
+          "ToolSearch",
+          "WebSearch",
+          "Write",
+          "mcp__claude_ai_Claude_Docs__batch",
+          "mcp__claude_ai_Claude_Docs__create",
+          "mcp__claude_ai_Claude_Docs__delete",
+          "mcp__claude_ai_Claude_Docs__export",
+          "mcp__claude_ai_Claude_Docs__guide",
+          "mcp__claude_ai_Claude_Docs__query",
+          "mcp__claude_ai_Claude_Docs__read",
+          "mcp__claude_ai_Claude_Docs__update"
+        ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "3a6dda70-426a-412e-9dc7-3435a69a2a8f",
+          "hasThinking": false
+        },
+        "response_ref": "response-3421",
+        "raw_response": {
+          "type": "system",
+          "subtype": "init",
+          "cwd": "/demo/project",
+          "session_id": "preview-session",
+          "tools": [
+            "Task",
+            "Artifact",
+            "ArtifactComments",
+            "ArtifactData",
+            "AskUserQuestion",
+            "Bash",
+            "CronCreate",
+            "CronDelete",
+            "CronList",
+            "DesignSync",
+            "Edit",
+            "EnterPlanMode",
+            "EnterWorktree",
+            "ExitPlanMode",
+            "ExitWorktree",
+            "ListAgents",
+            "Monitor",
+            "NotebookEdit",
+            "PushNotification",
+            "Read",
+            "RemoteTrigger",
+            "ReportFindings",
+            "ScheduleWakeup",
+            "SendMessage",
+            "SendToProject",
+            "SendToProjectContext",
+            "Skill",
+            "TaskStop",
+            "ToolSearch",
+            "WebSearch",
+            "Write",
+            "mcp__claude_ai_Claude_Docs__batch",
+            "mcp__claude_ai_Claude_Docs__create",
+            "mcp__claude_ai_Claude_Docs__delete",
+            "mcp__claude_ai_Claude_Docs__export",
+            "mcp__claude_ai_Claude_Docs__guide",
+            "mcp__claude_ai_Claude_Docs__query",
+            "mcp__claude_ai_Claude_Docs__read",
+            "mcp__claude_ai_Claude_Docs__update"
+          ],
+          "mcp_servers": [],
+          "model": "claude-haiku-5-5",
+          "permissionMode": "auto",
+          "slash_commands": [],
+          "terminal_slash_commands": [],
+          "apiKeySource": "none",
+          "claude_code_version": "2.1.325",
+          "output_style": "Concise",
+          "agents": ["general-purpose"],
+          "skills": [],
+          "plugins": [],
+          "capabilities": [
+            "interrupt_receipt_v1",
+            "interrupt_cancel_queued_v1",
+            "interrupt_send_now_v1",
+            "interrupt_requeue_taken_v1",
+            "msg_lifecycle_v1",
+            "request_marker_lists_v1",
+            "ask_user_question_unanswered_v1",
+            "lifecycle_wakeup_source_v1",
+            "sdk_mcp_tools_list_changed",
+            "sdk_mcp_manifests",
+            "mcp_read_resource_v1",
+            "mcp_tool_ui_meta_v1",
+            "ui_surface_v1",
+            "mcp_call_result_not_for_model_v1",
+            "mcp_call_check_permissions_v1",
+            "voice_call_talk_line_v1",
+            "withdrawn_files_note_v2",
+            "ui_pane_widget_v1",
+            "reload_plugins_refuse_if_busy_v1"
+          ],
+          "analytics_disabled": false,
+          "product_feedback_disabled": false,
+          "uuid": "3a6dda70-426a-412e-9dc7-3435a69a2a8f",
+          "original_cwd": "/demo/project",
+          "additional_directories": [],
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "per_turn_effort_active": true,
+          "ultrathink_available": false,
+          "ultrathink_typed_raises": false,
+          "view_mode": "default",
+          "startup_timing": {
+            "entrypoint": "subagent-extension-for-codex",
+            "warm_spare_claimed": false,
+            "plugin_full_loads": 0,
+            "user_context_builds": 4,
+            "sdk_mcp_dial_runs": 0,
+            "sdk_mcp_servers_dialed": 0,
+            "flag_fetch_kick": "not_eligible",
+            "flag_fetch_kick_judged_at_ms": 59,
+            "hooks_init_source": "resume",
+            "phases": {
+              "node_boot_ms": 38,
+              "settings_load_ms": 0,
+              "pre_action_mdm_keychain_ms": 1,
+              "pre_action_init_ms": 18,
+              "pre_action_client_data_url_ms": 0,
+              "pre_action_migrations_ms": 0,
+              "pre_action_managed_settings_ms": 17,
+              "pre_action_ms": 38,
+              "permission_context_ms": 12,
+              "setup_import_ms": 1,
+              "setup_uds_dir_ms": 14,
+              "setup_uds_listen_ms": 2,
+              "skills_load_ms": 17,
+              "setup_uds_publish_ms": 2,
+              "setup_uds_messaging_ms": 19,
+              "setup_hooks_snapshot_ms": 0,
+              "setup_file_watcher_ms": 0,
+              "setup_release_notes_ms": 5,
+              "setup_ms": 24,
+              "tools_commands_load_ms": 5,
+              "model_catalog_decision_ms": 4,
+              "mcp_config_wait_ms": 3,
+              "mcp_config_load_ms": 17,
+              "mcp_connect_ms": 1,
+              "print_import_ms": 5,
+              "grove_check_ms": 0,
+              "headless_prologue_ms": 1,
+              "mcp_client_module_load_ms": 0,
+              "resume_live_check_ms": 15,
+              "resume_deserialize_ms": 26,
+              "resume_load_cpu_ms": 11,
+              "hooks_init_ms": 1,
+              "initial_messages_load_ms": 44,
+              "headless_post_load_ms": 2,
+              "input_ready_ms": 205,
+              "first_message_read_ms": 216,
+              "sdk_mcp_update_ms": 0,
+              "first_message_handle_ms": 0,
+              "first_message_handle_cpu_ms": 0,
+              "first_message_handle_loop_lag_ms": 0,
+              "mcp_prewait_ms": 0,
+              "qe_system_prompt_ms": 8,
+              "qe_plugin_skills_load_ms": 1,
+              "init_emit_ms": 1
+            },
+            "time_origin_ms": 1794902123359.068,
+            "phase_start_ms": {
+              "node_boot_ms": 0,
+              "settings_load_ms": 39,
+              "pre_action_mdm_keychain_ms": 40,
+              "pre_action_init_ms": 41,
+              "pre_action_client_data_url_ms": 59,
+              "pre_action_migrations_ms": 59,
+              "pre_action_managed_settings_ms": 59,
+              "pre_action_ms": 40,
+              "permission_context_ms": 80,
+              "setup_import_ms": 93,
+              "setup_uds_dir_ms": 95,
+              "setup_uds_listen_ms": 110,
+              "skills_load_ms": 95,
+              "setup_uds_publish_ms": 112,
+              "setup_uds_messaging_ms": 94,
+              "setup_hooks_snapshot_ms": 114,
+              "setup_file_watcher_ms": 114,
+              "setup_release_notes_ms": 114,
+              "setup_ms": 95,
+              "tools_commands_load_ms": 125,
+              "model_catalog_decision_ms": 130,
+              "mcp_config_wait_ms": 135,
+              "mcp_connect_ms": 146,
+              "print_import_ms": 147,
+              "grove_check_ms": 153,
+              "headless_prologue_ms": 153,
+              "mcp_client_module_load_ms": 161,
+              "resume_live_check_ms": 154,
+              "resume_deserialize_ms": 169,
+              "hooks_init_ms": 195,
+              "initial_messages_load_ms": 154,
+              "headless_post_load_ms": 198,
+              "input_ready_ms": 0,
+              "first_message_read_ms": 0,
+              "sdk_mcp_update_ms": 216,
+              "first_message_handle_ms": 216,
+              "mcp_prewait_ms": 216,
+              "qe_system_prompt_ms": 6491,
+              "qe_plugin_skills_load_ms": 6499,
+              "init_emit_ms": 6500
+            }
+          },
+          "user_message_uuids": ["518b1ec1-52e2-4ca3-84fa-134d21fe164a"]
+        }
+      }
+    },
+    {
+      "id": 3422,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:10.714Z",
+      "data": {
+        "type": "system",
+        "subtype": "compact_boundary",
+        "uuid": "785f56af-2af6-4ac9-9ff1-a95386b95d2c",
+        "activity": {
+          "kind": "compact_boundary",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Context compacted · 38.3K → 7.7K tokens",
+          "title": "Context compacted · 38.3K → 7.7K tokens",
+          "messageId": "785f56af-2af6-4ac9-9ff1-a95386b95d2c",
+          "hasThinking": false
+        },
+        "response_ref": "response-3422",
+        "raw_response": {
+          "type": "system",
+          "subtype": "compact_boundary",
+          "session_id": "preview-session",
+          "uuid": "785f56af-2af6-4ac9-9ff1-a95386b95d2c",
+          "compact_metadata": {
+            "trigger": "manual",
+            "pre_tokens": 38275,
+            "post_tokens": 7680,
+            "cumulative_dropped_tokens": 30595,
+            "duration_ms": 6223,
+            "preserved_segment": {
+              "head_uuid": "44608668-0bb5-41e8-afcc-3662d22d6922",
+              "anchor_uuid": "dd0de821-3f69-4598-aa84-7c6b0f16d033",
+              "tail_uuid": "44608668-0bb5-41e8-afcc-3662d22d6922"
+            },
+            "preserved_messages": {
+              "anchor_uuid": "dd0de821-3f69-4598-aa84-7c6b0f16d033",
+              "uuids": ["44608668-0bb5-41e8-afcc-3662d22d6922"],
+              "all_uuids": ["44608668-0bb5-41e8-afcc-3662d22d6922"]
+            }
+          },
+          "logical_parent_uuid": "44608668-0bb5-41e8-afcc-3662d22d6922"
+        }
+      }
+    },
+    {
+      "id": 3423,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:10.715Z",
+      "data": {
+        "type": "system",
+        "subtype": "compact_summary",
+        "uuid": "dd0de821-3f69-4598-aa84-7c6b0f16d033",
+        "text": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary>Read</tools-used-before-summary>\n</system-reminder>\nSummary:\n1. Primary Request and Intent:\n   The user asked me to read `math.js` and `README.md` in the task workspace and then briefly describe the project in two sentences. The compaction request added a focus on `math.js`. No code changes, commits, or doc creation were requested.\n\n2. Key Technical Concepts:\n   - Plain JavaScript ES module exporting a single arrow function.\n   - A minimal demo repository with no build tooling visible in the files read.\n\n3. Files and Code Sections:\n   - `/demo/project/math.js`\n      - Read only. Contents (1 line):\n        ```js\n        export const add = (a, b) => a + b;\n        ```\n      - It is the project's only code file that was read. It exports one function, `add`, which returns the sum of its two arguments.\n   - `/demo/project/README.md`\n      - Read only. Contents:\n        ```md\n        # Demo\n\n        A tiny demo project.\n        ```\n   - No files were modified, created, or deleted.\n\n4. Errors and fixes:\n   - None.\n\n5. Problem Solving:\n   - Both files were read successfully. The project is a tiny demo whose only code is the `add` export in `math.js`.\n\n6. All user messages:\n   - \"Read math.js and README.md, then briefly describe the project in two sentences.\"\n   - The task notes that the repository may contain staged, unstaged, and untracked files, that write profiles edit the checkout directly, and that unrelated uncommitted changes must be preserved.\n   - Compaction instruction: \"focus on math.js\".\n\n7. Pending Tasks:\n   - Write the two-sentence project description, based on `math.js` and `README.md`.\n\n8. Current Work:\n   - Both requested files were read in parallel. The contents are shown in section 3. The description has not been written yet.\n\n9. Optional Next Step:\n   - Reply with a two-sentence description. Something like: \"This is a tiny demo project whose README describes it only as 'A tiny demo project.' Its one code file, `math.js`, exports a single function, `add(a, b)`, that returns `a + b`.\"\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /demo/home/.claude/projects/-demo-project/preview-session.jsonl\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with \"I'll continue\" or similar. Pick up the last task as if the break never happened.\n\nThe messages after this summary are the most recent messages from before compaction, kept verbatim. The summary was written without seeing them, so something it says has not happened yet may already have happened in them.",
+        "activity": {
+          "kind": "compact_summary",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Compaction summary",
+          "messageId": "dd0de821-3f69-4598-aa84-7c6b0f16d033",
+          "hasThinking": false
+        },
+        "response_ref": "response-3423",
+        "raw_response": {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary>Read</tools-used-before-summary>\n</system-reminder>\nSummary:\n1. Primary Request and Intent:\n   The user asked me to read `math.js` and `README.md` in the task workspace and then briefly describe the project in two sentences. The compaction request added a focus on `math.js`. No code changes, commits, or doc creation were requested.\n\n2. Key Technical Concepts:\n   - Plain JavaScript ES module exporting a single arrow function.\n   - A minimal demo repository with no build tooling visible in the files read.\n\n3. Files and Code Sections:\n   - `/demo/project/math.js`\n      - Read only. Contents (1 line):\n        ```js\n        export const add = (a, b) => a + b;\n        ```\n      - It is the project's only code file that was read. It exports one function, `add`, which returns the sum of its two arguments.\n   - `/demo/project/README.md`\n      - Read only. Contents:\n        ```md\n        # Demo\n\n        A tiny demo project.\n        ```\n   - No files were modified, created, or deleted.\n\n4. Errors and fixes:\n   - None.\n\n5. Problem Solving:\n   - Both files were read successfully. The project is a tiny demo whose only code is the `add` export in `math.js`.\n\n6. All user messages:\n   - \"Read math.js and README.md, then briefly describe the project in two sentences.\"\n   - The task notes that the repository may contain staged, unstaged, and untracked files, that write profiles edit the checkout directly, and that unrelated uncommitted changes must be preserved.\n   - Compaction instruction: \"focus on math.js\".\n\n7. Pending Tasks:\n   - Write the two-sentence project description, based on `math.js` and `README.md`.\n\n8. Current Work:\n   - Both requested files were read in parallel. The contents are shown in section 3. The description has not been written yet.\n\n9. Optional Next Step:\n   - Reply with a two-sentence description. Something like: \"This is a tiny demo project whose README describes it only as 'A tiny demo project.' Its one code file, `math.js`, exports a single function, `add(a, b)`, that returns `a + b`.\"\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /demo/home/.claude/projects/-demo-project/preview-session.jsonl\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with \"I'll continue\" or similar. Pick up the last task as if the break never happened.\n\nThe messages after this summary are the most recent messages from before compaction, kept verbatim. The summary was written without seeing them, so something it says has not happened yet may already have happened in them."
+          },
+          "session_id": "preview-session",
+          "parent_tool_use_id": null,
+          "uuid": "dd0de821-3f69-4598-aa84-7c6b0f16d033",
+          "timestamp": "2026-11-17T07:55:29.819Z",
+          "isReplay": false,
+          "isSynthetic": true
+        }
+      }
+    },
+    {
+      "id": 3424,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:10.715Z",
+      "data": {
+        "type": "system",
+        "subtype": "local_command_output",
+        "uuid": "c0cb91c9-86a7-406a-a7e1-14ce72157fe9",
+        "content": "Compacted",
+        "activity": {
+          "kind": "local_command_output",
+          "quiet": false,
+          "failed": false,
+          "summary": "Compacted",
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Command output",
+          "messageId": "c0cb91c9-86a7-406a-a7e1-14ce72157fe9",
+          "hasThinking": false
+        },
+        "response_ref": "response-3424",
+        "raw_response": {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": "<local-command-stdout>Compacted </local-command-stdout>"
+          },
+          "session_id": "preview-session",
+          "parent_tool_use_id": null,
+          "uuid": "c0cb91c9-86a7-406a-a7e1-14ce72157fe9",
+          "timestamp": "2026-11-17T07:55:29.943Z",
+          "isReplay": true
+        }
+      }
+    },
+    {
+      "id": 3425,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.completed",
+      "timestamp": "2026-10-02T11:40:10.715Z",
+      "data": {
+        "is_error": false,
+        "total_cost_usd": 0.005187565,
+        "usage": {
+          "output_tokens_details": { "thinking_tokens": 0 },
+          "input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 0,
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "",
+          "iterations": [],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "subtype": "success",
+        "type": "result",
+        "duration_ms": 6283,
+        "uuid": "4cde25d7-7b94-4dcf-98fc-4964b5853aea",
+        "cost_usd": 0.005187565,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "4cde25d7-7b94-4dcf-98fc-4964b5853aea",
+          "hasThinking": false
+        },
+        "response_ref": "response-3425",
+        "raw_response": {
+          "is_error": false,
+          "duration_api_ms": 0,
+          "num_turns": 0,
+          "stop_reason": null,
+          "session_id": "preview-session",
+          "total_cost_usd": 0.005187565,
+          "usage": {
+            "output_tokens_details": { "thinking_tokens": 0 },
+            "input_tokens": 0,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 0,
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 0,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "",
+            "iterations": [],
+            "speed": "standard",
+            "fallback_credit": null
+          },
+          "modelUsage": {
+            "claude-haiku-5-5": {
+              "inputTokens": 3950,
+              "outputTokens": 1631,
+              "thinkingTokens": 261,
+              "cacheReadInputTokens": 95099,
+              "cacheCreationInputTokens": 15223,
+              "cacheCreationEphemeral5mInputTokens": 247,
+              "cacheCreationEphemeral1hInputTokens": 14976,
+              "webSearchRequests": 0,
+              "costUSD": 0.005187565,
+              "contextWindow": 1000000,
+              "maxOutputTokens": 128000,
+              "canonicalModel": "claude-haiku-5-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "permission_denials": [],
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "subagent_stats": {
+            "spawned": 0,
+            "requested": { "background": 0, "foreground": 0, "unset": 0 },
+            "started_in_background": 0,
+            "max_depth": 0,
+            "spawned_by_subagents": 0,
+            "completed": 0,
+            "failed": 0,
+            "killed": { "parent": 0, "user": 0, "system": 0 },
+            "refused": {
+              "depth_limit": 0,
+              "concurrency_limit": 0,
+              "budget": 0
+            },
+            "by_type": {}
+          },
+          "safety_stops": 0,
+          "subtype": "success",
+          "result": "",
+          "user_message_uuid": "518b1ec1-52e2-4ca3-84fa-134d21fe164a",
+          "user_message_uuids": ["518b1ec1-52e2-4ca3-84fa-134d21fe164a"],
+          "local_command": "compact",
+          "type": "result",
+          "duration_ms": 6283,
+          "uuid": "4cde25d7-7b94-4dcf-98fc-4964b5853aea",
+          "queued_turn_count": 0,
+          "result_index": 0,
+          "model_usage_since_last_result": {
+            "claude-haiku-5-5": {
+              "inputTokens": 3946,
+              "outputTokens": 1258,
+              "cacheReadInputTokens": 35965,
+              "cacheCreationInputTokens": 247,
+              "webSearchRequests": 0,
+              "costUSD": 0.001414125,
+              "contextWindow": 1000000,
+              "maxOutputTokens": 128000,
+              "thinkingTokens": 261,
+              "cacheCreationEphemeral5mInputTokens": 247,
+              "cacheCreationEphemeral1hInputTokens": 0,
+              "canonicalModel": "claude-haiku-5-5",
+              "provider": "firstParty",
+              "costBasis": "list"
+            }
+          },
+          "credential_expires_at": "2026-12-11T13:26:03.371Z"
+        }
+      }
+    },
+    {
+      "id": 3426,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.reply",
+      "timestamp": "2026-10-02T11:40:11.263Z",
+      "data": { "text": "Compacted", "turn": 2, "command_output": true }
+    },
+    {
+      "id": 3427,
+      "task_id": "preview-recorded-compact",
+      "type": "task.turn_ended",
+      "timestamp": "2026-10-02T11:40:11.264Z",
+      "data": {
+        "turn": 2,
+        "outcome": "completed",
+        "runtime_ms": 7087,
+        "cost_usd": 0.0014141249999999996
+      }
+    },
+    {
+      "id": 3428,
+      "task_id": "preview-recorded-compact",
+      "type": "task.completed",
+      "timestamp": "2026-10-02T11:40:11.264Z",
+      "data": {}
+    },
+    {
+      "id": 3429,
+      "task_id": "preview-recorded-compact",
+      "type": "task.instruction",
+      "timestamp": "2026-10-02T11:40:12.469Z",
+      "data": {
+        "message_id": "msg_8f637428-6bfa-421c-8417-a27f7bd63e45",
+        "message": "What does add(2,3) return?",
+        "from": "parent",
+        "delivery": "steer"
+      }
+    },
+    {
+      "id": 3430,
+      "task_id": "preview-recorded-compact",
+      "type": "task.queued",
+      "timestamp": "2026-10-02T11:40:12.469Z",
+      "data": {}
+    },
+    {
+      "id": 3431,
+      "task_id": "preview-recorded-compact",
+      "type": "task.started",
+      "timestamp": "2026-10-02T11:40:12.497Z",
+      "data": { "turn": 3 }
+    },
+    {
+      "id": 3432,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.started",
+      "timestamp": "2026-10-02T11:40:12.734Z",
+      "data": {
+        "model": "claude-haiku-5-5",
+        "tools": [
+          "Task",
+          "Artifact",
+          "ArtifactComments",
+          "ArtifactData",
+          "AskUserQuestion",
+          "Bash",
+          "CronCreate",
+          "CronDelete",
+          "CronList",
+          "DesignSync",
+          "Edit",
+          "EnterPlanMode",
+          "EnterWorktree",
+          "ExitPlanMode",
+          "ExitWorktree",
+          "ListAgents",
+          "Monitor",
+          "NotebookEdit",
+          "PushNotification",
+          "Read",
+          "RemoteTrigger",
+          "ReportFindings",
+          "ScheduleWakeup",
+          "SendMessage",
+          "SendToProject",
+          "SendToProjectContext",
+          "Skill",
+          "TaskStop",
+          "ToolSearch",
+          "WebSearch",
+          "Write"
+        ],
+        "activity": {
+          "kind": "agent.started",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "statusTitle": "Claude connected",
+          "messageId": "c91c0971-22d2-44ff-bb21-0234bdc2f344",
+          "hasThinking": false
+        },
+        "response_ref": "response-3432",
+        "raw_response": {
+          "type": "system",
+          "subtype": "init",
+          "cwd": "/demo/project",
+          "session_id": "preview-session",
+          "tools": [
+            "Task",
+            "Artifact",
+            "ArtifactComments",
+            "ArtifactData",
+            "AskUserQuestion",
+            "Bash",
+            "CronCreate",
+            "CronDelete",
+            "CronList",
+            "DesignSync",
+            "Edit",
+            "EnterPlanMode",
+            "EnterWorktree",
+            "ExitPlanMode",
+            "ExitWorktree",
+            "ListAgents",
+            "Monitor",
+            "NotebookEdit",
+            "PushNotification",
+            "Read",
+            "RemoteTrigger",
+            "ReportFindings",
+            "ScheduleWakeup",
+            "SendMessage",
+            "SendToProject",
+            "SendToProjectContext",
+            "Skill",
+            "TaskStop",
+            "ToolSearch",
+            "WebSearch",
+            "Write"
+          ],
+          "mcp_servers": [],
+          "model": "claude-haiku-5-5",
+          "permissionMode": "auto",
+          "slash_commands": [],
+          "terminal_slash_commands": [],
+          "apiKeySource": "none",
+          "claude_code_version": "2.1.325",
+          "output_style": "Concise",
+          "agents": ["general-purpose"],
+          "skills": [],
+          "plugins": [],
+          "capabilities": [
+            "interrupt_receipt_v1",
+            "interrupt_cancel_queued_v1",
+            "interrupt_send_now_v1",
+            "interrupt_requeue_taken_v1",
+            "msg_lifecycle_v1",
+            "request_marker_lists_v1",
+            "ask_user_question_unanswered_v1",
+            "lifecycle_wakeup_source_v1",
+            "sdk_mcp_tools_list_changed",
+            "sdk_mcp_manifests",
+            "mcp_read_resource_v1",
+            "mcp_tool_ui_meta_v1",
+            "ui_surface_v1",
+            "mcp_call_result_not_for_model_v1",
+            "mcp_call_check_permissions_v1",
+            "voice_call_talk_line_v1",
+            "withdrawn_files_note_v2",
+            "ui_pane_widget_v1",
+            "reload_plugins_refuse_if_busy_v1"
+          ],
+          "analytics_disabled": false,
+          "product_feedback_disabled": false,
+          "uuid": "c91c0971-22d2-44ff-bb21-0234bdc2f344",
+          "original_cwd": "/demo/project",
+          "additional_directories": [],
+          "fast_mode_state": "off",
+          "fast_mode_disabled_reason": "sdk_opt_in_required",
+          "per_turn_effort_active": true,
+          "ultrathink_available": false,
+          "ultrathink_typed_raises": false,
+          "view_mode": "default",
+          "startup_timing": {
+            "entrypoint": "subagent-extension-for-codex",
+            "warm_spare_claimed": false,
+            "plugin_full_loads": 0,
+            "user_context_builds": 3,
+            "sdk_mcp_dial_runs": 0,
+            "sdk_mcp_servers_dialed": 0,
+            "flag_fetch_kick": "not_eligible",
+            "flag_fetch_kick_judged_at_ms": 59,
+            "hooks_init_source": "resume",
+            "phases": {
+              "node_boot_ms": 38,
+              "settings_load_ms": 0,
+              "pre_action_mdm_keychain_ms": 1,
+              "pre_action_init_ms": 18,
+              "pre_action_client_data_url_ms": 0,
+              "pre_action_migrations_ms": 0,
+              "pre_action_managed_settings_ms": 17,
+              "pre_action_ms": 38,
+              "permission_context_ms": 12,
+              "setup_import_ms": 1,
+              "setup_uds_dir_ms": 15,
+              "setup_uds_listen_ms": 2,
+              "skills_load_ms": 18,
+              "setup_uds_publish_ms": 2,
+              "setup_uds_messaging_ms": 20,
+              "setup_hooks_snapshot_ms": 0,
+              "setup_file_watcher_ms": 0,
+              "setup_release_notes_ms": 5,
+              "setup_ms": 25,
+              "tools_commands_load_ms": 5,
+              "model_catalog_decision_ms": 4,
+              "mcp_config_wait_ms": 2,
+              "mcp_config_load_ms": 17,
+              "mcp_connect_ms": 1,
+              "print_import_ms": 5,
+              "grove_check_ms": 0,
+              "headless_prologue_ms": 1,
+              "mcp_client_module_load_ms": 0,
+              "resume_live_check_ms": 14,
+              "resume_deserialize_ms": 11,
+              "resume_load_cpu_ms": 11,
+              "hooks_init_ms": 1,
+              "initial_messages_load_ms": 28,
+              "headless_post_load_ms": 1,
+              "input_ready_ms": 188,
+              "first_message_read_ms": 198,
+              "sdk_mcp_update_ms": 0,
+              "first_message_handle_ms": 0,
+              "first_message_handle_cpu_ms": 0,
+              "first_message_handle_loop_lag_ms": 0,
+              "mcp_prewait_ms": 0,
+              "qe_system_prompt_ms": 17,
+              "prompt_submit_hooks_ms": 1,
+              "qe_plugin_skills_load_ms": 1,
+              "init_emit_ms": 0
+            },
+            "time_origin_ms": 1794902131654.0212,
+            "phase_start_ms": {
+              "node_boot_ms": 0,
+              "settings_load_ms": 38,
+              "pre_action_mdm_keychain_ms": 40,
+              "pre_action_init_ms": 41,
+              "pre_action_client_data_url_ms": 58,
+              "pre_action_migrations_ms": 59,
+              "pre_action_managed_settings_ms": 59,
+              "pre_action_ms": 40,
+              "permission_context_ms": 80,
+              "setup_import_ms": 93,
+              "setup_uds_dir_ms": 95,
+              "setup_uds_listen_ms": 110,
+              "skills_load_ms": 95,
+              "setup_uds_publish_ms": 112,
+              "setup_uds_messaging_ms": 94,
+              "setup_hooks_snapshot_ms": 114,
+              "setup_file_watcher_ms": 114,
+              "setup_release_notes_ms": 115,
+              "setup_ms": 95,
+              "tools_commands_load_ms": 125,
+              "model_catalog_decision_ms": 131,
+              "mcp_config_wait_ms": 136,
+              "mcp_connect_ms": 146,
+              "print_import_ms": 147,
+              "grove_check_ms": 153,
+              "headless_prologue_ms": 153,
+              "mcp_client_module_load_ms": 161,
+              "resume_live_check_ms": 155,
+              "resume_deserialize_ms": 169,
+              "hooks_init_ms": 179,
+              "initial_messages_load_ms": 154,
+              "headless_post_load_ms": 182,
+              "input_ready_ms": 0,
+              "first_message_read_ms": 0,
+              "sdk_mcp_update_ms": 198,
+              "first_message_handle_ms": 198,
+              "mcp_prewait_ms": 199,
+              "qe_system_prompt_ms": 201,
+              "prompt_submit_hooks_ms": 224,
+              "qe_plugin_skills_load_ms": 228,
+              "init_emit_ms": 228
+            }
+          },
+          "user_message_uuids": ["125d0218-8351-42aa-86a4-748c79eff610"]
+        }
+      }
+    },
+    {
+      "id": 3433,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:12.741Z",
+      "data": {
+        "type": "system",
+        "subtype": "status",
+        "status": "requesting",
+        "uuid": "6faf2ba0-c69b-491e-8ad8-52c1c31e425f",
+        "activity": {
+          "kind": "status",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Requesting",
+          "title": "Claude status",
+          "messageId": "6faf2ba0-c69b-491e-8ad8-52c1c31e425f",
+          "hasThinking": false
+        },
+        "response_ref": "response-3433",
+        "raw_response": {
+          "type": "system",
+          "subtype": "status",
+          "status": "requesting",
+          "session_id": "preview-session",
+          "uuid": "6faf2ba0-c69b-491e-8ad8-52c1c31e425f",
+          "user_message_uuids": ["125d0218-8351-42aa-86a4-748c79eff610"]
+        }
+      }
+    },
+    {
+      "id": 3434,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.content",
+      "timestamp": "2026-10-02T11:40:13.625Z",
+      "data": {
+        "message_id": "msg_011Ch89APPRLxu9nc621Eok6",
+        "parent_tool_use_id": null,
+        "role": "assistant",
+        "content": { "type": "thinking", "thinking": "" },
+        "activity": {
+          "kind": "agent.content",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "title": "Claude content",
+          "messageId": "msg_011Ch89APPRLxu9nc621Eok6",
+          "hasThinking": true
+        },
+        "response_ref": "response-3434",
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-haiku-5-5",
+            "id": "msg_011Ch89APPRLxu9nc621Eok6",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "thinking",
+                "thinking": "",
+                "signature": "preview-signature"
+              }
+            ],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 11503,
+              "cache_read_input_tokens": 26211,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11503
+              },
+              "output_tokens": 2,
+              "service_tier": "standard",
+              "inference_geo": "global",
+              "speed": "standard"
+            },
+            "input_transformations": [],
+            "diagnostics": { "cache_miss_reason": { "type": "unavailable" } },
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "a17240ae-f7db-4068-aa11-056713158a0b",
+          "timestamp": "2026-11-17T07:55:32.767Z",
+          "request_id": "req_preview_0003",
+          "thinking_duration_ms": 260,
+          "thinking_display": "updates",
+          "user_message_uuid": "125d0218-8351-42aa-86a4-748c79eff610",
+          "user_message_uuids": ["125d0218-8351-42aa-86a4-748c79eff610"]
+        }
+      }
+    },
+    {
+      "id": 3435,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.message",
+      "timestamp": "2026-10-02T11:40:13.629Z",
+      "data": {
+        "message_id": "msg_011Ch89APPRLxu9nc621Eok6",
+        "parent_tool_use_id": null,
+        "role": "assistant",
+        "text": "`add(2, 3)` returns `5`.",
+        "activity": {
+          "kind": "agent.message",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "msg_011Ch89APPRLxu9nc621Eok6",
+          "hasThinking": false
+        },
+        "response_ref": "response-3435",
+        "raw_response": {
+          "type": "assistant",
+          "message": {
+            "model": "claude-haiku-5-5",
+            "id": "msg_011Ch89APPRLxu9nc621Eok6",
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "text", "text": "`add(2, 3)` returns `5`." }],
+            "container": null,
+            "stop_reason": null,
+            "stop_sequence": null,
+            "stop_details": null,
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 11503,
+              "cache_read_input_tokens": 26211,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11503
+              },
+              "output_tokens": 2,
+              "service_tier": "standard",
+              "inference_geo": "global",
+              "speed": "standard"
+            },
+            "input_transformations": [],
+            "diagnostics": { "cache_miss_reason": { "type": "unavailable" } },
+            "context_management": null
+          },
+          "parent_tool_use_id": null,
+          "session_id": "preview-session",
+          "uuid": "6db00b6b-f387-413f-8909-a12309f1950c",
+          "timestamp": "2026-11-17T07:55:32.775Z",
+          "request_id": "req_preview_0003"
+        }
+      }
+    },
+    {
+      "id": 3436,
+      "task_id": "preview-recorded-compact",
+      "type": "claude.activity",
+      "timestamp": "2026-10-02T11:40:13.633Z",
+      "data": {
+        "type": "rate_limit_event",
+        "rate_limit_info": {
+          "status": "allowed",
+          "rateLimitType": "five_hour",
+          "resetsAt": 1790959199
+        },
+        "uuid": "f570cbed-9c90-45c0-83c4-41fc11648ebb",
+        "activity": {
+          "kind": "rate_limit_event",
+          "quiet": true,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": true,
+          "statusTitle": "Rate limit updated",
+          "title": "Rate limit update",
+          "messageId": "f570cbed-9c90-45c0-83c4-41fc11648ebb",
+          "hasThinking": false
+        },
+        "response_ref": "response-3436",
+        "raw_response": {
+          "type": "rate_limit_event",
+          "rate_limit_info": {
+            "status": "allowed",
+            "rateLimitType": "five_hour",
+            "resetsAt": 1790959199
+          },
+          "uuid": "f570cbed-9c90-45c0-83c4-41fc11648ebb",
+          "session_id": "preview-session"
+        }
+      }
+    },
+    {
+      "id": 3437,
+      "task_id": "preview-recorded-compact",
+      "type": "agent.completed",
+      "timestamp": "2026-10-02T11:40:13.658Z",
+      "data": {
+        "total_cost_usd": 0.007775475,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 11503,
+          "cache_read_input_tokens": 26211,
+          "output_tokens": 50,
+          "output_tokens_details": { "thinking_tokens": 33 },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 11503,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 50,
+              "cache_read_input_tokens": 26211,
+              "cache_creation_input_tokens": 11503,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 11503
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "is_error": false,
+        "subtype": "success",
+        "type": "result",
+        "duration_ms": 952,
+        "uuid": "2df154a0-3ab1-46cb-a1fb-81506b522f5a",
+        "cost_usd": 0.007775475,
+        "activity": {
+          "kind": "agent.completed",
+          "quiet": false,
+          "failed": false,
+          "thinking": false,
+          "liveStatus": false,
+          "messageId": "2df154a0-3ab1-46cb-a1fb-81506b522f5a",
+          "hasThinking": false
+        },
+        "response_ref": "response-3437",
+        "raw_response": {
+          "duration_api_ms": 9366,
+          "stop_reason": "end_turn",
+          "session_id": "preview-session",
+          "total_cost_usd": 0.007775475,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 11503,
+            "cache_read_input_tokens": 26211,
+            "output_tokens": 50,
+            "output_tokens_details": { "thinking_tokens": 33 },
+            "server_tool_use": {
+              "web_search_requests": 0,
+              "web_fetch_requests": 0
+            },
+            "service_tier": "standard",
+            "cache_creation": {
+              "ephemeral_1h_input_tokens": 11503,
+              "ephemeral_5m_input_tokens": 0
+            },
+            "inference_geo": "global",
+            "iterations": [
+              {
+                "input_tokens": 2,
+                "output_tokens": 50,
+                "cache_read_input_tokens": 26211,
+                "cache_creation_input_tokens": 11503,
+                "cache_creation": {
+                  "ephemeral_5m_input_tokens": 0,
+                  "ephemeral_1h_input_tokens": 11503
+                },
+                "type": "message"
+              }
+            ],
+            "speed": "standard",
+            "fallback_credit": null
+          },
+          "modelUsage": {
+            "claude-haiku-5-5": {
+              "inputTokens": 3952,
+              "outputTokens": 1681,
+              "thinkingTokens": 294,
+              "cacheReadInputTokens": 121310,
+              "cacheCreationInputTokens": 26726,
+              "cacheCreationEphemeral5mInputTokens": 247,
+              "cacheCreationEphemeral1hInputTokens": 26479,
+              "webSearchRequests": 0,
+              "costUSD": 0.007775475,
+              "contextWindow": 1000000,
+              "maxOutputTokens": 128000,
+              "canonicalModel": "claude-haiku-5-5",
               "provider": "firstParty",
               "costBasis": "list"
             }
@@ -554,22 +2260,22 @@
           "num_turns": 1,
           "subtype": "success",
           "api_error_status": null,
-          "result": "Red, blue, and yellow are three primary colors.",
-          "ttft_ms": 2449,
+          "result": "`add(2, 3)` returns `5`.",
+          "ttft_ms": 914,
           "type": "result",
-          "duration_ms": 2477,
-          "uuid": "ba586a8b-ea8f-42ab-bf50-1cbb8c764ca8",
-          "ttft_stream_ms": 1980,
-          "time_to_request_ms": 206,
+          "duration_ms": 952,
+          "uuid": "2df154a0-3ab1-46cb-a1fb-81506b522f5a",
+          "ttft_stream_ms": 652,
+          "time_to_request_ms": 94,
           "time_to_request_phases_ms": {
             "other": 2,
-            "system_prompt": 3,
+            "system_prompt": 18,
             "resume_other": 0,
             "process_user_input": 1,
             "input_attachments": 4,
             "input_hooks": 1,
             "conversation_append": 0,
-            "transcript_persist": 10,
+            "transcript_persist": 1,
             "tool_pool_refresh": 1,
             "init_message": 1,
             "init_frame_send": 1,
@@ -578,39 +2284,39 @@
             "message_prep": 1,
             "model_config_wait": 0,
             "autocompact": 1,
-            "request_announcements": 4,
-            "query_setup": 2,
-            "auto_mode_context_wait": 18,
-            "model_gates": 139,
-            "tool_schema_build": 8,
-            "message_normalization": 2,
+            "request_announcements": 27,
+            "query_setup": 3,
+            "auto_mode_context_wait": 13,
+            "model_gates": 8,
+            "tool_schema_build": 5,
+            "message_normalization": 1,
             "client_creation": 1,
-            "request_build": 5
+            "request_build": 3
           },
           "turn_start_resume_kind": "none",
           "process_turn_index": 0,
-          "time_to_request_loop_lag_ms": 2,
-          "time_to_request_cpu_ms": 111,
-          "time_to_request_major_faults": 0,
+          "time_to_request_loop_lag_ms": 0,
+          "time_to_request_cpu_ms": 113,
+          "time_to_request_major_faults": 1,
           "input_attachments_detail": {
-            "slowest_producer": "skill_listing",
+            "slowest_producer": "deferred_tools_delta",
             "slowest_producer_ms": 1,
-            "cpu_ms": 6,
+            "cpu_ms": 7,
             "major_faults": 0,
             "setup_ms": 0,
             "prompt_producers_ms": 0,
             "ambient_start_ms": 1,
-            "ambient_wait_ms": 1,
+            "ambient_wait_ms": 0,
             "render_ms": 0,
             "producers": 40,
             "token_counts": 0
           },
           "tool_schema_build_detail": {
             "betas_ms": 0,
-            "waits_ms": 1,
-            "placement_ms": 0,
-            "render_ms": 7,
-            "after_ms": 0,
+            "waits_ms": 0,
+            "placement_ms": 1,
+            "render_ms": 3,
+            "after_ms": 1,
             "other_ms": 0,
             "tools": 12,
             "new_schemas": 12
@@ -621,716 +2327,78 @@
             "images_ms": 0,
             "post_process_ms": 0,
             "after_ms": 0,
-            "other_ms": 1,
-            "messages": 14,
-            "wire_messages": 2
+            "other_ms": 0,
+            "messages": 23,
+            "wire_messages": 6
           },
           "request_build_detail": {
             "records_ms": 0,
-            "system_ms": 1,
-            "headers_ms": 0,
+            "system_ms": 0,
+            "headers_ms": 1,
             "cache_break_record_ms": 0,
-            "plans_ms": 1,
+            "plans_ms": 0,
             "retry_setup_ms": 0,
             "sent_build_ms": 1,
-            "record_attempt_ms": 2,
+            "record_attempt_ms": 1,
             "other_ms": 0,
             "sent_build_safety_context_ms": 0,
             "sent_build_cache_breakpoints_ms": 0,
-            "sent_build_surrogate_scan_ms": 1
+            "sent_build_surrogate_scan_ms": 0
           },
-          "first_content_frame_ms": 1981,
-          "user_message_uuid": "d81db77f-0870-4c58-9e79-1bd229f83fa5",
-          "user_message_uuids": ["d81db77f-0870-4c58-9e79-1bd229f83fa5"],
-          "request_sent_wall_ms": 1794692238525,
-          "first_request_input_tokens": 33075,
-          "first_request_cache_read_input_tokens": 23160,
+          "first_content_frame_ms": 653,
+          "user_message_uuid": "125d0218-8351-42aa-86a4-748c79eff610",
+          "user_message_uuids": ["125d0218-8351-42aa-86a4-748c79eff610"],
+          "request_sent_wall_ms": 1794902131948,
+          "first_request_input_tokens": 37716,
+          "first_request_cache_read_input_tokens": 26211,
           "queued_turn_count": 0,
           "result_index": 0,
           "model_usage_since_last_result": {
-            "claude-sonnet-5-5": {
+            "claude-haiku-5-5": {
               "inputTokens": 2,
-              "outputTokens": 19,
-              "cacheReadInputTokens": 23160,
-              "cacheCreationInputTokens": 9913,
+              "outputTokens": 50,
+              "cacheReadInputTokens": 26211,
+              "cacheCreationInputTokens": 11503,
               "webSearchRequests": 0,
-              "costUSD": 0.042162,
+              "costUSD": 0.0025879099999999997,
               "contextWindow": 1000000,
               "maxOutputTokens": 128000,
-              "thinkingTokens": 0,
+              "thinkingTokens": 33,
               "cacheCreationEphemeral5mInputTokens": 0,
-              "cacheCreationEphemeral1hInputTokens": 9913,
-              "canonicalModel": "claude-sonnet-5-5",
+              "cacheCreationEphemeral1hInputTokens": 11503,
+              "canonicalModel": "claude-haiku-5-5",
               "provider": "firstParty",
               "costBasis": "list"
             }
           },
-          "credential_expires_at": "2026-12-11T13:26:03.508Z"
+          "credential_expires_at": "2026-12-11T13:26:03.371Z"
         }
       }
     },
     {
-      "id": 3407,
+      "id": 3438,
       "task_id": "preview-recorded-compact",
       "type": "agent.reply",
-      "timestamp": "2026-10-02T11:40:03.460Z",
-      "data": {
-        "text": "Red, blue, and yellow are three primary colors.",
-        "turn": 1
-      }
+      "timestamp": "2026-10-02T11:40:14.181Z",
+      "data": { "text": "`add(2, 3)` returns `5`.", "turn": 3 }
     },
     {
-      "id": 3408,
+      "id": 3439,
       "task_id": "preview-recorded-compact",
       "type": "task.turn_ended",
-      "timestamp": "2026-10-02T11:40:03.462Z",
+      "timestamp": "2026-10-02T11:40:14.182Z",
       "data": {
-        "turn": 1,
+        "turn": 3,
         "outcome": "completed",
-        "runtime_ms": 3460,
-        "cost_usd": 0.042162
+        "runtime_ms": 1712,
+        "cost_usd": 0.0025879099999999997
       }
     },
     {
-      "id": 3409,
+      "id": 3440,
       "task_id": "preview-recorded-compact",
       "type": "task.completed",
-      "timestamp": "2026-10-02T11:40:03.463Z",
-      "data": {}
-    },
-    {
-      "id": 3410,
-      "task_id": "preview-recorded-compact",
-      "type": "task.instruction",
-      "timestamp": "2026-10-02T11:40:03.541Z",
-      "data": {
-        "message_id": "msg_0e115571-3b95-4ab3-8a41-9e6190b41d88",
-        "message": "/compact",
-        "from": "user",
-        "delivery": "steer"
-      }
-    },
-    {
-      "id": 3411,
-      "task_id": "preview-recorded-compact",
-      "type": "task.queued",
-      "timestamp": "2026-10-02T11:40:03.542Z",
-      "data": {}
-    },
-    {
-      "id": 3412,
-      "task_id": "preview-recorded-compact",
-      "type": "task.started",
-      "timestamp": "2026-10-02T11:40:03.546Z",
-      "data": { "turn": 2 }
-    },
-    {
-      "id": 3413,
-      "task_id": "preview-recorded-compact",
-      "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:03.782Z",
-      "data": {
-        "type": "system",
-        "subtype": "status",
-        "status": "compacting",
-        "uuid": "d96224d2-7c3d-4fe2-8c27-a9515ac28ac2",
-        "activity": {
-          "kind": "status",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": true,
-          "statusTitle": "Compacting context",
-          "title": "Claude status",
-          "messageId": "d96224d2-7c3d-4fe2-8c27-a9515ac28ac2",
-          "hasThinking": false
-        },
-        "response_ref": "response-3413",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": "compacting",
-          "session_id": "preview-session",
-          "uuid": "d96224d2-7c3d-4fe2-8c27-a9515ac28ac2"
-        }
-      }
-    },
-    {
-      "id": 3414,
-      "task_id": "preview-recorded-compact",
-      "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:09.087Z",
-      "data": {
-        "type": "rate_limit_event",
-        "rate_limit_info": {
-          "status": "allowed",
-          "rateLimitType": "five_hour",
-          "resetsAt": 1790959200
-        },
-        "uuid": "c48a88f3-fd17-423b-bb9d-6f80a7254fc9",
-        "activity": {
-          "kind": "rate_limit_event",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": true,
-          "statusTitle": "Rate limit updated",
-          "title": "Rate limit update",
-          "messageId": "c48a88f3-fd17-423b-bb9d-6f80a7254fc9",
-          "hasThinking": false
-        },
-        "response_ref": "response-3414",
-        "raw_response": {
-          "type": "rate_limit_event",
-          "rate_limit_info": {
-            "status": "allowed",
-            "rateLimitType": "five_hour",
-            "resetsAt": 1790959200
-          },
-          "uuid": "c48a88f3-fd17-423b-bb9d-6f80a7254fc9",
-          "session_id": "preview-session"
-        }
-      }
-    },
-    {
-      "id": 3415,
-      "task_id": "preview-recorded-compact",
-      "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:09.107Z",
-      "data": {
-        "type": "system",
-        "subtype": "status",
-        "status": null,
-        "compact_result": "success",
-        "uuid": "40da427a-00f6-4275-8588-2dbf9dc06cae",
-        "activity": {
-          "kind": "status",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": true,
-          "statusTitle": "Working",
-          "title": "Claude status",
-          "messageId": "40da427a-00f6-4275-8588-2dbf9dc06cae",
-          "hasThinking": false
-        },
-        "response_ref": "response-3415",
-        "raw_response": {
-          "type": "system",
-          "subtype": "status",
-          "status": null,
-          "compact_result": "success",
-          "session_id": "preview-session",
-          "uuid": "40da427a-00f6-4275-8588-2dbf9dc06cae"
-        }
-      }
-    },
-    {
-      "id": 3416,
-      "task_id": "preview-recorded-compact",
-      "type": "agent.started",
-      "timestamp": "2026-10-02T11:40:09.116Z",
-      "data": {
-        "model": "claude-haiku-5-5",
-        "tools": [
-          "Task",
-          "Artifact",
-          "ArtifactComments",
-          "ArtifactData",
-          "AskUserQuestion",
-          "Bash",
-          "CronCreate",
-          "CronDelete",
-          "CronList",
-          "DesignSync",
-          "Edit",
-          "EnterPlanMode",
-          "EnterWorktree",
-          "ExitWorktree",
-          "ListAgents",
-          "Monitor",
-          "NotebookEdit",
-          "PushNotification",
-          "Read",
-          "RemoteTrigger",
-          "ReportFindings",
-          "ScheduleWakeup",
-          "SendMessage",
-          "SendToProject",
-          "SendToProjectContext",
-          "Skill",
-          "TaskStop",
-          "ToolSearch",
-          "WebSearch",
-          "Write"
-        ],
-        "activity": {
-          "kind": "agent.started",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Claude connected",
-          "messageId": "c08b4c7a-a64d-47a8-a484-d3e80414ba1f",
-          "hasThinking": false
-        },
-        "response_ref": "response-3416",
-        "raw_response": {
-          "type": "system",
-          "subtype": "init",
-          "cwd": "/demo/data/worktrees/preview-recorded-compact",
-          "session_id": "preview-session",
-          "tools": [
-            "Task",
-            "Artifact",
-            "ArtifactComments",
-            "ArtifactData",
-            "AskUserQuestion",
-            "Bash",
-            "CronCreate",
-            "CronDelete",
-            "CronList",
-            "DesignSync",
-            "Edit",
-            "EnterPlanMode",
-            "EnterWorktree",
-            "ExitWorktree",
-            "ListAgents",
-            "Monitor",
-            "NotebookEdit",
-            "PushNotification",
-            "Read",
-            "RemoteTrigger",
-            "ReportFindings",
-            "ScheduleWakeup",
-            "SendMessage",
-            "SendToProject",
-            "SendToProjectContext",
-            "Skill",
-            "TaskStop",
-            "ToolSearch",
-            "WebSearch",
-            "Write"
-          ],
-          "mcp_servers": [],
-          "model": "claude-haiku-5-5",
-          "permissionMode": "plan",
-          "slash_commands": [],
-          "terminal_slash_commands": [],
-          "apiKeySource": "none",
-          "claude_code_version": "2.1.325",
-          "output_style": "default",
-          "agents": ["general-purpose"],
-          "skills": [],
-          "plugins": [],
-          "capabilities": [
-            "interrupt_receipt_v1",
-            "interrupt_cancel_queued_v1",
-            "interrupt_send_now_v1",
-            "interrupt_requeue_taken_v1",
-            "msg_lifecycle_v1",
-            "request_marker_lists_v1",
-            "ask_user_question_unanswered_v1",
-            "lifecycle_wakeup_source_v1",
-            "sdk_mcp_tools_list_changed",
-            "sdk_mcp_manifests",
-            "mcp_read_resource_v1",
-            "mcp_tool_ui_meta_v1",
-            "ui_surface_v1",
-            "mcp_call_result_not_for_model_v1",
-            "mcp_call_check_permissions_v1",
-            "voice_call_talk_line_v1",
-            "withdrawn_files_note_v2",
-            "ui_pane_widget_v1",
-            "reload_plugins_refuse_if_busy_v1"
-          ],
-          "analytics_disabled": false,
-          "product_feedback_disabled": false,
-          "uuid": "c08b4c7a-a64d-47a8-a484-d3e80414ba1f",
-          "original_cwd": "/demo/data/worktrees/preview-recorded-compact",
-          "additional_directories": [],
-          "fast_mode_state": "off",
-          "fast_mode_disabled_reason": "sdk_opt_in_required",
-          "per_turn_effort_active": true,
-          "ultrathink_available": false,
-          "ultrathink_typed_raises": false,
-          "view_mode": "default",
-          "startup_timing": {
-            "entrypoint": "subagent-extension-for-codex",
-            "warm_spare_claimed": false,
-            "plugin_full_loads": 0,
-            "user_context_builds": 3,
-            "sdk_mcp_dial_runs": 0,
-            "sdk_mcp_servers_dialed": 0,
-            "flag_fetch_kick": "not_eligible",
-            "flag_fetch_kick_judged_at_ms": 73,
-            "hooks_init_source": "resume",
-            "phases": {
-              "node_boot_ms": 53,
-              "settings_load_ms": 0,
-              "pre_action_mdm_keychain_ms": 1,
-              "pre_action_init_ms": 18,
-              "pre_action_client_data_url_ms": 0,
-              "pre_action_migrations_ms": 0,
-              "pre_action_managed_settings_ms": 17,
-              "pre_action_ms": 39,
-              "permission_context_ms": 21,
-              "setup_import_ms": 1,
-              "skills_load_ms": 6,
-              "setup_uds_dir_ms": 8,
-              "setup_uds_listen_ms": 0,
-              "setup_uds_publish_ms": 2,
-              "setup_uds_messaging_ms": 11,
-              "setup_hooks_snapshot_ms": 0,
-              "setup_file_watcher_ms": 0,
-              "setup_release_notes_ms": 5,
-              "setup_ms": 16,
-              "tools_commands_load_ms": 5,
-              "model_catalog_decision_ms": 6,
-              "mcp_config_wait_ms": 4,
-              "mcp_config_load_ms": 1,
-              "mcp_connect_ms": 0,
-              "print_import_ms": 5,
-              "grove_check_ms": 0,
-              "headless_prologue_ms": 1,
-              "resume_live_check_ms": 11,
-              "resume_deserialize_ms": 10,
-              "resume_load_cpu_ms": 20,
-              "hooks_init_ms": 1,
-              "initial_messages_load_ms": 23,
-              "headless_post_load_ms": 1,
-              "input_ready_ms": 195,
-              "first_message_read_ms": 206,
-              "sdk_mcp_update_ms": 0,
-              "first_message_handle_ms": 0,
-              "first_message_handle_cpu_ms": 1,
-              "first_message_handle_loop_lag_ms": 0,
-              "mcp_prewait_ms": 0,
-              "qe_system_prompt_ms": 4,
-              "qe_plugin_skills_load_ms": 1,
-              "init_emit_ms": 1
-            },
-            "time_origin_ms": 1794692241638.725,
-            "phase_start_ms": {
-              "node_boot_ms": 0,
-              "settings_load_ms": 53,
-              "pre_action_mdm_keychain_ms": 54,
-              "pre_action_init_ms": 55,
-              "pre_action_client_data_url_ms": 73,
-              "pre_action_migrations_ms": 74,
-              "pre_action_managed_settings_ms": 74,
-              "pre_action_ms": 54,
-              "permission_context_ms": 95,
-              "setup_import_ms": 116,
-              "skills_load_ms": 119,
-              "setup_uds_dir_ms": 119,
-              "setup_uds_listen_ms": 127,
-              "setup_uds_publish_ms": 127,
-              "setup_uds_messaging_ms": 118,
-              "setup_hooks_snapshot_ms": 129,
-              "setup_file_watcher_ms": 129,
-              "setup_release_notes_ms": 130,
-              "setup_ms": 119,
-              "tools_commands_load_ms": 140,
-              "model_catalog_decision_ms": 145,
-              "mcp_config_wait_ms": 153,
-              "mcp_connect_ms": 159,
-              "print_import_ms": 160,
-              "grove_check_ms": 165,
-              "headless_prologue_ms": 165,
-              "resume_live_check_ms": 167,
-              "resume_deserialize_ms": 177,
-              "hooks_init_ms": 186,
-              "initial_messages_load_ms": 166,
-              "headless_post_load_ms": 189,
-              "input_ready_ms": 0,
-              "first_message_read_ms": 0,
-              "sdk_mcp_update_ms": 206,
-              "first_message_handle_ms": 206,
-              "mcp_prewait_ms": 206,
-              "qe_system_prompt_ms": 208,
-              "qe_plugin_skills_load_ms": 5548,
-              "init_emit_ms": 5549
-            }
-          },
-          "user_message_uuids": ["8a908331-b807-42e1-a248-ac0d9dfc2b52"]
-        }
-      }
-    },
-    {
-      "id": 3417,
-      "task_id": "preview-recorded-compact",
-      "type": "claude.activity",
-      "timestamp": "2026-10-02T11:40:09.119Z",
-      "data": {
-        "type": "system",
-        "subtype": "compact_boundary",
-        "uuid": "77355a58-3759-4bf3-baca-0c167ab86662",
-        "activity": {
-          "kind": "compact_boundary",
-          "quiet": true,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "statusTitle": "Context compacted",
-          "title": "Context compacted",
-          "messageId": "77355a58-3759-4bf3-baca-0c167ab86662",
-          "hasThinking": false
-        },
-        "response_ref": "response-3417",
-        "raw_response": {
-          "type": "system",
-          "subtype": "compact_boundary",
-          "session_id": "preview-session",
-          "uuid": "77355a58-3759-4bf3-baca-0c167ab86662",
-          "compact_metadata": {
-            "trigger": "manual",
-            "pre_tokens": 33094,
-            "post_tokens": 5746,
-            "cumulative_dropped_tokens": 27348,
-            "duration_ms": 5315
-          },
-          "logical_parent_uuid": "7e226241-957e-402c-af7a-ca75ac111c10"
-        }
-      }
-    },
-    {
-      "id": 3418,
-      "task_id": "preview-recorded-compact",
-      "type": "agent.content",
-      "timestamp": "2026-10-02T11:40:09.120Z",
-      "data": {
-        "message_id": "8d471cf0-6ed1-4d11-9435-f3ef6d320459",
-        "parent_tool_use_id": null,
-        "role": "user",
-        "text": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary></tools-used-before-summary>\n</system-reminder>\nSummary:\n1. Primary Request and Intent:\n   The user asked: \"Name three primary colors in one short sentence. Use no tools.\" The request was a trivial Q&A. I was running as an independent reviewer worker in a task workspace, with plan mode active.\n\n2. Key Technical Concepts:\n   - None. The task was general knowledge: red, blue and yellow are the traditional primary colors.\n   - The environment was a git worktree on branch `agent/name-three-primary-colors-in-one-short-s-9b9b40`, with a clean status and a single commit, \"fixture\".\n\n3. Files and Code Sections:\n   - No files were read, created or modified. The plan file at `/demo/home/.claude/plans/name-three-primary-colors-quizzical-fairy.md` was not created, because the request needed no plan.\n\n4. Errors and fixes:\n   - None.\n\n5. Problem Solving:\n   - The request was answered directly in one sentence with no tools. There is no ongoing troubleshooting.\n\n6. All user messages:\n   - \"Name three primary colors in one short sentence. Use no tools.\"\n   - \"CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.\" This message asked for a summary of the conversation in an <analysis> block followed by a <summary> block.\n\n7. Pending Tasks:\n   - None.\n\n8. Current Work:\n   I had answered the user's request with \"Red, blue, and yellow are three primary colors.\" The current turn is only this summary.\n\n9. Optional Next Step:\n   None. The task is complete, and I will wait for further instructions from the user.\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /demo/home/.claude/projects/-demo-data-worktrees-preview-recorded-compact/preview-session.jsonl\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with \"I'll continue\" or similar. Pick up the last task as if the break never happened.",
-        "content": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary></tools-used-before-summary>\n</system-reminder>\nSummary:\n1. Primary Request and Intent:\n   The user asked: \"Name three primary colors in one short sentence. Use no tools.\" The request was a trivial Q&A. I was running as an independent reviewer worker in a task workspace, with plan mode active.\n\n2. Key Technical Concepts:\n   - None. The task was general knowledge: red, blue and yellow are the traditional primary colors.\n   - The environment was a git worktree on branch `agent/name-three-primary-colors-in-one-short-s-9b9b40`, with a clean status and a single commit, \"fixture\".\n\n3. Files and Code Sections:\n   - No files were read, created or modified. The plan file at `/demo/home/.claude/plans/name-three-primary-colors-quizzical-fairy.md` was not created, because the request needed no plan.\n\n4. Errors and fixes:\n   - None.\n\n5. Problem Solving:\n   - The request was answered directly in one sentence with no tools. There is no ongoing troubleshooting.\n\n6. All user messages:\n   - \"Name three primary colors in one short sentence. Use no tools.\"\n   - \"CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.\" This message asked for a summary of the conversation in an <analysis> block followed by a <summary> block.\n\n7. Pending Tasks:\n   - None.\n\n8. Current Work:\n   I had answered the user's request with \"Red, blue, and yellow are three primary colors.\" The current turn is only this summary.\n\n9. Optional Next Step:\n   None. The task is complete, and I will wait for further instructions from the user.\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /demo/home/.claude/projects/-demo-data-worktrees-preview-recorded-compact/preview-session.jsonl\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with \"I'll continue\" or similar. Pick up the last task as if the break never happened.",
-        "activity": {
-          "kind": "agent.content",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "User content",
-          "messageId": "8d471cf0-6ed1-4d11-9435-f3ef6d320459",
-          "hasThinking": false
-        },
-        "response_ref": "response-3418",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\n<system-reminder>\n<tools-used-before-summary></tools-used-before-summary>\n</system-reminder>\nSummary:\n1. Primary Request and Intent:\n   The user asked: \"Name three primary colors in one short sentence. Use no tools.\" The request was a trivial Q&A. I was running as an independent reviewer worker in a task workspace, with plan mode active.\n\n2. Key Technical Concepts:\n   - None. The task was general knowledge: red, blue and yellow are the traditional primary colors.\n   - The environment was a git worktree on branch `agent/name-three-primary-colors-in-one-short-s-9b9b40`, with a clean status and a single commit, \"fixture\".\n\n3. Files and Code Sections:\n   - No files were read, created or modified. The plan file at `/demo/home/.claude/plans/name-three-primary-colors-quizzical-fairy.md` was not created, because the request needed no plan.\n\n4. Errors and fixes:\n   - None.\n\n5. Problem Solving:\n   - The request was answered directly in one sentence with no tools. There is no ongoing troubleshooting.\n\n6. All user messages:\n   - \"Name three primary colors in one short sentence. Use no tools.\"\n   - \"CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.\" This message asked for a summary of the conversation in an <analysis> block followed by a <summary> block.\n\n7. Pending Tasks:\n   - None.\n\n8. Current Work:\n   I had answered the user's request with \"Red, blue, and yellow are three primary colors.\" The current turn is only this summary.\n\n9. Optional Next Step:\n   None. The task is complete, and I will wait for further instructions from the user.\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /demo/home/.claude/projects/-demo-data-worktrees-preview-recorded-compact/preview-session.jsonl\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with \"I'll continue\" or similar. Pick up the last task as if the break never happened."
-          },
-          "session_id": "preview-session",
-          "parent_tool_use_id": null,
-          "uuid": "8d471cf0-6ed1-4d11-9435-f3ef6d320459",
-          "timestamp": "2026-11-14T21:37:27.165Z",
-          "isReplay": false,
-          "isSynthetic": true
-        }
-      }
-    },
-    {
-      "id": 3419,
-      "task_id": "preview-recorded-compact",
-      "type": "agent.content",
-      "timestamp": "2026-10-02T11:40:09.120Z",
-      "data": {
-        "message_id": "caf0caf9-73fd-4dd5-86ca-de009e3c9052",
-        "parent_tool_use_id": null,
-        "role": "user",
-        "text": "<local-command-stdout>Compacted </local-command-stdout>",
-        "content": "<local-command-stdout>Compacted </local-command-stdout>",
-        "activity": {
-          "kind": "agent.content",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "title": "User content",
-          "messageId": "caf0caf9-73fd-4dd5-86ca-de009e3c9052",
-          "hasThinking": false
-        },
-        "response_ref": "response-3419",
-        "raw_response": {
-          "type": "user",
-          "message": {
-            "role": "user",
-            "content": "<local-command-stdout>Compacted </local-command-stdout>"
-          },
-          "session_id": "preview-session",
-          "parent_tool_use_id": null,
-          "uuid": "caf0caf9-73fd-4dd5-86ca-de009e3c9052",
-          "timestamp": "2026-11-14T21:37:27.279Z",
-          "isReplay": true
-        }
-      }
-    },
-    {
-      "id": 3420,
-      "task_id": "preview-recorded-compact",
-      "type": "agent.completed",
-      "timestamp": "2026-10-02T11:40:09.121Z",
-      "data": {
-        "is_error": false,
-        "total_cost_usd": 0.0733351,
-        "usage": {
-          "output_tokens_details": { "thinking_tokens": 0 },
-          "input_tokens": 0,
-          "cache_creation_input_tokens": 0,
-          "cache_read_input_tokens": 0,
-          "output_tokens": 0,
-          "server_tool_use": {
-            "web_search_requests": 0,
-            "web_fetch_requests": 0
-          },
-          "service_tier": "standard",
-          "cache_creation": {
-            "ephemeral_1h_input_tokens": 0,
-            "ephemeral_5m_input_tokens": 0
-          },
-          "inference_geo": "",
-          "iterations": [],
-          "speed": "standard",
-          "fallback_credit": null
-        },
-        "subtype": "success",
-        "type": "result",
-        "duration_ms": 5342,
-        "uuid": "109e5f67-b637-4f46-836f-d3dc65b246d3",
-        "cost_usd": 0.0733351,
-        "activity": {
-          "kind": "agent.completed",
-          "quiet": false,
-          "failed": false,
-          "thinking": false,
-          "liveStatus": false,
-          "messageId": "109e5f67-b637-4f46-836f-d3dc65b246d3",
-          "hasThinking": false
-        },
-        "response_ref": "response-3420",
-        "raw_response": {
-          "is_error": false,
-          "duration_api_ms": 0,
-          "num_turns": 0,
-          "stop_reason": null,
-          "session_id": "preview-session",
-          "total_cost_usd": 0.0733351,
-          "usage": {
-            "output_tokens_details": { "thinking_tokens": 0 },
-            "input_tokens": 0,
-            "cache_creation_input_tokens": 0,
-            "cache_read_input_tokens": 0,
-            "output_tokens": 0,
-            "server_tool_use": {
-              "web_search_requests": 0,
-              "web_fetch_requests": 0
-            },
-            "service_tier": "standard",
-            "cache_creation": {
-              "ephemeral_1h_input_tokens": 0,
-              "ephemeral_5m_input_tokens": 0
-            },
-            "inference_geo": "",
-            "iterations": [],
-            "speed": "standard",
-            "fallback_credit": null
-          },
-          "modelUsage": {
-            "claude-sonnet-5-5": {
-              "inputTokens": 2000,
-              "outputTokens": 697,
-              "thinkingTokens": 0,
-              "cacheReadInputTokens": 49131,
-              "cacheCreationInputTokens": 17033,
-              "cacheCreationEphemeral5mInputTokens": 7120,
-              "cacheCreationEphemeral1hInputTokens": 9913,
-              "webSearchRequests": 0,
-              "costUSD": 0.0733351,
-              "contextWindow": 1000000,
-              "maxOutputTokens": 128000,
-              "canonicalModel": "claude-sonnet-5-5",
-              "provider": "firstParty",
-              "costBasis": "list"
-            }
-          },
-          "permission_denials": [],
-          "fast_mode_state": "off",
-          "fast_mode_disabled_reason": "sdk_opt_in_required",
-          "subagent_stats": {
-            "spawned": 0,
-            "requested": { "background": 0, "foreground": 0, "unset": 0 },
-            "started_in_background": 0,
-            "max_depth": 0,
-            "spawned_by_subagents": 0,
-            "completed": 0,
-            "failed": 0,
-            "killed": { "parent": 0, "user": 0, "system": 0 },
-            "refused": {
-              "depth_limit": 0,
-              "concurrency_limit": 0,
-              "budget": 0
-            },
-            "by_type": {}
-          },
-          "safety_stops": 0,
-          "subtype": "success",
-          "result": "",
-          "user_message_uuid": "8a908331-b807-42e1-a248-ac0d9dfc2b52",
-          "user_message_uuids": ["8a908331-b807-42e1-a248-ac0d9dfc2b52"],
-          "local_command": "compact",
-          "type": "result",
-          "duration_ms": 5342,
-          "uuid": "109e5f67-b637-4f46-836f-d3dc65b246d3",
-          "queued_turn_count": 0,
-          "result_index": 0,
-          "model_usage_since_last_result": {
-            "claude-sonnet-5-5": {
-              "inputTokens": 1998,
-              "outputTokens": 678,
-              "cacheReadInputTokens": 25971,
-              "cacheCreationInputTokens": 7120,
-              "webSearchRequests": 0,
-              "costUSD": 0.031173100000000002,
-              "contextWindow": 1000000,
-              "maxOutputTokens": 128000,
-              "thinkingTokens": 0,
-              "cacheCreationEphemeral5mInputTokens": 7120,
-              "cacheCreationEphemeral1hInputTokens": 0,
-              "canonicalModel": "claude-sonnet-5-5",
-              "provider": "firstParty",
-              "costBasis": "list"
-            }
-          },
-          "credential_expires_at": "2026-12-11T13:26:03.508Z"
-        }
-      }
-    },
-    {
-      "id": 3421,
-      "task_id": "preview-recorded-compact",
-      "type": "agent.reply",
-      "timestamp": "2026-10-02T11:40:09.646Z",
-      "data": { "text": "Compacted", "turn": 2 }
-    },
-    {
-      "id": 3422,
-      "task_id": "preview-recorded-compact",
-      "type": "task.turn_ended",
-      "timestamp": "2026-10-02T11:40:09.646Z",
-      "data": {
-        "turn": 2,
-        "outcome": "completed",
-        "runtime_ms": 6102,
-        "cost_usd": 0.031173100000000002
-      }
-    },
-    {
-      "id": 3423,
-      "task_id": "preview-recorded-compact",
-      "type": "task.completed",
-      "timestamp": "2026-10-02T11:40:09.647Z",
+      "timestamp": "2026-10-02T11:40:14.182Z",
       "data": {}
     }
   ]

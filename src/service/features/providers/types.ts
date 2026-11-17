@@ -85,6 +85,8 @@ export interface RunContext {
 /** What a successful turn returns: the worker's reply, in plain text or Markdown. */
 export interface TurnOutput {
   reply: string;
+  /** The reply is what a command such as /compact printed. */
+  commandOutput?: true;
 }
 
 export interface Provider {

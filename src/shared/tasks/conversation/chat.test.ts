@@ -158,6 +158,30 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
   );
 });
 
+test("a compaction's note replaces its command's output, and other command output stays", () => {
+  const commandTurn = (turn: number, first: number, text: string) => [
+    event(first, "task.started", { turn }),
+    event(first + 2, "agent.reply", { text, turn, command_output: true }),
+  ];
+
+  const items = chatItems(task, [
+    ...commandTurn(1, 1, "Compacted"),
+    event(2, "claude.activity", {
+      type: "system",
+      subtype: "compact_boundary",
+      activity: { kind: "compact_boundary" },
+    }),
+    ...commandTurn(2, 4, "Context Usage"),
+  ]);
+
+  assert.deepEqual(
+    items.map((item) =>
+      item.kind === "message" ? item.message.text : item.kind,
+    ),
+    ["Move the helpers", "note", "Context Usage"],
+  );
+});
+
 test("Chat reads every event that leaves a task unread, and an input request adds no item", () => {
   for (const type of READ_EVENTS) assert.ok(CHAT_EVENTS.includes(type), type);
 

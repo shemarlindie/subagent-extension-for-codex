@@ -3,6 +3,7 @@ import type { Event } from "../../events/types.js";
 import { contentText } from "../../providers/activity/content-text.js";
 import { activityPresentation } from "../../providers/activity/presentation.js";
 import { scalarText } from "../../text.js";
+import { slashCommand } from "../conversation/commands.js";
 import { failureMessage } from "../failure.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
@@ -42,6 +43,20 @@ export const activityKind = (e: Event) =>
  * place of a summary.
  */
 export const replyText = (e: Event) => eventPayload(e, "agent.reply")?.text;
+
+/**
+ * The summary a compaction continues the conversation from, without the
+ * reminders addressed to the model. Activity previews it like a reply.
+ */
+export function compactionSummary(e: Event) {
+  if (e.view.kind === "known" || activityKind(e) !== "compact_summary") {
+    return undefined;
+  }
+
+  return string(e.data.text)
+    ?.replace(/<system-reminder>[\s\S]*?<\/system-reminder>\s*/g, "")
+    .trim();
+}
 
 export function activityFailed(e: Event) {
   const failed = activityPresentation(e).failed;
@@ -226,6 +241,9 @@ export function eventRowTitle(
   presentationTitle: string | undefined,
 ) {
   if (!activityFailed(e)) {
+    const instruction = eventPayload(e, "task.instruction");
+    if (instruction && slashCommand(instruction.message)) return "Command";
+
     return (
       presentationTitle ??
       eventTitles[key] ??

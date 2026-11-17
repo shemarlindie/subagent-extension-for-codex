@@ -29,7 +29,10 @@ import {
 import { ClaudeCli } from "../configuration/executable.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
-import { claudeMessageNormalizer } from "../events/normalize.js";
+import {
+  claudeMessageNormalizer,
+  localCommandOutput,
+} from "../events/normalize.js";
 import { ClaudeCommands } from "./command-discovery.js";
 import { contextUsageRecorder } from "./context-usage.js";
 import { ClaudeDiscovery } from "./discovery.js";
@@ -64,14 +67,6 @@ type CommandLifecycle = {
 
 /** How long an interrupt may take before the process is stopped instead. */
 const INTERRUPT_GRACE_MS = 10_000;
-
-/** What a command that ran in Claude Code printed, from its replayed message. */
-const localCommandOutput = (content: SDKUserMessage["message"]["content"]) =>
-  typeof content === "string"
-    ? /^<local-command-stdout>([\s\S]*)<\/local-command-stdout>$/
-        .exec(content)?.[1]
-        ?.trim() || undefined
-    : undefined;
 
 export class ClaudeAgentProvider implements Provider {
   id = "claude";
@@ -249,6 +244,7 @@ export class ClaudeAgentProvider implements Provider {
     let reply: string | undefined;
     // What a command that ran in Claude Code printed, since its result.
     let localOutput: string | undefined;
+    let commandOutput = false;
     // The main worker's message being streamed.
     let streaming: string | undefined;
     // A steer the CLI runs as its own turn starts again, in whatever mode
@@ -386,9 +382,7 @@ export class ClaudeAgentProvider implements Provider {
 
         normalize(c, m);
 
-        if (m.type === "user" && "isReplay" in m) {
-          localOutput = localCommandOutput(m.message.content) ?? localOutput;
-        }
+        localOutput = localCommandOutput(m) ?? localOutput;
 
         if (m.type === "system" && m.subtype === "init" && !started) {
           started = true;
@@ -442,6 +436,7 @@ export class ClaudeAgentProvider implements Provider {
         }
 
         // A command such as /compact gives its output and an empty result.
+        commandOutput = !m.result && localOutput !== undefined;
         reply = m.result || localOutput || "";
         localOutput = undefined;
 
@@ -455,7 +450,7 @@ export class ClaudeAgentProvider implements Provider {
 
       if (reply === undefined) throw new Error("Claude ended without a result");
 
-      return { reply };
+      return commandOutput ? { reply, commandOutput } : { reply };
     } finally {
       clearTimeout(fallback);
       c.signal.removeEventListener("abort", interrupt);

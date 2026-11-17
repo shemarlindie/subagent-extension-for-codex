@@ -358,7 +358,7 @@ test("a command with an empty result replies with what it printed", async () => 
       },
       result(""),
     ]),
-    { reply: "Compacted" },
+    { reply: "Compacted", commandOutput: true },
   );
 });
 
