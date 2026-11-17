@@ -4,13 +4,13 @@ import {
   effortCap,
   effortCapReason,
   orgEffort,
+  runtimeDefault,
 } from "../../../shared/providers/policy";
 import type { ModelChoice } from "../../../shared/providers/types";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
 import { reasoningLevels } from "../../../shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
-import { modelName } from "./setting-labels";
 
 /** A saved level a start keeps. It skips one the model is known not to support. */
 function runnableLevel(metadata: ModelChoice | undefined, level?: string) {
@@ -48,10 +48,7 @@ export function modelDefaults(
   const runs = selectedModel.trim() || saved.model || "default";
   const models = workerInfo?.models ?? [];
   const metadata = models.find((item) => item.value === runs);
-  const runtime = models.find((item) => item.value === "default");
-
-  const runtimeModel =
-    runtime?.resolvedModel && modelName(models, runtime.resolvedModel);
+  const runtime = runtimeDefault(models);
 
   const supported =
     metadata?.supportsEffort === false
@@ -64,18 +61,18 @@ export function modelDefaults(
   const org = orgEffort(policy, model);
 
   const inheritedLevel = supported.find(
-    (level) => level === (org ?? runtime?.resolvedEffort),
+    (level) => level === (org ?? runtime.effort),
   );
 
   return {
     provider,
-    model: saved.model ?? runtimeModel,
+    model: saved.model ?? runtime.model,
     reasoning:
       runnableLevel(metadata, saved.reasoning_effort) ?? inheritedLevel,
     providerModel: saved.providerModel,
     providerReasoning:
       runnableLevel(metadata, saved.providerReasoning) ?? inheritedLevel,
-    runtimeModel,
+    runtimeModel: runtime.model,
     workerInfo,
     metadata,
     supported,

@@ -47,6 +47,33 @@ export function modelAllowed(
   );
 }
 
+/**
+ * A model's display name, by its value or the full ID an alias stands for,
+ * falling back to the ID for undiscovered models.
+ */
+export function modelName(models: readonly ModelChoice[], value: string) {
+  const match =
+    models.find((model) => model.value === value) ??
+    models.find(
+      (model) => model.value !== "default" && model.resolvedModel === value,
+    );
+
+  return match?.displayName ?? value;
+}
+
+/**
+ * The model, by name, and reasoning the catalog's Default entry runs: the
+ * provider's own default, or the org's.
+ */
+export function runtimeDefault(models: readonly ModelChoice[]) {
+  const entry = models.find(({ value }) => value === "default");
+
+  return {
+    model: entry?.resolvedModel && modelName(models, entry.resolvedModel),
+    effort: entry?.resolvedEffort,
+  };
+}
+
 /** The model ID a choice runs, from the catalog. Blank runs Default. */
 export const resolvedModel = (models: readonly ModelChoice[], value = "") =>
   models.find((choice) => choice.value === (value || "default"))

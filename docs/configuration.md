@@ -230,10 +230,12 @@ value set in this order:
 | Provider | `models.providers.claude.model`   | `models.providers.claude.reasoning_effort`   |
 
 A blank model and `default` reasoning inherit from the next scope. When every
-scope inherits, the provider runtime's default applies. Saved values from the
-removed global defaults are ignored, and imports list them as skipped. Task
-values come from `start_task`, the New task composer or the Advanced task
-dialog. Permission mode and session restrictions follow their own rules below.
+scope inherits, the provider runtime's default applies. Settings, the New task
+composer and the Advanced task dialog name the value an inherited choice lands
+on, such as `Inherit (Opus 5.5)`. Saved values from the removed global defaults
+are ignored, and imports list them as skipped. Task values come from
+`start_task`, the New task composer or the Advanced task dialog. Permission mode
+and session restrictions follow their own rules below.
 
 Profile defaults apply to every provider, so choose a model each provider
 accepts or override it on the task. Claude accepts `low`, `medium`, `high`,
@@ -365,7 +367,7 @@ is cached for five minutes.
 | Policy                                                                                                                     | New tasks                                                                                                          | Panel                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `permissions.disableBypassPermissionsMode`, `disableAutoMode` or `permissions.disableAutoMode`                             | An explicit request fails. A saved mode falls back.                                                                | The mode stays listed and locked, with the reason.                                                                                                                                                     |
-| `model`                                                                                                                    | It supplies the runtime default. Saved Claude and profile models still apply.                                      | Claude's Inherit names it, and the composer starts on it unless a saved model applies. The Default model names it, and **Organization policy** lists it.                                               |
+| `model`                                                                                                                    | It supplies the runtime default. Saved Claude and profile models still apply.                                      | Inherit and the composer name it where no saved model applies. The Default model names it, and **Organization policy** lists it.                                                                       |
 | `effortLevel`                                                                                                              | It supplies the runtime default. Saved Claude and profile reasoning still apply.                                   | Inherit and the composer name it where the model supports it, and **Organization policy** lists it.                                                                                                    |
 | `modelSettings.<model>.effortLevel`                                                                                        | Its model runs it in place of `effortLevel` when no saved reasoning applies.                                       | Inherit and the composer name it where that model runs, and **Organization policy** lists it.                                                                                                          |
 | `maxEffortLevel`, `modelSettings.<model>.maxEffortLevel`                                                                   | An explicit level above it fails. A saved one starts, and Claude Code lowers it.                                   | Reasoning menus lock higher levels. A saved level above it gets a warning, and **Organization policy** lists the limit. A lowered level gets a note in Chat, and the run settings show the level used. |

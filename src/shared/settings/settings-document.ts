@@ -6,9 +6,11 @@ import {
   aboveEffortCap,
   effortCap,
   modelAllowed,
+  modelName,
   MODELS_LIMITED,
   orgEffort,
   resolvedModel,
+  runtimeDefault,
   withEffortCap,
 } from "../providers/policy.js";
 import {
@@ -83,26 +85,35 @@ export interface ScopeInput {
 }
 
 /**
- * The org's reasoning a scope's Inherit lands on: its level for the model the
- * scope runs, when no scope it inherits sets one and the model supports it.
+ * What a scope's Inherit lands on: a profile's provider setting, then the
+ * runtime default. Reasoning takes the org's level for the model the scope
+ * runs before the runtime's, and only a level the model supports.
  */
-function orgInherited(
+function inherited(
   values: unknown,
   scope: { provider: string; providerScope: boolean },
-  policy: ProviderPolicy | undefined,
+  catalog: Catalog | undefined,
   model: string,
   levels: readonly string[] | undefined,
 ) {
   // Provider scopes inherit the runtime default.
-  const parent = scope.providerScope ? {} : { provider: scope.provider };
+  const parent = resolveModelDefaults(
+    values,
+    scope.providerScope ? {} : { provider: scope.provider },
+  );
 
-  const inherits = resolveModelDefaults(values, parent).reasoning_effort;
+  const models = catalog?.models ?? [];
+  const runtime = runtimeDefault(models);
 
-  const org = orgEffort(policy, model);
+  const fits = (level: string | undefined) =>
+    level && (!levels || levels.includes(level)) ? level : undefined;
 
-  return !inherits && org && (!levels || levels.includes(org))
-    ? org
-    : undefined;
+  return {
+    model: parent.model ? modelName(models, parent.model) : runtime.model,
+    effort:
+      fits(parent.reasoning_effort) ??
+      fits(orgEffort(catalog?.policy, model) ?? runtime.effort),
+  };
 }
 
 /**
@@ -145,10 +156,24 @@ export function modelScope(
   const levels =
     metadata?.supportsEffort === false ? [] : metadata?.supportedEffortLevels;
 
+  const runs = resolvedModel(catalog?.models ?? [], effectiveModel);
+  const cap = effortCap(catalog?.policy, runs);
+
+  const inherits = inherited(
+    values,
+    { provider, providerScope },
+    catalog,
+    runs,
+    levels,
+  );
+
   // Saved choices stay selectable even when the catalog no longer lists them.
   const modelChoices = choices.length
     ? [
-        { value: "", label: "Inherit" },
+        {
+          value: "",
+          label: inherits.model ? `Inherit (${inherits.model})` : "Inherit",
+        },
         ...new Map(
           choices.map((model) => [
             model.value,
@@ -165,17 +190,6 @@ export function modelScope(
       ]
     : undefined;
 
-  const runs = resolvedModel(catalog?.models ?? [], effectiveModel);
-  const cap = effortCap(catalog?.policy, runs);
-
-  const inherited = orgInherited(
-    values,
-    { provider, providerScope },
-    catalog?.policy,
-    runs,
-    levels,
-  );
-
   return {
     modelPath,
     effortPath,
@@ -185,14 +199,14 @@ export function modelScope(
     levels,
     modelChoices,
     modelExcluded: !modelAllowed(catalog?.policy, choices, saved),
-    ...effortScope(levels, providerScope, savedEffort, cap, inherited),
+    ...effortScope(levels, providerScope, savedEffort, cap, inherits.effort),
   };
 }
 
 /**
  * A scope's effort choices: a provider's offers the levels its model
  * supports, when known, and others offer all of them. Levels above the
- * org's cap are locked, and Inherit names the org's level it lands on.
+ * org's cap are locked, and Inherit names the level it lands on.
  */
 function effortScope(
   levels: readonly string[] | undefined,
@@ -285,8 +299,12 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   const profileModel = modelPath(settingAt(values, "task.worker_profile"));
   const providerModel = modelPath(settingAt(values, "task.provider"));
 
-  // Claude is the only provider, so its org defaults are what Inherit uses.
-  const inherit = inheritHelp(claudePolicy);
+  // Claude is the only provider, so its defaults are what Inherit uses.
+  const claudeModels = input.catalogs.find(
+    ({ provider }) => provider === "claude",
+  )?.models;
+
+  const inherit = inheritHelp(claudePolicy, runtimeDefault(claudeModels ?? []));
 
   const defaultsHelp = withHelp(
     [

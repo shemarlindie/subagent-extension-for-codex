@@ -1,14 +1,12 @@
 import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
+import { modelName } from "../../../../../shared/providers/policy";
 import { providerTaskFacts } from "../../../../../shared/providers/presentation";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { titleCase } from "../../../../../shared/text";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { compactPermissionLabel } from "../../../delegation/permission-label";
-import {
-  compactReasoningLabel,
-  modelName,
-} from "../../../delegation/setting-labels";
+import { compactReasoningLabel } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
 import { PromptCacheTimer } from "./prompt-cache-timer";
 

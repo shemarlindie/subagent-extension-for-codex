@@ -1,6 +1,6 @@
+import { modelName } from "../../../../../shared/providers/policy";
 import type { ModelChoice } from "../../../../../shared/providers/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
-import { modelName } from "../../setting-labels";
 import { useProfileChoice } from "./use-profile-choice";
 
 type ModelChipProps = {
