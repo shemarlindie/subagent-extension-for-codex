@@ -7,6 +7,7 @@ import type {
 import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
+import type { RunContext } from "../../types.js";
 import {
   claudeOptions,
   context,
@@ -29,13 +30,21 @@ const result = {
   usage: {},
 };
 
+type RunOptions = {
+  /** Runs when the turn's stream returns. */
+  onReturn?: () => void;
+  /** Replaces how the run saves session records. */
+  sessionOption?: RunContext["sessionOption"];
+};
+
 /** Runs a turn that plays `frames`, answering context usage calls with `answer`. */
 async function run(
   frames: object[],
   answer: (call: number) => Promise<SDKControlGetContextUsageResponse>,
-  onReturn = () => {},
+  { onReturn = () => {}, sessionOption }: RunOptions = {},
 ) {
   const ctx = await context();
+  if (sessionOption) ctx.c.sessionOption = sessionOption;
   let calls = 0;
 
   const launch = () =>
@@ -83,9 +92,11 @@ test("the newest measurement wins, and one still running at turn end is stored",
   const { stored } = await run(
     [responseEnd(), responseEnd()],
     async (call) => (call === 0 ? older : newer).promise,
-    () => {
-      newer.resolve(contextUsage(50_000));
-      older.resolve(contextUsage(40_000));
+    {
+      onReturn: () => {
+        newer.resolve(contextUsage(50_000));
+        older.resolve(contextUsage(40_000));
+      },
     },
   );
 
@@ -93,4 +104,18 @@ test("the newest measurement wins, and one still running at turn end is stored",
     (stored as { total_tokens: number } | undefined)?.total_tokens,
     50_000,
   );
+});
+
+test("a measurement that fails to save leaves the turn to finish", async () => {
+  const { calls } = await run(
+    [responseEnd()],
+    async () => contextUsage(40_000),
+    {
+      sessionOption: () => {
+        throw new Error("database or disk is full");
+      },
+    },
+  );
+
+  assert.equal(calls, 1);
 });

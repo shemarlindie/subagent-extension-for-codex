@@ -47,8 +47,9 @@ export function contextUsageRecorder(
     const id = ++started;
     const begun = performance.now();
 
-    running = stream.getContextUsage({ detail: "summary" }).then(
-      (usage) => {
+    running = stream
+      .getContextUsage({ detail: "summary" })
+      .then((usage) => {
         if (settled || id < stored) return;
         stored = id;
 
@@ -60,11 +61,11 @@ export function contextUsageRecorder(
           window_tokens: record.window_tokens,
           duration_ms: performance.now() - begun,
         });
-      },
-      (error: unknown) => {
+      })
+      // A failed call or save only loses this measurement.
+      .catch((error: unknown) => {
         if (!settled) logError("provider.context_usage_failed", error);
-      },
-    );
+      });
   };
 
   /** Waits briefly for a measurement still running, then stores no more. */
