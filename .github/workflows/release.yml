@@ -193,13 +193,20 @@ jobs:
       - run: npm ci
       - run: npm install --global @openai/codex@0.162.1
 
-      # A new version can take several minutes to appear on npm.
+      # A new version can take several minutes to appear on npm, and its tarball
+      # can appear after its metadata. A tarball request that 404s gets cached
+      # by npm's CDN for minutes, so the check adds a query string to skip the
+      # cache and leave the plain URL untouched until Codex downloads it.
       - name: Wait for npm to serve the version
         run: |
-          for attempt in {1..30}; do
-            npm view "subagent-extension-for-codex@${VERSION}" version && exit 0
-            sleep 30
+          for attempt in {1..60}; do
+            tarball=$(npm view "subagent-extension-for-codex@${VERSION}" dist.tarball || true)
+            if [ -n "$tarball" ] && curl -fsI "${tarball}?attempt=${attempt}-${RANDOM}" > /dev/null; then
+              exit 0
+            fi
+            sleep 15
           done
+          echo "npm didn't serve ${VERSION}'s tarball in time"
           exit 1
 
       - name: Install the tag from GitHub with Codex
