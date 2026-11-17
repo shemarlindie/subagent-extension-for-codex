@@ -471,12 +471,8 @@ export class Control {
         t.session_owner = this.ownerWorker;
         this.store.save(t);
       },
-      effectiveOptions: (effective) => {
-        t.provider_options = withSessionOption(t, "effective", effective);
-        this.store.save(t);
-      },
-      promptCache: (value) => {
-        t.provider_options = withSessionOption(t, "prompt_cache", value);
+      sessionOption: (key, value) => {
+        t.provider_options = withSessionOption(t, key, value);
         this.store.save(t);
       },
       input: a.input.request,

@@ -43,7 +43,7 @@ function description(left: PromptCacheLeft) {
   }
 }
 
-const HELP = "Replies that use the cache typically consume less plan usage.";
+const HELP = "Replies that use the cache consume less plan usage.";
 
 const STATE_ICONS = { warm: "timer", expired: "timer-off" } as const;
 
@@ -60,35 +60,37 @@ export function PromptCacheTimer({ task }: PromptCacheTimerProps) {
 
   const { status, note } = description(left);
 
-  // An empty title keeps the list's own tooltip off the timer.
+  // The whole item opens the tooltip.
   return (
-    <li
-      className="prompt-cache-timer"
-      data-warning={
-        left.state === "warm" && left.ms < WARNING_MS[left.ttl] ? "" : undefined
+    <TooltipWrapper
+      label={`${status}. ${note} ${HELP}`}
+      content={
+        <>
+          <span className="run-setting-tooltip-status">{status}</span>
+          <span className="run-setting-tooltip-note">{note}</span>
+          <span className="prompt-cache-tooltip-help">
+            <Icon name="info" size={8} />
+            {HELP}
+          </span>
+        </>
       }
-      title=""
     >
-      <TooltipWrapper
-        label={`${status}. ${note} ${HELP}`}
-        content={
-          <>
-            <span className="prompt-cache-tooltip-status">{status}</span>
-            <span className="prompt-cache-tooltip-note">{note}</span>
-            <span className="prompt-cache-tooltip-help">
-              <Icon name="info" size={8} />
-              {HELP}
-            </span>
-          </>
+      <li
+        className="prompt-cache-timer run-setting-trigger"
+        data-warning={
+          left.state === "warm" && left.ms < WARNING_MS[left.ttl]
+            ? ""
+            : undefined
         }
+        tabIndex={0}
       >
-        <span className="prompt-cache-timer-trigger" tabIndex={0}>
+        <span className="run-setting-value">
           <Icon name={STATE_ICONS[left.state]} size={12} />
           {left.state !== "expired" && (
             <span aria-hidden="true">{short(left.ms)}</span>
           )}
         </span>
-      </TooltipWrapper>
-    </li>
+      </li>
+    </TooltipWrapper>
   );
 }

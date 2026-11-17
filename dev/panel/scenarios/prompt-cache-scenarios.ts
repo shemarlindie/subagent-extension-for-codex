@@ -31,6 +31,18 @@ export const promptCacheTasks: Task[] = [
       claude: {
         ...settingOptions().claude,
         prompt_cache: { requested_at: ago(150_000), ttl: "5m" },
+        context_usage: {
+          total_tokens: 101_400,
+          window_tokens: 400_000,
+          auto_compact_tokens: 367_000,
+          categories: [
+            { name: "System prompt", tokens: 11_900 },
+            { name: "System tools", tokens: 14_000 },
+            { name: "Skills", tokens: 6_200 },
+            { name: "Memory files", tokens: 500 },
+            { name: "Messages", tokens: 68_800 },
+          ],
+        },
       },
     },
     runtime_ms: 18000,

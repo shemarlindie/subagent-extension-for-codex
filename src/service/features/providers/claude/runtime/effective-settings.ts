@@ -134,7 +134,7 @@ export async function recordEffectiveSettings(
 
   const changed = EFFECTIVE_KEYS.filter((key) => after[key] !== before?.[key]);
   if (!changed.length) return;
-  c.effectiveOptions(after);
+  c.sessionOption("effective", after);
 
   const fresh = (key: (typeof EFFECTIVE_KEYS)[number]) =>
     changed.includes(key) ? after[key] : undefined;

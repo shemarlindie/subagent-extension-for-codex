@@ -12,6 +12,10 @@ import type { RecordedFixture } from "../recording/recording";
 import { activityTasks, activityTimelines } from "./activity-scenarios";
 import { attachmentTask, attachmentTimeline } from "./attachment-scenarios";
 import {
+  contextUsageTasks,
+  contextUsageTimelines,
+} from "./context-usage-scenarios";
+import {
   conversationTasks,
   conversationTimelines,
 } from "./conversation-scenarios";
@@ -107,6 +111,7 @@ export const previewTasks: Task[] = [
     projectTasks,
     orgPolicyTasks,
     promptCacheTasks,
+    contextUsageTasks,
   );
 
 const timelinesById = new Map(
@@ -118,6 +123,7 @@ const timelinesById = new Map(
     ...liveTimelines,
     ...orgPolicyTimelines,
     ...promptCacheTimelines,
+    ...contextUsageTimelines,
   ].map((timeline) => [timeline.taskId, timeline]),
 );
 
@@ -152,6 +158,7 @@ export const previewEvents: Event[] = [
     "preview-policy-limited",
     "preview-policy-lowered",
     "preview-cache-countdown",
+    "preview-context-full",
   ].flatMap((id) => byId(timelinesById, id).events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),

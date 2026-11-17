@@ -40,6 +40,10 @@
   font-size: 11px;
   line-height: 1.35;
 }
+/* Formatted notes with several lines get even padding. */
+.tooltip-popup-rich {
+  padding: 8px;
+}
 .grow {
   flex: 1;
 }

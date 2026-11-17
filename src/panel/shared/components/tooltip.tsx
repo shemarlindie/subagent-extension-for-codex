@@ -9,7 +9,7 @@ import {
 
 interface TooltipWrapperProps {
   label: string;
-  /** Formatted popup text, when the plain `label` isn't enough. */
+  /** Formatted popup text, padded more, when the plain `label` isn't enough. */
   content?: ReactNode;
   children: ReactElement;
   open?: boolean;
@@ -73,11 +73,13 @@ export function TooltipWrapper({
             sideOffset={sideOffset}
           >
             <Tooltip.Popup
-              className={
-                popupClassName
-                  ? `tooltip-popup ${popupClassName}`
-                  : "tooltip-popup"
-              }
+              className={[
+                "tooltip-popup",
+                content && "tooltip-popup-rich",
+                popupClassName,
+              ]
+                .filter(Boolean)
+                .join(" ")}
               role="tooltip"
             >
               {arrow && (

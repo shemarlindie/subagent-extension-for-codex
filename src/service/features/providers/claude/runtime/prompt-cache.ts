@@ -57,7 +57,7 @@ export function recordPromptCache(
   // A read with no earlier record leaves the TTL unknown.
   if (!used || !ttl) return;
 
-  c.promptCache({
+  c.sessionOption("prompt_cache", {
     requested_at: new Date().toISOString(),
     ttl,
   } satisfies ClaudePromptCache);

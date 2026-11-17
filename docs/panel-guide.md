@@ -387,7 +387,9 @@ You can hide the composer and keep its draft. A pending question or permission
 request collapses it.
 
 The first run setting estimates how long the task's prompt cache stays warm. A
-reply sent before it runs out reuses the cached conversation and costs less.
+reply sent before it runs out reuses the cached conversation and costs less. The
+next shows how full the context window was after the latest response, with a
+breakdown in its tooltip.
 
 ### Questions and permissions
 

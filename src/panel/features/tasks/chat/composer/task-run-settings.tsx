@@ -8,15 +8,20 @@ import type { ModelChoice } from "../../../../../shared/providers/types";
 import { titleCase } from "../../../../../shared/text";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
+import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { compactPermissionLabel } from "../../../delegation/permission-label";
 import { compactReasoningLabel } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
+import { ContextUsageMeter } from "./context-usage-meter";
 import { PromptCacheTimer } from "./prompt-cache-timer";
 
 type TaskRunSettingsProps = { task: Task };
 
-/** A setting's label and the abbreviation shown for it. Without one, it stays unshown. */
-type RunSetting = { label: string; compact?: string };
+/**
+ * A setting's name in the tooltip, its label and the abbreviation shown for
+ * it. Without an abbreviation, it stays unshown.
+ */
+type RunSetting = { name: string; label: string; compact?: string };
 
 /** The settings shown after the profile, in order. */
 function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
@@ -32,23 +37,30 @@ function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
   const model = ran ? modelName(models, ran) : "Default model";
 
   return [
-    { label: model, compact: model },
+    { name: "Model", label: model, compact: model },
     {
+      name: "Reasoning",
       label:
         reasoning === "default" ? "Default reasoning" : titleCase(reasoning),
       compact: compactReasoningLabel(reasoning),
     },
     ...(permission
-      ? [{ label: permission, compact: compactPermissionLabel(permission) }]
+      ? [
+          {
+            name: "Permissions",
+            label: permission,
+            compact: compactPermissionLabel(permission),
+          },
+        ]
       : []),
   ];
 }
 
 /**
- * What the task runs with, and what it explicitly asked for where that
- * differs. A Default choice records what it ran without asking for it.
+ * What the task explicitly asked for where it differs from what it runs with.
+ * A Default choice records what it ran without asking for it.
  */
-function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
+function requestedSettings(task: Task) {
   const facts = providerTaskFacts(task);
   const effort = task.reasoning_effort;
 
@@ -61,16 +73,13 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
       `${titleCase(effort)} reasoning`,
   ].filter(Boolean);
 
-  return [
-    `Set when the task started: ${[profile, ...settings.map((setting) => setting.label)].join(" · ")}`,
-    ...(requested.length ? [`Requested: ${requested.join(", ")}`] : []),
-  ].join(". ");
+  return requested.length ? `Requested: ${requested.join(", ")}` : undefined;
 }
 
 /**
  * The profile, model, reasoning and permission mode a task started with,
- * shown beside the composer after the prompt cache timer. They are fixed for
- * the task's later turns.
+ * shown beside the composer after the prompt cache timer and context usage
+ * meter. They are fixed for the task's later turns.
  * The profile shows as its icon and the rest abbreviate beside it, as the
  * new-task composer's summary reads them. The full labels remain for
  * assistive tech and the tooltip.
@@ -84,37 +93,72 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
   const profile = titleCase(task.worker_profile);
   const settings = runSettings(task, models);
 
+  const started = [profile, ...settings.map((setting) => setting.label)].join(
+    " · ",
+  );
+
+  const requested = requestedSettings(task);
+
   return (
-    <ul
-      className="task-run-settings"
-      aria-label="Task settings"
-      title={runSettingsTitle(task, profile, settings)}
-    >
+    <ul className="task-run-settings" aria-label="Task settings">
       <PromptCacheTimer task={task} />
-      <li className="task-run-profile">
-        <WorkerProfileIcon profile={task.worker_profile} size={12} />
-        <span className="visually-hidden">{profile}</span>
-      </li>
-      {settings.map(({ label, compact }) => (
-        <li
-          key={label}
-          className="task-run-setting"
-          data-compact={compact ? undefined : "hidden"}
-        >
-          {compact === label ? (
-            label
-          ) : (
-            <>
-              <span className="visually-hidden">{label}</span>
-              {compact && (
-                <span className="task-run-setting-compact" aria-hidden="true">
-                  {compact}
-                </span>
+      <ContextUsageMeter task={task} />
+      {/* One item, so the whole summary opens its tooltip. */}
+      <TooltipWrapper
+        label={[`Set when the task started: ${started}`, requested]
+          .filter(Boolean)
+          .join(". ")}
+        content={
+          <>
+            <span className="run-setting-tooltip-status">
+              Set when the task started
+            </span>
+            <span className="run-setting-tooltip-rows">
+              {[{ name: "Profile", label: profile }, ...settings].map(
+                ({ name, label }) => (
+                  <span key={name}>
+                    <span>{name}</span>
+                    <span>{label}</span>
+                  </span>
+                ),
               )}
-            </>
-          )}
+            </span>
+            {requested && (
+              <span className="run-setting-tooltip-note">{requested}</span>
+            )}
+          </>
+        }
+      >
+        <li className="task-run-summary run-setting-trigger" tabIndex={0}>
+          <span className="task-run-profile">
+            <WorkerProfileIcon profile={task.worker_profile} size={12} />
+            <span className="visually-hidden">{profile}</span>
+          </span>
+          {settings.map(({ label, compact }) => (
+            <span
+              key={label}
+              className="task-run-setting"
+              data-compact={compact ? undefined : "hidden"}
+            >
+              {compact === label ? (
+                label
+              ) : (
+                <>
+                  <span className="visually-hidden">{label}</span>
+                  {compact && (
+                    <span
+                      className="task-run-setting-compact"
+                      aria-hidden="true"
+                    >
+                      {compact}
+                    </span>
+                  )}
+                </>
+              )}
+            </span>
+          ))}
         </li>
-      ))}
+      </TooltipWrapper>
     </ul>
   );
 }

@@ -197,9 +197,12 @@ inspect pending states in the fixture UI.
   Every file sets a stroke width on the root `<svg>`, which the catalog
   requires. Pick `size` for the visible size, and render shapes that cover more
   area, such as squares, a little smaller than circles beside them.
+- `ProgressRing` draws a decorative fill ring for a 0 to 1 value in the current
+  color. Pair it with text or a label that states the value.
 - `TooltipWrapper` labels controls for mouse and keyboard users. Base UI turns
   tooltips off for touch, so use `Infotip` for info triggers whose note must
-  open on tap.
+  open on tap. Plain labels get compact padding, and formatted content gets even
+  padding through `tooltip-popup-rich`.
 - `Button` variants cover primary, secondary, toolbar and inline actions. Pass
   `type="submit"` explicitly for form submission. Base UI button parts can reuse
   `buttonClass`. Domain controls such as task rows may keep their own native
