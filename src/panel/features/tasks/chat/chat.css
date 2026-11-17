@@ -793,25 +793,58 @@ body[data-expanded-panel="true"]
   flex: none;
   align-items: center;
 }
-.prompt-cache-timer-trigger {
+/* The prompt cache timer and context usage meter: an icon, a short value and a tooltip. */
+.run-setting-trigger {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   border-radius: 3px;
   font-variant-numeric: tabular-nums;
 }
-.prompt-cache-timer-trigger:focus-visible {
+.run-setting-trigger:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.prompt-cache-tooltip-status {
+.run-setting-tooltip-status {
   display: block;
   font-weight: 600;
 }
-.prompt-cache-tooltip-note {
+.run-setting-tooltip-note {
   display: block;
   margin-top: 2px;
   color: var(--muted);
+}
+.task-run-settings li[data-warning] {
+  color: var(--warn);
+}
+.context-usage-meter svg {
+  fill: none;
+  stroke-width: 2;
+  transform: rotate(-90deg);
+}
+.context-usage-ring-track {
+  stroke: currentColor;
+  opacity: 0.3;
+}
+.context-usage-ring-fill {
+  stroke: currentColor;
+}
+.context-usage-tooltip-categories {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 12px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.context-usage-tooltip-categories > span {
+  display: contents;
+}
+/* Narrow panels show the ring alone, leaving the model name room. */
+@media (max-width: 400px) {
+  .context-usage-meter-percent {
+    display: none;
+  }
 }
 .prompt-cache-tooltip-help {
   display: flex;
@@ -820,9 +853,6 @@ body[data-expanded-panel="true"]
   margin-top: 6px;
   color: var(--muted);
   font-size: 0.8em;
-}
-.prompt-cache-timer[data-warning] {
-  color: var(--warn);
 }
 .task-run-settings .task-run-profile {
   margin-inline-end: 6px;
@@ -836,6 +866,7 @@ body[data-expanded-panel="true"]
   text-overflow: ellipsis;
 }
 .prompt-cache-timer + li::before,
+.context-usage-meter + li::before,
 .task-run-setting + li::before {
   content: "·" / "";
   margin-inline: 4px;

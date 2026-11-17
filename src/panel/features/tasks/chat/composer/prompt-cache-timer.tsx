@@ -73,8 +73,8 @@ export function PromptCacheTimer({ task }: PromptCacheTimerProps) {
         label={`${status}. ${note} ${HELP}`}
         content={
           <>
-            <span className="prompt-cache-tooltip-status">{status}</span>
-            <span className="prompt-cache-tooltip-note">{note}</span>
+            <span className="run-setting-tooltip-status">{status}</span>
+            <span className="run-setting-tooltip-note">{note}</span>
             <span className="prompt-cache-tooltip-help">
               <Icon name="info" size={8} />
               {HELP}
@@ -82,7 +82,7 @@ export function PromptCacheTimer({ task }: PromptCacheTimerProps) {
           </>
         }
       >
-        <span className="prompt-cache-timer-trigger" tabIndex={0}>
+        <span className="run-setting-trigger" tabIndex={0}>
           <Icon name={STATE_ICONS[left.state]} size={12} />
           {left.state !== "expired" && (
             <span aria-hidden="true">{short(left.ms)}</span>

@@ -11,6 +11,7 @@ import type { Task } from "../../../../app/state/types";
 import { compactPermissionLabel } from "../../../delegation/permission-label";
 import { compactReasoningLabel } from "../../../delegation/setting-labels";
 import { WorkerProfileIcon } from "../../list/worker-profile-icon";
+import { ContextUsageMeter } from "./context-usage-meter";
 import { PromptCacheTimer } from "./prompt-cache-timer";
 
 type TaskRunSettingsProps = { task: Task };
@@ -69,7 +70,8 @@ function runSettingsTitle(task: Task, profile: string, settings: RunSetting[]) {
 
 /**
  * The profile, model, reasoning and permission mode a task started with,
- * shown beside the composer after the prompt cache timer. They are fixed for
+ * shown beside the composer after the prompt cache timer and context usage
+ * meter. They are fixed for
  * the task's later turns.
  * The profile shows as its icon and the rest abbreviate beside it, as the
  * new-task composer's summary reads them. The full labels remain for
@@ -91,6 +93,7 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
       title={runSettingsTitle(task, profile, settings)}
     >
       <PromptCacheTimer task={task} />
+      <ContextUsageMeter task={task} />
       <li className="task-run-profile">
         <WorkerProfileIcon profile={task.worker_profile} size={12} />
         <span className="visually-hidden">{profile}</span>
