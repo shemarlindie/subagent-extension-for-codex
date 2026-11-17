@@ -1,6 +1,7 @@
 import { claudeTaskOptionsSchema } from "../../../../../shared/providers/claude/task-options";
 import { optionsForProvider } from "../../../../../shared/providers/options";
 import type { Task } from "../../../../app/state/types";
+import { ProgressRing } from "../../../../shared/components/progress-ring/progress-ring";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { formatCount } from "../../../../shared/utils/format";
 
@@ -8,9 +9,6 @@ type ContextUsageMeterProps = { task: Task };
 
 /** Share of the window where the warning color starts. */
 const WARNING_SHARE = 0.8;
-
-/** Circumference of the ring's radius-4.5 circle. */
-const RING = 2 * Math.PI * 4.5;
 
 /** How full the window is, as a whole percentage. */
 const percent = (tokens: number, window: number) =>
@@ -27,7 +25,7 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
 
   if (!usage) return null;
 
-  const share = Math.min(usage.total_tokens / usage.window_tokens, 1);
+  const share = usage.total_tokens / usage.window_tokens;
   const used = percent(usage.total_tokens, usage.window_tokens);
   const status = `${formatCount(usage.total_tokens)} of ${formatCount(usage.window_tokens)} tokens used (${used}%)`;
 
@@ -62,21 +60,7 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
         tabIndex={0}
       >
         <span className="run-setting-value">
-          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <circle
-              className="context-usage-ring-track"
-              cx="6"
-              cy="6"
-              r="4.5"
-            />
-            <circle
-              className="context-usage-ring-fill"
-              cx="6"
-              cy="6"
-              r="4.5"
-              strokeDasharray={`${share * RING} ${RING}`}
-            />
-          </svg>
+          <ProgressRing value={share} />
           <span className="context-usage-meter-percent" aria-hidden="true">
             {used}%
           </span>

@@ -1,0 +1,10 @@
+.progress-ring {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transform: rotate(-90deg);
+}
+.progress-ring-track {
+  opacity: 0.3;
+}

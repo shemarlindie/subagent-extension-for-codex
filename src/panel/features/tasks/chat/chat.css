@@ -820,18 +820,6 @@ body[data-expanded-panel="true"]
 .task-run-settings li[data-warning] {
   color: var(--warn);
 }
-.context-usage-meter svg {
-  fill: none;
-  stroke-width: 2;
-  transform: rotate(-90deg);
-}
-.context-usage-ring-track {
-  stroke: currentColor;
-  opacity: 0.3;
-}
-.context-usage-ring-fill {
-  stroke: currentColor;
-}
 /* Name and value pairs in a run setting's tooltip. */
 .run-setting-tooltip-rows {
   display: grid;

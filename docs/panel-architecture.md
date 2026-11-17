@@ -197,6 +197,8 @@ inspect pending states in the fixture UI.
   Every file sets a stroke width on the root `<svg>`, which the catalog
   requires. Pick `size` for the visible size, and render shapes that cover more
   area, such as squares, a little smaller than circles beside them.
+- `ProgressRing` draws a decorative fill ring for a 0 to 1 value in the current
+  color. Pair it with text or a label that states the value.
 - `TooltipWrapper` labels controls for mouse and keyboard users. Base UI turns
   tooltips off for touch, so use `Infotip` for info triggers whose note must
   open on tap.
