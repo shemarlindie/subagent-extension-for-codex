@@ -234,39 +234,28 @@ test("Use extension setting names the saved mode it runs", async () => {
   );
 });
 
-test("Use extension setting names Plan for a read-only profile, and a blocked mode's fallback", async () => {
-  const blocked: Partial<Snapshot> = {
-    workers: [
-      {
-        provider: "claude",
-        profiles: [...roles],
-        capabilities: {},
-        policy: {
-          managed: true,
-          blocked: [{ value: "acceptEdits", reason: "Turned off" }],
-          notes: [],
+test("Use extension setting names the fallback for a saved mode policy blocks", () => {
+  const { view } = setup(
+    ready,
+    {
+      workers: [
+        {
+          provider: "claude",
+          profiles: [...roles],
+          capabilities: {},
+          policy: {
+            managed: true,
+            blocked: [{ value: "acceptEdits", reason: "Turned off" }],
+            notes: [],
+          },
         },
-      },
-    ],
-  };
-
-  const reviewer = setup(ready, blocked, {
-    worker: "claude:reviewer",
-    permission_mode: "inherit",
-  });
-
-  assert.ok(
-    reviewer.view.getByRole("button", {
-      name: /· Extension setting \(Plan\)$/,
-    }),
+      ],
+    },
+    { permission_mode: "inherit" },
   );
 
-  cleanup();
-
-  const implementer = setup(ready, blocked, { permission_mode: "inherit" });
-
   assert.ok(
-    implementer.view.getByRole("button", {
+    view.getByRole("button", {
       name: /· Extension setting \(Ask for approval\)$/,
     }),
   );

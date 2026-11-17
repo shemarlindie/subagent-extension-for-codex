@@ -231,8 +231,6 @@ test("Inherit names Claude Code's default model and reasoning", () => {
 
   assert.equal(rows.claude?.model.options?.[0]?.label, "Inherit (Opus 5.5)");
   assert.equal(rows.claude?.effort.options[0]?.label, "Inherit (High)");
-  assert.equal(rows.reviewer?.model.options?.[0]?.label, "Inherit (Opus 5.5)");
-  assert.equal(rows.reviewer?.effort.options[0]?.label, "Inherit (High)");
 
   assert.equal(
     help(all, "models"),

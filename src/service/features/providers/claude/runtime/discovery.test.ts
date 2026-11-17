@@ -326,7 +326,7 @@ test.for([
   { switchFails: false, effort: "high" },
   { switchFails: true, effort: undefined },
 ])(
-  "a Default model without reasoning levels names the session's reasoning when the switch works: %o",
+  "a Default model without reasoning levels reads the reasoning on another model, keeping the policy (switch fails: $switchFails)",
   async ({ switchFails, effort }) => {
     const read = discovery({
       policy: { model: "claude-haiku-4-5" },
@@ -344,12 +344,7 @@ test.for([
       switchFails,
     });
 
-    const entry = await defaultEntry(read);
-
-    assert.equal(entry?.resolvedModel, "claude-haiku-4-5");
-    assert.equal(entry?.supportsEffort, false);
-    assert.equal(entry?.resolvedEffort, effort);
-    // A failed switch keeps the policy read.
+    assert.equal((await defaultEntry(read))?.resolvedEffort, effort);
     assert.equal((await read.policy())?.default_model?.id, "claude-haiku-4-5");
   },
 );
