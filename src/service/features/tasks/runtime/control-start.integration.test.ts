@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { realpath } from "node:fs/promises";
+import { join } from "node:path";
 
 import { test } from "vitest";
 
@@ -107,6 +109,45 @@ test("discovery and effort validation use each owner's current settings", async 
   } finally {
     await c.close();
   }
+});
+
+test("discovery and start checks follow the task's project, and an unapproved folder reads outside any project", async () => {
+  const provider: Provider = new TestProvider();
+  const folders: (string | undefined)[] = [];
+
+  // The project's settings choose a model without reasoning.
+  provider.models = async (_settings, repository) => {
+    folders.push(repository);
+
+    return [
+      {
+        value: "configured-model",
+        displayName: "Configured model",
+        description: "",
+        supportsEffort: !repository,
+      },
+    ];
+  };
+
+  const { c, repo, dir } = await setup(provider);
+  const project = await realpath(repo);
+
+  await c.availableWorkers("alice", repo);
+  assert.equal(folders.at(-1), project);
+
+  await c.availableWorkers("alice", join(dir, "unapproved"));
+  assert.equal(folders.at(-1), undefined);
+
+  await assert.rejects(
+    c.start("alice", {
+      ...input(repo),
+      model: "configured-model",
+      reasoning_effort: "high",
+    }),
+    /does not support high reasoning/,
+  );
+
+  assert.equal(folders.at(-1), project);
 });
 
 test("an unready provider blocks task starts and model discovery but stays listed", async () => {

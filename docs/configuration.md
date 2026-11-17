@@ -247,8 +247,11 @@ may fail the task when it runs.
 Claude model suggestions come from the installed CLI. Discovery submits no user
 turn and turns off tools, settings-file hooks and external MCP servers. It uses
 the same environment as tasks and follows your settings-file choice. Discovery
-runs in the service directory, so project-specific model configuration can
-differ from a task workspace. Custom model IDs work when discovery is
+runs in a task's approved project folder, so that project's settings apply, and
+caches each folder for five minutes. Without a project, or for an unapproved
+folder, it runs outside any project. Settings show what applies outside any
+project. A worktree task can still differ, for example by a local settings file
+that exists only in the main checkout. Custom model IDs work when discovery is
 unavailable, but reasoning support may then be unknown.
 
 ## Custom instructions for worker profiles
@@ -360,9 +363,9 @@ management or a `managed-settings.json` file. Other keys in it still apply, even
 when the panel doesn't mention them.
 
 The extension never reads policy files. An idle Claude session reports what
-applies, under the same rules as a task, so an API key on a custom
-`ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The result
-is cached for five minutes.
+applies, under the same rules as a task in the same project, so an API key on a
+custom `ANTHROPIC_BASE_URL` sees no console policy, as its tasks wouldn't. The
+result is cached for five minutes.
 
 | Policy                                                                                                                     | New tasks                                                                                                          | Panel                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -386,7 +389,8 @@ runs. A model it now excludes gives way to Default, with a note.
 
 Limits:
 
-- Discovery runs outside any project, so project settings can differ.
+- Settings show what applies outside any project, so a project's own settings
+  can differ there. Start checks use the task's project.
 - Claude Code doesn't report which permission modes it allows. The panel locks a
   mode the settings turn off, and Bypass when the service runs as root. A mode
   that reads as allowed may still fall back, and Chat then says so.

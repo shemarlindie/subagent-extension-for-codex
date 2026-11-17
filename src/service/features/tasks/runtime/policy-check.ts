@@ -51,12 +51,14 @@ export type Requested = { model: boolean; effort: boolean };
  * now. A saved mode needs nothing here:
  * Claude Code falls back itself, and the provider reports it. Without discovery
  * there's nothing to check against, and tasks are still checked as they run.
+ * Policy is read in the task's project folder, whose settings apply to it.
  */
 export async function checkStartPolicy(
   provider: Provider,
   input: Start,
   defaults: SettingsValues,
   requested: Requested,
+  repository: string,
 ): Promise<
   Pick<Start, "model" | "reasoning_effort"> & {
     limited?: EventPayloadMap["agent.limited"];
@@ -72,7 +74,10 @@ export async function checkStartPolicy(
     return { model, reasoning_effort };
   }
 
-  const policy = await provider.policy(defaults).catch(() => undefined);
+  const policy = await provider
+    .policy(defaults, repository)
+    .catch(() => undefined);
+
   const reason = mode && blockedReason(policy, mode);
 
   const reject = (setting: string, value: string, why: string, text = why) => {
@@ -95,7 +100,8 @@ export async function checkStartPolicy(
     );
   }
 
-  const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
+  const models =
+    (await provider.models?.(defaults, repository).catch(() => [])) ?? [];
 
   const excluded = !!model && !modelAllowed(policy, models, model);
 
@@ -130,15 +136,21 @@ export async function limitTurnModel(
 ) {
   if (!t.model || !provider.policy) return undefined;
 
-  const policy = await provider.policy(defaults).catch(() => undefined);
-  const models = (await provider.models?.(defaults).catch(() => [])) ?? [];
+  const { repository } = t;
+
+  const policy = await provider
+    .policy(defaults, repository)
+    .catch(() => undefined);
+
+  const models =
+    (await provider.models?.(defaults, repository).catch(() => [])) ?? [];
 
   if (modelAllowed(policy, models, t.model)) return undefined;
 
   const limited = modelLimit(t.model);
   delete t.model;
 
-  if (await modelRejectingEffort(provider, t, defaults)) {
+  if (await modelRejectingEffort(provider, t, defaults, repository)) {
     delete t.reasoning_effort;
   }
 

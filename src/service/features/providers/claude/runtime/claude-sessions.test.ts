@@ -99,6 +99,38 @@ test("Claude model discovery coalesces requests, caches five minutes and submits
   assert.equal(closes, 2);
 });
 
+test("Claude model discovery reads in a project folder, caching each folder and settings-file choice", async () => {
+  const folders: (string | undefined)[] = [];
+
+  const provider = new ClaudeAgentProvider((args) => {
+    folders.push(args.options?.cwd);
+
+    return {
+      supportedModels: async () => [],
+      getSettings: async () => ({ effective: {} }),
+      close: () => {},
+    } as unknown as Query;
+  }, readyClaudeCli);
+
+  const settings = settingsDefaults("claude");
+
+  const noFiles = withSetting(
+    settings,
+    "providers.claude.settings_files",
+    false,
+  );
+
+  await provider.models(settings, "/repo/a");
+  await provider.policy(settings, "/repo/a");
+  await provider.models(noFiles, "/repo/a");
+  await provider.models(settings, "/repo/b");
+  await provider.models(settings);
+
+  assert.equal(folders.length, 4);
+  assert.deepEqual(folders.slice(0, 3), ["/repo/a", "/repo/a", "/repo/b"]);
+  assert.notEqual(folders[3], "/repo/a");
+});
+
 test("Claude command discovery reads the task's folder as its session would, keeping Claude Code's row for a shared name", async () => {
   const launches: Options[] = [];
 

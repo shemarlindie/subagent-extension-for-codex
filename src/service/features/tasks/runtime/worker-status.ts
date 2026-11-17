@@ -13,11 +13,15 @@ type WorkerStatus = {
   model_discovery_error?: string;
 };
 
-/** A worker with what its provider reports now: readiness, models and policy. */
+/**
+ * A worker with what its provider reports now: readiness, and the models and
+ * policy in `repository`, an approved project folder, or outside any project.
+ */
 export async function workerStatus<W extends object>(
   worker: W,
   provider: Provider,
   settings: SettingsValues,
+  repository?: string,
 ): Promise<W & WorkerStatus> {
   const readiness = await provider.readiness?.();
   const known = readiness ? { ...worker, readiness } : worker;
@@ -26,8 +30,8 @@ export async function workerStatus<W extends object>(
 
   try {
     const [models, policy] = await Promise.all([
-      provider.models(settings),
-      provider.policy?.(settings),
+      provider.models(settings, repository),
+      provider.policy?.(settings, repository),
     ]);
 
     return { ...known, models, ...(policy ? { policy } : {}) };

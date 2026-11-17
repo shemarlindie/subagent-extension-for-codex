@@ -188,11 +188,16 @@ async function readPolicy(
   session: Query & SettingsReader,
   models: ModelChoice[],
   resolve: typeof resolveSettings,
+  scoped: boolean,
+  started: number,
 ) {
   const settings = await readSessionSettings(session);
   const found = await policyFrom(settings, models, resolve);
 
   logEvent("info", "provider.policy_read", {
+    // Whether a project's own settings applied, without naming the project.
+    scoped,
+    duration_ms: Math.round(performance.now() - started),
     // Without the session's settings, whether policy applies is unknown.
     settings_read: !!settings,
     managed: settings ? (found?.managed ?? false) : undefined,
@@ -211,7 +216,8 @@ async function readPolicy(
 /**
  * The models the installed Claude Code offers and the policy that applies, read
  * by starting the native harness without a turn. It follows the same rules as a
- * task's session, so its answer is what a task would get. Polling reads the
+ * task's session in `cwd`, so its answer is what a task there would get.
+ * Without a project folder it reads outside any project. Polling reads the
  * cache, and a failure is remembered briefly so a broken runtime isn't
  * relaunched on every read.
  */
@@ -229,6 +235,7 @@ export class ClaudeDiscovery {
       "settings_files"
     > = claudeOverrideDefaults,
     private resolve: typeof resolveSettings = resolveSettings,
+    private cwd?: string,
   ) {}
 
   async models() {
@@ -240,13 +247,16 @@ export class ClaudeDiscovery {
   }
 
   private async discover() {
+    const started = performance.now();
+
     const turnless = turnlessSession(
       this.launch,
       this.configuration.settings_files,
       {
         pathToClaudeCodeExecutable: await this.cli.executable(),
-        // Outside any project, so one folder's settings don't lock modes for all.
-        cwd: tmpdir(),
+        // Outside any project unless one is given, as a folder's own settings
+        // apply only to tasks there.
+        cwd: this.cwd ?? tmpdir(),
         permissionMode: "default",
         canUseTool: async () => ({
           behavior: "deny",
@@ -262,7 +272,7 @@ export class ClaudeDiscovery {
 
       // Models stay useful without it, and tasks are still checked as they run.
       const read = await Promise.race([
-        readPolicy(session, models, this.resolve),
+        readPolicy(session, models, this.resolve, !!this.cwd, started),
         timeout,
       ]).catch((error: unknown) => {
         logError("provider.policy_read_failed", error);

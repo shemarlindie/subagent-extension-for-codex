@@ -16,7 +16,9 @@ import { generateTaskTitle } from "./task-title.js";
 /**
  * A start request resolved for its provider and the owner's settings: the
  * provider's options, a generated title and a copy of the profile's
- * instructions, with what policy changed. Rejects requests that can't start.
+ * instructions, with what policy changed. `repository` is the resolved project
+ * folder, whose settings the checks follow. Rejects requests that can't start,
+ * once the provider is ready.
  */
 export async function resolveStart(
   provider: Provider,
@@ -24,15 +26,13 @@ export async function resolveStart(
   defaults: SettingsValues,
   authority: InputAuthority,
   requested: Requested,
+  repository: string,
 ) {
-  const readiness = await provider.readiness?.();
-  if (readiness?.ready === false) throw new Error(readiness.message);
-
   const {
     model,
     reasoning_effort: fitted,
     limited,
-  } = await checkStartPolicy(provider, input, defaults, requested);
+  } = await checkStartPolicy(provider, input, defaults, requested, repository);
 
   // A saved effort the model can't run gives way, since nobody asked for it
   // just now. One the request names fails below.
@@ -42,6 +42,7 @@ export async function resolveStart(
       provider,
       { model, reasoning_effort: fitted },
       defaults,
+      repository,
     ));
 
   if (rejecting) {
@@ -78,7 +79,7 @@ export async function resolveStart(
   if (!req.title) throw new Error("Task title is required");
   if (!req.description) throw new Error("Task description is required");
 
-  await assertModelEffort(provider, req, defaults);
+  await assertModelEffort(provider, req, defaults, repository);
   validateBudgets(provider, req);
 
   if (req.workspace_strategy === "current_repo" && req.revision !== "HEAD") {

@@ -98,9 +98,19 @@ export interface Provider {
   taskPolicy: ProviderTaskPolicy;
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
   readiness?(options?: { refresh?: boolean }): Promise<ProviderReadiness>;
-  models?(settings?: SettingsValues): Promise<ModelChoice[]>;
+  /**
+   * The models a session offers. `repository` is an approved project folder
+   * whose own settings apply. Without one, settings outside any project do.
+   */
+  models?(
+    settings?: SettingsValues,
+    repository?: string,
+  ): Promise<ModelChoice[]>;
   /** What org policy limits for new tasks. Nothing means nothing known. */
-  policy?(settings?: SettingsValues): Promise<ProviderPolicy | undefined>;
+  policy?(
+    settings?: SettingsValues,
+    repository?: string,
+  ): Promise<ProviderPolicy | undefined>;
   /** The slash commands the task's session offers, for suggestions. */
   commands?(task: Task): Promise<ProviderCommand[]>;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
