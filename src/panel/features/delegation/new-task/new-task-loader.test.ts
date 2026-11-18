@@ -193,33 +193,36 @@ test("saved defaults outlast the composer, for undo of a profile choice", async 
   const { controller, transport } = await started();
   t.onTestFinished(() => controller.dispose());
 
-  const save = async (value: string, ok: boolean) => {
-    controller.newTasks.open();
-    await flush();
-
-    transport.handler = (name) =>
-      name === "update_settings"
-        ? ok || Promise.reject(new Error("Service unavailable"))
-        : undefined;
-
-    await controller.newTasks.saveProfileSetting(
-      "claude:implementer",
-      "model",
-      value,
-    );
-
-    const loaded = controller.getSnapshot().newTask?.defaults;
-    controller.back();
-    assert.equal(controller.getSnapshot().newTask, undefined);
-
-    return loaded;
-  };
-
-  // A failed save keeps the loaded defaults, and a saved choice joins them.
-  const loaded = await save("haiku", false);
+  controller.newTasks.open();
+  await flush();
+  const loaded = controller.getSnapshot().newTask?.defaults;
   assert.ok(loaded);
+
+  // Closing before any save starts keeps the loaded defaults.
+  controller.back();
+  assert.equal(controller.getSnapshot().newTask, undefined);
   assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
-  await save("opus", true);
+
+  // A failed save keeps them too, and a saved choice joins them.
+  transport.handler = (name) =>
+    name === "update_settings"
+      ? Promise.reject(new Error("Service unavailable"))
+      : undefined;
+
+  await controller.newTasks.saveProfileSetting(
+    "claude:implementer",
+    "model",
+    "haiku",
+  );
+
+  assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
+  transport.handler = (name) => (name === "update_settings" ? {} : undefined);
+
+  await controller.newTasks.saveProfileSetting(
+    "claude:implementer",
+    "model",
+    "opus",
+  );
 
   assert.equal(
     controller.newTasks.savedDefaults()?.models.profiles.implementer.model,

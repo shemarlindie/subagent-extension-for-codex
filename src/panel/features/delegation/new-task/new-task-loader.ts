@@ -61,7 +61,7 @@ export function rescopedNewTask(
  */
 export class NewTaskLoader {
   private request = 0;
-  /** The defaults after the last profile save, kept once the composer closes. */
+  /** The defaults as last loaded or saved, kept once the composer closes. */
   private confirmedDefaults?: Defaults;
 
   constructor(private context: NewTaskLoaderContext) {}
@@ -116,6 +116,7 @@ export class NewTaskLoader {
     const current = this.context.snapshot().newTask;
 
     if (this.context.closed() || current?.request !== request) return;
+    if (result?.defaults) this.confirmedDefaults = result.defaults;
 
     this.context.patch({
       ...result?.snapshot,
@@ -233,7 +234,6 @@ export class NewTaskLoader {
     } catch (error) {
       // Restore the loaded default unless a later choice replaced it.
       setDefault(previous, value);
-      this.confirmedDefaults = saved;
 
       return `The ${titleCase(profile)} profile's default could not be saved: ${errorMessage(error)}`;
     }
@@ -244,8 +244,8 @@ export class NewTaskLoader {
   }
 
   /**
-   * The saved defaults: the composer's, or once it closes, those the last
-   * profile save confirmed. Undo of a profile choice reads them.
+   * The saved defaults: the composer's, or once it closes, those it last
+   * loaded or a profile save confirmed. Undo of a profile choice reads them.
    */
   savedDefaults() {
     return this.context.snapshot().newTask?.defaults ?? this.confirmedDefaults;
