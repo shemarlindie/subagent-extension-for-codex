@@ -89,6 +89,10 @@ function setup(
     .spyOn(controller.newTasks, "saveProfileSetting")
     .mockResolvedValue(undefined);
 
+  vi.spyOn(controller.newTasks, "savedDefaults").mockReturnValue(
+    newTask.defaults,
+  );
+
   const view = render(
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>

@@ -272,12 +272,10 @@ export class TaskActions {
   }
 
   removeQueued(task: Task, messageId: string) {
-    const text = task.queue.find((m) => m.id === messageId)?.message ?? "";
-
     return this.removeFromQueue(
       task,
       [messageId],
-      `Removed ${quote(text)} from the queue`,
+      (removed) => `Removed ${quote(removed[0]?.message ?? "")} from the queue`,
     );
   }
 
@@ -286,14 +284,13 @@ export class TaskActions {
   }
 
   clearQueue(task: Task) {
-    const count = task.queue.length;
-
     return this.removeFromQueue(
       task,
       task.queue.map((m) => m.id),
-      count === 1
-        ? "Cleared 1 queued message"
-        : `Cleared ${count} queued messages`,
+      ({ length }) =>
+        length === 1
+          ? "Cleared 1 queued message"
+          : `Cleared ${length} queued messages`,
     );
   }
 
@@ -332,8 +329,13 @@ export class TaskActions {
   /**
    * Removes queued messages, which undo puts back at their places. Clearing
    * the whole queue names each message, so redo leaves later ones queued.
+   * `label` names the messages still queued when the removal starts.
    */
-  private removeFromQueue(task: Task, ids: string[], label: string) {
+  private removeFromQueue(
+    task: Task,
+    ids: string[],
+    label: (removed: Task["queue"]) => string,
+  ) {
     const remove = () =>
       ids.length === 1
         ? this.run("app_remove_queued_message", {
@@ -345,34 +347,32 @@ export class TaskActions {
             ...(ids.length ? { message_ids: ids } : {}),
           });
 
-    return this.recordUndo(
-      task,
-      remove,
-      (queue) =>
-        ids.length > 0 && {
-          label,
+    return this.recordUndo(task, remove, (queue) => {
+      // An earlier change may have removed some while this one waited.
+      const removed = queue.filter((m) => ids.includes(m.id));
+
+      return (
+        removed.length > 0 && {
+          label: label(removed),
           // The messages leave the queue, so the change shows a toast.
           toast: true,
           // The label quotes one message, and the toast lists more.
-          ...(ids.length > 1
-            ? {
-                items: ids.map(
-                  (id) => queue.find((m) => m.id === id)?.message ?? "",
-                ),
-              }
+          ...(removed.length > 1
+            ? { items: removed.map((m) => m.message) }
             : {}),
           view: taskView(task.id, "chat", task.title),
           undo: () =>
             this.run("app_restore_queued_messages", {
               task_id: task.id,
-              messages: ids.map((id) => ({
-                message_id: id,
-                index: queue.findIndex((m) => m.id === id),
+              messages: removed.map((m) => ({
+                message_id: m.id,
+                index: queue.indexOf(m),
               })),
             }),
           redo: remove,
-        },
-    );
+        }
+      );
+    });
   }
 
   /**

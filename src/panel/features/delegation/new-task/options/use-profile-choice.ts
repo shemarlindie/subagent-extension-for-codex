@@ -65,7 +65,7 @@ export function useProfileChoice<Name extends "model" | "reasoning_effort">(
     let saved: string = previous;
 
     const start = () => {
-      const defaults = controller.getSnapshot().newTask?.defaults;
+      const defaults = controller.newTasks.savedDefaults();
       if (defaults) saved = profileValues(worker, defaults)[name];
 
       return controller.newTasks.saveProfileSetting(worker, name, value);

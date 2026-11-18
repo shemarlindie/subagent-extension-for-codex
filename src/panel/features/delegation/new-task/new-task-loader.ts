@@ -12,6 +12,7 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import type { Defaults } from "../../settings/types";
 import {
   applyDelegateRead,
   initialDelegateStatuses,
@@ -60,6 +61,8 @@ export function rescopedNewTask(
  */
 export class NewTaskLoader {
   private request = 0;
+  /** The defaults after the last profile save, kept once the composer closes. */
+  private confirmedDefaults?: Defaults;
 
   constructor(private context: NewTaskLoaderContext) {}
 
@@ -219,7 +222,8 @@ export class NewTaskLoader {
       this.context.patch({ newTask: { ...newTask, defaults } });
     };
 
-    const previous = settingAt(this.context.snapshot().newTask?.defaults, path);
+    const saved = this.savedDefaults();
+    const previous = settingAt(saved, path);
     setDefault(value, previous);
 
     try {
@@ -229,11 +233,22 @@ export class NewTaskLoader {
     } catch (error) {
       // Restore the loaded default unless a later choice replaced it.
       setDefault(previous, value);
+      this.confirmedDefaults = saved;
 
       return `The ${titleCase(profile)} profile's default could not be saved: ${errorMessage(error)}`;
     }
 
+    this.confirmedDefaults = saved && withSetting(saved, path, value);
+
     return undefined;
+  }
+
+  /**
+   * The saved defaults: the composer's, or once it closes, those the last
+   * profile save confirmed. Undo of a profile choice reads them.
+   */
+  savedDefaults() {
+    return this.context.snapshot().newTask?.defaults ?? this.confirmedDefaults;
   }
 
   private load({ request, statuses }: NewTaskState) {

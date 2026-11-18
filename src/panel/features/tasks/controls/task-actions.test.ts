@@ -380,6 +380,29 @@ test("undoing a queue move uses the queue as the move starts", async () => {
   ]);
 });
 
+test("undoing a clear restores only the messages still queued as it starts", async () => {
+  const { actions, context, entries } = setup();
+
+  // An earlier removal finished while the clear waited.
+  context.patch({ tasks: [queued("b", "c")] });
+  await actions.clearQueue(queued("a", "b", "c"));
+  const [entry] = entries;
+  assert.ok(entry);
+  assert.equal(entry.label, "Cleared 2 queued messages");
+  await entry.undo();
+
+  expect(context.tool.mock.calls.at(-1)).toEqual([
+    "app_restore_queued_messages",
+    {
+      task_id: "task-1",
+      messages: [
+        { message_id: "b", index: 0 },
+        { message_id: "c", index: 1 },
+      ],
+    },
+  ]);
+});
+
 test("a refused or failed change leaves nothing to undo, and a failed undo rejects with its message", async () => {
   let fail = true;
 
