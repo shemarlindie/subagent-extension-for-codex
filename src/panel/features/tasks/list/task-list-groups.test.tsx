@@ -172,10 +172,5 @@ test("bulk selection skips hidden rows and keeps picks hidden by Show less", asy
   // With every group collapsed, a header still opens the selection's menu.
   for (const name of ["a", "c"]) fireEvent.click(toggle(name));
   fireEvent.contextMenu(toggle("a"));
-
-  await userEvent.click(
-    await view.findByRole("menuitem", { name: "Exit selection" }),
-  );
-
-  assert.equal(view.queryByRole("status"), null);
+  await view.findByRole("menuitem", { name: /^Archive/ });
 });

@@ -331,7 +331,6 @@ export function TaskList() {
         <TaskSelectionMenu
           selection={selection}
           shown={shown.length}
-          onExit={endSelection}
           render={
             <div
               id="task-list"

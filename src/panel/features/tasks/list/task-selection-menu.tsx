@@ -7,7 +7,6 @@ type TaskSelectionMenuProps = {
   selection: ReturnType<typeof useTaskSelection>;
   /** How many rows the list shows, which "Select all shown" picks. */
   shown: number;
-  onExit: () => void;
   /** The list, which opens the menu anywhere, group headers included. */
   render: ReactElement;
   /** The list header's count, which keeps focus once changed rows leave. */
@@ -22,7 +21,6 @@ type TaskSelectionMenuProps = {
 export function TaskSelectionMenu({
   selection,
   shown,
-  onExit,
   render,
   count,
   children,
@@ -94,9 +92,6 @@ export function TaskSelectionMenu({
               onClick={() => toggleShown(!allShownSelected)}
             >
               {allShownSelected ? "Deselect shown" : "Select all shown"}
-            </ContextMenu.Item>
-            <ContextMenu.Item className="menu-item" onClick={onExit}>
-              Exit selection
             </ContextMenu.Item>
           </ContextMenu.Popup>
         </ContextMenu.Positioner>
