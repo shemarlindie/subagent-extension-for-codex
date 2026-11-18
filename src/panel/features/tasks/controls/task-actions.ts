@@ -220,8 +220,6 @@ export class TaskActions {
   }
 
   editQueued(task: Task, messageId: string, message: string) {
-    const previous = task.queue.find((m) => m.id === messageId)?.message;
-
     const edit = (text: string) =>
       this.run("app_edit_queued_message", {
         task_id: task.id,
@@ -230,19 +228,24 @@ export class TaskActions {
       });
 
     return this.recordUndo(
+      task,
       () => edit(message),
-      previous !== undefined && {
-        label: `Edited ${quote(previous)}`,
-        view: taskView(task.id, "chat", task.title),
-        undo: () => edit(previous),
-        redo: () => edit(message),
+      (queue) => {
+        const previous = queue.find((m) => m.id === messageId)?.message;
+
+        return (
+          previous !== undefined && {
+            label: `Edited ${quote(previous)}`,
+            view: taskView(task.id, "chat", task.title),
+            undo: () => edit(previous),
+            redo: () => edit(message),
+          }
+        );
       },
     );
   }
 
   moveQueued(task: Task, messageId: string, index: number) {
-    const from = task.queue.findIndex((m) => m.id === messageId);
-
     const move = (to: number) =>
       this.run("app_move_queued_message", {
         task_id: task.id,
@@ -251,12 +254,19 @@ export class TaskActions {
       });
 
     return this.recordUndo(
+      task,
       () => move(index),
-      from >= 0 && {
-        label: `Moved ${quote(task.queue[from]?.message ?? "")}`,
-        view: taskView(task.id, "chat", task.title),
-        undo: () => move(from),
-        redo: () => move(index),
+      (queue) => {
+        const from = queue.findIndex((m) => m.id === messageId);
+
+        return (
+          from >= 0 && {
+            label: `Moved ${quote(queue[from]?.message ?? "")}`,
+            view: taskView(task.id, "chat", task.title),
+            undo: () => move(from),
+            redo: () => move(index),
+          }
+        );
       },
     );
   }
@@ -303,9 +313,7 @@ export class TaskActions {
     await this.context.undo.change(
       () => {
         // An earlier rename may have finished while this one waited.
-        previous =
-          this.context.snapshot().tasks.find((t) => t.id === task.id)?.title ??
-          previous;
+        previous = this.latest(task).title;
 
         return rename(title);
       },
@@ -326,11 +334,6 @@ export class TaskActions {
    * the whole queue names each message, so redo leaves later ones queued.
    */
   private removeFromQueue(task: Task, ids: string[], label: string) {
-    const placements = ids.map((id) => ({
-      message_id: id,
-      index: task.queue.findIndex((m) => m.id === id),
-    }));
-
     const remove = () =>
       ids.length === 1
         ? this.run("app_remove_queued_message", {
@@ -343,51 +346,72 @@ export class TaskActions {
           });
 
     return this.recordUndo(
+      task,
       remove,
-      ids.length > 0 && {
-        label,
-        // The messages leave the queue, so the change shows a toast.
-        toast: true,
-        // The label quotes one message, and the toast lists more.
-        ...(ids.length > 1
-          ? {
-              items: ids.map(
-                (id) => task.queue.find((m) => m.id === id)?.message ?? "",
-              ),
-            }
-          : {}),
-        view: taskView(task.id, "chat", task.title),
-        undo: () =>
-          this.run("app_restore_queued_messages", {
-            task_id: task.id,
-            messages: placements,
-          }),
-        redo: remove,
-      },
+      (queue) =>
+        ids.length > 0 && {
+          label,
+          // The messages leave the queue, so the change shows a toast.
+          toast: true,
+          // The label quotes one message, and the toast lists more.
+          ...(ids.length > 1
+            ? {
+                items: ids.map(
+                  (id) => queue.find((m) => m.id === id)?.message ?? "",
+                ),
+              }
+            : {}),
+          view: taskView(task.id, "chat", task.title),
+          undo: () =>
+            this.run("app_restore_queued_messages", {
+              task_id: task.id,
+              messages: ids.map((id) => ({
+                message_id: id,
+                index: queue.findIndex((m) => m.id === id),
+              })),
+            }),
+          redo: remove,
+        },
     );
   }
 
   /**
-   * Starts an action and remembers `steps` once it succeeds, resolving with
-   * the action's failure message. An action the panel refuses records nothing.
+   * Starts a queue action and remembers its `steps` once it succeeds,
+   * resolving with the action's failure message. The steps read the task's
+   * queue as the action starts, since earlier changes can finish while it
+   * waits. An action the panel refuses records nothing.
    */
   private recordUndo(
+    task: Task,
     start: () => Promise<string | undefined>,
-    steps: ActionUndo | false,
+    describe: (queue: Task["queue"]) => ActionUndo | false,
   ) {
-    if (!steps || this.context.snapshot().busy || this.context.closed()) {
-      return start();
-    }
+    if (this.context.snapshot().busy || this.context.closed()) return start();
 
-    return this.context.undo.change(start, (error) =>
-      error
-        ? undefined
-        : {
-            ...steps,
-            undo: () => succeed(steps.undo()),
-            redo: () => succeed(steps.redo()),
-          },
+    let steps: ActionUndo | false = false;
+
+    return this.context.undo.change(
+      () => {
+        steps = describe(this.latest(task).queue);
+
+        return start();
+      },
+      (error) => {
+        if (error || !steps) return undefined;
+        const { undo, redo } = steps;
+
+        return {
+          ...steps,
+          undo: () => succeed(undo()),
+          redo: () => succeed(redo()),
+        };
+      },
     );
+  }
+
+  /** The task as last loaded, which a change that waited reads as it starts. */
+  private latest(task: Task) {
+    return this.context.snapshot().tasks.find((t) => t.id === task.id) ?? task;
   }
 
   /** Calls one task tool while marking the panel busy, then reloads. */

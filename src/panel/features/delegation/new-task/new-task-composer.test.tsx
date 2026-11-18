@@ -98,6 +98,7 @@ function setup(
   );
 
   return {
+    controller,
     view,
     user: userEvent.setup(),
     start,
@@ -327,6 +328,30 @@ test("reasoning choices save to the profile, and choosing a profile restores its
     model: "",
     reasoning_effort: "low",
   });
+});
+
+test("undoing a profile choice restores the default saved when its save started", async () => {
+  const { controller, view, user, saveProfileSetting } = setup();
+  const held = Promise.withResolvers<string | undefined>();
+  saveProfileSetting.mockReturnValueOnce(held.promise);
+
+  const choose = async (name: string) => {
+    await user.click(view.getByRole("combobox", { name: /^Reasoning/ }));
+    await user.click(await view.findByRole("option", { name }));
+  };
+
+  await user.click(view.getByRole("button", { name: /^Edit / }));
+  await choose("High");
+  await choose("Low");
+  held.resolve("The settings file is read-only.");
+  await waitFor(() => assert.equal(saveProfileSetting.mock.calls.length, 2));
+  await controller.undo.undo();
+
+  expect(saveProfileSetting.mock.calls.at(-1)).toEqual([
+    "claude:implementer",
+    "reasoning_effort",
+    "default",
+  ]);
 });
 
 test.for([

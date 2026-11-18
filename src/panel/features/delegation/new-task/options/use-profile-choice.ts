@@ -9,6 +9,7 @@ import { useController } from "../../../../app/state/controller-context";
 import { quote } from "../../../../app/state/undo-history";
 import type { DelegateValues } from "../../delegate-values";
 import { workerChoice } from "../../delegation";
+import { profileValues } from "../new-task-values";
 
 const SETTING_NAMES = { model: "model", reasoning_effort: "reasoning" };
 
@@ -59,18 +60,26 @@ export function useProfileChoice<Name extends "model" | "reasoning_effort">(
       }
     };
 
-    const start = () =>
-      controller.newTasks.saveProfileSetting(worker, name, value);
+    // An earlier save may have failed while this one waited, so undo returns
+    // to the default saved when this save starts.
+    let saved: string = previous;
+
+    const start = () => {
+      const defaults = controller.getSnapshot().newTask?.defaults;
+      if (defaults) saved = profileValues(worker, defaults)[name];
+
+      return controller.newTasks.saveProfileSetting(worker, name, value);
+    };
 
     const saving =
       profile && previous !== value
         ? controller.undo.change(start, (failure) =>
-            failure
+            failure || saved === value
               ? undefined
               : {
                   label: `Set the ${titleCase(profile)} profile's ${SETTING_NAMES[name]} to ${quote(choiceName(name, value))}`,
-                  undo: () => save(value, previous),
-                  redo: () => save(previous, value),
+                  undo: () => save(value, saved),
+                  redo: () => save(saved, value),
                 },
           )
         : start();
