@@ -1,8 +1,8 @@
 import type { UndoEntry, UndoRecorder } from "./undo-history";
 
 /**
- * A recorder that collects entries the way the history keeps them: tracked
- * changes count at once and drop out when their action fails.
+ * A recorder that collects entries the way the history keeps them: a change
+ * counts once it finishes, if it changed anything. Changes start at once.
  */
 export function undoRecorder() {
   const entries: UndoEntry[] = [];
@@ -11,14 +11,12 @@ export function undoRecorder() {
     record: (entry) => {
       entries.push(entry);
     },
-    track: (action, entry, happened = () => true) => {
-      entries.push(entry);
+    change: async (start, describe) => {
+      const value = await start();
+      const entry = describe(value);
+      if (entry) entries.push(entry);
 
-      void action
-        .then(happened, () => false)
-        .then((ok) => {
-          if (!ok) entries.splice(entries.indexOf(entry), 1);
-        });
+      return value;
     },
   };
 

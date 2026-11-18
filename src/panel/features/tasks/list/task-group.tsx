@@ -5,19 +5,15 @@ import type { Task } from "../../../app/state/types";
 import { Button, buttonClass } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { GroupSignals } from "./group-signals";
-import { groupRows } from "./selectors";
 
 type TaskGroupProps = {
   repository: string;
   name: string;
   /** Every task the group lists, including rows "Show more" hides. */
   tasks: Task[];
-  /** Whether a long group stops at a few rows until "Show more". */
-  capped: boolean;
-  /** Stays shown when the group stops at a few rows. */
-  selected?: string;
-  /** Whether "Show more" revealed every row. */
-  expanded: boolean;
+  shown: Task[];
+  hidden: Task[];
+  canShowLess: boolean;
   onExpandedChange: (expanded: boolean) => void;
   open: boolean;
   /** Controls at the end of the header, such as the project's menu. */
@@ -35,22 +31,15 @@ export function TaskGroup({
   repository,
   name,
   tasks,
-  capped,
-  selected,
-  expanded,
+  shown,
+  hidden,
+  canShowLess,
   onExpandedChange,
   open,
   actions,
   renderRow,
 }: TaskGroupProps) {
   const id = useId();
-
-  const rows = capped
-    ? groupRows(tasks, selected)
-    : { shown: tasks, hidden: [] };
-
-  const limited = rows.hidden.length > 0;
-  const { shown, hidden } = expanded ? { shown: tasks, hidden: [] } : rows;
 
   return (
     <Accordion.Item
@@ -91,7 +80,7 @@ export function TaskGroup({
             <GroupSignals tasks={hidden} />
           </Button>
         )}
-        {expanded && limited && (
+        {canShowLess && (
           <Button
             variant="ghost"
             className="task-group-more"

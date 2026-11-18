@@ -1,4 +1,7 @@
+import assert from "node:assert/strict";
 import { join } from "node:path";
+
+import type { Locator } from "@playwright/test";
 
 import { startTask } from "./console-actions";
 import { createRepository, expect, test } from "./fixtures";
@@ -132,4 +135,163 @@ test("group tasks by project, keeping collapsed groups across reload, and narrow
   await expect(scope).toContainText("other");
   await expect(row("Review login flow")).toBeHidden();
   await expect(row("Tidy the docs")).toBeVisible();
+});
+
+test("select tasks by row and undo bulk list actions as one step each", async ({
+  consolePage: page,
+}) => {
+  const list = page.getByRole("complementary", { name: "Delegated tasks" });
+  const status = list.getByRole("status");
+  const listCount = list.locator(".list-count");
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  const first = list.getByRole("button", { name: /^Review login/ });
+  const second = list.getByRole("button", { name: /^Review signup/ });
+  const waiting = list.getByRole("button", { name: /^Document the API/ });
+
+  const chooseAction = async (row: Locator, name: string) => {
+    await row.click({ button: "right" });
+    await page.getByRole("menuitem", { name, exact: true }).click();
+  };
+
+  const unread = list
+    .getByRole("button", { name: /^Review (login|signup)/ })
+    .and(list.locator("[data-unread]"));
+
+  await page.getByRole("radio", { name: /^All, 0/ }).click();
+  await startTask(page, "Review login");
+  await expect(first).toContainText("Completed");
+  await expect(first).not.toContainText("Unread");
+  await startTask(page, "Review signup");
+  await expect(second).toContainText("Completed");
+  await expect(second).not.toContainText("Unread");
+  await startTask(page, "Document the API [fixture:question]");
+  await expect(waiting).toHaveAttribute("aria-current", "true");
+
+  await first.click({ modifiers: ["Meta"] });
+  await expect(first).toBeFocused();
+  await expect(status).toHaveText("1 selected");
+
+  await waiting.click({ modifiers: ["Shift"] });
+  await expect(status).toHaveText("3 selected");
+  await second.click({ modifiers: ["Shift"] });
+  await expect(status).toHaveText("2 selected");
+  await expect(waiting).toHaveAttribute("aria-pressed", "false");
+
+  await first.click({ modifiers: ["Meta"] });
+  await expect(first).toHaveAttribute("aria-pressed", "false");
+  await expect(second).toHaveAttribute("aria-pressed", "true");
+  // Deselecting the last task ends selection.
+  await second.click({ modifiers: ["Meta"] });
+  await expect(status).toBeHidden();
+  await second.click({ modifiers: ["Meta"] });
+  await page.keyboard.press("Escape");
+  await expect(waiting).toHaveAttribute("aria-current", "true");
+
+  // Start with Shift held at either endpoint, even when another task is open.
+  for (const [from, to] of [
+    [first, waiting],
+    [waiting, first],
+  ] as const) {
+    await from.click({ modifiers: ["Shift"] });
+    await expect(status).toHaveText("1 selected");
+    await to.click({ modifiers: ["Shift"] });
+    await expect(status).toHaveText("3 selected");
+    // Clicking the list header clears the selection too.
+    await list.locator(".list-label").click();
+  }
+
+  await waiting.click();
+  await first.click({ modifiers: ["Shift"] });
+  await expect(status).toHaveText("3 selected");
+  // Clicking blank space below the rows clears the selection.
+  const area = await list.locator("#task-list").boundingBox();
+  assert.ok(area);
+  await page.mouse.click(area.x + 20, area.y + area.height - 10);
+  await expect(status).toBeHidden();
+
+  await first.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Select task" }).click();
+  await expect(first).toHaveAttribute("aria-pressed", "true");
+  await second.press("Space");
+  await expect(second).toHaveAttribute("aria-pressed", "true");
+
+  await expect(
+    page.getByRole("button", { name: "Respond", exact: true }),
+  ).toBeVisible();
+
+  // Each read action and its undo leave the waiting task's inspector open.
+  // A selected row's context menu acts on the whole selection.
+  await chooseAction(second, "Mark unread (2)");
+  await expect(unread).toHaveCount(2);
+  // Rows can leave the list, so focus moves where Escape still works.
+  await expect(listCount).toBeFocused();
+  // Shift+F10 opens the menu from the keyboard.
+  await second.press("Shift+F10");
+
+  await page
+    .getByRole("menuitem", { name: "Mark read (2)", exact: true })
+    .click();
+
+  await expect(unread).toHaveCount(0);
+  await undo.click();
+  await expect(unread).toHaveCount(2);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(unread).toHaveCount(0);
+
+  // Right-clicking a row outside the selection adds it first.
+  await waiting.click({ button: "right" });
+
+  await expect(
+    page.getByRole("menuitem", { name: "Archive (2)" }),
+  ).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(waiting).toHaveAttribute("aria-pressed", "true");
+  await chooseAction(waiting, "Archive (2)");
+  await expect(first).toBeHidden();
+  await expect(second).toBeHidden();
+  await expect(waiting).toHaveAttribute("aria-pressed", "true");
+  await expect(status).toHaveText("1 selected · 1 skipped.");
+  await undo.click();
+  await expect(first).toBeVisible();
+  await expect(second).toBeVisible();
+
+  await waiting.press("Escape");
+  await expect(status).toBeHidden();
+  await expect(waiting).toBeFocused();
+
+  const release = Promise.withResolvers<void>();
+
+  await page.route(
+    "**/api/tools/app_set_tasks_archived",
+    async (route) => {
+      await release.promise;
+
+      await route.fulfill({
+        status: 500,
+        json: { error: "Archive unavailable." },
+      });
+    },
+    { times: 1 },
+  );
+
+  try {
+    await first.click({ modifiers: ["Meta"] });
+    await chooseAction(first, "Archive (1)");
+    await expect(status).toHaveText("Applying…");
+    await expect(listCount).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(status).toBeHidden();
+    await list.getByRole("searchbox", { name: "Search tasks" }).fill("signup");
+  } finally {
+    release.resolve();
+  }
+
+  const failure = page
+    .getByRole("alert")
+    .filter({ hasText: "Could not archive 1 task." });
+
+  await expect(failure).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss action failure" }).click();
+  await expect(failure).toBeHidden();
 });

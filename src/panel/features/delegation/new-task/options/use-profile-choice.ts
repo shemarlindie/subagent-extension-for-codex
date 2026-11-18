@@ -59,23 +59,25 @@ export function useProfileChoice<Name extends "model" | "reasoning_effort">(
       }
     };
 
-    const saving = controller.newTasks.saveProfileSetting(worker, name, value);
+    const start = () =>
+      controller.newTasks.saveProfileSetting(worker, name, value);
+
+    const saving =
+      profile && previous !== value
+        ? controller.undo.change(start, (failure) =>
+            failure
+              ? undefined
+              : {
+                  label: `Set the ${titleCase(profile)} profile's ${SETTING_NAMES[name]} to ${quote(choiceName(name, value))}`,
+                  undo: () => save(value, previous),
+                  redo: () => save(previous, value),
+                },
+          )
+        : start();
 
     void saving.then((failure) => {
       if (failure) setError("root.settings", { message: failure });
     });
-
-    if (profile && previous !== value) {
-      controller.undo.track(
-        saving,
-        {
-          label: `Set the ${titleCase(profile)} profile's ${SETTING_NAMES[name]} to ${quote(choiceName(name, value))}`,
-          undo: () => save(value, previous),
-          redo: () => save(previous, value),
-        },
-        (failure) => !failure,
-      );
-    }
   };
 
   return { field, choose };

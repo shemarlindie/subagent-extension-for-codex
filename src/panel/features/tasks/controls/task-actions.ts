@@ -289,7 +289,7 @@ export class TaskActions {
 
   /** Renames a task, throwing when the service refuses. */
   async rename(task: Task, title: string) {
-    const previous = task.title;
+    let previous = task.title;
 
     const rename = async (to: string) => {
       await this.context.tool("app_rename_task", {
@@ -300,18 +300,25 @@ export class TaskActions {
       await this.context.refresh();
     };
 
-    const renaming = rename(title);
+    await this.context.undo.change(
+      () => {
+        // An earlier rename may have finished while this one waited.
+        previous =
+          this.context.snapshot().tasks.find((t) => t.id === task.id)?.title ??
+          previous;
 
-    if (previous !== title) {
-      this.context.undo.track(renaming, {
-        // Naming both titles identifies the task wherever the user is.
-        label: `Renamed ${quote(previous)} to ${quote(title)}`,
-        undo: () => rename(previous),
-        redo: () => rename(title),
-      });
-    }
-
-    await renaming;
+        return rename(title);
+      },
+      () =>
+        previous === title
+          ? undefined
+          : {
+              // Naming both titles identifies the task wherever the user is.
+              label: `Renamed ${quote(previous)} to ${quote(title)}`,
+              undo: () => rename(previous),
+              redo: () => rename(title),
+            },
+    );
   }
 
   /**
@@ -361,8 +368,8 @@ export class TaskActions {
   }
 
   /**
-   * Starts an action and remembers `steps` while it saves, resolving with the
-   * action's failure message. An action the panel refuses records nothing.
+   * Starts an action and remembers `steps` once it succeeds, resolving with
+   * the action's failure message. An action the panel refuses records nothing.
    */
   private recordUndo(
     start: () => Promise<string | undefined>,
@@ -372,19 +379,15 @@ export class TaskActions {
       return start();
     }
 
-    const action = start();
-
-    this.context.undo.track(
-      action,
-      {
-        ...steps,
-        undo: () => succeed(steps.undo()),
-        redo: () => succeed(steps.redo()),
-      },
-      (error) => !error,
+    return this.context.undo.change(start, (error) =>
+      error
+        ? undefined
+        : {
+            ...steps,
+            undo: () => succeed(steps.undo()),
+            redo: () => succeed(steps.redo()),
+          },
     );
-
-    return action;
   }
 
   /** Calls one task tool while marking the panel busy, then reloads. */

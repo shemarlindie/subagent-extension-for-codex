@@ -94,7 +94,14 @@ export function ProjectArchive({
     });
 
   const unarchive = () =>
-    act(() => controller.taskActions.archive.setArchived(targets, false));
+    act(async () => {
+      const { failure } = await controller.taskActions.archive.setArchived(
+        targets,
+        false,
+      );
+
+      if (failure) throw failure.error;
+    });
 
   const remove = (deleteAgentTasks: boolean, confirmation: string) =>
     act(async () => {

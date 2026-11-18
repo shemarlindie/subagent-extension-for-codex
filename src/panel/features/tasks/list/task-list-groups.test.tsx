@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import assert from "node:assert/strict";
 
-import { cleanup, render, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, onTestFinished, test, vi } from "vitest";
 
@@ -129,4 +129,53 @@ test("long groups show every row while searching or when one project is listed",
   assert.equal(setup({ search: "a" }).rows("a").length, 7);
   cleanup();
   assert.equal(setup({ tasks: tasks.slice(0, 7) }).rows("a").length, 7);
+});
+
+test("bulk selection skips hidden rows and keeps picks hidden by Show less", async () => {
+  const { view, toggle } = setup({ tasks: [...tasks, named("c0", "/repo/c")] });
+
+  // a3 stays selected, so its menu acts on the selection as it is.
+  const choose = async (name: string) => {
+    fireEvent.contextMenu(view.getByRole("button", { name: /^a3/ }));
+
+    await userEvent.click(await view.findByRole("menuitem", { name }));
+  };
+
+  const pressed = () =>
+    view
+      .queryAllByRole("button", { pressed: true })
+      .map((row) => row.getAttribute("data-task"));
+
+  fireEvent.click(toggle("b"));
+
+  fireEvent.click(view.getByRole("button", { name: /^a3/ }), { ctrlKey: true });
+
+  fireEvent.click(view.getByRole("button", { name: /^c0/ }), {
+    shiftKey: true,
+  });
+
+  assert.deepEqual(pressed(), ["a3", "a4", "c0"]);
+
+  await choose("Select all shown");
+  assert.deepEqual(pressed(), ["a0", "a1", "a2", "a3", "a4", "c0"]);
+
+  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await choose("Select all shown");
+  await userEvent.click(view.getByRole("button", { name: "Show less" }));
+  await choose("Deselect shown");
+  view.getByText("2 selected · 2 hidden");
+  assert.deepEqual(pressed(), []);
+
+  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  assert.deepEqual(pressed(), ["a5", "a6"]);
+
+  // With every group collapsed, a header still opens the selection's menu.
+  for (const name of ["a", "c"]) fireEvent.click(toggle(name));
+  fireEvent.contextMenu(toggle("a"));
+
+  await userEvent.click(
+    await view.findByRole("menuitem", { name: "Exit selection" }),
+  );
+
+  assert.equal(view.queryByRole("status"), null);
 });

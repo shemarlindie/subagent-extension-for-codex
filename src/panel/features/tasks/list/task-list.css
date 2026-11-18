@@ -275,3 +275,13 @@
 .task-group .row {
   scroll-margin-top: var(--task-group-header-height);
 }
+
+.row[aria-pressed="true"] .row-meta {
+  color: color-mix(in srgb, var(--text) 30%, var(--muted));
+}
+.row[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.task-selection-status {
+  color: var(--text);
+}

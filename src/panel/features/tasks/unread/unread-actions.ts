@@ -5,6 +5,13 @@ import {
   type UndoEntry,
   type UndoRecorder,
 } from "../../../app/state/undo-history";
+import { chunks } from "../../../shared/utils/chunks";
+import {
+  settleTaskBatches,
+  TASK_BATCH_LIMIT,
+  taskBatchWarning,
+  type TaskBatchFailure,
+} from "../controls/task-batches";
 
 interface UnreadContext {
   snapshot(): Snapshot;
@@ -24,6 +31,41 @@ const fieldsFrom = (state: ReadState): ReadFields =>
 
 const fieldsOf = (task: Task): ReadFields =>
   task.unread ? { unread: true, read_through: task.read_through } : {};
+
+type ReadOutcome = { changed: Task[]; failure?: TaskBatchFailure };
+
+function readLabel(tasks: Task[], read: boolean) {
+  const title = tasks.length === 1 && tasks[0]?.title;
+  const target = title ? quote(title) : `${tasks.length} tasks`;
+
+  return `Marked ${target} ${read ? "read" : "unread"}`;
+}
+
+/** Limits concurrent requests for read actions the service takes one task at a time. */
+async function changeReadState(
+  tasks: Task[],
+  apply: (task: Task) => Promise<void>,
+): Promise<ReadOutcome> {
+  const changed: Task[] = [];
+  let failure: TaskBatchFailure | undefined;
+
+  for (const batch of chunks(tasks, 16)) {
+    const results = await Promise.allSettled(batch.map(apply));
+
+    batch.forEach((task, index) => {
+      const result = results[index];
+
+      if (result?.status === "fulfilled") {
+        changed.push(task);
+      } else if (result?.status === "rejected") {
+        failure ??= { count: 0, error: result.reason };
+        failure.count++;
+      }
+    });
+  }
+
+  return { changed, failure };
+}
 
 /**
  * Records what the user has read of their tasks. Reading a task's Chat to
@@ -117,14 +159,14 @@ export class UnreadActions {
 
   /** Marks a task read, clearing the open task's "New" divider. */
   markRead(task: Task) {
-    return this.remember(task, this.read(task), {
+    return this.remember(task, () => this.read(task), {
       label: `Marked ${quote(task.title)} read`,
       redo: () => this.read(task),
     });
   }
 
   private async read(task: Task) {
-    if (this.held === task.id) this.held = undefined;
+    this.release(task.id);
     const previous = this.clearDivider([task.id]);
 
     try {
@@ -137,16 +179,33 @@ export class UnreadActions {
 
   /** Marks a task unread; while it stays open and unscrolled, reading it doesn't mark it read again. */
   markUnread(task: Task) {
-    return this.remember(task, this.unread(task), {
-      label: `Marked ${quote(task.title)} unread`,
-      redo: () => this.unread(task),
-    });
+    return this.remember(
+      task,
+      () => this.unread(task),
+      {
+        label: `Marked ${quote(task.title)} unread`,
+        redo: () => this.unread(task),
+      },
+      (before) =>
+        before.unread ? this.restore(task, before) : this.clearUnreadMark(task),
+    );
   }
 
   private async unread(task: Task) {
     if (task.id === this.context.snapshot().selected) this.held = task.id;
 
-    await this.mark(task, false);
+    try {
+      await this.mark(task, false);
+    } catch (error) {
+      this.release(task.id);
+      throw error;
+    }
+  }
+
+  /** Clears the manual unread flag without advancing the stored cursor. */
+  private async clearUnreadMark(task: Task) {
+    await this.mark(task, true, 0);
+    this.release(task.id);
   }
 
   /**
@@ -154,25 +213,45 @@ export class UnreadActions {
    * after it are new. Like `markUnread`, an open task stays unread while the user reads it.
    */
   markUnreadFrom(task: Task, from: number) {
-    return this.remember(task, this.unreadFrom(task, from), {
+    return this.remember(task, () => this.unreadFrom(task, from), {
       label: `Marked ${quote(task.title)} unread from a reply`,
       redo: () => this.unreadFrom(task, from),
     });
   }
 
-  private async unreadFrom(task: Task, from: number) {
-    if (task.id === this.context.snapshot().selected) this.held = task.id;
+  private async unreadFrom(task: Task, from: number, restore?: ReadFields) {
+    const { selected, newMark: previous } = this.context.snapshot();
+    const open = task.id === selected;
+    const showDivider = open || !restore;
+    const previousHold = this.held;
 
-    const previous = this.markDivider(task.id, from - 1);
+    if (open) this.held = task.id;
+    if (showDivider) this.markDivider(task.id, from - 1);
+
+    const optimistic = this.context.snapshot().newMark;
 
     try {
-      await this.record(task, { unread: true }, "app_mark_task_unread_from", {
-        task_id: task.id,
-        event_id: from,
-      });
+      const state = await this.record(
+        task,
+        restore ?? { unread: true },
+        "app_mark_task_unread_from",
+        { task_id: task.id, event_id: from },
+      );
+
+      // Undo also restores a manual unread flag on a task without unseen replies.
+      if (restore && state && !state.unread) await this.mark(task, false);
     } catch (error) {
-      this.moveDivider(previous);
-      this.release(task.id);
+      const current = this.context.snapshot();
+
+      if (
+        showDivider &&
+        current.selected === selected &&
+        current.newMark === optimistic
+      ) {
+        if (this.held === task.id) this.held = previousHold;
+        this.moveDivider(previous);
+      }
+
       throw error;
     }
   }
@@ -184,99 +263,159 @@ export class UnreadActions {
 
   /** Marks everything so far in these tasks read. */
   async markAllRead(tasks: Task[]) {
-    const unread = tasks.filter((task) => task.unread);
-    if (!unread.length || this.context.closed()) return;
-    const marking = this.allRead(unread);
-    const [only] = unread;
-
-    this.context.undo.track(marking, {
-      label:
-        unread.length === 1 && only
-          ? `Marked ${quote(only.title)} read`
-          : `Marked ${unread.length} tasks read`,
-      ...(unread.length > 1 ? { items: unread.map((task) => task.title) } : {}),
-      // Under the Unread filter, the tasks leave the list.
-      toast: true,
-      undo: async () => {
-        await Promise.all(
-          unread.map((task) => this.restore(task, fieldsOf(task))),
-        );
-      },
-      redo: () => this.allRead(unread),
-    });
-
-    await marking;
+    const { failure } = await this.setMany(tasks, true);
+    if (failure) throw failure.error;
   }
 
-  private async allRead(unread: Task[]) {
+  /** Changes the eligible tasks' read state as one undo step. */
+  async setMany(tasks: Task[], read: boolean): Promise<ReadOutcome> {
+    const eligible = (task: Task) => Boolean(task.unread) === read;
+    if (!tasks.some(eligible) || this.context.closed()) return { changed: [] };
+
+    const apply = (tasks: Task[]) =>
+      read
+        ? this.allRead(tasks)
+        : changeReadState(tasks, (task) => this.unread(task));
+
+    /** The tasks the last step changed, which the next one reverses. */
+    let reversible: Task[] = [];
+
+    const restore = (tasks: Task[]) =>
+      changeReadState(tasks, (task) =>
+        read ? this.restore(task, fieldsOf(task)) : this.clearUnreadMark(task),
+      );
+
+    const replay = async (step: (tasks: Task[]) => Promise<ReadOutcome>) => {
+      const { changed: tasks, failure } = await step(reversible);
+      if (failure && !tasks.length) throw failure.error;
+      changed(tasks);
+
+      return failure ? { warning: taskBatchWarning(0, failure) } : undefined;
+    };
+
+    const entry: UndoEntry = {
+      label: "",
+      toast: true,
+      undo: () => replay(restore),
+      redo: () => replay(apply),
+    };
+
+    const changed = (tasks: Task[]) => {
+      reversible = tasks;
+
+      Object.assign(entry, {
+        label: readLabel(tasks, read),
+        items: tasks.length > 1 ? tasks.map((task) => task.title) : undefined,
+      });
+    };
+
+    return this.context.undo.change(
+      async () => {
+        const changing = tasks.map(this.current).filter(eligible);
+
+        return changing.length ? apply(changing) : { changed: [] };
+      },
+      (outcome) => {
+        if (!outcome.changed.length) return undefined;
+        changed(outcome.changed);
+
+        return entry;
+      },
+    );
+  }
+
+  private async allRead(unread: Task[]): Promise<ReadOutcome> {
     const ids = unread.map((task) => task.id);
-    if (this.held && ids.includes(this.held)) this.held = undefined;
+    const held = this.held;
+    const stateBefore = this.context.snapshot();
+    const before = new Map(stateBefore.tasks.map((task) => [task.id, task]));
     const previous = this.clearDivider(ids);
+    const cleared = this.context.snapshot().newMark;
     this.show(new Map(ids.map((id) => [id, {}])));
 
-    try {
-      await this.context.tool("app_mark_tasks_read", { task_ids: ids });
-    } catch (error) {
-      this.moveDivider(previous);
-      this.show(new Map(unread.map((task) => [task.id, fieldsOf(task)])));
-      throw error;
+    const { changed, failed, failure } = await settleTaskBatches(
+      unread,
+      TASK_BATCH_LIMIT,
+      async (batch) => {
+        await this.context.tool("app_mark_tasks_read", {
+          task_ids: batch.map((task) => task.id),
+        });
+
+        return batch;
+      },
+    );
+
+    const state = this.context.snapshot();
+
+    if (
+      stateBefore.scopeVersion === state.scopeVersion &&
+      stateBefore.selected === state.selected &&
+      state.newMark === cleared
+    ) {
+      if (failed.some((task) => task.id === state.selected)) {
+        this.moveDivider(previous);
+      } else if (held && held === state.selected && ids.includes(held)) {
+        this.release(held);
+      }
     }
+
+    if (failure) {
+      this.show(
+        new Map(
+          failed.map((task) => [
+            task.id,
+            fieldsOf(before.get(task.id) ?? task),
+          ]),
+        ),
+      );
+    }
+
+    return { changed: changed.flat(), failure };
   }
 
-  /** Remembers a change to one task while it saves. Undo puts back its read state. */
+  /**
+   * Changes one task and remembers it. Undo puts back the read state the task
+   * had when the change ran, by default.
+   */
   private remember(
     task: Task,
-    action: Promise<void>,
+    start: () => Promise<void>,
     steps: Pick<UndoEntry, "label" | "redo">,
+    undo = (before: ReadFields) => this.restore(task, before),
   ) {
-    const before = fieldsOf(task);
+    let before: ReadFields = {};
 
-    this.context.undo.track(action, {
-      ...steps,
-      undo: () => this.restore(task, before),
-    });
+    return this.context.undo.change(
+      () => {
+        before = fieldsOf(this.current(task));
 
-    return action;
+        return start();
+      },
+      () => ({ ...steps, undo: () => undo(before) }),
+    );
   }
+
+  /** The task as the list shows it now, which may be newer than `task`. */
+  private current = (task: Task) =>
+    this.context.snapshot().tasks.find((item) => item.id === task.id) ?? task;
 
   /**
    * Puts back a task's read fields: unread from just after its read point, or
    * read. An open task gets its "New" divider back and stays unread while
    * the user reads it, as after marking it unread.
    */
-  private async restore(task: Task, fields: ReadFields) {
-    const open = task.id === this.context.snapshot().selected;
-
-    if (!fields.unread) {
-      if (open) this.clearDivider([task.id]);
-      if (this.held === task.id) this.held = undefined;
-      await this.mark(task, true);
-
-      return;
-    }
-
-    const through = fields.read_through ?? 0;
-
-    if (open) {
-      this.held = task.id;
-      this.markDivider(task.id, through);
-    }
-
-    const state = await this.record(task, fields, "app_mark_task_unread_from", {
-      task_id: task.id,
-      event_id: through + 1,
-    });
-
-    // A task marked unread without newer replies needs its mark back too.
-    if (state && !state.unread) await this.mark(task, false);
+  private restore(task: Task, fields: ReadFields) {
+    return fields.unread
+      ? this.unreadFrom(task, (fields.read_through ?? 0) + 1, fields)
+      : this.read(task);
   }
 
-  private mark(task: Task, read: boolean) {
+  private mark(task: Task, read: boolean, through?: number) {
     return this.record(
       task,
       read ? {} : { unread: true },
       "app_set_task_read",
-      { task_id: task.id, read },
+      { task_id: task.id, read, ...(through === undefined ? {} : { through }) },
     );
   }
 
@@ -295,6 +434,10 @@ export class UnreadActions {
     this.sent.delete(task.id);
     this.settled.delete(task.id);
 
+    const current = this.context
+      .snapshot()
+      .tasks.find((item) => item.id === task.id);
+
     this.show(new Map([[task.id, shown]]));
 
     try {
@@ -304,7 +447,7 @@ export class UnreadActions {
 
       return result;
     } catch (error) {
-      this.show(new Map([[task.id, fieldsOf(task)]]));
+      this.show(new Map([[task.id, fieldsOf(current ?? task)]]));
       throw error;
     }
   }

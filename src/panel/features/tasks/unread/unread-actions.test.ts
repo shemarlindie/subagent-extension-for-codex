@@ -148,6 +148,7 @@ test("marking the open task read removes its New divider, and restores it if the
     revision: 2,
   });
 
+  tool.mockResolvedValueOnce({ unread: true, through: 4 } as never);
   await actions.markUnreadFrom(open, 5);
   await actions.markAllRead([task({ id: "a", unread: true })]);
 
@@ -271,6 +272,131 @@ test("undoing mark unread on a task without newer replies marks it read again, a
   await unmark.undo();
 
   expect(tool.mock.calls).toEqual([
-    ["app_set_task_read", { task_id: "q", read: true }],
+    ["app_set_task_read", { task_id: "q", read: true, through: 0 }],
   ]);
+});
+
+test("bulk mark-unread undo preserves new replies and redo excludes failed targets", async () => {
+  const a = task({ id: "a" });
+  const b = task({ id: "b" });
+  const { actions, tool, unread, entries } = setup([a, b]);
+  const error = new Error("offline");
+  let newest = 9;
+  let cursor = newest;
+
+  tool.mockImplementation(async (_name, args) => {
+    if (args.task_id === "b") throw error;
+
+    if (args.read) cursor = Math.max(cursor, Number(args.through ?? newest));
+
+    return { unread: !args.read || cursor < newest, through: cursor } as never;
+  });
+
+  const { failure } = await actions.setMany([a, b], false);
+  assert.deepEqual(failure, { count: 1, error });
+  assert.deepEqual(unread(), ["a"]);
+
+  const [entry] = entries;
+  assert.ok(entry);
+  newest++;
+  await entry.undo();
+  assert.deepEqual(unread(), ["a"]);
+  assert.equal(cursor, 9);
+  assert.equal(await entry.redo(), undefined);
+});
+
+test("a failed bulk undo restores the open task's divider and lets reading resume", async () => {
+  const open = task({ id: "a", unread: true, read_through: 2 });
+  const other = task({ id: "b", unread: true, read_through: 3 });
+
+  const { actions, tool, unread, entries, snapshot } = setup(
+    [open, other],
+    "a",
+  );
+
+  await actions.setMany([open, other], true);
+  const previous = snapshot().newMark;
+  const [entry] = entries;
+  assert.ok(entry);
+
+  tool.mockRejectedValueOnce(new Error("offline"));
+  tool.mockResolvedValueOnce({ unread: true, through: 3 } as never);
+  expect(await entry.undo()).toMatchObject({ warning: expect.any(String) });
+  expect(unread()).toEqual(["b"]);
+  expect(snapshot().newMark).toBe(previous);
+
+  await actions.readThrough(open, 8);
+
+  expect(tool).toHaveBeenLastCalledWith("app_set_task_read", {
+    task_id: "a",
+    read: true,
+    through: 8,
+  });
+});
+
+test("a bulk mark read releases an open task marked unread only once it succeeds", async () => {
+  const open = task({ id: "a" });
+  const { actions, tool, snapshot } = setup([open], "a");
+  tool.mockResolvedValueOnce({ unread: true, through: 4 } as never);
+  await actions.markUnreadFrom(open, 5);
+
+  const [unread] = snapshot().tasks;
+  assert.ok(unread?.unread);
+  const divider = snapshot().newMark;
+
+  tool.mockRejectedValueOnce(new Error("offline"));
+  const outcome = await actions.setMany([unread], true);
+
+  expect(outcome.failure?.count).toBe(1);
+  expect(snapshot().newMark).toBe(divider);
+  await actions.readThrough(unread, 9);
+
+  expect(tool).toHaveBeenLastCalledWith("app_mark_tasks_read", {
+    task_ids: ["a"],
+  });
+
+  await actions.setMany([unread], true);
+  // Released, so a fetch with new replies keeps the watched task read.
+  actions.watch("a");
+  expect(actions.settle([unread])[0]?.unread).toBeUndefined();
+});
+
+test("undoing mark read on a task marked unread by hand marks it unread again", async () => {
+  const marked = task({ id: "a", unread: true, read_through: 9 });
+  const { actions, tool, entries, unread } = setup([marked]);
+
+  await actions.markRead(marked);
+  const [entry] = entries;
+  assert.ok(entry);
+
+  // No replies follow its read point, so only the manual mark makes it unread.
+  tool.mockResolvedValueOnce({ unread: false, through: 9 } as never);
+  tool.mockResolvedValueOnce({ unread: true, through: 9 } as never);
+  await entry.undo();
+
+  expect(tool).toHaveBeenLastCalledWith("app_set_task_read", {
+    task_id: "a",
+    read: false,
+  });
+
+  expect(unread()).toEqual(["a"]);
+});
+
+test("undo restores the read state a task had when the change ran", async () => {
+  const open = task({ id: "a", unread: true, read_through: 2 });
+  const { actions, tool, entries } = setup([open], "a");
+  tool.mockResolvedValueOnce({ unread: true, through: 4 } as never);
+  await actions.markUnreadFrom(open, 5);
+  tool.mockResolvedValueOnce({ unread: true, through: 6 } as never);
+  // A change that waited its turn starts from the first one's result.
+  await actions.markUnreadFrom(open, 7);
+
+  tool.mockClear();
+  tool.mockResolvedValue({ unread: true, through: 4 } as never);
+  await entries[1]?.undo();
+
+  expect(tool).toHaveBeenCalledWith("app_mark_task_unread_from", {
+    task_id: "a",
+    event_id: 5,
+  });
 });
