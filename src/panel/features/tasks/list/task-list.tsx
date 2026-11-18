@@ -46,18 +46,20 @@ const EMPTY_FILTER: Record<Filter, string> = {
 };
 
 /**
- * Opens the focused element's context menu on Shift+F10, which Chromium on
- * macOS ignores.
+ * Opens the focused element's context menu, or `menu`'s, on Shift+F10, which
+ * Chromium on macOS ignores.
  */
-function openContextMenu(event: ReactKeyboardEvent<HTMLDivElement>) {
+function openContextMenu(
+  event: ReactKeyboardEvent<HTMLElement>,
+  menu: Element | null = event.target as Element,
+) {
   if (event.key !== "F10" || !event.shiftKey) return;
 
-  const target = event.target as HTMLElement;
-  const { left, bottom } = target.getBoundingClientRect();
+  const { left, bottom } = (event.target as Element).getBoundingClientRect();
 
   event.preventDefault();
 
-  target.dispatchEvent(
+  menu?.dispatchEvent(
     new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
@@ -303,7 +305,17 @@ export function TaskList() {
         <span id="scope" ref={scopeRef} tabIndex={-1}>
           {conversation ? "This conversation" : "All conversations"}
         </span>
-        <span className="list-count" ref={countRef} tabIndex={-1}>
+        <span
+          className="list-count"
+          ref={countRef}
+          tabIndex={-1}
+          // Focus lands here after an action, so the selection's menu opens too.
+          onKeyDown={
+            selecting
+              ? (event) => openContextMenu(event, listRef.current)
+              : undefined
+          }
+        >
           {!selecting && (
             <>
               {unreadShown && (

@@ -225,8 +225,8 @@ test("select tasks by row and undo bulk list actions as one step each", async ({
   await expect(unread).toHaveCount(2);
   // Rows can leave the list, so focus moves where Escape still works.
   await expect(listCount).toBeFocused();
-  // Shift+F10 opens the menu from the keyboard.
-  await second.press("Shift+F10");
+  // Shift+F10 opens the menu from the keyboard, on the count or a row.
+  await listCount.press("Shift+F10");
 
   await page
     .getByRole("menuitem", { name: "Mark read (2)", exact: true })
@@ -277,7 +277,8 @@ test("select tasks by row and undo bulk list actions as one step each", async ({
 
   try {
     await first.click({ modifiers: ["Meta"] });
-    await chooseAction(first, "Archive (1)");
+    await first.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Archive (1)" }).click();
     await expect(status).toHaveText("Applying…");
     await expect(listCount).toBeFocused();
     await page.keyboard.press("Escape");
