@@ -96,11 +96,10 @@
   max-height: min(320px, var(--available-height));
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--raised-bg);
   color: var(--text);
-  box-shadow: 0 8px 24px #0002;
+  box-shadow: var(--raised-shadow);
 }
 .select-item,
 .autocomplete-item,

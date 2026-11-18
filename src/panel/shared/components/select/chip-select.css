@@ -17,7 +17,7 @@
 }
 .chip-select:hover,
 .chip-select[data-popup-open] {
-  background: color-mix(in srgb, var(--color-text-primary) 11%, transparent);
+  background: color-mix(in srgb, var(--tint) 11%, transparent);
   color: var(--text);
 }
 .chip-select:disabled {

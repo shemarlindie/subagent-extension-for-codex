@@ -44,7 +44,7 @@ header .service-updating {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  color: var(--color-text-secondary);
+  color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -428,7 +428,7 @@ h3 {
 }
 .tabs button:hover {
   color: var(--text);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+  background: var(--hover);
 }
 .tabs button[aria-selected="true"] {
   color: var(--text);
@@ -458,7 +458,7 @@ h3 {
   height: 14px;
   padding: 0 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--text) 10%, transparent);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
   font-size: 10px;
   line-height: 14px;
   text-align: center;

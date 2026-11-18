@@ -5,7 +5,6 @@
 /* A failure takes the warning accent that notices use. */
 .undo-toast[data-failed] {
   border-left: 2px solid var(--warn);
-  background: var(--notice-bg);
 }
 .undo-copy {
   flex: 1;

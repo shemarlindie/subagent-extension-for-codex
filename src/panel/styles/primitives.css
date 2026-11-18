@@ -33,10 +33,9 @@
   overflow-wrap: anywhere;
   padding: 4px 8px;
   border-radius: 5px;
-  background: var(--popup-bg);
+  background: var(--tooltip-bg);
   color: var(--text);
-  /* Tight and dark enough to stay darker than the popup, so its edge stays crisp. */
-  box-shadow: 0 1px 4px #0004;
+  box-shadow: var(--tooltip-shadow);
   font-size: 11px;
   line-height: 1.35;
 }
@@ -67,14 +66,15 @@
   max-height: calc(100dvh - 40px);
   overflow: auto;
   margin: 0;
-  border: 1px solid var(--line);
   /* The sticky heading and footer bleed by the same amount. */
   --dialog-pad: 24px;
+  /* A dialog floats, so its sticky parts and fields fill with the dialog color. */
+  --bg: var(--dialog-bg);
   padding: var(--dialog-pad);
   border-radius: 12px;
   background: var(--bg);
   color: var(--text);
-  box-shadow: 0 24px 80px #0005;
+  box-shadow: var(--raised-shadow);
 }
 .dialog h2 {
   margin-top: 0;

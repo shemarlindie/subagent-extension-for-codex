@@ -91,7 +91,7 @@ body[data-expanded-panel="true"]
   width: min(40%, 260px);
 }
 .chat-skeleton-bubble .skeleton-shape {
-  background-color: color-mix(in oklab, var(--text) 10%, transparent);
+  background-color: color-mix(in oklab, var(--tint) 10%, transparent);
 }
 .chat-skeleton-worker-text {
   display: grid;

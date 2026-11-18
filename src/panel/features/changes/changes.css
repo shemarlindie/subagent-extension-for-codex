@@ -462,8 +462,8 @@ body[data-expanded-panel="true"]
   margin-left: 4px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: var(--bg);
-  box-shadow: 0 4px 12px #0003;
+  background: var(--raised-bg);
+  box-shadow: var(--raised-shadow);
   font-size: 12px;
   pointer-events: auto;
 }
@@ -481,11 +481,10 @@ body[data-expanded-panel="true"]
   max-width: 100%;
   max-height: min(360px, var(--available-height));
   padding: 6px;
-  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--raised-bg);
   color: var(--text);
-  box-shadow: 0 8px 24px #0002;
+  box-shadow: var(--raised-shadow);
 }
 .changed-file-navigator-heading {
   display: flex;
@@ -530,7 +529,7 @@ body[data-expanded-panel="true"]
   cursor: pointer;
 }
 .changed-file-tree button:hover {
-  background: color-mix(in srgb, var(--text) 12%, var(--bg));
+  background: var(--hover);
 }
 .changed-file-tree button:focus-visible {
   outline: 2px solid var(--accent);

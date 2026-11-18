@@ -209,7 +209,7 @@
 .diff-tag {
   padding: 0 6px;
   border-radius: 9px;
-  background: color-mix(in srgb, var(--text) 10%, transparent);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
   color: var(--muted);
   font-size: 10px;
 }
@@ -401,7 +401,7 @@
   white-space: nowrap;
 }
 .table-view tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+  background: color-mix(in srgb, var(--tint) 3%, transparent);
 }
 
 .image-view {

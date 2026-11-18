@@ -23,10 +23,9 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--raised-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--raised-shadow);
   pointer-events: auto;
 }
 .toast-card button {

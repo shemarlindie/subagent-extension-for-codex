@@ -99,30 +99,13 @@
 
   /* Panel tokens: aliases of the host variables, so a host override reaches every surface. */
   --bg: var(--color-background-primary);
-  --surface: var(--color-background-tertiary);
-  /* Tooltips and popovers: a solid tint of the page. Dark theme needs a stronger one. */
-  --popup-bg: color-mix(
-    in srgb,
-    var(--color-text-primary) 5%,
-    var(--color-background-primary)
-  );
-  /* The user's chat bubble, which the chat skeleton matches. */
-  --user-bubble-bg: color-mix(
-    in oklab,
-    var(--color-text-primary) 5%,
-    transparent
-  );
-  /* Code tints whatever sits behind it, so it stands out on the page and on cards. */
-  --code-bg: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
-  --notice-bg: color-mix(
-    in srgb,
-    var(--color-text-primary) 5%,
-    var(--color-background-primary)
-  );
   --text: var(--color-text-primary);
-  --muted: var(--color-text-secondary);
+  /*
+   * Codex's secondary text, about 50% of the text color, falls under 4.5:1 on panel
+   * grays and their hover. Each theme sets a share that keeps 5:1.
+   */
+  --muted: color-mix(in srgb, var(--color-text-primary) 62%, transparent);
   --line: var(--color-border-primary);
-  --hover: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
   --danger: var(--color-text-danger);
   --success: var(--color-text-success);
   /* Use Codex's opaque info color so the accent stays solid in dark mode. */
@@ -130,19 +113,35 @@
   --warn: #925e17;
   --status-paused: var(--warn);
   --radius: 8px;
-  /* Codex's sidebar is a faint tint of the text color over the page (about 3% light, 4% dark). */
-  --sidebar-bg: color-mix(in srgb, var(--color-text-primary) 3%, var(--bg));
+
+  /*
+   * Every panel gray mixes --tint into the page, so all of them share one hue. Fills
+   * that can sit on other surfaces, such as hover and code, mix into transparent.
+   */
+  --tint: var(--color-text-primary);
+  --surface: color-mix(in srgb, var(--tint) 4%, var(--bg));
+  /* Codex's sidebar is a faint tint over the page. */
+  --sidebar-bg: color-mix(in srgb, var(--tint) 3%, var(--bg));
+  --notice-bg: color-mix(in srgb, var(--tint) 5%, var(--bg));
+  /* Tooltips have no border, so they keep a solid tint. */
+  --tooltip-bg: color-mix(in srgb, var(--tint) 5%, var(--bg));
+  /* The user's chat bubble, which the chat skeleton matches. */
+  --user-bubble-bg: color-mix(in srgb, var(--tint) 5%, transparent);
+  --code-bg: color-mix(in srgb, var(--tint) 6%, transparent);
+  --hover: color-mix(in srgb, var(--tint) 6%, transparent);
   --sidebar-selected: var(--hover);
+  /* Menus, popups, toasts and floating buttons. In light the shadow lifts them. */
+  --raised-bg: var(--bg);
+  --raised-shadow: var(--shadow-hairline), 0 8px 24px #0002;
+  /* Dialogs sit on a dimmed backdrop, so they need less lift than menus. */
+  --dialog-bg: var(--raised-bg);
+  /* Tight and darker than the tooltip, so its edge stays crisp. */
+  --tooltip-shadow: 0 1px 4px #0004;
   font: var(--font-text-sm-size) / 1.5 var(--font-sans);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --popup-bg: color-mix(
-    in srgb,
-    var(--color-text-primary) 7%,
-    var(--color-background-primary)
-  );
   --color-background-primary: rgb(17, 17, 17);
   --color-background-secondary: rgba(47, 47, 47, 0.96);
   --color-background-tertiary: rgb(14, 14, 14);
@@ -187,12 +186,44 @@
   --color-ring-success: rgb(0, 162, 64);
   --color-ring-warning: rgb(255, 133, 73);
 
-  --sidebar-bg: color-mix(in srgb, var(--color-text-primary) 4%, var(--bg));
-  --sidebar-selected: color-mix(
+  /*
+   * Dark grays read cool. Each solid gray is a step of the text color plus the same
+   * --cool share of the accent, so every step looks equally cool. Translucent fills
+   * mix --tint, which carries the accent too. Grays sit higher on the scale than in
+   * light because dark shadows barely show. The page and borders stay Codex's neutral.
+   */
+  --cool: 2.6%;
+  --tint: color-mix(in srgb, var(--accent) 20%, var(--color-text-primary));
+  --surface: color-mix(
     in srgb,
-    var(--color-text-primary) 10%,
-    transparent
+    var(--accent) var(--cool),
+    color-mix(in srgb, var(--color-text-primary) 3%, var(--bg))
   );
+  --sidebar-bg: color-mix(
+    in srgb,
+    var(--accent) var(--cool),
+    color-mix(in srgb, var(--color-text-primary) 4%, var(--bg))
+  );
+  --sidebar-selected: color-mix(in srgb, var(--tint) 10%, transparent);
+  --notice-bg: color-mix(
+    in srgb,
+    var(--accent) var(--cool),
+    color-mix(in srgb, var(--color-text-primary) 5%, var(--bg))
+  );
+  --dialog-bg: color-mix(
+    in srgb,
+    var(--accent) var(--cool),
+    color-mix(in srgb, var(--color-text-primary) 6%, var(--bg))
+  );
+  --raised-bg: color-mix(
+    in srgb,
+    var(--accent) var(--cool),
+    color-mix(in srgb, var(--color-text-primary) 11%, var(--bg))
+  );
+  --raised-shadow: var(--shadow-hairline), 0 8px 24px #0008;
+  --tooltip-bg: var(--raised-bg);
+  --tooltip-shadow: 0 1px 4px #0008;
+  --muted: color-mix(in srgb, var(--color-text-primary) 58%, transparent);
   --warn: #edbc74;
 }
 
