@@ -189,7 +189,7 @@ test("a profile choice saves as its default and rolls back when saving fails", a
   assert.equal(saved(), "opus");
 });
 
-test("saved defaults outlast the composer, for undo of a profile choice", async (t) => {
+test("saved defaults keep each confirmed profile choice until a read includes it", async (t) => {
   const { controller, transport } = await started();
   t.onTestFinished(() => controller.dispose());
 
@@ -203,29 +203,54 @@ test("saved defaults outlast the composer, for undo of a profile choice", async 
   assert.equal(controller.getSnapshot().newTask, undefined);
   assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
 
-  // A failed save keeps them too, and a saved choice joins them.
+  const model = () =>
+    controller.newTasks.savedDefaults()?.models.profiles.implementer.model;
+
+  const save = (value: string) =>
+    controller.newTasks.saveProfileSetting(
+      "claude:implementer",
+      "model",
+      value,
+    );
+
+  // A failed save keeps them too.
   transport.handler = (name) =>
     name === "update_settings"
       ? Promise.reject(new Error("Service unavailable"))
       : undefined;
 
-  await controller.newTasks.saveProfileSetting(
-    "claude:implementer",
-    "model",
-    "haiku",
-  );
-
+  await save("haiku");
   assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
-  transport.handler = (name) => (name === "update_settings" ? {} : undefined);
 
-  await controller.newTasks.saveProfileSetting(
-    "claude:implementer",
-    "model",
-    "opus",
-  );
+  // A read that overlaps a save, starting during it or before, can miss it,
+  // so the save stays.
+  for (const [value, saveFirst] of [
+    ["opus", true],
+    ["sonnet", false],
+  ] as const) {
+    const saving = deferred<unknown>();
+    const reading = deferred<unknown>();
 
-  assert.equal(
-    controller.newTasks.savedDefaults()?.models.profiles.implementer.model,
-    "opus",
-  );
+    transport.handler = (name) => {
+      if (name === "update_settings") return saving.promise;
+
+      return name === "get_settings" ? reading.promise : undefined;
+    };
+
+    if (!saveFirst) controller.newTasks.open();
+    const saved = save(value);
+    if (saveFirst) controller.newTasks.open();
+    saving.resolve({});
+    await saved;
+    reading.resolve({ values: loaded });
+    await flush();
+    assert.equal(model(), value);
+    controller.back();
+  }
+
+  // A read that starts with no save running includes every save.
+  transport.handler = undefined;
+  controller.newTasks.open();
+  await flush();
+  assert.equal(model(), loaded.models.profiles.implementer.model);
 });
