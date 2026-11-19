@@ -495,9 +495,12 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        // Leaving the loop closes the query, which drops a measurement still
-        // running, such as the one compaction starts just before its result.
+        // Leaving the loop closes the query, which fails a measurement still
+        // running.
         await contextUsage.settle();
+
+        // Closing here drops session_writes_lost, which the CLI sends as it
+        // exits. Waiting for the exit would add about 0.7s to every turn.
         break;
       }
 

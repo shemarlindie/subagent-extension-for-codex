@@ -2,7 +2,8 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { createContext, useContext } from "react";
 
-export type TimelineStatus = "running" | "completed" | "failed" | "info";
+export type TimelineStatus =
+  "running" | "completed" | "failed" | "warning" | "info";
 
 type TimelineState = { trimmed: boolean };
 

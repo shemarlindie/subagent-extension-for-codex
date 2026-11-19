@@ -302,6 +302,29 @@ signals.sdk({
 
 signals.sdk({
   type: "system",
+  subtype: "informational",
+  content: "Loaded 2 skills from .claude/skills.",
+  level: "info",
+});
+
+signals.sdk({
+  type: "system",
+  subtype: "informational",
+  content: "Connected 1 MCP server.",
+  level: "info",
+});
+
+signals.sdk({
+  type: "system",
+  subtype: "informational",
+  content:
+    "PreToolUse hook check-paths.sh returned no verdict for Read. The call goes through the usual permission checks.",
+  level: "warning",
+  tool_use_id: "toolu_preview-signals_read",
+});
+
+signals.sdk({
+  type: "system",
   subtype: "commands_changed",
   commands: [
     { name: "review", description: "Review changes", argumentHint: "" },
