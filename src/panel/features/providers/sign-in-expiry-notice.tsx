@@ -6,8 +6,8 @@ import {
   formatUserDateTime,
   type UserDateTimePreferences,
 } from "../../shared/utils/user-date-time";
-import type { SignInExpiry } from "./sign-in-expiry";
-import { useSignInExpiry } from "./use-sign-in-expiry";
+import { signInExpiry, type SignInExpiry } from "./sign-in-expiry";
+import { useSignInExpiryDismissal } from "./use-sign-in-expiry-dismissal";
 
 const dateOnly = {
   hour: undefined,
@@ -27,11 +27,11 @@ export function SignInExpiryNotice() {
   const host = useSnapshot((state) => state.host);
   const claude = workers.find(({ provider }) => provider === "claude");
 
-  const { expiry, hidden, dismiss } = useSignInExpiry(
-    claude?.readiness?.ready
-      ? claude.readiness.credential_expires_at
-      : undefined,
-  );
+  const { hidden, dismiss } = useSignInExpiryDismissal();
+
+  const expiry = claude?.readiness?.ready
+    ? signInExpiry(claude.readiness.credential_expires_at)
+    : undefined;
 
   return (
     <Presence show={Boolean(expiry) && !hidden}>
@@ -49,33 +49,18 @@ export function SignInExpiryNotice() {
   );
 }
 
-/** The notice text for how close the sign-in's end is, with dates in the host's zone. */
+/** The notice text, with the date in the host's zone. */
 function expiryText(expiry: SignInExpiry, host: UserDateTimePreferences) {
-  const earliest = formatUserDateTime(expiry.earliest, host, dateOnly);
-  const latest = formatUserDateTime(expiry.latest, host, dateOnly);
+  const date = formatUserDateTime(expiry.endsAt, host, dateOnly);
 
-  if (expiry.state === "ended") {
-    return (
-      <>
-        Claude sign-in may have ended between {earliest} and {latest}. If tasks
-        are refused, run {renew} in a terminal.
-      </>
-    );
-  }
-
-  if (expiry.state === "imminent") {
-    return (
-      <>
-        Claude sign-in can end any time before {latest}, and renewing doesn't
-        move that date. Run {renew} in a terminal now.
-      </>
-    );
-  }
-
-  return (
+  return expiry.ended ? (
     <>
-      Claude sign-in ends between {earliest} and {latest}, and renewing doesn't
-      move these dates. Run {renew} in a terminal before then.
+      Claude sign-in may have ended on {date}. If tasks are refused, run {renew}{" "}
+      in a terminal.
+    </>
+  ) : (
+    <>
+      Claude sign-in ends by {date}. Run {renew} in a terminal to renew it.
     </>
   );
 }
