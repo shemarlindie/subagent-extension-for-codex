@@ -106,6 +106,24 @@ const liveStates: {
     }),
   },
   {
+    name: "hook-heartbeat",
+    title: "Live: waiting on a slow hook",
+    status: "Running PreToolUse hook",
+    timeline: (() => {
+      const timeline = liveTimeline("hook-heartbeat", 2000);
+      const id = timeline.toolStart("Bash", { command: "npm run lint" });
+
+      return timeline.sdk({
+        type: "tool_progress",
+        tool_use_id: `hook-PreToolUse-${id}-heartbeat-0`,
+        tool_name: "PreToolUse",
+        parent_tool_use_id: id,
+        elapsed_time_seconds: 30,
+        heartbeat: true,
+      });
+    })(),
+  },
+  {
     name: "background",
     title: "Live: background task",
     status: "Background task",
