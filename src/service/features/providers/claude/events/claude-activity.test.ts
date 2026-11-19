@@ -284,6 +284,7 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
 
   informational("warning", "PreToolUse hook gave no verdict.");
   informational("info", "Loaded 3 skills.");
+  informational("info", "Connected 2 MCP servers.");
   informational("notice", "Plan mode is active.");
   informational("suggestion", "Try /compact.");
 
@@ -335,6 +336,12 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
         state: "info",
       },
       {
+        kind: "status",
+        title: "Connected 2 MCP servers.",
+        summary: undefined,
+        state: "info",
+      },
+      {
         kind: "event",
         title: "Claude note",
         summary: "Plan mode is active.",
@@ -356,7 +363,7 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
         kind: "event",
         title: "Session not fully saved",
         summary:
-          "The disk is full. Part of the conversation wasn't saved, so the next turn resumes a session that may be missing it.",
+          "The disk is full. Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation.",
         state: "warning",
       },
       {

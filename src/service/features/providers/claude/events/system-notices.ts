@@ -29,7 +29,7 @@ export function sessionWritesLostSummary(raw: SDKMessage | undefined) {
   return [
     writeFailures[raw.error_code] ?? "Claude couldn't write to disk.",
     raw.lost.includes("transcript") &&
-      "Part of the conversation wasn't saved, so the next turn resumes a session that may be missing it.",
+      "Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation.",
     raw.lost.includes("global_config") &&
       "Changes to Claude's settings in ~/.claude.json weren't saved.",
   ]
