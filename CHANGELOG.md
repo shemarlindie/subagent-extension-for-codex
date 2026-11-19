@@ -3,6 +3,26 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.8.0
+
+### Breaking changes
+
+- Block tool calls when the PreToolUse guard fails (#144). This requires Claude
+  Code 2.1.324 or later. Update Claude Code before you update the extension.
+
+### Features
+
+- Archive Claude sessions with their tasks (#147)
+- Warn when the claude.ai sign-in ends within 10 days (#146)
+- Select tasks to archive or mark read in bulk (#142)
+
+### Fixes
+
+- Update context usage and its compaction note after compaction (#151)
+- Title informational and lost-write rows and mark warnings (#150)
+- Show hook heartbeats as a status, not a stuck tool row (#145)
+- Lift menus, toasts and dialogs off the page (#143)
+
 ## 0.7.0
 
 ### Features
