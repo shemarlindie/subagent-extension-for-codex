@@ -89,11 +89,9 @@ CLI's own text, which names the fix, and the service log keeps its reason code.
 
 ## Sign-in expiry
 
-A stored claude.ai sign-in ends on a fixed date, which refreshing its access
-token doesn't move. Claude Code 2.1.318 and newer report that date with each
-task result, and `list_workers` returns the latest one as
-`readiness.credential_expires_at`. From 10 days before, the panel warns when the
-sign-in ends and asks you to sign in again with `claude auth login`, as
-`claude -p` does. **Dismiss** hides it for 24 hours. API keys report no date and
-show no warning. The service keeps the date in memory, so after a restart the
-warning returns with the next task result.
+Each task result reports when the stored claude.ai sign-in ends, and
+`list_workers` returns the latest date as `readiness.credential_expires_at`.
+From 10 days before, the panel shows the date and asks you to sign in again with
+`claude auth login`. **Dismiss** hides it for a day. API keys have no date. The
+service keeps the date in memory, so after a restart the warning returns with
+the next task result.

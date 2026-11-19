@@ -411,11 +411,8 @@ export class ClaudeAgentProvider implements Provider {
 
         // Absent for an API key, so a switch from claude.ai clears it. Only a
         // result the CLI numbered can report the sign-in, and a refusal ran no
-        // requests, so other results without a date keep the known one.
-        if (
-          m.credential_expires_at ||
-          (m.result_index !== undefined && !refusal)
-        ) {
+        // requests, so other results keep the known date.
+        if (m.result_index !== undefined && !refusal) {
           this.credentialExpiresAt = m.credential_expires_at;
         }
 
