@@ -7,7 +7,7 @@ import type { ClaudeContextUsage } from "../../../../../shared/providers/claude/
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 
-/** How long a turn's end waits for a measurement still running. */
+/** How long a turn waits for a measurement still running. */
 const SETTLE_MS = 2_000;
 
 function contextUsageRecord(
@@ -40,9 +40,11 @@ export function contextUsageRecorder(
 ) {
   let started = 0;
   let stored = 0;
-  let settled = false;
-  let running: Promise<void> | undefined;
+  // Measurements up to this one store nothing more: they were given up on.
+  let dropped = 0;
+  let running: Promise<ClaudeContextUsage | undefined> | undefined;
 
+  /** Starts a measurement, which resolves with the record it stores. */
   const measure = () => {
     const id = ++started;
     const begun = performance.now();
@@ -50,7 +52,7 @@ export function contextUsageRecorder(
     running = stream
       .getContextUsage({ detail: "summary" })
       .then((usage) => {
-        if (settled || id < stored) return;
+        if (id <= dropped || id < stored) return undefined;
         stored = id;
 
         const record = contextUsageRecord(usage);
@@ -61,31 +63,60 @@ export function contextUsageRecorder(
           window_tokens: record.window_tokens,
           duration_ms: performance.now() - begun,
         });
+
+        return record;
       })
       // A failed call or save only loses this measurement.
       .catch((error: unknown) => {
-        if (!settled) logError("provider.context_usage_failed", error);
+        if (id > dropped) logError("provider.context_usage_failed", error);
+
+        return undefined;
       });
   };
 
-  /** Waits briefly for a measurement still running, then stores no more. */
-  const settle = async () => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Waits up to `SETTLE_MS` for the latest measurement. One that takes longer
+   * is dropped with any before it, so a late answer can't change the meter
+   * after the turn has moved on, and nothing waits for it again.
+   */
+  const wait = async () => {
+    if (!running) return undefined;
 
-    const timedOut =
-      running &&
-      (await Promise.race([
-        running.then(() => false),
-        new Promise<boolean>((resolve) => {
-          timer = setTimeout(() => resolve(true), SETTLE_MS);
-        }),
-      ]));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = Symbol("timed out");
+
+    const result = await Promise.race([
+      running,
+      new Promise<typeof timedOut>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), SETTLE_MS);
+      }),
+    ]);
 
     clearTimeout(timer);
-    settled = true;
+    if (result !== timedOut) return result;
 
-    if (timedOut) logEvent("warn", "provider.context_usage_timeout");
+    dropped = started;
+    running = undefined;
+    logEvent("warn", "provider.context_usage_timeout");
+
+    return undefined;
   };
 
-  return { measure, settle };
+  /** Measures now and waits briefly for the record it stores. */
+  const measureNow = () => {
+    measure();
+
+    return wait();
+  };
+
+  /**
+   * Waits briefly for a measurement still running, then stores no more. It
+   * must run before the stream closes, which fails a pending measurement.
+   */
+  const settle = async () => {
+    await wait();
+    dropped = started;
+  };
+
+  return { measure, measureNow, settle };
 }
