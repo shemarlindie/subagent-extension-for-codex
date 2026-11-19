@@ -40,18 +40,19 @@ export function contextUsageRecorder(
 ) {
   let started = 0;
   let stored = 0;
-  let settled = false;
+  // Measurements up to this one store nothing more: they were given up on.
+  let dropped = 0;
   let running: Promise<ClaudeContextUsage | undefined> | undefined;
 
-  /** Starts a measurement, which resolves with the record it stored. */
+  /** Starts a measurement, which resolves with the record it stores. */
   const measure = () => {
     const id = ++started;
     const begun = performance.now();
 
-    const measurement = stream
+    running = stream
       .getContextUsage({ detail: "summary" })
       .then((usage) => {
-        if (settled || id < stored) return undefined;
+        if (id <= dropped || id < stored) return undefined;
         stored = id;
 
         const record = contextUsageRecord(usage);
@@ -67,23 +68,25 @@ export function contextUsageRecorder(
       })
       // A failed call or save only loses this measurement.
       .catch((error: unknown) => {
-        if (!settled) logError("provider.context_usage_failed", error);
+        if (id > dropped) logError("provider.context_usage_failed", error);
 
         return undefined;
       });
-
-    running = measurement;
-
-    return measurement;
   };
 
-  /** Waits briefly for `measurement`, giving up after `SETTLE_MS`. */
-  const wait = async (measurement: Promise<ClaudeContextUsage | undefined>) => {
+  /**
+   * Waits up to `SETTLE_MS` for the latest measurement. One that takes longer
+   * is dropped with any before it, so a late answer can't change the meter
+   * after the turn has moved on, and nothing waits for it again.
+   */
+  const wait = async () => {
+    if (!running) return undefined;
+
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timedOut = Symbol("timed out");
 
     const result = await Promise.race([
-      measurement,
+      running,
       new Promise<typeof timedOut>((resolve) => {
         timer = setTimeout(() => resolve(timedOut), SETTLE_MS);
       }),
@@ -92,21 +95,27 @@ export function contextUsageRecorder(
     clearTimeout(timer);
     if (result !== timedOut) return result;
 
+    dropped = started;
+    running = undefined;
     logEvent("warn", "provider.context_usage_timeout");
 
     return undefined;
   };
 
   /** Measures now and waits briefly for the record it stores. */
-  const measureNow = () => wait(measure());
+  const measureNow = () => {
+    measure();
+
+    return wait();
+  };
 
   /**
    * Waits briefly for a measurement still running, then stores no more. It
    * must run before the stream closes, which fails a pending measurement.
    */
   const settle = async () => {
-    if (running) await wait(running);
-    settled = true;
+    await wait();
+    dropped = started;
   };
 
   return { measure, measureNow, settle };

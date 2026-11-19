@@ -382,7 +382,7 @@ export class ClaudeAgentProvider implements Provider {
               c.delta(streaming, m.event.delta.text);
             } else if (m.event.type === "message_delta") {
               // The CLI has the response's usage from here on.
-              void contextUsage.measure();
+              contextUsage.measure();
             }
           }
 
