@@ -107,6 +107,8 @@ export class Control {
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   worktreeChanges = new WorktreeChanges();
+  /** Archive changes to provider sessions, run one after another. */
+  sessionArchiving = Promise.resolve();
   private sendRequests: SendRequests;
   /** Observes queue waits for the timing log. */
   private queueWaits = new QueueWaits();

@@ -5,7 +5,7 @@ import { recordTaskTiming } from "./timing.js";
 
 type ArchiveContext = Pick<
   Control,
-  "archive" | "stopped" | "providers" | "ownerWorker"
+  "archive" | "stopped" | "providers" | "ownerWorker" | "sessionArchiving"
 > &
   WorktreeContext;
 
@@ -23,19 +23,24 @@ export function setTasksArchived(
 ) {
   const result = c.archive.setArchived(owner, ids, archived);
 
-  const cleanup = (async () => {
-    await archiveSessions(c, owner, result.task_ids);
-    if (archived) await removeWorktrees(c, owner, result.task_ids);
-  })();
+  // Session changes wait for earlier ones, so the last change to finish reads
+  // the final archive state.
+  const sessions = (c.sessionArchiving = c.sessionArchiving.then(() =>
+    archiveSessions(c, owner, result.task_ids),
+  ));
+
+  const cleanup = archived
+    ? sessions.then(() => removeWorktrees(c, owner, result.task_ids))
+    : sessions;
 
   return { result, cleanup };
 }
 
 /**
  * Archives or unarchives the tasks' provider sessions one at a time, until
- * shutdown. Each session follows its task's archive state at that point, so an
- * undo that runs meanwhile still wins. Nothing awaits it in production, so
- * failures are logged and never thrown.
+ * shutdown. Each session follows its task's archive state when its change
+ * starts. Nothing awaits it in production, so failures are logged and never
+ * thrown.
  */
 async function archiveSessions(
   c: ArchiveContext,

@@ -235,6 +235,41 @@ test("archiving removes clean worktrees and keeps those with uncommitted changes
   }
 });
 
+test("an undo during a session archive leaves the session unarchived", async () => {
+  const changes: boolean[] = [];
+  let release = () => {};
+
+  const provider = Object.assign(new TestProvider(), {
+    async setSessionArchived(_task: unknown, archived: boolean) {
+      changes.push(archived);
+
+      if (changes.length === 1) {
+        await new Promise<void>((resolve) => (release = resolve));
+      }
+    },
+  });
+
+  const { c, store, repo } = await setup(provider);
+
+  try {
+    const t = await c.start("alice", input(repo));
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    const archiving = setTasksArchived(c, "alice", [t.id], true).cleanup;
+    await until(() => changes.length === 1);
+    const undoing = setTasksArchived(c, "alice", [t.id], false).cleanup;
+
+    // The undo waits for the archive to finish, then reads the final state.
+    assert.deepEqual(changes, [true]);
+    release();
+    await Promise.all([archiving, undoing]);
+    assert.deepEqual(changes, [true, false]);
+  } finally {
+    release();
+    await c.close();
+  }
+});
+
 /**
  * Holds each worktree removal after Git removes it, until released in order.
  * `releaseAll` stops holding, so closing never waits on a held removal.

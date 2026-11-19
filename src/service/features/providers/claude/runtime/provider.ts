@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readdir, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import {
   archiveSession,
@@ -132,13 +132,16 @@ export class ClaudeAgentProvider implements Provider {
 
   /**
    * Sets or clears the session's archived mark, which `listSessions()`
-   * reports. Like `sessionPath`, it finds the session by ID in any project
-   * folder. A later prompt in the session clears the mark.
+   * reports. A later prompt in the session clears the mark.
    */
   async setSessionArchived(task: Task, archived: boolean) {
-    if (!task.session_id) return;
+    if (!task.session_id || !task.workspace) return;
 
-    await (archived ? archiveSession : unarchiveSession)(task.session_id);
+    // Scoped to the folder the session ran in, so copies of the session in
+    // other project folders keep their mark.
+    await (archived ? archiveSession : unarchiveSession)(task.session_id, {
+      dir: await realFolder(task.workspace),
+    });
   }
 
   models(
@@ -492,5 +495,19 @@ export class ClaudeAgentProvider implements Provider {
     } catch {}
 
     return undefined;
+  }
+}
+
+/**
+ * The folder's real path, which names its Claude project folder. A removed
+ * worktree resolves through its parent folder.
+ */
+async function realFolder(path: string) {
+  try {
+    return await realpath(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+
+    return join(await realpath(dirname(path)), basename(path));
   }
 }
