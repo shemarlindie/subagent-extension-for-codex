@@ -114,11 +114,15 @@ audit.tool(
   { progress: [2, 4] },
 );
 
-audit.sdk({
-  type: "system",
-  subtype: "compact_boundary",
-  compact_metadata: { trigger: "auto", pre_tokens: 41000, post_tokens: 7800 },
-});
+audit.sdk(
+  {
+    type: "system",
+    subtype: "compact_boundary",
+    compact_metadata: { trigger: "auto", pre_tokens: 41000, post_tokens: 7800 },
+  },
+  undefined,
+  { context_tokens_after: 26000 },
+);
 
 audit.sdk({
   type: "system",
@@ -371,15 +375,19 @@ function convert(i: number) {
   if (i % 12 === 0) rateLimit(long);
 
   if (i === 18) {
-    long.sdk({
-      type: "system",
-      subtype: "compact_boundary",
-      compact_metadata: {
-        trigger: "auto",
-        pre_tokens: 88000,
-        post_tokens: 9000,
+    long.sdk(
+      {
+        type: "system",
+        subtype: "compact_boundary",
+        compact_metadata: {
+          trigger: "auto",
+          pre_tokens: 88000,
+          post_tokens: 9000,
+        },
       },
-    });
+      undefined,
+      { context_tokens_after: 28000 },
+    );
   }
 
   long.ticks(40 + i, 120 + i);

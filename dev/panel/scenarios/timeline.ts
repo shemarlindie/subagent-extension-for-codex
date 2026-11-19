@@ -8,7 +8,10 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
-import { claudeMessageNormalizer } from "../../../src/service/features/providers/claude/events/normalize";
+import {
+  claudeMessageNormalizer,
+  type ClaudeMeasurements,
+} from "../../../src/service/features/providers/claude/events/normalize";
 import type { RunContext } from "../../../src/service/features/providers/types";
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
@@ -155,15 +158,19 @@ export class Timeline {
     return this;
   }
 
-  /** Most SDK messages surface unchanged as `claude.activity`. */
-  sdk(body: Body<Plain>, gapMs?: number) {
+  /**
+   * Most SDK messages surface unchanged as `claude.activity`. `measured` is
+   * what the provider would measure on arrival, such as a compaction's size
+   * after.
+   */
+  sdk(body: Body<Plain>, gapMs?: number, measured?: ClaudeMeasurements) {
     const message = {
       ...body,
       uuid: this.uuid(),
       session_id: SESSION,
     };
 
-    return this.response(message, gapMs);
+    return this.response(message, gapMs, measured);
   }
 
   init(tools: string[]) {
@@ -432,13 +439,18 @@ export class Timeline {
     return this.response(message);
   }
 
-  private response(message: SDKMessage, gapMs?: number) {
+  private response(
+    message: SDKMessage,
+    gapMs?: number,
+    measured?: ClaudeMeasurements,
+  ) {
     const emit = (type: string, data: Data) =>
       this.add(type, { ...data, raw_response: message }, gapMs);
 
     this.normalize(
       { emit, emitOpaque: emit } as unknown as RunContext,
       message,
+      measured,
     );
 
     return this;

@@ -30,22 +30,37 @@ const result = {
   usage: {},
 };
 
+const compaction = {
+  type: "system",
+  subtype: "compact_boundary",
+  compact_metadata: { trigger: "manual", pre_tokens: 90_000 },
+};
+
+/** Answers with `usage` after `ms`. */
+const later = (ms: number, usage: SDKControlGetContextUsageResponse) =>
+  new Promise<SDKControlGetContextUsageResponse>((resolve) =>
+    setTimeout(() => resolve(usage), ms),
+  );
+
 type RunOptions = {
-  /** Runs when the turn's stream returns. */
-  onReturn?: () => void;
   /** Replaces how the run saves session records. */
   sessionOption?: RunContext["sessionOption"];
 };
 
-/** Runs a turn that plays `frames`, answering context usage calls with `answer`. */
+/**
+ * Runs a turn that plays `frames`, answering context usage calls with
+ * `answer`. As in the SDK, the stream's return fails calls still running.
+ */
 async function run(
   frames: object[],
   answer: (call: number) => Promise<SDKControlGetContextUsageResponse>,
-  { onReturn = () => {}, sessionOption }: RunOptions = {},
+  { sessionOption }: RunOptions = {},
 ) {
   const ctx = await context();
   if (sessionOption) ctx.c.sessionOption = sessionOption;
   let calls = 0;
+  const closed = Promise.withResolvers<never>();
+  closed.promise.catch(() => {});
 
   const launch = () =>
     Object.assign(
@@ -54,15 +69,22 @@ async function run(
           yield* frames;
           yield result;
         } finally {
-          onReturn();
+          closed.reject(new Error("Query closed before response received"));
         }
       })(),
-      { close: () => {}, getContextUsage: () => answer(calls++) },
+      {
+        close: () => {},
+        getContextUsage: () => Promise.race([answer(calls++), closed.promise]),
+      },
     ) as unknown as Query;
 
   await new ClaudeAgentProvider(launch, readyClaudeCli).run(ctx.c, "Work");
 
-  return { calls, stored: claudeOptions(ctx.c.task).context_usage };
+  return {
+    calls,
+    stored: claudeOptions(ctx.c.task).context_usage,
+    events: ctx.events,
+  };
 }
 
 test("a main response stores how full the context window is, and a subagent's measures nothing", async () => {
@@ -85,24 +107,34 @@ test("a main response stores how full the context window is, and a subagent's me
 });
 
 test("the newest measurement wins, and one still running at turn end is stored", async () => {
-  const older = Promise.withResolvers<SDKControlGetContextUsageResponse>();
-  const newer = Promise.withResolvers<SDKControlGetContextUsageResponse>();
-
-  // Both answer once the turn has its result, the newer one first.
-  const { stored } = await run(
-    [responseEnd(), responseEnd()],
-    async (call) => (call === 0 ? older : newer).promise,
-    {
-      onReturn: () => {
-        newer.resolve(contextUsage(50_000));
-        older.resolve(contextUsage(40_000));
-      },
-    },
+  // Both answer after the turn has its result, the newer one first.
+  const { stored } = await run([responseEnd(), responseEnd()], (call) =>
+    call === 0
+      ? later(20, contextUsage(40_000))
+      : later(10, contextUsage(50_000)),
   );
 
   assert.equal(
     (stored as { total_tokens: number } | undefined)?.total_tokens,
     50_000,
+  );
+});
+
+test("compaction stores the context size after it and shows it in its note, though its result follows at once", async () => {
+  const { stored, events } = await run([compaction], () =>
+    later(10, contextUsage(9_000)),
+  );
+
+  assert.equal(
+    (stored as { total_tokens: number } | undefined)?.total_tokens,
+    9_000,
+  );
+
+  const note = events.find((e) => e.data.subtype === "compact_boundary");
+
+  assert.equal(
+    note?.data.activity.statusTitle,
+    "Context compacted · 90K → 9K tokens",
   );
 });
 

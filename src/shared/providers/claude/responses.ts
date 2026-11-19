@@ -10,6 +10,7 @@ const activityFields = new Set([
   "attempt",
   "compact_error",
   "compact_result",
+  "context_tokens_after",
   "content",
   "description",
   "error",

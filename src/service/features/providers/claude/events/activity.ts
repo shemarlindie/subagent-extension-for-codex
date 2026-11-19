@@ -90,8 +90,13 @@ const tokenCount = new Intl.NumberFormat("en", {
   maximumFractionDigits: 1,
 });
 
-/** Names a compaction, with how it started and what it saved where known. */
-function compactionTitle(raw: SDKMessage | undefined) {
+/**
+ * Names a compaction, with how it started and the context size before and
+ * after it. Claude Code's `pre_tokens` counts the whole context, while its
+ * `post_tokens` counts only the summary, so the size after comes from the
+ * provider's measurement. Without one, the summary's size is named as such.
+ */
+function compactionTitle(raw: SDKMessage | undefined, after: unknown) {
   const metadata =
     raw?.type === "system" && raw.subtype === "compact_boundary"
       ? raw.compact_metadata
@@ -102,9 +107,16 @@ function compactionTitle(raw: SDKMessage | undefined) {
       ? "Context compacted automatically"
       : "Context compacted";
 
-  if (metadata?.post_tokens === undefined) return title;
+  if (!metadata) return title;
+  const before = tokenCount.format(metadata.pre_tokens);
 
-  return `${title} · ${tokenCount.format(metadata.pre_tokens)} → ${tokenCount.format(metadata.post_tokens)} tokens`;
+  if (typeof after === "number") {
+    return `${title} · ${before} → ${tokenCount.format(after)} tokens`;
+  }
+
+  if (metadata.post_tokens === undefined) return `${title} · ${before} tokens`;
+
+  return `${title} · ${before} tokens → ${tokenCount.format(metadata.post_tokens)} summary`;
 }
 
 function statusTitle(e: ActivityEvent) {
@@ -127,7 +139,9 @@ function statusTitle(e: ActivityEvent) {
     return `Retrying request${typeof d.attempt === "number" ? ` · attempt ${d.attempt}` : ""}`;
   }
 
-  if (key === "compact_boundary") return compactionTitle(e.rawResponse);
+  if (key === "compact_boundary") {
+    return compactionTitle(e.rawResponse, object(e.data).context_tokens_after);
+  }
 
   if (key === "auth_status") {
     return d.isAuthenticating
@@ -252,7 +266,9 @@ function activityBodyContent(value: unknown): ActivityContent[] | undefined {
 
 /** Labels an SDK activity event, or a transcript content row. */
 function activityTitle(e: ActivityEvent, key: string) {
-  if (key === "compact_boundary") return compactionTitle(e.rawResponse);
+  if (key === "compact_boundary") {
+    return compactionTitle(e.rawResponse, object(e.data).context_tokens_after);
+  }
 
   if (e.type === "claude.activity") {
     return (

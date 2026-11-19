@@ -210,6 +210,31 @@ test("Claude rate-limit activity uses the current typed SDK metadata", () => {
   ]);
 });
 
+test("a compaction note without a measured size names Claude Code's figure as the summary", () => {
+  const message = {
+    type: "system",
+    subtype: "compact_boundary",
+    compact_metadata: {
+      trigger: "auto",
+      pre_tokens: 97_291,
+      post_tokens: 1743,
+    },
+    uuid: "00000000-0000-4000-8000-000000000010",
+    session_id: "sdk-session",
+  } satisfies Extract<SDKMessage, { subtype: "compact_boundary" }>;
+
+  const presentation = claudeActivityPresentation({
+    type: "claude.activity",
+    data: message,
+    rawResponse: message,
+  });
+
+  assert.equal(
+    presentation.statusTitle,
+    "Context compacted automatically · 97.3K tokens → 1.7K summary",
+  );
+});
+
 test("hook heartbeats share one status row and never open a tool row or live status", () => {
   const data: Record<string, unknown>[] = [];
   const normalize = claudeMessageNormalizer();

@@ -6,7 +6,8 @@ import { NestedContentOmitted } from "./nested-content-omitted";
 
 const fieldLabels: Record<string, string> = {
   pre_tokens: "Tokens before compaction",
-  post_tokens: "Tokens after compaction",
+  post_tokens: "Summary tokens",
+  context_tokens_after: "Tokens after compaction",
   total_cost_usd: "Total cost",
   cost_usd: "Cost",
   duration_ms: "Duration",

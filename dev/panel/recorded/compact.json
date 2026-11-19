@@ -1397,8 +1397,8 @@
           "failed": false,
           "thinking": false,
           "liveStatus": false,
-          "statusTitle": "Context compacted · 38.3K → 7.7K tokens",
-          "title": "Context compacted · 38.3K → 7.7K tokens",
+          "statusTitle": "Context compacted · 38.3K tokens → 7.7K summary",
+          "title": "Context compacted · 38.3K tokens → 7.7K summary",
           "messageId": "785f56af-2af6-4ac9-9ff1-a95386b95d2c",
           "hasThinking": false
         },

@@ -4,7 +4,11 @@ import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 // record and events, with everything specific to the machine and account it
 // ran on replaced, so the file can be committed. See
 // docs/development.md#recorded-fixtures.
-import { claudeMessageNormalizer } from "../../../src/service/features/providers/claude/events/normalize";
+import {
+  claudeMessageNormalizer,
+  keptMeasurements,
+  type ClaudeMeasurements,
+} from "../../../src/service/features/providers/claude/events/normalize";
 import type { RunContext } from "../../../src/service/features/providers/types";
 import type { EventEnvelope } from "../../../src/shared/events/event-contract";
 import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
@@ -217,7 +221,11 @@ export function recordFixture(
 
         scrubRateLimits(raw, options.start);
         responseRefs.set(identity, `response-${options.firstId + index}`);
-        derivedEvents.set(identity, derivedFrom(raw, normalize));
+
+        derivedEvents.set(
+          identity,
+          derivedFrom(raw, normalize, keptMeasurements(fields)),
+        );
       }
 
       const derived = derivedEvents.get(identity)?.shift();
@@ -278,13 +286,18 @@ type DerivedEvent = { type: string; data: Record<string, unknown> };
 function derivedFrom(
   original: SDKMessage,
   normalize: ReturnType<typeof claudeMessageNormalizer>,
+  measured: ClaudeMeasurements | undefined,
 ) {
   const events: DerivedEvent[] = [];
 
   const emit = (type: string, data: Record<string, unknown>) =>
     events.push({ type, data });
 
-  normalize({ emit, emitOpaque: emit } as unknown as RunContext, original);
+  normalize(
+    { emit, emitOpaque: emit } as unknown as RunContext,
+    original,
+    measured,
+  );
 
   return events;
 }

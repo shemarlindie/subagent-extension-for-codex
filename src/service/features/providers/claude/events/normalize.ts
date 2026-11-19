@@ -51,8 +51,23 @@ export function claudeMessageNormalizer(fullEvents = false) {
     compacted: false,
   };
 
-  return (c: RunContext, m: SDKMessage) =>
-    normalizeClaudeMessage(c, m, fullEvents, state);
+  return (c: RunContext, m: SDKMessage, measured?: ClaudeMeasurements) =>
+    normalizeClaudeMessage(c, m, fullEvents, state, measured);
+}
+
+/**
+ * What the provider measured when a message arrived, kept with its activity:
+ * after a compaction, the context size the context usage meter shows.
+ */
+export type ClaudeMeasurements = { context_tokens_after?: number };
+
+/** The measurements an event kept, so tools can derive it again. */
+export function keptMeasurements(
+  data: Record<string, unknown>,
+): ClaudeMeasurements | undefined {
+  return typeof data.context_tokens_after === "number"
+    ? { context_tokens_after: data.context_tokens_after }
+    : undefined;
 }
 
 type NormalizerState = {
@@ -111,6 +126,7 @@ function normalizeClaudeMessage(
   m: SDKMessage,
   fullEvents: boolean,
   state: NormalizerState,
+  measured: ClaudeMeasurements | undefined,
 ) {
   const { fileToolIds } = state;
   const responseRef = fullEvents ? globalThis.crypto.randomUUID() : undefined;
@@ -158,6 +174,7 @@ function normalizeClaudeMessage(
   const emitActivity = (message: object) => {
     const payload = {
       ...normalizedClaudeFields(message),
+      ...measured,
       ...originalResponseFields(),
     };
 

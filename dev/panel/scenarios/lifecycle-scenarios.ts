@@ -188,15 +188,19 @@ refactor.sdk({
 
 refactor.sdk({ type: "system", subtype: "status", status: "compacting" });
 
-refactor.sdk({
-  type: "system",
-  subtype: "compact_boundary",
-  compact_metadata: {
-    trigger: "manual",
-    pre_tokens: 90000,
-    post_tokens: 12000,
+refactor.sdk(
+  {
+    type: "system",
+    subtype: "compact_boundary",
+    compact_metadata: {
+      trigger: "manual",
+      pre_tokens: 90000,
+      post_tokens: 12000,
+    },
   },
-});
+  undefined,
+  { context_tokens_after: 31000 },
+);
 
 refactor.sdk({
   type: "system",

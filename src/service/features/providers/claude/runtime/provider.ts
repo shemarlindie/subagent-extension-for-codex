@@ -382,7 +382,7 @@ export class ClaudeAgentProvider implements Provider {
               c.delta(streaming, m.event.delta.text);
             } else if (m.event.type === "message_delta") {
               // The CLI has the response's usage from here on.
-              contextUsage.measure();
+              void contextUsage.measure();
             }
           }
 
@@ -410,19 +410,26 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        normalize(c, m);
+        // Compaction's own request emits no stream events. Its note shows the
+        // context size after it, as the context usage meter does.
+        if (m.type === "system" && m.subtype === "compact_boundary") {
+          recordPromptCache(c, "compact_boundary");
+          const usage = await contextUsage.measureNow();
+
+          normalize(
+            c,
+            m,
+            usage && { context_tokens_after: usage.total_tokens },
+          );
+        } else {
+          normalize(c, m);
+        }
 
         localOutput = localCommandOutput(m) ?? localOutput;
 
         if (m.type === "system" && m.subtype === "init" && !started) {
           started = true;
           await recordEffectiveSettings(c, m, stream);
-        }
-
-        // Compaction's own request emits no stream events.
-        if (m.type === "system" && m.subtype === "compact_boundary") {
-          recordPromptCache(c, "compact_boundary");
-          contextUsage.measure();
         }
 
         if (m.type !== "result") continue;
@@ -488,6 +495,9 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
+        // Leaving the loop closes the query, which drops a measurement still
+        // running, such as the one compaction starts just before its result.
+        await contextUsage.settle();
         break;
       }
 
@@ -497,7 +507,6 @@ export class ClaudeAgentProvider implements Provider {
     } finally {
       clearTimeout(fallback);
       c.signal.removeEventListener("abort", interrupt);
-      await contextUsage.settle();
       inbox.end();
       stream.close();
     }
