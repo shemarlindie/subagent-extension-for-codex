@@ -8,8 +8,8 @@ export const readyClaudeCli: Pick<ClaudeCli, "status" | "executable"> = {
   status: async () => ({
     ready: true,
     path: fakeClaudePath,
-    version: "2.1.317",
-    supported: "2.1.317+",
+    version: "2.1.324",
+    supported: "2.1.324+",
   }),
   executable: async () => fakeClaudePath,
 };

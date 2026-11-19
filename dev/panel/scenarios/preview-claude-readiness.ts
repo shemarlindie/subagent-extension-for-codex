@@ -3,9 +3,9 @@ import type { ProviderReadiness } from "../../../src/shared/providers/types";
 export const previewClaudeReady = {
   ready: true,
   details: {
-    executable: "/opt/homebrew/Caskroom/claude-code/2.1.319/claude",
-    version: "2.1.319",
-    supported_versions: "2.1.317+",
+    executable: "/opt/homebrew/Caskroom/claude-code/2.1.328/claude",
+    version: "2.1.328",
+    supported_versions: "2.1.324+",
   },
 } satisfies ProviderReadiness;
 
@@ -13,11 +13,11 @@ export const previewClaudeReady = {
 export const previewClaudeUnavailable = {
   ready: false,
   message:
-    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.317+. Update it using its original installer (see https://code.claude.com/docs/en/setup), or set SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH to a supported copy.",
+    "Claude Code 2.1.200 at /opt/homebrew/Caskroom/claude-code/2.1.200/claude is older than the supported 2.1.324+. Update it using its original installer (see https://code.claude.com/docs/en/setup), or set SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH to a supported copy.",
   details: {
     problem: "too_old",
     executable: "/opt/homebrew/Caskroom/claude-code/2.1.200/claude",
     version: "2.1.200",
-    supported_versions: "2.1.317+",
+    supported_versions: "2.1.324+",
   },
 } satisfies ProviderReadiness;
