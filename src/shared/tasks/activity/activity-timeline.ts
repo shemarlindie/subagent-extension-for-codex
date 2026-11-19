@@ -7,6 +7,7 @@ import {
   activityKind,
   boundaries,
   compactionSummary,
+  eventRowState,
   eventRowTitle,
   failureSummary,
   isQuiet,
@@ -19,7 +20,7 @@ import {
   thinkingSignal,
   toolTitle,
   type ActivityGroup,
-  type ActivityState,
+  type ActivityGroupState,
 } from "./activity-events.js";
 
 function onlyThinkingSignals(group: ActivityGroup) {
@@ -82,7 +83,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     event: Event,
     kind: ActivityGroup["kind"],
     title: string,
-    state: ActivityState = "info",
+    state: ActivityGroupState = "info",
   ) => {
     const group: ActivityGroup = {
       id: `activity-${event.task_id}-${event.id}`,
@@ -307,7 +308,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       e,
       "event",
       eventRowTitle(e, key, presentation.title),
-      activityFailed(e) ? "failed" : "info",
+      eventRowState(e),
     );
 
     group.summary =

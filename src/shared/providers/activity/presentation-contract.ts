@@ -47,6 +47,8 @@ export interface ActivityPresentation {
   quiet?: boolean;
   thinking?: boolean;
   failed?: boolean;
+  /** True when the row needs attention although the work goes on. */
+  warning?: boolean;
   messageId?: string;
   hasThinking?: boolean;
   rateLimitWindows?: ActivityRateLimitWindow[];

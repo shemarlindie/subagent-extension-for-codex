@@ -10,6 +10,11 @@ import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/r
 import { scalarText } from "../../../../../shared/text.js";
 import { decodeClaudeActivityContent } from "./content.js";
 import { claudeStreamPresentation } from "./stream-presentation.js";
+import {
+  informational,
+  informationalTitle,
+  sessionWritesLostSummary,
+} from "./system-notices.js";
 
 export {
   claudeActivityContent,
@@ -112,6 +117,7 @@ function statusTitle(e: ActivityEvent) {
   const d = object(e.data);
 
   if (thinking.has(key)) return "Thinking…";
+  if (key === "informational") return string(d.content) ?? "Claude note";
   if (isHookHeartbeat(e)) return `Running ${scalarText(d.tool_name)} hook`;
 
   if (key === "status") {
@@ -202,6 +208,7 @@ const sdkTitles: Record<string, string> = {
   elicitation_complete: "Input completed",
   permission_denied: "Permission denied",
   mirror_error: "Transcript sync failed",
+  session_writes_lost: "Session not fully saved",
   tool_progress: "Tool running",
   tool_use_summary: "Tool summary",
   auth_status: "Authentication",
@@ -253,6 +260,7 @@ function activityBodyContent(value: unknown): ActivityContent[] | undefined {
 /** Labels an SDK activity event, or a transcript content row. */
 function activityTitle(e: ActivityEvent, key: string) {
   if (key === "compact_boundary") return compactionTitle(e.rawResponse);
+  if (key === "informational") return informationalTitle(e.rawResponse);
 
   if (e.type === "claude.activity") {
     return (
@@ -315,7 +323,11 @@ export function claudeActivityPresentation(
       : decodeClaudeRateLimitWindowInfo(d.rate_limit_info);
 
   const hookHeartbeat = isHookHeartbeat(e);
-  const isQuiet = quiet.has(key) || hookHeartbeat;
+  const level = informational(e.rawResponse)?.level;
+
+  // Claude Code shows info-level lines only in its transcript view.
+  const isQuiet = quiet.has(key) || hookHeartbeat || level === "info";
+
   const failed = activityFailed(e);
   const summaryIsResponse = e.type === "claude.activity" && d.type === "result";
 
@@ -327,7 +339,12 @@ export function claudeActivityPresentation(
     (failed ? failureSummary(e) : undefined) ??
     string(d.compact_error) ??
     payloadSummary ??
-    (key === "local_command_output" ? string(d.content) : undefined) ??
+    (["local_command_output", "informational"].includes(key)
+      ? string(d.content)
+      : undefined) ??
+    (key === "session_writes_lost"
+      ? sessionWritesLostSummary(e.rawResponse)
+      : undefined) ??
     (Array.isArray(d.errors) ? d.errors.map(String).join("; ") : undefined);
 
   const presentation: ActivityPresentation = {
@@ -358,6 +375,10 @@ export function claudeActivityPresentation(
     ),
     hasThinking: hasThinkingContent(e),
   };
+
+  if (key === "session_writes_lost" || level === "warning") {
+    presentation.warning = true;
+  }
 
   if (key === "session_state_changed") {
     if (d.state === "requires_action") presentation.statusState = "info";

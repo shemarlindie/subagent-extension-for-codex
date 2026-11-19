@@ -255,6 +255,121 @@ test("hook heartbeats share one status row and never open a tool row or live sta
   assert.equal(currentActivityStatus(events).text, "Working");
 });
 
+test("informational and lost-write messages get titled rows, warnings and quiet info", () => {
+  const data: Record<string, unknown>[] = [];
+  const normalize = claudeMessageNormalizer();
+
+  const context = {
+    emitOpaque: (_: string, d: Record<string, unknown>) => data.push(d),
+  } as unknown as RunContext;
+
+  const base = {
+    uuid: "00000000-0000-4000-8000-000000000020",
+    session_id: "s",
+  } as const;
+
+  const informational = (
+    level: "info" | "notice" | "suggestion" | "warning",
+    content: string,
+    extra: { prevent_continuation?: boolean } = {},
+  ) =>
+    normalize(context, {
+      type: "system",
+      subtype: "informational",
+      level,
+      content,
+      ...extra,
+      ...base,
+    });
+
+  informational("warning", "PreToolUse hook gave no verdict.");
+  informational("info", "Loaded 3 skills.");
+  informational("notice", "Plan mode is active.");
+  informational("suggestion", "Try /compact.");
+
+  informational("notice", "Stop hook denied continuation.", {
+    prevent_continuation: true,
+  });
+
+  for (const [error_code, lost] of [
+    ["ENOSPC", ["transcript"]],
+    ["EDQUOT", ["global_config"]],
+  ] as const) {
+    normalize(context, {
+      type: "system",
+      subtype: "session_writes_lost",
+      error_code,
+      lost: [...lost],
+      ...base,
+    });
+  }
+
+  const events = data.map((d, id) =>
+    decodedEvent({
+      id,
+      task_id: "task",
+      type: "claude.activity",
+      timestamp: "",
+      data: d,
+    }),
+  );
+
+  assert.deepEqual(
+    groupActivity(events).map(({ kind, title, summary, state }) => ({
+      kind,
+      title,
+      summary,
+      state,
+    })),
+    [
+      {
+        kind: "event",
+        title: "Claude warning",
+        summary: "PreToolUse hook gave no verdict.",
+        state: "warning",
+      },
+      {
+        kind: "status",
+        title: "Loaded 3 skills.",
+        summary: undefined,
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Claude note",
+        summary: "Plan mode is active.",
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Claude suggestion",
+        summary: "Try /compact.",
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Claude stopped",
+        summary: "Stop hook denied continuation.",
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Session not fully saved",
+        summary:
+          "The disk is full. Part of the conversation wasn't saved, so the next turn resumes a session that may be missing it.",
+        state: "warning",
+      },
+      {
+        kind: "event",
+        title: "Session not fully saved",
+        summary:
+          "The disk quota is used up. Changes to Claude's settings in ~/.claude.json weren't saved.",
+        state: "warning",
+      },
+    ],
+  );
+});
+
 test("Claude preserves the activity kind and normalized fields of an unknown message", () => {
   const message = {
     type: "future_sdk_message",
