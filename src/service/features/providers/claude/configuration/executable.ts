@@ -13,7 +13,7 @@ import compareVersions from "semver/functions/compare.js";
  */
 export const claudeCliSupport = {
   sdk: "0.3.328",
-  minimum: "2.1.300",
+  minimum: "2.1.317",
   paired: "2.1.328",
 } as const;
 

@@ -192,6 +192,8 @@ export async function claudeTurnOptions(
       ],
       PreToolUse: [
         {
+          // A guard that throws blocks the call instead of letting it run.
+          onFailure: "block",
           hooks: [
             async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
