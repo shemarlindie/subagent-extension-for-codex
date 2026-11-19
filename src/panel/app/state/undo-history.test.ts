@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { expect, test, vi } from "vitest";
 
+import { ArchiveActions } from "../../features/tasks/archive/archive-actions";
 import { task } from "./controller-test-harness";
 import { initialState } from "./initial-state";
 import type { Snapshot } from "./types";
@@ -30,6 +31,12 @@ function setup() {
     entry,
     state: () => state,
     show: (patch: Partial<Snapshot>) => (state = { ...state, ...patch }),
+    /** The open toast, which the test expects. */
+    notice: () => {
+      assert.ok(state.undoNotice);
+
+      return state.undoNotice;
+    },
   };
 }
 
@@ -154,7 +161,7 @@ test("a failed step warns and is dropped, and a busy panel keeps the step for la
 });
 
 test("the toast's button reverses every step it lists", async () => {
-  const { history, entry, state } = setup();
+  const { history, entry, state, notice } = setup();
   const changes = ["First", "Second", "Third"].map((label) => entry(label));
 
   for (const change of changes) history.record(change);
@@ -166,7 +173,7 @@ test("the toast's button reverses every step it lists", async () => {
     steps: 3,
   });
 
-  await history.redo(state().undoNotice?.steps);
+  await history.redo(notice().steps);
 
   for (const change of changes) expect(change.redo).toHaveBeenCalledOnce();
 
@@ -209,29 +216,132 @@ test("quick presses all count, in order, while an earlier step is still running"
   expect(order).toEqual(["fast", "slow"]);
 });
 
-test("a change counts as soon as it shows: undo waits for its save, and a failed save drops it with its toast", async () => {
+test("changes and steps run in the order asked, so undo reverses the change in progress and never a later one", async () => {
   const { history, entry, state } = setup();
   const earlier = entry("Earlier");
   const saving = Promise.withResolvers<boolean>();
   const archive = entry("Archived “Parser”", { toast: true });
+  const later = entry("Marked “Docs” unread");
 
   history.record(earlier);
-  history.track(saving.promise, archive, (saved) => saved);
-  expect(state().undoNotice?.text).toBe("Archived “Parser”");
 
-  // The shortcut pressed mid-save reverses this change, never the earlier one.
+  const archiving = history.change(
+    () => saving.promise,
+    () => archive,
+  );
+
   const undoing = history.undo();
-  saving.resolve(true);
-  await undoing;
-  expect(archive.undo).toHaveBeenCalledOnce();
-  expect(earlier.undo).not.toHaveBeenCalled();
 
-  const failing = Promise.withResolvers<boolean>();
-  const removal = entry("Removed “Later” from the queue", { toast: true });
-  history.track(failing.promise, removal);
-  failing.reject(new Error("offline"));
+  const marking = history.change(
+    async () => true,
+    () => later,
+  );
+
+  expect(state().undoPending).toBe(true);
+
+  saving.resolve(true);
+  await Promise.all([archiving, undoing, marking]);
+  expect(archive.undo).toHaveBeenCalledOnce();
+  expect(later.undo).not.toHaveBeenCalled();
+  expect(state().undoPending).toBe(false);
+
+  await history.undo();
+  expect(later.undo).toHaveBeenCalledOnce();
+  expect(earlier.undo).not.toHaveBeenCalled();
+});
+
+test("a change that fails or changes nothing leaves the history as it was, redo included", async () => {
+  const { history, entry } = setup();
+  const first = entry("First");
+
+  history.record(first);
   await history.undo();
 
-  expect(removal.undo).not.toHaveBeenCalled();
-  expect(earlier.undo).toHaveBeenCalledOnce();
+  await expect(
+    history.change(
+      () => Promise.reject(new Error("offline")),
+      () => entry("Failed"),
+    ),
+  ).rejects.toThrow("offline");
+
+  await history.change(
+    async () => false,
+    (changed) => (changed ? entry("Skipped") : undefined),
+  );
+
+  await history.redo();
+  expect(first.redo).toHaveBeenCalledOnce();
+});
+
+test("a local change made while an undo waits cancels the undo and stays undoable", async () => {
+  const { history, entry, state } = setup();
+  const first = entry("First");
+  const viewed = entry("Marked “a.ts” viewed", { toast: true });
+  const saving = Promise.withResolvers<boolean>();
+
+  history.record(first);
+
+  const archiving = history.change(
+    () => saving.promise,
+    (changed) => (changed ? entry("Archived") : undefined),
+  );
+
+  const undoing = history.undo();
+  // Already on screen, so an older undo must not reverse what it changed.
+  history.record(viewed);
+  saving.resolve(false);
+  await Promise.all([archiving, undoing]);
+
+  expect(first.undo).not.toHaveBeenCalled();
+  expect(viewed.undo).not.toHaveBeenCalled();
+  expect(state().undoNotice?.text).toBe("Marked “a.ts” viewed");
+
+  await history.undo();
+  expect(viewed.undo).toHaveBeenCalledOnce();
+});
+
+test("a partial archive redo keeps its successful changes undoable", async () => {
+  const { history, state, show } = setup();
+
+  const tasks = ["a", "b"].map((id) => ({
+    ...task(id),
+    status: "completed" as const,
+  }));
+
+  show({ tasks });
+
+  const tool = vi.fn(
+    async (_name: string, args: Record<string, unknown>) =>
+      ({ task_ids: args.task_ids, skipped: [] }) as never,
+  );
+
+  const actions = new ArchiveActions({
+    snapshot: state,
+    patch: show,
+    closed: () => false,
+    tool,
+    leaveSelection: () => {},
+    select: async () => {},
+    undo: history,
+  });
+
+  await actions.setArchived(tasks, true);
+  await history.undo();
+  tool.mockResolvedValueOnce({ task_ids: ["a"], skipped: ["b"] } as never);
+  await history.redo();
+
+  expect(state().undoNotice).toMatchObject({
+    text: expect.stringContaining("1 skipped"),
+    offer: "undo",
+    failed: true,
+  });
+
+  await history.undo();
+
+  expect(tool).toHaveBeenLastCalledWith("app_set_tasks_archived", {
+    task_ids: ["a"],
+    archived: false,
+  });
+
+  expect(state().tasks.some((task) => task.archived_at)).toBe(false);
 });

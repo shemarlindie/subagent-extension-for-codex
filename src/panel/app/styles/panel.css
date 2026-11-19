@@ -80,6 +80,12 @@ header .brand > span {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.action-failure {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
 /* The scope reads as the title's project name, like the thread header.
    The negative margin lines its text up with that name while the hover fill keeps its padding. */
 .project-scope .select-trigger {
@@ -289,6 +295,10 @@ header .toolbar {
 .task-list-scrollbar-thumb:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
+}
+/* Inset, since a group's collapsible panel clips anything past the row. */
+.row:focus-visible {
+  outline-offset: -1px;
 }
 .row[aria-current="true"] {
   background: var(--sidebar-selected);

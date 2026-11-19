@@ -104,27 +104,32 @@ test("a failed archive restores the list and rethrows", async () => {
   assert.deepEqual(archived(), []);
 });
 
-test("archiving the open task closes it, while other changes keep it open", async () => {
+test("archiving the open task closes it once the service archives it, while other changes keep it open", async () => {
   const open = task({ id: "open" });
   const other = task({ id: "other" });
   const old = task({ id: "old", archived_at: "then" });
+  let result: ArchiveResult = { task_ids: ["other"], skipped: [] };
 
   const { actions, leaveSelection } = setup(
     [open, other, old],
-    () => Promise.resolve({ task_ids: [], skipped: [] }),
+    () => Promise.resolve(result),
     "open",
   );
 
   await actions.setArchived([other], true);
+  result = { task_ids: ["old"], skipped: [] };
   await actions.toggle(old);
+  result = { task_ids: ["other"], skipped: ["open"] };
+  await actions.setArchived([open, other], true);
   assert.equal(leaveSelection.mock.calls.length, 0);
 
-  await actions.setArchived([open, other], true);
+  result = { task_ids: ["open"], skipped: [] };
+  await actions.toggle(open);
   assert.equal(leaveSelection.mock.calls.length, 1);
 });
 
 test("undo and redo change only the tasks the service archived", async () => {
-  const done = task({ id: "done" });
+  const done = task({ id: "done", title: "Done" });
   const skipped = task({ id: "skipped" });
 
   const { actions, tool, entries } = setup([done, skipped], () =>
@@ -134,6 +139,8 @@ test("undo and redo change only the tasks the service archived", async () => {
   await actions.setArchived([done, skipped], true);
   const [entry] = entries;
   assert.ok(entry);
+  assert.equal(entry.label, "Archived “Done”");
+  tool.mockResolvedValue({ task_ids: ["done"], skipped: [] } as never);
   await entry.undo();
   await entry.redo();
 
@@ -175,6 +182,58 @@ test("an archive the service skips entirely leaves nothing to undo", async () =>
   );
 
   await actions.setArchived([task({ id: "a" })], true);
-  await Promise.resolve();
   assert.equal(entries.length, 0);
+});
+
+test("archiving more than a request can hold preserves the successful batch when another fails", async () => {
+  const tasks = Array.from({ length: 1001 }, (_, index) =>
+    task({ id: String(index) }),
+  );
+
+  const ids = tasks.slice(0, 1000).map((task) => task.id);
+  const error = new Error("offline");
+
+  const { actions, tool, archived, entries } = setup(tasks, () =>
+    Promise.reject(error),
+  );
+
+  tool.mockResolvedValueOnce({ task_ids: ids, skipped: [] } as never);
+
+  assert.deepEqual(await actions.setArchived(tasks, true), {
+    task_ids: ids,
+    skipped: [],
+    failure: { count: 1, error },
+  });
+
+  assert.deepEqual(archived(), ids);
+  const [entry] = entries;
+  assert.ok(entry);
+  tool.mockResolvedValueOnce({ task_ids: ids, skipped: [] } as never);
+  await entry.undo();
+  assert.deepEqual(archived(), []);
+
+  assert.deepEqual(
+    tool.mock.calls.map(([, args]) => [
+      args.archived,
+      (args.task_ids as string[]).length,
+    ]),
+    [
+      [true, 1000],
+      [true, 1],
+      [false, 1000],
+    ],
+  );
+});
+
+test("archiving reads the tasks when its turn comes, leaving one an earlier change archived", async () => {
+  const done = task({ id: "done" });
+
+  const { actions, tool, list } = setup([done], () =>
+    Promise.resolve({ task_ids: ["done"], skipped: [] }),
+  );
+
+  list([{ ...done, archived_at: "now" }]);
+  await actions.setArchived([done], true);
+
+  assert.equal(tool.mock.calls.length, 0);
 });

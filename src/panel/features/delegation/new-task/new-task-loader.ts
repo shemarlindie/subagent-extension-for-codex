@@ -12,6 +12,7 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import type { Defaults } from "../../settings/types";
 import {
   applyDelegateRead,
   initialDelegateStatuses,
@@ -60,6 +61,13 @@ export function rescopedNewTask(
  */
 export class NewTaskLoader {
   private request = 0;
+  /** The settings the composer last loaded, kept once it closes. */
+  private loadedDefaults?: Defaults;
+  /** Profile settings saved since a load that may not include them. */
+  private savedSettings = new Map<string, unknown>();
+  private savesRunning = 0;
+  /** Whether the current settings read includes every profile save. */
+  private readIncludesSaves = false;
 
   constructor(private context: NewTaskLoaderContext) {}
 
@@ -113,6 +121,11 @@ export class NewTaskLoader {
     const current = this.context.snapshot().newTask;
 
     if (this.context.closed() || current?.request !== request) return;
+
+    if (result?.defaults) {
+      this.loadedDefaults = result.defaults;
+      if (this.readIncludesSaves) this.savedSettings.clear();
+    }
 
     this.context.patch({
       ...result?.snapshot,
@@ -221,6 +234,7 @@ export class NewTaskLoader {
 
     const previous = settingAt(this.context.snapshot().newTask?.defaults, path);
     setDefault(value, previous);
+    this.savesRunning++;
 
     try {
       await this.context.tool("update_settings", {
@@ -231,12 +245,36 @@ export class NewTaskLoader {
       setDefault(previous, value);
 
       return `The ${titleCase(profile)} profile's default could not be saved: ${errorMessage(error)}`;
+    } finally {
+      this.savesRunning--;
     }
+
+    this.savedSettings.set(path, value);
+    this.readIncludesSaves = false;
 
     return undefined;
   }
 
+  /**
+   * The defaults as saved, which undo of a profile choice returns to: the
+   * last loaded ones with each profile save confirmed since. They outlast the
+   * composer.
+   */
+  savedDefaults() {
+    let defaults = this.loadedDefaults;
+
+    for (const [path, value] of this.savedSettings) {
+      defaults = defaults && withSetting(defaults, path, value);
+    }
+
+    return defaults;
+  }
+
   private load({ request, statuses }: NewTaskState) {
+    // A read that starts while no profile save runs includes every save so
+    // far. One that starts during a save can miss it.
+    this.readIncludesSaves = !this.savesRunning;
+
     startDelegateReads(this.context, statuses, (...update) =>
       this.update(request, ...update),
     );

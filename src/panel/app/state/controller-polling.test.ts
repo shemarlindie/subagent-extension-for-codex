@@ -148,6 +148,30 @@ test("a successful queued refresh clears the earlier read's failure", async (t) 
   );
 });
 
+test("a successful refresh leaves action failures visible", async (t) => {
+  const { controller, transport } = setup();
+  const wait = deferred<unknown>();
+
+  t.onTestFinished(() => {
+    controller.dispose();
+    wait.resolve({ tasks: [] });
+  });
+
+  await controller.start();
+
+  transport.handler = (name) =>
+    name === "app_list_tasks" ? wait.promise : undefined;
+
+  const refreshing = controller.refresh();
+  await flush();
+  controller.reportActionFailure("Archive unavailable.");
+  wait.resolve({ tasks: [task("a")] });
+  await refreshing;
+
+  expect(controller.getSnapshot().tasks.map((task) => task.id)).toEqual(["a"]);
+  expect(controller.getSnapshot().actionFailure).toBe("Archive unavailable.");
+});
+
 test("the fallback refresh skips hidden panels and waits for a pending refresh", async (t) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 

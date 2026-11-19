@@ -1,51 +1,36 @@
 import { Accordion } from "@base-ui/react/accordion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { useCollapsedProjects } from "./collapsed-projects";
 import { ProjectGroupMenu } from "./project-group-menu";
-import { listedTask, tasksByProject } from "./selectors";
+import { groupRows, tasksByProject } from "./selectors";
 import { TaskGroup } from "./task-group";
 
-type ProjectGroupsProps = {
-  /** The listed tasks across projects, in display order. */
-  tasks: Task[];
-  projectName: (repository: string) => string;
-  renderRow: (task: Task) => ReactNode;
-};
-
-/**
- * The all-projects task list: an accordion with a group for each project.
- * Long groups stop at a few rows so one project can't bury the rest, except
- * while searching or when only one project is listed.
- */
-export function ProjectGroups({
-  tasks,
-  projectName,
-  renderRow,
-}: ProjectGroupsProps) {
-  const { search, selected } = useSnapshot(["search"], (state) => ({
-    selected: listedTask(state),
-  }));
-
+/** Determines which rows the accordion shows and which "Select all" can reach. */
+export function useProjectGroups(
+  tasks: Task[],
+  search: string,
+  current?: string,
+) {
   const groups = tasksByProject(tasks);
   const capped = !search && groups.length > 1;
   const [collapsed, setGroupOpen] = useCollapsedProjects();
-  // Groups whose "Show more" was chosen, while the groups stay shown.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const revealed = useRef(selected);
+  const revealed = useRef(current);
+
+  // An empty or single-project list unmounts the accordion.
+  if (!groups.length && expanded.size) setExpanded(new Set());
 
   // Choosing a task from outside the list, such as a toast, opens its group.
   useEffect(() => {
-    if (revealed.current === selected) return;
+    if (revealed.current === current) return;
 
-    revealed.current = selected;
+    revealed.current = current;
 
-    const repository = tasks.find((task) => task.id === selected)?.repository;
-
+    const repository = tasks.find((task) => task.id === current)?.repository;
     if (repository) setGroupOpen(repository, true);
-  });
+  }, [current, tasks, setGroupOpen]);
 
   const setOpenGroups = (open: string[]) => {
     for (const { repository } of groups) {
@@ -63,29 +48,60 @@ export function ProjectGroups({
       return next;
     });
 
+  return {
+    groups: groups.map(({ repository, tasks }) => {
+      const rows = capped
+        ? groupRows(tasks, current)
+        : { shown: tasks, hidden: [] };
+
+      const isExpanded = expanded.has(repository);
+
+      return {
+        repository,
+        tasks,
+        shown: isExpanded ? tasks : rows.shown,
+        hidden: isExpanded ? [] : rows.hidden,
+        canShowLess: isExpanded && rows.hidden.length > 0,
+        open: !collapsed.has(repository),
+      };
+    }),
+    setOpenGroups,
+    setGroupExpanded,
+  };
+}
+
+type ProjectGroupsProps = {
+  model: ReturnType<typeof useProjectGroups>;
+  projectName: (repository: string) => string;
+  renderRow: (task: Task) => ReactNode;
+};
+
+/** The all-projects task list accordion. */
+export function ProjectGroups({
+  model,
+  projectName,
+  renderRow,
+}: ProjectGroupsProps) {
   return (
     <Accordion.Root
       multiple
-      value={groups
-        .map((group) => group.repository)
-        .filter((repository) => !collapsed.has(repository))}
-      onValueChange={setOpenGroups}
+      value={model.groups.flatMap(({ repository, open }) =>
+        open ? [repository] : [],
+      )}
+      onValueChange={model.setOpenGroups}
     >
-      {groups.map(({ repository, tasks }) => (
+      {model.groups.map((group) => (
         <TaskGroup
-          key={repository}
-          repository={repository}
-          name={projectName(repository)}
-          tasks={tasks}
-          capped={capped}
-          selected={selected}
-          expanded={expanded.has(repository)}
-          onExpandedChange={(expand) => setGroupExpanded(repository, expand)}
-          open={!collapsed.has(repository)}
+          key={group.repository}
+          {...group}
+          name={projectName(group.repository)}
+          onExpandedChange={(expand) =>
+            model.setGroupExpanded(group.repository, expand)
+          }
           actions={
             <ProjectGroupMenu
-              repository={repository}
-              name={projectName(repository)}
+              repository={group.repository}
+              name={projectName(group.repository)}
             />
           }
           renderRow={renderRow}
