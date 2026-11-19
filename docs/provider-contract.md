@@ -215,6 +215,7 @@ A provider that ends a turn before sending its prompt calls
 | `commands(task)`                       | Optional. Lists the slash commands the task's session offers. The service checks them against the task policy for suggestions and sends.        |
 | `deleteSession(task, expectedVersion)` | Optional. Removes the confirmed session resources. Rejects a changed version.                                                                   |
 | `sessionDeletionStatus(task)`          | Required for session deletion. Lists the verified resources and their version for confirmation.                                                 |
+| `setSessionArchived(task, archived)`   | Optional. Archives or unarchives the recorded session with its task, in the background. A failure is logged and never undoes the task change.   |
 | `close()`                              | Optional. Releases provider resources during service shutdown.                                                                                  |
 
 When the provider creates a native session, it calls

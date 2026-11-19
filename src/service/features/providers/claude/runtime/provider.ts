@@ -4,7 +4,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
+  archiveSession,
   query,
+  unarchiveSession,
   type Query,
   type SDKMessage,
   type SDKUserMessage,
@@ -126,6 +128,17 @@ export class ClaudeAgentProvider implements Provider {
 
   sessionDeletionStatus(task: Task) {
     return claudeSessionDeletionStatus(task);
+  }
+
+  /**
+   * Sets or clears the session's archived mark, which `listSessions()`
+   * reports. Like `sessionPath`, it finds the session by ID in any project
+   * folder. A later prompt in the session clears the mark.
+   */
+  async setSessionArchived(task: Task, archived: boolean) {
+    if (!task.session_id) return;
+
+    await (archived ? archiveSession : unarchiveSession)(task.session_id);
   }
 
   models(

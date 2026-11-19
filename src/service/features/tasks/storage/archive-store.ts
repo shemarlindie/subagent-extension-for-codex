@@ -33,6 +33,15 @@ export class ArchiveStore {
     return new Map(rows.map((row) => [row.id, row.at]));
   }
 
+  /** Whether a task is archived. */
+  archived(id: string) {
+    return !!this.orm
+      .select({ id: taskArchive.task_id })
+      .from(taskArchive)
+      .where(eq(taskArchive.task_id, id))
+      .get();
+  }
+
   /** Archives a task, keeping the time of an earlier archive. */
   private archive(t: Task) {
     this.orm

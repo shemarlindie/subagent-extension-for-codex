@@ -3,12 +3,17 @@ import type { Control } from "./control.js";
 import { removeTaskWorktree, type WorktreeContext } from "./task-worktree.js";
 import { recordTaskTiming } from "./timing.js";
 
-type ArchiveContext = Pick<Control, "archive" | "stopped"> & WorktreeContext;
+type ArchiveContext = Pick<
+  Control,
+  "archive" | "stopped" | "providers" | "ownerWorker"
+> &
+  WorktreeContext;
 
 /**
- * Archives or unarchives tasks. Archiving then removes each archived task's
- * worktree in the background when it has no uncommitted changes, keeping the
- * branch. `cleanup` settles once every removal finishes, fails or is skipped.
+ * Archives or unarchives tasks, then their provider sessions in the
+ * background. Archiving also removes each archived task's worktree when it has
+ * no uncommitted changes, keeping the branch. `cleanup` settles once every
+ * change finishes, fails or is skipped.
  */
 export function setTasksArchived(
   c: ArchiveContext,
@@ -18,11 +23,47 @@ export function setTasksArchived(
 ) {
   const result = c.archive.setArchived(owner, ids, archived);
 
-  const cleanup = archived
-    ? removeWorktrees(c, owner, result.task_ids)
-    : Promise.resolve();
+  const cleanup = (async () => {
+    await archiveSessions(c, owner, result.task_ids);
+    if (archived) await removeWorktrees(c, owner, result.task_ids);
+  })();
 
   return { result, cleanup };
+}
+
+/**
+ * Archives or unarchives the tasks' provider sessions one at a time, until
+ * shutdown. Each session follows its task's archive state at that point, so an
+ * undo that runs meanwhile still wins. Nothing awaits it in production, so
+ * failures are logged and never thrown.
+ */
+async function archiveSessions(
+  c: ArchiveContext,
+  owner: string,
+  ids: string[],
+) {
+  for (const id of ids) {
+    if (c.stopped) break;
+
+    try {
+      const t = c.store.find(id, owner);
+      const provider = t && c.providers.get(t.provider);
+
+      // Only a session recorded on this host can be found here.
+      if (
+        !t?.session_id ||
+        !t.session_state_ref ||
+        t.session_owner !== c.ownerWorker ||
+        !provider?.setSessionArchived
+      ) {
+        continue;
+      }
+
+      await provider.setSessionArchived(t, c.archive.archived(id));
+    } catch (error) {
+      logError("task.archive_session_failed", error, { task_id: id });
+    }
+  }
 }
 
 /**
