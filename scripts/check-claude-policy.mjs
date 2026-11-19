@@ -8,6 +8,8 @@ import { join } from "node:path";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
+import { claudeEnvironment } from "../src/service/features/providers/claude/configuration/execution-environment.ts";
+
 const executable =
   process.env.SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH || "claude";
 
@@ -55,13 +57,14 @@ async function idleSession(cached, read) {
       strictMcpConfig: true,
       mcpServers: {},
       permissionMode: "default",
-      env: {
+      // Tagged like the service, from a minimal environment.
+      env: claudeEnvironment({
         PATH: process.env.PATH,
         HOME: home,
         CLAUDE_CONFIG_DIR: config,
         ANTHROPIC_API_KEY: "sk-ant-not-a-real-key",
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
-      },
+      }),
     },
   });
 
