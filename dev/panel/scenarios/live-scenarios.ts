@@ -108,7 +108,8 @@ const liveStates: {
   {
     name: "hook-heartbeat",
     title: "Live: waiting on a slow hook",
-    status: "Running PreToolUse hook",
+    // The heartbeat is history only, so it can't outlast the hook.
+    status: "Running Bash · npm run lint",
     timeline: (() => {
       const timeline = liveTimeline("hook-heartbeat", 2000);
       const id = timeline.toolStart("Bash", { command: "npm run lint" });

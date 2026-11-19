@@ -15,6 +15,7 @@ import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import { decodedEvent } from "../../../../../shared/events/decode.js";
+import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status.js";
 import { groupActivity } from "../../../../../shared/tasks/activity/activity-timeline.js";
 import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
@@ -209,7 +210,7 @@ test("Claude rate-limit activity uses the current typed SDK metadata", () => {
   ]);
 });
 
-test("hook heartbeats share one status row and never open a tool row", () => {
+test("hook heartbeats share one status row and never open a tool row or live status", () => {
   const data: Record<string, unknown>[] = [];
   const normalize = claudeMessageNormalizer();
 
@@ -249,6 +250,9 @@ test("hook heartbeats share one status row and never open a tool row", () => {
     })),
     [{ kind: "status", title: "Running Stop hook", state: "info" }],
   );
+
+  // Nothing marks a heartbeat finished, so the status line must not show it.
+  assert.equal(currentActivityStatus(events).text, "Working");
 });
 
 test("Claude preserves the activity kind and normalized fields of an unknown message", () => {

@@ -346,9 +346,7 @@ export function claudeActivityPresentation(
         "api_retry",
         "session_state_changed",
         "rate_limit_event",
-      ].includes(key) ||
-      thinking.has(key) ||
-      hookHeartbeat,
+      ].includes(key) || thinking.has(key),
     statusTitle: isQuiet || thinking.has(key) ? statusTitle(e) : undefined,
     title: activityTitle(e, key),
     messageId: string(
