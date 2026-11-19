@@ -15,8 +15,9 @@ service connections and [fixture recording](development.md#recorded-fixtures).
 3. Check the relevant scenarios at narrow and wide widths, and in both themes
    when layout or styling changes. Check keyboard navigation, focus, loading,
    error and empty states when the change involves them.
-4. Afterwards, use **Reset projects** and clear **Claude Code unavailable** if
-   you changed them. Stop the servers you started, and leave others running.
+4. Afterwards, use **Reset projects** and clear **Claude Code unavailable** and
+   **Claude sign-in ending** if you changed them. Stop the servers you started,
+   and leave others running.
 
 Fixture mode makes no model calls and sends nothing to a real parent chat. Its
 interactions still update fixture state and temporary Git repositories. Use live

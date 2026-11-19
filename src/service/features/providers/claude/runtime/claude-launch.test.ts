@@ -89,6 +89,38 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   assert.ok(closed);
 });
 
+test("readiness reports when the sign-in the latest result used ends", async () => {
+  const { c } = await context();
+  const expiresAt = "2026-11-25T12:00:00.000Z";
+  const results = [{ credential_expires_at: expiresAt }, {}];
+
+  const provider = new ClaudeAgentProvider(
+    () =>
+      Object.assign(
+        (async function* () {
+          yield {
+            type: "result",
+            subtype: "success",
+            is_error: false,
+            session_id: "session",
+            result: reply,
+            usage: {},
+            ...results.shift(),
+          };
+        })(),
+        { close: () => {} },
+      ) as unknown as Query,
+    readyClaudeCli,
+  );
+
+  assert.equal((await provider.readiness()).credential_expires_at, undefined);
+  await provider.run(c, "Review");
+  assert.equal((await provider.readiness()).credential_expires_at, expiresAt);
+  // A later run with an API key reports no date.
+  await provider.run(c, "Review");
+  assert.equal((await provider.readiness()).credential_expires_at, undefined);
+});
+
 test("Claude forwards the selected model and effort without changing its resolved permission mode", async () => {
   const { c } = await context();
   let options: Options | undefined;

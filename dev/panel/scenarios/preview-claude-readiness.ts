@@ -1,6 +1,6 @@
 import type { ProviderReadiness } from "../../../src/shared/providers/types";
 
-export const previewClaudeReady = {
+const previewClaudeReady = {
   ready: true,
   details: {
     executable: "/opt/homebrew/Caskroom/claude-code/2.1.319/claude",
@@ -8,6 +8,19 @@ export const previewClaudeReady = {
     supported_versions: "2.1.300+",
   },
 } satisfies ProviderReadiness;
+
+/** A ready CLI, whose claude.ai sign-in ends in six days when `signInEnding`. */
+export const previewClaudeReadiness = (
+  signInEnding?: boolean,
+): ProviderReadiness =>
+  signInEnding
+    ? {
+        ...previewClaudeReady,
+        credential_expires_at: new Date(
+          Date.now() + 6 * 86_400_000,
+        ).toISOString(),
+      }
+    : previewClaudeReady;
 
 /** A located CLI that is older than the supported range. */
 export const previewClaudeUnavailable = {

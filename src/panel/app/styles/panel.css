@@ -73,6 +73,9 @@ header .brand > span {
   margin-bottom: 0;
   overflow-wrap: anywhere;
 }
+.worker-readiness .notice code {
+  white-space: nowrap;
+}
 .context-error {
   padding: 8px 12px;
   min-width: 0;

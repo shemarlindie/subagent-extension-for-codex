@@ -90,6 +90,8 @@ export class ClaudeAgentProvider implements Provider {
 
   private discoveries = new Map<string, ClaudeDiscovery>();
   private commandLists: ClaudeCommands;
+  /** When the claude.ai sign-in ends, as the latest result reported it. */
+  private credentialExpiresAt?: string;
 
   constructor(
     private launch: typeof query = query,
@@ -109,12 +111,17 @@ export class ClaudeAgentProvider implements Provider {
       supported_versions: status.supported,
     };
 
+    const credential = this.credentialExpiresAt
+      ? { credential_expires_at: this.credentialExpiresAt }
+      : {};
+
     return status.ready
-      ? { ready: true, details }
+      ? { ready: true, details, ...credential }
       : {
           ready: false,
           message: status.message,
           details,
+          ...credential,
         };
   }
 
@@ -397,6 +404,9 @@ export class ClaudeAgentProvider implements Provider {
 
         if (m.type !== "result") continue;
 
+        // Absent for an API key, so a switch from claude.ai clears it.
+        this.credentialExpiresAt = m.credential_expires_at;
+
         logEvent("info", "provider.result", {
           subtype: m.subtype,
           is_error: m.is_error,
@@ -408,6 +418,7 @@ export class ClaudeAgentProvider implements Provider {
           cache_creation_tokens: m.usage.cache_creation_input_tokens,
           cost_usd: m.total_cost_usd,
           turn_count: m.num_turns,
+          credential_expires_at: m.credential_expires_at,
         });
 
         // Claude Code refused to start, and its own text names the fix.
