@@ -93,6 +93,6 @@ A stored claude.ai sign-in ends on a fixed date, which renewing it doesn't move.
 Claude Code 2.1.318 and newer report that date with each task result, and
 `list_workers` returns the latest one as `readiness.credential_expires_at`. From
 10 days before, the panel warns when the sign-in ends and asks you to run
-`claude auth login`, as `claude -p` does. API keys report no date and show no
-warning. The service keeps the date in memory, so after a restart the warning
-returns with the next task result.
+`claude auth login`, as `claude -p` does. **Dismiss** hides it for 24 hours. API
+keys report no date and show no warning. The service keeps the date in memory,
+so after a restart the warning returns with the next task result.
