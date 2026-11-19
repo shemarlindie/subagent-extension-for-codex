@@ -4,7 +4,18 @@ import {
 } from "../../../../shared/tasks/archive.js";
 import { tasksInScope } from "../../../app/state/scope-reconciliation";
 import type { Snapshot, Task } from "../../../app/state/types";
-import { quote, type UndoRecorder } from "../../../app/state/undo-history";
+import {
+  quote,
+  type UndoEntry,
+  type UndoRecorder,
+} from "../../../app/state/undo-history";
+import { errorMessage } from "../../../shared/utils/error-message";
+import {
+  settleTaskBatches,
+  TASK_BATCH_LIMIT,
+  taskBatchWarning,
+  type TaskBatchFailure,
+} from "../controls/task-batches";
 
 interface ArchiveContext {
   snapshot(): Snapshot;
@@ -19,7 +30,9 @@ interface ArchiveContext {
   undo: UndoRecorder;
 }
 
-const EMPTY: ArchiveResult = { task_ids: [], skipped: [] };
+type ArchiveOutcome = ArchiveResult & { failure?: TaskBatchFailure };
+
+const EMPTY: ArchiveOutcome = { task_ids: [], skipped: [] };
 
 /** Whether the user can archive or unarchive a task now. */
 export const canToggleArchive = (task: Task) =>
@@ -50,55 +63,93 @@ export class ArchiveActions {
   constructor(private context: ArchiveContext) {}
 
   /** Archives or unarchives tasks, leaving those already so and, when archiving, active ones. */
-  async setArchived(tasks: Task[], archived: boolean): Promise<ArchiveResult> {
-    const changing = tasks.filter((task) =>
-      archived ? !task.archived_at && archivable(task) : task.archived_at,
-    );
+  async setArchived(tasks: Task[], archived: boolean): Promise<ArchiveOutcome> {
+    const eligible = (task: Task) =>
+      archived ? !task.archived_at && archivable(task) : task.archived_at;
 
-    if (!changing.length || this.context.closed()) return EMPTY;
+    if (!tasks.some(eligible) || this.context.closed()) return EMPTY;
 
-    const { selected } = this.context.snapshot();
-    const ids = changing.map((task) => task.id);
+    /** The tasks as they were when the change ran. */
+    let changing: Task[] = [];
+    /** The open task archiving closes, which undo reopens. */
+    let closed = "";
+    /** The tasks the last step changed, which the next one reverses. */
+    let reversible: string[] = [];
 
-    const closed =
-      archived && selected && ids.includes(selected) ? selected : "";
+    const replay = async (archive: boolean) => {
+      if (!archive) this.relist(changing, reversible);
 
-    const action = this.apply(ids, archived, changing);
+      const result = await this.apply(reversible, archive);
+      const warning = taskBatchWarning(result.skipped.length, result.failure);
 
-    // The undo reverses only what the service changed.
-    const changed = async () => (await action).task_ids;
+      if (!result.task_ids.length) {
+        throw new Error(warning || "No tasks could be changed.");
+      }
 
-    this.context.undo.track(
-      action,
-      {
+      changed(result.task_ids);
+
+      const reopen =
+        !archive &&
+        reversible.includes(closed) &&
+        tasksInScope(
+          changing.filter((task) => task.id === closed),
+          this.context.snapshot(),
+        ).length > 0;
+
+      if (reopen) {
+        try {
+          await this.context.select(closed);
+        } catch (error) {
+          return {
+            warning: [warning, errorMessage(error)].filter(Boolean).join(" "),
+          };
+        }
+      }
+
+      return warning ? { warning } : undefined;
+    };
+
+    const entry: UndoEntry = {
+      label: "",
+      toast: true,
+      undo: () => replay(!archived),
+      redo: () => replay(archived),
+    };
+
+    const changed = (ids: string[]) => {
+      reversible = ids;
+
+      Object.assign(entry, {
         label: archiveLabel(changing, ids, archived),
-        // The tasks leave the list, so the change shows a toast.
-        toast: true,
-        ...(ids.length > 1 ? { items: titles(changing, ids) } : {}),
-        undo: async () => {
-          const reverted = await changed();
-          if (archived) this.relist(changing, reverted);
-          await this.apply(reverted, !archived);
+        items: ids.length > 1 ? titles(changing, ids) : undefined,
+      });
+    };
 
-          // Only a task in the current scope can open. A list read in flight
-          // can still lack it, so this doesn't wait for the list.
-          const reopened = tasksInScope(
-            changing.filter((task) => task.id === closed),
-            this.context.snapshot(),
-          );
+    return this.context.undo.change(
+      async () => {
+        const state = this.context.snapshot();
 
-          if (reopened.length && reverted.includes(closed)) {
-            await this.context.select(closed);
-          }
-        },
-        redo: async () => {
-          await this.apply(await changed(), archived);
-        },
+        // Earlier changes may have changed these tasks while this one waited.
+        changing = tasks
+          .map((task) => state.tasks.find((t) => t.id === task.id) ?? task)
+          .filter(eligible);
+
+        if (!changing.length) return EMPTY;
+        const ids = changing.map((task) => task.id);
+
+        if (archived && state.selected && ids.includes(state.selected)) {
+          closed = state.selected;
+        }
+
+        return this.apply(ids, archived, changing);
       },
-      (result) => result.task_ids.length > 0,
-    );
+      (result) => {
+        if (!result.task_ids.length) return undefined;
+        changed(result.task_ids);
 
-    return action;
+        return entry;
+      },
+    );
   }
 
   /** Unarchives an archived task, and archives any other. */
@@ -116,33 +167,47 @@ export class ArchiveActions {
     shown = this.context.snapshot().tasks.filter((t) => ids.includes(t.id)),
   ) {
     const at = archived ? new Date().toISOString() : undefined;
-
-    if (archived && ids.includes(this.context.snapshot().selected ?? "")) {
-      this.context.leaveSelection();
-    }
+    const { selected } = this.context.snapshot();
+    const open = archived && selected && ids.includes(selected) ? selected : "";
 
     this.show(new Map(ids.map((id) => [id, at])));
 
-    try {
-      const result = await this.context.tool<ArchiveResult>(
-        "app_set_tasks_archived",
-        { task_ids: ids, archived },
-      );
+    const { changed, failure } = await settleTaskBatches(
+      ids,
+      TASK_BATCH_LIMIT,
+      (batch) =>
+        this.context.tool<ArchiveResult>("app_set_tasks_archived", {
+          task_ids: batch,
+          archived,
+        }),
+    );
 
-      this.show(
-        new Map([
-          ...result.task_ids.map((id) => [id, at] as const),
-          ...shown
-            .filter((task) => !result.task_ids.includes(task.id))
-            .map((task) => [task.id, task.archived_at] as const),
-        ]),
-      );
+    const task_ids = changed.flatMap((result) => result.task_ids);
+    const skipped = changed.flatMap((result) => result.skipped);
+    const applied = new Set(task_ids);
 
-      return result;
-    } catch (error) {
-      this.show(new Map(shown.map((task) => [task.id, task.archived_at])));
-      throw error;
+    this.show(
+      new Map([
+        ...shown
+          .filter((task) => !applied.has(task.id))
+          .map((task) => [task.id, task.archived_at] as const),
+        ...task_ids.map((id) => [id, at] as const),
+      ]),
+    );
+
+    // Closes the open task only once the service archives it, and only if
+    // the user hasn't opened another meanwhile.
+    if (
+      applied.has(open) &&
+      !this.context.closed() &&
+      this.context.snapshot().selected === open
+    ) {
+      this.context.leaveSelection();
     }
+
+    if (failure && !changed.length) throw failure.error;
+
+    return { task_ids, skipped, ...(failure ? { failure } : {}) };
   }
 
   /**

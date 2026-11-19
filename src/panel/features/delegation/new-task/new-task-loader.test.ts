@@ -188,3 +188,69 @@ test("a profile choice saves as its default and rolls back when saving fails", a
 
   assert.equal(saved(), "opus");
 });
+
+test("saved defaults keep each confirmed profile choice until a read includes it", async (t) => {
+  const { controller, transport } = await started();
+  t.onTestFinished(() => controller.dispose());
+
+  controller.newTasks.open();
+  await flush();
+  const loaded = controller.getSnapshot().newTask?.defaults;
+  assert.ok(loaded);
+
+  // Closing before any save starts keeps the loaded defaults.
+  controller.back();
+  assert.equal(controller.getSnapshot().newTask, undefined);
+  assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
+
+  const model = () =>
+    controller.newTasks.savedDefaults()?.models.profiles.implementer.model;
+
+  const save = (value: string) =>
+    controller.newTasks.saveProfileSetting(
+      "claude:implementer",
+      "model",
+      value,
+    );
+
+  // A failed save keeps them too.
+  transport.handler = (name) =>
+    name === "update_settings"
+      ? Promise.reject(new Error("Service unavailable"))
+      : undefined;
+
+  await save("haiku");
+  assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
+
+  // A read that overlaps a save, starting during it or before, can miss it,
+  // so the save stays.
+  for (const [value, saveFirst] of [
+    ["opus", true],
+    ["sonnet", false],
+  ] as const) {
+    const saving = deferred<unknown>();
+    const reading = deferred<unknown>();
+
+    transport.handler = (name) => {
+      if (name === "update_settings") return saving.promise;
+
+      return name === "get_settings" ? reading.promise : undefined;
+    };
+
+    if (!saveFirst) controller.newTasks.open();
+    const saved = save(value);
+    if (saveFirst) controller.newTasks.open();
+    saving.resolve({});
+    await saved;
+    reading.resolve({ values: loaded });
+    await flush();
+    assert.equal(model(), value);
+    controller.back();
+  }
+
+  // A read that starts with no save running includes every save.
+  transport.handler = undefined;
+  controller.newTasks.open();
+  await flush();
+  assert.equal(model(), loaded.models.profiles.implementer.model);
+});

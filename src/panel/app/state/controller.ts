@@ -368,6 +368,12 @@ export class Controller {
     if (!this.disposed) this.patch({ error: errorMessage(error) });
   };
 
+  reportActionFailure = (message: string) => {
+    if (!this.disposed) this.patch({ actionFailure: message });
+  };
+
+  dismissActionFailure = () => this.patch({ actionFailure: undefined });
+
   run = (action: () => Promise<unknown>) => {
     void action().catch(this.report);
   };

@@ -1,7 +1,12 @@
-import { ContextMenu } from "@base-ui/react/context-menu";
-import { memo, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 
-import { archivable } from "../../../../shared/tasks/archive.js";
 import { CONNECTION } from "../../../app/state/connection";
 import {
   useController,
@@ -11,155 +16,25 @@ import {
   effectiveFilter,
   FILTER_LABELS,
   listedTask,
-  profileLabel,
   projectChoices,
   scopedTasks,
   TASK_LIST_FIELDS,
-  terminal,
   visibleTasks,
 } from "../../../app/state/selectors";
 import type { Filter, Task } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
-import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";
 import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading-swap";
 import { useListMotion } from "../../../shared/components/motion/use-list-motion";
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
-import { useNow } from "../../../shared/utils/use-now";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
-import { UnreadDot } from "../unread/unread-dot";
-import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
-import { ProjectGroups } from "./project-groups";
+import { ProjectGroups, useProjectGroups } from "./project-groups";
+import { TaskListCount } from "./task-list-count";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
-import { rowStatus } from "./task-status";
-import { TaskStatusIcon } from "./task-status-icon";
-import { WorkerProfileIcon } from "./worker-profile-icon";
-
-interface TaskRowProps {
-  task: Task;
-  selected: boolean;
-}
-
-/** A task in the list; right-click or long-press marks it read or unread, or archives it. */
-export const TaskRow = memo(function TaskRow({ task, selected }: TaskRowProps) {
-  const controller = useController();
-
-  const select = () => controller.run(() => controller.select(task.id));
-
-  const toggleRead = () =>
-    controller.run(() => controller.taskActions.unread.toggle(task));
-
-  const archive = () =>
-    controller.run(() =>
-      controller.taskActions.archive.setArchived([task], true),
-    );
-
-  return (
-    <ContextMenu.Root>
-      <ContextMenu.Trigger
-        render={
-          <button
-            className="row"
-            data-task={task.id}
-            data-unread={task.unread ? "" : undefined}
-            aria-current={selected}
-            onClick={select}
-          />
-        }
-      >
-        <TaskRowContent task={task} />
-      </ContextMenu.Trigger>
-      <ContextMenu.Portal>
-        <ContextMenu.Positioner className="menu-positioner">
-          <ContextMenu.Popup className="menu-popup">
-            <ContextMenu.Item
-              className="menu-item"
-              data-action={task.unread ? "mark-read" : "mark-unread"}
-              onClick={toggleRead}
-            >
-              {task.unread ? "Mark read" : "Mark unread"}
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              className="menu-item"
-              data-action="archive"
-              disabled={!archivable(task)}
-              onClick={archive}
-            >
-              Archive
-            </ContextMenu.Item>
-          </ContextMenu.Popup>
-        </ContextMenu.Positioner>
-      </ContextMenu.Portal>
-    </ContextMenu.Root>
-  );
-});
-
-type TaskRowContentProps = Pick<TaskRowProps, "task">;
-
-// The icon tells profiles apart, so the worker's name is in its tooltip and
-// for screen readers only.
-function TaskRowContent({ task }: TaskRowContentProps) {
-  const worker = profileLabel(task.worker_profile);
-
-  return (
-    <>
-      <span className="row-title">{task.title}</span>
-      <span className="row-meta">
-        <span className="row-worker" title={worker}>
-          <WorkerProfileIcon
-            profile={task.worker_profile}
-            size={12}
-            className="row-worker-icon"
-          />
-          {task.unread && <UnreadDot />}
-          <span className="row-worker-label visually-hidden">{worker}</span>
-        </span>
-        <span className="row-trailing">
-          <TaskRowRuntime task={task} />
-          <TaskRowStatus task={task} />
-        </span>
-      </span>
-    </>
-  );
-}
-
-function TaskRowStatus({ task }: { task: Task }) {
-  const { kind, label } = rowStatus(task);
-
-  return <TaskStatusIcon kind={kind} label={label} />;
-}
-
-function TaskRowRuntime({ task }: { task: Task }) {
-  const status = rowStatus(task);
-
-  const activityLabel =
-    (task.status === "running" &&
-      (status.kind === "failed" ||
-        status.kind === "paused" ||
-        status.kind === "input")) ||
-    Boolean(task.pending_input);
-
-  const live = runtimeLive(task) && !activityLabel;
-  const now = useNow(live);
-  const runtime = taskRuntimeMs(task, now);
-
-  // Attention states and tasks without an active clock use their short label.
-  // Finished tasks say their time is final; the status icon says how it ended.
-  const label =
-    activityLabel || (!live && !terminal(task)) ? status.shortLabel : undefined;
-
-  const duration = formatDuration(runtime);
-
-  return (
-    <span
-      className="row-runtime"
-      title={label ? status.label : "Total run time across turns"}
-    >
-      {label ?? (terminal(task) ? `Ran for ${duration}` : duration)}
-    </span>
-  );
-}
+import { TaskRow } from "./task-row";
+import { TaskSelectionMenu } from "./task-selection-menu";
+import { useTaskSelection } from "./use-task-selection";
 
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet.",
@@ -169,6 +44,47 @@ const EMPTY_FILTER: Record<Filter, string> = {
   completed: "No completed tasks.",
   failed: "No failed tasks.",
 };
+
+/**
+ * Opens the focused element's context menu, or `menu`'s, on Shift+F10, which
+ * Chromium on macOS ignores.
+ */
+function openContextMenu(
+  event: ReactKeyboardEvent<HTMLElement>,
+  menu: Element | null = event.target as Element,
+) {
+  if (event.key !== "F10" || !event.shiftKey) return;
+
+  const { left, bottom } = (event.target as Element).getBoundingClientRect();
+
+  event.preventDefault();
+
+  menu?.dispatchEvent(
+    new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: left,
+      clientY: bottom,
+    }),
+  );
+}
+
+function visibleRow(list: HTMLDivElement, id?: string) {
+  if (!id) return;
+
+  const row = list.querySelector<HTMLButtonElement>(
+    `[data-task="${CSS.escape(id)}"]`,
+  );
+
+  if (!row) return;
+
+  const { top, bottom, height } = row.getBoundingClientRect();
+  const area = list.getBoundingClientRect();
+
+  return height > 0 && top >= area.top && bottom <= area.bottom
+    ? row
+    : undefined;
+}
 
 export function TaskList() {
   const controller = useController();
@@ -181,8 +97,16 @@ export function TaskList() {
     conversation,
     taskListLoading,
     composing,
+    scopeVersion,
   } = useSnapshot(
-    ["projects", "connected", "connection", "conversation", "taskListLoading"],
+    [
+      "projects",
+      "connected",
+      "connection",
+      "conversation",
+      "taskListLoading",
+      "scopeVersion",
+    ],
     (state) => ({ composing: Boolean(state.newTask) }),
   );
 
@@ -202,9 +126,92 @@ export function TaskList() {
   const projectName = (repository: string) =>
     projectNames.get(repository) ?? projectDisplayName({ repository });
 
+  const current = listedTask(list);
+
+  const projectGroups = useProjectGroups(
+    list.repository ? [] : tasks,
+    list.search,
+    current,
+  );
+
+  const shown = list.repository
+    ? tasks
+    : projectGroups.groups.flatMap((group) => (group.open ? group.shown : []));
+
+  const selection = useTaskSelection(
+    JSON.stringify([scopeVersion, list.search, list.filter]),
+    tasks,
+    shown,
+  );
+
+  const selecting = selection.ids !== undefined;
+  const scopeRef = useRef<HTMLSpanElement>(null);
+  const countRef = useRef<HTMLSpanElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const scrolledOnLoad = useRef(false);
   const cancelScroll = useRef<(() => void) | undefined>(undefined);
+
+  const { anchor, exit } = selection;
+
+  const endSelection = useCallback(() => {
+    const list = listRef.current;
+
+    if (!list?.contains(list.ownerDocument.activeElement)) {
+      const row = list && visibleRow(list, anchor);
+
+      row?.focus({ preventScroll: true });
+
+      if (!row || row.ownerDocument.activeElement !== row) {
+        scopeRef.current?.focus({ preventScroll: true });
+      }
+    }
+
+    exit();
+  }, [anchor, exit]);
+
+  // Clicking blank space in the list or its header clears the selection, as in
+  // Finder. Menus render in portals, so their clicks reach here from outside.
+  const clearOnBlank = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (
+      selecting &&
+      event.target instanceof Element &&
+      event.currentTarget.contains(event.target) &&
+      !event.target.closest("button, a, input, [data-task]")
+    ) {
+      endSelection();
+    }
+  };
+
+  useEffect(() => {
+    if (!selecting) return;
+
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        !(event.target instanceof Node)
+      ) {
+        return;
+      }
+
+      if (
+        !listRef.current?.contains(event.target) &&
+        event.target !== countRef.current
+      ) {
+        return;
+      }
+
+      // Escape closes the selection's context menu first.
+      if (listRef.current?.hasAttribute("data-popup-open")) return;
+
+      event.preventDefault();
+      endSelection();
+    };
+
+    document.addEventListener("keydown", escape);
+
+    return () => document.removeEventListener("keydown", escape);
+  }, [selecting, endSelection]);
 
   const order = tasks.map((task) => task.id).join();
 
@@ -251,7 +258,10 @@ export function TaskList() {
         <TaskRow
           key={task.id}
           task={task}
-          selected={task.id === listedTask(list)}
+          current={task.id === current}
+          pressed={selection.ids?.has(task.id)}
+          disabled={selecting && selection.blocked ? true : undefined}
+          onActivate={selection.clickRow}
         />
       );
 
@@ -260,7 +270,7 @@ export function TaskList() {
       // Across projects, each project's tasks sit under their own header.
       return (
         <ProjectGroups
-          tasks={tasks}
+          model={projectGroups}
           projectName={projectName}
           renderRow={renderRow}
         />
@@ -291,40 +301,58 @@ export function TaskList() {
 
   return (
     <>
-      <div className="list-label">
-        <span id="scope">
+      <div className="list-label" onClick={clearOnBlank}>
+        <span id="scope" ref={scopeRef} tabIndex={-1}>
           {conversation ? "This conversation" : "All conversations"}
         </span>
-        <span className="list-count">
-          {unreadShown && (
-            <Button variant="text" underline onClick={markAllRead}>
-              Mark all read
-            </Button>
+        <span
+          className="list-count"
+          ref={countRef}
+          tabIndex={-1}
+          // Focus lands here after an action, so the selection's menu opens too.
+          onKeyDown={
+            selecting
+              ? (event) => openContextMenu(event, listRef.current)
+              : undefined
+          }
+        >
+          {!selecting && (
+            <>
+              {unreadShown && (
+                <Button variant="text" underline onClick={markAllRead}>
+                  Mark all read
+                </Button>
+              )}
+              {clearShown && (
+                <Button variant="text" underline onClick={resetFilters}>
+                  Clear filter
+                </Button>
+              )}
+            </>
           )}
-          {clearShown && (
-            <Button variant="text" underline onClick={resetFilters}>
-              Clear filter
-            </Button>
-          )}
-          <span id="count">
-            <LoadingSwap
-              as="span"
-              className="loading-swap-inline"
-              loading={taskListLoading}
-              busy={false}
-              skeleton={
-                <SkeletonShape
-                  className={`task-list-count-skeleton${narrowed ? " task-list-count-skeleton-filtered" : ""}`}
-                />
-              }
-            >
-              {narrowed ? `${tasks.length} of ${total}` : tasks.length}
-            </LoadingSwap>
-          </span>
+          <TaskListCount
+            loading={taskListLoading}
+            shown={tasks.length}
+            total={total}
+            narrowed={narrowed}
+            selection={selection}
+          />
         </span>
       </div>
       <div className="task-list-scroll-area">
-        <div id="task-list" ref={listRef}>
+        <TaskSelectionMenu
+          selection={selection}
+          shown={shown.length}
+          render={
+            <div
+              id="task-list"
+              ref={listRef}
+              onKeyDown={openContextMenu}
+              onClick={clearOnBlank}
+            />
+          }
+          count={countRef}
+        >
           <LoadingSwap
             className="task-list-loading-swap"
             loading={taskListLoading}
@@ -337,7 +365,7 @@ export function TaskList() {
               </>
             )}
           </LoadingSwap>
-        </div>
+        </TaskSelectionMenu>
         {!taskListLoading && <TaskListScrollbar scrollerRef={listRef} />}
       </div>
     </>

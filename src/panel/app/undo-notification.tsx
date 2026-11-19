@@ -6,7 +6,7 @@ import { Icon } from "../shared/components/icons/icons";
 import { useController, useSnapshot } from "./state/controller-context";
 import type { UndoNotice } from "./state/undo-history";
 
-/** A failure explains why nothing changed, so it stays longer. */
+/** A warning stays longer so there is time to read what failed. */
 const FAILURE_TIMEOUT_MS = 10_000;
 
 type UndoNotificationProps = {
@@ -18,7 +18,7 @@ type UndoNotificationProps = {
 /** The undo toast for one notice, updated in place as notices change. */
 export function UndoNotification({ notice, timeout }: UndoNotificationProps) {
   const controller = useController();
-  const busy = useSnapshot((state) => state.busy);
+  const busy = useSnapshot((state) => state.busy || state.undoPending);
   const { add, toasts } = Toast.useToastManager();
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function UndoNotification({ notice, timeout }: UndoNotificationProps) {
       id: "undo",
       title: notice.text,
       timeout: notice.failed ? FAILURE_TIMEOUT_MS : timeout,
-      // Failures interrupt the screen reader, since the step didn't happen.
+      // Announce failures promptly, including partially completed steps.
       priority: notice.failed ? "high" : "low",
       onClose: () => controller.undo.dismiss(notice.id),
     });

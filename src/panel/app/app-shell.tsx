@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect } from "react";
 import { LoginForm } from "../features/auth/login-form";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
 import { useUnreadTitle } from "../features/tasks/unread/use-unread-title";
+import { Button } from "../shared/components/button/button";
 import { Presence } from "../shared/components/motion/presence";
 import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
@@ -36,11 +37,12 @@ export function AppShell() {
   const controller = useController();
   const { embedded } = controller.transport;
 
-  const { selected, newTask, host, error } = useSnapshot([
+  const { selected, newTask, host, error, actionFailure } = useSnapshot([
     "selected",
     "newTask",
     "host",
     "error",
+    "actionFailure",
   ]);
 
   const compact = isCompact({ host }, embedded);
@@ -64,6 +66,20 @@ export function AppShell() {
             {error && (
               <div id="error" className="context-error" role="alert">
                 {error}
+              </div>
+            )}
+          </Presence>
+          <Presence show={Boolean(actionFailure)}>
+            {actionFailure && (
+              <div className="context-error action-failure">
+                <span role="alert">{actionFailure}</span>
+                <Button
+                  variant="text"
+                  aria-label="Dismiss action failure"
+                  onClick={controller.dismissActionFailure}
+                >
+                  Dismiss
+                </Button>
               </div>
             )}
           </Presence>

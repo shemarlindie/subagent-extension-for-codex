@@ -45,10 +45,12 @@ export function ProjectArchiveItems({ repository }: ProjectArchiveItemsProps) {
           ).tasks
         : tasks;
 
-      await controller.taskActions.archive.setArchived(
+      const { failure } = await controller.taskActions.archive.setArchived(
         pick(stoppedIn(candidates)),
         true,
       );
+
+      if (failure) throw failure.error;
     });
 
   return (

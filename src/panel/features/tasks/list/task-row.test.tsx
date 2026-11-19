@@ -9,7 +9,7 @@ import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { task } from "../../../app/state/controller-test-harness";
 import type { Task, Transport } from "../../../app/state/types";
-import { TaskRow } from "./task-list";
+import { TaskRow } from "./task-row";
 
 function renderRow(row: Task) {
   onTestFinished(cleanup);
@@ -23,7 +23,7 @@ function renderRow(row: Task) {
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <TaskRow task={row} selected={false} />
+      <TaskRow task={row} current={false} />
     </ControllerContext.Provider>,
   );
 

@@ -220,8 +220,6 @@ export class TaskActions {
   }
 
   editQueued(task: Task, messageId: string, message: string) {
-    const previous = task.queue.find((m) => m.id === messageId)?.message;
-
     const edit = (text: string) =>
       this.run("app_edit_queued_message", {
         task_id: task.id,
@@ -230,19 +228,24 @@ export class TaskActions {
       });
 
     return this.recordUndo(
+      task,
       () => edit(message),
-      previous !== undefined && {
-        label: `Edited ${quote(previous)}`,
-        view: taskView(task.id, "chat", task.title),
-        undo: () => edit(previous),
-        redo: () => edit(message),
+      (queue) => {
+        const previous = queue.find((m) => m.id === messageId)?.message;
+
+        return (
+          previous !== undefined && {
+            label: `Edited ${quote(previous)}`,
+            view: taskView(task.id, "chat", task.title),
+            undo: () => edit(previous),
+            redo: () => edit(message),
+          }
+        );
       },
     );
   }
 
   moveQueued(task: Task, messageId: string, index: number) {
-    const from = task.queue.findIndex((m) => m.id === messageId);
-
     const move = (to: number) =>
       this.run("app_move_queued_message", {
         task_id: task.id,
@@ -251,23 +254,28 @@ export class TaskActions {
       });
 
     return this.recordUndo(
+      task,
       () => move(index),
-      from >= 0 && {
-        label: `Moved ${quote(task.queue[from]?.message ?? "")}`,
-        view: taskView(task.id, "chat", task.title),
-        undo: () => move(from),
-        redo: () => move(index),
+      (queue) => {
+        const from = queue.findIndex((m) => m.id === messageId);
+
+        return (
+          from >= 0 && {
+            label: `Moved ${quote(queue[from]?.message ?? "")}`,
+            view: taskView(task.id, "chat", task.title),
+            undo: () => move(from),
+            redo: () => move(index),
+          }
+        );
       },
     );
   }
 
   removeQueued(task: Task, messageId: string) {
-    const text = task.queue.find((m) => m.id === messageId)?.message ?? "";
-
     return this.removeFromQueue(
       task,
       [messageId],
-      `Removed ${quote(text)} from the queue`,
+      (removed) => `Removed ${quote(removed[0]?.message ?? "")} from the queue`,
     );
   }
 
@@ -276,20 +284,19 @@ export class TaskActions {
   }
 
   clearQueue(task: Task) {
-    const count = task.queue.length;
-
     return this.removeFromQueue(
       task,
       task.queue.map((m) => m.id),
-      count === 1
-        ? "Cleared 1 queued message"
-        : `Cleared ${count} queued messages`,
+      ({ length }) =>
+        length === 1
+          ? "Cleared 1 queued message"
+          : `Cleared ${length} queued messages`,
     );
   }
 
   /** Renames a task, throwing when the service refuses. */
   async rename(task: Task, title: string) {
-    const previous = task.title;
+    let previous = task.title;
 
     const rename = async (to: string) => {
       await this.context.tool("app_rename_task", {
@@ -300,30 +307,35 @@ export class TaskActions {
       await this.context.refresh();
     };
 
-    const renaming = rename(title);
+    await this.context.undo.change(
+      () => {
+        // An earlier rename may have finished while this one waited.
+        previous = this.latest(task).title;
 
-    if (previous !== title) {
-      this.context.undo.track(renaming, {
-        // Naming both titles identifies the task wherever the user is.
-        label: `Renamed ${quote(previous)} to ${quote(title)}`,
-        undo: () => rename(previous),
-        redo: () => rename(title),
-      });
-    }
-
-    await renaming;
+        return rename(title);
+      },
+      () =>
+        previous === title
+          ? undefined
+          : {
+              // Naming both titles identifies the task wherever the user is.
+              label: `Renamed ${quote(previous)} to ${quote(title)}`,
+              undo: () => rename(previous),
+              redo: () => rename(title),
+            },
+    );
   }
 
   /**
    * Removes queued messages, which undo puts back at their places. Clearing
    * the whole queue names each message, so redo leaves later ones queued.
+   * `label` names the messages still queued when the removal starts.
    */
-  private removeFromQueue(task: Task, ids: string[], label: string) {
-    const placements = ids.map((id) => ({
-      message_id: id,
-      index: task.queue.findIndex((m) => m.id === id),
-    }));
-
+  private removeFromQueue(
+    task: Task,
+    ids: string[],
+    label: (removed: Task["queue"]) => string,
+  ) {
     const remove = () =>
       ids.length === 1
         ? this.run("app_remove_queued_message", {
@@ -335,56 +347,71 @@ export class TaskActions {
             ...(ids.length ? { message_ids: ids } : {}),
           });
 
-    return this.recordUndo(
-      remove,
-      ids.length > 0 && {
-        label,
-        // The messages leave the queue, so the change shows a toast.
-        toast: true,
-        // The label quotes one message, and the toast lists more.
-        ...(ids.length > 1
-          ? {
-              items: ids.map(
-                (id) => task.queue.find((m) => m.id === id)?.message ?? "",
-              ),
-            }
-          : {}),
-        view: taskView(task.id, "chat", task.title),
-        undo: () =>
-          this.run("app_restore_queued_messages", {
-            task_id: task.id,
-            messages: placements,
-          }),
-        redo: remove,
+    return this.recordUndo(task, remove, (queue) => {
+      // An earlier change may have removed some while this one waited.
+      const removed = queue.filter((m) => ids.includes(m.id));
+
+      return (
+        removed.length > 0 && {
+          label: label(removed),
+          // The messages leave the queue, so the change shows a toast.
+          toast: true,
+          // The label quotes one message, and the toast lists more.
+          ...(removed.length > 1
+            ? { items: removed.map((m) => m.message) }
+            : {}),
+          view: taskView(task.id, "chat", task.title),
+          undo: () =>
+            this.run("app_restore_queued_messages", {
+              task_id: task.id,
+              messages: removed.map((m) => ({
+                message_id: m.id,
+                index: queue.indexOf(m),
+              })),
+            }),
+          redo: remove,
+        }
+      );
+    });
+  }
+
+  /**
+   * Starts a queue action and remembers its `steps` once it succeeds,
+   * resolving with the action's failure message. The steps read the task's
+   * queue as the action starts, since earlier changes can finish while it
+   * waits. An action the panel refuses records nothing.
+   */
+  private recordUndo(
+    task: Task,
+    start: () => Promise<string | undefined>,
+    describe: (queue: Task["queue"]) => ActionUndo | false,
+  ) {
+    if (this.context.snapshot().busy || this.context.closed()) return start();
+
+    let steps: ActionUndo | false = false;
+
+    return this.context.undo.change(
+      () => {
+        steps = describe(this.latest(task).queue);
+
+        return start();
+      },
+      (error) => {
+        if (error || !steps) return undefined;
+        const { undo, redo } = steps;
+
+        return {
+          ...steps,
+          undo: () => succeed(undo()),
+          redo: () => succeed(redo()),
+        };
       },
     );
   }
 
-  /**
-   * Starts an action and remembers `steps` while it saves, resolving with the
-   * action's failure message. An action the panel refuses records nothing.
-   */
-  private recordUndo(
-    start: () => Promise<string | undefined>,
-    steps: ActionUndo | false,
-  ) {
-    if (!steps || this.context.snapshot().busy || this.context.closed()) {
-      return start();
-    }
-
-    const action = start();
-
-    this.context.undo.track(
-      action,
-      {
-        ...steps,
-        undo: () => succeed(steps.undo()),
-        redo: () => succeed(steps.redo()),
-      },
-      (error) => !error,
-    );
-
-    return action;
+  /** The task as last loaded, which a change that waited reads as it starts. */
+  private latest(task: Task) {
+    return this.context.snapshot().tasks.find((t) => t.id === task.id) ?? task;
   }
 
   /** Calls one task tool while marking the panel busy, then reloads. */

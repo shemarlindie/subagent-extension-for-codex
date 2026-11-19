@@ -261,17 +261,17 @@ To add a page:
   busy and error handling and the scope captured when the dialog opened. Send
   messages or run tools only after the user submits.
 - **Undoable action:** remember each deliberate user change in
-  `controller.undo`, or the action context's `undo`. Use `track` when the panel
-  shows the change before the service confirms it, so the shortcut never skips
-  past a change still saving to an older one. Use `record` for changes shown
-  only after success. Steps call service tools or session memory with the values
-  captured before the change, never component state, and reject with a message
-  the user can read. Set `toast` only when the change takes something off the
-  screen, list a bulk change's `items`, and give a `view` such as `taskView`
-  when the label doesn't name what changed. Views with their own reads, such as
-  a project's archive, read again when `undoRevision` changes. Don't record
-  automatic changes, such as Chat marking a task read, or changes that start
-  work or reach the worker.
+  `controller.undo`, or the action context's `undo`. Use `change` for a change
+  the service saves. It waits for earlier changes and steps, and counts once the
+  service confirms it. Use `record` for a change already made, such as a local
+  one. Steps call service tools or session memory with the values read when the
+  change starts, never component state, and reject with a message the user can
+  read. Set `toast` only when the change takes something off the screen, list a
+  bulk change's `items`, and give a `view` such as `taskView` when the label
+  doesn't name what changed. Views with their own reads, such as a project's
+  archive, read again when `undoRevision` changes. Don't record automatic
+  changes, such as Chat marking a task read, or changes that start work or reach
+  the worker.
 - **Selector:** add one for a pure calculation shared across views. Keep
   transport calls and mutations out of selectors.
 - **Transport:** add one when the connection mechanism changes. Implement

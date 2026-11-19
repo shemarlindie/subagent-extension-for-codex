@@ -17,7 +17,7 @@ function setup(
     args: Record<string, unknown>,
   ) => Promise<unknown> = async () => {},
 ) {
-  let state = { busy: false } as Snapshot;
+  let state = { busy: false, tasks: [] as Task[] } as Snapshot;
   const busyChanges: boolean[] = [];
 
   const toolCall = vi.fn(tool);
@@ -363,6 +363,43 @@ test("undoing a clear restores each message's place, and redo removes only those
     ],
     // Naming the messages keeps any queued since.
     ["app_clear_queue", { task_id: "task-1", message_ids: ["a", "c"] }],
+  ]);
+});
+
+test("undoing a queue move uses the queue as the move starts", async () => {
+  const { actions, context, entries } = setup();
+
+  // An earlier move finished while this one waited.
+  context.patch({ tasks: [queued("b", "a", "c")] });
+  await actions.moveQueued(queued("a", "b", "c"), "b", 2);
+  await entries[0]?.undo();
+
+  expect(context.tool.mock.calls.at(-1)).toEqual([
+    "app_move_queued_message",
+    { task_id: "task-1", message_id: "b", index: 0 },
+  ]);
+});
+
+test("undoing a clear restores only the messages still queued as it starts", async () => {
+  const { actions, context, entries } = setup();
+
+  // An earlier removal finished while the clear waited.
+  context.patch({ tasks: [queued("b", "c")] });
+  await actions.clearQueue(queued("a", "b", "c"));
+  const [entry] = entries;
+  assert.ok(entry);
+  assert.equal(entry.label, "Cleared 2 queued messages");
+  await entry.undo();
+
+  expect(context.tool.mock.calls.at(-1)).toEqual([
+    "app_restore_queued_messages",
+    {
+      task_id: "task-1",
+      messages: [
+        { message_id: "b", index: 0 },
+        { message_id: "c", index: 1 },
+      ],
+    },
   ]);
 });
 

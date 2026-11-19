@@ -151,6 +151,20 @@ resizable list beside the inspector and remember its width and collapsed state.
 Narrow panels switch between the list and task content without changing those
 preferences.
 
+### Act on several tasks
+
+Command-click a row (Ctrl-click on Windows or Linux), press Shift+Space on it,
+or choose **Select task** after right-clicking or holding it. Click or press
+Space to toggle more rows. For a range, click either endpoint, then Shift-click
+the other.
+
+The list header shows the selection count. Right-click or hold the list, or
+press Shift+F10, to archive the selection, mark it read or unread, or select all
+shown rows. A row you right-click joins the selection, and selections in
+collapsed groups still count. **Undo** reverses the whole action. Press Escape
+or click blank space to exit. Changing the search, filter, project, or
+conversation clears the selection.
+
 ### Read and unread tasks
 
 A task becomes unread when it has a worker message or reply, a turn end, a
@@ -222,14 +236,13 @@ it isn't on screen. Pressing them again while the toast is open adds each step
 to its list, and the toast's **Undo** or **Redo** button reverses every step it
 lists. Quick presses all count, in order.
 
-A change itself shows a toast with **Undo** only when it takes something off the
-screen: archiving or unarchiving, removing or clearing queued messages, removing
-a project and **Mark all read**. Bulk changes list up to three of the tasks or
-messages they touched.
+Archiving or unarchiving, removing or clearing queued messages, removing a
+project, and bulk read changes show an **Undo** toast. Bulk changes list up to
+three affected tasks or messages.
 
-- When an undo or redo fails, a warning toast says why, for example when a
-  queued message was already sent. It stays longer, and the panel forgets that
-  change.
+- If undo or redo fails, a warning toast says why, for example when a queued
+  message was already sent. The panel forgets a change that failed entirely.
+  When only some tasks fail, the ones that changed stay reversible.
 - Text fields, open dialogs and the Settings page keep their own undo. Settings
   saves nothing until you choose **Save**.
 - A new change clears what you could redo. The history lasts while the panel is

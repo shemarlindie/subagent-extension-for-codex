@@ -295,6 +295,8 @@ export type Snapshot = {
   undoNotice?: UndoNotice;
   /** Counts applied undo and redo steps, so views with their own reads reload. */
   undoRevision: number;
+  /** A change is saving or an undo step running, so undo, redo and bulk actions wait. */
+  undoPending?: boolean;
   selected?: string;
   /** The last task closed, which the list keeps marked until another opens. */
   previousTask?: string;
@@ -321,6 +323,8 @@ export type Snapshot = {
   /** Whether a newer service takes over once running turns end. */
   updating: boolean;
   error: string;
+  /** A user action failure that stays visible until dismissed. */
+  actionFailure?: string;
   loginRequired: boolean;
   dialog?: DialogState;
   formError: string;

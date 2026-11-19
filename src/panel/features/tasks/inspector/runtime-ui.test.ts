@@ -9,7 +9,7 @@ import { startSchema } from "../../../../shared/tasks/model.js";
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
-import { TaskRow } from "../list/task-list";
+import { TaskRow } from "../list/task-row";
 import { TaskDetails } from "./task-details";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
@@ -74,7 +74,7 @@ const row = (task: Task) =>
   createElement(
     ControllerContext.Provider,
     { value: {} as Controller },
-    createElement(TaskRow, { task, selected: false }),
+    createElement(TaskRow, { task, current: false }),
   );
 
 const rowRuntime = (view: ReturnType<typeof render>) =>

@@ -8,6 +8,9 @@ export type UndoView = {
   name(state: Snapshot): string | undefined;
 };
 
+/** A partial step returns a warning and keeps the part it changed reversible. */
+type UndoStep = () => Promise<void | { warning: string }>;
+
 /** A change the user made that the panel can reverse and apply again. */
 export type UndoEntry = {
   /** What the change did, such as "Archived 3 tasks". */
@@ -23,13 +26,13 @@ export type UndoEntry = {
   /** Where the change shows. A step taken while it's hidden names it. */
   view?: UndoView;
   /** Reverses the change, rejecting with a message the user can read. */
-  undo(): Promise<void>;
+  undo: UndoStep;
   /** Applies the change again. */
-  redo(): Promise<void>;
+  redo: UndoStep;
 };
 
 /** What actions use to remember their changes. */
-export type UndoRecorder = Pick<UndoHistory, "record" | "track">;
+export type UndoRecorder = Pick<UndoHistory, "record" | "change">;
 
 /** The undo toast's message and the step it offers next. */
 export type UndoNotice = {
@@ -43,7 +46,7 @@ export type UndoNotice = {
   offer?: "undo" | "redo";
   /** How many steps the offer takes: all the steps the toast lists. */
   steps?: number;
-  /** Set when a step failed, so the toast warns and stays longer. */
+  /** Set when a step reports a problem, so the toast warns and stays longer. */
   failed?: boolean;
 };
 
@@ -103,6 +106,12 @@ function listed(lines: string[] | undefined, word: string) {
  * across project and conversation changes, since each toast names what it
  * changed.
  *
+ * One thing happens at a time: changes, records and steps run in the order
+ * the user asked for them, so quick presses all count and none overtakes
+ * another. A change counts once the service confirms it, and reads the
+ * state it changes when its turn comes. `undoPending` lets the toast wait
+ * meanwhile.
+ *
  * Undo and redo always show what they did, since a shortcut gives no other
  * feedback. Steps taken while their toast is open collect in it. A change
  * itself stays quiet unless it takes something off the screen, and a quiet
@@ -110,33 +119,70 @@ function listed(lines: string[] | undefined, word: string) {
  * Failures always show.
  */
 export class UndoHistory {
-  // Changed in place, since a step in progress holds these arrays.
   private readonly past: UndoEntry[] = [];
   private readonly future: UndoEntry[] = [];
-  /** Steps run one at a time, so quick presses all count, in order. */
   private queue: Promise<unknown> = Promise.resolve();
+  /** Changes and steps asked for and not yet finished. */
+  private queued = 0;
+  /** Counts local changes made while steps wait, which cancel those steps. */
+  private interruptions = 0;
   private notices = 0;
   /** The steps the open toast lists. */
   private streak?: Streak;
-  /** Changes still saving, and whether each one happened. */
-  private saving = new WeakMap<UndoEntry, Promise<boolean>>();
   /** The change whose own toast is open. */
   private announced?: { entry: UndoEntry; notice: number };
 
   constructor(private context: UndoContext) {}
 
-  /** Remembers a change the service has made. */
+  /**
+   * Remembers a change already made, such as a local one that needs no
+   * service, after the changes and steps asked for before it. Its effect
+   * already shows, so it cancels undo and redo steps still waiting, which
+   * could reverse what it just changed.
+   */
   record(entry: UndoEntry) {
+    if (this.queued) {
+      this.interruptions++;
+      void this.enqueue(async () => this.remember(entry));
+    } else {
+      this.remember(entry);
+    }
+  }
+
+  private remember(entry: UndoEntry) {
+    if (this.context.closed()) return;
     this.past.push(entry);
     this.past.splice(0, this.past.length - LIMIT);
     this.future.length = 0;
     this.streak = undefined;
 
-    if (!entry.toast) {
+    if (entry.toast) {
+      this.announce(entry);
+    } else {
       this.context.patch({ undoNotice: undefined });
-
-      return;
     }
+  }
+
+  /**
+   * Starts a change once earlier changes and steps finish, then remembers
+   * what `describe` says it did. Undefined means nothing changed, which
+   * leaves the history as it was.
+   */
+  change<T>(
+    start: () => Promise<T>,
+    describe: (value: T) => UndoEntry | undefined,
+  ): Promise<T> {
+    return this.enqueue(async () => {
+      const value = await start();
+      const entry = describe(value);
+      if (entry) this.remember(entry);
+
+      return value;
+    });
+  }
+
+  private announce(entry: UndoEntry) {
+    if (this.context.closed()) return;
 
     const notice = this.show({
       text: entry.label,
@@ -145,26 +191,6 @@ export class UndoHistory {
     });
 
     this.announced = { entry, notice };
-  }
-
-  /**
-   * Remembers a change as soon as it shows, while `action` saves it, so the
-   * shortcut never skips past it to an older change. Undo waits for the save.
-   * A failed save, or one `happened` rejects, drops the change.
-   */
-  track<T>(
-    action: Promise<T>,
-    entry: UndoEntry,
-    happened: (value: T) => boolean = () => true,
-  ) {
-    const saved = action.then(happened, () => false);
-
-    this.saving.set(entry, saved);
-    this.record(entry);
-
-    void saved.then((ok) => {
-      if (!ok) this.forget(entry);
-    });
   }
 
   /** Drops a change that didn't happen, with its toast. */
@@ -182,25 +208,50 @@ export class UndoHistory {
 
   /** Undoes `count` changes, newest first, stopping at a failure. */
   undo(count = 1) {
-    return this.repeat(count, () => this.step(this.past, this.future, "undo"));
+    return this.repeat(count, "undo");
   }
 
   /** Redoes `count` changes, stopping at a failure. */
   redo(count = 1) {
-    return this.repeat(count, () => this.step(this.future, this.past, "redo"));
+    return this.repeat(count, "redo");
   }
 
-  /** Runs `step` up to `count` times after any steps already asked for. */
-  private repeat(count: number, step: () => Promise<boolean>) {
-    const run = this.queue.then(async () => {
+  /** Takes up to `count` steps, stopping at a failure or a local change. */
+  private repeat(count: number, direction: Direction) {
+    const interruptions = this.interruptions;
+
+    return this.enqueue(async () => {
       for (let done = 0; done < count; done++) {
-        if (!(await step())) return;
+        if (this.interruptions !== interruptions) return;
+        if (!(await this.step(direction))) return;
       }
+    });
+  }
+
+  /** Runs `work` after everything asked for earlier. */
+  private enqueue<T>(work: () => Promise<T>): Promise<T> {
+    this.queued++;
+    this.updatePending();
+
+    const run = this.queue.then(work).finally(() => {
+      this.queued--;
+      this.updatePending();
     });
 
     this.queue = run.catch(() => undefined);
 
     return run;
+  }
+
+  private updatePending() {
+    const undoPending = this.queued > 0;
+
+    if (
+      !this.context.closed() &&
+      this.context.snapshot().undoPending !== undoPending
+    ) {
+      this.context.patch({ undoPending });
+    }
   }
 
   /** Closes the notice with this id, unless a newer one replaced it. */
@@ -210,33 +261,31 @@ export class UndoHistory {
     }
   };
 
-  private async step(
-    from: UndoEntry[],
-    to: UndoEntry[],
-    direction: Direction,
-  ): Promise<boolean> {
-    // A change still saving finishes first, and drops itself if it failed.
-    const next = from.at(-1);
-    if (next) await this.saving.get(next);
-
+  private async step(direction: Direction): Promise<boolean> {
     // A busy panel refuses actions, so the entry waits for another try.
     if (this.context.closed() || this.context.snapshot().busy) return false;
+
+    const [from, to] =
+      direction === "undo"
+        ? [this.past, this.future]
+        : [this.future, this.past];
 
     const entry = from.pop();
     if (!entry) return false;
 
     try {
-      await entry[direction]();
+      const result = await entry[direction]();
       to.push(entry);
 
       this.context.patch({
         undoRevision: this.context.snapshot().undoRevision + 1,
       });
 
-      this.stepped(entry, direction);
+      this.stepped(entry, direction, result?.warning);
 
-      return true;
+      return !result;
     } catch (error) {
+      this.forget(entry);
       this.streak = undefined;
 
       this.show({
@@ -249,13 +298,27 @@ export class UndoHistory {
   }
 
   /** Shows the step, with the earlier ones its open toast listed. */
-  private stepped(entry: UndoEntry, direction: Direction) {
+  private stepped(entry: UndoEntry, direction: Direction, warning?: string) {
     const state = this.context.snapshot();
     const { view } = entry;
     const name = view && !view.visible(state) ? view.name(state) : undefined;
     const line = name ? `${entry.label} · ${name}` : entry.label;
     const verb = direction === "undo" ? "Undid" : "Redid";
     const offer = direction === "undo" ? "redo" : "undo";
+
+    if (warning) {
+      this.streak = undefined;
+
+      this.show({
+        text: `${verb}: ${line}. ${warning}`,
+        ...listed(entry.items, "more"),
+        offer,
+        failed: true,
+      });
+
+      return;
+    }
+
     const streak = this.streak;
 
     // Only steps the same way while their toast is open collect.
