@@ -22,7 +22,7 @@ export function signInExpiry(
   if (!expiresAt) return;
   const latest = Date.parse(expiresAt);
   // An unparsable date fails this check too.
-  if (!(latest - now < WARN_MS)) return;
+  if (!(latest - now <= WARN_MS)) return;
   const earliest = latest - EARLY_MS;
 
   return {
@@ -50,7 +50,7 @@ export function nextExpiryChange(
 
 function expiryState(earliest: number, latest: number, now: number) {
   if (latest <= now) return "ended";
-  if (earliest - now < DAY_MS) return "imminent";
+  if (earliest - now <= DAY_MS) return "imminent";
 
   return "soon";
 }

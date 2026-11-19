@@ -11,7 +11,7 @@ const inDays = (days: number) => new Date(now + days * DAY_MS).toISOString();
 test("a sign-in shows nothing when its end is unknown or more than 10 days away", () => {
   assert.equal(signInExpiry(undefined, now), undefined);
   assert.equal(signInExpiry("not a date", now), undefined);
-  assert.equal(signInExpiry(inDays(10), now), undefined);
+  assert.equal(signInExpiry(inDays(10.001), now), undefined);
 });
 
 test("a sign-in within 10 days ends in a window starting 3 days before its date", () => {
@@ -25,17 +25,22 @@ test("a sign-in within 10 days ends in a window starting 3 days before its date"
   assert.equal(signInExpiry(inDays(0), now)?.state, "ended");
 });
 
-test("the next change is when the warning starts, turns imminent, or ends", () => {
+test("each next change lands on the time the warning starts, turns imminent, or ends", () => {
   const expiresAt = inDays(12);
+  const states = [];
+  let time = nextExpiryChange(expiresAt, now);
 
-  assert.equal(nextExpiryChange(expiresAt, now), now + 2 * DAY_MS);
-  assert.equal(nextExpiryChange(expiresAt, now + 2 * DAY_MS), now + 8 * DAY_MS);
+  // A timer fires exactly on the change, so the new state must apply then.
+  while (time !== undefined) {
+    states.push([(time - now) / DAY_MS, signInExpiry(expiresAt, time)?.state]);
+    time = nextExpiryChange(expiresAt, time);
+  }
 
-  assert.equal(
-    nextExpiryChange(expiresAt, now + 8 * DAY_MS),
-    now + 12 * DAY_MS,
-  );
+  assert.deepEqual(states, [
+    [2, "soon"],
+    [8, "imminent"],
+    [12, "ended"],
+  ]);
 
-  assert.equal(nextExpiryChange(expiresAt, now + 12 * DAY_MS), undefined);
   assert.equal(nextExpiryChange(undefined, now), undefined);
 });
