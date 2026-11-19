@@ -33,6 +33,12 @@ const activityKind = (e: ActivityEvent) => {
     : e.type;
 };
 
+// A long-running hook sends tool_progress heartbeats with a new `hook-` id each
+// time and no hook_id, so they cannot join a tool or hook operation.
+const isHookHeartbeat = (e: ActivityEvent) =>
+  activityKind(e) === "tool_progress" &&
+  !!string(object(e.data).tool_use_id)?.startsWith("hook-");
+
 function activityFailed(e: ActivityEvent) {
   const d = object(e.data);
 
@@ -106,6 +112,7 @@ function statusTitle(e: ActivityEvent) {
   const d = object(e.data);
 
   if (thinking.has(key)) return "Thinking…";
+  if (isHookHeartbeat(e)) return `Running ${scalarText(d.tool_name)} hook`;
 
   if (key === "status") {
     if (d.compact_result === "failed") return "Context compaction failed";
@@ -307,6 +314,8 @@ export function claudeActivityPresentation(
       ? e.rawResponse.rate_limit_info
       : decodeClaudeRateLimitWindowInfo(d.rate_limit_info);
 
+  const hookHeartbeat = isHookHeartbeat(e);
+  const isQuiet = quiet.has(key) || hookHeartbeat;
   const failed = activityFailed(e);
   const summaryIsResponse = e.type === "claude.activity" && d.type === "result";
 
@@ -323,7 +332,7 @@ export function claudeActivityPresentation(
 
   const presentation: ActivityPresentation = {
     kind: key,
-    quiet: quiet.has(key),
+    quiet: isQuiet,
     failed,
     // Activity falls back to the payload, so a summary that repeats it is left out.
     ...(failed || summaryIsResponse || summary !== payloadSummary
@@ -338,8 +347,7 @@ export function claudeActivityPresentation(
         "session_state_changed",
         "rate_limit_event",
       ].includes(key) || thinking.has(key),
-    statusTitle:
-      quiet.has(key) || thinking.has(key) ? statusTitle(e) : undefined,
+    statusTitle: isQuiet || thinking.has(key) ? statusTitle(e) : undefined,
     title: activityTitle(e, key),
     messageId: string(
       (e.rawResponse?.type === "assistant"
@@ -365,7 +373,10 @@ export function claudeActivityPresentation(
     presentation.statusState = "info";
   }
 
-  const toolId = key === "tool_progress" ? string(d.tool_use_id) : undefined;
+  const toolId =
+    key === "tool_progress" && !hookHeartbeat
+      ? string(d.tool_use_id)
+      : undefined;
 
   const operationId = operationIdFor(key, d, toolId);
 

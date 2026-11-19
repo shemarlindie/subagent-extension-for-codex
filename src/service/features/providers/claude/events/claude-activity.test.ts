@@ -15,6 +15,7 @@ import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import { decodedEvent } from "../../../../../shared/events/decode.js";
+import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status.js";
 import { groupActivity } from "../../../../../shared/tasks/activity/activity-timeline.js";
 import { startSchema } from "../../../../../shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
@@ -207,6 +208,51 @@ test("Claude rate-limit activity uses the current typed SDK metadata", () => {
       resetsAt: 100,
     },
   ]);
+});
+
+test("hook heartbeats share one status row and never open a tool row or live status", () => {
+  const data: Record<string, unknown>[] = [];
+  const normalize = claudeMessageNormalizer();
+
+  const context = {
+    emitOpaque: (_: string, d: Record<string, unknown>) => data.push(d),
+  } as unknown as RunContext;
+
+  // Each beat has a new id, and a hook outside a tool call names no tool.
+  for (const beat of [0, 1]) {
+    normalize(context, {
+      type: "tool_progress",
+      tool_use_id: `hook-Stop-session-heartbeat-${beat}`,
+      tool_name: "Stop",
+      parent_tool_use_id: "session",
+      elapsed_time_seconds: 30 * (beat + 1),
+      heartbeat: true,
+      uuid: `00000000-0000-4000-8000-00000000001${beat}`,
+      session_id: "sdk-session",
+    });
+  }
+
+  const events = data.map((d, id) =>
+    decodedEvent({
+      id,
+      task_id: "task",
+      type: "claude.activity",
+      timestamp: "",
+      data: d,
+    }),
+  );
+
+  assert.deepEqual(
+    groupActivity(events).map(({ kind, title, state }) => ({
+      kind,
+      title,
+      state,
+    })),
+    [{ kind: "status", title: "Running Stop hook", state: "info" }],
+  );
+
+  // Nothing marks a heartbeat finished, so the status line must not show it.
+  assert.equal(currentActivityStatus(events).text, "Working");
 });
 
 test("Claude preserves the activity kind and normalized fields of an unknown message", () => {

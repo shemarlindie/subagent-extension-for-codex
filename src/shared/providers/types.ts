@@ -46,6 +46,11 @@ export interface ProviderReadiness {
   message?: string;
   /** Facts for diagnostics, such as the executable path and version. */
   details: Record<string, string>;
+  /**
+   * When the provider's stored sign-in ends, as an ISO 8601 instant, from the
+   * latest run that reported it. Absent when unknown, such as for an API key.
+   */
+  credential_expires_at?: string;
 }
 
 export type {

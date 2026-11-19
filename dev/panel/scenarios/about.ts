@@ -11,7 +11,7 @@ export const previewAbout = (
     commit: "d9f4c3a7b812e6a05df9d82b4ca9135e670abc12",
     dirty: true,
     sdks: [
-      { name: "@anthropic-ai/claude-agent-sdk", version: "0.3.319" },
+      { name: "@anthropic-ai/claude-agent-sdk", version: "0.3.328" },
       { name: "@modelcontextprotocol/sdk", version: "1.32.2" },
       { name: "@modelcontextprotocol/ext-apps", version: "1.7.5" },
     ],
@@ -25,7 +25,7 @@ export const previewAbout = (
     data_directory: "/Users/avery/.local/share/subagent-extension-for-codex",
   },
   claude,
-  claude_recommended: { version: "2.1.319", behind },
+  claude_recommended: { version: "2.1.328", behind },
   claude_upgrade: {
     installation: "Homebrew (stable)",
     command: "'/opt/homebrew/bin/brew' upgrade --cask claude-code",
