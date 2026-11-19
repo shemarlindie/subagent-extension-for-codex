@@ -1,4 +1,7 @@
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  SDKMessage,
+  SDKSessionWritesLostMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 
 /** The message when it is an informational notice from Claude Code. */
 export const informational = (raw: SDKMessage | undefined) =>
@@ -15,10 +18,10 @@ export function informationalTitle(raw: SDKMessage | undefined) {
   return "Claude note";
 }
 
-const writeFailures: Record<string, string> = {
+const writeFailures = {
   ENOSPC: "The disk is full.",
   EDQUOT: "The disk quota is used up.",
-};
+} satisfies Record<SDKSessionWritesLostMessage["error_code"], string>;
 
 /** Says why Claude couldn't save its session and what that loses. */
 export function sessionWritesLostSummary(raw: SDKMessage | undefined) {
@@ -27,7 +30,7 @@ export function sessionWritesLostSummary(raw: SDKMessage | undefined) {
   }
 
   return [
-    writeFailures[raw.error_code] ?? "Claude couldn't write to disk.",
+    writeFailures[raw.error_code],
     raw.lost.includes("transcript") &&
       "Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation.",
     raw.lost.includes("global_config") &&

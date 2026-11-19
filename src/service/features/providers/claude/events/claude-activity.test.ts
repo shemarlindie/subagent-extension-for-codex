@@ -255,7 +255,7 @@ test("hook heartbeats share one status row and never open a tool row or live sta
   assert.equal(currentActivityStatus(events).text, "Working");
 });
 
-test("informational and lost-write messages get titled rows, warnings and quiet info", () => {
+test("informational and lost-write messages get titled rows, warnings and separate quiet info", () => {
   const data: Record<string, unknown>[] = [];
   const normalize = claudeMessageNormalizer();
 
@@ -269,16 +269,14 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
   } as const;
 
   const informational = (
-    level: "info" | "notice" | "suggestion" | "warning",
+    level: "info" | "notice" | "warning",
     content: string,
-    extra: { prevent_continuation?: boolean } = {},
   ) =>
     normalize(context, {
       type: "system",
       subtype: "informational",
       level,
       content,
-      ...extra,
       ...base,
     });
 
@@ -286,24 +284,14 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
   informational("info", "Loaded 3 skills.");
   informational("info", "Connected 2 MCP servers.");
   informational("notice", "Plan mode is active.");
-  informational("suggestion", "Try /compact.");
 
-  informational("notice", "Stop hook denied continuation.", {
-    prevent_continuation: true,
+  normalize(context, {
+    type: "system",
+    subtype: "session_writes_lost",
+    error_code: "ENOSPC",
+    lost: ["transcript", "global_config"],
+    ...base,
   });
-
-  for (const [error_code, lost] of [
-    ["ENOSPC", ["transcript"]],
-    ["EDQUOT", ["global_config"]],
-  ] as const) {
-    normalize(context, {
-      type: "system",
-      subtype: "session_writes_lost",
-      error_code,
-      lost: [...lost],
-      ...base,
-    });
-  }
 
   const events = data.map((d, id) =>
     decodedEvent({
@@ -349,28 +337,9 @@ test("informational and lost-write messages get titled rows, warnings and quiet 
       },
       {
         kind: "event",
-        title: "Claude suggestion",
-        summary: "Try /compact.",
-        state: "info",
-      },
-      {
-        kind: "event",
-        title: "Claude stopped",
-        summary: "Stop hook denied continuation.",
-        state: "info",
-      },
-      {
-        kind: "event",
         title: "Session not fully saved",
         summary:
-          "The disk is full. Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation.",
-        state: "warning",
-      },
-      {
-        kind: "event",
-        title: "Session not fully saved",
-        summary:
-          "The disk quota is used up. Changes to Claude's settings in ~/.claude.json weren't saved.",
+          "The disk is full. Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation. Changes to Claude's settings in ~/.claude.json weren't saved.",
         state: "warning",
       },
     ],

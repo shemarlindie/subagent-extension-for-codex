@@ -117,7 +117,7 @@ function statusTitle(e: ActivityEvent) {
   const d = object(e.data);
 
   if (thinking.has(key)) return "Thinking…";
-  if (key === "informational") return string(d.content) ?? "Claude note";
+  if (key === "informational") return scalarText(d.content);
   if (isHookHeartbeat(e)) return `Running ${scalarText(d.tool_name)} hook`;
 
   if (key === "status") {
