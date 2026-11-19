@@ -111,6 +111,7 @@ test("every task denies the admin token, and its hook denies file tools on it", 
     "Read(//c/data/admin-token)",
   );
 
+  expect(options.hooks?.PreToolUse?.[0]?.onFailure).toBe("block");
   const hook = preToolUseHook(options);
 
   const decision = async (tool: string, input: object) =>

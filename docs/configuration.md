@@ -326,6 +326,11 @@ Each task keeps the values it started with.
 Codex can turn the sandbox on for one task. Only you can turn it off when the
 setting is on. See [Task tools](mcp-reference.md#task-tools).
 
+By default, sandboxed Bash follows Claude Code's regular permission checks.
+Commands that require confirmation reach the task's approver. Setting
+`sandbox.autoAllowBashIfSandboxed: true` in Claude Code can allow sandboxed
+commands without a prompt.
+
 Every task is denied the service's admin token. With the sandbox on, that covers
 every command. Without it, a script can still read the token, as it can read
 your other credentials.
