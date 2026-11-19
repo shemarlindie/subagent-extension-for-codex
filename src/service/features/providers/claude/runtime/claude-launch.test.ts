@@ -92,7 +92,17 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
 test("readiness reports when the sign-in the latest result used ends", async () => {
   const { c } = await context();
   const expiresAt = "2026-11-25T12:00:00.000Z";
-  const results = [{ credential_expires_at: expiresAt }, {}];
+
+  const results = [
+    { credential_expires_at: expiresAt },
+    {
+      subtype: "error_during_execution",
+      is_error: true,
+      startup_failure_reason: "cwd_unavailable",
+      errors: ["The working directory is unavailable."],
+    },
+    {},
+  ];
 
   const provider = new ClaudeAgentProvider(
     () =>
@@ -115,6 +125,9 @@ test("readiness reports when the sign-in the latest result used ends", async () 
 
   assert.equal((await provider.readiness()).credential_expires_at, undefined);
   await provider.run(c, "Review");
+  assert.equal((await provider.readiness()).credential_expires_at, expiresAt);
+  // A startup refusal reports no date but keeps the known one.
+  await assert.rejects(provider.run(c, "Review"));
   assert.equal((await provider.readiness()).credential_expires_at, expiresAt);
   // A later run with an API key reports no date.
   await provider.run(c, "Review");

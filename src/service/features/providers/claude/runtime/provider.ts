@@ -404,8 +404,14 @@ export class ClaudeAgentProvider implements Provider {
 
         if (m.type !== "result") continue;
 
-        // Absent for an API key, so a switch from claude.ai clears it.
-        this.credentialExpiresAt = m.credential_expires_at;
+        const refusal =
+          "startup_failure_reason" in m && m.startup_failure_reason
+            ? m
+            : undefined;
+
+        // Absent for an API key, so a switch from claude.ai clears it. A
+        // refusal ran no requests, so it says nothing about the sign-in.
+        if (!refusal) this.credentialExpiresAt = m.credential_expires_at;
 
         logEvent("info", "provider.result", {
           subtype: m.subtype,
@@ -422,12 +428,12 @@ export class ClaudeAgentProvider implements Provider {
         });
 
         // Claude Code refused to start, and its own text names the fix.
-        if ("startup_failure_reason" in m && m.startup_failure_reason) {
+        if (refusal) {
           logEvent("warn", "provider.startup_refused", {
-            reason: m.startup_failure_reason,
+            reason: refusal.startup_failure_reason,
           });
 
-          throw new Error(m.errors.join("; "));
+          throw new Error(refusal.errors.join("; "));
         }
 
         if (m.subtype !== "success") {

@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
@@ -8,7 +6,8 @@ import {
   formatUserDateTime,
   type UserDateTimePreferences,
 } from "../../shared/utils/user-date-time";
-import { signInExpiry, type SignInExpiry } from "./sign-in-expiry";
+import type { SignInExpiry } from "./sign-in-expiry";
+import { useSignInExpiry } from "./use-sign-in-expiry";
 
 const dateOnly = {
   hour: undefined,
@@ -19,18 +18,6 @@ const dateOnly = {
 
 const renew = <code>claude auth login</code>;
 
-const HIDDEN_UNTIL_KEY = "dw_sign_in_expiry_hidden_until";
-const HIDE_MS = 86_400_000;
-
-/** When a dismissal ends, or 0 when browser storage has none. */
-function storedHiddenUntil() {
-  try {
-    return Number(localStorage.getItem(HIDDEN_UNTIL_KEY)) || 0;
-  } catch {
-    return 0;
-  }
-}
-
 /**
  * Says when Claude's stored claude.ai sign-in ends and how to renew it, from 10
  * days before. Dismissing hides it for a day.
@@ -38,31 +25,21 @@ function storedHiddenUntil() {
 export function SignInExpiryNotice() {
   const workers = useSnapshot((state) => state.workers);
   const host = useSnapshot((state) => state.host);
-  const [hiddenUntil, setHiddenUntil] = useState(storedHiddenUntil);
   const claude = workers.find(({ provider }) => provider === "claude");
 
-  const expiry = claude?.readiness?.ready
-    ? signInExpiry(claude.readiness.credential_expires_at)
-    : undefined;
-
-  const hide = () => {
-    const until = Date.now() + HIDE_MS;
-    setHiddenUntil(until);
-
-    try {
-      localStorage.setItem(HIDDEN_UNTIL_KEY, String(until));
-    } catch {
-      // The dismissal still lasts while the panel stays open.
-    }
-  };
+  const { expiry, hidden, dismiss } = useSignInExpiry(
+    claude?.readiness?.ready
+      ? claude.readiness.credential_expires_at
+      : undefined,
+  );
 
   return (
-    <Presence show={Boolean(expiry) && Date.now() >= hiddenUntil}>
+    <Presence show={Boolean(expiry) && !hidden}>
       {expiry && (
         <div className="worker-readiness" role="status">
           <Notice className="sign-in-expiry">
             <p>{expiryText(expiry, host)}</p>
-            <Button variant="text" onClick={hide}>
+            <Button variant="text" onClick={dismiss}>
               Dismiss
             </Button>
           </Notice>

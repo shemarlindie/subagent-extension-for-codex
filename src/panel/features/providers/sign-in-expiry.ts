@@ -32,6 +32,22 @@ export function signInExpiry(
   };
 }
 
+/**
+ * The next time after `now` when `signInExpiry` gives a different answer: when
+ * the warning starts, when the end becomes imminent, and when it passes.
+ */
+export function nextExpiryChange(
+  expiresAt: string | undefined,
+  now = Date.now(),
+): number | undefined {
+  if (!expiresAt) return;
+  const latest = Date.parse(expiresAt);
+
+  return [latest - WARN_MS, latest - EARLY_MS - DAY_MS, latest].find(
+    (time) => time > now,
+  );
+}
+
 function expiryState(earliest: number, latest: number, now: number) {
   if (latest <= now) return "ended";
   if (earliest - now < DAY_MS) return "imminent";
