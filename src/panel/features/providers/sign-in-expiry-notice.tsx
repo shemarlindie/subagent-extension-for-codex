@@ -16,11 +16,11 @@ const dateOnly = {
   timeZoneName: undefined,
 } satisfies Intl.DateTimeFormatOptions;
 
-const renew = <code>claude auth login</code>;
+const signIn = <code>claude auth login</code>;
 
 /**
- * Says when Claude's stored claude.ai sign-in ends and how to renew it, from 10
- * days before. Dismissing hides it for a day.
+ * Says when Claude's stored claude.ai sign-in ends and how to sign in again,
+ * from 10 days before. Dismissing hides it for a day.
  */
 export function SignInExpiryNotice() {
   const workers = useSnapshot((state) => state.workers);
@@ -55,12 +55,13 @@ function expiryText(expiry: SignInExpiry, host: UserDateTimePreferences) {
 
   return expiry.ended ? (
     <>
-      Claude sign-in may have ended on {date}. If tasks are refused, run {renew}{" "}
-      in a terminal.
+      Claude sign-in may have ended. If tasks are refused, run {signIn} in a
+      terminal to sign in again.
     </>
   ) : (
     <>
-      Claude sign-in ends by {date}. Run {renew} in a terminal to renew it.
+      Claude sign-in ends by {date}. Run {signIn} in a terminal to sign in
+      again.
     </>
   );
 }
