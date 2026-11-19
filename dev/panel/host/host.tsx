@@ -24,6 +24,7 @@ import {
 import type { Task } from "../../../src/shared/tasks/model";
 import { PREVIEW_THREAD } from "../scenarios/fixtures";
 import { previewTool } from "../scenarios/tools";
+import { FixtureCheck } from "./fixture-check";
 import {
   codexMeta,
   FIXTURE_SERVICE_TOOLS,
@@ -98,6 +99,7 @@ const defaults: Settings = {
   cwd: __DEV_HOST_CWD__,
   autoRegister: true,
   claudeUnavailable: false,
+  claudeSignInEnding: false,
   orgPolicy: "",
   successfulBudgetUpdates: false,
   slowAsyncReads: false,
@@ -262,6 +264,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    claudeSignInEnding,
     orgPolicy,
     successfulBudgetUpdates,
     slowAsyncReads,
@@ -278,6 +281,7 @@ export function Host() {
     cwd,
     autoRegister,
     claudeUnavailable,
+    claudeSignInEnding,
     orgPolicy,
     successfulBudgetUpdates,
     slowAsyncReads,
@@ -364,6 +368,7 @@ export function Host() {
         result = fixtureCall(name, args, {
           autoRegisterChatProject: current.autoRegister,
           claudeUnavailable: current.claudeUnavailable,
+          claudeSignInEnding: current.claudeSignInEnding,
           orgPolicy: parseOrgPolicy(current.orgPolicy),
           successfulBudgetUpdates: current.successfulBudgetUpdates,
           deferTaskList: current.slowAsyncReads,
@@ -739,42 +744,30 @@ export function Host() {
                   onBlur={(e) => update({ cwd: normalizeCwd(e.target.value) })}
                 />
               </label>
-              <label className="settings-check">
-                <input
-                  type="checkbox"
-                  checked={autoRegister}
-                  disabled={source === "live"}
-                  onChange={(e) => update({ autoRegister: e.target.checked })}
-                />
-                <span
-                  title={
-                    source === "live"
-                      ? "The live service uses your own setting."
-                      : undefined
-                  }
-                >
-                  Automatically add chat projects
-                </span>
-              </label>
-              <label className="settings-check">
-                <input
-                  type="checkbox"
-                  checked={claudeUnavailable}
-                  disabled={source === "live"}
-                  onChange={(e) =>
-                    update({ claudeUnavailable: e.target.checked })
-                  }
-                />
-                <span
-                  title={
-                    source === "live"
-                      ? "The live service checks your installed Claude Code."
-                      : undefined
-                  }
-                >
-                  Claude Code unavailable
-                </span>
-              </label>
+              <FixtureCheck
+                checked={autoRegister}
+                live={source === "live"}
+                liveTitle="The live service uses your own setting."
+                onChange={(checked) => update({ autoRegister: checked })}
+              >
+                Automatically add chat projects
+              </FixtureCheck>
+              <FixtureCheck
+                checked={claudeUnavailable}
+                live={source === "live"}
+                liveTitle="The live service checks your installed Claude Code."
+                onChange={(checked) => update({ claudeUnavailable: checked })}
+              >
+                Claude Code unavailable
+              </FixtureCheck>
+              <FixtureCheck
+                checked={claudeSignInEnding}
+                live={source === "live"}
+                liveTitle="The live service reports your own sign-in."
+                onChange={(checked) => update({ claudeSignInEnding: checked })}
+              >
+                Claude sign-in ending
+              </FixtureCheck>
               <OrgPolicyField
                 value={orgPolicy}
                 disabled={source === "live"}

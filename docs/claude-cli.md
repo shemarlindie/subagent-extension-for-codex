@@ -86,3 +86,12 @@ authentication or the network. Model discovery and task execution report those
 failures when they happen. When [org policy](configuration.md#org-policy) makes
 Claude Code refuse to start, such as with a sign-in pin, the task shows the
 CLI's own text, which names the fix, and the service log keeps its reason code.
+
+## Sign-in expiry
+
+Each task result reports when the stored claude.ai sign-in ends, and
+`list_workers` returns the latest date as `readiness.credential_expires_at`.
+From 10 days before, the panel shows the date and asks you to sign in again with
+`claude auth login`. **Dismiss** hides it for a day. API keys have no date. The
+service keeps the date in memory, so after a restart the warning returns with
+the next task result.

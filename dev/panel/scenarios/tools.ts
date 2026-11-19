@@ -27,7 +27,7 @@ import {
 } from "./original-response-tools";
 import { previewMarkSeen, previewPendingUpdates } from "./pending-update-tools";
 import {
-  previewClaudeReady,
+  previewClaudeReadiness,
   previewClaudeUnavailable,
 } from "./preview-claude-readiness";
 import { previewCatalog } from "./preview-models";
@@ -54,6 +54,8 @@ export type PreviewOptions = {
   autoRegisterChatProject?: boolean;
   /** Reports Claude as not ready, as the service does for an unsupported CLI. */
   claudeUnavailable?: boolean;
+  /** Reports Claude's claude.ai sign-in ending within the warning period. */
+  claudeSignInEnding?: boolean;
   /** Applies an org policy, as discovery reports it. */
   orgPolicy?: ProviderPolicy;
   /** Applies budget changes to fixture tasks instead of rejecting the action. */
@@ -449,7 +451,7 @@ export function previewTool(
   const fixtures: Record<string, unknown> = {
     app_get_about: options.claudeUnavailable
       ? previewAbout(previewClaudeUnavailable, true)
-      : previewAbout(previewClaudeReady, false),
+      : previewAbout(previewClaudeReadiness(options.claudeSignInEnding), false),
     app_preview_task_deletion: previewTaskDeletion(tasks, args),
     open_subagent_extension_for_codex: openPanel(args, options),
     app_open_subagent_extension_for_codex_global: openPanel(
@@ -517,7 +519,7 @@ export function previewTool(
           ? { readiness: previewClaudeUnavailable }
           : {
               ...previewCatalog(options.orgPolicy, args.repository),
-              readiness: previewClaudeReady,
+              readiness: previewClaudeReadiness(options.claudeSignInEnding),
             }),
         capabilities: {
           cost_budget: true,

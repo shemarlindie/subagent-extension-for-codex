@@ -89,6 +89,58 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
   assert.ok(closed);
 });
 
+test("readiness reports when the sign-in the latest result used ends", async () => {
+  const { c } = await context();
+  const expiresAt = "2026-11-25T12:00:00.000Z";
+
+  const failed = {
+    subtype: "error_during_execution",
+    is_error: true,
+    errors: ["Claude Code stopped."],
+  };
+
+  const results = [
+    { credential_expires_at: expiresAt, result_index: 0 },
+    { ...failed, result_index: 0, startup_failure_reason: "cwd_unavailable" },
+    // An error result the CLI didn't write, such as after a crash.
+    failed,
+    { result_index: 0 },
+  ];
+
+  const provider = new ClaudeAgentProvider(
+    () =>
+      Object.assign(
+        (async function* () {
+          yield {
+            type: "result",
+            subtype: "success",
+            is_error: false,
+            session_id: "session",
+            result: reply,
+            usage: {},
+            ...results.shift(),
+          };
+        })(),
+        { close: () => {} },
+      ) as unknown as Query,
+    readyClaudeCli,
+  );
+
+  assert.equal((await provider.readiness()).credential_expires_at, undefined);
+  await provider.run(c, "Review");
+  assert.equal((await provider.readiness()).credential_expires_at, expiresAt);
+
+  // A startup refusal and an unnumbered error report no date but keep it.
+  for (let run = 0; run < 2; run++) {
+    await assert.rejects(provider.run(c, "Review"));
+    assert.equal((await provider.readiness()).credential_expires_at, expiresAt);
+  }
+
+  // A later run with an API key reports no date.
+  await provider.run(c, "Review");
+  assert.equal((await provider.readiness()).credential_expires_at, undefined);
+});
+
 test("Claude forwards the selected model and effort without changing its resolved permission mode", async () => {
   const { c } = await context();
   let options: Options | undefined;

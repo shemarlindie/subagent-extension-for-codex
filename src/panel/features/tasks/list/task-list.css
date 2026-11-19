@@ -34,8 +34,8 @@
 .inline-preview .error {
   overflow-wrap: anywhere;
 }
-.inline-preview .worker-readiness .notice {
-  margin: 8px 0;
+.inline-preview .worker-readiness {
+  padding: 8px 0;
 }
 .inline-preview-loading-swap {
   align-content: start;

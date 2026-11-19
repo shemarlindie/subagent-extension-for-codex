@@ -66,12 +66,31 @@ header .brand > span {
   display: flex;
   min-width: 0;
 }
+/* Padding, not the notice's margin, so Presence animates the whole height. */
+.worker-readiness {
+  padding: 8px;
+}
 .worker-readiness .notice {
-  margin: 8px;
+  margin: 0;
 }
 .worker-readiness .notice p {
   margin-bottom: 0;
   overflow-wrap: anywhere;
+}
+.worker-readiness .notice code {
+  white-space: nowrap;
+}
+.sign-in-expiry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.worker-readiness .sign-in-expiry p {
+  margin: 0;
+}
+.sign-in-expiry > button {
+  flex: none;
 }
 .context-error {
   padding: 8px 12px;
