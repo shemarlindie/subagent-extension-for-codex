@@ -23,10 +23,9 @@ export function setTasksArchived(
 ) {
   const result = c.archive.setArchived(owner, ids, archived);
 
-  // Session changes wait for earlier ones, so the last change to finish reads
-  // the final archive state.
+  // Session changes run in request order, so an undo is applied last.
   const sessions = (c.sessionArchiving = c.sessionArchiving.then(() =>
-    archiveSessions(c, owner, result.task_ids),
+    archiveSessions(c, owner, result.task_ids, archived),
   ));
 
   const cleanup = archived
@@ -38,14 +37,14 @@ export function setTasksArchived(
 
 /**
  * Archives or unarchives the tasks' provider sessions one at a time, until
- * shutdown. Each session follows its task's archive state when its change
- * starts. Nothing awaits it in production, so failures are logged and never
+ * shutdown. Nothing awaits it in production, so failures are logged and never
  * thrown.
  */
 async function archiveSessions(
   c: ArchiveContext,
   owner: string,
   ids: string[],
+  archived: boolean,
 ) {
   for (const id of ids) {
     if (c.stopped) break;
@@ -64,7 +63,7 @@ async function archiveSessions(
         continue;
       }
 
-      await provider.setSessionArchived(t, c.archive.archived(id));
+      await provider.setSessionArchived(t, archived);
     } catch (error) {
       logError("task.archive_session_failed", error, { task_id: id });
     }

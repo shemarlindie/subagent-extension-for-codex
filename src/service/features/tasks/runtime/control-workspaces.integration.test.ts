@@ -259,7 +259,7 @@ test("an undo during a session archive leaves the session unarchived", async () 
     await until(() => changes.length === 1);
     const undoing = setTasksArchived(c, "alice", [t.id], false).cleanup;
 
-    // The undo waits for the archive to finish, then reads the final state.
+    // The undo's session change waits for the archive's to finish.
     assert.deepEqual(changes, [true]);
     release();
     await Promise.all([archiving, undoing]);

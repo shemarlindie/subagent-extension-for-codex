@@ -201,11 +201,10 @@ Archiving also removes a task's worktree when it has no uncommitted changes,
 keeping its branch. A worktree with uncommitted changes stays. Unarchiving or
 undoing leaves a removed worktree removed, and the next message recreates it.
 
-Archiving a Claude task also marks its Claude session archived, as the Agent
-SDK's `listSessions()` reports. Unarchiving or undoing clears the mark. A
-message that returns the task to the list clears it only once its prompt reaches
-the session. Claude Code 2.1.328's `claude --resume` picker still lists archived
-sessions. A session that can't be marked doesn't stop the task archive.
+Archiving a Claude task also archives its Claude session. Unarchiving or undoing
+unarchives it. A message that returns the task to the list unarchives it once
+its prompt reaches the session. A session that can't be archived doesn't stop
+the task archive.
 
 The **View archived tasks** icon beside a project on the Projects page lists
 that project's archived tasks from any chat, newest first. Select tasks to act
