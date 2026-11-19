@@ -355,6 +355,9 @@
 .timeline-dot[data-status="failed"] {
   --dot-color: var(--danger);
 }
+.timeline-dot[data-status="warning"] {
+  --dot-color: var(--warn);
+}
 .activity-group {
   --group-pad: 12px;
   /* Dots centre on a heading kept at the debug toggle's 28px height. */

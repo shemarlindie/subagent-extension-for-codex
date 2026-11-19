@@ -488,6 +488,8 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
+        // Closing here drops session_writes_lost, which the CLI sends as it
+        // exits. Waiting for the exit would add about 0.7s to every turn.
         break;
       }
 

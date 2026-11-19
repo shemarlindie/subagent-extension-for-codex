@@ -8,12 +8,15 @@ import { failureMessage } from "../failure.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
 
+/** A row can also warn, which the task's overall state never does. */
+export type ActivityGroupState = ActivityState | "warning";
+
 export type ActivityGroup = {
   id: string;
   kind: "message" | "tool" | "operation" | "status" | "stream" | "event";
   title: string;
   summary?: string;
-  state: ActivityState;
+  state: ActivityGroupState;
   /** A group starts with its first event and only gains events. */
   events: [Event, ...Event[]];
 };
@@ -232,6 +235,13 @@ export function failureSummary(event: Event) {
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0,
   );
+}
+
+/** State of a service event row: failed, warning or plain. */
+export function eventRowState(e: Event): ActivityGroupState {
+  if (activityFailed(e)) return "failed";
+
+  return activityPresentation(e).warning ? "warning" : "info";
 }
 
 /** Title of a service event row: a failure's title, else its presentation's, else its name. */

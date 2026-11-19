@@ -81,6 +81,7 @@ export const activityPresentationSchema: z.ZodType<ActivityPresentation> =
       quiet: z.boolean().optional(),
       thinking: z.boolean().optional(),
       failed: z.boolean().optional(),
+      warning: z.boolean().optional(),
       messageId: z.string().optional(),
       hasThinking: z.boolean().optional(),
       rateLimitWindows: z.array(activityRateLimitWindowSchema).optional(),

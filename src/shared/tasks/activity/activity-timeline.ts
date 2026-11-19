@@ -7,6 +7,7 @@ import {
   activityKind,
   boundaries,
   compactionSummary,
+  eventRowState,
   eventRowTitle,
   failureSummary,
   isQuiet,
@@ -19,8 +20,22 @@ import {
   thinkingSignal,
   toolTitle,
   type ActivityGroup,
-  type ActivityState,
+  type ActivityGroupState,
 } from "./activity-events.js";
+
+/**
+ * Startup, ordinary Claude status changes and Claude's info lines keep their
+ * own status rows, since a merged row shows only its latest title.
+ */
+function ownsStatusRow(e: Event) {
+  const kind = activityKind(e);
+
+  return (
+    kind === "agent.started" ||
+    kind === "informational" ||
+    (kind === "status" && !thinkingSignal(e))
+  );
+}
 
 function onlyThinkingSignals(group: ActivityGroup) {
   return group.events.length > 0 && group.events.every(thinkingSignal);
@@ -82,7 +97,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     event: Event,
     kind: ActivityGroup["kind"],
     title: string,
-    state: ActivityState = "info",
+    state: ActivityGroupState = "info",
   ) => {
     const group: ActivityGroup = {
       id: `activity-${event.task_id}-${event.id}`,
@@ -271,19 +286,12 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
     if (isQuiet(e) && !activityFailed(e)) {
       const previous = adjacentStatus;
 
-      // Startup and ordinary Claude status changes retain their own rows;
-      // only thinking signals can become a Thought row.
+      // Only thinking signals can become a Thought row.
       if (
         previous?.kind === "status" &&
         previous.events[0].task_id === e.task_id &&
-        key !== "agent.started" &&
-        !previous.events.some(
-          (event) => activityKind(event) === "agent.started",
-        ) &&
-        !(key === "status" && !thinkingSignal(e)) &&
-        !previous.events.some(
-          (event) => activityKind(event) === "status" && !thinkingSignal(event),
-        ) &&
+        !ownsStatusRow(e) &&
+        !previous.events.some(ownsStatusRow) &&
         thinkingSignal(e) === onlyThinkingSignals(previous) &&
         (key === "rate_limit_event") ===
           (activityKind(lastEvent(previous.events)) === "rate_limit_event") &&
@@ -307,7 +315,7 @@ export function groupActivity(events: Event[]): ActivityGroup[] {
       e,
       "event",
       eventRowTitle(e, key, presentation.title),
-      activityFailed(e) ? "failed" : "info",
+      eventRowState(e),
     );
 
     group.summary =

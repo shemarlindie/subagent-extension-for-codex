@@ -255,6 +255,97 @@ test("hook heartbeats share one status row and never open a tool row or live sta
   assert.equal(currentActivityStatus(events).text, "Working");
 });
 
+test("informational and lost-write messages get titled rows, warnings and separate quiet info", () => {
+  const data: Record<string, unknown>[] = [];
+  const normalize = claudeMessageNormalizer();
+
+  const context = {
+    emitOpaque: (_: string, d: Record<string, unknown>) => data.push(d),
+  } as unknown as RunContext;
+
+  const base = {
+    uuid: "00000000-0000-4000-8000-000000000020",
+    session_id: "s",
+  } as const;
+
+  const informational = (
+    level: "info" | "notice" | "warning",
+    content: string,
+  ) =>
+    normalize(context, {
+      type: "system",
+      subtype: "informational",
+      level,
+      content,
+      ...base,
+    });
+
+  informational("warning", "PreToolUse hook gave no verdict.");
+  informational("info", "Loaded 3 skills.");
+  informational("info", "Connected 2 MCP servers.");
+  informational("notice", "Plan mode is active.");
+
+  normalize(context, {
+    type: "system",
+    subtype: "session_writes_lost",
+    error_code: "ENOSPC",
+    lost: ["transcript", "global_config"],
+    ...base,
+  });
+
+  const events = data.map((d, id) =>
+    decodedEvent({
+      id,
+      task_id: "task",
+      type: "claude.activity",
+      timestamp: "",
+      data: d,
+    }),
+  );
+
+  assert.deepEqual(
+    groupActivity(events).map(({ kind, title, summary, state }) => ({
+      kind,
+      title,
+      summary,
+      state,
+    })),
+    [
+      {
+        kind: "event",
+        title: "Claude warning",
+        summary: "PreToolUse hook gave no verdict.",
+        state: "warning",
+      },
+      {
+        kind: "status",
+        title: "Loaded 3 skills.",
+        summary: undefined,
+        state: "info",
+      },
+      {
+        kind: "status",
+        title: "Connected 2 MCP servers.",
+        summary: undefined,
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Claude note",
+        summary: "Plan mode is active.",
+        state: "info",
+      },
+      {
+        kind: "event",
+        title: "Session not fully saved",
+        summary:
+          "The disk is full. Part of a session transcript wasn't saved, so resuming that session may leave out part of its conversation. Changes to Claude's settings in ~/.claude.json weren't saved.",
+        state: "warning",
+      },
+    ],
+  );
+});
+
 test("Claude preserves the activity kind and normalized fields of an unknown message", () => {
   const message = {
     type: "future_sdk_message",
