@@ -3,12 +3,17 @@ import type { Control } from "./control.js";
 import { removeTaskWorktree, type WorktreeContext } from "./task-worktree.js";
 import { recordTaskTiming } from "./timing.js";
 
-type ArchiveContext = Pick<Control, "archive" | "stopped"> & WorktreeContext;
+type ArchiveContext = Pick<
+  Control,
+  "archive" | "stopped" | "providers" | "ownerWorker" | "sessionArchiving"
+> &
+  WorktreeContext;
 
 /**
- * Archives or unarchives tasks. Archiving then removes each archived task's
- * worktree in the background when it has no uncommitted changes, keeping the
- * branch. `cleanup` settles once every removal finishes, fails or is skipped.
+ * Archives or unarchives tasks, then their provider sessions in the
+ * background. Archiving also removes each archived task's worktree when it has
+ * no uncommitted changes, keeping the branch. `cleanup` settles once every
+ * change finishes, fails or is skipped.
  */
 export function setTasksArchived(
   c: ArchiveContext,
@@ -18,11 +23,51 @@ export function setTasksArchived(
 ) {
   const result = c.archive.setArchived(owner, ids, archived);
 
+  // Session changes run in request order, so an undo is applied last.
+  const sessions = (c.sessionArchiving = c.sessionArchiving.then(() =>
+    archiveSessions(c, owner, result.task_ids, archived),
+  ));
+
   const cleanup = archived
-    ? removeWorktrees(c, owner, result.task_ids)
-    : Promise.resolve();
+    ? sessions.then(() => removeWorktrees(c, owner, result.task_ids))
+    : sessions;
 
   return { result, cleanup };
+}
+
+/**
+ * Archives or unarchives the tasks' provider sessions one at a time, until
+ * shutdown. Nothing awaits it in production, so failures are logged and never
+ * thrown.
+ */
+async function archiveSessions(
+  c: ArchiveContext,
+  owner: string,
+  ids: string[],
+  archived: boolean,
+) {
+  for (const id of ids) {
+    if (c.stopped) break;
+
+    try {
+      const t = c.store.find(id, owner);
+      const provider = t && c.providers.get(t.provider);
+
+      // Only a session recorded on this host can be found here.
+      if (
+        !t?.session_id ||
+        !t.session_state_ref ||
+        t.session_owner !== c.ownerWorker ||
+        !provider?.setSessionArchived
+      ) {
+        continue;
+      }
+
+      await provider.setSessionArchived(t, archived);
+    } catch (error) {
+      logError("task.archive_session_failed", error, { task_id: id });
+    }
+  }
 }
 
 /**

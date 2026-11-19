@@ -201,6 +201,11 @@ Archiving also removes a task's worktree when it has no uncommitted changes,
 keeping its branch. A worktree with uncommitted changes stays. Unarchiving or
 undoing leaves a removed worktree removed, and the next message recreates it.
 
+Archiving a Claude task also archives its Claude session. Unarchiving or undoing
+unarchives it. A message that returns the task to the list unarchives it once
+its prompt reaches the session. A session that can't be archived doesn't stop
+the task archive.
+
 The **View archived tasks** icon beside a project on the Projects page lists
 that project's archived tasks from any chat, newest first. Select tasks to act
 on them, or select none to act on all.

@@ -116,5 +116,7 @@ export interface Provider {
   deleteSession?(task: Task, expectedVersion?: string): Promise<void>;
   /** Checks whether this task's provider session has a known cleanup location. */
   sessionDeletionStatus?(task: Task): Promise<SessionDeletionStatus>;
+  /** Archives or unarchives the provider-side session a task ran in. */
+  setSessionArchived?(task: Task, archived: boolean): Promise<void>;
   close?(): Promise<void>;
 }

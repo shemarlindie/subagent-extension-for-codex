@@ -4,7 +4,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
+  archiveSession,
   query,
+  unarchiveSession,
   type Query,
   type SDKMessage,
   type SDKUserMessage,
@@ -133,6 +135,27 @@ export class ClaudeAgentProvider implements Provider {
 
   sessionDeletionStatus(task: Task) {
     return claudeSessionDeletionStatus(task);
+  }
+
+  /**
+   * Sets or clears the session's archived mark, which `listSessions()`
+   * reports. A later prompt in the session clears the mark.
+   */
+  async setSessionArchived(task: Task, archived: boolean) {
+    const id = task.session_id;
+    if (!id) return;
+
+    // The SDK marks every transcript with the ID, so a copy in another
+    // project folder, such as a linked worktree's, would change too.
+    const paths = await sessionPaths(id);
+
+    if (paths.length !== 1 || paths[0] !== task.session_state_ref) {
+      throw new Error(
+        `Claude session ${id} isn't only at its recorded location (${paths.length} found).`,
+      );
+    }
+
+    await (archived ? archiveSession : unarchiveSession)(id);
   }
 
   models(
@@ -481,23 +504,28 @@ export class ClaudeAgentProvider implements Provider {
   }
 
   async sessionPath(id: string) {
-    const root = join(
-      (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
-        "NFC",
-      ),
-      "projects",
-    );
-
-    try {
-      for (const d of await readdir(root)) {
-        const p = join(root, d, `${id}.jsonl`);
-
-        try {
-          return await realpath(p);
-        } catch {}
-      }
-    } catch {}
-
-    return undefined;
+    return (await sessionPaths(id))[0];
   }
+}
+
+/** The real path of each project folder's transcript with this session ID. */
+async function sessionPaths(id: string) {
+  const root = join(
+    (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
+      "NFC",
+    ),
+    "projects",
+  );
+
+  const paths: string[] = [];
+
+  try {
+    for (const d of await readdir(root)) {
+      try {
+        paths.push(await realpath(join(root, d, `${id}.jsonl`)));
+      } catch {}
+    }
+  } catch {}
+
+  return paths;
 }
