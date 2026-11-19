@@ -248,7 +248,11 @@ To add a page:
   trigger that reads as text, like the header's project scope.
 - **Styles:** keep primitive styling beside its component or dialog. Define
   surface colors through CSS variables in `styles/theme.css`, and put panel
-  layout in `app/styles/`.
+  layout in `app/styles/`. Mix translucent gray fills from `--tint`. Add solid
+  grays as theme tokens, where dark theme gives each the same `--cool` share of
+  the accent. Give anything that floats, such as menus, toasts and floating
+  buttons, `--raised-bg` and `--raised-shadow` with no border. Dialogs use
+  `--dialog-bg`.
 - **Form:** add one for a new user-reviewed operation. Share fields and footers,
   declare its typed dialog variant, and export a `defineDialog` definition from
   the form with its title, render function, optional title-row controls and

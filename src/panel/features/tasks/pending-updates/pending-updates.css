@@ -92,7 +92,7 @@ header .pending-updates-button[data-waiting] {
   flex: none;
   padding: 1px 6px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
   color: var(--muted);
   font-size: 11px;
 }
