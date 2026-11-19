@@ -37,10 +37,10 @@ jobs:
       # The marketplace install test installs the plugin with the Codex CLI,
       # pinned to the version the README says the install is tested with.
       - run: npm install --global @openai/codex@0.162.1
-      # Usually under 30 seconds. A stalled package mirror otherwise retries
-      # for minutes before failing.
+      # Usually under 30 seconds, but a slow Ubuntu package mirror can take over
+      # a minute. A stalled mirror otherwise retries for minutes before failing.
       - run: npx playwright install --with-deps chromium
-        timeout-minutes: 1
+        timeout-minutes: 2
       # These steps run what npm test runs, one after another, so the checks
       # don't compete with the browser tests for the runner's 3 macOS cores.
       # Source checks give the same result on every OS, so only Ubuntu runs
