@@ -308,8 +308,12 @@
     position: absolute;
     top: 2px;
     right: 3px;
-    width: 24px;
+    /* The last dot centres in the menu's slot, in line with the rows' dots,
+       and earlier dots extend to the left. */
+    justify-content: flex-end;
+    min-width: 24px;
     height: 24px;
+    padding-inline-end: 8.5px;
     pointer-events: none;
   }
   .task-group-header:hover .task-group-signals,

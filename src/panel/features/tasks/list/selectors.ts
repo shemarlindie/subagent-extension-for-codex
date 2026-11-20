@@ -181,16 +181,21 @@ export function groupRows(tasks: Task[], selected?: string) {
 }
 
 /**
- * What a group's header or "Show more" row flags about tasks it hides. A task
- * that needs input names the attention dot before one paused by a rate limit.
+ * What a group's header or "Show more" row flags about tasks it hides: one dot
+ * each for attention, work and unread. A task that needs input names the
+ * attention dot before one paused by a rate limit.
  */
 export function groupSignals(tasks: Task[]) {
-  const attention = tasks.filter(needsAttention).map(rowStatus);
+  const statuses = tasks.map(rowStatus);
+
+  const toned = (tone: ReturnType<typeof statusTone>) =>
+    statuses.find((status) => statusTone(status.kind) === tone);
 
   return {
-    unread: tasks.some((task) => task.unread),
     attention:
-      attention.find((status) => status.kind === "input") ?? attention.at(0),
+      statuses.find((status) => status.kind === "input") ?? toned("attention"),
+    working: toned("working"),
+    unread: tasks.some((task) => task.unread),
   };
 }
 

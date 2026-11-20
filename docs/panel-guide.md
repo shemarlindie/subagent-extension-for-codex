@@ -136,7 +136,7 @@ Appearance** can hide worker icons.
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
 - A collapsed header shows its task count, and dots when a hidden task needs
-  input, waits for a rate limit or is unread.
+  attention, works or is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.

@@ -109,8 +109,22 @@ test("a collapsed header flags hidden unread tasks and tasks waiting on input", 
   assert.equal(within(header).queryByText("Unread"), null);
   await userEvent.click(header);
   within(header).getByText("Unread");
-  within(header).getByRole("img", { name: "Needs input" });
   view.getByText("2", { selector: ".task-group-count" });
+
+  // b0 is still running, so the dots follow the filters: unread, attention,
+  // then working.
+  assert.deepEqual(
+    within(header)
+      .getAllByRole("img")
+      .map((dot) => dot.getAttribute("aria-label")),
+    ["Needs input", "Running"],
+  );
+
+  assert.ok(
+    getElement(header, ".unread-dot").compareDocumentPosition(
+      within(header).getByRole("img", { name: "Needs input" }),
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  );
 });
 
 test("a collapsed header flags hidden tasks waiting for a rate limit", async () => {
@@ -134,7 +148,7 @@ test("long groups stop at a few rows until Show more, and Show less folds them a
 
   assert.deepEqual(rows("a"), ["a0", "a1", "a2", "a3", "a4"]);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(view.getByRole("button", { name: /^Show 2 more/ }));
   assert.equal(rows("a").length, 7);
 
   await userEvent.click(view.getByRole("button", { name: "Show less" }));
@@ -175,14 +189,14 @@ test("bulk selection skips hidden rows and keeps picks hidden by Show less", asy
   await choose("Select all shown");
   assert.deepEqual(pressed(), ["a0", "a1", "a2", "a3", "a4", "c0"]);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(view.getByRole("button", { name: /^Show 2 more/ }));
   await choose("Select all shown");
   await userEvent.click(view.getByRole("button", { name: "Show less" }));
   await choose("Deselect shown");
   view.getByText("2 selected · 2 hidden");
   assert.deepEqual(pressed(), []);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(view.getByRole("button", { name: /^Show 2 more/ }));
   assert.deepEqual(pressed(), ["a5", "a6"]);
 
   // With every group collapsed, a header still opens the selection's menu.
