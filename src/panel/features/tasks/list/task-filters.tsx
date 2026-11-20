@@ -105,9 +105,7 @@ export function TaskFilters() {
               <span
                 className="filter-count"
                 data-alert={
-                  !loading &&
-                  (filter === "attention" || filter === "failed") &&
-                  counts[filter] > 0
+                  !loading && filter === "attention" && counts[filter] > 0
                     ? ""
                     : undefined
                 }
