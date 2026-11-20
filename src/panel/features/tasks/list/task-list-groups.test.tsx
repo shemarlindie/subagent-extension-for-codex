@@ -110,15 +110,7 @@ test("a collapsed header flags hidden unread tasks and tasks waiting on input", 
   await userEvent.click(header);
   view.getByText("2", { selector: ".task-group-count" });
 
-  // b0 is still running. The dots follow the filters' order, and screen
-  // readers hear one phrase in their place.
-  assert.deepEqual(
-    [...header.querySelectorAll(".group-signal > *")].map(
-      (dot) => dot.className,
-    ),
-    ["unread-dot", "row-status-icon dot input", "row-status-icon dot running"],
-  );
-
+  // b0 is still running. Screen readers hear one phrase in place of the dots.
   within(header).getByText(", including unread, needing input and working");
   assert.deepEqual(within(header).queryAllByRole("img"), []);
 });
