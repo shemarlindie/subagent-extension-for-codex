@@ -7,7 +7,6 @@ import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
-import { measureRowTitle } from "./row-title-slide";
 import { rowStatus } from "./task-status";
 import { statusTone, TaskStatusIcon } from "./task-status-icon";
 import type { TaskRowClick } from "./use-task-selection";
@@ -67,8 +66,6 @@ export const TaskRow = memo(function TaskRow({
             aria-pressed={pressed}
             aria-disabled={disabled}
             onClick={select}
-            onPointerEnter={(event) => measureRowTitle(event.currentTarget)}
-            onFocus={(event) => measureRowTitle(event.currentTarget)}
           />
         }
       >
@@ -119,7 +116,9 @@ function TaskRowContent({ task }: TaskRowContentProps) {
   return (
     <>
       <span className="row-title">
-        <span className="row-title-text">{task.title}</span>
+        <span className="row-title-text">
+          <span className="row-title-slide">{task.title}</span>
+        </span>
       </span>
       <span className="row-worker" title={worker}>
         <WorkerProfileIcon

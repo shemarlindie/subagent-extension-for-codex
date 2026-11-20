@@ -177,36 +177,33 @@
 #task-list[data-row-icons="hidden"] .row-worker {
   display: contents;
 }
-/* After a short pause on hover or focus, a long title slides to show its end,
-   and its start fades at the left edge as it goes. It slides back when the
-   row loses hover or focus. row-title-slide.ts marks long titles and sets
-   the distance and duration. */
-@property --row-title-fade-start {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
-}
-.row-title[data-overflow] {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 var(--row-title-fade-start),
-    #000 calc(100% - 20px),
-    transparent
-  );
+/* After a short pause on hover or focus, a long title slides to show its end
+   clear of the right fade, and its start fades at the left edge as it goes.
+   It slides back when the row loses hover or focus. A title that fits has no
+   fade, so it stays put. Container units keep the distance current as the
+   row's width changes. */
+.row-title {
+  container-type: inline-size;
   transition: --row-title-fade-start var(--motion-base) var(--ease-out);
 }
-.row:is(:hover, :focus-visible) .row-title[data-overflow] {
+.row:is(:hover, :focus-visible) .row-title:has(.row-title-slide) {
+  /* The mask caps this at the right fade, so a title that fits gets none. */
   --row-title-fade-start: 20px;
   transition-delay: 0.3s;
 }
+/* The text's own box stays in place so the title keeps overflowing, and so
+   keeps its fade, while the inner text slides. */
 .row-title-text {
+  display: inline-block;
+  width: max-content;
+}
+.row-title-slide {
   display: inline-block;
   transition: transform var(--motion-base) var(--ease-out);
 }
-.row:is(:hover, :focus-visible) .row-title[data-overflow] .row-title-text {
-  transform: translateX(var(--title-slide-distance));
-  transition: transform var(--title-slide-duration) var(--ease-out) 0.3s;
+.row:is(:hover, :focus-visible) .row-title-slide {
+  transform: translateX(calc(min(0px, 100cqw - 100%) - var(--row-title-fade)));
+  transition: transform 0.5s var(--ease-out) 0.3s;
 }
 /* A fixed slot keeps every dot centred in the same place. */
 .row-signal {
