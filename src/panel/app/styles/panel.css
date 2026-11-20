@@ -366,6 +366,9 @@ header .toolbar {
   );
   animation: row-title-fade linear both;
   animation-timeline: scroll(self inline);
+  /* Overflow drives this, not time. Reduced motion's 0s duration would keep
+     the fade after the title fits again. */
+  animation-duration: auto !important;
 }
 /* A task status dot, the size of the unread dot. See task-status-icon.tsx. */
 .dot {
