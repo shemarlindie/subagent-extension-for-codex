@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import type { Task } from "../../../../shared/tasks/model.js";
+import { z } from "zod";
+
+import type { InputAuthority, Task } from "../../../../shared/tasks/model.js";
 import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { RunContext } from "../../providers/types.js";
 import {
@@ -11,6 +13,9 @@ import {
 import type { Store } from "../storage/store.js";
 
 type InputResponse = Awaited<ReturnType<RunContext["input"]>>;
+
+/** A question's answers, keyed by question, as Claude's AskUserQuestion takes them. */
+const questionAnswers = z.record(z.string(), z.string());
 
 /** Cancel a queued input without letting later requests bypass its predecessor. */
 async function waitForInputSlot(previous: Promise<void>, signal: AbortSignal) {
@@ -61,8 +66,27 @@ export class PendingInput {
     return !!this.resolveInput;
   }
 
-  submit(response: InputResponse) {
-    if (!this.resolveInput) throw new Error("No active input request");
+  /** Records who decided the request, with a question's answers, and resumes the worker. */
+  submit(response: InputResponse, authority: InputAuthority) {
+    const request = this.task.pending_input;
+
+    if (!this.resolveInput || !request) {
+      throw new Error("No active input request");
+    }
+
+    // Chat shows the answers to a question.
+    const answers =
+      request.kind === "question" && response.approved
+        ? questionAnswers.safeParse(response.input?.answers).data
+        : undefined;
+
+    this.store.event(this.task, "agent.input_decision", {
+      request_id: request.id,
+      approved: response.approved,
+      authority,
+      ...(answers ? { answers } : {}),
+    });
+
     this.resolveInput(response);
   }
 

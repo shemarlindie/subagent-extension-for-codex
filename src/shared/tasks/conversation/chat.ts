@@ -1,7 +1,7 @@
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { failureMessage } from "../failure.js";
-import type { Task } from "../model.js";
+import type { Sender, Task } from "../model.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
 /**
@@ -23,12 +23,14 @@ export const CHAT_EVENTS = [
 ];
 
 /**
- * Whether Chat shows an event: one of `CHAT_EVENTS`, or a context compaction,
- * which Claude reports among its other activity. Stored events keep the answer
- * in their `chat` column, so changing it needs a migration that updates them.
+ * Whether Chat shows an event: one of `CHAT_EVENTS`, answers to a question,
+ * or a context compaction, which Claude reports among its other activity.
+ * Stored events keep the answer in their `chat` column, so changing it needs
+ * a migration that updates them.
  */
 export const isChatEvent = (type: string, data: Record<string, unknown>) =>
   CHAT_EVENTS.includes(type) ||
+  (type === "agent.input_decision" && data.answers !== undefined) ||
   (type === "claude.activity" &&
     (data.subtype === "compact_boundary" || data.compact_result === "failed"));
 
@@ -63,7 +65,18 @@ export type ChatMessage = {
   message: ConversationMessage;
 };
 
-export type ChatItem = ChatMessage | TurnOutcome | ChatNote;
+/** Answers to the worker's questions, from whoever answered them. */
+export type ChatAnswers = {
+  kind: "answers";
+  id: string;
+  event_id: number;
+  timestamp: string;
+  from: Sender;
+  /** Each question with its answer, in question order. */
+  answers: { question: string; answer: string }[];
+};
+
+export type ChatItem = ChatMessage | TurnOutcome | ChatNote | ChatAnswers;
 
 /** A context compaction, which Claude reports as a system message. */
 const isCompaction = (e: Event) => {
@@ -141,12 +154,30 @@ function note(e: Event): ChatNote | undefined {
   return undefined;
 }
 
+function answered(e: Event): ChatAnswers | undefined {
+  const decision = eventPayload(e, "agent.input_decision");
+  if (!decision?.answers) return undefined;
+
+  return {
+    kind: "answers",
+    id: `evt_${e.id}`,
+    event_id: e.id,
+    timestamp: e.timestamp,
+    from: decision.authority,
+    answers: Object.entries(decision.answers).map(([question, answer]) => ({
+      question,
+      answer,
+    })),
+  };
+}
+
 /**
- * Chat for a task, in order: its conversation (see `conversation`), an
- * outcome row where each turn ended, with a failed turn's error, standalone
- * task failures, and small notes for a new session, worktree recreation,
- * compaction and a session limited to less than the task asked for. A
- * compaction's note stands in for the output of the command that ran it.
+ * Chat for a task, in order: its conversation (see `conversation`), answers
+ * to the worker's questions, an outcome row where each turn ended, with a
+ * failed turn's error, standalone task failures, and small notes for a new
+ * session, worktree recreation, compaction and a session limited to less than
+ * the task asked for. A compaction's note stands in for the output of the
+ * command that ran it.
  */
 export function chatItems(task: Task, events: Event[]): ChatItem[] {
   const sorted = [...events].sort((a, b) => a.id - b.id);
@@ -230,12 +261,15 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
         failedOutcome = undefined;
       }
 
-      const marker = note(e);
+      const marker = note(e) ?? answered(e);
 
       if (marker) {
         flush(e.id);
         items.push(marker);
-        if (marker.note === "compaction") compactedTurns.add(turn);
+
+        if (marker.kind === "note" && marker.note === "compaction") {
+          compactedTurns.add(turn);
+        }
       }
     }
   }

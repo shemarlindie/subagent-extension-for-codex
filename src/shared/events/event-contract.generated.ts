@@ -117,6 +117,7 @@ const agentInputDecisionPayloadSchema = z.object({
   request_id: z.string(),
   approved: z.boolean(),
   authority: z.union([z.literal("user"), z.literal("parent")]),
+  answers: z.record(z.string(), z.string()).optional(),
 });
 
 export const eventPayloadMapSchema = taskEventPayloadMapSchema.extend({

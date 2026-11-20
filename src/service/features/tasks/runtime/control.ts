@@ -1254,13 +1254,7 @@ export class Control {
     const a = this.active.get(id);
     if (!a?.input.waiting) throw new Error("No active input request");
 
-    this.store.event(t, "agent.input_decision", {
-      request_id: requestId,
-      approved,
-      authority,
-    });
-
-    a.input.submit({ approved, input, message });
+    a.input.submit({ approved, input, message }, authority);
 
     return this.store.get(id, owner);
   }

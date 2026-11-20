@@ -30,7 +30,7 @@ const task: Task = {
 const event = (id: number, type: string, data: Record<string, unknown> = {}) =>
   decodedEvent({ id, task_id: "task", type, timestamp: "", data });
 
-test("stored Chat events include compaction failures and exclude ordinary statuses", (t) => {
+test("stored Chat events include compaction failures and question answers, and exclude ordinary statuses and permission decisions", (t) => {
   const store = new Store(":memory:");
 
   t.onTestFinished(() => store.close());
@@ -60,7 +60,20 @@ test("stored Chat events include compaction failures and exclude ordinary status
     },
   });
 
-  assert.deepEqual(store.chatEvents(task.id), [failure]);
+  store.event(task, "agent.input_decision", {
+    request_id: "permission",
+    approved: true,
+    authority: "user",
+  });
+
+  const answers = store.event(task, "agent.input_decision", {
+    request_id: "question",
+    approved: true,
+    authority: "user",
+    answers: { "Which format?": "TOML" },
+  });
+
+  assert.deepEqual(store.chatEvents(task.id), [failure, answers]);
 });
 
 test("Chat shows a compaction failure between replies without ending the turn", () => {
@@ -142,7 +155,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
         return [item.kind, item.turn, item.outcome, item.error, item.event_id];
       }
 
-      return [item.kind, item.note];
+      return [item.kind, item.kind === "note" ? item.note : item.from];
     }),
     [
       ["message", "request"],
