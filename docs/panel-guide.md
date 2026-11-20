@@ -144,7 +144,7 @@ While you view a task, a toast announces new tasks in the current scope.
 stay in place until you navigate. If several other tasks arrive together, the
 toast shows the newest one. Notifications stay quiet while you compose a task,
 have a dialog open, wait for a submitted request or browse the list or another
-page.
+page. A panel you return to doesn't announce tasks created while it was hidden.
 
 Use the header's task list toggle to show or hide the list. Wide panels show a
 resizable list beside the inspector and remember its width and collapsed state.

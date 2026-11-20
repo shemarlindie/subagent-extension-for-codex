@@ -25,6 +25,11 @@ export function taskArrivalTarget(state: Snapshot) {
 export class TaskArrivals {
   private listed?: { scope: number; ids: Set<string>; newest: string };
 
+  /** Makes the next list a baseline, such as when a hidden panel is shown. */
+  reset() {
+    this.listed = undefined;
+  }
+
   update(
     tasks: Task[],
     state: Snapshot,
