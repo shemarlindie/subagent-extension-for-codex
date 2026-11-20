@@ -5,6 +5,7 @@ import { archivable } from "../../../../shared/tasks/archive.js";
 import { useController } from "../../../app/state/controller-context";
 import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
+import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
 import { rowStatus, statusTone } from "./task-status";
@@ -31,7 +32,8 @@ const TITLE_SLIDE_SPEED = 50;
  */
 function paceTitleSlide(title: HTMLElement | null) {
   const text = title?.querySelector<HTMLElement>(".row-title-text");
-  if (!title || !text) return;
+  // With reduced motion, CSS makes the title jump to its end.
+  if (!title || !text || reducedMotion(title)) return;
 
   const overflow = text.offsetWidth - title.clientWidth;
   if (overflow <= 0) return;
