@@ -39,9 +39,10 @@
   font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
-/* Matches the yellow dot on rows that need attention. */
+/* A lighter shade of the yellow dot on rows that need attention, so dark text
+   reads on it. */
 .filter-count[data-alert] {
-  background: var(--status-input);
+  background: var(--status-input-fill);
   color: var(--on-status-input);
 }
 .filter-count:has(.filter-count-skeleton) {
