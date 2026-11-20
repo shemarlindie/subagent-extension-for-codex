@@ -102,6 +102,8 @@ interface AgentInputDecisionPayload {
   request_id: string;
   approved: boolean;
   authority: "user" | "parent";
+  /** A question's answers as the worker receives them, keyed by question. */
+  answers?: Record<string, string>;
 }
 
 export interface EventPayloadMap extends TaskEventPayloadMap {

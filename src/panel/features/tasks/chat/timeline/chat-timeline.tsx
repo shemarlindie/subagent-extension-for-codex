@@ -30,6 +30,7 @@ import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
 import { ChatSkeleton } from "./chat-skeleton";
+import { QuestionAnswersRow } from "./question-answers-row";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 import { useHistoryMotion } from "./use-history-motion";
 import { WorkspaceFallbackNotice } from "./workspace-fallback-notice";
@@ -49,9 +50,9 @@ type ChatTimelineProps = {
 };
 
 /**
- * The conversation: messages, turn outcomes and notes, then what the worker
- * is doing now or the input it waits for. It follows new messages while the
- * reader is at the end.
+ * The conversation: messages, answers to questions, turn outcomes and notes,
+ * then what the worker is doing now or the input it waits for. It follows new
+ * messages while the reader is at the end.
  */
 export function ChatTimeline({
   task,
@@ -178,6 +179,13 @@ export function ChatTimeline({
                       item,
                     ) ? null : (
                       <TurnOutcomeRow outcome={item} />
+                    );
+                  } else if (item.kind === "answers") {
+                    row = (
+                      <QuestionAnswersRow
+                        item={item}
+                        arriving={animateArrivals}
+                      />
                     );
                   } else {
                     row = <ChatNoteRow note={item} />;

@@ -263,6 +263,53 @@ conversationTask.finish(sizeLimitReply, 1, {
 
 followUp(conversationTask, 2, fileTypeRequest);
 
+// The worker asks two questions, and the user answers one and skips the other.
+conversationTask.add("agent.input_required", {
+  request: {
+    id: "preview-conversation-question",
+    tool: "AskUserQuestion",
+    kind: "question",
+    input: {
+      questions: [
+        {
+          question: "How should a mismatched upload be handled?",
+          header: "Mismatch",
+          multiSelect: false,
+          options: [
+            {
+              label: "Reject with 415",
+              description: "The client must fix it.",
+            },
+            { label: "Accept and log", description: "Keep uploads working." },
+          ],
+        },
+        {
+          question: "Should the check cover existing uploads?",
+          header: "Existing",
+          multiSelect: false,
+          options: [
+            { label: "Yes", description: "Scan stored files once." },
+            { label: "No", description: "New uploads only." },
+          ],
+        },
+      ],
+    },
+  },
+});
+
+conversationTask.add("agent.input_decision", {
+  request_id: "preview-conversation-question",
+  approved: true,
+  authority: "user",
+  answers: {
+    "How should a mismatched upload be handled?": "Reject with 415",
+    "Should the check cover existing uploads?":
+      "(Skipped: the user has no preference; use your best judgment.)",
+  },
+});
+
+conversationTask.add("agent.input_submitted", { approved: true }, 200);
+
 conversationTask.tool(
   "Edit",
   {

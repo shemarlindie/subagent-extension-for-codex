@@ -52,7 +52,7 @@ test("a queued request aborted behind a shown one keeps the shown request's wait
   expect(input.waitedMs).toBe(10);
 
   step(20);
-  input.submit({ approved: true });
+  input.submit({ approved: true }, "user");
   await expect(first).resolves.toEqual({ approved: true });
   expect(input.waitedMs).toBe(30);
 
@@ -81,13 +81,13 @@ test("serialized requests add their user waits without overlap", async () => {
   expect(input.waiting).toBe(true);
 
   step(5);
-  input.submit({ approved: true });
+  input.submit({ approved: true }, "user");
   await first;
   // The next request is shown once the first one's slot is released.
   await settle();
   expect(input.waiting).toBe(true);
   step(7);
-  input.submit({ approved: false });
+  input.submit({ approved: false }, "user");
   await second;
 
   expect(input.waitedMs).toBe(12);

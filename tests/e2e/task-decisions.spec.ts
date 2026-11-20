@@ -105,4 +105,19 @@ test("answer stacked choices with a skip, then deny a tool with a message", asyn
   await expect(history).toContainText(
     '"Any notes for the fixture worker?":"(Skipped: the user has no preference; use your best judgment.)"',
   );
+
+  // Chat keeps each question with the user's answer.
+  const answers = history.getByRole("article", { name: "Your answers" });
+
+  await expect(answers.getByRole("definition")).toHaveText([
+    "Unit",
+    "Lint, Tests, Docs",
+    "Skipped",
+  ]);
+
+  await expect(answers.getByRole("term")).toHaveText([
+    "Which fixture path should be used?",
+    "Which fixture checks should run?",
+    "Any notes for the fixture worker?",
+  ]);
 });
