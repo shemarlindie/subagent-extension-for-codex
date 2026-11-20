@@ -128,9 +128,10 @@ Task runtime accumulates across turns and includes the active run. Under **All
 projects**, tasks group by project, ordered by each group's newest task. Project
 headers stay visible as their rows scroll.
 
-A dot at the end of a row shows a task that needs you or is working: amber when
-it needs input, red when it failed and green while it works. Hover the dot for
-the exact status. Titles too long for the row fade out at its right edge.
+A dot at the end of a row shows a task that needs you or is working: yellow when
+it needs input and pulsing gray while it works. Other statuses show no dot.
+Hover the dot for the exact status. Titles too long for the row fade out at its
+right edge.
 
 Turn on **Compact task rows** in **Settings > Appearance** to show each task on
 one line: worker icon, title and at most one dot. Compact rows leave out the
@@ -141,7 +142,7 @@ in browser storage wherever it is available.
 - The header shows the project's task count. Click it to collapse the group. The
   panel remembers collapsed groups across reloads where browser storage is
   available.
-- A collapsed header shows an amber dot when a hidden task needs input and an
+- A collapsed header shows a yellow dot when a hidden task needs input and an
   accent dot when one is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it

@@ -176,38 +176,36 @@ test("task list icons describe the running task's latest activity", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({})));
 
-  for (const [live_activity, kind, label] of [
-    [
-      { text: "Waiting for rate limit reset", state: "info" },
-      "paused",
-      "Waiting for rate limit reset",
-    ],
-    [
-      { text: "Context compaction failed", state: "failed" },
-      "failed",
-      "Compaction failed",
-    ],
-  ] as const) {
-    view.rerender(row(task({ live_activity })));
-    const icon = view.getByRole("img", { name: label });
-    assert.ok(icon.classList.contains(kind));
-    assert.equal(icon.getAttribute("title"), label);
+  const paused = {
+    text: "Waiting for rate limit reset",
+    state: "info",
+  } as const;
 
-    if (kind === "failed") {
-      assert.equal(rowRuntime(view), "Compaction failed");
+  view.rerender(row(task({ live_activity: paused })));
+  const icon = view.getByRole("img", { name: paused.text });
+  assert.ok(icon.classList.contains("paused"));
+  assert.equal(icon.getAttribute("title"), paused.text);
 
-      view.rerender(
-        row(
-          task({
-            live_activity,
-            run_started_at: new Date(Date.now() - 60_000).toISOString(),
-          }),
-        ),
-      );
+  // A failure shows no dot. The row's label names it.
+  const failed = {
+    text: "Context compaction failed",
+    state: "failed",
+  } as const;
 
-      assert.equal(rowRuntime(view), "Compaction failed");
-    }
-  }
+  view.rerender(row(task({ live_activity: failed })));
+  expect(view.queryByRole("img")).toBeNull();
+  assert.equal(rowRuntime(view), "Compaction failed");
+
+  view.rerender(
+    row(
+      task({
+        live_activity: failed,
+        run_started_at: new Date(Date.now() - 60_000).toISOString(),
+      }),
+    ),
+  );
+
+  assert.equal(rowRuntime(view), "Compaction failed");
 });
 
 test("terminal states and input requests take precedence over stale activity", (t) => {
@@ -220,14 +218,15 @@ test("terminal states and input requests take precedence over stale activity", (
 
   const view = render(row(task({ live_activity })));
 
-  // A completed row shows no dot, so only screen readers hear its status.
-  view.rerender(row(task({ status: "completed", live_activity })));
-  view.getByText("Completed");
-  expect(view.queryByRole("img")).toBeNull();
-
-  view.rerender(row(task({ status: "failed", live_activity })));
-  view.getByRole("img", { name: "Failed" });
-  expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
+  // Finished rows show no dot, so only screen readers hear their status.
+  for (const [status, label] of [
+    ["completed", "Completed"],
+    ["failed", "Failed"],
+  ] as const) {
+    view.rerender(row(task({ status, live_activity })));
+    view.getByText(label);
+    expect(view.queryByRole("img")).toBeNull();
+  }
 
   view.rerender(
     row(

@@ -38,8 +38,8 @@
     transform: translateX(12px);
   }
 }
-/* A halo gently brightens and dims in place, without growing. */
-@keyframes motion-glow {
+/* A working dot or a halo fades out and back in, without growing. */
+@keyframes motion-pulse {
   50% {
     opacity: 0.3;
   }

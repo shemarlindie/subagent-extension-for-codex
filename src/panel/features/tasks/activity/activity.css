@@ -216,12 +216,12 @@
 }
 /* A status dot fills a 12px slot, the size of the worker icon. */
 .row-status-icon {
-  margin: 3px;
+  margin: 2.5px;
 }
 .row-status-glow {
   fill: currentColor;
   opacity: 0.15;
-  animation: motion-glow 2.4s ease-in-out infinite;
+  animation: motion-pulse 2.4s ease-in-out infinite;
 }
 /* Timeline: the rail runs between the first and last markers rather than past them. */
 .timeline-item {

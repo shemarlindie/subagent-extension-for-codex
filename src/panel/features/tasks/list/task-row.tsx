@@ -166,9 +166,9 @@ function CompactTaskRowContent({ task }: TaskRowContentProps) {
 }
 
 /**
- * One dot at most: a task that needs input or failed, then one at work, then
- * one with something unread. Screen readers hear the unread state and status
- * whichever dot shows.
+ * One dot at most: a task that needs input, then one at work, then one with
+ * something unread. Screen readers hear the unread state and status whichever
+ * dot shows.
  */
 function CompactRowSignal({ task }: { task: Task }) {
   const quiet = statusTone(rowStatus(task).kind) === "quiet";
@@ -186,8 +186,8 @@ function CompactRowSignal({ task }: { task: Task }) {
   );
 }
 
-// Rows show a dot only for work, input and failures. A stopped or waiting
-// task's runtime or label says enough, so its status is for screen readers.
+// Rows show a dot only for work and input. Otherwise the runtime or label says
+// enough, so the status is for screen readers.
 function TaskRowStatus({ task }: { task: Task }) {
   const { kind, label } = rowStatus(task);
 

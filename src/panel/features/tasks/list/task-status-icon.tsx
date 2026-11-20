@@ -5,18 +5,18 @@ type StatusPresentation = ReturnType<typeof rowStatus>;
 type StatusKind = StatusPresentation["kind"];
 
 /**
- * A status shows as a dot in one of four tones: green and glowing while the
- * task works, amber when it needs input, red when it failed, and gray once
- * it stops or waits its turn. The label carries the exact status.
+ * A working task's dot pulses gray, and one that needs input shows yellow.
+ * Rows leave out the dot for quiet statuses, and the label carries the exact
+ * status.
  */
-type StatusTone = "working" | "input" | "failed" | "quiet";
+type StatusTone = "working" | "input" | "quiet";
 
 const STATUS_TONES: Record<StatusKind, StatusTone> = {
   starting: "working",
   running: "working",
   paused: "working",
   input: "input",
-  failed: "failed",
+  failed: "quiet",
   queued: "quiet",
   waiting: "quiet",
   interrupted: "quiet",

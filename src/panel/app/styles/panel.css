@@ -339,24 +339,21 @@ header .toolbar {
   margin-top: 3px;
   overflow-wrap: anywhere;
 }
-/* A task status dot. See task-status-icon.tsx for its tones. */
+/* A task status dot, the size of the unread dot. See task-status-icon.tsx. */
 .dot {
   display: inline-block;
   vertical-align: middle;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--muted);
   flex-shrink: 0;
 }
 .dot[data-tone="working"] {
-  background: var(--success);
+  animation: motion-pulse 1.6s ease-in-out infinite;
 }
 .dot[data-tone="input"] {
-  background: var(--status-paused);
-}
-.dot[data-tone="failed"] {
-  background: var(--danger);
+  background: var(--status-input);
 }
 .detail {
   padding: 8px 24px 22px;
