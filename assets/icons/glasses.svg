@@ -5,13 +5,13 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="1.815"
+  stroke-width="2"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <rect x="2.42" y="5.95" width="8.571" height="12.101" rx="3.025"></rect>
-  <rect x="13.008" y="5.95" width="8.571" height="12.101" rx="3.025"></rect>
+  <circle cx="6" cy="15" r="4.5"></circle>
+  <circle cx="18" cy="15" r="4.5"></circle>
   <path
-    d="M2.42 7.966 0.908 7.462M10.487 10.487c0.504-1.21 2.521-1.21 3.025 0m8.067-2.017 1.513-0.504"
+    d="M10.5 14.2c.9-1 2.1-1 3 0M1.6 14 3.6 6.6A1.6 1.6 0 0 1 5.1 5.5H6.5M22.4 14 20.4 6.6a1.6 1.6 0 0 0-1.5-1.1h-1.4"
   ></path>
 </svg>
