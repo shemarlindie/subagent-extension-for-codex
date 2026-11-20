@@ -339,23 +339,23 @@ header .toolbar {
   margin-top: 3px;
   overflow-wrap: anywhere;
 }
+/* A task status dot. See task-status-icon.tsx for its tones. */
 .dot {
+  display: inline-block;
+  vertical-align: middle;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--muted);
   flex-shrink: 0;
 }
-.dot.running {
+.dot[data-tone="working"] {
   background: var(--success);
 }
-.dot.completed {
-  background: var(--success);
+.dot[data-tone="input"] {
+  background: var(--status-paused);
 }
-.dot.waiting {
-  background: var(--warn);
-}
-.dot.failed {
+.dot[data-tone="failed"] {
   background: var(--danger);
 }
 .detail {

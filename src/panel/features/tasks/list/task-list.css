@@ -153,6 +153,12 @@
   height: 10px;
   border-radius: 50%;
 }
+/* Matches a status dot and its margin. */
+.task-list-skeleton-status {
+  width: 6px;
+  height: 6px;
+  margin: 3px;
+}
 .task-list-skeleton-runtime {
   width: 54px;
   height: 7px;
@@ -169,18 +175,11 @@
   min-width: 0;
 }
 .task-list-skeleton-row[data-compact] .task-list-skeleton-profile {
-  width: 14px;
-  height: 14px;
-}
-.task-list-skeleton-row[data-compact] .task-list-skeleton-status {
   width: 12px;
   height: 12px;
 }
-.row .row-status-icon.completed {
-  color: var(--muted);
-}
 
-/* Compact rows: profile icon, title and status mark on one line. The title
+/* Compact rows: profile icon, title and one signal dot on one line. The title
    comes first in the DOM, so screen readers hear it first. */
 .row[data-compact] {
   display: flex;
@@ -194,34 +193,21 @@
   min-width: 0;
 }
 .row[data-compact] .row-worker {
-  position: relative;
   order: -1;
   display: flex;
   flex: none;
   color: var(--muted);
 }
-.row[data-compact] .row-worker-icon {
-  width: 14px;
-  height: 14px;
+/* A fixed slot keeps titles the same width whether or not a dot shows. */
+.row-signal {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 12px;
 }
-/* Unread: an accent dot on the icon's corner, cut out of the icon so it
-   reads on any row background. */
-.row[data-compact] .unread-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
+.row-signal .unread-dot {
   width: 6px;
   height: 6px;
-}
-.row[data-compact][data-unread] .row-worker-icon {
-  mask-image: radial-gradient(
-    circle at 13px 1px,
-    transparent 4.25px,
-    #000 4.75px
-  );
-}
-.row[data-compact] > .row-status-icon {
-  margin-inline-end: 2px;
 }
 @media (pointer: coarse) {
   .row[data-compact] {

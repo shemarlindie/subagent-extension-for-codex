@@ -128,22 +128,21 @@ Task runtime accumulates across turns and includes the active run. Under **All
 projects**, tasks group by project, ordered by each group's newest task. Project
 headers stay visible as their rows scroll.
 
-Each row ends with a status mark: a turning arc while the task works, a dashed
-ring while it waits, a ring with a dot when it needs input, a square when
-interrupted, a red exclamation when it failed and a check when done. Hover a
-mark for the exact status. Titles too long for the row fade out at its right
-edge.
+A dot at the end of a row shows a task that needs you or is working: amber when
+it needs input, red when it failed and green while it works. Hover the dot for
+the exact status. Titles too long for the row fade out at its right edge.
 
 Turn on **Compact task rows** in **Settings > Appearance** to show each task on
-one line, with its worker icon before the title and the runtime left out. It
-applies right away, and the panel keeps it in browser storage wherever it is
-available.
+one line: worker icon, title and at most one dot. Compact rows leave out the
+runtime, and show the unread dot in place of a status dot when the task neither
+needs you nor is working. The setting applies right away, and the panel keeps it
+in browser storage wherever it is available.
 
 - The header shows the project's task count. Click it to collapse the group. The
   panel remembers collapsed groups across reloads where browser storage is
   available.
-- A collapsed header shows a pencil when a hidden task needs input and an accent
-  dot when one is unread.
+- A collapsed header shows an amber dot when a hidden task needs input and an
+  accent dot when one is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.
@@ -181,7 +180,7 @@ conversation clears the selection.
 A task becomes unread when it has a worker message or reply, a turn end, a
 failure, or a question or permission request you haven't seen. Your own messages
 never make a task unread. Unread rows show an accent dot after the worker icon,
-or on its corner in compact rows, and the compact panel adds **N unread** to its
+or at the end of compact rows, and the compact panel adds **N unread** to its
 counts.
 
 A task becomes read when its Chat tab shows the latest message. Opening an

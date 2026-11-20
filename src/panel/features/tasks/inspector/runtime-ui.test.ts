@@ -191,7 +191,7 @@ test("task list icons describe the running task's latest activity", (t) => {
     view.rerender(row(task({ live_activity })));
     const icon = view.getByRole("img", { name: label });
     assert.ok(icon.classList.contains(kind));
-    assert.equal(icon.querySelector("title")?.textContent, label);
+    assert.equal(icon.getAttribute("title"), label);
 
     if (kind === "failed") {
       assert.equal(rowRuntime(view), "Compaction failed");
@@ -220,15 +220,14 @@ test("terminal states and input requests take precedence over stale activity", (
 
   const view = render(row(task({ live_activity })));
 
-  for (const status of ["completed", "failed"] as const) {
-    view.rerender(row(task({ status, live_activity })));
+  // A completed row shows no dot, so only screen readers hear its status.
+  view.rerender(row(task({ status: "completed", live_activity })));
+  view.getByText("Completed");
+  expect(view.queryByRole("img")).toBeNull();
 
-    view.getByRole("img", {
-      name: status.charAt(0).toUpperCase() + status.slice(1),
-    });
-
-    expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
-  }
+  view.rerender(row(task({ status: "failed", live_activity })));
+  view.getByRole("img", { name: "Failed" });
+  expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
 
   view.rerender(
     row(

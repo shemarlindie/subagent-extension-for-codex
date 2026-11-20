@@ -183,12 +183,6 @@
   right: 20px;
   bottom: 16px;
 }
-/* Every status dot wears a faint halo in its own colour (the motion section makes a running task's breathe). */
-.dot {
-  position: relative;
-  display: inline-block;
-  vertical-align: middle;
-}
 .row-meta {
   justify-content: space-between;
 }
@@ -220,53 +214,14 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* Status marks: see task-status-icon.tsx. Waiting and stopped marks are muted,
-   except a rate-limit pause, which takes the paused color below. */
+/* A status dot fills a 12px slot, the size of the worker icon. */
 .row-status-icon {
-  display: block;
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-.row-status-icon[data-mark="working"] {
-  color: var(--success);
-  animation: row-status-turn 0.9s linear infinite;
-}
-@keyframes row-status-turn {
-  to {
-    transform: rotate(1turn);
-  }
-}
-.row-status-icon[data-mark="pending"],
-.row-status-icon[data-mark="stopped"] {
-  color: var(--muted);
-}
-.row-status-knockout {
-  fill: var(--bg);
-  stroke: var(--bg);
-}
-.row-status-icon.completed {
-  color: var(--success);
+  margin: 3px;
 }
 .row-status-glow {
   fill: currentColor;
   opacity: 0.15;
   animation: motion-glow 2.4s ease-in-out infinite;
-}
-.row-status-icon.paused,
-.row-status-icon.input {
-  color: var(--status-paused);
-}
-.row-status-icon.failed {
-  color: var(--danger);
-}
-.dot::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: inherit;
-  opacity: 0.15;
 }
 /* Timeline: the rail runs between the first and last markers rather than past them. */
 .timeline-item {

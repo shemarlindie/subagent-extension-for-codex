@@ -74,7 +74,7 @@ test("a compact row names its title, worker, unread state and status", () => {
   // The open context menu hides the row from the accessibility tree. Without
   // layout, jsdom joins the inline parts without spaces.
   const row = view.getByRole("button", {
-    name: /^Plan the rollout\s*Unread\s*reviewer\s*Completed$/,
+    name: /^Plan the rollout\s*reviewer\s*Unread\s*Completed$/,
     hidden: true,
   });
 

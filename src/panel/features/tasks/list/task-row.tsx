@@ -9,7 +9,7 @@ import { useNow } from "../../../shared/utils/use-now";
 import { UnreadDot } from "../unread/unread-dot";
 import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
 import { rowStatus } from "./task-status";
-import { TaskStatusIcon } from "./task-status-icon";
+import { statusTone, TaskStatusIcon } from "./task-status-icon";
 import type { TaskRowClick } from "./use-task-selection";
 import { WorkerProfileIcon } from "./worker-profile-icon";
 
@@ -155,21 +155,47 @@ function CompactTaskRowContent({ task }: TaskRowContentProps) {
       <span className="row-worker" title={worker}>
         <WorkerProfileIcon
           profile={task.worker_profile}
-          size={14}
+          size={12}
           className="row-worker-icon"
         />
-        {task.unread && <UnreadDot />}
         <span className="visually-hidden">{worker}</span>
       </span>
-      <TaskRowStatus task={task} />
+      <CompactRowSignal task={task} />
     </>
   );
 }
 
+/**
+ * One dot at most: a task that needs input or failed, then one at work, then
+ * one with something unread. Screen readers hear the unread state and status
+ * whichever dot shows.
+ */
+function CompactRowSignal({ task }: { task: Task }) {
+  const quiet = statusTone(rowStatus(task).kind) === "quiet";
+
+  return (
+    <span className="row-signal">
+      {task.unread &&
+        (quiet ? (
+          <UnreadDot />
+        ) : (
+          <span className="visually-hidden">Unread</span>
+        ))}
+      <TaskRowStatus task={task} />
+    </span>
+  );
+}
+
+// Rows show a dot only for work, input and failures. A stopped or waiting
+// task's runtime or label says enough, so its status is for screen readers.
 function TaskRowStatus({ task }: { task: Task }) {
   const { kind, label } = rowStatus(task);
 
-  return <TaskStatusIcon kind={kind} label={label} />;
+  return statusTone(kind) === "quiet" ? (
+    <span className="visually-hidden">{label}</span>
+  ) : (
+    <TaskStatusIcon kind={kind} label={label} />
+  );
 }
 
 function TaskRowRuntime({ task }: { task: Task }) {

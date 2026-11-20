@@ -38,21 +38,7 @@
     transform: translateX(12px);
   }
 }
-/*
- * A waiting task's dot sends out a ring, then the next one starts. The ring grows from the
- * dot's edge to 4px past it, speeding up the whole way. It holds its strength until 75% of
- * the way, then fades out, also speeding up. Growth and fade run as two animations so each
- * keeps its own timing. --ping-start is the dot's share of the ring's full size.
- */
-@keyframes motion-ping-grow {
-  from {
-    transform: scale(var(--ping-start));
-  }
-  to {
-    transform: none;
-  }
-}
-/* A running task's halo gently brightens and dims in place, without growing. */
+/* A halo gently brightens and dims in place, without growing. */
 @keyframes motion-glow {
   50% {
     opacity: 0.3;
@@ -62,17 +48,6 @@
 @keyframes motion-glow-rail {
   50% {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot-color) 30%, var(--bg));
-  }
-}
-@keyframes motion-ping-fade {
-  0%,
-  75% {
-    opacity: 0.35;
-    /* Applies to the 75% → 100% stretch, so the fade accelerates. */
-    animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
-  }
-  100% {
-    opacity: 0;
   }
 }
 
@@ -191,25 +166,12 @@
   animation: motion-fade var(--motion-base) var(--ease-out);
 }
 
-/* Status colours cross-fade; only a running task's halo breathes, other halos hold still. */
+/* Status colours cross-fade. */
 .dot,
 .timeline-dot {
   transition:
     background-color var(--motion-slow) ease,
     box-shadow var(--motion-slow) ease;
-}
-/* Waiting asks for attention, so it sends out rings. */
-.dot.waiting::after {
-  /* The ring's full size: 4px past the dot on each side; a 6px dot in a 14px ring. */
-  inset: -4px;
-  --ping-start: 0.4286;
-  animation:
-    motion-ping-grow 1.4s cubic-bezier(0.5, 0, 1, 1) infinite,
-    motion-ping-fade 1.4s linear infinite;
-}
-/* Running is the normal state, so it only glows softly. */
-.dot.live::after {
-  animation: motion-glow 2.4s ease-in-out infinite;
 }
 .timeline-dot[data-status="running"] {
   animation: motion-glow-rail 2.4s ease-in-out infinite;

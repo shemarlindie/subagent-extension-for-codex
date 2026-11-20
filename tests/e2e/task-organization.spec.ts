@@ -29,7 +29,7 @@ test("filter, search and rename tasks, keeping the choices across reload", async
   await expect(row(/Document the API/)).toBeVisible();
   await filter(/^Failed, 1/).click();
   await expect(rows).toHaveCount(1);
-  await expect(row(/Fix flaky search/)).toContainText("Failed");
+  await expect(row(/Fix flaky search/)).toHaveAccessibleName(/Failed$/);
   await filter(/^Done, 1/).click();
   await expect(rows).toHaveCount(1);
   await page.reload();

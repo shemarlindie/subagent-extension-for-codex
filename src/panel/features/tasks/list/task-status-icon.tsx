@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import type { rowStatus } from "./task-status";
 
 type StatusPresentation = ReturnType<typeof rowStatus>;
@@ -7,67 +5,25 @@ type StatusPresentation = ReturnType<typeof rowStatus>;
 type StatusKind = StatusPresentation["kind"];
 
 /**
- * Statuses share six marks, each told apart by shape as well as color: an arc
- * that turns while work runs, a dashed ring while it waits, a ring with a dot
- * when it needs input, a square when interrupted, an exclamation when it
- * failed and a check when done.
+ * A status shows as a dot in one of four tones: green and glowing while the
+ * task works, amber when it needs input, red when it failed, and gray once
+ * it stops or waits its turn. The label carries the exact status.
  */
-type StatusMark =
-  "working" | "pending" | "input" | "stopped" | "failed" | "done";
+type StatusTone = "working" | "input" | "failed" | "quiet";
 
-const STATUS_MARKS: Record<StatusKind, StatusMark> = {
+const STATUS_TONES: Record<StatusKind, StatusTone> = {
   starting: "working",
   running: "working",
-  queued: "pending",
-  waiting: "pending",
-  paused: "pending",
+  paused: "working",
   input: "input",
-  interrupted: "stopped",
   failed: "failed",
-  completed: "done",
+  queued: "quiet",
+  waiting: "quiet",
+  interrupted: "quiet",
+  completed: "quiet",
 };
 
-// Drawn on a 16px grid around a ring of radius 6.
-const MARK_ARTWORK: Record<StatusMark, ReactNode> = {
-  working: (
-    <>
-      <circle cx="8" cy="8" r="6" opacity="0.25" />
-      <path d="M8 2a6 6 0 0 1 5.2 9" />
-    </>
-  ),
-  pending: <circle cx="8" cy="8" r="6" strokeDasharray="2.36 2.36" />,
-  input: (
-    <>
-      <circle cx="8" cy="8" r="6" />
-      <circle cx="8" cy="8" r="2.5" fill="currentColor" stroke="none" />
-    </>
-  ),
-  stopped: (
-    <rect
-      x="4"
-      y="4"
-      width="8"
-      height="8"
-      rx="1.75"
-      fill="currentColor"
-      stroke="none"
-    />
-  ),
-  failed: (
-    <>
-      <circle cx="8" cy="8" r="6.75" fill="currentColor" stroke="none" />
-      <path d="M8 4.75v3.75" className="row-status-knockout" />
-      <circle
-        cx="8"
-        cy="11.1"
-        r="0.95"
-        className="row-status-knockout"
-        stroke="none"
-      />
-    </>
-  ),
-  done: <path d="M3.5 8.5 6.5 11.5 12.5 4.75" />,
-};
+export const statusTone = (kind: StatusKind) => STATUS_TONES[kind];
 
 interface TaskStatusIconProps extends Pick<
   StatusPresentation,
@@ -81,27 +37,14 @@ export function TaskStatusIcon({
   label,
   decorative = false,
 }: TaskStatusIconProps) {
-  const mark = STATUS_MARKS[kind];
-  const named = !decorative;
-
   return (
-    <svg
-      viewBox="0 0 16 16"
-      width={12}
-      height={12}
-      className={`row-status-icon ${kind}`}
-      data-mark={mark}
-      role={named ? "img" : undefined}
-      aria-label={named ? label : undefined}
-      aria-hidden={named ? undefined : true}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {named && <title>{label}</title>}
-      {MARK_ARTWORK[mark]}
-    </svg>
+    <span
+      className={`row-status-icon dot ${kind}`}
+      data-tone={statusTone(kind)}
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative || undefined}
+      title={decorative ? undefined : label}
+    />
   );
 }
