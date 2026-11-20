@@ -1,5 +1,5 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
-import { memo, type MouseEvent } from "react";
+import { memo, type MouseEvent, type SyntheticEvent } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
 import { useController } from "../../../app/state/controller-context";
@@ -19,6 +19,37 @@ interface TaskRowProps {
   disabled?: boolean;
   onActivate?: (id: string, action: TaskRowClick) => void;
 }
+
+// Pixels per second a long title slides on hover or focus.
+const TITLE_SLIDE_SPEED = 50;
+
+/**
+ * Times a long title's slide from its overflow, so every title slides at
+ * about the same easy pace. CSS can't turn a width into a duration. Titles
+ * measure when they mount, which covers rows that appear under a still
+ * pointer, and again on hover or focus in case the row's width changed.
+ */
+function paceTitleSlide(title: HTMLElement | null) {
+  const text = title?.querySelector<HTMLElement>(".row-title-text");
+  if (!title || !text) return;
+
+  const overflow = text.offsetWidth - title.clientWidth;
+  if (overflow <= 0) return;
+
+  const seconds = Math.max(0.6, overflow / TITLE_SLIDE_SPEED);
+  title.style.setProperty("--row-title-slide-duration", `${seconds}s`);
+
+  // Measuring on hover applies the hover style first, which starts the slide
+  // with the old duration, so the slide takes the new one directly.
+  for (const animation of title.getAnimations({ subtree: true })) {
+    if (animation instanceof CSSTransition) {
+      animation.effect?.updateTiming({ duration: seconds * 1000 });
+    }
+  }
+}
+
+const repaceTitleSlide = (event: SyntheticEvent<HTMLElement>) =>
+  paceTitleSlide(event.currentTarget.querySelector(".row-title"));
 
 /** A task in the list with actions on right-click or long-press. */
 export const TaskRow = memo(function TaskRow({
@@ -66,6 +97,8 @@ export const TaskRow = memo(function TaskRow({
             aria-pressed={pressed}
             aria-disabled={disabled}
             onClick={select}
+            onPointerEnter={repaceTitleSlide}
+            onFocus={repaceTitleSlide}
           />
         }
       >
@@ -115,7 +148,7 @@ function TaskRowContent({ task }: TaskRowContentProps) {
 
   return (
     <>
-      <span className="row-title">
+      <span className="row-title" ref={paceTitleSlide}>
         <span className="row-title-text">
           <span className="row-title-slide">{task.title}</span>
         </span>

@@ -332,8 +332,9 @@ header .toolbar {
   background: var(--sidebar-selected);
 }
 /* A title too long for its row fades out at the right edge. A title that fits
-   has no scroll timeline, so it keeps the unfaded initial value. Task rows
-   also fade the start while a long title slides, as task-list.css sets. */
+   has no scroll timeline, so it keeps the unfaded initial value. While a
+   task row's long title slides, task-list.css fades its start and clears its
+   end fade. */
 @property --row-title-fade {
   syntax: "<length>";
   inherits: true;
@@ -343,6 +344,11 @@ header .toolbar {
   syntax: "<length>";
   inherits: false;
   initial-value: 0px;
+}
+@property --row-title-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 20px;
 }
 @keyframes row-title-fade {
   from,
@@ -361,7 +367,7 @@ header .toolbar {
     to right,
     transparent,
     #000 min(var(--row-title-fade-start), var(--row-title-fade)),
-    #000 calc(100% - var(--row-title-fade)),
+    #000 calc(100% - min(var(--row-title-fade-end), var(--row-title-fade))),
     transparent
   );
   animation: row-title-fade linear both;

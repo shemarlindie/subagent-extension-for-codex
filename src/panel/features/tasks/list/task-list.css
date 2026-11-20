@@ -177,19 +177,26 @@
 #task-list[data-row-icons="hidden"] .row-worker {
   display: contents;
 }
-/* After a short pause on hover or focus, a long title slides to show its end
-   clear of the right fade, and its start fades at the left edge as it goes.
-   It slides back when the row loses hover or focus. A title that fits has no
-   fade, so it stays put. Container units keep the distance current as the
-   row's width changes. */
+/* After a short pause on hover or focus, a long title slides to its end. Its
+   start fades at the left edge as it goes, and the right fade clears as the
+   end arrives. It slides back when the row loses hover or focus. A title that
+   fits has no fade, so it stays put. Container units keep the distance
+   current as the row's width changes. */
 .row-title {
   container-type: inline-size;
-  transition: --row-title-fade-start var(--motion-base) var(--ease-out);
+  transition:
+    --row-title-fade-start var(--motion-base) var(--ease-out),
+    --row-title-fade-end var(--motion-base) var(--ease-out);
 }
 .row:is(:hover, :focus-visible) .row-title:has(.row-title-slide) {
   /* The mask caps this at the right fade, so a title that fits gets none. */
   --row-title-fade-start: 20px;
-  transition-delay: 0.3s;
+  --row-title-fade-end: 0px;
+  /* The fades follow the slide. The left one grows early as the start leaves,
+     and the right one lingers while text still runs past the edge. */
+  transition:
+    --row-title-fade-start var(--row-title-slide-duration, 0.6s) ease-out 0.3s,
+    --row-title-fade-end var(--row-title-slide-duration, 0.6s) ease-in 0.3s;
 }
 /* The text's own box stays in place so the title keeps overflowing, and so
    keeps its fade, while the inner text slides. */
@@ -197,13 +204,21 @@
   display: inline-block;
   width: max-content;
 }
+/* The row times the slide from the title's overflow, so long titles move at
+   an easy, steady pace. The return takes a third as long, up to 0.8s. */
 .row-title-slide {
   display: inline-block;
-  transition: transform var(--motion-base) var(--ease-out);
+  transition: transform
+    clamp(
+      var(--motion-slow),
+      calc(var(--row-title-slide-duration, 0.6s) / 3),
+      0.8s
+    )
+    ease-in-out;
 }
 .row:is(:hover, :focus-visible) .row-title-slide {
-  transform: translateX(calc(min(0px, 100cqw - 100%) - var(--row-title-fade)));
-  transition: transform 0.5s var(--ease-out) 0.3s;
+  transform: translateX(min(0px, 100cqw - 100%));
+  transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
 }
 /* A fixed slot keeps every dot centred in the same place. */
 .row-signal {
