@@ -215,8 +215,8 @@
   justify-content: center;
   width: 12px;
 }
-/* Project groups in the all-projects list. Primary text sets headers apart
-   from the muted scope label above the list. */
+/* Project groups in the all-projects list. Muted bold headers sit back from
+   the task titles. */
 #task-list {
   --task-group-header-height: 28px;
 }
@@ -249,20 +249,15 @@
   min-width: 0;
   height: 100%;
   padding: 0 6px;
-  color: var(--text);
+  color: var(--muted);
   font-weight: 600;
   text-align: start;
 }
-/* A collapsed group's name fades and its count shows. */
 .task-group-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: color var(--motion-base) var(--ease-out);
-}
-.task-group-toggle:not([data-panel-open]) .task-group-name {
-  color: var(--muted);
 }
 .task-group-count {
   flex: none;
