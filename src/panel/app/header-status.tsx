@@ -7,7 +7,7 @@ import { useSnapshot } from "./state/controller-context";
 const UPDATING = "Updating…";
 
 const UPDATING_NOTE =
-  "A new version of the extension is installed. It takes over once running turns finish, and starts new turns after that.";
+  "A new version of the extension is installed. It takes over once working tasks finish their turns, and starts new turns after that.";
 
 /**
  * The header's service status: connection problems, or an update waiting for

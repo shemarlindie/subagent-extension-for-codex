@@ -219,7 +219,7 @@ function GroupCard({
     : rateLimitStats(group.events, preferences);
 
   let badge: string | undefined;
-  if (group.state === "running") badge = "Running";
+  if (group.state === "running") badge = "Working";
   else if (group.state === "failed") badge = "Failed";
   else if (group.state === "completed" && !conversational) badge = "Done";
 

@@ -90,7 +90,7 @@ export function Composer({
   const hint = mode === "input" ? inputHint : HINTS[mode];
 
   const sendTooltip =
-    mode === "busy" ? "Send into the running turn (Enter)" : "Send (Enter)";
+    mode === "busy" ? "Send into the current turn (Enter)" : "Send (Enter)";
 
   const continueLabel = mode === "busy" ? "Steer" : "Send";
   const inputRequest = task?.pending_input?.id;

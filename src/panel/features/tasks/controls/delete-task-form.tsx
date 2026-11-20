@@ -58,7 +58,7 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
       )}
     >
       <p className="form-note">
-        Delete this task and the resources listed below? Running work will stop
+        Delete this task and the resources listed below? Work in progress stops
         first. This can't be undone.
       </p>
       <Controller

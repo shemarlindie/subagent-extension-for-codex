@@ -49,9 +49,9 @@ Tasks** returns to the previous task view.
 - **Remove project** asks for confirmation.
 
 By default, removal deletes only the saved registration. Files, task history and
-worktrees remain. Running turns may finish, and later turns need approval again.
-Parent approvals still apply, and starting a task from the repository's chat can
-register it again. Parent approvals set in
+worktrees remain. Working tasks may finish their turns, but later turns need
+approval again. Parent approvals still apply, and starting a task from the
+repository's chat can register it again. Parent approvals set in
 `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` return when the service restarts
 unless you remove them from that setting.
 
@@ -256,7 +256,7 @@ three affected tasks or messages.
 - A new change clears what you could redo. The history lasts while the panel is
   open, including after you switch project or conversation.
 - Undo puts removed queued messages back in their places with their original
-  text and sender. A task that isn't running keeps them in a paused queue, so
+  text and sender. A task that isn't working keeps them in a paused queue, so
   undo never starts a turn.
 - Undoing an archive reopens the task that archiving closed, when the current
   task list includes it.
@@ -383,7 +383,7 @@ service rules.
 
 ### Steering, queues and budgets
 
-- **Steer** sends a queued message into the running turn after its next tool
+- **Steer** sends a queued message into the current turn after its next tool
   call. It is unavailable while the worker waits for input or for an earlier
   steer.
 - A pending steer offers **Interrupt and send now**. An unconsumed steer stays
@@ -547,9 +547,9 @@ Nothing sends until you submit. Hosts without message delivery offer the text to
 copy instead.
 
 **Task actions** in the task heading includes handoff and deletion. **Delete
-task** stops running, queued or waiting work, then removes the task's history,
-requests, recorded edits, worktree and local branch. Files in the project folder
-and remote branches stay intact.
+task** stops the task if it is working, queued or waiting, then removes the
+task's history, requests, recorded edits, worktree and local branch. Files in
+the project folder and remote branches stay intact.
 
 - **Also delete the agent task**, off by default, also removes the provider
   session. It is unavailable when the service cannot verify where the session
@@ -572,7 +572,7 @@ shows connection status only when there is a problem. A failed connection shows
 connection shows **Connection failed**. Narrow panels show a warning icon
 instead, and hovering or tapping it shows the status. While a
 [plugin update](task-continuation.md#updates-and-service-handoff) waits for
-running turns to finish, the header shows **Updating…**. Changes has
+working tasks to finish their turns, the header shows **Updating…**. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how

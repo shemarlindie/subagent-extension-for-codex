@@ -40,6 +40,8 @@ const LIMIT_LABELS: Partial<Record<string, string>> = {
 export const statusLabel = (task: Task) => {
   if (task.pending_input) return "Needs input";
   if (stopped(task)) return "Stopped";
+  // Running reads as Working, the name of its filter.
+  if (task.status === "running") return "Working";
 
   const limit =
     task.status === "failed" && task.error_code

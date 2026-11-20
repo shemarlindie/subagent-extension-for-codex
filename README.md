@@ -107,8 +107,8 @@ own, unless you pinned a version below. To check now:
 codex plugin marketplace upgrade shemarlindie
 ```
 
-The new version takes over from the running service once its running turns
-finish, and queued tasks carry over. See
+The new version takes over from the old service once its working tasks finish
+their turns, and queued tasks carry over. See
 [Updates and service handoff](docs/task-continuation.md#updates-and-service-handoff).
 Startup backs up the database before applying migrations. See
 [Restore a backup](docs/database.md#restore-a-backup).
@@ -134,7 +134,7 @@ codex plugin marketplace remove shemarlindie
 The service exits once Codex stops the plugin and its tasks finish. To stop it
 sooner, run
 `kill "$(cat ~/.local/share/subagent-extension-for-codex/service.pid)"`, which
-interrupts running turns.
+stops working tasks.
 
 Tasks, settings and the worktrees the service creates are stored in
 `~/.local/share/subagent-extension-for-codex`. If you delete that directory,
@@ -150,7 +150,7 @@ run `git worktree prune` and delete the branches.
 | `A different extension service … is running`   | Another service owns the data directory or port, for example a development checkout. Stop it, or give development its own data and port. |
 | `Port … is already in use`                     | Choose a free port or remove the address override. See [Service address](docs/configuration.md#service-address).                         |
 | Claude tasks can't start                       | The panel shows a readiness message above the task list. [Claude Code CLI](docs/claude-cli.md) explains fixes.                           |
-| Panel shows Reconnecting… after an update      | The new service starts once the old one's running turns finish. Wait for it to reconnect.                                                |
+| Panel shows Reconnecting… after an update      | The new service starts once the old one's working tasks finish their turns. Wait for it to reconnect.                                    |
 
 ## Documentation
 

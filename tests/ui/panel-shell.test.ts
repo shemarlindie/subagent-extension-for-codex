@@ -88,7 +88,7 @@ test("inline preview expands and collapses while preserving the selected task", 
 
   await act(() => controller.select("two"));
   assert.ok(screen.getByText("Review database"));
-  assert.ok(screen.getByText("Running", { exact: true }));
+  assert.ok(screen.getByText("Working", { exact: true }));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
   assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 
