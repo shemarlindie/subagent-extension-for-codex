@@ -4,15 +4,15 @@ import type { Task } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { UnreadDot } from "../unread/unread-dot";
-import { groupSignals } from "./selectors";
+import { FILTER_LABELS, groupSignals } from "./selectors";
 import { TaskStatusIcon } from "./task-status-icon";
 
 type GroupSignalsProps = {
   /** The tasks a collapsed group or "Show more" hides. */
   tasks: Task[];
   /**
-   * Names each dot on hover. A collapsed header's dots hide on hover, where
-   * the project menu takes their place, so only "Show more" names them.
+   * Names each dot's filter on hover. A collapsed header's dots hide on hover,
+   * where the project menu takes their place, so only "Show more" names them.
    */
   tooltips?: boolean;
 };
@@ -65,12 +65,12 @@ export function GroupSignals({ tasks, tooltips }: GroupSignalsProps) {
 
   return (
     <>
-      <Signal show={unread} label="Unread" tooltip={tooltips}>
+      <Signal show={unread} label={FILTER_LABELS.unread} tooltip={tooltips}>
         <UnreadDot />
       </Signal>
       <Signal
         show={Boolean(attention)}
-        label={attention?.label ?? ""}
+        label={FILTER_LABELS.attention}
         tooltip={tooltips}
       >
         {attention && (
@@ -83,7 +83,7 @@ export function GroupSignals({ tasks, tooltips }: GroupSignalsProps) {
       </Signal>
       <Signal
         show={Boolean(working)}
-        label={working?.label ?? ""}
+        label={FILTER_LABELS.active}
         tooltip={tooltips}
       >
         {working && (
