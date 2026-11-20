@@ -54,7 +54,22 @@
   height: 5px;
   border-radius: 3px;
 }
+/* The count follows the scope, like a project header's count. */
+.list-scope {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
 .list-count {
+  flex: none;
+  white-space: nowrap;
+}
+.list-count::before {
+  content: "·" / "";
+  margin-inline-end: 4px;
+}
+.list-actions {
   display: inline-flex;
   flex: none;
   align-items: baseline;

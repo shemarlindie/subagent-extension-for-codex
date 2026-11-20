@@ -305,42 +305,44 @@ export function TaskList() {
   return (
     <>
       <div className="list-label" onClick={clearOnBlank}>
-        <span id="scope" ref={scopeRef} tabIndex={-1}>
-          {conversation ? "This conversation" : "All conversations"}
+        <span className="list-scope">
+          <span id="scope" ref={scopeRef} tabIndex={-1}>
+            {conversation ? "This conversation" : "All conversations"}
+          </span>
+          <span
+            className="list-count"
+            ref={countRef}
+            tabIndex={-1}
+            // Focus lands here after an action, so the selection's menu opens too.
+            onKeyDown={
+              selecting
+                ? (event) => openContextMenu(event, listRef.current)
+                : undefined
+            }
+          >
+            <TaskListCount
+              loading={taskListLoading}
+              shown={tasks.length}
+              total={total}
+              narrowed={narrowed}
+              selection={selection}
+            />
+          </span>
         </span>
-        <span
-          className="list-count"
-          ref={countRef}
-          tabIndex={-1}
-          // Focus lands here after an action, so the selection's menu opens too.
-          onKeyDown={
-            selecting
-              ? (event) => openContextMenu(event, listRef.current)
-              : undefined
-          }
-        >
-          {!selecting && (
-            <>
-              {unreadShown && (
-                <Button variant="text" underline onClick={markAllRead}>
-                  Mark all read
-                </Button>
-              )}
-              {clearShown && (
-                <Button variant="text" underline onClick={resetFilters}>
-                  Clear filter
-                </Button>
-              )}
-            </>
-          )}
-          <TaskListCount
-            loading={taskListLoading}
-            shown={tasks.length}
-            total={total}
-            narrowed={narrowed}
-            selection={selection}
-          />
-        </span>
+        {!selecting && (unreadShown || clearShown) && (
+          <span className="list-actions">
+            {unreadShown && (
+              <Button variant="text" underline onClick={markAllRead}>
+                Mark all read
+              </Button>
+            )}
+            {clearShown && (
+              <Button variant="text" underline onClick={resetFilters}>
+                Clear filter
+              </Button>
+            )}
+          </span>
+        )}
       </div>
       <div className="task-list-scroll-area">
         <TaskSelectionMenu

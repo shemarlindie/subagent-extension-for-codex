@@ -228,9 +228,8 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
   height: var(--task-group-header-height);
-  padding: 2px 6px 2px 2px;
+  padding: 2px 3px 2px 2px;
   background: var(--sidebar-bg);
   font-size: 11px;
   line-height: 13px;
@@ -256,19 +255,16 @@
   font-weight: 600;
   text-align: start;
 }
-.task-group-chevron {
-  flex: none;
-  color: var(--muted);
-  transition: transform var(--motion-base) var(--ease-out);
-}
-.task-group-toggle:not([data-panel-open]) .task-group-chevron {
-  transform: rotate(-90deg);
-}
+/* A collapsed group's name fades and its count shows. */
 .task-group-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color var(--motion-base) var(--ease-out);
+}
+.task-group-toggle:not([data-panel-open]) .task-group-name {
+  color: var(--muted);
 }
 .task-group-count {
   flex: none;
@@ -276,6 +272,17 @@
   color: var(--muted);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+/* Matches the list's scope count. */
+.task-group-count::before {
+  content: "·" / "";
+  margin-inline-end: 4px;
+}
+/* An open group's rows show what it holds, so its count shows only when
+   collapsed. Screen readers still hear it. */
+.task-group-toggle[data-panel-open] .task-group-count {
+  opacity: 0;
 }
 /* "Show more" and "Show less" match the header toggle's box. The extra bottom
    margin matches a row's bottom padding, so a later group sits as far below
@@ -295,17 +302,48 @@
 .task-group-more:hover {
   color: var(--text);
 }
-/* The project menu shows on hover or focus, or always where nothing hovers. */
+/* A collapsed group's hidden-task dots sit where the project menu shows, and
+   trade places with it on hover. Where nothing hovers, they sit beside it.
+   Clicks pass through them to the menu. */
+.task-group-signals {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .task-group-signals {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+  }
+  .task-group-header:hover .task-group-signals,
+  .task-group-header:has(
+      .task-group-menu:focus-visible,
+      .task-group-menu[data-popup-open]
+    )
+    .task-group-signals {
+    opacity: 0;
+  }
+}
+/* The project menu shows on hover or focus, or always where nothing hovers.
+   Its padding, not the header's, gives it a full-height target. */
 .task-group-menu {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   color: var(--muted);
   opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-out);
 }
 .task-group-header:hover .task-group-menu,
 .task-group-menu:focus-visible,

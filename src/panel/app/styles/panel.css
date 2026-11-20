@@ -231,7 +231,7 @@ header .toolbar {
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  padding: 9px 16px;
+  padding: 9px 16px 9px 17px;
   color: var(--muted);
   font-size: 11px;
 }
