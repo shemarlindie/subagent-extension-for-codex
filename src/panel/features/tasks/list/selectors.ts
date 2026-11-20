@@ -53,7 +53,7 @@ export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
 // A failed row status, or an interruption you didn't ask for, places a task in
 // Failed alone. The other filters never overlap except through All.
-export const failedStatus = (task: Task) => {
+const failedStatus = (task: Task) => {
   const { kind } = rowStatus(task);
 
   return kind === "failed" || (kind === "interrupted" && !stopped(task));
