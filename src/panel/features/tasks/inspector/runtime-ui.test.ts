@@ -89,6 +89,7 @@ test("task list icons describe the running task's latest activity", (t) => {
   view.rerender(row(task({ live_activity: paused })));
   const icon = view.getByRole("img", { name: paused.text });
   assert.ok(icon.classList.contains("paused"));
+  assert.equal(icon.dataset.tone, "attention");
   assert.equal(icon.getAttribute("title"), paused.text);
 
   // A failure shows no dot. Screen readers hear its short label.

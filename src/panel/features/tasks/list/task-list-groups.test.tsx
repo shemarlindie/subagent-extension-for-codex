@@ -113,6 +113,22 @@ test("a collapsed header flags hidden unread tasks and tasks waiting on input", 
   view.getByText("2", { selector: ".task-group-count" });
 });
 
+test("a collapsed header flags hidden tasks waiting for a rate limit", async () => {
+  const { toggle } = setup({
+    tasks: [
+      ...tasks,
+      named("b1", "/repo/b", {
+        live_activity: { text: "Waiting for rate limit reset", state: "info" },
+      }),
+    ],
+  });
+
+  const header = toggle("b");
+  await userEvent.click(header);
+
+  within(header).getByRole("img", { name: "Waiting for rate limit reset" });
+});
+
 test("long groups stop at a few rows until Show more, and Show less folds them again", async () => {
   const { rows, view } = setup();
 

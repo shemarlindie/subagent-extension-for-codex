@@ -59,8 +59,10 @@ test("recover running and queued tasks and preserve follow-up order after a serv
   const tasks = page.getByRole("complementary", { name: "Delegated tasks" });
 
   await expect(
-    tasks.getByRole("button", { name: /Recover the queued task/ }),
-  ).toContainText("Queued");
+    tasks
+      .getByRole("button", { name: /Recover the queued task/ })
+      .getByRole("img", { name: "Queued" }),
+  ).toBeVisible();
 
   await processService.restart();
   await page.reload();

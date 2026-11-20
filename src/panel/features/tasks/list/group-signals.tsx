@@ -8,13 +8,15 @@ type GroupSignalsProps = {
   tasks: Task[];
 };
 
-/** Flags hidden tasks that need input or have something unread. */
+/** Flags hidden tasks that need attention or have something unread. */
 export function GroupSignals({ tasks }: GroupSignalsProps) {
-  const { unread, needsInput } = groupSignals(tasks);
+  const { unread, attention } = groupSignals(tasks);
 
   return (
     <>
-      {needsInput && <TaskStatusIcon kind="input" label="Needs input" />}
+      {attention && (
+        <TaskStatusIcon kind={attention.kind} label={attention.label} />
+      )}
       {unread && <UnreadDot />}
     </>
   );

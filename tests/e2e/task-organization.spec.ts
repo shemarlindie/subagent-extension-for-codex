@@ -22,7 +22,7 @@ test("filter, search and rename tasks, keeping the choices across reload", async
   ).toBeVisible();
 
   // The list opens on the first nonempty filter after Unread.
-  await expect(filter(/^Needs input, 1/)).toBeChecked();
+  await expect(filter(/^Needs attention, 1/)).toBeChecked();
 
   // Each status filter lists only its tasks, and the choice survives reload.
   await expect(rows).toHaveCount(1);

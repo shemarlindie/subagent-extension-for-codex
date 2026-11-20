@@ -380,12 +380,15 @@ header .toolbar {
   background: var(--muted);
   flex-shrink: 0;
 }
-/* Lighter than muted text, so a working task reads as quiet activity. */
-.dot[data-tone="working"] {
+/* Lighter than muted text, so working and queued tasks read as quiet
+   activity. Only working pulses. */
+.dot:is([data-tone="working"], [data-tone="queued"]) {
   background: color-mix(in srgb, var(--text) 28%, transparent);
+}
+.dot[data-tone="working"] {
   animation: motion-pulse 1.6s ease-in-out infinite;
 }
-.dot[data-tone="input"] {
+.dot[data-tone="attention"] {
   background: var(--status-input);
 }
 .detail {

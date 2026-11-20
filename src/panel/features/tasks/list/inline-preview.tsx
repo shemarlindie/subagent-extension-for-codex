@@ -2,7 +2,7 @@ import {
   useController,
   useSnapshot,
 } from "../../../app/state/controller-context";
-import { failedStatus, terminal } from "../../../app/state/selectors";
+import { needsAttention, working } from "../../../app/state/selectors";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import {
@@ -50,11 +50,9 @@ export function InlinePreview() {
     (task) => !repository || task.repository === repository,
   );
 
-  const attention = projectTasks.filter((task) => task.pending_input);
+  const attention = projectTasks.filter(needsAttention);
 
-  const active = projectTasks.filter(
-    (task) => !terminal(task) && !failedStatus(task),
-  );
+  const active = projectTasks.filter(working);
 
   const unread = projectTasks.filter((task) => task.unread).length;
 
@@ -128,9 +126,10 @@ export function InlinePreview() {
               {projectTasks.length}{" "}
               {projectTasks.length === 1 ? "task" : "tasks"}
               {" · "}
-              {active.length} active
+              {active.length} working
               {" · "}
-              {attention.length} needing attention
+              {attention.length} {attention.length === 1 ? "needs" : "need"}{" "}
+              attention
               {unread > 0 && ` · ${unread} unread`}
             </p>
             {task ? (

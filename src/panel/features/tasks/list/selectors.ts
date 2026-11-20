@@ -4,14 +4,14 @@ import type {
   Snapshot,
   Task,
 } from "../../../app/state/types.js";
-import { rowStatus } from "./task-status.js";
+import { rowStatus, statusTone } from "./task-status.js";
 
 // Display order of the filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
   unread: "Unread",
-  attention: "Needs input",
+  attention: "Needs attention",
   failed: "Failed",
-  active: "Active",
+  active: "Working",
   completed: "Done",
   all: "All",
 };
@@ -21,23 +21,53 @@ const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 // Reading a task changes Unread's count, so the list never opens on it by itself.
 const DEFAULT_FILTERS = FILTERS.filter((filter) => filter !== "unread");
 
+/**
+ * A turn you stopped. Its stop clears any error, while a service restart
+ * leaves one asking you to continue.
+ */
+const stopped = (task: Task) => task.status === "interrupted" && !task.error;
+
 export const terminal = (task: Task) =>
-  ["completed", "failed"].includes(task.status);
+  ["completed", "failed"].includes(task.status) || stopped(task);
+
+// Limits you set, named so they read apart from errors.
+const LIMIT_LABELS: Partial<Record<string, string>> = {
+  cost_budget_exhausted: "Cost limit reached",
+  runtime_budget_exhausted: "Runtime limit reached",
+  error_max_turns: "Turn limit reached",
+};
 
 export const statusLabel = (task: Task) => {
   if (task.pending_input) return "Needs input";
+  if (stopped(task)) return "Stopped";
 
-  return task.status.charAt(0).toUpperCase() + task.status.slice(1);
+  const limit =
+    task.status === "failed" && task.error_code
+      ? LIMIT_LABELS[task.error_code]
+      : undefined;
+
+  return limit ?? task.status.charAt(0).toUpperCase() + task.status.slice(1);
 };
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
-// A failed row status (including interrupted) places a task in Failed alone;
-// the other filters never overlap except through All.
-export const failedStatus = (task: Task) =>
-  ["failed", "interrupted"].includes(rowStatus(task).kind);
+// A failed row status, or an interruption you didn't ask for, places a task in
+// Failed alone. The other filters never overlap except through All.
+export const failedStatus = (task: Task) => {
+  const { kind } = rowStatus(task);
 
-const needsInput = (task: Task) => Boolean(task.pending_input);
+  return kind === "failed" || (kind === "interrupted" && !stopped(task));
+};
+
+const done = (task: Task) => task.status === "completed" || stopped(task);
+
+/** Tasks with the yellow dot: waiting on you or on a rate limit reset. */
+export const needsAttention = (task: Task) =>
+  statusTone(rowStatus(task).kind) === "attention";
+
+/** Unfinished tasks that need nothing from you, including queued turns. */
+export const working = (task: Task) =>
+  !terminal(task) && !failedStatus(task) && !needsAttention(task);
 
 /** The snapshot fields the task list selectors read. */
 export const TASK_LIST_FIELDS = [
@@ -65,9 +95,9 @@ export const pendingQuestions = (task: Task): Question[] => {
 const matchesFilter = (task: Task, filter: Filter) =>
   filter === "all" ||
   (filter === "unread" && Boolean(task.unread)) ||
-  (filter === "active" && !terminal(task) && !failedStatus(task)) ||
-  (filter === "attention" && needsInput(task) && !failedStatus(task)) ||
-  (filter === "completed" && task.status === "completed") ||
+  (filter === "active" && working(task)) ||
+  (filter === "attention" && needsAttention(task)) ||
+  (filter === "completed" && done(task)) ||
   (filter === "failed" && failedStatus(task));
 
 // Tasks in the chosen project and search, before the status filter applies.
@@ -150,11 +180,19 @@ export function groupRows(tasks: Task[], selected?: string) {
   return hidden.length > 1 ? { shown, hidden } : { shown: tasks, hidden: [] };
 }
 
-/** What a group's header or "Show more" row flags about tasks it hides. */
-export const groupSignals = (tasks: Task[]) => ({
-  unread: tasks.some((task) => task.unread),
-  needsInput: tasks.some((task) => matchesFilter(task, "attention")),
-});
+/**
+ * What a group's header or "Show more" row flags about tasks it hides. A task
+ * that needs input names the attention dot before one paused by a rate limit.
+ */
+export function groupSignals(tasks: Task[]) {
+  const attention = tasks.filter(needsAttention).map(rowStatus);
+
+  return {
+    unread: tasks.some((task) => task.unread),
+    attention:
+      attention.find((status) => status.kind === "input") ?? attention.at(0),
+  };
+}
 
 // Done and All count read completed tasks the list hasn't loaded. A search
 // loads them, so it never counts them unloaded.

@@ -13,6 +13,28 @@ function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
   return task.status;
 }
 
+/**
+ * A working task's dot pulses gray, and a queued one stays gray. One that
+ * needs input or is paused by a rate limit needs attention and shows yellow.
+ * Rows leave out the dot for quiet statuses, and the label carries the exact
+ * status.
+ */
+type StatusTone = "working" | "queued" | "attention" | "quiet";
+
+const STATUS_TONES: Record<RowKind, StatusTone> = {
+  starting: "working",
+  running: "working",
+  queued: "queued",
+  paused: "attention",
+  input: "attention",
+  failed: "quiet",
+  waiting: "quiet",
+  interrupted: "quiet",
+  completed: "quiet",
+};
+
+export const statusTone = (kind: RowKind) => STATUS_TONES[kind];
+
 export function rowStatus(task: Task) {
   const activity = task.status === "running" ? task.live_activity : undefined;
   const kind = rowKind(task, activity);

@@ -17,7 +17,7 @@ import {
 test("task filters show counts and an empty state with a way out", async (t) => {
   const { user } = await setup(t, undefined, { view: "task-list" });
   assert.ok(screen.getByRole("radio", { name: "All, 1" }));
-  assert.ok(screen.getByRole("radio", { name: "Active, 1" }));
+  assert.ok(screen.getByRole("radio", { name: "Working, 1" }));
   assertAbsent(screen.queryByRole("button", { name: "Clear filter" }));
   const search = screen.getByRole("searchbox", { name: "Search tasks" });
   await user.type(search, "zzz");
@@ -53,11 +53,13 @@ test("task filters show counts and an empty state with a way out", async (t) => 
 
 test("a chosen filter stays visible after it empties", async (t) => {
   const { user } = await setup(t, undefined, { view: "task-list" });
-  await user.click(screen.getByRole("radio", { name: /^Active/ }));
-  await user.click(screen.getByRole("radio", { name: /^Active/ }));
+  await user.click(screen.getByRole("radio", { name: /^Working/ }));
+  await user.click(screen.getByRole("radio", { name: /^Working/ }));
 
   assert.equal(
-    screen.getByRole("radio", { name: /^Active/ }).getAttribute("aria-checked"),
+    screen
+      .getByRole("radio", { name: /^Working/ })
+      .getAttribute("aria-checked"),
     "true",
   );
 
@@ -66,8 +68,8 @@ test("a chosen filter stays visible after it empties", async (t) => {
     "zzz",
   );
 
-  assert.ok(screen.getByRole("radio", { name: "Active, 0" }));
-  assert.ok(screen.getByText("No tasks match “zzz” in Active."));
+  assert.ok(screen.getByRole("radio", { name: "Working, 0" }));
+  assert.ok(screen.getByText("No tasks match “zzz” in Working."));
   await user.click(screen.getByRole("button", { name: "Clear filter" }));
 
   assert.equal(

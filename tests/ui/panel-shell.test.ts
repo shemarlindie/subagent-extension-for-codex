@@ -247,7 +247,7 @@ test("inline preview summarizes repository scope independently of list filters",
 
   assert.equal(
     screen.getByRole("status").textContent,
-    "4 tasks · 2 active · 1 needing attention",
+    "4 tasks · 1 working · 1 needs attention",
   );
 
   assert.ok(screen.getByText("Waiting review"));
@@ -267,7 +267,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
 
     assert.equal(
       screen.getByRole("status").textContent,
-      "0 tasks · 0 active · 0 needing attention",
+      "0 tasks · 0 working · 0 need attention",
     );
 
     assert.ok(screen.getByText("No delegated tasks yet."));

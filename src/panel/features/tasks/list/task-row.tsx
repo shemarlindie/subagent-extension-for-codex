@@ -7,8 +7,8 @@ import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
-import { rowStatus } from "./task-status";
-import { statusTone, TaskStatusIcon } from "./task-status-icon";
+import { rowStatus, statusTone } from "./task-status";
+import { TaskStatusIcon } from "./task-status-icon";
 import type { TaskRowClick } from "./use-task-selection";
 import { WorkerProfileIcon } from "./worker-profile-icon";
 

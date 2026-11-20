@@ -40,9 +40,9 @@ import { useTaskSelection } from "./use-task-selection";
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet.",
   unread: "You're all caught up.",
-  active: "No active tasks.",
-  attention: "No tasks need input.",
-  completed: "No completed tasks.",
+  active: "No working tasks.",
+  attention: "No tasks need attention.",
+  completed: "No finished tasks.",
   failed: "No failed tasks.",
 };
 
