@@ -1,5 +1,32 @@
-import { statusLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
+
+/**
+ * A turn you stopped. Its stop clears any error, while a service restart
+ * leaves one asking you to continue.
+ */
+export const stopped = (task: Task) =>
+  task.status === "interrupted" && !task.error;
+
+// Limits you set, named so they read apart from errors.
+const LIMIT_LABELS: Partial<Record<string, string>> = {
+  cost_budget_exhausted: "Cost limit reached",
+  runtime_budget_exhausted: "Runtime limit reached",
+  error_max_turns: "Turn limit reached",
+};
+
+export const statusLabel = (task: Task) => {
+  if (task.pending_input) return "Needs input";
+  if (stopped(task)) return "Stopped";
+  // Running reads as Working, the name of its filter.
+  if (task.status === "running") return "Working";
+
+  const limit =
+    task.status === "failed" && task.error_code
+      ? LIMIT_LABELS[task.error_code]
+      : undefined;
+
+  return limit ?? task.status.charAt(0).toUpperCase() + task.status.slice(1);
+};
 
 type RowKind = Task["status"] | "input" | "paused";
 

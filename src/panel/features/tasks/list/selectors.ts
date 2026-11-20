@@ -4,7 +4,14 @@ import type {
   Snapshot,
   Task,
 } from "../../../app/state/types.js";
-import { rowStatus, statusTone, type StatusTone } from "./task-status.js";
+import {
+  rowStatus,
+  statusTone,
+  stopped,
+  type StatusTone,
+} from "./task-status.js";
+
+export { statusLabel } from "./task-status.js";
 
 // Display order of the filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
@@ -21,35 +28,8 @@ const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 // Reading a task changes Unread's count, so the list never opens on it by itself.
 const DEFAULT_FILTERS = FILTERS.filter((filter) => filter !== "unread");
 
-/**
- * A turn you stopped. Its stop clears any error, while a service restart
- * leaves one asking you to continue.
- */
-const stopped = (task: Task) => task.status === "interrupted" && !task.error;
-
 export const terminal = (task: Task) =>
   ["completed", "failed"].includes(task.status) || stopped(task);
-
-// Limits you set, named so they read apart from errors.
-const LIMIT_LABELS: Partial<Record<string, string>> = {
-  cost_budget_exhausted: "Cost limit reached",
-  runtime_budget_exhausted: "Runtime limit reached",
-  error_max_turns: "Turn limit reached",
-};
-
-export const statusLabel = (task: Task) => {
-  if (task.pending_input) return "Needs input";
-  if (stopped(task)) return "Stopped";
-  // Running reads as Working, the name of its filter.
-  if (task.status === "running") return "Working";
-
-  const limit =
-    task.status === "failed" && task.error_code
-      ? LIMIT_LABELS[task.error_code]
-      : undefined;
-
-  return limit ?? task.status.charAt(0).toUpperCase() + task.status.slice(1);
-};
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
