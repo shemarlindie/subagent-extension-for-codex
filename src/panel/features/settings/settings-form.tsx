@@ -16,6 +16,7 @@ import { SettingsSearchContext } from "./search/settings-search-context";
 import { SettingsSearchSummary } from "./search/settings-search-summary";
 import { useSettingsSearchView } from "./search/use-settings-search-view";
 import { aboutSection } from "./settings-about";
+import { appearanceSection } from "./settings-appearance";
 import { SettingsContext } from "./settings-fields";
 import {
   activeSection,
@@ -38,7 +39,7 @@ import {
   SettingsSections,
   type SettingsSectionView,
 } from "./settings-sections";
-import { SettingsTransfer } from "./settings-transfer";
+import { transferSection } from "./settings-transfer";
 import { useSettingsDiscardPrompt } from "./use-settings-discard-prompt";
 import { useSettingsStickyLayout } from "./use-settings-sticky-layout";
 
@@ -276,34 +277,15 @@ export function SettingsForm({
           ),
       }));
 
-  // The transfer section has no setting rows, so search matches its title and
-  // its own keywords.
-  const transfer = {
-    id: "transfer",
-    title: "Import and export",
-    keywords: ["settings", "JSON", "copy", "file"],
-  };
-
-  const transferMatches = search.matches(
-    [transfer.title, ...transfer.keywords].join(" "),
+  sectionViews.push(
+    appearanceSection(search),
+    transferSection(search, {
+      ready: !loading,
+      edited: total > 0,
+      onImportingChange: setImporting,
+    }),
+    aboutSection(search, selectedSection),
   );
-
-  sectionViews.push({
-    id: transfer.id,
-    title: transfer.title,
-    hidden: !transferMatches,
-    matches: transferMatches ? 1 : 0,
-    score: 3,
-    content: (
-      <SettingsTransfer
-        ready={!loading}
-        edited={total > 0}
-        onImportingChange={setImporting}
-      />
-    ),
-  });
-
-  sectionViews.push(aboutSection(search, selectedSection));
 
   const activeSectionId = activeSection(selectedSection, sectionViews);
   const matchingSections = sectionViews.filter((section) => !section.hidden);

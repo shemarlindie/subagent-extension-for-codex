@@ -10,12 +10,19 @@ const GROUPS: RowWidth[][] = [
   ["short", "medium"],
 ];
 
+type TaskListSkeletonProps = {
+  /** Mirrors compact rows: one line with a profile and a status mark. */
+  compact?: boolean;
+};
+
 /**
  * Mirrors project groups, task titles, worker profiles and row metadata.
  * Headers show in every scope: the scope can resolve mid-load, and a fixed
  * shape keeps the placeholder from changing while it's on screen.
  */
-export function TaskListSkeleton() {
+export function TaskListSkeleton({ compact = false }: TaskListSkeletonProps) {
+  const Row = compact ? CompactSkeletonRow : SkeletonRow;
+
   return (
     <LoadingSkeleton
       label="Loading tasks"
@@ -31,7 +38,7 @@ export function TaskListSkeleton() {
             />
           </div>
           {widths.map((width, row) => (
-            <SkeletonRow key={row} width={width} />
+            <Row key={row} width={width} />
           ))}
         </div>
       ))}
@@ -41,14 +48,14 @@ export function TaskListSkeleton() {
 
 type SkeletonRowProps = { width: RowWidth };
 
+const titleClass = (width: RowWidth) =>
+  `task-list-skeleton-title task-list-skeleton-title-${width}`;
+
 function SkeletonRow({ width }: SkeletonRowProps) {
   return (
     <div className="task-list-skeleton-row">
       <span className="row-title">
-        <SkeletonShape
-          className={`task-list-skeleton-title task-list-skeleton-title-${width}`}
-          measureText="Task title"
-        />
+        <SkeletonShape className={titleClass(width)} measureText="Task title" />
       </span>
       <div className="row-meta task-list-skeleton-meta">
         <SkeletonShape className="task-list-skeleton-profile" />
@@ -62,6 +69,18 @@ function SkeletonRow({ width }: SkeletonRowProps) {
           <SkeletonShape className="task-list-skeleton-status" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function CompactSkeletonRow({ width }: SkeletonRowProps) {
+  return (
+    <div className="task-list-skeleton-row" data-compact="">
+      <SkeletonShape className="task-list-skeleton-profile" />
+      <span className="row-title">
+        <SkeletonShape className={titleClass(width)} measureText="Task title" />
+      </span>
+      <SkeletonShape className="task-list-skeleton-status" />
     </div>
   );
 }

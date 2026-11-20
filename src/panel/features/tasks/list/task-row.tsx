@@ -18,6 +18,8 @@ interface TaskRowProps {
   current: boolean;
   pressed?: boolean;
   disabled?: boolean;
+  /** Shows the task on one line: profile icon, title and status mark. */
+  compact?: boolean;
   onActivate?: (id: string, action: TaskRowClick) => void;
 }
 
@@ -27,6 +29,7 @@ export const TaskRow = memo(function TaskRow({
   current,
   pressed,
   disabled,
+  compact = false,
   onActivate,
 }: TaskRowProps) {
   const controller = useController();
@@ -63,6 +66,7 @@ export const TaskRow = memo(function TaskRow({
             className="row"
             data-task={task.id}
             data-unread={task.unread ? "" : undefined}
+            data-compact={compact ? "" : undefined}
             aria-current={pressed === undefined ? current : undefined}
             aria-pressed={pressed}
             aria-disabled={disabled}
@@ -70,7 +74,11 @@ export const TaskRow = memo(function TaskRow({
           />
         }
       >
-        <TaskRowContent task={task} />
+        {compact ? (
+          <CompactTaskRowContent task={task} />
+        ) : (
+          <TaskRowContent task={task} />
+        )}
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className="menu-positioner">
@@ -130,6 +138,30 @@ function TaskRowContent({ task }: TaskRowContentProps) {
           <TaskRowStatus task={task} />
         </span>
       </span>
+    </>
+  );
+}
+
+// The title comes first so screen readers hear it first; CSS puts the icon
+// before it. Its tooltip shows the whole title when the row fades it out.
+function CompactTaskRowContent({ task }: TaskRowContentProps) {
+  const worker = profileLabel(task.worker_profile);
+
+  return (
+    <>
+      <span className="row-title" title={task.title}>
+        {task.title}
+      </span>
+      <span className="row-worker" title={worker}>
+        <WorkerProfileIcon
+          profile={task.worker_profile}
+          size={14}
+          className="row-worker-icon"
+        />
+        {task.unread && <UnreadDot />}
+        <span className="visually-hidden">{worker}</span>
+      </span>
+      <TaskRowStatus task={task} />
     </>
   );
 }

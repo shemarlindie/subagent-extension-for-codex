@@ -11,7 +11,7 @@ import { task } from "../../../app/state/controller-test-harness";
 import type { Task, Transport } from "../../../app/state/types";
 import { TaskRow } from "./task-row";
 
-function renderRow(row: Task) {
+function renderRow(row: Task, compact = false) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -23,7 +23,7 @@ function renderRow(row: Task) {
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <TaskRow task={row} current={false} />
+      <TaskRow task={row} current={false} compact={compact} />
     </ControllerContext.Provider>,
   );
 
@@ -59,4 +59,24 @@ test("right-clicking a completed row offers Archive", async () => {
   await userEvent.click(await view.findByRole("menuitem", { name: "Archive" }));
 
   assert.deepEqual(archive.mock.calls, [[[completed], true]]);
+});
+
+test("a compact row names its title, worker, unread state and status", () => {
+  const unread = {
+    ...task("a"),
+    title: "Plan the rollout",
+    status: "completed" as const,
+    unread: true as const,
+  };
+
+  const { view } = renderRow(unread, true);
+
+  // The open context menu hides the row from the accessibility tree. Without
+  // layout, jsdom joins the inline parts without spaces.
+  const row = view.getByRole("button", {
+    name: /^Plan the rollout\s*Unread\s*reviewer\s*Completed$/,
+    hidden: true,
+  });
+
+  assert.equal(row.querySelector(".row-runtime"), null);
 });

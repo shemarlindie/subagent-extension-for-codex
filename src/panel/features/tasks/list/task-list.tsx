@@ -28,6 +28,7 @@ import { useListMotion } from "../../../shared/components/motion/use-list-motion
 import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into-view";
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
+import { useCompactRows } from "./compact-rows";
 import { ProjectGroups, useProjectGroups } from "./project-groups";
 import { TaskListCount } from "./task-list-count";
 import { TaskListScrollbar } from "./task-list-scrollbar";
@@ -110,6 +111,7 @@ export function TaskList() {
     (state) => ({ composing: Boolean(state.newTask) }),
   );
 
+  const compact = useCompactRows();
   const tasks = visibleTasks(list);
   const total = scopedTasks({ ...list, search: "" }).length;
   const filter = effectiveFilter(list);
@@ -261,6 +263,7 @@ export function TaskList() {
           current={task.id === current}
           pressed={selection.ids?.has(task.id)}
           disabled={selecting && selection.blocked ? true : undefined}
+          compact={compact}
           onActivate={selection.clickRow}
         />
       );
@@ -347,6 +350,7 @@ export function TaskList() {
             <div
               id="task-list"
               ref={listRef}
+              data-compact={compact ? "" : undefined}
               onKeyDown={openContextMenu}
               onClick={clearOnBlank}
             />
@@ -356,11 +360,11 @@ export function TaskList() {
           <LoadingSwap
             className="task-list-loading-swap"
             loading={taskListLoading}
-            skeleton={<TaskListSkeleton />}
+            skeleton={<TaskListSkeleton compact={compact} />}
           >
             {taskListLoading ? null : (
               <>
-                {composing && <NewTaskRow />}
+                {composing && <NewTaskRow compact={compact} />}
                 {renderRows()}
               </>
             )}

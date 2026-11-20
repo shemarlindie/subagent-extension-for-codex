@@ -128,6 +128,17 @@ Task runtime accumulates across turns and includes the active run. Under **All
 projects**, tasks group by project, ordered by each group's newest task. Project
 headers stay visible as their rows scroll.
 
+Each row ends with a status mark: a turning arc while the task works, a dashed
+ring while it waits, a ring with a dot when it needs input, a square when
+interrupted, a red exclamation when it failed and a check when done. Hover a
+mark for the exact status. Titles too long for the row fade out at its right
+edge.
+
+Turn on **Compact task rows** in **Settings > Appearance** to show each task on
+one line, with its worker icon before the title and the runtime left out. It
+applies right away, and the panel keeps it in browser storage wherever it is
+available.
+
 - The header shows the project's task count. Click it to collapse the group. The
   panel remembers collapsed groups across reloads where browser storage is
   available.
@@ -170,7 +181,8 @@ conversation clears the selection.
 A task becomes unread when it has a worker message or reply, a turn end, a
 failure, or a question or permission request you haven't seen. Your own messages
 never make a task unread. Unread rows show an accent dot after the worker icon,
-and the compact panel adds **N unread** to its counts.
+or on its corner in compact rows, and the compact panel adds **N unread** to its
+counts.
 
 A task becomes read when its Chat tab shows the latest message. Opening an
 unread task places a **New** divider above the first unseen item and scrolls to
@@ -249,7 +261,8 @@ three affected tasks or messages.
   message was already sent. The panel forgets a change that failed entirely.
   When only some tasks fail, the ones that changed stay reversible.
 - Text fields, open dialogs and the Settings page keep their own undo. Settings
-  saves nothing until you choose **Save**.
+  saves nothing until you choose **Save**, except **Appearance**, which applies
+  right away.
 - A new change clears what you could redo. The history lasts while the panel is
   open, including after you switch project or conversation.
 - Undo puts removed queued messages back in their places with their original

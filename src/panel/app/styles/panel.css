@@ -322,12 +322,13 @@ header .toolbar {
 .row[aria-current="true"] {
   background: var(--sidebar-selected);
 }
+/* A title too long for its row fades out at the right edge. */
 .row-title {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+  mask-image: linear-gradient(to left, transparent, #000 20px);
 }
 .row-meta {
   display: flex;
