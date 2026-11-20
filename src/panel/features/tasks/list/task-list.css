@@ -217,11 +217,14 @@
 #task-list {
   --task-group-header-height: 28px;
 }
+/* One grid cell holds the heading and, over its end, the project menu. */
 .task-group-header {
+  /* Puts the menu icon's right edge in line with the rows' dots. */
+  --task-group-menu-inset: 2.5px;
   position: sticky;
   top: 0;
   z-index: 1;
-  display: flex;
+  display: grid;
   align-items: center;
   height: var(--task-group-header-height);
   padding: 2px 3px 2px 2px;
@@ -230,14 +233,15 @@
   line-height: 13px;
 }
 .task-group-heading {
+  grid-area: 1 / 1;
   display: flex;
-  flex: 1;
   min-width: 0;
   height: 100%;
   margin: 0;
   font: inherit;
 }
-/* The whole header, save its menu, toggles the group. */
+/* The whole header, save its menu, toggles the group. Its end padding keeps
+   the name clear of the menu, which always shows where nothing hovers. */
 .task-group-toggle {
   display: flex;
   flex: 1;
@@ -246,6 +250,7 @@
   min-width: 0;
   height: 100%;
   padding: 0 6px;
+  padding-inline-end: calc(24px + var(--task-group-menu-inset) + 6px);
   color: var(--muted);
   font-weight: 600;
   text-align: start;
@@ -293,8 +298,7 @@
   color: var(--text);
 }
 /* A collapsed group's hidden-task dots sit where the project menu shows, and
-   trade places with it on hover. Where nothing hovers, they sit beside it.
-   Clicks pass through them to the menu. */
+   trade places with it on hover. Where nothing hovers, they sit beside it. */
 .task-group-signals {
   display: flex;
   flex: none;
@@ -308,17 +312,19 @@
   display: flex;
 }
 @media (hover: hover) {
+  /* The toggle's content runs under the menu to the menu's right edge (the
+     inset less the toggle's 1px border). */
+  .task-group-toggle {
+    padding-inline-end: calc(var(--task-group-menu-inset) - 1px);
+  }
+  /* The dots' box covers the menu's, so it keeps a long name clear of the
+     menu even with no dots. The last dot ends in line with the menu icon,
+     and earlier dots extend to the left. */
   .task-group-signals {
-    position: absolute;
-    top: 2px;
-    right: 3px;
-    /* The last dot centres in the menu's slot, in line with the rows' dots,
-       and earlier dots extend to the left. */
     justify-content: flex-end;
     min-width: 24px;
     height: 24px;
-    padding-inline-end: 8.5px;
-    pointer-events: none;
+    padding-inline-end: 6px;
   }
   .task-group-header:hover .task-group-signals,
   .task-group-header:has(
@@ -330,14 +336,18 @@
   }
 }
 /* The project menu shows on hover or focus, or always where nothing hovers.
-   Its padding, not the header's, gives it a full-height target. */
+   Its layer keeps it above the dots, which fade into a layer of their own. */
 .task-group-menu {
+  position: relative;
+  z-index: 1;
+  grid-area: 1 / 1;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: none;
   width: 24px;
   height: 24px;
+  margin-inline-end: var(--task-group-menu-inset);
   padding: 0;
   color: var(--muted);
   opacity: 0;

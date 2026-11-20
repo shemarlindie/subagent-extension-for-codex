@@ -10,9 +10,19 @@ import { TaskStatusIcon } from "./task-status-icon";
 type GroupSignalsProps = {
   /** The tasks a collapsed group or "Show more" hides. */
   tasks: Task[];
+  /**
+   * Names each dot on hover. A collapsed header's dots hide on hover, where
+   * the project menu takes their place, so only "Show more" names them.
+   */
+  tooltips?: boolean;
 };
 
-type SignalProps = { show: boolean; label: string; children: ReactNode };
+type SignalProps = {
+  show: boolean;
+  label: string;
+  tooltip?: boolean;
+  children: ReactNode;
+};
 
 /** Joins states as "a, b and c". */
 const listed = (states: string[]) =>
@@ -21,14 +31,16 @@ const listed = (states: string[]) =>
     : (states[0] ?? "");
 
 // The phrase after the dots speaks for them, so screen readers skip each dot.
-function Signal({ show, label, children }: SignalProps) {
+function Signal({ show, label, tooltip, children }: SignalProps) {
+  const dot = (
+    <span className="group-signal" aria-hidden="true">
+      {children}
+    </span>
+  );
+
   return (
     <Presence show={show} as="span" variant="fold">
-      <TooltipWrapper label={label}>
-        <span className="group-signal" aria-hidden="true">
-          {children}
-        </span>
-      </TooltipWrapper>
+      {tooltip ? <TooltipWrapper label={label}>{dot}</TooltipWrapper> : dot}
     </Presence>
   );
 }
@@ -36,10 +48,10 @@ function Signal({ show, label, children }: SignalProps) {
 /**
  * Flags hidden tasks that have something unread, need attention or are
  * working, in the filters' order. Each dot folds in and out, so its neighbours
- * slide over, and names its state on hover. Screen readers hear one phrase in
- * place of the dots, such as ", including unread and working".
+ * slide over. Screen readers hear one phrase in place of the dots, such as
+ * ", including unread and working".
  */
-export function GroupSignals({ tasks }: GroupSignalsProps) {
+export function GroupSignals({ tasks, tooltips }: GroupSignalsProps) {
   const { attention, working, unread } = groupSignals(tasks);
 
   const states = [
@@ -53,10 +65,14 @@ export function GroupSignals({ tasks }: GroupSignalsProps) {
 
   return (
     <>
-      <Signal show={unread} label="Unread">
+      <Signal show={unread} label="Unread" tooltip={tooltips}>
         <UnreadDot />
       </Signal>
-      <Signal show={Boolean(attention)} label={attention?.label ?? ""}>
+      <Signal
+        show={Boolean(attention)}
+        label={attention?.label ?? ""}
+        tooltip={tooltips}
+      >
         {attention && (
           <TaskStatusIcon
             kind={attention.kind}
@@ -65,7 +81,11 @@ export function GroupSignals({ tasks }: GroupSignalsProps) {
           />
         )}
       </Signal>
-      <Signal show={Boolean(working)} label={working?.label ?? ""}>
+      <Signal
+        show={Boolean(working)}
+        label={working?.label ?? ""}
+        tooltip={tooltips}
+      >
         {working && (
           <TaskStatusIcon
             kind={working.kind}

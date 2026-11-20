@@ -121,6 +121,9 @@ test("a collapsed header flags hidden unread tasks and tasks waiting on input", 
 
   within(header).getByText(", including unread, needing input and working");
   assert.deepEqual(within(header).queryAllByRole("img"), []);
+
+  // The project menu covers the dots on hover, so they carry no tooltips.
+  assert.equal(header.querySelector(".group-signal[aria-label]"), null);
 });
 
 test("a collapsed header flags hidden tasks waiting for a rate limit", async () => {
@@ -144,10 +147,17 @@ test("long groups stop at a few rows until Show more, and Show less folds them a
 
   assert.deepEqual(rows("a"), ["a0", "a1", "a2", "a3", "a4"]);
 
-  await userEvent.click(
-    view.getByRole("button", { name: "Show 2 more, including working" }),
+  const more = view.getByRole("button", {
+    name: "Show 2 more, including working",
+  });
+
+  // Show more's dots name their states on hover.
+  assert.equal(
+    more.querySelector(".group-signal")?.getAttribute("aria-label"),
+    "Working",
   );
 
+  await userEvent.click(more);
   assert.equal(rows("a").length, 7);
 
   await userEvent.click(view.getByRole("button", { name: "Show less" }));

@@ -61,11 +61,9 @@ export function TaskGroup({
                 {tasks.length === 1 ? " task" : " tasks"}
               </span>
             </span>
-            {!open && (
-              <span className="task-group-signals">
-                <GroupSignals tasks={tasks} />
-              </span>
-            )}
+            <span className="task-group-signals">
+              {!open && <GroupSignals tasks={tasks} />}
+            </span>
           </Accordion.Trigger>
         </Accordion.Header>
         {actions}
@@ -79,7 +77,7 @@ export function TaskGroup({
             onClick={() => onExpandedChange(true)}
           >
             Show {hidden.length} more
-            <GroupSignals tasks={hidden} />
+            <GroupSignals tasks={hidden} tooltips />
           </Button>
         )}
         {canShowLess && (
