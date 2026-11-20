@@ -303,6 +303,10 @@
   gap: 4px;
   transition: opacity var(--motion-base) var(--ease-out);
 }
+/* A box, so the dot's fold can shrink its width. */
+.group-signal {
+  display: flex;
+}
 @media (hover: hover) {
   .task-group-signals {
     position: absolute;

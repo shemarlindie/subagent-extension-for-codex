@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
+
 import type { Task } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
+import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { UnreadDot } from "../unread/unread-dot";
 import { groupSignals } from "./selectors";
 import { TaskStatusIcon } from "./task-status-icon";
@@ -9,29 +12,71 @@ type GroupSignalsProps = {
   tasks: Task[];
 };
 
+type SignalProps = { show: boolean; label: string; children: ReactNode };
+
+/** Joins states as "a, b and c". */
+const listed = (states: string[]) =>
+  states.length > 1
+    ? `${states.slice(0, -1).join(", ")} and ${states.at(-1)}`
+    : (states[0] ?? "");
+
+// The phrase after the dots speaks for them, so screen readers skip each dot.
+function Signal({ show, label, children }: SignalProps) {
+  return (
+    <Presence show={show} as="span" variant="fold">
+      <TooltipWrapper label={label}>
+        <span className="group-signal" aria-hidden="true">
+          {children}
+        </span>
+      </TooltipWrapper>
+    </Presence>
+  );
+}
+
 /**
  * Flags hidden tasks that have something unread, need attention or are
  * working, in the filters' order. Each dot folds in and out, so its neighbours
- * slide over.
+ * slide over, and names its state on hover. Screen readers hear one phrase in
+ * place of the dots, such as ", including unread and working".
  */
 export function GroupSignals({ tasks }: GroupSignalsProps) {
   const { attention, working, unread } = groupSignals(tasks);
 
+  const states = [
+    unread && "unread",
+    attention &&
+      (attention.kind === "paused"
+        ? "waiting for a rate limit"
+        : "needing input"),
+    working && "working",
+  ].filter((state) => typeof state === "string");
+
   return (
     <>
-      <Presence show={unread} as="span" variant="fold">
+      <Signal show={unread} label="Unread">
         <UnreadDot />
-      </Presence>
-      <Presence show={Boolean(attention)} as="span" variant="fold">
+      </Signal>
+      <Signal show={Boolean(attention)} label={attention?.label ?? ""}>
         {attention && (
-          <TaskStatusIcon kind={attention.kind} label={attention.label} />
+          <TaskStatusIcon
+            kind={attention.kind}
+            label={attention.label}
+            decorative
+          />
         )}
-      </Presence>
-      <Presence show={Boolean(working)} as="span" variant="fold">
+      </Signal>
+      <Signal show={Boolean(working)} label={working?.label ?? ""}>
         {working && (
-          <TaskStatusIcon kind={working.kind} label={working.label} />
+          <TaskStatusIcon
+            kind={working.kind}
+            label={working.label}
+            decorative
+          />
         )}
-      </Presence>
+      </Signal>
+      {states.length > 0 && (
+        <span className="visually-hidden">, including {listed(states)}</span>
+      )}
     </>
   );
 }
