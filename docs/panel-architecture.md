@@ -296,10 +296,9 @@ reload.
   browser URL. They keep open dialog descriptors, form drafts and the last
   Settings section in browser storage. Unsent task and new-task composer text
   also stays in browser storage until sent or cleared.
-- **Task list width, collapsed project groups and hidden worker icons:** saved
-  in browser storage wherever it is available. The worker icons choice saves
-  with the Settings form but stays out of the service settings. Groups expanded
-  with **Show more** stay expanded while the project groups are shown.
+- **Task list width, collapsed project groups and worker icons:** saved in
+  browser storage wherever it is available. Groups expanded with **Show more**
+  stay expanded while the project groups are shown.
 - **Composer model and reasoning:** saved on the service as profile settings.
   See [New-task composer](#new-task-composer).
 

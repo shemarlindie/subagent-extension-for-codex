@@ -128,17 +128,14 @@ Under **All projects**, tasks group by project, ordered by each group's newest
 task. Project headers stay visible as their rows scroll.
 
 Each row shows the worker icon, the title and at most one dot: yellow when the
-task needs input, pulsing gray while it works, and the accent dot when it is
-unread. Other tasks show no dot, and their titles use its space. Hover the dot
-for the exact status. A title too long for its row scrolls to its end when you
-hover or focus the row. **Details** shows the task's runtime, which accumulates
-across turns and includes the active run. To hide worker icons, turn off
-**Settings > Appearance > Worker icons in task list**.
+task needs input, pulsing gray while it works, and the accent color when it is
+unread. Hover a long title to see the rest. **Details** shows the task's total
+runtime. **Settings > Appearance** can hide worker icons.
 
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
-- A collapsed header shows the project's task count, a yellow dot when a hidden
-  task needs input and an accent dot when one is unread.
+- A collapsed header shows its task count, and dots when a hidden task needs
+  input or is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.
