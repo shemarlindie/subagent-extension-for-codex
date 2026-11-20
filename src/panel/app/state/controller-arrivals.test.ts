@@ -193,6 +193,22 @@ test("a delayed arrival preserves a selection made after its read started", asyn
   expect(controller.getSnapshot().taskArrival).toBeUndefined();
 });
 
+test("a shown panel does not announce tasks created while it was hidden", async (t) => {
+  const { controller, transport, environment } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("old")];
+  await controller.start();
+  environment.setHidden(true);
+  transport.tasks = [task("missed"), task("old")];
+  environment.setHidden(false);
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival).toBeUndefined();
+
+  transport.tasks = [task("new"), task("missed"), task("old")];
+  await controller.refresh();
+  expect(controller.getSnapshot().taskArrival?.id).toBe("new");
+});
+
 test("View cannot leave a dialog opened after an arrival", async (t) => {
   const { controller, transport } = setup(true);
   t.onTestFinished(() => controller.dispose());

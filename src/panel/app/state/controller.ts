@@ -412,9 +412,12 @@ export class Controller {
 
       if (this.isDisposed()) return;
 
-      this.stopVisibility = this.environment.onVisibilityChange?.(() =>
-        this.revisions.resume(),
-      );
+      this.stopVisibility = this.environment.onVisibilityChange?.(() => {
+        // A hidden panel stops reading, and other panels may have shown the
+        // tasks created meanwhile, so it announces none of them.
+        if (!this.environment.hidden()) this.arrivals.reset();
+        this.revisions.resume();
+      });
 
       this.patch({ connected: true, loginRequired: false });
       const savedDialog = this.dialogs.latest();
