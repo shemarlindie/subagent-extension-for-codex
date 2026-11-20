@@ -19,7 +19,7 @@ function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
  * Rows leave out the dot for quiet statuses, and the label carries the exact
  * status.
  */
-type StatusTone = "working" | "queued" | "attention" | "quiet";
+export type StatusTone = "working" | "queued" | "attention" | "quiet";
 
 const STATUS_TONES: Record<RowKind, StatusTone> = {
   starting: "working",

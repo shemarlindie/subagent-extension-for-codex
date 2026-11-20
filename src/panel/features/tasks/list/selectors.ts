@@ -4,7 +4,7 @@ import type {
   Snapshot,
   Task,
 } from "../../../app/state/types.js";
-import { rowStatus, statusTone } from "./task-status.js";
+import { rowStatus, statusTone, type StatusTone } from "./task-status.js";
 
 // Display order of the filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
@@ -51,23 +51,20 @@ export const statusLabel = (task: Task) => {
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
-// A failed row status, or an interruption you didn't ask for, places a task in
-// Failed alone. The other filters never overlap except through All.
-const failedStatus = (task: Task) => {
+/**
+ * The one status filter a task lands in besides All. The yellow dot means
+ * Needs attention, a stop you asked for counts as Done, and any other failure
+ * or interruption counts as Failed. The rest are working, including queued
+ * turns.
+ */
+export function statusFilter(task: Task): Exclude<Filter, "all" | "unread"> {
   const { kind } = rowStatus(task);
+  if (statusTone(kind) === "attention") return "attention";
+  if (kind === "completed" || stopped(task)) return "completed";
+  if (kind === "failed" || kind === "interrupted") return "failed";
 
-  return kind === "failed" || (kind === "interrupted" && !stopped(task));
-};
-
-const done = (task: Task) => task.status === "completed" || stopped(task);
-
-/** Tasks with the yellow dot: waiting on you or on a rate limit reset. */
-export const needsAttention = (task: Task) =>
-  statusTone(rowStatus(task).kind) === "attention";
-
-/** Unfinished tasks that need nothing from you, including queued turns. */
-export const working = (task: Task) =>
-  !terminal(task) && !failedStatus(task) && !needsAttention(task);
+  return "active";
+}
 
 /** The snapshot fields the task list selectors read. */
 export const TASK_LIST_FIELDS = [
@@ -90,15 +87,10 @@ export const pendingQuestions = (task: Task): Question[] => {
   return Array.isArray(questions) ? (questions as Question[]) : [];
 };
 
-// Each task lands in one status filter besides All; see failedStatus. Unread
-// cuts across them.
+// Unread cuts across the status filters.
 const matchesFilter = (task: Task, filter: Filter) =>
   filter === "all" ||
-  (filter === "unread" && Boolean(task.unread)) ||
-  (filter === "active" && working(task)) ||
-  (filter === "attention" && needsAttention(task)) ||
-  (filter === "completed" && done(task)) ||
-  (filter === "failed" && failedStatus(task));
+  (filter === "unread" ? Boolean(task.unread) : statusFilter(task) === filter);
 
 // Tasks in the chosen project and search, before the status filter applies.
 // Archived tasks are left out. The Projects page lists them.
@@ -188,7 +180,7 @@ export function groupRows(tasks: Task[], selected?: string) {
 export function groupSignals(tasks: Task[]) {
   const statuses = tasks.map(rowStatus);
 
-  const toned = (tone: ReturnType<typeof statusTone>) =>
+  const toned = (tone: StatusTone) =>
     statuses.find((status) => statusTone(status.kind) === tone);
 
   return {
