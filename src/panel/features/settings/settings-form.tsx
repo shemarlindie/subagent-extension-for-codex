@@ -11,12 +11,13 @@ import { Notice } from "../../shared/components/notice/notice";
 import { SearchField } from "../../shared/components/search/search-field";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
+import { setRowIcons, useRowIcons } from "../tasks/list/row-icons";
 import { settingsSearch } from "./search/settings-search";
 import { SettingsSearchContext } from "./search/settings-search-context";
 import { SettingsSearchSummary } from "./search/settings-search-summary";
 import { useSettingsSearchView } from "./search/use-settings-search-view";
 import { aboutSection } from "./settings-about";
-import { appearanceSection } from "./settings-appearance";
+import { appearanceSection, ROW_ICONS_FIELD } from "./settings-appearance";
 import { SettingsContext } from "./settings-fields";
 import {
   activeSection,
@@ -79,9 +80,14 @@ export function SettingsForm({
     [settings?.sections],
   );
 
-  const initial = useMemo(
-    () => sectionsForm(sections, settings?.values ?? {}),
-    [sections, settings?.values],
+  const rowIcons = useRowIcons();
+
+  const initial = useMemo<Values>(
+    () => ({
+      ...sectionsForm(sections, settings?.values ?? {}),
+      [ROW_ICONS_FIELD]: String(rowIcons),
+    }),
+    [sections, settings?.values, rowIcons],
   );
 
   const { control, register, handleSubmit, setValue, reset } =
@@ -101,7 +107,10 @@ export function SettingsForm({
     editCount(section, form, baseline.current),
   );
 
-  const total = edits.reduce((sum, count) => sum + count, 0);
+  const appearanceEdits =
+    form[ROW_ICONS_FIELD] === baseline.current[ROW_ICONS_FIELD] ? 0 : 1;
+
+  const total = edits.reduce((sum, count) => sum + count, appearanceEdits);
 
   const [selectedSection, setSelectedSection] = useState(
     controller.getLastSettingsSection(),
@@ -278,7 +287,7 @@ export function SettingsForm({
       }));
 
   sectionViews.push(
-    appearanceSection(search),
+    appearanceSection(search, { control, edits: appearanceEdits }),
     transferSection(search, {
       ready: !loading,
       edited: total > 0,
@@ -315,6 +324,7 @@ export function SettingsForm({
       },
       false,
       () => {
+        setRowIcons(submitted[ROW_ICONS_FIELD] === "true");
         baseline.current = { ...submitted };
         reset(submitted, { keepValues: true });
         setDiscarding(false);

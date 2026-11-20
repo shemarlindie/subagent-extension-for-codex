@@ -10,19 +10,12 @@ const GROUPS: RowWidth[][] = [
   ["short", "medium"],
 ];
 
-type TaskListSkeletonProps = {
-  /** Mirrors compact rows: one line with a profile and a status mark. */
-  compact?: boolean;
-};
-
 /**
- * Mirrors project groups, task titles, worker profiles and row metadata.
- * Headers show in every scope: the scope can resolve mid-load, and a fixed
+ * Mirrors project groups and task rows: a worker profile, a title and a status
+ * dot. Headers show in every scope: the scope can resolve mid-load, and a fixed
  * shape keeps the placeholder from changing while it's on screen.
  */
-export function TaskListSkeleton({ compact = false }: TaskListSkeletonProps) {
-  const Row = compact ? CompactSkeletonRow : SkeletonRow;
-
+export function TaskListSkeleton() {
   return (
     <LoadingSkeleton
       label="Loading tasks"
@@ -38,7 +31,7 @@ export function TaskListSkeleton({ compact = false }: TaskListSkeletonProps) {
             />
           </div>
           {widths.map((width, row) => (
-            <Row key={row} width={width} />
+            <SkeletonRow key={row} width={width} />
           ))}
         </div>
       ))}
@@ -48,37 +41,15 @@ export function TaskListSkeleton({ compact = false }: TaskListSkeletonProps) {
 
 type SkeletonRowProps = { width: RowWidth };
 
-const titleClass = (width: RowWidth) =>
-  `task-list-skeleton-title task-list-skeleton-title-${width}`;
-
 function SkeletonRow({ width }: SkeletonRowProps) {
   return (
     <div className="task-list-skeleton-row">
-      <span className="row-title">
-        <SkeletonShape className={titleClass(width)} measureText="Task title" />
-      </span>
-      <div className="row-meta task-list-skeleton-meta">
-        <SkeletonShape className="task-list-skeleton-profile" />
-        <div className="task-list-skeleton-trailing">
-          <span className="row-runtime">
-            <SkeletonShape
-              className="task-list-skeleton-runtime"
-              measureText="Ran for 5m"
-            />
-          </span>
-          <SkeletonShape className="task-list-skeleton-status" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CompactSkeletonRow({ width }: SkeletonRowProps) {
-  return (
-    <div className="task-list-skeleton-row" data-compact="">
       <SkeletonShape className="task-list-skeleton-profile" />
       <span className="row-title">
-        <SkeletonShape className={titleClass(width)} measureText="Task title" />
+        <SkeletonShape
+          className={`task-list-skeleton-title task-list-skeleton-title-${width}`}
+          measureText="Task title"
+        />
       </span>
       <SkeletonShape className="task-list-skeleton-status" />
     </div>

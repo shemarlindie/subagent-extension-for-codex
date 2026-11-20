@@ -3,11 +3,11 @@ import { memo, type MouseEvent } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
 import { useController } from "../../../app/state/controller-context";
-import { profileLabel, terminal } from "../../../app/state/selectors";
+import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
-import { useNow } from "../../../shared/utils/use-now";
+import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
-import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
+import { measureRowTitle } from "./row-title-slide";
 import { rowStatus } from "./task-status";
 import { statusTone, TaskStatusIcon } from "./task-status-icon";
 import type { TaskRowClick } from "./use-task-selection";
@@ -18,8 +18,6 @@ interface TaskRowProps {
   current: boolean;
   pressed?: boolean;
   disabled?: boolean;
-  /** Shows the task on one line: profile icon, title and status mark. */
-  compact?: boolean;
   onActivate?: (id: string, action: TaskRowClick) => void;
 }
 
@@ -29,7 +27,6 @@ export const TaskRow = memo(function TaskRow({
   current,
   pressed,
   disabled,
-  compact = false,
   onActivate,
 }: TaskRowProps) {
   const controller = useController();
@@ -66,19 +63,16 @@ export const TaskRow = memo(function TaskRow({
             className="row"
             data-task={task.id}
             data-unread={task.unread ? "" : undefined}
-            data-compact={compact ? "" : undefined}
             aria-current={pressed === undefined ? current : undefined}
             aria-pressed={pressed}
             aria-disabled={disabled}
             onClick={select}
+            onPointerEnter={(event) => measureRowTitle(event.currentTarget)}
+            onFocus={(event) => measureRowTitle(event.currentTarget)}
           />
         }
       >
-        {compact ? (
-          <CompactTaskRowContent task={task} />
-        ) : (
-          <TaskRowContent task={task} />
-        )}
+        <TaskRowContent task={task} />
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className="menu-positioner">
@@ -115,42 +109,17 @@ export const TaskRow = memo(function TaskRow({
 
 type TaskRowContentProps = Pick<TaskRowProps, "task">;
 
-// The icon tells profiles apart, so the worker's name is in its tooltip and
-// for screen readers only.
+// The title comes first so screen readers hear it first; CSS puts the icon
+// before it. A title too long for the row scrolls to its end on hover or focus.
+// The icon tells profiles apart, so the worker's name is for screen readers
+// only.
 function TaskRowContent({ task }: TaskRowContentProps) {
   const worker = profileLabel(task.worker_profile);
 
   return (
     <>
-      <span className="row-title">{task.title}</span>
-      <span className="row-meta">
-        <span className="row-worker" title={worker}>
-          <WorkerProfileIcon
-            profile={task.worker_profile}
-            size={12}
-            className="row-worker-icon"
-          />
-          {task.unread && <UnreadDot />}
-          <span className="row-worker-label visually-hidden">{worker}</span>
-        </span>
-        <span className="row-trailing">
-          <TaskRowRuntime task={task} />
-          <TaskRowStatus task={task} />
-        </span>
-      </span>
-    </>
-  );
-}
-
-// The title comes first so screen readers hear it first; CSS puts the icon
-// before it. Its tooltip shows the whole title when the row fades it out.
-function CompactTaskRowContent({ task }: TaskRowContentProps) {
-  const worker = profileLabel(task.worker_profile);
-
-  return (
-    <>
-      <span className="row-title" title={task.title}>
-        {task.title}
+      <span className="row-title">
+        <span className="row-title-text">{task.title}</span>
       </span>
       <span className="row-worker" title={worker}>
         <WorkerProfileIcon
@@ -160,7 +129,7 @@ function CompactTaskRowContent({ task }: TaskRowContentProps) {
         />
         <span className="visually-hidden">{worker}</span>
       </span>
-      <CompactRowSignal task={task} />
+      <TaskRowSignal task={task} />
     </>
   );
 }
@@ -168,63 +137,26 @@ function CompactTaskRowContent({ task }: TaskRowContentProps) {
 /**
  * One dot at most: a task that needs input, then one at work, then one with
  * something unread. Screen readers hear the unread state and status whichever
- * dot shows.
+ * dot shows. Without a dot, the title takes the slot's space, and the slot
+ * folds in or out as a dot comes or goes.
  */
-function CompactRowSignal({ task }: { task: Task }) {
-  const quiet = statusTone(rowStatus(task).kind) === "quiet";
-
-  return (
-    <span className="row-signal">
-      {task.unread &&
-        (quiet ? (
-          <UnreadDot />
-        ) : (
-          <span className="visually-hidden">Unread</span>
-        ))}
-      <TaskRowStatus task={task} />
-    </span>
-  );
-}
-
-// Rows show a dot only for work and input. Otherwise the runtime or label says
-// enough, so the status is for screen readers.
-function TaskRowStatus({ task }: { task: Task }) {
+function TaskRowSignal({ task }: TaskRowContentProps) {
   const { kind, label } = rowStatus(task);
+  const quiet = statusTone(kind) === "quiet";
 
-  return statusTone(kind) === "quiet" ? (
-    <span className="visually-hidden">{label}</span>
+  const dot = quiet ? (
+    task.unread && <UnreadDot />
   ) : (
     <TaskStatusIcon kind={kind} label={label} />
   );
-}
-
-function TaskRowRuntime({ task }: { task: Task }) {
-  const status = rowStatus(task);
-
-  const activityLabel =
-    (task.status === "running" &&
-      (status.kind === "failed" ||
-        status.kind === "paused" ||
-        status.kind === "input")) ||
-    Boolean(task.pending_input);
-
-  const live = runtimeLive(task) && !activityLabel;
-  const now = useNow(live);
-  const runtime = taskRuntimeMs(task, now);
-
-  // Attention states and tasks without an active clock use their short label.
-  // Finished tasks say their time is final; the status icon says how it ended.
-  const label =
-    activityLabel || (!live && !terminal(task)) ? status.shortLabel : undefined;
-
-  const duration = formatDuration(runtime);
 
   return (
-    <span
-      className="row-runtime"
-      title={label ? status.label : "Total run time across turns"}
-    >
-      {label ?? (terminal(task) ? `Ran for ${duration}` : duration)}
-    </span>
+    <>
+      {task.unread && !quiet && <span className="visually-hidden">Unread</span>}
+      <Presence show={Boolean(dot)} as="span" variant="fold">
+        <span className="row-signal">{dot}</span>
+      </Presence>
+      {quiet && <span className="visually-hidden">{label}</span>}
+    </>
   );
 }

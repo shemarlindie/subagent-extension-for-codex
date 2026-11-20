@@ -114,9 +114,13 @@
   align-content: start;
 }
 .task-list-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  min-height: 28px;
   margin: 1px 0;
-  padding: 7px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
 }
 .task-list-skeleton-project {
@@ -135,87 +139,81 @@
 .task-list-skeleton-title-short {
   width: 54%;
 }
-.task-list-skeleton-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-top: 3px;
-}
-.task-list-skeleton-trailing {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
 .task-list-skeleton-profile,
 .task-list-skeleton-status {
-  width: 10px;
-  height: 10px;
+  flex: none;
   border-radius: 50%;
 }
-/* Matches a status dot and its margin. */
+.task-list-skeleton-profile {
+  width: 12px;
+  height: 12px;
+}
+/* A status dot centred in its row's 12px slot. */
 .task-list-skeleton-status {
   width: 7px;
   height: 7px;
   margin: 2.5px;
 }
-.task-list-skeleton-runtime {
-  width: 54px;
-  height: 7px;
-}
-.task-list-skeleton-row[data-compact] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 8px;
-}
-.task-list-skeleton-row[data-compact] .row-title {
-  flex: 1;
-  min-width: 0;
-}
-.task-list-skeleton-row[data-compact] .task-list-skeleton-profile {
-  width: 12px;
-  height: 12px;
-}
 
-/* Compact rows: profile icon, title and one signal dot on one line. The title
-   comes first in the DOM, so screen readers hear it first. */
-.row[data-compact] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 4px 8px;
-}
-.row[data-compact] .row-title {
-  flex: 1;
-  min-width: 0;
-}
-.row[data-compact] .row-worker {
+/* The title comes first in the DOM, so screen readers hear it before the
+   worker icon. */
+.row-worker {
   order: -1;
   display: flex;
   flex: none;
   color: var(--muted);
 }
-/* A fixed slot keeps titles the same width whether or not a dot shows. */
+.row-worker-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+/* Appearance settings can hide worker icons. The emptied slot takes no space
+   or gap, and screen readers still hear the worker. */
+#task-list[data-row-icons="hidden"]
+  :is(.row-worker-icon, .task-list-skeleton-profile) {
+  display: none;
+}
+#task-list[data-row-icons="hidden"] .row-worker {
+  display: contents;
+}
+/* After a short pause on hover or focus, a long title slides to show its end,
+   and its start fades at the left edge as it goes. It slides back when the
+   row loses hover or focus. row-title-slide.ts marks long titles and sets
+   the distance and duration. */
+@property --row-title-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+.row-title[data-overflow] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--row-title-fade-start),
+    #000 calc(100% - 20px),
+    transparent
+  );
+  transition: --row-title-fade-start var(--motion-base) var(--ease-out);
+}
+.row:is(:hover, :focus-visible) .row-title[data-overflow] {
+  --row-title-fade-start: 20px;
+  transition-delay: 0.3s;
+}
+.row-title-text {
+  display: inline-block;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.row:is(:hover, :focus-visible) .row-title[data-overflow] .row-title-text {
+  transform: translateX(var(--title-slide-distance));
+  transition: transform var(--title-slide-duration) var(--ease-out) 0.3s;
+}
+/* A fixed slot keeps every dot centred in the same place. */
 .row-signal {
   display: flex;
   flex: none;
   justify-content: center;
   width: 12px;
-}
-@media (pointer: coarse) {
-  .row[data-compact] {
-    min-height: 36px;
-  }
-}
-/* Compact groups sit closer together, and "Show more" keeps a row's spacing. */
-#task-list[data-compact] .task-group + .task-group {
-  margin-top: 12px;
-}
-#task-list[data-compact] .task-group-more {
-  margin-bottom: 4px;
 }
 /* Project groups in the all-projects list. Primary text sets headers apart
    from the muted scope label above the list. */
@@ -293,7 +291,7 @@
   gap: 5px;
   width: calc(100% - 8px);
   height: calc(var(--task-group-header-height) - 4px);
-  margin: 2px 6px 9px 2px;
+  margin: 2px 6px 4px 2px;
   padding: 0 6px;
   color: var(--muted);
   font-size: 11px;
@@ -359,7 +357,7 @@
    the header reads as part of the group under it. It sits on the group, so
    every header keeps the same height. */
 .task-group + .task-group {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 /* A collapsed group ends at its header, which sits closer to the next group
    than a row's text does. */
@@ -371,9 +369,6 @@
   scroll-margin-top: var(--task-group-header-height);
 }
 
-.row[aria-pressed="true"] .row-meta {
-  color: color-mix(in srgb, var(--text) 30%, var(--muted));
-}
 .row[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }

@@ -258,13 +258,22 @@ header .toolbar {
   padding: 8px 10px;
   text-align: center;
 }
+/* A task row: worker icon, title and at most one status dot on one line. */
 .row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  min-height: 28px;
   text-align: left;
   border-color: transparent;
-  padding: 7px 10px;
+  padding: 4px 8px;
   margin: 1px 0;
+}
+@media (pointer: coarse) {
+  .row {
+    min-height: 36px;
+  }
 }
 .task-list-scroll-area {
   position: relative;
@@ -325,19 +334,12 @@ header .toolbar {
 /* A title too long for its row fades out at the right edge. */
 .row-title {
   display: block;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 300;
   mask-image: linear-gradient(to left, transparent, #000 20px);
-}
-.row-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 3px;
-  overflow-wrap: anywhere;
 }
 /* A task status dot, the size of the unread dot. See task-status-icon.tsx. */
 .dot {

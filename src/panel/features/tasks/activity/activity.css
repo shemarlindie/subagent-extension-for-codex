@@ -183,46 +183,6 @@
   right: 20px;
   bottom: 16px;
 }
-.row-meta {
-  justify-content: space-between;
-}
-.row-worker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.row-worker-icon {
-  display: block;
-  flex: none;
-  width: 12px;
-  height: 12px;
-}
-.row-worker-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row-trailing {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.row-runtime {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-/* A status dot fills a 12px slot, the size of the worker icon. */
-.row-status-icon {
-  margin: 2.5px;
-}
-.row-status-glow {
-  fill: currentColor;
-  opacity: 0.15;
-  animation: motion-pulse 2.4s ease-in-out infinite;
-}
 /* Timeline: the rail runs between the first and last markers rather than past them. */
 .timeline-item {
   /* Rail to content, and item top to marker centre. */

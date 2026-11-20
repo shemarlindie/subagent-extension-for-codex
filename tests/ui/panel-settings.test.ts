@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { setRowIcons } from "../../src/panel/features/tasks/list/row-icons";
 import {
   assert,
   budgetRow,
@@ -82,6 +83,32 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
   assert.deepEqual(
     transport.calls.find((call) => call.name === "update_settings")?.args,
     { set: { providers: { claude: { subagents: false } } } },
+  );
+});
+
+test("hiding worker icons waits for Save and stays in the panel", async (t) => {
+  const { transport, user } = await setupSettings(t, (transport) =>
+    serveSettings(transport, { values: {}, sections: [] }),
+  );
+
+  t.onTestFinished(() => setRowIcons(true));
+
+  await screen.findByRole("heading", { name: "Settings" });
+  await user.click(screen.getByRole("tab", { name: "Appearance" }));
+
+  await user.click(
+    screen.getByRole("switch", { name: "Worker icons in task list" }),
+  );
+
+  assert.equal(localStorage.getItem("dw_hide_task_row_icons"), null);
+  await user.click(screen.getByRole("button", { name: "Save 1 change" }));
+  await waitForSettingsSaved();
+
+  assert.equal(localStorage.getItem("dw_hide_task_row_icons"), "true");
+
+  assert.equal(
+    transport.calls.some((call) => call.name === "update_settings"),
+    false,
   );
 });
 

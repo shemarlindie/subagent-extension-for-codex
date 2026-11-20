@@ -124,26 +124,21 @@ The task list offers search and these filters:
 The default is the first nonempty filter after Unread. Counts respect the
 project and search filters. Press `/` to search and Escape to clear it.
 
-Task runtime accumulates across turns and includes the active run. Under **All
-projects**, tasks group by project, ordered by each group's newest task. Project
-headers stay visible as their rows scroll.
+Under **All projects**, tasks group by project, ordered by each group's newest
+task. Project headers stay visible as their rows scroll.
 
-A dot at the end of a row shows a task that needs you or is working: yellow when
-it needs input and pulsing gray while it works. Other statuses show no dot.
-Hover the dot for the exact status. Titles too long for the row fade out at its
-right edge.
+Each row shows the worker icon, the title and at most one dot: yellow when the
+task needs input, pulsing gray while it works, and the accent dot when it is
+unread. Other tasks show no dot, and their titles use its space. Hover the dot
+for the exact status. A title too long for its row scrolls to its end when you
+hover or focus the row. **Details** shows the task's runtime, which accumulates
+across turns and includes the active run. To hide worker icons, turn off
+**Settings > Appearance > Worker icons in task list**.
 
-Turn on **Compact task rows** in **Settings > Appearance** to show each task on
-one line: worker icon, title and at most one dot. Compact rows leave out the
-runtime, and show the unread dot in place of a status dot when the task neither
-needs you nor is working. The setting applies right away, and the panel keeps it
-in browser storage wherever it is available.
-
-- The header shows the project's task count. Click it to collapse the group. The
-  panel remembers collapsed groups across reloads where browser storage is
-  available.
-- A collapsed header shows a yellow dot when a hidden task needs input and an
-  accent dot when one is unread.
+- Click a project header to collapse its group. The panel remembers collapsed
+  groups across reloads where browser storage is available.
+- A collapsed header shows the project's task count, a yellow dot when a hidden
+  task needs input and an accent dot when one is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.
@@ -180,9 +175,8 @@ conversation clears the selection.
 
 A task becomes unread when it has a worker message or reply, a turn end, a
 failure, or a question or permission request you haven't seen. Your own messages
-never make a task unread. Unread rows show an accent dot after the worker icon,
-or at the end of compact rows, and the compact panel adds **N unread** to its
-counts.
+never make a task unread. Unread rows show an accent dot unless they need input
+or are working, and the compact panel adds **N unread** to its counts.
 
 A task becomes read when its Chat tab shows the latest message. Opening an
 unread task places a **New** divider above the first unseen item and scrolls to
@@ -261,8 +255,7 @@ three affected tasks or messages.
   message was already sent. The panel forgets a change that failed entirely.
   When only some tasks fail, the ones that changed stay reversible.
 - Text fields, open dialogs and the Settings page keep their own undo. Settings
-  saves nothing until you choose **Save**, except **Appearance**, which applies
-  right away.
+  saves nothing until you choose **Save**.
 - A new change clears what you could redo. The history lasts while the panel is
   open, including after you switch project or conversation.
 - Undo puts removed queued messages back in their places with their original
