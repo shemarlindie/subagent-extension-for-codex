@@ -17,7 +17,7 @@ import {
 
 import { canAnimate, MOTION } from "../shared/components/motion/motion-utils";
 
-const DEFAULT_WIDTH = 245;
+const DEFAULT_WIDTH = 300;
 const MIN_RAIL_WIDTH = 220;
 const MAX_RAIL_WIDTH = 480;
 const MIN_INSPECTOR_WIDTH = 320;
