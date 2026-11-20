@@ -49,9 +49,9 @@ Tasks** returns to the previous task view.
 - **Remove project** asks for confirmation.
 
 By default, removal deletes only the saved registration. Files, task history and
-worktrees remain. Working tasks may finish their turns, but later turns need
-approval again. Parent approvals still apply, and starting a task from the
-repository's chat can register it again. Parent approvals set in
+worktrees remain. Running turns may finish, and later turns need approval again.
+Parent approvals still apply, and starting a task from the repository's chat can
+register it again. Parent approvals set in
 `SUBAGENT_EXTENSION_FOR_CODEX_ALLOWED_ROOTS` return when the service restarts
 unless you remove them from that setting.
 
@@ -572,7 +572,7 @@ shows connection status only when there is a problem. A failed connection shows
 connection shows **Connection failed**. Narrow panels show a warning icon
 instead, and hovering or tapping it shows the status. While a
 [plugin update](task-continuation.md#updates-and-service-handoff) waits for
-working tasks to finish their turns, the header shows **Updating…**. Changes has
+running turns to finish, the header shows **Updating…**. Changes has
 [its own refresh rules](#changes-tab).
 
 See [Panel network access](host-capabilities.md#panel-network-access) for how
