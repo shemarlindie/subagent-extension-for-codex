@@ -32,11 +32,15 @@ const TITLE_SLIDE_SPEED = 50;
  */
 function paceTitleSlide(title: HTMLElement | null) {
   const text = title?.querySelector<HTMLElement>(".row-title-text");
-  // With reduced motion, CSS makes the title jump to its end.
-  if (!title || !text || reducedMotion(title)) return;
+  if (!title || !text) return;
 
   const overflow = text.offsetWidth - title.clientWidth;
-  if (overflow <= 0) return;
+
+  // With reduced motion, CSS makes a long title jump to its end, which can
+  // skip its middle, so a tooltip shows the whole title.
+  const still = reducedMotion(title);
+  title.title = still && overflow > 0 ? text.textContent : "";
+  if (still || overflow <= 0) return;
 
   const seconds = Math.max(0.6, overflow / TITLE_SLIDE_SPEED);
   title.style.setProperty("--row-title-slide-duration", `${seconds}s`);
