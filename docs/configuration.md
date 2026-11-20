@@ -201,7 +201,7 @@ Open **Settings** and choose **Import and export**.
 
 Exports include your saved defaults, including the amounts of budget limits that
 are off. Approved projects aren't included. Add them separately on each
-computer.
+computer. **Appearance** settings stay in each browser and aren't included.
 
 **Export file** saves a JSON file. In a browser, it's a normal download that
 follows your browser's preferences. In a host that supports file downloads, the
