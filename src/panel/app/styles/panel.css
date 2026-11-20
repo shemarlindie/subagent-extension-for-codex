@@ -349,7 +349,9 @@ header .toolbar {
   background: var(--muted);
   flex-shrink: 0;
 }
+/* Lighter than muted text, so a working task reads as quiet activity. */
 .dot[data-tone="working"] {
+  background: color-mix(in srgb, var(--text) 28%, transparent);
   animation: motion-pulse 1.6s ease-in-out infinite;
 }
 .dot[data-tone="input"] {
