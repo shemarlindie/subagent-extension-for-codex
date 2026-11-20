@@ -413,8 +413,7 @@ breakdown in its tooltip.
 
 Questions appear as inline cards with single or multiple choices, custom
 answers, skips and **Respond**. Several questions form a stack you can step
-through. Unsent answers survive switching tasks until reload. Once sent, Chat
-keeps each question with its answer, labelled when the parent agent answered.
+through. Unsent answers survive switching tasks until reload.
 
 Permission requests show their full payload in Chat, with commands formatted as
 code. Add an optional message, then choose **Deny** or **Approve**. Requests
