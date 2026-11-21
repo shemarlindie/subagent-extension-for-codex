@@ -1,5 +1,6 @@
 import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import type { Event } from "../../../shared/events/types.js";
+import type { PanelSettings } from "../../../shared/settings/settings-schema.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
 import type { GitState } from "../../../shared/tasks/model.js";
 import type {
@@ -322,6 +323,8 @@ export type Snapshot = {
   connection: ConnectionLabel;
   /** Whether a newer service takes over once running turns end. */
   updating: boolean;
+  /** The saved panel settings, from the latest view. */
+  panelSettings: PanelSettings;
   error: string;
   /** A user action failure that stays visible until dismissed. */
   actionFailure?: string;

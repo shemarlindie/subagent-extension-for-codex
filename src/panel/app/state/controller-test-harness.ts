@@ -2,7 +2,10 @@
 // build reject production imports of `*-test-harness` modules.
 import assert from "node:assert/strict";
 
-import { settingsDefaults } from "../../../shared/settings/settings-schema";
+import {
+  panelSettingsDefaults,
+  settingsDefaults,
+} from "../../../shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
 import { composeView } from "./panel-view-test-harness";
@@ -144,6 +147,7 @@ export class FakeTransport implements Transport {
       },
       "view.chat": { items: [], next_cursor: 0 },
       "view.pending": { tasks: [] },
+      "view.settings": panelSettingsDefaults,
       get_message: { message: { id: "parent_1" } },
       get_settings: { values: defaults },
     };

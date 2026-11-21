@@ -142,6 +142,7 @@ export class Control {
       store.database,
       () => [...providers.keys()],
       (id) => providerMetadata(id, providers.get(id)?.metadata),
+      (owner) => store.markChanged(owner),
     );
 
     this.attachments = new Attachments(

@@ -296,11 +296,15 @@ reload.
   browser URL. They keep open dialog descriptors, form drafts and the last
   Settings section in browser storage. Unsent task and new-task composer text
   also stays in browser storage until sent or cleared.
-- **Task list width, collapsed project groups and worker icons:** saved in
-  browser storage wherever it is available. Groups expanded with **Show more**
-  stay expanded while the project groups are shown.
+- **Task list width and collapsed project groups:** saved in browser storage
+  wherever it is available. Groups expanded with **Show more** stay expanded
+  while the project groups are shown.
 - **Composer model and reasoning:** saved on the service as profile settings.
   See [New-task composer](#new-task-composer).
+- **Panel settings:** display preferences such as worker icons are service
+  settings under `panel`, so they import and export with the rest. Every update
+  wait view carries them, and the controller keeps them in `panelSettings`. Add
+  a new one as a leaf of that group and a row in the Appearance section.
 
 `app/view-state.ts` provides the reload adapters, and `app/bootstrap.tsx`
 installs them for the standalone console and the development host. The

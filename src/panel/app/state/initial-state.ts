@@ -1,3 +1,4 @@
+import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
 import { DEFAULT_PAGE } from "../navigation/pages";
 import { CONNECTION } from "./connection";
 import type { Snapshot } from "./types";
@@ -22,6 +23,7 @@ export function initialState(): Snapshot {
     busy: false,
     connection: CONNECTION.connecting,
     updating: false,
+    panelSettings: panelSettingsDefaults,
     error: "",
     loginRequired: false,
     formError: "",

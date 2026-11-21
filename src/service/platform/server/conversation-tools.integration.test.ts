@@ -699,6 +699,7 @@ test("an update wait returns the panel view as of its revision, except for draft
     draft?: unknown;
     view?: {
       built_at: number;
+      settings: unknown;
       projects: unknown;
       list: { tasks: PanelTask[] };
       chat?: { items: { id: string }[]; next_cursor: number };
@@ -735,6 +736,7 @@ test("an update wait returns the panel view as of its revision, except for draft
     const { built_at: builtAt, ...view } = first.view;
     assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
 
+    assert.deepEqual(view.settings, { row_icons: true });
     assert.deepEqual(view.projects, await user("list_projects", {}));
     assert.deepEqual(view.list, await user("app_list_tasks", parts.list));
     assert.deepEqual(view.pending, { tasks: [] });
@@ -788,6 +790,21 @@ test("an update wait returns the panel view as of its revision, except for draft
     assert.equal(changed.revision, store.revision("alice"));
     assert.equal(changed.view?.list.tasks[0]?.title, "Renamed");
 
+    // Saving settings changes the revision, and the view has the new ones.
+    const saving = wait({
+      after: changed.revision,
+      view: parts,
+      wait_ms: 5000,
+    });
+
+    await user("app_update_settings", {
+      set: { panel: { row_icons: false } },
+    });
+
+    const saved = await saving;
+    assert.notEqual(saved.revision, changed.revision);
+    assert.deepEqual(saved.view?.settings, { row_icons: false });
+
     // A missing selected task leaves its details out and the rest in.
     const missing = await wait({
       view: {
@@ -802,6 +819,7 @@ test("an update wait returns the panel view as of its revision, except for draft
       "list",
       "pending",
       "projects",
+      "settings",
     ]);
   } finally {
     growDraft.resolve();

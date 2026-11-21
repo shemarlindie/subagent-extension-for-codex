@@ -1,3 +1,4 @@
+import type { PanelSettings } from "../../../shared/settings/settings-schema";
 import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates";
 import type { ChatRead } from "../../features/tasks/chat/chat-state";
@@ -18,6 +19,7 @@ type ViewArgs = {
 export type PanelView = {
   /** When the service built it, in epoch milliseconds. */
   built_at: number;
+  settings: PanelSettings;
   projects: Project[];
   list: TaskList;
   chat?: ChatRead;

@@ -73,6 +73,8 @@ export class Settings {
     private metadata: (provider: string) => ProviderMetadata | undefined = (
       provider,
     ) => builtinProviderMetadata[provider],
+    /** Tells the owner's panels to read their view again. */
+    private changed: (owner: string) => void = () => {},
   ) {
     // Settings cover providers with presentation metadata. A service without
     // any still needs a valid provider default; tasks can still choose other
@@ -247,6 +249,8 @@ export class Settings {
       .values({ owner, body })
       .onConflictDoUpdate({ target: userSettings.owner, set: { body } })
       .run();
+
+    this.changed(owner);
 
     return { values: this.shown(this.values(owner)) };
   }
