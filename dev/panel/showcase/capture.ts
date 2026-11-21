@@ -8,13 +8,10 @@ import { parseArgs } from "node:util";
 
 import type { Browser, Page } from "@playwright/test";
 
+import { devServer, launchBrowser } from "../capture/capture-browser";
+import { withCleanup } from "../capture/capture-cleanup";
 import { checkCaptureFrames, describeFrameCheck } from "../capture/frame-check";
-import {
-  capturePngFrames,
-  devServer,
-  launchBrowser,
-  ORIGIN,
-} from "../capture/screencast";
+import { capturePngFrames } from "../capture/screencast";
 import { PLAYBACK_MS } from "./playback";
 import { story, storyAt } from "./story";
 
@@ -60,7 +57,7 @@ const size = {
 };
 
 async function openShowcase(page: Page, query: string) {
-  await page.goto(`${ORIGIN}/showcase.html?${query}`);
+  await page.goto(`${server.origin}/showcase.html?${query}`);
 
   await page.evaluate((zoom) => {
     document.documentElement.style.zoom = String(zoom);
@@ -154,11 +151,13 @@ async function captureVideo(browser: Browser) {
         },
       });
 
-      try {
-        await page.waitForTimeout(await remainingPlaybackMs(page, started));
-      } finally {
-        await page.screencast.stop();
-      }
+      await withCleanup(
+        () =>
+          remainingPlaybackMs(page, started).then((ms) =>
+            page.waitForTimeout(ms),
+          ),
+        () => page.screencast.stop(),
+      );
 
       return shots;
     });
@@ -176,8 +175,14 @@ async function captureFrames(browser: Browser) {
     await rm(dir, { recursive: true, force: true });
     const { page, started } = await startPlayback(browser, theme);
 
-    const result = await capturePngFrames(page, dir, size, () =>
-      remainingPlaybackMs(page, started).then((ms) => page.waitForTimeout(ms)),
+    const result = await capturePngFrames(
+      page,
+      dir,
+      () =>
+        remainingPlaybackMs(page, started).then((ms) =>
+          page.waitForTimeout(ms),
+        ),
+      size,
     );
 
     await page.close();
@@ -185,21 +190,27 @@ async function captureFrames(browser: Browser) {
   }
 }
 
-await mkdir(out, { recursive: true });
+await withCleanup(
+  async () => {
+    await mkdir(out, { recursive: true });
+    const browser = await launchBrowser();
 
-const browser = await launchBrowser();
-
-try {
-  if (values.frames) {
-    await warmUp(browser);
-    await captureFrames(browser);
-  } else if (values.video) {
-    await warmUp(browser);
-    await captureVideo(browser);
-  } else {
-    await captureSteps(browser);
-  }
-} finally {
-  await browser.close();
-  await server?.close();
-}
+    await withCleanup(
+      async () => {
+        if (values.frames) {
+          await warmUp(browser);
+          await captureFrames(browser);
+        } else if (values.video) {
+          await warmUp(browser);
+          await captureVideo(browser);
+        } else {
+          await captureSteps(browser);
+        }
+      },
+      () => browser.close(),
+    );
+  },
+  async () => {
+    await server.close?.();
+  },
+);

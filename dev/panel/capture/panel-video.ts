@@ -1,25 +1,32 @@
-// Records the dev host's panel as a 2x MP4. See
-// docs/ui-verification.md#recordings.
-import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+// Records the dev host's panel as an MP4. See docs/ui-verification.md#recordings.
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { promisify } from "node:util";
+import { join } from "node:path";
 
 import type { FrameLocator, Locator, Page } from "@playwright/test";
 
-import { withCleanup } from "./capture-cleanup";
 import {
-  capturePngFrames,
-  devServer,
-  launchBrowser,
-  ORIGIN,
-} from "./screencast";
+  cropWithinViewport,
+  rectangleBounds,
+  watchBounds,
+} from "./capture-bounds";
+import { devServer, launchBrowser } from "./capture-browser";
+import { withCleanup } from "./capture-cleanup";
+import { applyPanelLayout, panelLayout, type PanelSetup } from "./panel-layout";
+import {
+  encodePanelMp4,
+  validateOutputCanvas,
+  type CaptureRect,
+  type OutputCanvas,
+} from "./panel-mp4";
+import { capturePngFrames } from "./screencast";
 
-// The screencast captures CSS pixels whatever the device scale, so the page
-// zooms to 2x in a viewport twice the size.
-const ZOOM = 2;
-const VIEWPORT = { width: 1600, height: 1280 };
+type RecordingOptions = {
+  /** Defaults to the whole panel. Rectangles use top-level capture pixels. */
+  target?: Locator | CaptureRect;
+  /** Defaults to the size of the captured area. */
+  output?: OutputCanvas;
+};
 
 type PanelSession = {
   page: Page;
@@ -29,60 +36,27 @@ type PanelSession = {
    * zoomed iframe as if unzoomed, so its own clicks and hovers miss.
    */
   center: (element: Locator) => Promise<{ x: number; y: number }>;
-  /** Records the panel while `actions` runs, and writes the MP4 to `out`. */
-  record: (out: string, actions: () => Promise<unknown>) => Promise<void>;
+  record: (
+    out: string,
+    actions: () => Promise<unknown>,
+    options?: RecordingOptions,
+  ) => Promise<void>;
 };
 
-// The MP4 has one size. Sample each animation frame to include moves such as
-// opening the inspector, which can shift the iframe without resizing it.
-function watchPanelBounds(iframe: Locator) {
-  return iframe.evaluateHandle((element) => {
-    const frame = element.parentElement;
-    const { left, top, right, bottom } = element.getBoundingClientRect();
-    const bounds = { left, top, right, bottom };
-    let frameId: number;
-
-    const watcher = {
-      sample(this: void) {
-        const rect = frame?.querySelector("iframe")?.getBoundingClientRect();
-
-        if (rect?.width && rect.height) {
-          bounds.left = Math.min(bounds.left, rect.left);
-          bounds.top = Math.min(bounds.top, rect.top);
-          bounds.right = Math.max(bounds.right, rect.right);
-          bounds.bottom = Math.max(bounds.bottom, rect.bottom);
-        }
-
-        frameId = requestAnimationFrame(watcher.sample);
-      },
-      bounds,
-      stop() {
-        cancelAnimationFrame(frameId);
-      },
-    };
-
-    frameId = requestAnimationFrame(watcher.sample);
-
-    return watcher;
-  });
-}
-
-async function capturePanelFrames(
-  page: Page,
-  iframe: Locator,
-  frames: string,
-  actions: () => Promise<unknown>,
+async function captureTarget(
+  locator: Locator,
+  followIframe: boolean,
+  capture: () => Promise<string>,
 ) {
-  const watcher = await watchPanelBounds(iframe);
+  const watcher = await watchBounds(locator, followIframe);
 
   return withCleanup(
     async () => {
-      const result = await withCleanup(
-        () => capturePngFrames(page, frames, VIEWPORT, actions),
-        () => watcher.evaluate((capture) => capture.stop()),
+      const result = await withCleanup(capture, () =>
+        watcher.evaluate((watcher) => watcher.stop()),
       );
 
-      const bounds = await watcher.evaluate((capture) => capture.bounds);
+      const bounds = await watcher.evaluate((watcher) => watcher.bounds);
 
       return { result, bounds };
     },
@@ -95,38 +69,40 @@ async function recordPanel(
   iframe: Locator,
   out: string,
   actions: () => Promise<unknown>,
+  { target, output }: RecordingOptions,
 ) {
-  const file = resolve(out);
+  if (output) validateOutputCanvas(output);
+
+  const viewport = page.viewportSize();
+
+  if (!viewport) {
+    throw new Error("Set a browser viewport before recording an MP4");
+  }
+
+  const selected = target ?? iframe;
   const frames = await mkdtemp(join(tmpdir(), "panel-video-"));
 
   await withCleanup(
     async () => {
-      const { result, bounds } = await capturePanelFrames(
-        page,
-        iframe,
-        frames,
-        actions,
-      );
+      const capture = () => capturePngFrames(page, frames, actions, viewport);
+      let result: string;
+      let crop: CaptureRect;
 
-      // H.264 in 4:2:0 needs even sizes.
-      const even = (value: number) => Math.floor(value / 2) * 2;
-      const x = even(Math.max(0, bounds.left));
-      const y = even(Math.max(0, bounds.top));
-      const width = even(Math.min(VIEWPORT.width, bounds.right)) - x;
-      const height = even(Math.min(VIEWPORT.height, bounds.bottom)) - y;
-      const crop = `crop=${width}:${height}:${x}:${y}`;
+      if ("width" in selected) {
+        crop = cropWithinViewport(rectangleBounds(selected), viewport);
+        result = await capture();
+      } else {
+        const captured = await captureTarget(
+          selected,
+          target === undefined,
+          capture,
+        );
 
-      // The showcase MP4 settings, cropped to the panel.
-      await mkdir(dirname(file), { recursive: true });
+        result = captured.result;
+        crop = cropWithinViewport(captured.bounds, viewport);
+      }
 
-      await promisify(execFile)("ffmpeg", [
-        ...["-y", "-v", "error", "-safe", "0", "-f", "concat"],
-        ...["-i", join(frames, "frames.ffconcat")],
-        ...["-vf", `${crop},fps=60,format=yuv420p`],
-        ...["-c:v", "libx264", "-preset", "slow", "-tune", "animation"],
-        ...["-crf", "12", "-movflags", "+faststart", "-an", file],
-      ]);
-
+      await encodePanelMp4(frames, out, crop, output);
       console.log(`${out} (${result})`);
     },
     () => rm(frames, { recursive: true, force: true }),
@@ -137,7 +113,9 @@ async function recordPanel(
 export async function withPanel(
   path: string,
   script: (session: PanelSession) => Promise<unknown>,
+  setup: PanelSetup = {},
 ) {
+  const layout = panelLayout(setup);
   const server = await devServer("/");
 
   await withCleanup(
@@ -146,17 +124,12 @@ export async function withPanel(
 
       await withCleanup(
         async () => {
-          const page = await browser.newPage({ viewport: VIEWPORT });
+          const page = await browser.newPage({ viewport: layout.viewport });
 
           const iframe = page.locator(".frame iframe");
           const panel = page.frameLocator(".frame iframe");
-          await page.goto(`${ORIGIN}${path}`);
-
-          // Keep the zoomed host within the viewport so the iframe can resize with
-          // the inline and fullscreen layouts.
-          await page.addStyleTag({
-            content: `:root { zoom: ${ZOOM}; } .host { height: ${VIEWPORT.height / ZOOM}px; }`,
-          });
+          await page.goto(`${server.origin}${path}`);
+          await applyPanelLayout(page, layout);
 
           await panel.locator("body *").first().waitFor();
           await page.waitForTimeout(1000);
@@ -173,18 +146,19 @@ export async function withPanel(
               );
 
               return {
-                x: box.x + (rect.x + rect.width / 2) * ZOOM,
-                y: box.y + (rect.y + rect.height / 2) * ZOOM,
+                x: box.x + (rect.x + rect.width / 2) * layout.scale,
+                y: box.y + (rect.y + rect.height / 2) * layout.scale,
               };
             },
-            record: (out, actions) => recordPanel(page, iframe, out, actions),
+            record: (out, actions, options = {}) =>
+              recordPanel(page, iframe, out, actions, options),
           });
         },
         () => browser.close(),
       );
     },
     async () => {
-      await server?.close();
+      await server.close?.();
     },
   );
 }

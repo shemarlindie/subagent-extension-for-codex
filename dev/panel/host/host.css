@@ -159,6 +159,7 @@ button {
   align-items: flex-start;
 }
 .frame {
+  width: var(--frame-width);
   min-width: 0;
   min-height: 0;
   max-width: 100%;
@@ -175,6 +176,9 @@ button {
 }
 .frame.fullscreen {
   height: 100%;
+}
+.frame.inline {
+  height: var(--inline-frame-height);
 }
 .frame iframe {
   display: block;

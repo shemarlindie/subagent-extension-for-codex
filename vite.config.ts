@@ -8,6 +8,11 @@ import { pathToFileURL } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import {
+  DEV_HOST,
+  DEV_HOST_CHECKOUT_HEADER,
+  devHostCheckout,
+} from "./dev/panel/dev-host.ts";
 import { fixtureServicePlugin } from "./dev/panel/fixture-service/plugin.ts";
 
 const root = import.meta.dirname;
@@ -60,9 +65,9 @@ export default defineConfig({
     __DEV_HOST_CWD__: JSON.stringify(pathToFileURL(root).href),
   },
   server: {
-    port: 5317,
+    ...DEV_HOST,
     strictPort: true,
-    host: "127.0.0.1",
+    headers: { [DEV_HOST_CHECKOUT_HEADER]: devHostCheckout(root) },
     fs: { allow: [root] },
     proxy: {
       // The mock host talks MCP to the real service, as Codex does. The admin

@@ -69,18 +69,61 @@ await withPanel(
 );
 ```
 
-Run it from the checkout with `npx tsx <script>.mts`. Playwright's own clicks
-and hovers miss in the zoomed panel, so use `page.mouse` with `center`. The
-panel is about 480×465 CSS pixels, and 760 is the widest width that fits. When
+Run it from the checkout with `npx tsx <script>.mts`. The script reuses a dev
+host from that checkout or starts one on a free port. Playwright's own clicks
+and hovers can miss in the zoomed panel, so use `page.mouse` with `center`. When
 you record opening the panel, the crop covers both the inline preview and the
 expanded panel. The script prints the
 [frame check](showcase.md#video-and-frame-captures) and encodes with the
 [showcase MP4 settings](showcase.md#mp4).
 
-Keep videos under 10 MB, GitHub's attachment limit. `gh pr create --attach` and
-`gh pr edit --attach` take no alt text for a video and append it to the end of
-the body. GitHub's video links expire 5 minutes after the page loads, so reload
-a page left open longer if the player is blank.
+### Size and crop
+
+Pass a third argument to `withPanel` to set the layout and capture resolution.
+For example, `{ panelSize: { width: 640, height: 900 }, scale: 2 }` lays out the
+panel at 640 × 900 CSS pixels and captures it at twice that resolution. Set
+either panel dimension independently, or let the dev host size it. The viewport
+starts at 800 × 640 CSS pixels and grows to fit explicit panel dimensions. Pass
+`viewport: { width, height }` to choose the host viewport yourself. Resize the
+browser between MP4 recordings. Dev host breakpoints use the scaled viewport.
+
+Pass a third argument to `record` to capture a section or deliver a specific
+output size. For example, with the composer open:
+
+```ts
+await record("video-captures/composer.mp4", () => page.waitForTimeout(1000), {
+  target: panel.getByRole("textbox"),
+  output: { width: 1080, height: 1920, fit: "contain" },
+});
+```
+
+Use a locator in the dev host or panel iframe, or a rectangle
+`{ x, y, width, height }` in the same capture pixels `page.mouse` uses. The
+recorder tracks the element the locator matches when the clip starts. The crop
+includes its visible positions throughout the clip and clips panel targets to
+the stage. Output dimensions must be even. `contain` centers the crop with black
+padding, `cover` fills the canvas with a center crop, and `stretch` scales
+directly to the requested size. Omit `output` to use the crop size.
+
+### Raw frames
+
+For your own framing or encoding, import `capturePngFrames` from
+`dev/panel/capture/screencast.ts` and call
+`capturePngFrames(page, framesDirectory, actions)`. It accepts any Chromium
+Playwright page, including `page` from `withPanel`. Use a separate directory for
+each capture. The helper leaves viewport PNGs at their native resolution plus a
+timed `frames.ffconcat` list in that directory. Run one capture at a time per
+Chromium instance because the frame check uses its trace. Pass the list to
+FFmpeg with `-safe 0 -f concat -i <framesDirectory>/frames.ffconcat` and choose
+your own crop, canvas, or codec.
+
+### Pull request attachments
+
+Keep videos under 10 MB to fit GitHub's
+[attachment limit for free plans](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files).
+`gh pr create --attach` and `gh pr edit --attach` append videos to the pull
+request body. If a player goes blank after the pull request has been open a
+while, reload the page to refresh the attachment link.
 
 ## Design review
 

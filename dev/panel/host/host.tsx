@@ -12,7 +12,13 @@ import type {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 
 import type { UiStatePersistence } from "../../../src/panel/app/state/types";
 import { browserUiState } from "../../../src/panel/app/view-state";
@@ -646,10 +652,13 @@ export function Host() {
       <main className="stage">
         <div
           className={`frame ${inline ? "inline" : "fullscreen"}`}
-          style={{
-            width: settings.width === "fill" ? "100%" : `${settings.width}px`,
-            ...(inline ? { height } : {}),
-          }}
+          style={
+            {
+              "--frame-width":
+                settings.width === "fill" ? "100%" : `${settings.width}px`,
+              "--inline-frame-height": `${height}px`,
+            } as CSSProperties
+          }
         >
           <iframe ref={frame} key={sessionKey} title="Delegated Work" />
         </div>
