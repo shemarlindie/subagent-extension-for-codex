@@ -68,6 +68,21 @@ export function InlinePreview() {
 
   const project = projects.find((project) => project.repository === repository);
 
+  const counts = [
+    projectTasks.length > 0 &&
+      `${projectTasks.length} ${projectTasks.length === 1 ? "task" : "tasks"}`,
+    working.length > 0 && `${working.length} working`,
+    attention.length > 0 &&
+      `${attention.length} ${attention.length === 1 ? "needs" : "need"} attention`,
+    unread > 0 && `${unread} unread`,
+  ].filter(Boolean);
+
+  const openTask = (id: string) =>
+    controller.run(async () => {
+      await controller.select(id);
+      await controller.transport.expand?.();
+    });
+
   return (
     <section className="inline-preview" aria-label="Delegated Work preview">
       <div className="preview-heading">
@@ -126,28 +141,29 @@ export function InlinePreview() {
       >
         {connected ? (
           <>
-            <p className="preview-counts" role="status">
-              {projectTasks.length}{" "}
-              {projectTasks.length === 1 ? "task" : "tasks"}
-              {" · "}
-              {working.length} working
-              {" · "}
-              {attention.length} {attention.length === 1 ? "needs" : "need"}{" "}
-              attention
-              {unread > 0 && ` · ${unread} unread`}
-            </p>
+            {counts.length > 0 && (
+              <p className="preview-counts" role="status">
+                {counts.join(" · ")}
+              </p>
+            )}
             {task ? (
               <MotionContent
                 as="div"
                 changeKey={task.id}
                 className="preview-task"
               >
-                <p className="preview-task-title" title={task.title}>
-                  {task.title}
-                </p>
-                <small>
-                  <TaskStatus task={task} />
-                </small>
+                <button
+                  type="button"
+                  className="preview-task-open"
+                  onClick={() => openTask(task.id)}
+                >
+                  <span className="preview-task-title" title={task.title}>
+                    {task.title}
+                  </span>
+                  <small>
+                    <TaskStatus task={task} />
+                  </small>
+                </button>
               </MotionContent>
             ) : (
               <p className="muted">No delegated tasks yet.</p>

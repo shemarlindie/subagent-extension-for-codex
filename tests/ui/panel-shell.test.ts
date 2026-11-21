@@ -113,6 +113,26 @@ test("inline preview expands and collapses while preserving the selected task", 
   assertAbsent(screen.queryByRole("region", { name: "Selected task" }));
 });
 
+test("inline preview opens its task", async (t) => {
+  const { controller, transport, user } = await setup(t, undefined, {
+    displayMode: "inline",
+  });
+
+  assert.equal(screen.getByRole("status").textContent, "1 task · 1 working");
+
+  await user.click(
+    screen.getByRole("button", { name: /Review authentication/ }),
+  );
+
+  assert.equal(transport.expandCalls, 1);
+  assert.equal(controller.getSnapshot().selected, "one");
+
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "Review authentication",
+  );
+});
+
 test("inline host without expansion offers the chat controls fallback", async (t) => {
   await setup(
     t,
@@ -265,11 +285,7 @@ describe("inline preview distinguishes empty tasks from connecting state", () =>
       { displayMode: "inline" },
     );
 
-    assert.equal(
-      screen.getByRole("status").textContent,
-      "0 tasks · 0 working · 0 need attention",
-    );
-
+    assertAbsent(screen.queryByRole("status"));
     assert.ok(screen.getByText("No delegated tasks yet."));
     assert.ok(screen.getByRole("button", { name: "Open panel" }));
   });

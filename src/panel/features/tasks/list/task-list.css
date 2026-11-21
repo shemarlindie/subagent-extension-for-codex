@@ -19,7 +19,17 @@
   margin-top: 10px;
   padding-top: 4px;
 }
+.preview-task-open {
+  /* The inset fill reaches past the text, which stays aligned with the counts. */
+  display: block;
+  width: calc(100% + 16px);
+  border-color: transparent;
+  margin: 4px -8px 0;
+  padding: 4px 8px;
+  text-align: left;
+}
 .preview-task-title {
+  margin-bottom: 4px;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
