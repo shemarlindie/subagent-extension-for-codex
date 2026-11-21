@@ -112,27 +112,31 @@ installations and fallbacks.
 
 The task list offers search and these filters:
 
-| Filter      | Tasks                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| Unread      | Tasks with something you haven't seen. See [Read and unread tasks](#read-and-unread-tasks). |
-| Needs input | Tasks waiting on a question or permission request.                                          |
-| Failed      | Failures, interruptions and compaction failures.                                            |
-| Active      | Other unfinished tasks, including tasks with queued follow-up turns.                        |
-| Done        | Completed tasks.                                                                            |
-| All         | Every task.                                                                                 |
+| Filter          | Tasks                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| Unread          | Tasks with something you haven't seen. See [Read and unread tasks](#read-and-unread-tasks). |
+| Needs attention | Tasks waiting on a question, permission request or rate limit reset.                        |
+| Failed          | Errors, reached limits, service restarts and compaction failures.                           |
+| Working         | Other unfinished tasks, including tasks with queued follow-up turns.                        |
+| Done            | Completed tasks and tasks you stopped.                                                      |
+| All             | Every task.                                                                                 |
 
 The default is the first nonempty filter after Unread. Counts respect the
 project and search filters. Press `/` to search and Escape to clear it.
 
-Task runtime accumulates across turns and includes the active run. Under **All
-projects**, tasks group by project, ordered by each group's newest task. Project
-headers stay visible as their rows scroll.
+Under **All projects**, tasks group by project, ordered by each group's newest
+task. Project headers stay visible as their rows scroll.
 
-- The header shows the project's task count. Click it to collapse the group. The
-  panel remembers collapsed groups across reloads where browser storage is
-  available.
-- A collapsed header shows a pencil when a hidden task needs input and an accent
-  dot when one is unread.
+Each row shows the worker icon, the title and at most one dot: yellow when the
+task needs input or waits for a rate limit, gray while it is queued, pulsing
+gray while it works, and the accent color when it is unread. Hover a long title
+to see the rest. **Details** shows the task's total runtime. **Settings >
+Appearance** can hide worker icons.
+
+- Click a project header to collapse its group. The panel remembers collapsed
+  groups across reloads where browser storage is available.
+- A collapsed header shows its task count, and dots when a hidden task needs
+  attention, works or is unread.
 - When several projects are listed, a long group shows its first five tasks and
   **Show N more**, which flags hidden tasks the same way. **Show less** folds it
   again. The selected task always stays listed. Searching shows every match.
@@ -169,8 +173,7 @@ conversation clears the selection.
 
 A task becomes unread when it has a worker message or reply, a turn end, a
 failure, or a question or permission request you haven't seen. Your own messages
-never make a task unread. Unread rows show an accent dot after the worker icon,
-and the compact panel adds **N unread** to its counts.
+never make a task unread. The compact panel adds **N unread** to its counts.
 
 A task becomes read when its Chat tab shows the latest message. Opening an
 unread task places a **New** divider above the first unseen item and scrolls to
@@ -253,7 +256,7 @@ three affected tasks or messages.
 - A new change clears what you could redo. The history lasts while the panel is
   open, including after you switch project or conversation.
 - Undo puts removed queued messages back in their places with their original
-  text and sender. A task that isn't running keeps them in a paused queue, so
+  text and sender. A task that isn't working keeps them in a paused queue, so
   undo never starts a turn.
 - Undoing an archive reopens the task that archiving closed, when the current
   task list includes it.
@@ -380,7 +383,7 @@ service rules.
 
 ### Steering, queues and budgets
 
-- **Steer** sends a queued message into the running turn after its next tool
+- **Steer** sends a queued message into the current turn after its next tool
   call. It is unavailable while the worker waits for input or for an earlier
   steer.
 - A pending steer offers **Interrupt and send now**. An unconsumed steer stays
@@ -544,9 +547,9 @@ Nothing sends until you submit. Hosts without message delivery offer the text to
 copy instead.
 
 **Task actions** in the task heading includes handoff and deletion. **Delete
-task** stops running, queued or waiting work, then removes the task's history,
-requests, recorded edits, worktree and local branch. Files in the project folder
-and remote branches stay intact.
+task** stops the task if it is working, queued or waiting, then removes the
+task's history, requests, recorded edits, worktree and local branch. Files in
+the project folder and remote branches stay intact.
 
 - **Also delete the agent task**, off by default, also removes the provider
   session. It is unavailable when the service cannot verify where the session

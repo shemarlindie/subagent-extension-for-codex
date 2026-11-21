@@ -60,3 +60,21 @@ test("right-clicking a completed row offers Archive", async () => {
 
   assert.deepEqual(archive.mock.calls, [[[completed], true]]);
 });
+
+test("a row names its title, worker, unread state and status", () => {
+  const unread = {
+    ...task("a"),
+    title: "Plan the rollout",
+    status: "completed" as const,
+    unread: true as const,
+  };
+
+  const { view } = renderRow(unread);
+
+  // The open context menu hides the row from the accessibility tree. Without
+  // layout, jsdom joins the inline parts without spaces.
+  view.getByRole("button", {
+    name: /^Plan the rollout\s*reviewer\s*Unread\s*Completed$/,
+    hidden: true,
+  });
+});

@@ -29,6 +29,7 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
 import { ProjectGroups, useProjectGroups } from "./project-groups";
+import { useRowIcons } from "./row-icons";
 import { TaskListCount } from "./task-list-count";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
@@ -39,9 +40,9 @@ import { useTaskSelection } from "./use-task-selection";
 const EMPTY_FILTER: Record<Filter, string> = {
   all: "No tasks yet.",
   unread: "You're all caught up.",
-  active: "No active tasks.",
-  attention: "No tasks need input.",
-  completed: "No completed tasks.",
+  active: "No working tasks.",
+  attention: "No tasks need attention.",
+  completed: "No finished tasks.",
   failed: "No failed tasks.",
 };
 
@@ -110,6 +111,7 @@ export function TaskList() {
     (state) => ({ composing: Boolean(state.newTask) }),
   );
 
+  const rowIcons = useRowIcons();
   const tasks = visibleTasks(list);
   const total = scopedTasks({ ...list, search: "" }).length;
   const filter = effectiveFilter(list);
@@ -302,42 +304,44 @@ export function TaskList() {
   return (
     <>
       <div className="list-label" onClick={clearOnBlank}>
-        <span id="scope" ref={scopeRef} tabIndex={-1}>
-          {conversation ? "This conversation" : "All conversations"}
+        <span className="list-scope">
+          <span id="scope" ref={scopeRef} tabIndex={-1}>
+            {conversation ? "This conversation" : "All conversations"}
+          </span>
+          <span
+            className="list-count"
+            ref={countRef}
+            tabIndex={-1}
+            // Focus lands here after an action, so the selection's menu opens too.
+            onKeyDown={
+              selecting
+                ? (event) => openContextMenu(event, listRef.current)
+                : undefined
+            }
+          >
+            <TaskListCount
+              loading={taskListLoading}
+              shown={tasks.length}
+              total={total}
+              narrowed={narrowed}
+              selection={selection}
+            />
+          </span>
         </span>
-        <span
-          className="list-count"
-          ref={countRef}
-          tabIndex={-1}
-          // Focus lands here after an action, so the selection's menu opens too.
-          onKeyDown={
-            selecting
-              ? (event) => openContextMenu(event, listRef.current)
-              : undefined
-          }
-        >
-          {!selecting && (
-            <>
-              {unreadShown && (
-                <Button variant="text" underline onClick={markAllRead}>
-                  Mark all read
-                </Button>
-              )}
-              {clearShown && (
-                <Button variant="text" underline onClick={resetFilters}>
-                  Clear filter
-                </Button>
-              )}
-            </>
-          )}
-          <TaskListCount
-            loading={taskListLoading}
-            shown={tasks.length}
-            total={total}
-            narrowed={narrowed}
-            selection={selection}
-          />
-        </span>
+        {!selecting && (unreadShown || clearShown) && (
+          <span className="list-actions">
+            {unreadShown && (
+              <Button variant="text" underline onClick={markAllRead}>
+                Mark all read
+              </Button>
+            )}
+            {clearShown && (
+              <Button variant="text" underline onClick={resetFilters}>
+                Clear filter
+              </Button>
+            )}
+          </span>
+        )}
       </div>
       <div className="task-list-scroll-area">
         <TaskSelectionMenu
@@ -347,6 +351,7 @@ export function TaskList() {
             <div
               id="task-list"
               ref={listRef}
+              data-row-icons={rowIcons ? undefined : "hidden"}
               onKeyDown={openContextMenu}
               onClick={clearOnBlank}
             />

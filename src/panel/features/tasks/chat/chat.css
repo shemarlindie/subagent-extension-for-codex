@@ -517,6 +517,12 @@ body[data-expanded-panel="true"]
   );
   animation: chat-queue-fade linear both;
   animation-timeline: scroll(self);
+  /* Scrolling drives this, not time. Reduced motion's 0s duration would jump
+     straight to the end keyframe. */
+  animation-duration: auto !important;
+  /* Ends just past the scroll end, so the animation never finishes. A finished
+     one would keep the top fade after the list shrinks to fit. */
+  animation-range-end: calc(100% + 0.1px);
 }
 /*
  * A message queued out of view flashes an accent along the list's bottom

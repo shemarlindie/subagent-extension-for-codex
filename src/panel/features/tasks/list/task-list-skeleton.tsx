@@ -11,8 +11,8 @@ const GROUPS: RowWidth[][] = [
 ];
 
 /**
- * Mirrors project groups, task titles, worker profiles and row metadata.
- * Headers show in every scope: the scope can resolve mid-load, and a fixed
+ * Mirrors project groups and task rows: a worker profile, a title and a status
+ * dot. Headers show in every scope: the scope can resolve mid-load, and a fixed
  * shape keeps the placeholder from changing while it's on screen.
  */
 export function TaskListSkeleton() {
@@ -44,24 +44,14 @@ type SkeletonRowProps = { width: RowWidth };
 function SkeletonRow({ width }: SkeletonRowProps) {
   return (
     <div className="task-list-skeleton-row">
+      <SkeletonShape className="task-list-skeleton-profile" />
       <span className="row-title">
         <SkeletonShape
           className={`task-list-skeleton-title task-list-skeleton-title-${width}`}
           measureText="Task title"
         />
       </span>
-      <div className="row-meta task-list-skeleton-meta">
-        <SkeletonShape className="task-list-skeleton-profile" />
-        <div className="task-list-skeleton-trailing">
-          <span className="row-runtime">
-            <SkeletonShape
-              className="task-list-skeleton-runtime"
-              measureText="Ran for 5m"
-            />
-          </span>
-          <SkeletonShape className="task-list-skeleton-status" />
-        </div>
-      </div>
+      <SkeletonShape className="task-list-skeleton-status" />
     </div>
   );
 }

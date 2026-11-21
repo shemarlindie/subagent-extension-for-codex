@@ -111,7 +111,11 @@
   /* Use Codex's opaque info color so the accent stays solid in dark mode. */
   --accent: var(--color-text-info);
   --warn: #925e17;
-  --status-paused: var(--warn);
+  /* A filled dot can be brighter than --warn, which text needs dark for contrast. */
+  --status-input: #e0a800;
+  /* A lighter yellow fill behind dark text, such as the Needs attention count. */
+  --status-input-fill: color-mix(in srgb, var(--status-input) 60%, #fff);
+  --on-status-input: var(--text);
   --radius: 8px;
 
   /*
@@ -225,6 +229,9 @@
   --tooltip-shadow: 0 1px 4px #0008;
   --muted: color-mix(in srgb, var(--color-text-primary) 58%, transparent);
   --warn: #edbc74;
+  --status-input: var(--warn);
+  --status-input-fill: var(--status-input);
+  --on-status-input: var(--bg);
 }
 
 ::selection {

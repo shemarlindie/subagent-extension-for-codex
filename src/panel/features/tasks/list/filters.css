@@ -39,9 +39,11 @@
   font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
+/* A lighter shade of the yellow dot on rows that need attention, so dark text
+   reads on it. */
 .filter-count[data-alert] {
-  background: var(--warn);
-  color: var(--bg);
+  background: var(--status-input-fill);
+  color: var(--on-status-input);
 }
 .filter-count:has(.filter-count-skeleton) {
   display: inline-grid;
@@ -54,7 +56,22 @@
   height: 5px;
   border-radius: 3px;
 }
+/* The count follows the scope, like a project header's count. */
+.list-scope {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
 .list-count {
+  flex: none;
+  white-space: nowrap;
+}
+.list-count::before {
+  content: "·" / "";
+  margin-inline-end: 4px;
+}
+.list-actions {
   display: inline-flex;
   flex: none;
   align-items: baseline;

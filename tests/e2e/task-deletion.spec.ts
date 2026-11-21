@@ -64,7 +64,7 @@ test("delete a running task together with its agent session", async ({
     details.getByRole("list", { name: "Will remain" }),
   ).toContainText("Provider session");
 
-  await expect(confirmation).toContainText("Running work will stop first.");
+  await expect(confirmation).toContainText("Work in progress stops first.");
 
   const linkInfo = details.getByRole("button", {
     name: `Symbolic links for ${worktree}`,

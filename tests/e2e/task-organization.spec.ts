@@ -22,14 +22,14 @@ test("filter, search and rename tasks, keeping the choices across reload", async
   ).toBeVisible();
 
   // The list opens on the first nonempty filter after Unread.
-  await expect(filter(/^Needs input, 1/)).toBeChecked();
+  await expect(filter(/^Needs attention, 1/)).toBeChecked();
 
   // Each status filter lists only its tasks, and the choice survives reload.
   await expect(rows).toHaveCount(1);
   await expect(row(/Document the API/)).toBeVisible();
   await filter(/^Failed, 1/).click();
   await expect(rows).toHaveCount(1);
-  await expect(row(/Fix flaky search/)).toContainText("Failed");
+  await expect(row(/Fix flaky search/)).toHaveAccessibleName(/Failed$/);
   await filter(/^Done, 1/).click();
   await expect(rows).toHaveCount(1);
   await page.reload();

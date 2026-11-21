@@ -5,6 +5,8 @@ import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { errorMessage } from "../../shared/utils/error-message";
 import { writeClipboardText } from "../../shared/utils/write-clipboard";
+import type { settingsSearch } from "./search/settings-search";
+import type { SettingsSectionView } from "./settings-sections";
 
 type SettingsExport = { document: string };
 
@@ -32,8 +34,28 @@ type SettingsTransferProps = {
   onImportingChange: (importing: boolean) => void;
 };
 
+const TITLE = "Import and export";
+const KEYWORDS = ["settings", "JSON", "copy", "file"];
+
+/** The section has no setting rows, so search matches its title and keywords. */
+export function transferSection(
+  search: ReturnType<typeof settingsSearch>,
+  props: SettingsTransferProps,
+): SettingsSectionView {
+  const matches = search.matches([TITLE, ...KEYWORDS].join(" "));
+
+  return {
+    id: "transfer",
+    title: TITLE,
+    hidden: !matches,
+    matches: matches ? 1 : 0,
+    score: 3,
+    content: <SettingsTransfer {...props} />,
+  };
+}
+
 /** Saves or copies settings as JSON, and imports a copy pasted from elsewhere. */
-export function SettingsTransfer({
+function SettingsTransfer({
   ready,
   edited,
   onImportingChange,

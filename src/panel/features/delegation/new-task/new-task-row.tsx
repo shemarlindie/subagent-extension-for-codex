@@ -16,6 +16,8 @@ export function NewTaskRow() {
   const focusComposer = () =>
     document.getElementById("new-task-message")?.focus();
 
+  const state = title ? "Draft" : "Not started";
+
   return (
     <button
       className="row row-new-task"
@@ -24,13 +26,9 @@ export function NewTaskRow() {
       onClick={focusComposer}
     >
       <span className="row-title">{title || "New task"}</span>
-      <span className="row-meta">
-        <span className="row-worker">
-          <Icon name="pencil-simple" size={10} className="row-worker-icon" />
-          <span className="row-worker-label">
-            {title ? "Draft" : "Not started"}
-          </span>
-        </span>
+      <span className="row-worker" title={state}>
+        <Icon name="pencil-simple" size={12} className="row-worker-icon" />
+        <span className="visually-hidden">{state}</span>
       </span>
     </button>
   );

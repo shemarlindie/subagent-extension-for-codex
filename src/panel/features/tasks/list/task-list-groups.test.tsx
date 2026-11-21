@@ -106,11 +106,29 @@ test("a collapsed header flags hidden unread tasks and tasks waiting on input", 
 
   const header = toggle("b");
 
-  assert.equal(within(header).queryByText("Unread"), null);
+  assert.equal(within(header).queryByText(/including/), null);
   await userEvent.click(header);
-  within(header).getByText("Unread");
-  within(header).getByRole("img", { name: "Needs input" });
   view.getByText("2", { selector: ".task-group-count" });
+
+  // b0 is still running. Screen readers hear one phrase in place of the dots.
+  within(header).getByText(", including unread, needing input and working");
+  assert.deepEqual(within(header).queryAllByRole("img"), []);
+});
+
+test("a collapsed header flags hidden tasks waiting for a rate limit", async () => {
+  const { toggle } = setup({
+    tasks: [
+      ...tasks,
+      named("b1", "/repo/b", {
+        live_activity: { text: "Waiting for rate limit reset", state: "info" },
+      }),
+    ],
+  });
+
+  const header = toggle("b");
+  await userEvent.click(header);
+
+  within(header).getByText(", including waiting for a rate limit and working");
 });
 
 test("long groups stop at a few rows until Show more, and Show less folds them again", async () => {
@@ -118,7 +136,10 @@ test("long groups stop at a few rows until Show more, and Show less folds them a
 
   assert.deepEqual(rows("a"), ["a0", "a1", "a2", "a3", "a4"]);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(
+    view.getByRole("button", { name: "Show 2 more, including working" }),
+  );
+
   assert.equal(rows("a").length, 7);
 
   await userEvent.click(view.getByRole("button", { name: "Show less" }));
@@ -159,14 +180,20 @@ test("bulk selection skips hidden rows and keeps picks hidden by Show less", asy
   await choose("Select all shown");
   assert.deepEqual(pressed(), ["a0", "a1", "a2", "a3", "a4", "c0"]);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(
+    view.getByRole("button", { name: "Show 2 more, including working" }),
+  );
+
   await choose("Select all shown");
   await userEvent.click(view.getByRole("button", { name: "Show less" }));
   await choose("Deselect shown");
   view.getByText("2 selected · 2 hidden");
   assert.deepEqual(pressed(), []);
 
-  await userEvent.click(view.getByRole("button", { name: "Show 2 more" }));
+  await userEvent.click(
+    view.getByRole("button", { name: "Show 2 more, including working" }),
+  );
+
   assert.deepEqual(pressed(), ["a5", "a6"]);
 
   // With every group collapsed, a header still opens the selection's menu.

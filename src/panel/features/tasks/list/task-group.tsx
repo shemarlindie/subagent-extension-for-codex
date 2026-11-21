@@ -3,7 +3,6 @@ import { useId, type ReactNode } from "react";
 
 import type { Task } from "../../../app/state/types";
 import { Button, buttonClass } from "../../../shared/components/button/button";
-import { Icon } from "../../../shared/components/icons/icons";
 import { GroupSignals } from "./group-signals";
 
 type TaskGroupProps = {
@@ -53,7 +52,6 @@ export function TaskGroup({
           <Accordion.Trigger
             className={buttonClass("ghost", { className: "task-group-toggle" })}
           >
-            <Icon name="chevron-down" size={8} className="task-group-chevron" />
             <span className="task-group-name" id={id} title={name}>
               {name}
             </span>
@@ -63,7 +61,9 @@ export function TaskGroup({
                 {tasks.length === 1 ? " task" : " tasks"}
               </span>
             </span>
-            {!open && <GroupSignals tasks={tasks} />}
+            <span className="task-group-signals">
+              {!open && <GroupSignals tasks={tasks} />}
+            </span>
           </Accordion.Trigger>
         </Accordion.Header>
         {actions}
@@ -77,7 +77,7 @@ export function TaskGroup({
             onClick={() => onExpandedChange(true)}
           >
             Show {hidden.length} more
-            <GroupSignals tasks={hidden} />
+            <GroupSignals tasks={hidden} tooltips />
           </Button>
         )}
         {canShowLess && (

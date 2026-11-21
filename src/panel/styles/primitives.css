@@ -90,11 +90,6 @@
 .tabs button[data-active] {
   color: var(--text);
 }
-.row-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 .form-error:empty {
   display: none;
 }

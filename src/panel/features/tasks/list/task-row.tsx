@@ -1,14 +1,14 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
-import { memo, type MouseEvent } from "react";
+import { memo, type MouseEvent, type SyntheticEvent } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
 import { useController } from "../../../app/state/controller-context";
-import { profileLabel, terminal } from "../../../app/state/selectors";
+import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
-import { useNow } from "../../../shared/utils/use-now";
+import { reducedMotion } from "../../../shared/components/motion/motion-utils";
+import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
-import { formatDuration, runtimeLive, taskRuntimeMs } from "./duration";
-import { rowStatus } from "./task-status";
+import { rowStatus, statusTone } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
 import type { TaskRowClick } from "./use-task-selection";
 import { WorkerProfileIcon } from "./worker-profile-icon";
@@ -20,6 +20,42 @@ interface TaskRowProps {
   disabled?: boolean;
   onActivate?: (id: string, action: TaskRowClick) => void;
 }
+
+// Pixels per second a long title slides on hover or focus.
+const TITLE_SLIDE_SPEED = 50;
+
+/**
+ * Times a long title's slide from its overflow, so every title slides at
+ * about the same easy pace. CSS can't turn a width into a duration. Titles
+ * measure when they mount, which covers rows that appear under a still
+ * pointer, and again on hover or focus in case the row's width changed.
+ */
+function paceTitleSlide(title: HTMLElement | null) {
+  const text = title?.querySelector<HTMLElement>(".row-title-text");
+  if (!title || !text) return;
+
+  const overflow = text.offsetWidth - title.clientWidth;
+
+  // With reduced motion, CSS makes a long title jump to its end, which can
+  // skip its middle, so a tooltip shows the whole title.
+  const still = reducedMotion(title);
+  title.title = still && overflow > 0 ? text.textContent : "";
+  if (still || overflow <= 0) return;
+
+  const seconds = Math.max(0.6, overflow / TITLE_SLIDE_SPEED);
+  title.style.setProperty("--row-title-slide-duration", `${seconds}s`);
+
+  // Measuring on hover applies the hover style first, which starts the slide
+  // with the old duration, so the slide takes the new one directly.
+  for (const animation of title.getAnimations({ subtree: true })) {
+    if (animation instanceof CSSTransition) {
+      animation.effect?.updateTiming({ duration: seconds * 1000 });
+    }
+  }
+}
+
+const repaceTitleSlide = (event: SyntheticEvent<HTMLElement>) =>
+  paceTitleSlide(event.currentTarget.querySelector(".row-title"));
 
 /** A task in the list with actions on right-click or long-press. */
 export const TaskRow = memo(function TaskRow({
@@ -67,6 +103,8 @@ export const TaskRow = memo(function TaskRow({
             aria-pressed={pressed}
             aria-disabled={disabled}
             onClick={select}
+            onPointerEnter={repaceTitleSlide}
+            onFocus={repaceTitleSlide}
           />
         }
       >
@@ -107,66 +145,56 @@ export const TaskRow = memo(function TaskRow({
 
 type TaskRowContentProps = Pick<TaskRowProps, "task">;
 
-// The icon tells profiles apart, so the worker's name is in its tooltip and
-// for screen readers only.
+// The title comes first so screen readers hear it first; CSS puts the icon
+// before it. A title too long for the row scrolls to its end on hover or focus.
+// The icon tells profiles apart, so the worker's name is for screen readers
+// only.
 function TaskRowContent({ task }: TaskRowContentProps) {
   const worker = profileLabel(task.worker_profile);
 
   return (
     <>
-      <span className="row-title">{task.title}</span>
-      <span className="row-meta">
-        <span className="row-worker" title={worker}>
-          <WorkerProfileIcon
-            profile={task.worker_profile}
-            size={12}
-            className="row-worker-icon"
-          />
-          {task.unread && <UnreadDot />}
-          <span className="row-worker-label visually-hidden">{worker}</span>
-        </span>
-        <span className="row-trailing">
-          <TaskRowRuntime task={task} />
-          <TaskRowStatus task={task} />
+      <span className="row-title" ref={paceTitleSlide}>
+        <span className="row-title-text">
+          <span className="row-title-slide">{task.title}</span>
         </span>
       </span>
+      <span className="row-worker" title={worker}>
+        <WorkerProfileIcon
+          profile={task.worker_profile}
+          size={12}
+          className="row-worker-icon"
+        />
+        <span className="visually-hidden">{worker}</span>
+      </span>
+      <TaskRowSignal task={task} />
     </>
   );
 }
 
-function TaskRowStatus({ task }: { task: Task }) {
+/**
+ * One dot at most: a task that needs input, then one at work, then one with
+ * something unread. Screen readers hear the unread state and status whichever
+ * dot shows. Without a dot, the title takes the slot's space, and the slot
+ * folds in or out as a dot comes or goes.
+ */
+function TaskRowSignal({ task }: TaskRowContentProps) {
   const { kind, label } = rowStatus(task);
+  const quiet = statusTone(kind) === "quiet";
 
-  return <TaskStatusIcon kind={kind} label={label} />;
-}
-
-function TaskRowRuntime({ task }: { task: Task }) {
-  const status = rowStatus(task);
-
-  const activityLabel =
-    (task.status === "running" &&
-      (status.kind === "failed" ||
-        status.kind === "paused" ||
-        status.kind === "input")) ||
-    Boolean(task.pending_input);
-
-  const live = runtimeLive(task) && !activityLabel;
-  const now = useNow(live);
-  const runtime = taskRuntimeMs(task, now);
-
-  // Attention states and tasks without an active clock use their short label.
-  // Finished tasks say their time is final; the status icon says how it ended.
-  const label =
-    activityLabel || (!live && !terminal(task)) ? status.shortLabel : undefined;
-
-  const duration = formatDuration(runtime);
+  const dot = quiet ? (
+    task.unread && <UnreadDot />
+  ) : (
+    <TaskStatusIcon kind={kind} label={label} />
+  );
 
   return (
-    <span
-      className="row-runtime"
-      title={label ? status.label : "Total run time across turns"}
-    >
-      {label ?? (terminal(task) ? `Ran for ${duration}` : duration)}
-    </span>
+    <>
+      {task.unread && !quiet && <span className="visually-hidden">Unread</span>}
+      <Presence show={Boolean(dot)} as="span" variant="fold">
+        <span className="row-signal">{dot}</span>
+      </Presence>
+      {quiet && <span className="visually-hidden">{label}</span>}
+    </>
   );
 }

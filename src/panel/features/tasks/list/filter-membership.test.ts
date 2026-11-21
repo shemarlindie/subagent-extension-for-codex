@@ -8,6 +8,7 @@ import {
   filterCounts,
   GROUP_ROW_LIMIT,
   groupRows,
+  statusLabel,
   visibleTasks,
 } from "../../../app/state/selectors";
 import type { Filter, Snapshot, Task } from "../../../app/state/types";
@@ -48,7 +49,7 @@ const cases: [string, Partial<Task>, Filter[]][] = [
     {
       live_activity: { text: "Waiting for rate limit reset", state: "info" },
     },
-    ["all", "active"],
+    ["all", "attention"],
   ],
   [
     "pending input",
@@ -57,9 +58,14 @@ const cases: [string, Partial<Task>, Filter[]][] = [
       waiting_reason: "waiting_for_user",
       pending_input: input,
     },
-    ["all", "active", "attention"],
+    ["all", "attention"],
   ],
-  ["interrupted", { status: "interrupted" }, ["all", "failed"]],
+  ["stopped", { status: "interrupted" }, ["all", "completed"]],
+  [
+    "service restart",
+    { status: "interrupted", error: "Service restarted." },
+    ["all", "failed"],
+  ],
   [
     "compaction failed",
     { live_activity: { text: "Context compaction failed", state: "failed" } },
@@ -81,6 +87,21 @@ test("each task state appears only in its own filter besides All", () => {
     );
 
     assert.deepEqual(found, expected, name);
+  }
+});
+
+test("stops and limits read apart from errors", () => {
+  for (const [patch, label] of [
+    [{ status: "interrupted" }, "Stopped"],
+    [{ status: "interrupted", error: "Service restarted." }, "Interrupted"],
+    [
+      { status: "failed", error_code: "cost_budget_exhausted" },
+      "Cost limit reached",
+    ],
+    [{ status: "failed", error_code: "error_max_turns" }, "Turn limit reached"],
+    [{ status: "failed", error_code: "error_during_execution" }, "Failed"],
+  ] as const) {
+    assert.equal(statusLabel(task(patch)), label);
   }
 });
 

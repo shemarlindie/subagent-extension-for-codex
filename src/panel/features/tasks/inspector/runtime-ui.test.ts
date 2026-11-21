@@ -77,137 +77,30 @@ const row = (task: Task) =>
     createElement(TaskRow, { task, current: false }),
   );
 
-const rowRuntime = (view: ReturnType<typeof render>) =>
-  view.container.querySelector(".row-runtime")?.textContent;
-
-test("task list runtime ticks, freezes while stopped, and accumulates after resume", (t) => {
-  t.onTestFinished(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
-
-  vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
-  const running = task({ run_started_at: "2026-10-02T12:00:00.000Z" });
-  const view = render(row(running));
-  assert.equal(rowRuntime(view), "1m 30s");
-  act(() => void vi.advanceTimersByTime(5000));
-  assert.equal(rowRuntime(view), "1m 35s");
-
-  for (const status of ["waiting", "interrupted"] as const) {
-    view.rerender(
-      row(task({ status, runtime_ms: 95_000, run_started_at: undefined })),
-    );
-
-    const expected = status === "waiting" ? "Waiting" : "Interrupted";
-    assert.equal(rowRuntime(view), expected);
-    act(() => void vi.advanceTimersByTime(5000));
-    assert.equal(rowRuntime(view), expected);
-  }
-
-  view.rerender(
-    row(
-      task({
-        runtime_ms: 95_000,
-        run_started_at: new Date(Date.now()).toISOString(),
-      }),
-    ),
-  );
-
-  assert.equal(rowRuntime(view), "1m 35s");
-  act(() => void vi.advanceTimersByTime(5000));
-  assert.equal(rowRuntime(view), "1m 40s");
-});
-
-test("task list freezes an open run when input is requested and catches up on resume", (t) => {
-  t.onTestFinished(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
-
-  vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:30.000Z") });
-  const running = task({ run_started_at: "2026-10-02T12:00:00.000Z" });
-  const view = render(row(running));
-  assert.equal(rowRuntime(view), "1m 30s");
-
-  view.rerender(
-    row({
-      ...running,
-      status: "waiting",
-      pending_input: {
-        id: "question",
-        kind: "question",
-        tool: "AskUserQuestion",
-        input: {},
-      },
-      updated_at: new Date(Date.now()).toISOString(),
-    }),
-  );
-
-  assert.equal(rowRuntime(view), "Needs input");
-  act(() => void vi.advanceTimersByTime(10_000));
-  assert.equal(rowRuntime(view), "Needs input");
-  view.rerender(row(running));
-  assert.equal(rowRuntime(view), "1m 40s");
-  act(() => void vi.advanceTimersByTime(5000));
-  assert.equal(rowRuntime(view), "1m 45s");
-});
-
-test("task list shows a fixed final runtime for every terminal status, including zero", (t) => {
-  t.onTestFinished(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
-
-  vi.useFakeTimers();
-  const view = render(row(task({ status: "completed" })));
-
-  for (const status of ["completed", "failed"] as const) {
-    for (const runtime_ms of [95_000, 0]) {
-      view.rerender(row(task({ status, runtime_ms })));
-      const expected = `Ran for ${runtime_ms ? "1m 35s" : "0s"}`;
-      assert.equal(rowRuntime(view), expected);
-      act(() => void vi.advanceTimersByTime(5000));
-      assert.equal(rowRuntime(view), expected);
-    }
-  }
-});
-
 test("task list icons describe the running task's latest activity", (t) => {
   t.onTestFinished(cleanup);
   const view = render(row(task({})));
 
-  for (const [live_activity, kind, label] of [
-    [
-      { text: "Waiting for rate limit reset", state: "info" },
-      "paused",
-      "Waiting for rate limit reset",
-    ],
-    [
-      { text: "Context compaction failed", state: "failed" },
-      "failed",
-      "Compaction failed",
-    ],
-  ] as const) {
-    view.rerender(row(task({ live_activity })));
-    const icon = view.getByRole("img", { name: label });
-    assert.ok(icon.classList.contains(kind));
-    assert.equal(icon.querySelector("title")?.textContent, label);
+  const paused = {
+    text: "Waiting for rate limit reset",
+    state: "info",
+  } as const;
 
-    if (kind === "failed") {
-      assert.equal(rowRuntime(view), "Compaction failed");
+  view.rerender(row(task({ live_activity: paused })));
+  const icon = view.getByRole("img", { name: paused.text });
+  assert.ok(icon.classList.contains("paused"));
+  assert.equal(icon.dataset.tone, "attention");
+  assert.equal(icon.getAttribute("title"), paused.text);
 
-      view.rerender(
-        row(
-          task({
-            live_activity,
-            run_started_at: new Date(Date.now() - 60_000).toISOString(),
-          }),
-        ),
-      );
+  // A failure shows no dot. Screen readers hear its short label.
+  const failed = {
+    text: "Context compaction failed",
+    state: "failed",
+  } as const;
 
-      assert.equal(rowRuntime(view), "Compaction failed");
-    }
-  }
+  view.rerender(row(task({ live_activity: failed })));
+  expect(view.queryByRole("img")).toBeNull();
+  view.getByText("Compaction failed");
 });
 
 test("terminal states and input requests take precedence over stale activity", (t) => {
@@ -220,14 +113,14 @@ test("terminal states and input requests take precedence over stale activity", (
 
   const view = render(row(task({ live_activity })));
 
-  for (const status of ["completed", "failed"] as const) {
+  // Finished rows show no dot, so only screen readers hear their status.
+  for (const [status, label] of [
+    ["completed", "Completed"],
+    ["failed", "Failed"],
+  ] as const) {
     view.rerender(row(task({ status, live_activity })));
-
-    view.getByRole("img", {
-      name: status.charAt(0).toUpperCase() + status.slice(1),
-    });
-
-    expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
+    view.getByText(label);
+    expect(view.queryByRole("img")).toBeNull();
   }
 
   view.rerender(
@@ -250,40 +143,4 @@ test("terminal states and input requests take precedence over stale activity", (
   );
 
   expect(view.queryByRole("img", { name: live_activity.text })).toBeNull();
-});
-
-test("task list replaces its activity fallback with a live timer once the run starts", (t) => {
-  t.onTestFinished(() => {
-    cleanup();
-    vi.useRealTimers();
-  });
-
-  vi.useFakeTimers({ now: Date.parse("2026-10-02T12:00:00.000Z") });
-
-  const running = task({
-    runtime_ms: 0,
-    live_activity: { text: "Waiting for rate limit reset", state: "info" },
-  });
-
-  const view = render(row(running));
-  assert.equal(rowRuntime(view), "Rate limit");
-
-  view.rerender(
-    row({ ...running, run_started_at: new Date(Date.now()).toISOString() }),
-  );
-
-  assert.equal(rowRuntime(view), "Rate limit");
-
-  view.rerender(
-    row({
-      ...running,
-      run_started_at: new Date(Date.now()).toISOString(),
-      live_activity: { text: "Working", state: "running" },
-    }),
-  );
-
-  assert.equal(rowRuntime(view), "0s");
-  act(() => void vi.advanceTimersByTime(5000));
-  assert.equal(rowRuntime(view), "5s");
-  view.getByRole("img", { name: "Running" });
 });

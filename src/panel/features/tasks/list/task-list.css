@@ -114,9 +114,13 @@
   align-content: start;
 }
 .task-list-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  min-height: 28px;
   margin: 1px 0;
-  padding: 7px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
 }
 .task-list-skeleton-project {
@@ -135,58 +139,124 @@
 .task-list-skeleton-title-short {
   width: 54%;
 }
-.task-list-skeleton-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-top: 3px;
-}
-.task-list-skeleton-trailing {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
 .task-list-skeleton-profile,
 .task-list-skeleton-status {
-  width: 10px;
-  height: 10px;
+  flex: none;
   border-radius: 50%;
 }
-.task-list-skeleton-runtime {
-  width: 54px;
-  height: 7px;
+.task-list-skeleton-profile {
+  width: 12px;
+  height: 12px;
 }
-.row .row-status-icon.completed {
+/* A status dot centred in its row's 12px slot. */
+.task-list-skeleton-status {
+  width: 7px;
+  height: 7px;
+  margin: 2.5px;
+}
+
+/* The title comes first in the DOM, so screen readers hear it before the
+   worker icon. */
+.row-worker {
+  order: -1;
+  display: flex;
+  flex: none;
   color: var(--muted);
 }
-/* Project groups in the all-projects list. Primary text sets headers apart
-   from the muted scope label above the list. */
+.row-worker-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+/* Appearance settings can hide worker icons. The emptied slot takes no space
+   or gap, and screen readers still hear the worker. */
+#task-list[data-row-icons="hidden"]
+  :is(.row-worker-icon, .task-list-skeleton-profile) {
+  display: none;
+}
+#task-list[data-row-icons="hidden"] .row-worker {
+  display: contents;
+}
+/* After a short pause on hover or focus, a long title slides to its end. Its
+   start fades at the left edge as it goes, and the right fade clears as the
+   end arrives. It slides back when the row loses hover or focus. A title that
+   fits has no fade, so it stays put. Container units keep the distance
+   current as the row's width changes. */
+.row-title {
+  container-type: inline-size;
+  transition:
+    --row-title-fade-start var(--motion-base) var(--ease-out),
+    --row-title-fade-end var(--motion-base) var(--ease-out);
+}
+.row:is(:hover, :focus-visible) .row-title:has(.row-title-slide) {
+  /* The mask caps this at the right fade, so a title that fits gets none. */
+  --row-title-fade-start: 20px;
+  --row-title-fade-end: 0px;
+  /* The fades follow the slide. The left one grows early as the start leaves,
+     and the right one lingers while text still runs past the edge. */
+  transition:
+    --row-title-fade-start var(--row-title-slide-duration, 0.6s) ease-out 0.3s,
+    --row-title-fade-end var(--row-title-slide-duration, 0.6s) ease-in 0.3s;
+}
+/* The text's own box stays in place so the title keeps overflowing, and so
+   keeps its fade, while the inner text slides. */
+.row-title-text {
+  display: inline-block;
+  width: max-content;
+}
+/* The row times the slide from the title's overflow, so long titles move at
+   an easy, steady pace. The return takes a third as long, up to 0.8s. */
+.row-title-slide {
+  display: inline-block;
+  transition: transform
+    clamp(
+      var(--motion-slow),
+      calc(var(--row-title-slide-duration, 0.6s) / 3),
+      0.8s
+    )
+    ease-in-out;
+}
+.row:is(:hover, :focus-visible) .row-title-slide {
+  transform: translateX(min(0px, 100cqw - 100%));
+  transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
+}
+/* A fixed slot keeps every dot centred in the same place. */
+.row-signal {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 12px;
+}
+/* Project groups in the all-projects list. Muted bold headers sit back from
+   the task titles. */
 #task-list {
   --task-group-header-height: 28px;
 }
+/* One grid cell holds the heading and, over its end, the project menu. */
 .task-group-header {
+  /* Puts the menu icon's right edge in line with the rows' dots. */
+  --task-group-menu-inset: 2.5px;
   position: sticky;
   top: 0;
   z-index: 1;
-  display: flex;
+  display: grid;
   align-items: center;
-  gap: 4px;
   height: var(--task-group-header-height);
-  padding: 2px 6px 2px 2px;
+  padding: 2px 3px 2px 2px;
   background: var(--sidebar-bg);
   font-size: 11px;
   line-height: 13px;
 }
 .task-group-heading {
+  grid-area: 1 / 1;
   display: flex;
-  flex: 1;
   min-width: 0;
   height: 100%;
   margin: 0;
   font: inherit;
 }
-/* The whole header, save its menu, toggles the group. */
+/* The whole header, save its menu, toggles the group. Its end padding keeps
+   the name clear of the menu, which always shows where nothing hovers. */
 .task-group-toggle {
   display: flex;
   flex: 1;
@@ -195,17 +265,10 @@
   min-width: 0;
   height: 100%;
   padding: 0 6px;
-  color: var(--text);
+  padding-inline-end: calc(24px + var(--task-group-menu-inset) + 6px);
+  color: var(--muted);
   font-weight: 600;
   text-align: start;
-}
-.task-group-chevron {
-  flex: none;
-  color: var(--muted);
-  transition: transform var(--motion-base) var(--ease-out);
-}
-.task-group-toggle:not([data-panel-open]) .task-group-chevron {
-  transform: rotate(-90deg);
 }
 .task-group-name {
   min-width: 0;
@@ -219,6 +282,17 @@
   color: var(--muted);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+/* Matches the list's scope count. */
+.task-group-count::before {
+  content: "·" / "";
+  margin-inline-end: 4px;
+}
+/* An open group's rows show what it holds, so its count shows only when
+   collapsed. Screen readers still hear it. */
+.task-group-toggle[data-panel-open] .task-group-count {
+  opacity: 0;
 }
 /* "Show more" and "Show less" match the header toggle's box. The extra bottom
    margin matches a row's bottom padding, so a later group sits as far below
@@ -229,7 +303,7 @@
   gap: 5px;
   width: calc(100% - 8px);
   height: calc(var(--task-group-header-height) - 4px);
-  margin: 2px 6px 9px 2px;
+  margin: 2px 6px 4px 2px;
   padding: 0 6px;
   color: var(--muted);
   font-size: 11px;
@@ -238,17 +312,61 @@
 .task-group-more:hover {
   color: var(--text);
 }
-/* The project menu shows on hover or focus, or always where nothing hovers. */
+/* A collapsed group's hidden-task dots sit where the project menu shows, and
+   trade places with it on hover. Where nothing hovers, they sit beside it. */
+.task-group-signals {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+/* A box, so the dot's fold can shrink its width. */
+.group-signal {
+  display: flex;
+}
+@media (hover: hover) {
+  /* The toggle's content runs under the menu to the menu's right edge (the
+     inset less the toggle's 1px border). */
+  .task-group-toggle {
+    padding-inline-end: calc(var(--task-group-menu-inset) - 1px);
+  }
+  /* The dots' box covers the menu's, so it keeps a long name clear of the
+     menu even with no dots. The last dot ends in line with the menu icon,
+     and earlier dots extend to the left. */
+  .task-group-signals {
+    justify-content: flex-end;
+    min-width: 24px;
+    height: 24px;
+    padding-inline-end: 6px;
+  }
+  .task-group-header:hover .task-group-signals,
+  .task-group-header:has(
+      .task-group-menu:focus-visible,
+      .task-group-menu[data-popup-open]
+    )
+    .task-group-signals {
+    opacity: 0;
+  }
+}
+/* The project menu shows on hover or focus, or always where nothing hovers.
+   Its layer keeps it above the dots, which fade into a layer of their own. */
 .task-group-menu {
+  position: relative;
+  z-index: 1;
+  grid-area: 1 / 1;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: var(--task-group-menu-inset);
   padding: 0;
   color: var(--muted);
   opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-out);
 }
 .task-group-header:hover .task-group-menu,
 .task-group-menu:focus-visible,
@@ -264,7 +382,7 @@
    the header reads as part of the group under it. It sits on the group, so
    every header keeps the same height. */
 .task-group + .task-group {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 /* A collapsed group ends at its header, which sits closer to the next group
    than a row's text does. */
@@ -276,9 +394,6 @@
   scroll-margin-top: var(--task-group-header-height);
 }
 
-.row[aria-pressed="true"] .row-meta {
-  color: color-mix(in srgb, var(--text) 30%, var(--muted));
-}
 .row[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }

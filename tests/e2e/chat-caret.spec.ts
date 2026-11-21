@@ -75,12 +75,14 @@ const conversationGeometry = (history: Locator) =>
 async function settledGeometry(history: Locator) {
   // A pending entrance, such as the narrow task slide, holds its first
   // keyframe until the next rendered frame, which a busy runner can delay.
+  // Looping and scroll-driven animations, such as row title fades, never end.
   await history.evaluate(() =>
     Promise.all(
       document
         .getAnimations()
         .filter(
           (animation) =>
+            animation.timeline === document.timeline &&
             animation.effect?.getComputedTiming().endTime !== Infinity,
         )
         .map((animation) => animation.finished.catch(() => undefined)),

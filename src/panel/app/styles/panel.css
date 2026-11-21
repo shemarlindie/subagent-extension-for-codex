@@ -231,7 +231,7 @@ header .toolbar {
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  padding: 9px 16px;
+  padding: 9px 16px 9px 17px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -258,13 +258,22 @@ header .toolbar {
   padding: 8px 10px;
   text-align: center;
 }
+/* A task row: worker icon, title and at most one status dot on one line. */
 .row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  min-height: 28px;
   text-align: left;
   border-color: transparent;
-  padding: 7px 10px;
+  padding: 4px 8px;
   margin: 1px 0;
+}
+@media (pointer: coarse) {
+  .row {
+    min-height: 36px;
+  }
 }
 .task-list-scroll-area {
   position: relative;
@@ -322,40 +331,71 @@ header .toolbar {
 .row[aria-current="true"] {
   background: var(--sidebar-selected);
 }
+/* A title too long for its row fades out at the right edge. A title that fits
+   has no scroll timeline, so it keeps the unfaded initial value. While a
+   task row's long title slides, task-list.css fades its start and clears its
+   end fade. */
+@property --row-title-fade {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --row-title-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --row-title-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 20px;
+}
+@keyframes row-title-fade {
+  from,
+  to {
+    --row-title-fade: 20px;
+  }
+}
 .row-title {
   display: block;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 300;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 min(var(--row-title-fade-start), var(--row-title-fade)),
+    #000 calc(100% - min(var(--row-title-fade-end), var(--row-title-fade))),
+    transparent
+  );
+  animation: row-title-fade linear both;
+  animation-timeline: scroll(self inline);
+  /* Overflow drives this, not time. Reduced motion's 0s duration would keep
+     the fade after the title fits again. */
+  animation-duration: auto !important;
 }
-.row-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 3px;
-  overflow-wrap: anywhere;
-}
+/* A task status dot, the size of the unread dot. See task-status-icon.tsx. */
 .dot {
-  width: 6px;
-  height: 6px;
+  display: inline-block;
+  vertical-align: middle;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--muted);
   flex-shrink: 0;
 }
-.dot.running {
-  background: var(--success);
+/* Lighter than muted text, so working and queued tasks read as quiet
+   activity. Only working pulses. */
+.dot:is([data-tone="working"], [data-tone="queued"]) {
+  background: color-mix(in srgb, var(--text) 28%, transparent);
 }
-.dot.completed {
-  background: var(--success);
+.dot[data-tone="working"] {
+  animation: motion-pulse 1.6s ease-in-out infinite;
 }
-.dot.waiting {
-  background: var(--warn);
-}
-.dot.failed {
-  background: var(--danger);
+.dot[data-tone="attention"] {
+  background: var(--status-input);
 }
 .detail {
   padding: 8px 24px 22px;

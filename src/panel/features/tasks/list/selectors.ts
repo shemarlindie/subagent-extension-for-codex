@@ -4,14 +4,21 @@ import type {
   Snapshot,
   Task,
 } from "../../../app/state/types.js";
-import { rowStatus } from "./task-status.js";
+import {
+  rowStatus,
+  statusTone,
+  stopped,
+  type StatusTone,
+} from "./task-status.js";
+
+export { statusLabel } from "./task-status.js";
 
 // Display order of the filters; the panel hides "attention" without the capability.
 export const FILTER_LABELS: Record<Filter, string> = {
   unread: "Unread",
-  attention: "Needs input",
+  attention: "Needs attention",
   failed: "Failed",
-  active: "Active",
+  active: "Working",
   completed: "Done",
   all: "All",
 };
@@ -22,22 +29,24 @@ const FILTERS = Object.keys(FILTER_LABELS) as Filter[];
 const DEFAULT_FILTERS = FILTERS.filter((filter) => filter !== "unread");
 
 export const terminal = (task: Task) =>
-  ["completed", "failed"].includes(task.status);
-
-export const statusLabel = (task: Task) => {
-  if (task.pending_input) return "Needs input";
-
-  return task.status.charAt(0).toUpperCase() + task.status.slice(1);
-};
+  ["completed", "failed"].includes(task.status) || stopped(task);
 
 export const profileLabel = (profile: string) => profile.replaceAll("_", " ");
 
-// A failed row status (including interrupted) places a task in Failed alone;
-// the other filters never overlap except through All.
-export const failedStatus = (task: Task) =>
-  ["failed", "interrupted"].includes(rowStatus(task).kind);
+/**
+ * The one status filter a task lands in besides All. The yellow dot means
+ * Needs attention, a stop you asked for counts as Done, and any other failure
+ * or interruption counts as Failed. The rest are working, including queued
+ * turns.
+ */
+export function statusFilter(task: Task): Exclude<Filter, "all" | "unread"> {
+  const { kind } = rowStatus(task);
+  if (statusTone(kind) === "attention") return "attention";
+  if (kind === "completed" || stopped(task)) return "completed";
+  if (kind === "failed" || kind === "interrupted") return "failed";
 
-const needsInput = (task: Task) => Boolean(task.pending_input);
+  return "active";
+}
 
 /** The snapshot fields the task list selectors read. */
 export const TASK_LIST_FIELDS = [
@@ -60,15 +69,10 @@ export const pendingQuestions = (task: Task): Question[] => {
   return Array.isArray(questions) ? (questions as Question[]) : [];
 };
 
-// Each task lands in one status filter besides All; see failedStatus. Unread
-// cuts across them.
+// Unread cuts across the status filters.
 const matchesFilter = (task: Task, filter: Filter) =>
   filter === "all" ||
-  (filter === "unread" && Boolean(task.unread)) ||
-  (filter === "active" && !terminal(task) && !failedStatus(task)) ||
-  (filter === "attention" && needsInput(task) && !failedStatus(task)) ||
-  (filter === "completed" && task.status === "completed") ||
-  (filter === "failed" && failedStatus(task));
+  (filter === "unread" ? Boolean(task.unread) : statusFilter(task) === filter);
 
 // Tasks in the chosen project and search, before the status filter applies.
 // Archived tasks are left out. The Projects page lists them.
@@ -150,11 +154,24 @@ export function groupRows(tasks: Task[], selected?: string) {
   return hidden.length > 1 ? { shown, hidden } : { shown: tasks, hidden: [] };
 }
 
-/** What a group's header or "Show more" row flags about tasks it hides. */
-export const groupSignals = (tasks: Task[]) => ({
-  unread: tasks.some((task) => task.unread),
-  needsInput: tasks.some((task) => matchesFilter(task, "attention")),
-});
+/**
+ * What a group's header or "Show more" row flags about tasks it hides: one dot
+ * each for attention, work and unread. A task that needs input names the
+ * attention dot before one paused by a rate limit.
+ */
+export function groupSignals(tasks: Task[]) {
+  const statuses = tasks.map(rowStatus);
+
+  const toned = (tone: StatusTone) =>
+    statuses.find((status) => statusTone(status.kind) === tone);
+
+  return {
+    attention:
+      statuses.find((status) => status.kind === "input") ?? toned("attention"),
+    working: toned("working"),
+    unread: tasks.some((task) => task.unread),
+  };
+}
 
 // Done and All count read completed tasks the list hasn't loaded. A search
 // loads them, so it never counts them unloaded.

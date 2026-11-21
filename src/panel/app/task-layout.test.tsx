@@ -171,12 +171,12 @@ test("an unusable saved width restores the default without overwriting it", () =
   localStorage.setItem(storageKey, "Infinity");
   const { rail } = setup();
 
-  expect(width(rail)).toBeCloseTo(245);
+  expect(width(rail)).toBeCloseTo(300);
   // Mounting is not a user interaction and must not overwrite preferences.
   expect(localStorage.getItem(storageKey)).toBe("Infinity");
 });
 
-test("double-click resets to 245 pixels instead of the saved initial width", async () => {
+test("double-click resets to 300 pixels instead of the saved initial width", async () => {
   localStorage.setItem(storageKey, "400");
   const { separator, rail } = setup();
 
@@ -185,8 +185,8 @@ test("double-click resets to 245 pixels instead of the saved initial width", asy
   await waitFor(() => expect(width(rail)).toBeCloseTo(350));
 
   fireEvent.doubleClick(separator);
-  await waitFor(() => expect(width(rail)).toBeCloseTo(245));
-  expect(localStorage.getItem(storageKey)).toBe("245");
+  await waitFor(() => expect(width(rail)).toBeCloseTo(300));
+  expect(localStorage.getItem(storageKey)).toBe("300");
 });
 
 test("narrow mode disables resizing and keeps both child trees mounted across breakpoints", async () => {
@@ -275,7 +275,7 @@ test("clicking the collapsed divider reopens the list, but the click ending a co
 
   fireEvent.pointerDown(separator);
   fireEvent.click(separator);
-  await waitFor(() => expect(width(rail)).toBeCloseTo(245));
+  await waitFor(() => expect(width(rail)).toBeCloseTo(300));
 });
 
 test("the toggle eases the list closed, keeping it visible but out of reach until the motion ends", async () => {
@@ -298,7 +298,7 @@ test("the toggle eases the list closed, keeping it visible but out of reach unti
   await waitFor(() => expect(width(rail)).toBe(0));
   expect(shell.hasAttribute("data-rail-motion")).toBe(true);
   // The list keeps its width while its panel shrinks, so rows don't rewrap.
-  expect(list(container).style.minWidth).toBe("245px");
+  expect(list(container).style.minWidth).toBe("300px");
   expect(list(container).hidden).toBe(false);
   expect(list(container).hasAttribute("inert")).toBe(true);
 

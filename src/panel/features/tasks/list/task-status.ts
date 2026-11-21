@@ -1,5 +1,32 @@
-import { statusLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
+
+/**
+ * A turn you stopped. Its stop clears any error, while a service restart
+ * leaves one asking you to continue.
+ */
+export const stopped = (task: Task) =>
+  task.status === "interrupted" && !task.error;
+
+// Limits you set, named so they read apart from errors.
+const LIMIT_LABELS: Partial<Record<string, string>> = {
+  cost_budget_exhausted: "Cost limit reached",
+  runtime_budget_exhausted: "Runtime limit reached",
+  error_max_turns: "Turn limit reached",
+};
+
+export const statusLabel = (task: Task) => {
+  if (task.pending_input) return "Needs input";
+  if (stopped(task)) return "Stopped";
+  // Running reads as Working, the name of its filter.
+  if (task.status === "running") return "Working";
+
+  const limit =
+    task.status === "failed" && task.error_code
+      ? LIMIT_LABELS[task.error_code]
+      : undefined;
+
+  return limit ?? task.status.charAt(0).toUpperCase() + task.status.slice(1);
+};
 
 type RowKind = Task["status"] | "input" | "paused";
 
@@ -13,6 +40,28 @@ function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
   return task.status;
 }
 
+/**
+ * A working task's dot pulses gray, and a queued one stays gray. One that
+ * needs input or is paused by a rate limit needs attention and shows yellow.
+ * Rows leave out the dot for quiet statuses, and the label carries the exact
+ * status.
+ */
+export type StatusTone = "working" | "queued" | "attention" | "quiet";
+
+const STATUS_TONES: Record<RowKind, StatusTone> = {
+  starting: "working",
+  running: "working",
+  queued: "queued",
+  paused: "attention",
+  input: "attention",
+  failed: "quiet",
+  waiting: "quiet",
+  interrupted: "quiet",
+  completed: "quiet",
+};
+
+export const statusTone = (kind: RowKind) => STATUS_TONES[kind];
+
 export function rowStatus(task: Task) {
   const activity = task.status === "running" ? task.live_activity : undefined;
   const kind = rowKind(task, activity);
@@ -24,29 +73,11 @@ export function rowStatus(task: Task) {
       ? activity.text
       : statusLabel(task);
 
-  const shortLabels: Record<RowKind, string> = {
-    queued: "Queued",
-    starting: "Starting",
-    running: "Running",
-    waiting: "Waiting",
-    interrupted: "Interrupted",
-    completed: "Done",
-    failed: "Failed",
-    input: "Needs input",
-    paused: "Rate limit",
-  };
-
-  const displayLabel =
-    activity?.text === "Context compaction failed"
-      ? "Compaction failed"
-      : label;
-
   return {
     kind,
-    label: displayLabel,
-    shortLabel:
+    label:
       activity?.text === "Context compaction failed"
         ? "Compaction failed"
-        : shortLabels[kind],
+        : label,
   };
 }
