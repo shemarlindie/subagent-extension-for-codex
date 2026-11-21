@@ -71,9 +71,11 @@ await withPanel(
 
 Run it from the checkout with `npx tsx <script>.mts`. Playwright's own clicks
 and hovers miss in the zoomed panel, so use `page.mouse` with `center`. The
-panel is about 480×465 CSS pixels, and 760 is the widest width that fits. The
-script prints the [frame check](showcase.md#video-and-frame-captures) and
-encodes with the [showcase MP4 settings](showcase.md#mp4).
+panel is about 480×465 CSS pixels, and 760 is the widest width that fits. When
+you record opening the panel, the crop covers both the inline preview and the
+expanded panel. The script prints the
+[frame check](showcase.md#video-and-frame-captures) and encodes with the
+[showcase MP4 settings](showcase.md#mp4).
 
 Keep videos under 10 MB, GitHub's attachment limit. `gh pr create --attach` and
 `gh pr edit --attach` take no alt text for a video and append it to the end of

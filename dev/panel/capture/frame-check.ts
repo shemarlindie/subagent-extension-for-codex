@@ -24,7 +24,10 @@ type FrameCheck = {
 export const SYNC = "frame-check-sync";
 const REFRESH_MS = 1000 / 60;
 
-export async function startFrameCheck(page: Page) {
+export async function checkCaptureFrames(
+  page: Page,
+  capture: () => Promise<number[]>,
+) {
   const cdp = await page.context().newCDPSession(page);
   const events: TraceEvent[] = [];
 
@@ -33,30 +36,37 @@ export async function startFrameCheck(page: Page) {
     events.push(...(value as unknown as TraceEvent[]));
   });
 
-  await cdp.send("Tracing.start", {
-    traceConfig: {
-      includedCategories: [
-        "disabled-by-default-devtools.timeline.frame",
-        "blink.user_timing",
-      ],
-    },
-    transferMode: "ReportEvents",
-  });
+  try {
+    await cdp.send("Tracing.start", {
+      traceConfig: {
+        includedCategories: [
+          "disabled-by-default-devtools.timeline.frame",
+          "blink.user_timing",
+        ],
+      },
+      transferMode: "ReportEvents",
+    });
 
-  const wall = await page.evaluate((name) => {
-    const now = performance.now();
-    performance.mark(name, { startTime: now });
+    let wall: number;
+    let shots: number[];
 
-    return performance.timeOrigin + now;
-  }, SYNC);
+    try {
+      wall = await page.evaluate((name) => {
+        const now = performance.now();
+        performance.mark(name, { startTime: now });
 
-  // Takes the screencast frame timestamps, in wall-clock milliseconds.
-  return async (shots: number[]) => {
-    await endTrace(cdp);
-    await cdp.detach();
+        return performance.timeOrigin + now;
+      }, SYNC);
+
+      shots = await capture();
+    } finally {
+      await endTrace(cdp);
+    }
 
     return checkFrames(events, wall, shots);
-  };
+  } finally {
+    await cdp.detach();
+  }
 }
 
 async function endTrace(cdp: CDPSession) {

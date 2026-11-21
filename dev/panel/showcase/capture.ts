@@ -2,13 +2,13 @@
 // theme as WebM with --video or as lossless PNG frames with --frames:
 // npm run showcase:capture [-- --out dir --scale 2 --video --fps 60 --frames]
 // Reuses a running panel-dev server, or starts one for the capture.
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import type { Browser, Page } from "@playwright/test";
 
-import { describeFrameCheck, startFrameCheck } from "../capture/frame-check";
+import { checkCaptureFrames, describeFrameCheck } from "../capture/frame-check";
 import {
   capturePngFrames,
   devServer,
@@ -140,22 +140,29 @@ async function captureVideo(browser: Browser) {
   for (const theme of THEMES) {
     const { page, started } = await startPlayback(browser, theme);
     const name = `showcase-${theme}.webm`;
-    const shots: number[] = [];
-    const check = await startFrameCheck(page);
 
-    await page.screencast.start({
-      path: join(out, name),
-      size,
-      fps,
-      quality: 100,
-      onFrame: ({ timestamp }) => {
-        shots.push(timestamp);
-      },
+    const result = await checkCaptureFrames(page, async () => {
+      const shots: number[] = [];
+
+      await page.screencast.start({
+        path: join(out, name),
+        size,
+        fps,
+        quality: 100,
+        onFrame: ({ timestamp }) => {
+          shots.push(timestamp);
+        },
+      });
+
+      try {
+        await page.waitForTimeout(await remainingPlaybackMs(page, started));
+      } finally {
+        await page.screencast.stop();
+      }
+
+      return shots;
     });
 
-    await page.waitForTimeout(await remainingPlaybackMs(page, started));
-    await page.screencast.stop();
-    const result = await check(shots);
     await page.close();
 
     console.log(`${join(values.out, name)} (${describeFrameCheck(result)})`);
@@ -165,9 +172,11 @@ async function captureVideo(browser: Browser) {
 async function captureFrames(browser: Browser) {
   for (const theme of THEMES) {
     const name = `showcase-${theme}-frames`;
+    const dir = join(out, name);
+    await rm(dir, { recursive: true, force: true });
     const { page, started } = await startPlayback(browser, theme);
 
-    const result = await capturePngFrames(page, join(out, name), size, () =>
+    const result = await capturePngFrames(page, dir, size, () =>
       remainingPlaybackMs(page, started).then((ms) => page.waitForTimeout(ms)),
     );
 
