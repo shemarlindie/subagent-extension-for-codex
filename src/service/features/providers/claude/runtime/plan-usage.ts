@@ -215,13 +215,22 @@ export class ClaudePlanUsage implements PlanUsageReader {
       ),
     });
 
+    const { windows } = this.value;
+
     this.value = {
       ...this.value,
-      windows: this.value.windows.map((w) => {
-        const update = updates.get(w.id);
+      // A read leaves out a window not yet running, so an event can add it.
+      // Reads list these windows first.
+      windows: [
+        ...EVENT_WINDOWS.flatMap((id) => {
+          const known = windows.find((w) => w.id === id);
+          const update = updates.get(id);
+          if (!update) return known ? [known] : [];
 
-        return update ? { ...w, ...update } : w;
-      }),
+          return [{ id, label: claudeRateLimitLabels[id], ...known, ...update }];
+        }),
+        ...windows.filter((w) => !EVENT_WINDOWS.some((id) => id === w.id)),
+      ],
       read_at: Date.now(),
     };
 
