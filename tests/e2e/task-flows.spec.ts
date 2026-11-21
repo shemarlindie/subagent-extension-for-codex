@@ -339,10 +339,23 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
     page.getByRole("region", { name: "Chat history" }),
   ).toContainText("Fixture session turn: 1.");
 
-  await page.getByRole("button", { name: "Task actions" }).click();
-  await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
   const taskList = page.getByRole("complementary", { name: "Delegated tasks" });
   const row = taskList.getByRole("button", { name: new RegExp(title) });
+
+  const archive = taskList.getByRole("button", {
+    name: "Archive task",
+    exact: true,
+  });
+
+  await expect(archive).toBeHidden();
+  await row.hover();
+  await expect(archive).toBeVisible();
+  await page.getByRole("region", { name: "Chat history" }).hover();
+  await expect(archive).toBeHidden();
+  await row.focus();
+  await page.keyboard.press("Tab");
+  await expect(archive).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(row).toHaveCount(0);
 
   // Archiving offers Undo, which reopens the task it closed.

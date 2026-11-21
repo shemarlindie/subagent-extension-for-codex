@@ -5,6 +5,8 @@ import { archivable } from "../../../../shared/tasks/archive.js";
 import { useController } from "../../../app/state/controller-context";
 import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
+import { Button } from "../../../shared/components/button/button";
+import { Icon } from "../../../shared/components/icons/icons";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { Presence } from "../../../shared/components/motion/presence";
 import { UnreadDot } from "../unread/unread-dot";
@@ -93,23 +95,37 @@ export const TaskRow = memo(function TaskRow({
 
   return (
     <ContextMenu.Root disabled={pressed !== undefined}>
-      <ContextMenu.Trigger
-        render={
-          <button
-            className="row"
-            data-task={task.id}
-            data-unread={task.unread ? "" : undefined}
-            aria-current={pressed === undefined ? current : undefined}
-            aria-pressed={pressed}
-            aria-disabled={disabled}
-            onClick={select}
-            onPointerEnter={repaceTitleSlide}
-            onFocus={repaceTitleSlide}
-          />
-        }
-      >
-        <TaskRowContent task={task} />
-      </ContextMenu.Trigger>
+      <div className="task-row-container">
+        <ContextMenu.Trigger
+          render={
+            <button
+              className="row"
+              data-task={task.id}
+              data-unread={task.unread ? "" : undefined}
+              aria-current={pressed === undefined ? current : undefined}
+              aria-pressed={pressed}
+              aria-disabled={disabled}
+              onClick={select}
+              onPointerEnter={repaceTitleSlide}
+              onFocus={repaceTitleSlide}
+            />
+          }
+        >
+          <TaskRowContent task={task} />
+        </ContextMenu.Trigger>
+        {pressed === undefined && archivable(task) && (
+          <Button
+            variant="ghost"
+            className="row-archive"
+            aria-label="Archive task"
+            aria-description={task.title}
+            title="Archive task"
+            onClick={archive}
+          >
+            <Icon name="archive" size={14} />
+          </Button>
+        )}
+      </div>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className="menu-positioner">
           <ContextMenu.Popup className="menu-popup">

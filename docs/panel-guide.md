@@ -192,8 +192,9 @@ count. Codex reading replies through `list_messages` doesn't mark tasks read.
 
 Archiving hides a stopped task with nothing waiting from the task list.
 
-- To archive one task, right-click or long-press its row, or open **Task
-  actions**, and choose **Archive**.
+- Hover over a task row or focus it with the keyboard to reveal **Archive
+  task**. On devices without hover, the button is always visible. You can also
+  choose **Archive** from the row’s context menu or **Task actions**.
 - Under **All projects**, each project header has an actions menu. **Archive
   completed** archives the project's completed tasks in the current scope, and
   **Archive all** archives every stopped one. Search and filters don't limit
