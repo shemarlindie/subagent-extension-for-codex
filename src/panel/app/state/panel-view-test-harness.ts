@@ -10,7 +10,7 @@ type ViewParts = {
 };
 
 /** A part of a view, named as the view names it. */
-type ViewPart = keyof Omit<PanelView, "built_at" | "json_bytes">;
+type ViewPart = "projects" | keyof ViewParts;
 
 /**
  * Answers an update wait's `view` from each requested part's own read, as
