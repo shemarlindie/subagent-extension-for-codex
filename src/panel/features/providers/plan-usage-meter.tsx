@@ -16,7 +16,7 @@ import {
   percent,
   planUsageState,
   WARNING_SHARE,
-  windowShortName,
+  windowMeterLabel,
 } from "./plan-usage";
 
 /**
@@ -89,7 +89,7 @@ export function PlanUsageMeter() {
   const label =
     top.utilization >= 1 && top.resetsAt !== undefined
       ? `in ${formatTimeLeft(top.resetsAt * 1000 - now)}`
-      : [windowShortName(top.id), "usage"].filter(Boolean).join(" ");
+      : windowMeterLabel(top.id);
 
   const plan = planUsage.plan ? `${titleCase(planUsage.plan)} plan` : "Plan";
 

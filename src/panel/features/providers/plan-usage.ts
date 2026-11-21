@@ -44,15 +44,15 @@ function windowLength(id: string) {
   return undefined;
 }
 
-/** A window's short name for the meter: `5h`, `7d` or `7d opus`. */
-export function windowShortName(id: string) {
-  if (id === "five_hour") return "5h";
-  if (id === "seven_day") return "7d";
-  // Per-model windows, such as seven_day_opus.
+/** A window's label under the meter: `5h usage`, `7d usage` or `7d opus`. */
+export function windowMeterLabel(id: string) {
+  if (id === "five_hour") return "5h usage";
+  if (id === "seven_day") return "7d usage";
+  // Per-model windows, such as seven_day_opus, drop "usage" to stay short.
   const model = id.match(/^seven_day_(.+)$/)?.[1];
   if (model) return `7d ${model}`;
 
-  return undefined;
+  return "usage";
 }
 
 /** Time left, rounded up to the minute: `3d 4h`, `1h 12m` or `5m`. */
