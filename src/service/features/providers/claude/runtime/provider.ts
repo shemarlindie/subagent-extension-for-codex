@@ -428,6 +428,7 @@ export class ClaudeAgentProvider implements Provider {
           normalize(c, m);
         }
 
+        this.planUsage.fromMessage(m);
         localOutput = localCommandOutput(m) ?? localOutput;
 
         if (m.type === "system" && m.subtype === "init" && !started) {
