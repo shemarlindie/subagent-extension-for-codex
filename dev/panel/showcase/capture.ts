@@ -2,18 +2,22 @@
 // theme as WebM with --video or as lossless PNG frames with --frames:
 // npm run showcase:capture [-- --out dir --scale 2 --video --fps 60 --frames]
 // Reuses a running panel-dev server, or starts one for the capture.
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { chromium, type Browser, type Page } from "@playwright/test";
-import { createServer } from "vite";
+import type { Browser, Page } from "@playwright/test";
 
-import { describeFrameCheck, startFrameCheck } from "./frame-check";
+import { describeFrameCheck, startFrameCheck } from "../capture/frame-check";
+import {
+  capturePngFrames,
+  devServer,
+  launchBrowser,
+  ORIGIN,
+} from "../capture/screencast";
 import { PLAYBACK_MS } from "./playback";
 import { story, storyAt } from "./story";
 
-const ORIGIN = "http://127.0.0.1:5317";
 const VIEWPORT = { width: 1600, height: 1000 };
 const THEMES = ["dark", "light"] as const;
 
@@ -63,16 +67,7 @@ async function openShowcase(page: Page, query: string) {
   }, scale * pageZoom);
 }
 
-const reachable = await fetch(`${ORIGIN}/showcase.html`).then(
-  (response) => response.ok,
-  () => false,
-);
-
-const server = reachable
-  ? undefined
-  : await createServer({ configFile: resolve("vite.config.ts") }).then(
-      (created) => created.listen(),
-    );
+const server = await devServer("/showcase.html");
 
 const out = resolve(values.out);
 
@@ -167,79 +162,23 @@ async function captureVideo(browser: Browser) {
   }
 }
 
-// Playwright's screencast only delivers JPEG frames, so this asks Chromium for
-// PNG frames directly. Chromium sends a frame when the page changes, so the
-// ffconcat list keeps each frame on screen until the next one.
 async function captureFrames(browser: Browser) {
   for (const theme of THEMES) {
-    const dir = join(out, `showcase-${theme}-frames`);
-    await rm(dir, { recursive: true, force: true });
-    await mkdir(dir);
-
+    const name = `showcase-${theme}-frames`;
     const { page, started } = await startPlayback(browser, theme);
-    const check = await startFrameCheck(page);
-    const cdp = await page.context().newCDPSession(page);
-    const frames: { file: string; time: number }[] = [];
-    const pending: Promise<unknown>[] = [];
-    let recording = true;
 
-    cdp.on("Page.screencastFrame", ({ data, metadata, sessionId }) => {
-      // Ignores frames that arrive while stopping, so the list stays final.
-      if (!recording) {
-        return;
-      }
+    const result = await capturePngFrames(page, join(out, name), size, () =>
+      remainingPlaybackMs(page, started).then((ms) => page.waitForTimeout(ms)),
+    );
 
-      const file = `${String(frames.length).padStart(5, "0")}.png`;
-      frames.push({ file, time: metadata.timestamp ?? Date.now() / 1000 });
-
-      pending.push(
-        writeFile(join(dir, file), data, "base64"),
-        cdp.send("Page.screencastFrameAck", { sessionId }),
-      );
-    });
-
-    await cdp.send("Page.startScreencast", {
-      format: "png",
-      maxWidth: size.width,
-      maxHeight: size.height,
-    });
-
-    await page.waitForTimeout(await remainingPlaybackMs(page, started));
-    recording = false;
-    const end = Date.now() / 1000;
-    await cdp.send("Page.stopScreencast");
-    await Promise.all(pending);
-    const result = await check(frames.map(({ time }) => time * 1000));
     await page.close();
-
-    // Each image otherwise gets a 1/25 s time base, which rounds frame times
-    // and caps motion at 25 fps. The option gives millisecond timing.
-    const list = frames.map(
-      ({ file, time }, index) =>
-        `file ${file}\noption framerate 1000\nduration ${((frames[index + 1]?.time ?? end) - time).toFixed(4)}`,
-    );
-
-    // The concat demuxer ignores the last duration unless the file repeats.
-    list.push(`file ${frames.at(-1)?.file}\noption framerate 1000`);
-
-    await writeFile(
-      join(dir, "frames.ffconcat"),
-      `ffconcat version 1.0\n${list.join("\n")}\n`,
-    );
-
-    console.log(
-      `${join(values.out, `showcase-${theme}-frames`)} (${describeFrameCheck(result)})`,
-    );
+    console.log(`${join(values.out, name)} (${result})`);
   }
 }
 
 await mkdir(out, { recursive: true });
 
-// Metal GPU rendering on macOS. Headless Chromium otherwise renders on the
-// CPU, which drops frames at 2x.
-const browser = await chromium.launch({
-  args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
-});
+const browser = await launchBrowser();
 
 try {
   if (values.frames) {
