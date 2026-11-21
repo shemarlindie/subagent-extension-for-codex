@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { statusTone, type rowStatus } from "./task-status";
 
 type StatusPresentation = ReturnType<typeof rowStatus>;
@@ -9,7 +11,8 @@ interface TaskStatusIconProps extends Pick<
   decorative?: boolean;
 }
 
-export function TaskStatusIcon({
+/** Memoized, so Chat's status line stays still while a reply streams. */
+export const TaskStatusIcon = memo(function TaskStatusIcon({
   kind,
   label,
   decorative = false,
@@ -24,4 +27,4 @@ export function TaskStatusIcon({
       title={decorative ? undefined : label}
     />
   );
-}
+});

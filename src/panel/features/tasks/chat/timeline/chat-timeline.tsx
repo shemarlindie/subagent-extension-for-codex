@@ -106,7 +106,7 @@ export function ChatTimeline({
 
   let working: string | undefined;
 
-  if (task && composerMode(task) === "busy" && !draftItem) {
+  if (task && composerMode(task) === "busy") {
     working =
       task.status === "running" && activity ? activity.text : statusLabel(task);
   }
