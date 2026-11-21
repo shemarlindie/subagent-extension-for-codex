@@ -11,17 +11,30 @@ import { ProgressBar } from "../../shared/components/progress-bar/progress-bar";
 import {
   elapsedShare,
   formatPlanTime,
+  formatTimeLeft,
   nextReset,
   percent,
   planUsageState,
   WARNING_SHARE,
+  windowShortName,
 } from "./plan-usage";
 
-/** The current time, taken again when a read arrives and when a window resets. */
-function useResetClock(usage?: PlanUsage) {
+/**
+ * The current time, taken again when a read arrives, when a window resets and,
+ * with `everyMinute`, each minute for a countdown.
+ */
+function useResetClock(usage?: PlanUsage, everyMinute = false) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => setNow(Date.now()), [usage]);
+
+  useEffect(() => {
+    if (!everyMinute) return;
+
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+
+    return () => clearInterval(timer);
+  }, [everyMinute]);
 
   // Runs again after each reset, so it waits for the one after.
   useEffect(() => {
@@ -38,8 +51,9 @@ function useResetClock(usage?: PlanUsage) {
 
 /**
  * How much of the plan's usage limits the account has used, as the most-used
- * window's percentage over a bar. Its note lists every window. Nothing shows
- * until a read finds plan limits, or when the setting hides it.
+ * window's percentage over its short name, or over the time until it resets
+ * once used up. Its note lists every window. Nothing shows until a read finds
+ * plan limits, or when the setting hides it.
  */
 export function PlanUsageMeter() {
   const { planUsage, host, panelSettings } = useSnapshot([
@@ -49,7 +63,13 @@ export function PlanUsageMeter() {
   ]);
 
   const controller = useController();
-  const now = useResetClock(planUsage);
+
+  // A used-up window counts down to its reset.
+  const now = useResetClock(
+    planUsage,
+    planUsage?.windows.some((window) => window.utilization >= 1),
+  );
+
   const [refreshing, setRefreshing] = useState(false);
   // A read that ends quickly shows no change, as loading placeholders do.
   const showRefreshing = useLoadingSkeletonDelay(refreshing);
@@ -65,6 +85,11 @@ export function PlanUsageMeter() {
     window.resetsAt === undefined
       ? undefined
       : `resets ${time(window.resetsAt * 1000)}`;
+
+  const label =
+    top.utilization >= 1 && top.resetsAt !== undefined
+      ? `in ${formatTimeLeft(top.resetsAt * 1000 - now)}`
+      : [windowShortName(top.id), "usage"].filter(Boolean).join(" ");
 
   const plan = planUsage.plan ? `${titleCase(planUsage.plan)} plan` : "Plan";
 
@@ -144,7 +169,9 @@ export function PlanUsageMeter() {
         <span aria-hidden="true" data-long={percent(top) >= 100 || undefined}>
           {percent(top)}%
         </span>
-        <ProgressBar value={top.utilization} />
+        <span aria-hidden="true" className="plan-usage-meter-label">
+          {label}
+        </span>
       </button>
     </Infotip>
   );

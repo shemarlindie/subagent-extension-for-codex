@@ -1,20 +1,21 @@
-/* The header's plan usage meter: the percentage over a bar, shaped unlike the
-   composer's context ring so the two don't read as one measure. */
+/* The header's plan usage meter: the percentage over a small label. */
 header .plan-usage-meter {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   padding: 4px 0;
   font-size: 10px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-header .plan-usage-meter .progress-bar {
-  width: 24px;
+header .plan-usage-meter-label {
+  font-size: 8px;
+  /* A step lighter than the number, in any state. */
+  color: color-mix(in srgb, currentColor 70%, transparent);
 }
-/* Three digits shrink to stay within the bar's width. */
+/* Three digits shrink to stay near the label's width. */
 header .plan-usage-meter [data-long] {
   font-size: 9px;
 }
@@ -22,10 +23,6 @@ header .plan-usage-meter[data-warning],
 header .plan-usage-meter[data-warning]:hover,
 .plan-usage-tooltip-rows > [data-warning] {
   color: var(--warn);
-}
-/* The bar takes the Needs attention yellow, which text can't use for contrast. */
-header .plan-usage-meter[data-warning] .progress-bar-fill {
-  background: var(--status-input);
 }
 .plan-usage-tooltip-title {
   display: block;

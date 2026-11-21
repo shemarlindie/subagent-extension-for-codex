@@ -44,6 +44,29 @@ function windowLength(id: string) {
   return undefined;
 }
 
+/** A window's short name for the meter: `5h`, `7d` or `7d opus`. */
+export function windowShortName(id: string) {
+  if (id === "five_hour") return "5h";
+  if (id === "seven_day") return "7d";
+  // Per-model windows, such as seven_day_opus.
+  const model = id.match(/^seven_day_(.+)$/)?.[1];
+  if (model) return `7d ${model}`;
+
+  return undefined;
+}
+
+/** Time left, rounded up to the minute: `3d 4h`, `1h 12m` or `5m`. */
+export function formatTimeLeft(ms: number) {
+  const minutes = Math.max(1, Math.ceil(ms / 60_000));
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days) return `${days}d ${hours % 24}h`;
+  if (hours) return `${hours}h ${minutes % 60}m`;
+
+  return `${minutes}m`;
+}
+
 /**
  * How much of a window's time has passed, from 0 to 1, which usage can be
  * compared against for pace. Undefined when the length or reset is unknown.

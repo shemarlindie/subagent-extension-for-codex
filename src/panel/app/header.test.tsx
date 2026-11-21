@@ -180,7 +180,7 @@ test("the plan usage meter shows the most-used window that has not reset", () =>
   expect(meter()).toBeNull();
 
   const normal = meter(usage(0.42, 0.9));
-  expect(normal?.textContent).toBe("42%");
+  expect(normal?.textContent).toBe("42%5h usage");
   expect(normal?.dataset.warning).toBeUndefined();
 
   expect(normal?.getAttribute("aria-label")).toMatch(
