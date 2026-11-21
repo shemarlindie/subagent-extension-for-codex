@@ -1,5 +1,9 @@
-/** Delegated sessions never receive the extension's own variables or the OpenAI variables Codex may pass. */
+/**
+ * Delegated sessions never receive the extension's own variables, including
+ * its listener `PORT`, or the OpenAI variables Codex may pass.
+ */
 const privateVariable = (name: string) =>
+  name === "PORT" ||
   name.startsWith("SUBAGENT_EXTENSION_FOR_CODEX_") ||
   name.startsWith("OPENAI_");
 
