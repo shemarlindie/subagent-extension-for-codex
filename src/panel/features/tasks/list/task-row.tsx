@@ -21,6 +21,8 @@ interface TaskRowProps {
   pressed?: boolean;
   disabled?: boolean;
   onActivate?: (id: string, action: TaskRowClick) => void;
+  /** Runs an action that can remove the row, keeping focus in the list. */
+  keepFocus?: (id: string, action: () => Promise<unknown>) => Promise<unknown>;
 }
 
 // Pixels per second a long title slides on hover or focus.
@@ -66,6 +68,7 @@ export const TaskRow = memo(function TaskRow({
   pressed,
   disabled,
   onActivate,
+  keepFocus,
 }: TaskRowProps) {
   const controller = useController();
 
@@ -90,10 +93,12 @@ export const TaskRow = memo(function TaskRow({
   const toggleRead = () =>
     controller.run(() => controller.taskActions.unread.toggle(task));
 
-  const archive = () =>
-    controller.run(() =>
-      controller.taskActions.archive.setArchived([task], true),
-    );
+  const archive = () => {
+    const action = () =>
+      controller.taskActions.archive.setArchived([task], true);
+
+    controller.run(keepFocus ? () => keepFocus(task.id, action) : action);
+  };
 
   // The container hovers and moves as one, so pointing at Archive keeps the
   // row's hover, and Archive slides with the row when the list moves.

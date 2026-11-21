@@ -29,6 +29,7 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
 import { ProjectGroups, useProjectGroups } from "./project-groups";
+import { keepRowFocus } from "./row-focus";
 import { TaskListCount } from "./task-list-count";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
@@ -215,6 +216,15 @@ export function TaskList() {
     return () => document.removeEventListener("keydown", escape);
   }, [selecting, endSelection]);
 
+  // Archiving a row that has focus keeps focus in the list.
+  const keepFocus = useCallback(
+    (id: string, action: () => Promise<unknown>) =>
+      listRef.current
+        ? keepRowFocus(listRef.current, id, countRef.current, action)
+        : action(),
+    [],
+  );
+
   const order = tasks.map((task) => task.id).join();
 
   // Rows move whole, Archive included.
@@ -265,6 +275,7 @@ export function TaskList() {
           pressed={selection.ids?.has(task.id)}
           disabled={selecting && selection.blocked ? true : undefined}
           onActivate={selection.clickRow}
+          keepFocus={keepFocus}
         />
       );
 

@@ -320,29 +320,40 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   repository,
 }) => {
   const title = "Review archive lifecycle";
-  await page.getByRole("button", { name: "New task", exact: true }).click();
-  await page.getByRole("textbox", { name: "Task message" }).fill(title);
+  // An older task listed below, which takes focus after a keyboard archive.
+  const neighbour = "Review archive focus";
 
-  // Once the composer's reads finish, Enter starts the task and typing focus
-  // stays in Chat's composer.
-  await expect(
-    page.getByRole("button", { name: "Start task", exact: true }),
-  ).toBeEnabled();
+  for (const task of [neighbour, title]) {
+    await page.getByRole("button", { name: "New task", exact: true }).click();
+    await page.getByRole("textbox", { name: "Task message" }).fill(task);
 
-  await page.getByRole("textbox", { name: "Task message" }).press("Enter");
+    // Once the composer's reads finish, Enter starts the task and typing focus
+    // stays in Chat's composer.
+    await expect(
+      page.getByRole("button", { name: "Start task", exact: true }),
+    ).toBeEnabled();
 
-  await expect(
-    page.getByRole("textbox", { name: "Message", exact: true }),
-  ).toBeFocused();
+    await page.getByRole("textbox", { name: "Task message" }).press("Enter");
 
-  await expect(
-    page.getByRole("region", { name: "Chat history" }),
-  ).toContainText("Fixture session turn: 1.");
+    await expect(
+      page.getByRole("textbox", { name: "Message", exact: true }),
+    ).toBeFocused();
+
+    await expect(
+      page.getByRole("region", { name: "Chat history" }),
+    ).toContainText("Fixture session turn: 1.");
+  }
 
   const taskList = page.getByRole("complementary", { name: "Delegated tasks" });
   const row = taskList.getByRole("button", { name: new RegExp(title) });
 
-  const archive = taskList.getByRole("button", { name: "Archive task" });
+  const archive = row
+    .locator("..")
+    .getByRole("button", { name: "Archive task" });
+
+  const neighbourRow = taskList.getByRole("button", {
+    name: new RegExp(neighbour),
+  });
 
   await row.hover();
   await expect(archive).toHaveCSS("opacity", "1");
@@ -356,8 +367,25 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await expect(archive).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
   await expect(archive).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(row).toHaveCount(0);
+  // Focus moves on as the row leaves, before the service answers.
+  const release = Promise.withResolvers<void>();
+
+  await page.route(
+    "**/api/tools/app_set_tasks_archived",
+    async (route) => {
+      await release.promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+
+  try {
+    await page.keyboard.press("Enter");
+    await expect(row).toHaveCount(0);
+    await expect(neighbourRow).toBeFocused();
+  } finally {
+    release.resolve();
+  }
 
   // Archiving offers Undo, which reopens the task it closed.
   const toast = page.getByRole("dialog", { name: `Archived “${title}”` });
@@ -376,6 +404,13 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await page.keyboard.press("ControlOrMeta+z");
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await expect(row).toHaveCount(0);
+
+  // Archiving the last listed task leaves focus on the list's count.
+  await neighbourRow.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(neighbourRow).toHaveCount(0);
+  await expect(taskList.locator(".list-count")).toBeFocused();
 
   await page.reload();
 
