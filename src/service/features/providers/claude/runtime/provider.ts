@@ -40,6 +40,7 @@ import { contextUsageRecorder } from "./context-usage.js";
 import { ClaudeDiscovery } from "./discovery.js";
 import { recordEffectiveSettings } from "./effective-settings.js";
 import { Inbox } from "./inbox.js";
+import { ClaudePlanUsage } from "./plan-usage.js";
 import { recordPromptCache } from "./prompt-cache.js";
 import {
   claudeSessionDeletionStatus,
@@ -92,6 +93,7 @@ export class ClaudeAgentProvider implements Provider {
 
   private discoveries = new Map<string, ClaudeDiscovery>();
   private commandLists: ClaudeCommands;
+  readonly planUsage: ClaudePlanUsage;
   /** When the claude.ai sign-in ends, as the latest result reported it. */
   private credentialExpiresAt?: string;
 
@@ -101,6 +103,7 @@ export class ClaudeAgentProvider implements Provider {
     private fullEvents = false,
   ) {
     this.commandLists = new ClaudeCommands(launch, cli);
+    this.planUsage = new ClaudePlanUsage(launch, cli);
   }
 
   async readiness(options?: { refresh?: boolean }): Promise<ProviderReadiness> {
@@ -410,6 +413,9 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
+        // The event rarely carries utilization, so plan usage is read afresh.
+        if (m.type === "rate_limit_event") this.planUsage.refresh();
+
         // Compaction's own request emits no stream events. Its note shows the
         // context size after it, as the context usage meter does.
         if (m.type === "system" && m.subtype === "compact_boundary") {
@@ -512,6 +518,8 @@ export class ClaudeAgentProvider implements Provider {
       c.signal.removeEventListener("abort", interrupt);
       inbox.end();
       stream.close();
+      // The turn's requests count against the plan.
+      this.planUsage.refresh();
     }
   }
 
