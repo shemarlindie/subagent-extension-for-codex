@@ -525,10 +525,10 @@ pushes changes.
 
 ## Plan usage
 
-With a Claude plan sign-in, the meter beside **Settings** shows the most-used
-usage window's percentage. Hover or tap it for every window and its reset time.
-Opening it reads usage again, at most every 10 seconds. Turn it off with
-**Settings > Appearance > Plan usage meter**.
+With a Claude plan sign-in, turn on **Settings > Appearance > Plan usage meter**
+to show the most-used usage window's percentage beside **Settings**. Hover or
+tap it for every window and its reset time. Opening it reads usage again, at
+most every 10 seconds.
 
 ## Pending worker updates
 

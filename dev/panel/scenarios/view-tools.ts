@@ -15,8 +15,12 @@ type ViewParts = {
   pending?: Record<string, unknown>;
 };
 
-// Panel settings saved while the dev host page stays open.
-let previewPanelSettings: PanelSettings = panelSettingsDefaults;
+// Panel settings saved while the dev host page stays open. The plan usage
+// meter starts on so the Plan usage host setting shows it.
+let previewPanelSettings: PanelSettings = {
+  ...panelSettingsDefaults,
+  plan_usage_meter: true,
+};
 
 /** Saves a settings update, which fixtures allow only for panel settings. */
 export function saveSettings(set: unknown) {

@@ -208,7 +208,7 @@ export const settingsSchema = z.strictObject({
             "Show how much of your Claude plan's usage limits you have used, beside Settings.",
           keywords: ["usage", "limits", "rate limit", "quota", "header"],
         })
-        .default(true),
+        .default(false),
       attachment_wrap_lines: z
         .boolean()
         .meta({

@@ -6,6 +6,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
+import { panelSettingsDefaults } from "../../shared/settings/settings-schema";
 import { Header } from "./header";
 import { CONNECTION } from "./state/connection";
 import { Controller } from "./state/controller";
@@ -172,7 +173,10 @@ test("the plan usage meter shows the most-used window that has not reset", () =>
   const meter = (planUsage?: Snapshot["planUsage"]) => {
     cleanup();
 
-    return setup({ planUsage }).view.container.querySelector<HTMLElement>(
+    return setup({
+      planUsage,
+      panelSettings: { ...panelSettingsDefaults, plan_usage_meter: true },
+    }).view.container.querySelector<HTMLElement>(
       "#plan-usage",
     );
   };
