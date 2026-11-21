@@ -176,9 +176,7 @@ test("the plan usage meter shows the most-used window that has not reset", () =>
     return setup({
       planUsage,
       panelSettings: { ...panelSettingsDefaults, plan_usage_meter: true },
-    }).view.container.querySelector<HTMLElement>(
-      "#plan-usage",
-    );
+    }).view.container.querySelector<HTMLElement>("#plan-usage");
   };
 
   expect(meter()).toBeNull();

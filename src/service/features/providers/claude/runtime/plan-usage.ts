@@ -227,7 +227,9 @@ export class ClaudePlanUsage implements PlanUsageReader {
           const update = updates.get(id);
           if (!update) return known ? [known] : [];
 
-          return [{ id, label: claudeRateLimitLabels[id], ...known, ...update }];
+          return [
+            { id, label: claudeRateLimitLabels[id], ...known, ...update },
+          ];
         }),
         ...windows.filter((w) => !EVENT_WINDOWS.some((id) => id === w.id)),
       ],
