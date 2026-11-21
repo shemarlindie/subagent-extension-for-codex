@@ -172,5 +172,4 @@ test("review several changed files across scopes, viewed marks and previews", as
     .click();
 
   await expect(preview.locator("[data-wrap-lines=true]")).not.toHaveCount(0);
-  await preview.getByRole("button", { name: "Close", exact: true }).click();
 });

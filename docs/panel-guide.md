@@ -506,10 +506,8 @@ and scrolls it to the top, adding space after the last file when needed. The
 navigator stays open between picks. Collapse it with its close button, **Files**
 or Escape. It starts collapsed when you open Changes.
 
-**File preview options → Wrap lines** wraps source and diff lines. Changes and
-attachment previews each remember their choice, which **Settings → Appearance**
-also shows. **Ask Codex about this file** opens the
-[handoff flow](#handoff-and-deletion).
+**File preview options → Wrap lines** wraps source and diff lines. **Ask Codex
+about this file** opens the [handoff flow](#handoff-and-deletion).
 
 ### Worktree actions
 

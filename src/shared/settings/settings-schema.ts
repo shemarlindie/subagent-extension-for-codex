@@ -205,8 +205,7 @@ export const settingsSchema = z.strictObject({
         .meta({
           title: "Wrap lines in attachment previews",
           description:
-            "Wrap long lines instead of scrolling sideways. The preview's options menu changes it too.",
-          keywords: ["file", "preview", "scroll"],
+            "Wrap long lines instead of scrolling sideways. Set from the preview's options menu.",
         })
         .default(false),
       changes_wrap_lines: z
@@ -214,8 +213,7 @@ export const settingsSchema = z.strictObject({
         .meta({
           title: "Wrap lines in Changes previews",
           description:
-            "Wrap long lines in changed files and diffs instead of scrolling sideways. The preview's options menu changes it too.",
-          keywords: ["diff", "file", "preview", "scroll"],
+            "Wrap long lines in changed files and diffs instead of scrolling sideways. Set from the preview's options menu.",
         })
         .default(false),
     })
