@@ -428,7 +428,7 @@ export class ClaudeAgentProvider implements Provider {
           normalize(c, m);
         }
 
-        this.planUsage.fromMessage(m);
+        this.planUsage.fromMessage(m, Boolean(options.settingSources?.length));
         localOutput = localCommandOutput(m) ?? localOutput;
 
         if (m.type === "system" && m.subtype === "init" && !started) {
@@ -517,7 +517,7 @@ export class ClaudeAgentProvider implements Provider {
       inbox.end();
       stream.close();
       // The turn's requests count against the plan.
-      this.planUsage.refresh();
+      this.planUsage.refresh(Boolean(options.settingSources?.length));
     }
   }
 

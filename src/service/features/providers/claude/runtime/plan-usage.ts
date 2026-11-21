@@ -29,13 +29,19 @@ type Limits = NonNullable<SDKControlGetUsageResponse["rate_limits"]>;
 
 type Window = { utilization: number | null; resets_at: string | null };
 
-/** Plan usage from Claude Code's `/usage` data, or null when no plan limits apply. */
+/**
+ * Plan usage from Claude Code's `/usage` data, or null when no plan limits
+ * apply. Throws when the CLI couldn't fetch limits that apply.
+ */
 export function claudePlanUsage(
   usage: SDKControlGetUsageResponse,
   readAt = Date.now(),
 ): PlanUsage | null {
+  if (!usage.rate_limits_available) return null;
+
+  // Null while limits apply means the CLI couldn't reach the usage endpoint.
   const limits = usage.rate_limits;
-  if (!usage.rate_limits_available || !limits) return null;
+  if (!limits) throw new Error("Claude Code couldn't fetch plan usage");
 
   const windows = [
     toWindow("five_hour", claudeRateLimitLabels.five_hour, limits.five_hour),
@@ -130,6 +136,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
   /** Undefined until a read succeeds, and null when no plan limits apply. */
   private value?: PlanUsage | null;
   private lastStart = -Infinity;
+  private lastRead = -Infinity;
   private running = false;
   private again = false;
   private timer?: ReturnType<typeof setTimeout>;
@@ -142,11 +149,11 @@ export class ClaudePlanUsage implements PlanUsageReader {
     private cli: Pick<ClaudeCli, "executable">,
   ) {}
 
-  /** Reads load settings files as the latest caller's settings say. */
   current(settings?: SettingsValues) {
     const settingsFiles = settings?.providers.claude.settings_files;
     if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
-    if (Date.now() - this.lastStart >= PLAN_USAGE_STALE_MS) this.refresh();
+    // From the last success, so a failed read is retried at the interval.
+    if (Date.now() - this.lastRead >= PLAN_USAGE_STALE_MS) this.refresh();
 
     return this.value;
   }
@@ -161,7 +168,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
    * window past a warning threshold, so this reads the undocumented
    * `unifiedWindows`. Anything unexpected leaves the value as it is.
    */
-  fromMessage(message: SDKMessage) {
+  fromMessage(message: SDKMessage, settingsFiles: boolean) {
     if (message.type !== "rate_limit_event") return;
 
     // Typed, but checked anyway, as throwing here would fail the turn.
@@ -191,7 +198,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
 
     // Only a read gives the plan and the per-model windows.
     if (!this.value) {
-      this.refresh();
+      this.refresh(settingsFiles);
 
       return;
     }
@@ -221,9 +228,11 @@ export class ClaudePlanUsage implements PlanUsageReader {
 
   /**
    * Reads now, or as soon as the interval allows. Without a watcher nothing
-   * would show the result, so nothing is read.
+   * would show the result, so nothing is read. Reads load settings files as
+   * the latest caller's settings or turn says.
    */
-  refresh() {
+  refresh(settingsFiles?: boolean) {
+    if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
     if (!this.watchers.size) return;
 
     if (this.running) {
@@ -257,6 +266,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
 
     try {
       this.value = await this.read();
+      this.lastRead = Date.now();
 
       logEvent("debug", "provider.plan_usage", {
         duration_ms: performance.now() - started,

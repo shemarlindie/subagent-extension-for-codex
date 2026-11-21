@@ -19,15 +19,17 @@ import {
 function useResetClock(usage?: PlanUsage) {
   const [now, setNow] = useState(() => Date.now());
 
+  useEffect(() => setNow(Date.now()), [usage]);
+
+  // Runs again after each reset, so it waits for the one after.
   useEffect(() => {
-    setNow(Date.now());
-    const next = nextReset(usage, Date.now());
+    const next = nextReset(usage, now);
     if (next === undefined) return;
 
     const timer = setTimeout(() => setNow(Date.now()), next - Date.now());
 
     return () => clearTimeout(timer);
-  }, [usage]);
+  }, [usage, now]);
 
   return now;
 }
