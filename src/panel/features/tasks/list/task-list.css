@@ -169,6 +169,51 @@
   margin: 2.5px;
 }
 
+.task-row-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.task-row-container > .row,
+.row-archive {
+  grid-area: 1 / 1;
+}
+/* Archive centres over the dot's slot. Its layer keeps it above the dot, which
+   fades into a layer of its own, and under a sticky group header. */
+.row-archive {
+  position: relative;
+  place-self: center end;
+  margin-inline-end: 3px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+/* Pointing at Archive keeps its row's hover fill. A selected row keeps its
+   own fill, as it does on hover. */
+:where(.task-row-container:hover) > .row {
+  background: var(--hover);
+}
+.task-row-container:has(:focus-visible) .row-archive {
+  opacity: 1;
+  pointer-events: auto;
+}
+.task-row-container:has(.row-archive):has(:focus-visible) .row-signal {
+  opacity: 0;
+}
+@media (hover: hover) {
+  .task-row-container:hover .row-archive {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .task-row-container:hover:has(.row-archive) .row-signal {
+    opacity: 0;
+  }
+}
 /* The title comes first in the DOM, so screen readers hear it before the
    worker icon. */
 .row-worker {
@@ -202,7 +247,8 @@
     --row-title-fade-start var(--motion-base) var(--ease-out),
     --row-title-fade-end var(--motion-base) var(--ease-out);
 }
-.row:is(:hover, :focus-visible) .row-title:has(.row-title-slide) {
+:is(.task-row-container:hover, .row:focus-visible)
+  .row-title:has(.row-title-slide) {
   /* The mask caps this at the right fade, so a title that fits gets none. */
   --row-title-fade-start: 20px;
   --row-title-fade-end: 0px;
@@ -230,16 +276,18 @@
     )
     ease-in-out;
 }
-.row:is(:hover, :focus-visible) .row-title-slide {
+:is(.task-row-container:hover, .row:focus-visible) .row-title-slide {
   transform: translateX(min(0px, 100cqw - 100%));
   transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
 }
-/* A fixed slot keeps every dot centred in the same place. */
+/* A fixed slot keeps every dot centred in the same place. It fades while
+   Archive shows over it. */
 .row-signal {
   display: flex;
   flex: none;
   justify-content: center;
   width: 12px;
+  transition: opacity var(--motion-base) var(--ease-out);
 }
 /* Project groups in the all-projects list. Muted bold headers sit back from
    the task titles. */

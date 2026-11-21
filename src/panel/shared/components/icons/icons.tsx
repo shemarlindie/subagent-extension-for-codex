@@ -47,6 +47,7 @@ const ICON_NAMES = [
   "git-merge",
   "git-off",
   "git-commit-off",
+  "archive",
   "archive-view",
   "diff-search",
   "clipboard-check",

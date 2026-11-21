@@ -149,6 +149,14 @@ test("Allow tasks here stays disabled until the scope is known", async () => {
 });
 
 test("the plan usage meter shows the most-used window that has not reset", () => {
+  // Local noon, so a reset an hour later reads as a time of day.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 10, 21, 12));
+
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
   const now = Math.floor(Date.now() / 1000);
 
   const usage = (session: number, weekly: number) => ({
