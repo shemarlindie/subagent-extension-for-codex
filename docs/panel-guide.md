@@ -527,7 +527,8 @@ pushes changes.
 
 With a Claude plan sign-in, the meter beside **Settings** shows the most-used
 usage window's percentage over a bar. Hover or tap it for every window and its
-reset time.
+reset time. Opening it reads usage again, at most every 10 seconds. Turn it off
+with **Settings > Appearance > Plan usage meter**.
 
 ## Pending worker updates
 

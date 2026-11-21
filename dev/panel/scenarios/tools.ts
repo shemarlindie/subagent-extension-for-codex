@@ -493,6 +493,7 @@ export function previewTool(
       };
     })(),
     app_record_timing: {},
+    app_refresh_plan_usage: {},
     app_get_original_response: originalResponseResult(
       eventsFor(args.task_id),
       args,

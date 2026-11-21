@@ -77,7 +77,10 @@ export function panelViewTools(c: Control, owner: string) {
         const activityTask = activity && c.store.find(activity.task_id, owner);
 
         const settings = c.settings.values(owner);
-        const planUsage = planUsageFor(c, settings);
+
+        // Hidden, it stays unread so views don't start reads.
+        const planUsage =
+          settings.panel.plan_usage_meter && planUsageFor(c, settings);
 
         const read = {
           settings: settings.panel,
@@ -137,6 +140,23 @@ export function panelViewTools(c: Control, owner: string) {
           a.position,
           a.cursor,
         ),
+    }),
+    app_refresh_plan_usage: tool({
+      readOnly: true,
+      description:
+        "User interface only: reads the account's plan usage again unless a read started in the last 10 seconds, and returns once it ends. The new value arrives with the next app_wait_for_updates view.",
+      schema: z.strictObject({}),
+      run: async () => {
+        const settings = c.settings.values(owner);
+
+        await Promise.all(
+          [...c.providers.values()].map((p) =>
+            p.planUsage ? p.planUsage.refreshNow(settings) : Promise.resolve(),
+          ),
+        );
+
+        return {};
+      },
     }),
     app_wait_for_updates: tool({
       readOnly: true,

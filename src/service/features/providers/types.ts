@@ -96,6 +96,8 @@ export interface PlanUsageReader {
    * limits apply. A missing or old value starts a read.
    */
   current(settings?: SettingsValues): PlanUsage | null | undefined;
+  /** Reads for a user, more often than `current` would. Resolves once read. */
+  refreshNow(settings?: SettingsValues): Promise<void>;
   /** Calls `listener` after each successful read. */
   watch(listener: () => void): void;
 }

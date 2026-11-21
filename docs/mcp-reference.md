@@ -271,7 +271,8 @@ take the selected `task_id` and an `after` cursor, and pending updates take a
 `conversation_id`. Only the first Chat read (cursor 0) includes the request. Its
 `attachments` carry each attachment's metadata, minus where the service stores
 its content. The view has `plan_usage` when the provider reports usage windows
-for the signed-in plan, and `updating: true` while the service
+for the signed-in plan, and `app_refresh_plan_usage` reads it again, at most
+every 10 seconds. The view has `updating: true` while the service
 [drains for an update](task-continuation.md#updates-and-service-handoff).
 
 `app_get_attachment` reads an attachment by `task_id` and its `position` in the

@@ -91,6 +91,7 @@ const fixtureReadTools = new Set([
   "list_projects",
   "app_list_tasks",
   "list_workers",
+  "app_refresh_plan_usage",
   "app_wait_for_updates",
 ]);
 

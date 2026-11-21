@@ -426,7 +426,10 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     {
       id: "appearance",
       title: "Appearance",
-      rows: [{ kind: "switch", ...described("panel.row_icons") }],
+      rows: [
+        { kind: "switch", ...described("panel.row_icons") },
+        { kind: "switch", ...described("panel.plan_usage_meter") },
+      ],
     },
   ];
 

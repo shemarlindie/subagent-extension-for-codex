@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import type { ActivityRateLimitWindow } from "../../../shared/providers/activity/types";
 import type { PlanUsage } from "../../../shared/providers/plan-usage";
 import { titleCase } from "../../../shared/text";
-import { useSnapshot } from "../../app/state/controller-context";
+import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Infotip } from "../../shared/components/infotip";
+import { useLoadingSkeletonDelay } from "../../shared/components/loading-skeleton/loading-skeleton";
+import { LOADING_SKELETON_CONFIG } from "../../shared/components/loading-skeleton/loading-skeleton-config";
 import { ProgressBar } from "../../shared/components/progress-bar/progress-bar";
 import {
   elapsedShare,
@@ -37,13 +39,24 @@ function useResetClock(usage?: PlanUsage) {
 /**
  * How much of the plan's usage limits the account has used, as the most-used
  * window's percentage over a bar. Its note lists every window. Nothing shows
- * until a read finds plan limits.
+ * until a read finds plan limits, or when the setting hides it.
  */
 export function PlanUsageMeter() {
-  const { planUsage, host } = useSnapshot(["planUsage", "host"]);
-  const now = useResetClock(planUsage);
+  const { planUsage, host, panelSettings } = useSnapshot([
+    "planUsage",
+    "host",
+    "panelSettings",
+  ]);
 
-  if (!planUsage?.windows.length) return null;
+  const controller = useController();
+  const now = useResetClock(planUsage);
+  const [refreshing, setRefreshing] = useState(false);
+  // A read that ends quickly shows no change, as loading placeholders do.
+  const showRefreshing = useLoadingSkeletonDelay(refreshing);
+
+  if (!panelSettings.plan_usage_meter || !planUsage?.windows.length) {
+    return null;
+  }
 
   const { windows, top, warning } = planUsageState(planUsage, now);
   const time = (at: number) => formatPlanTime(at, now, host).toLowerCase();
@@ -55,8 +68,32 @@ export function PlanUsageMeter() {
 
   const plan = planUsage.plan ? `${titleCase(planUsage.plan)} plan` : "Plan";
 
+  // Opening reads again, which the service limits to every 10 seconds.
+  const refresh = (open: boolean) => {
+    if (!open || refreshing) return;
+
+    setRefreshing(true);
+    const started = Date.now();
+
+    // A failed read keeps the last value, which the service logs.
+    void controller
+      .tool("app_refresh_plan_usage", {})
+      .catch(() => undefined)
+      .then(() => {
+        const { delay, minimumVisible } = LOADING_SKELETON_CONFIG;
+        const elapsed = Date.now() - started;
+
+        // Once shown, "refreshing" stays long enough to read.
+        const hold =
+          elapsed > delay ? Math.max(delay + minimumVisible - elapsed, 0) : 0;
+
+        setTimeout(() => setRefreshing(false), hold);
+      });
+  };
+
   return (
     <Infotip
+      onOpenChange={refresh}
       triggerLabel={[
         `Plan usage: ${percent(top)}% ${top.label.toLowerCase()}`,
         reset(top),
@@ -67,7 +104,12 @@ export function PlanUsageMeter() {
         <>
           <span className="plan-usage-tooltip-title">
             <strong>{plan} usage</strong>
-            <span className="muted"> · updated {time(planUsage.read_at)}</span>
+            <span className="muted">
+              {" · "}
+              {showRefreshing
+                ? "refreshing…"
+                : `updated ${time(planUsage.read_at)}`}
+            </span>
           </span>
           <span className="plan-usage-tooltip-rows">
             {windows.map((window) => (

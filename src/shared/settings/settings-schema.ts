@@ -200,6 +200,15 @@ export const settingsSchema = z.strictObject({
           keywords: ["profile", "researcher", "reviewer", "implementer", "row"],
         })
         .default(true),
+      plan_usage_meter: z
+        .boolean()
+        .meta({
+          title: "Plan usage meter",
+          description:
+            "Show how much of your Claude plan's usage limits you have used, beside Settings.",
+          keywords: ["usage", "limits", "rate limit", "quota", "header"],
+        })
+        .default(true),
       attachment_wrap_lines: z
         .boolean()
         .meta({

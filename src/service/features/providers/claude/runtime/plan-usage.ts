@@ -19,6 +19,9 @@ import { turnlessSession } from "./session-reads.js";
 /** The least time between reads, which also spaces retries after a failure. */
 export const PLAN_USAGE_INTERVAL_MS = 30_000;
 
+/** The least time between reads a user starts by opening the meter. */
+const PLAN_USAGE_OPEN_INTERVAL_MS = 10_000;
+
 /** How old a read may be before showing it starts another. */
 const PLAN_USAGE_STALE_MS = 5 * 60_000;
 
@@ -137,7 +140,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
   private value?: PlanUsage | null;
   private lastStart = -Infinity;
   private lastRead = -Infinity;
-  private running = false;
+  private reading?: Promise<void>;
   private again = false;
   private timer?: ReturnType<typeof setTimeout>;
   private watchers = new Set<() => void>();
@@ -150,8 +153,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
   ) {}
 
   current(settings?: SettingsValues) {
-    const settingsFiles = settings?.providers.claude.settings_files;
-    if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
+    this.followSettings(settings);
     // From the last success, so a failed read is retried at the interval.
     if (Date.now() - this.lastRead >= PLAN_USAGE_STALE_MS) this.refresh();
 
@@ -235,7 +237,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
     if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
     if (!this.watchers.size) return;
 
-    if (this.running) {
+    if (this.reading) {
       this.again = true;
 
       return;
@@ -248,7 +250,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
     if (wait > 0) {
       this.timer = setTimeout(() => {
         this.timer = undefined;
-        void this.run();
+        void this.start();
       }, wait);
 
       this.timer.unref();
@@ -256,11 +258,41 @@ export class ClaudePlanUsage implements PlanUsageReader {
       return;
     }
 
-    void this.run();
+    void this.start();
+  }
+
+  /**
+   * Reads for a user opening the meter, unless a read started in the last
+   * `PLAN_USAGE_OPEN_INTERVAL_MS`. Resolves once the running read ends.
+   */
+  refreshNow(settings?: SettingsValues) {
+    this.followSettings(settings);
+    if (this.reading) return this.reading;
+
+    if (Date.now() - this.lastStart < PLAN_USAGE_OPEN_INTERVAL_MS) {
+      return Promise.resolve();
+    }
+
+    // This read serves one waiting for the interval.
+    clearTimeout(this.timer);
+    this.timer = undefined;
+
+    return this.start();
+  }
+
+  /** Reads load settings files as the latest caller's settings say. */
+  private followSettings(settings?: SettingsValues) {
+    const settingsFiles = settings?.providers.claude.settings_files;
+    if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
+  }
+
+  private start() {
+    this.reading = this.run();
+
+    return this.reading;
   }
 
   private async run() {
-    this.running = true;
     this.lastStart = Date.now();
     const started = performance.now();
 
@@ -284,7 +316,7 @@ export class ClaudePlanUsage implements PlanUsageReader {
         duration_ms: performance.now() - started,
       });
     } finally {
-      this.running = false;
+      this.reading = undefined;
 
       if (this.again) {
         this.again = false;
