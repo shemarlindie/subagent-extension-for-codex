@@ -38,6 +38,48 @@ both when the change is small within the panel. Use `deviceScaleFactor: 2` for
 screenshots people will see. Add other widths or themes only where they look
 different.
 
+## Recordings
+
+Record the panel when a change involves motion, such as streaming or
+transitions. Write a short script in the session scratchpad with `withPanel`
+from `dev/panel/capture/panel-video.ts`. It opens a dev host path with the panel
+at 2x, and `record` writes an MP4 of the panel while its actions run. This
+example opens the composer and types while one reply streams:
+
+```ts
+import { withPanel } from "<checkout>/dev/panel/capture/panel-video";
+
+await withPanel(
+  "/?data=fixtures&display=fullscreen&theme=dark&width=480&dw_task=preview-live-conversation&dw_tab=chat",
+  async ({ page, panel, center, record }) => {
+    const reply = panel.locator("[data-streaming]");
+    // Starts at the beginning of the next reply.
+    await reply.waitFor({ state: "hidden", timeout: 60_000 });
+    await reply.waitFor({ timeout: 60_000 });
+
+    await record("video-captures/streaming.mp4", async () => {
+      const expand = panel.getByRole("button", { name: "Show composer" });
+      const { x, y } = await center(expand);
+      await page.mouse.click(x, y);
+      await panel.getByRole("textbox").fill("Check the narrow panel too");
+      await reply.waitFor({ state: "hidden" });
+      await page.waitForTimeout(1000);
+    });
+  },
+);
+```
+
+Run it from the checkout with `npx tsx <script>.mts`. Playwright's own clicks
+and hovers miss in the zoomed panel, so use `page.mouse` with `center`. The
+panel is about 480×465 CSS pixels, and 760 is the widest width that fits. The
+script prints the [frame check](showcase.md#video-and-frame-captures) and
+encodes with the [showcase MP4 settings](showcase.md#mp4).
+
+Keep videos under 10 MB, GitHub's attachment limit. `gh pr create --attach` and
+`gh pr edit --attach` take no alt text for a video and append it to the end of
+the body. GitHub's video links expire 5 minutes after the page loads, so reload
+a page left open longer if the player is blank.
+
 ## Design review
 
 Check the rendered panel against these points during the workflow above:
