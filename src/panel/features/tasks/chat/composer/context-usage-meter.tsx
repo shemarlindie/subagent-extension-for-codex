@@ -16,7 +16,8 @@ const percent = (tokens: number, window: number) =>
 
 /**
  * How full the task's context window was after its latest response, as the
- * second run setting. Narrow panels show the ring alone.
+ * second run setting. The ring shows alone, and its tooltip gives the
+ * percentage.
  */
 export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
   const usage = claudeTaskOptionsSchema.safeParse(
@@ -64,9 +65,6 @@ export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
       >
         <span className="run-setting-value">
           <ProgressRing value={share} />
-          <span className="context-usage-meter-percent" aria-hidden="true">
-            {used}%
-          </span>
         </span>
       </li>
     </TooltipWrapper>

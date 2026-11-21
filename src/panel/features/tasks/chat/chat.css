@@ -874,12 +874,6 @@ body[data-expanded-panel="true"]
 .context-usage-tooltip-rows > span > :last-child {
   text-align: end;
 }
-/* Narrow panels show the ring alone, leaving the model name room. */
-@media (max-width: 400px) {
-  .context-usage-meter-percent {
-    display: none;
-  }
-}
 .prompt-cache-tooltip-help {
   display: flex;
   align-items: center;
@@ -908,11 +902,18 @@ body[data-expanded-panel="true"]
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.prompt-cache-timer + li::before,
-.context-usage-meter + li::before,
+.prompt-cache-timer + .context-usage-meter::before,
 .task-run-setting + .task-run-setting::before {
   content: "·" / "";
   margin-inline: 6px;
+}
+/* A rule sets the task's settings apart from the usage stats before them. */
+.task-run-settings li + .task-run-summary::before {
+  content: "";
+  width: 1px;
+  height: 0.75em;
+  margin-inline: 8px;
+  background: var(--line);
 }
 .task-run-summary [data-compact="hidden"] {
   display: none;
