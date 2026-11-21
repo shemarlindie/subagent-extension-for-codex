@@ -304,7 +304,9 @@ reload.
 - **Panel settings:** display preferences such as worker icons are service
   settings under `panel`, so they import and export with the rest. Every update
   wait view carries them, and the controller keeps them in `panelSettings`. Add
-  a new one as a leaf of that group and a row in the Appearance section.
+  a new one as a leaf of that group and a row in the Appearance section. A
+  control outside Settings, such as a preview's **Wrap lines**, saves through
+  `controller.panelSettings`, which shows the change at once.
 
 `app/view-state.ts` provides the reload adapters, and `app/bootstrap.tsx`
 installs them for the standalone console and the development host. The

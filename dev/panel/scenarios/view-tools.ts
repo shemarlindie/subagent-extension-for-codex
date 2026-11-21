@@ -1,5 +1,8 @@
 import type { PanelView } from "../../../src/panel/app/state/panel-view";
-import { panelSettingsDefaults } from "../../../src/shared/settings/settings-schema";
+import {
+  panelSettingsDefaults,
+  type PanelSettings,
+} from "../../../src/shared/settings/settings-schema";
 import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
 
 type WaitRead = { revision: string; draft?: Draft | null };
@@ -10,6 +13,24 @@ type ViewParts = {
   activity?: Record<string, unknown>;
   pending?: Record<string, unknown>;
 };
+
+// Panel settings saved while the dev host page stays open.
+let previewPanelSettings: PanelSettings = panelSettingsDefaults;
+
+/** Saves a settings update, which fixtures allow only for panel settings. */
+export function saveSettings(set: unknown) {
+  const { panel, ...rest } = set as { panel?: Partial<PanelSettings> };
+
+  if (!panel || Object.keys(rest).length) {
+    throw new Error(
+      "Design preview only. No worker or service action was executed.",
+    );
+  }
+
+  previewPanelSettings = { ...previewPanelSettings, ...panel };
+
+  return { values: { panel: previewPanelSettings } };
+}
 
 /** A part of a view, named as the view names it. */
 export type ViewPart = keyof Omit<PanelView, "built_at" | "settings">;
@@ -43,8 +64,7 @@ export function withPreviewView(
     ...read,
     view: {
       built_at: Date.now(),
-      // Fixtures keep the default panel settings.
-      settings: panelSettingsDefaults,
+      settings: previewPanelSettings,
       projects: readPart("projects", {}),
       list: readPart("list", view.list),
       ...(view.chat && { chat: readPart("chat", view.chat) }),

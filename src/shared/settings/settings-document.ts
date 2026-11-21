@@ -426,7 +426,11 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     {
       id: "appearance",
       title: "Appearance",
-      rows: [{ kind: "switch", ...described("panel.row_icons") }],
+      rows: [
+        { kind: "switch", ...described("panel.row_icons") },
+        { kind: "switch", ...described("panel.attachment_wrap_lines") },
+        { kind: "switch", ...described("panel.changes_wrap_lines") },
+      ],
     },
   ];
 

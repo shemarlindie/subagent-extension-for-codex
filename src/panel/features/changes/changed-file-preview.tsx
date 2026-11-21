@@ -130,7 +130,11 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
 
   // Kept across files, so stepping through them stays in, say, Diff.
   const [view, setView] = useState<FileView>();
-  const [wrapLines, setWrapLines] = useState(false);
+
+  const wrapLines = useSnapshot(
+    (state) => state.panelSettings.changes_wrap_lines,
+  );
+
   const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
 
   const [viewSwitcherTarget, setViewSwitcherTarget] =
@@ -217,7 +221,9 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
         createPortal(
           <FilePreviewOptions
             wrapLines={wrapLines}
-            onWrapLinesChange={setWrapLines}
+            onWrapLinesChange={(value) =>
+              void controller.panelSettings.set("changes_wrap_lines", value)
+            }
           />,
           optionsTarget,
         )}

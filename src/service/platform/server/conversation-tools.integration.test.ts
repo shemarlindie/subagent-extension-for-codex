@@ -9,6 +9,7 @@ import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-h
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
 import { until } from "../../../../tests/support/until.js";
+import { panelSettingsDefaults } from "../../../shared/settings/settings-schema.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import type {
@@ -738,7 +739,7 @@ test("an update wait returns the panel view as of its revision, except for draft
     assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
     assert.equal(jsonBytes, Buffer.byteLength(JSON.stringify(view)));
 
-    assert.deepEqual(view.settings, { row_icons: true });
+    assert.deepEqual(view.settings, panelSettingsDefaults);
     assert.deepEqual(view.projects, await user("list_projects", {}));
     assert.deepEqual(view.list, await user("app_list_tasks", parts.list));
     assert.deepEqual(view.pending, { tasks: [] });
@@ -805,7 +806,11 @@ test("an update wait returns the panel view as of its revision, except for draft
 
     const saved = await saving;
     assert.notEqual(saved.revision, changed.revision);
-    assert.deepEqual(saved.view?.settings, { row_icons: false });
+
+    assert.deepEqual(saved.view?.settings, {
+      ...panelSettingsDefaults,
+      row_icons: false,
+    });
 
     // A missing selected task leaves its details out and the rest in.
     const missing = await wait({

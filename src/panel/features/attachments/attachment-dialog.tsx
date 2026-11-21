@@ -5,7 +5,7 @@ import type {
   AttachmentPage,
   RequestAttachment,
 } from "../../../shared/attachments/model.js";
-import { useController } from "../../app/state/controller-context";
+import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { StepNav } from "../../shared/components/step-nav/step-nav";
@@ -81,7 +81,12 @@ type AttachmentPreviewProps = {
 function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
   const read = useAttachment(task, attachment.position);
   const page = read?.status === "ready" ? read.page : undefined;
-  const [wrapLines, setWrapLines] = useState(false);
+  const controller = useController();
+
+  const wrapLines = useSnapshot(
+    (state) => state.panelSettings.attachment_wrap_lines,
+  );
+
   const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
@@ -119,7 +124,9 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
         createPortal(
           <FilePreviewOptions
             wrapLines={wrapLines}
-            onWrapLinesChange={setWrapLines}
+            onWrapLinesChange={(value) =>
+              void controller.panelSettings.set("attachment_wrap_lines", value)
+            }
           />,
           optionsTarget,
         )}
