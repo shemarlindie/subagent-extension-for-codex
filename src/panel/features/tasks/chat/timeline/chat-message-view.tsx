@@ -18,7 +18,7 @@ type ChatMessageViewProps = {
   message: ConversationMessage;
   /** The worker's name, such as Claude, for its messages. */
   worker: string;
-  /** Still being written: it shows a caret until the stored message replaces it. */
+  /** Still being written, until the stored message replaces it. */
   streaming?: boolean;
   /** Expands a new message into a conversation that is already showing. */
   arriving?: boolean;

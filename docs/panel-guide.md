@@ -347,9 +347,9 @@ The inspector offers Chat, Activity, Changes and Details. Chat shows requests,
 follow-ups, worker messages, replies and turn outcomes. Reports the worker sends
 to Codex appear in Activity only. Worker and parent-agent text renders as
 [Markdown](../src/panel/features/file-preview/README.md#markdown), and your text
-shows as typed. Draft replies stream a paragraph at a time, and the stored
-message replaces them, adding the last paragraph. Code blocks in Chat and
-Activity have a copy action in their header.
+shows as typed. Draft replies stream a paragraph at a time above the worker's
+current activity, and the stored message replaces them, adding the last
+paragraph. Code blocks in Chat and Activity have a copy action in their header.
 
 A request's [attachments](mcp-reference.md#attachments) show as chips under it,
 with a summary on hover or focus. Chips that don't fit fold behind **+N more**,

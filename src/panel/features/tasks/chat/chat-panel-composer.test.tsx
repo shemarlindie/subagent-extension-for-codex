@@ -109,6 +109,19 @@ test("rate-limit waiting shows a paused status from events", () => {
   expect(status.querySelector(".running")).toBeNull();
 });
 
+test("a streaming reply keeps the working status", () => {
+  const { view } = setup({
+    status: "running",
+    draft: { message_id: "msg-1", text: "First paragraph.\n\nSecond" },
+  });
+
+  const reply = view.container.querySelector("[data-streaming]");
+  const status = view.container.querySelector(".chat-working");
+
+  assert.equal(reply?.textContent, "First paragraph.");
+  assert.equal(status?.textContent, "Working");
+});
+
 test("on an idle task, Enter sends the message, which starts the next turn", async () => {
   const { tool, composer, type, view } = setup();
   type("Next, add tests");
