@@ -28,11 +28,9 @@ actions**, with **Allow tasks here** first when needed.
 Changing scope closes unsent forms. An action you already submitted still
 completes, but its result never selects work in the new scope.
 
-Inline mode shows a compact summary of scope, nonzero counts and one task's
-status. Click that task to open it. **Open panel** requests fullscreen when the
-host supports it. Returning to inline mode keeps the selection and form drafts.
-The standalone console always shows the full layout. The host owns placement and
-display modes.
+Inline mode shows the scope, nonzero counts and one task. Click the task to open
+it, or **Open panel** to expand when the host supports it. Returning to inline
+mode keeps the selection and form drafts.
 
 ### Manage projects
 
