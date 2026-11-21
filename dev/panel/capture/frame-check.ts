@@ -3,6 +3,8 @@
 // the wall clock ties trace time to screencast timestamps.
 import type { CDPSession, Page } from "@playwright/test";
 
+import { withCleanup } from "./capture-cleanup";
+
 export type TraceEvent = {
   name: string;
   ph: string;
@@ -24,7 +26,10 @@ type FrameCheck = {
 export const SYNC = "frame-check-sync";
 const REFRESH_MS = 1000 / 60;
 
-export async function startFrameCheck(page: Page) {
+export async function checkCaptureFrames(
+  page: Page,
+  capture: () => Promise<number[]>,
+) {
   const cdp = await page.context().newCDPSession(page);
   const events: TraceEvent[] = [];
 
@@ -33,39 +38,49 @@ export async function startFrameCheck(page: Page) {
     events.push(...(value as unknown as TraceEvent[]));
   });
 
-  await cdp.send("Tracing.start", {
-    traceConfig: {
-      includedCategories: [
-        "disabled-by-default-devtools.timeline.frame",
-        "blink.user_timing",
-      ],
+  return withCleanup(
+    async () => {
+      await cdp.send("Tracing.start", {
+        traceConfig: {
+          includedCategories: [
+            "disabled-by-default-devtools.timeline.frame",
+            "blink.user_timing",
+          ],
+        },
+        transferMode: "ReportEvents",
+      });
+
+      const { wall, shots } = await withCleanup(
+        async () => {
+          const wall = await page.evaluate((name) => {
+            const now = performance.now();
+            performance.mark(name, { startTime: now });
+
+            return performance.timeOrigin + now;
+          }, SYNC);
+
+          return { wall, shots: await capture() };
+        },
+        () => endTrace(cdp),
+      );
+
+      return checkFrames(events, wall, shots);
     },
-    transferMode: "ReportEvents",
-  });
-
-  const wall = await page.evaluate((name) => {
-    const now = performance.now();
-    performance.mark(name, { startTime: now });
-
-    return performance.timeOrigin + now;
-  }, SYNC);
-
-  // Takes the screencast frame timestamps, in wall-clock milliseconds.
-  return async (shots: number[]) => {
-    await endTrace(cdp);
-    await cdp.detach();
-
-    return checkFrames(events, wall, shots);
-  };
+    () => cdp.detach(),
+  );
 }
 
 async function endTrace(cdp: CDPSession) {
-  const complete = new Promise((resolve) => {
-    cdp.once("Tracing.tracingComplete", resolve);
+  const complete = new Promise<boolean>((resolve) => {
+    cdp.once("Tracing.tracingComplete", () => resolve(true));
+    cdp.once("close", () => resolve(false));
   });
 
   await cdp.send("Tracing.end");
-  await complete;
+
+  if (!(await complete)) {
+    throw new Error("Chromium closed before the recording trace finished");
+  }
 }
 
 export function checkFrames(

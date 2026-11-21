@@ -38,6 +38,46 @@ both when the change is small within the panel. Use `deviceScaleFactor: 2` for
 screenshots people will see. Add other widths or themes only where they look
 different.
 
+## Recordings
+
+Run a scratch `.mts` script from the checkout with `npx tsx <script>.mts`.
+Install Playwright Chromium and FFmpeg. For example, record a streamed reply
+from the chat timeline:
+
+```ts
+import { withPanel } from "<checkout>/dev/panel/capture/panel-video";
+
+await withPanel(
+  "/?data=fixtures&display=fullscreen&dw_task=preview-live-conversation&dw_tab=chat",
+  async ({ panel, record }) => {
+    const reply = panel.locator("[data-streaming]");
+    await reply.waitFor({ timeout: 60_000 });
+
+    await record(
+      "video-captures/chat.mp4",
+      () => reply.waitFor({ state: "hidden", timeout: 60_000 }),
+      {
+        target: panel.locator(".chat-timeline"),
+        output: { width: 960, height: 960 },
+      },
+    );
+  },
+  { panelSize: { width: 640, height: 720 }, scale: 1.5 },
+);
+```
+
+- `withPanel` accepts `panelSize` and `viewport` in CSS pixels, plus `scale`
+  (default 2). For clicks inside the zoomed iframe, use `center(locator)` with
+  `page.mouse`.
+- `record` defaults to the whole panel. A `target` is a locator resolved at the
+  start or a rectangle in `page.mouse` coordinates. An exact `output` uses even
+  dimensions and supports `contain` (default), `cover` or `stretch`. Resize the
+  browser between MP4 recordings.
+- For custom encoding, call `capturePngFrames(page, dir, actions)` from
+  `dev/panel/capture/screencast.ts`. Use a fresh directory and one capture per
+  Chromium instance. Feed its `frames.ffconcat` into FFmpeg with
+  `-safe 0 -f concat -i <dir>/frames.ffconcat`.
+
 ## Design review
 
 Check the rendered panel against these points during the workflow above:

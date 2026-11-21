@@ -419,10 +419,7 @@
         "dev/panel/showcase/**/*.{ts,tsx}"
       ],
       // Node scripts beside the showcase they capture.
-      "excludeFiles": [
-        "dev/panel/showcase/capture.ts",
-        "dev/panel/showcase/frame-check.ts"
-      ],
+      "excludeFiles": ["dev/panel/showcase/capture.ts"],
       "env": {
         "browser": true
       },
