@@ -40,90 +40,43 @@ different.
 
 ## Recordings
 
-Record the panel when a change involves motion, such as streaming or
-transitions. Write a short script in the session scratchpad with `withPanel`
-from `dev/panel/capture/panel-video.ts`. It opens a dev host path with the panel
-at 2x, and `record` writes an MP4 of the panel while its actions run. This
-example opens the composer and types while one reply streams:
+Run a scratch `.mts` script from the checkout with `npx tsx <script>.mts`.
+Install Playwright Chromium and FFmpeg. For example, record a streamed reply
+from the chat timeline:
 
 ```ts
 import { withPanel } from "<checkout>/dev/panel/capture/panel-video";
 
 await withPanel(
-  "/?data=fixtures&display=fullscreen&theme=dark&width=480&dw_task=preview-live-conversation&dw_tab=chat",
-  async ({ page, panel, center, record }) => {
+  "/?data=fixtures&display=fullscreen&dw_task=preview-live-conversation&dw_tab=chat",
+  async ({ panel, record }) => {
     const reply = panel.locator("[data-streaming]");
-    // Starts at the beginning of the next reply.
-    await reply.waitFor({ state: "hidden", timeout: 60_000 });
     await reply.waitFor({ timeout: 60_000 });
 
-    await record("video-captures/streaming.mp4", async () => {
-      const expand = panel.getByRole("button", { name: "Show composer" });
-      const { x, y } = await center(expand);
-      await page.mouse.click(x, y);
-      await panel.getByRole("textbox").fill("Check the narrow panel too");
-      await reply.waitFor({ state: "hidden" });
-      await page.waitForTimeout(1000);
-    });
+    await record(
+      "video-captures/chat.mp4",
+      () => reply.waitFor({ state: "hidden", timeout: 60_000 }),
+      {
+        target: panel.locator(".chat-timeline"),
+        output: { width: 960, height: 960 },
+      },
+    );
   },
+  { panelSize: { width: 640, height: 720 }, scale: 1.5 },
 );
 ```
 
-Run it from the checkout with `npx tsx <script>.mts`. The script reuses a dev
-host from that checkout or starts one on a free port. Playwright's own clicks
-and hovers can miss in the zoomed panel, so use `page.mouse` with `center`. When
-you record opening the panel, the crop covers both the inline preview and the
-expanded panel. The script prints the
-[frame check](showcase.md#video-and-frame-captures) and encodes with the
-[showcase MP4 settings](showcase.md#mp4).
-
-### Size and crop
-
-Pass a third argument to `withPanel` to set the layout and capture resolution.
-For example, `{ panelSize: { width: 640, height: 900 }, scale: 2 }` lays out the
-panel at 640 × 900 CSS pixels and captures it at twice that resolution. Set
-either panel dimension independently, or let the dev host size it. The viewport
-starts at 800 × 640 CSS pixels and grows to fit explicit panel dimensions. Pass
-`viewport: { width, height }` to choose the host viewport yourself. Resize the
-browser between MP4 recordings. Dev host breakpoints use the scaled viewport.
-
-Pass a third argument to `record` to capture a section or deliver a specific
-output size. For example, with the composer open:
-
-```ts
-await record("video-captures/composer.mp4", () => page.waitForTimeout(1000), {
-  target: panel.getByRole("textbox"),
-  output: { width: 1080, height: 1920, fit: "contain" },
-});
-```
-
-Use a locator in the dev host or panel iframe, or a rectangle
-`{ x, y, width, height }` in the same capture pixels `page.mouse` uses. The
-recorder tracks the element the locator matches when the clip starts. The crop
-includes its visible positions throughout the clip and clips panel targets to
-the stage. Output dimensions must be even. `contain` centers the crop with black
-padding, `cover` fills the canvas with a center crop, and `stretch` scales
-directly to the requested size. Omit `output` to use the crop size.
-
-### Raw frames
-
-For your own framing or encoding, import `capturePngFrames` from
-`dev/panel/capture/screencast.ts` and call
-`capturePngFrames(page, framesDirectory, actions)`. It accepts any Chromium
-Playwright page, including `page` from `withPanel`. Use a separate directory for
-each capture. The helper leaves viewport PNGs at their native resolution plus a
-timed `frames.ffconcat` list in that directory. Run one capture at a time per
-Chromium instance because the frame check uses its trace. Pass the list to
-FFmpeg with `-safe 0 -f concat -i <framesDirectory>/frames.ffconcat` and choose
-your own crop, canvas, or codec.
-
-### Pull request attachments
-
-Keep videos under 10 MB to fit GitHub's
-[attachment limit for free plans](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files).
-`gh pr create --attach` and `gh pr edit --attach` append videos to the pull
-request body. If a player goes blank after the pull request has been open a
-while, reload the page to refresh the attachment link.
+- `withPanel` accepts `panelSize` and `viewport` in CSS pixels, plus `scale`
+  (default 2). For clicks inside the zoomed iframe, use `center(locator)` with
+  `page.mouse`.
+- `record` defaults to the whole panel. A `target` is a locator resolved at the
+  start or a rectangle in `page.mouse` coordinates. An exact `output` uses even
+  dimensions and supports `contain` (default), `cover` or `stretch`. Resize the
+  browser between MP4 recordings.
+- For custom encoding, call `capturePngFrames(page, dir, actions)` from
+  `dev/panel/capture/screencast.ts`. Use a fresh directory and one capture per
+  Chromium instance. Feed its `frames.ffconcat` into FFmpeg with
+  `-safe 0 -f concat -i <dir>/frames.ffconcat`.
 
 ## Design review
 
