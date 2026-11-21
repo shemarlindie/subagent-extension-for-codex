@@ -42,6 +42,21 @@ header .plan-usage-meter[data-warning] .progress-bar-fill {
 .plan-usage-tooltip-rows > span {
   display: contents;
 }
+/* Each window: its percentage centered beside the label and a bar whose tick
+   marks how much of the window's time has passed. */
 .plan-usage-tooltip-rows > span > :first-child {
+  grid-row: span 2;
+  align-self: center;
   text-align: end;
+}
+.plan-usage-tooltip-rows .progress-bar {
+  --progress-bar-surface: var(--tooltip-bg);
+  height: 4px;
+}
+/* With the grid's row gap, this matches the space below the title. */
+.plan-usage-tooltip-rows > :not(:last-child) .progress-bar {
+  margin-bottom: 5px;
+}
+.plan-usage-tooltip-rows > [data-warning] .progress-bar-fill {
+  background: var(--status-input);
 }

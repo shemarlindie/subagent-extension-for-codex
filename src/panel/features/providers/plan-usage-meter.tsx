@@ -7,6 +7,7 @@ import { useSnapshot } from "../../app/state/controller-context";
 import { Infotip } from "../../shared/components/infotip";
 import { ProgressBar } from "../../shared/components/progress-bar/progress-bar";
 import {
+  elapsedShare,
   formatPlanTime,
   nextReset,
   percent,
@@ -79,6 +80,10 @@ export function PlanUsageMeter() {
                     <span className="muted">, {reset(window)}</span>
                   )}
                 </span>
+                <ProgressBar
+                  value={window.utilization}
+                  marker={elapsedShare(window, now)}
+                />
               </span>
             ))}
           </span>

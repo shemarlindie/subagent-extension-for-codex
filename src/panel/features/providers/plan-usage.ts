@@ -34,6 +34,28 @@ export function planUsageState(usage: PlanUsage, now: number) {
   };
 }
 
+const HOUR_MS = 3_600_000;
+
+/** Each window's length by id, as the usage data gives only its reset time. */
+function windowLength(id: string) {
+  if (id === "five_hour") return 5 * HOUR_MS;
+  if (id.startsWith("seven_day")) return 7 * 24 * HOUR_MS;
+
+  return undefined;
+}
+
+/**
+ * How much of a window's time has passed, from 0 to 1, which usage can be
+ * compared against for pace. Undefined when the length or reset is unknown.
+ */
+export function elapsedShare(window: ActivityRateLimitWindow, now: number) {
+  const length = windowLength(window.id);
+  if (!length || window.resetsAt === undefined) return undefined;
+  const left = window.resetsAt * 1000 - now;
+
+  return Math.min(Math.max(1 - left / length, 0), 1);
+}
+
 /** When the next window resets, in epoch milliseconds, if one is still ahead. */
 export function nextReset(usage: PlanUsage | undefined, now: number) {
   const ahead = (usage?.windows ?? [])
