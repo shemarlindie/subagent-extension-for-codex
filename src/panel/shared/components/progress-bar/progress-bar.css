@@ -1,0 +1,28 @@
+/* A capsule whose fill keeps its own rounded end. */
+.progress-bar {
+  position: relative;
+  display: block;
+  min-width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 25%, transparent);
+}
+.progress-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+}
+/* A thin tick that stands past the bar's edges in the text color. A ring in
+   the surface color keeps it visible over the fill; set --progress-bar-surface
+   on surfaces other than the page. */
+.progress-bar-marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1.5px;
+  margin-left: -0.75px;
+  border-radius: 1px;
+  background: var(--text);
+  box-shadow: 0 0 0 1px var(--progress-bar-surface, var(--bg));
+}

@@ -146,3 +146,46 @@ test("Allow tasks here stays disabled until the scope is known", async () => {
   await user.click(action);
   assert.equal(addProject.mock.calls.length, 0);
 });
+
+test("the plan usage meter shows the most-used window that has not reset", () => {
+  const now = Math.floor(Date.now() / 1000);
+
+  const usage = (session: number, weekly: number) => ({
+    plan: "pro",
+    windows: [
+      {
+        id: "five_hour",
+        label: "5-hour window",
+        utilization: session,
+        resetsAt: now + 3600,
+      },
+      {
+        id: "seven_day",
+        label: "7-day window",
+        utilization: weekly,
+        resetsAt: now - 60,
+      },
+    ],
+    read_at: Date.now(),
+  });
+
+  const meter = (planUsage?: Snapshot["planUsage"]) => {
+    cleanup();
+
+    return setup({ planUsage }).view.container.querySelector<HTMLElement>(
+      "#plan-usage",
+    );
+  };
+
+  expect(meter()).toBeNull();
+
+  const normal = meter(usage(0.42, 0.9));
+  expect(normal?.textContent).toBe("42%");
+  expect(normal?.dataset.warning).toBeUndefined();
+
+  expect(normal?.getAttribute("aria-label")).toMatch(
+    /^Plan usage: 42% 5-hour window, resets \d/,
+  );
+
+  expect(meter(usage(0.86, 0))?.dataset.warning).toBe("true");
+});

@@ -6,6 +6,7 @@ import type {
 } from "../../../shared/events/event-types.js";
 import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import type { SessionOptionKey } from "../../../shared/providers/options.js";
+import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
 import type {
   Capabilities,
   ModelChoice,
@@ -89,6 +90,16 @@ export interface TurnOutput {
   commandOutput?: true;
 }
 
+export interface PlanUsageReader {
+  /**
+   * The last value read: undefined before the first read, null when no plan
+   * limits apply. A missing or old value starts a read.
+   */
+  current(settings?: SettingsValues): PlanUsage | null | undefined;
+  /** Calls `listener` after each successful read. */
+  watch(listener: () => void): void;
+}
+
 export interface Provider {
   id: string;
   capabilities: Capabilities;
@@ -111,6 +122,8 @@ export interface Provider {
   ): Promise<ProviderPolicy | undefined>;
   /** The slash commands the task's session offers, for suggestions. */
   commands?(task: Task): Promise<ProviderCommand[]>;
+  /** The signed-in account's plan usage. */
+  planUsage?: PlanUsageReader;
   run(context: RunContext, prompt: string): Promise<TurnOutput>;
   /** Deletes the provider-side session a task ran in; one already gone is not an error. */
   deleteSession?(task: Task, expectedVersion?: string): Promise<void>;

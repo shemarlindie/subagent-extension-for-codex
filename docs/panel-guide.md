@@ -523,6 +523,12 @@ loading or failed. A later message recreates the worktree from its branch, or
 from the base commit if the branch was deleted. The panel never applies or
 pushes changes.
 
+## Plan usage
+
+With a Claude plan sign-in, the meter beside **Settings** shows the most-used
+usage window's percentage over a bar. Hover or tap it for every window and its
+reset time.
+
 ## Pending worker updates
 
 In thread mode, the header counts worker updates Codex hasn't seen: turn

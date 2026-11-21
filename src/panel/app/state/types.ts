@@ -1,5 +1,6 @@
 import type { RequestAttachment } from "../../../shared/attachments/model.js";
 import type { Event } from "../../../shared/events/types.js";
+import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
 import type { PanelSettings } from "../../../shared/settings/settings-schema.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
 import type { GitState } from "../../../shared/tasks/model.js";
@@ -325,6 +326,8 @@ export type Snapshot = {
   updating: boolean;
   /** The saved panel settings, from the latest view. */
   panelSettings: PanelSettings;
+  /** The account's plan usage, from the latest view, when plan limits apply. */
+  planUsage?: PlanUsage;
   error: string;
   /** A user action failure that stays visible until dismissed. */
   actionFailure?: string;

@@ -651,8 +651,8 @@ export class Controller {
 
     this.viewRevision = revision;
 
-    const { updating = false, settings: panelSettings } = view;
-    this.patch({ updating, panelSettings });
+    const { updating = false, settings, plan_usage } = view;
+    this.patch({ updating, panelSettings: settings, planUsage: plan_usage });
 
     const projectUpdate = this.reconcileProjects(view.projects);
 
