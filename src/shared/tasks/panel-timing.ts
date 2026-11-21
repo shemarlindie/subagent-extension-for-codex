@@ -40,6 +40,8 @@ const panelLoadTimingRecordSchema = z.strictObject({
   groups: workCount,
   stale_count: workCount,
   error_count: workCount,
+  /** Panels loaded before this field existed leave it out. */
+  json_bytes: workCount.optional(),
 });
 
 const panelTimingRecordSchema = z.union([
@@ -61,6 +63,7 @@ export interface PanelTimingWork {
   rows?: number;
   groups?: number;
   stale_count?: number;
+  json_bytes?: number;
   outcome?: "success" | "error";
 }
 

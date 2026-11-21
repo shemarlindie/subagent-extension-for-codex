@@ -281,9 +281,10 @@ and `activity_latest` and `activity_turn` Activity.
 | `group`   | Activity grouping and sorting when the list actually runs them                                                                 |
 
 Each aggregate includes `count`, `total_ms`, `max_ms`, `rows`, `groups`,
-`stale_count` and `error_count`. Counts describe work in that phase.
-`stale_count` counts responses or view parts discarded after selection or scope
-changed, and views older than one already applied. Unused work fields are zero.
+`stale_count`, `error_count` and `json_bytes`, the total view size. Counts
+describe work in that phase. `stale_count` counts responses or view parts
+discarded after selection or scope changed, and views older than one already
+applied. Unused work fields are zero.
 
 Views from held update waits have no `fetch`, since the hold dominates it. Only
 reads at once, after a scope or selection change or on a console revision,

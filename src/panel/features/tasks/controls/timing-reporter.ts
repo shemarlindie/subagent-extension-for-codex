@@ -59,6 +59,7 @@ export class TimingReporter {
       groups: 0,
       stale_count: 0,
       error_count: 0,
+      json_bytes: 0,
     };
 
     record.count = bounded(record.count + 1);
@@ -76,6 +77,10 @@ export class TimingReporter {
     record.rows = bounded(record.rows + (work.rows ?? 0));
     record.groups = bounded(record.groups + (work.groups ?? 0));
     record.stale_count = bounded(record.stale_count + (work.stale_count ?? 0));
+
+    record.json_bytes = bounded(
+      (record.json_bytes ?? 0) + (work.json_bytes ?? 0),
+    );
 
     record.error_count = bounded(
       record.error_count + Number(work.outcome === "error"),
@@ -104,6 +109,13 @@ export class TimingReporter {
         outcome,
       });
     }
+  }
+
+  /** Times a view's travel from the service, which shares the machine's clock. */
+  deliver(view: { built_at: number; json_bytes: number }) {
+    this.observe("view", "deliver", Date.now() - view.built_at, {
+      json_bytes: view.json_bytes,
+    });
   }
 
   merge<T>(operation: PanelLoadOperation, rows: number, run: () => T): T {

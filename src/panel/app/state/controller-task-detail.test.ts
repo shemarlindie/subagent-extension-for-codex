@@ -252,6 +252,7 @@ test("a poll overlapping a refresh keeps each activity event once and appends ne
     revision: "boot:3",
     view: {
       built_at: Date.now(),
+      json_bytes: 0,
       settings: panelSettingsDefaults,
       projects: transport.projects,
       list: { tasks: transport.tasks },

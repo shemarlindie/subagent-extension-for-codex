@@ -143,6 +143,7 @@ test("a held report coalesces rapid polling and bounds pending calls", async () 
     groups: 0,
     stale_count: 0,
     error_count: 1,
+    json_bytes: 0,
   });
 
   expect(batch.records).toContainEqual(
@@ -164,9 +165,9 @@ test("failed aggregates are dropped and their loss is carried by the next batch"
 
   const { reporter } = setup(tool);
 
-  reporter.observe("view", "fetch", 15, { rows: 2 });
+  reporter.observe("view", "deliver", 15, { json_bytes: 2000 });
   await vi.advanceTimersByTimeAsync(5000);
-  reporter.observe("view", "fetch", 3, { rows: 1 });
+  reporter.observe("view", "deliver", 3, { json_bytes: 1000 });
   await vi.advanceTimersByTimeAsync(5000);
 
   expect(tool).toHaveBeenCalledTimes(2);
@@ -175,14 +176,15 @@ test("failed aggregates are dropped and their loss is carried by the next batch"
     records: [
       {
         operation: "view",
-        phase: "fetch",
+        phase: "deliver",
         count: 1,
         total_ms: 3,
         max_ms: 3,
-        rows: 1,
+        rows: 0,
         groups: 0,
         stale_count: 0,
         error_count: 0,
+        json_bytes: 1000,
       },
     ],
     dropped_count: 1,
