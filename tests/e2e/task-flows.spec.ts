@@ -367,6 +367,34 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await expect(archive).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
   await expect(archive).toBeFocused();
+  // A refused archive brings the row back. Focus stays where the user left it.
+  const refuse = Promise.withResolvers<void>();
+
+  await page.route(
+    "**/api/tools/app_set_tasks_archived",
+    async (route) => {
+      await refuse.promise;
+
+      await route.fulfill({
+        status: 500,
+        json: { error: "Archive unavailable." },
+      });
+    },
+    { times: 1 },
+  );
+
+  try {
+    await page.keyboard.press("Enter");
+    await expect(neighbourRow).toBeFocused();
+    await neighbourRow.blur();
+  } finally {
+    refuse.resolve();
+  }
+
+  await expect(page.getByRole("alert")).toContainText("Archive unavailable.");
+  await expect(row).toBeVisible();
+  await expect(row).not.toBeFocused();
+  await archive.focus();
   // Focus moves on as the row leaves, before the service answers.
   const release = Promise.withResolvers<void>();
 

@@ -35,8 +35,8 @@ export async function keepRowFocus(
 
     observer.disconnect();
 
-    moved =
-      neighbours.map((other) => rowFor(list, other)).find(Boolean) ?? fallback;
+    const next = neighbours.find((other) => rowFor(list, other));
+    moved = next === undefined ? fallback : rowFor(list, next);
 
     moved?.focus();
   });
@@ -49,6 +49,6 @@ export async function keepRowFocus(
     observer.disconnect();
     const row = rowFor(list, id);
 
-    if (row && (lost() || page.activeElement === moved)) row.focus();
+    if (row && page.activeElement === moved) row.focus();
   }
 }
