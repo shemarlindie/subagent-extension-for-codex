@@ -8,6 +8,7 @@ import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-e
 import type { Task } from "../../../src/shared/tasks/model";
 import { previewOrgPolicy } from "../scenarios/preview-models";
 import { previewTool, type PreviewOptions } from "../scenarios/tools";
+import { saveSettings } from "../scenarios/view-tools";
 
 export type Settings = {
   source: "fixtures" | "live";
@@ -257,7 +258,11 @@ export function fixtureCall(
   options: PreviewOptions,
 ): CallToolResult {
   try {
-    const result = previewTool(name, args, options);
+    // Fixtures keep panel settings, so preview toggles such as Wrap lines stick.
+    const result =
+      name === "app_update_settings"
+        ? saveSettings(args.set)
+        : previewTool(name, args, options);
 
     // The openers and settings tools return their payload unwrapped.
     const unwrapped =

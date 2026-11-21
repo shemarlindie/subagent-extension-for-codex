@@ -21,6 +21,7 @@ import {
 } from "../../features/projects/project-mutation";
 import { projectUndoSteps } from "../../features/projects/project-undo";
 import { workersStale } from "../../features/providers/worker-freshness";
+import { PanelSettingsSaver } from "../../features/settings/panel-settings-saver";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
 import {
   handoffMessage,
@@ -106,6 +107,7 @@ export class Controller {
   };
 
   readonly timing: TimingReporter = new TimingReporter(this.stateContext);
+  readonly panelSettings = new PanelSettingsSaver(this.stateContext);
 
   private draftFollower = new DraftFollower({
     ...this.stateContext,

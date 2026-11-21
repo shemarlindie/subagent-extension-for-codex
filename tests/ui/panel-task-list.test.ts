@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
+import { panelSettingsDefaults } from "../../src/shared/settings/settings-schema";
 import {
   act,
   assert,
@@ -211,7 +212,7 @@ test("the view's panel settings can hide worker icons", async (t) => {
   await setup(
     t,
     (transport) => {
-      transport.panelSettings = { row_icons: false };
+      transport.panelSettings = { ...panelSettingsDefaults, row_icons: false };
     },
     { view: "task-list" },
   );

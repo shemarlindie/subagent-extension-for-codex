@@ -145,11 +145,18 @@ test("settings sections have unique IDs and cover every shown value once", async
   assert.equal(new Set(listed(result)).size, listed(result).length);
 
   // The execution approval mode is for agents and execution providers. The
-  // panel presents native permission settings instead.
+  // panel presents native permission settings instead. Previews set their
+  // wrap settings from their own menus.
+  const unlisted = [
+    "approvals.execution_mode",
+    "panel.attachment_wrap_lines",
+    "panel.changes_wrap_lines",
+  ];
+
   assert.deepEqual(
     [...listed(result)].sort(),
     settingPaths(result.values)
-      .filter((path) => path !== "approvals.execution_mode")
+      .filter((path) => !unlisted.includes(path))
       .sort(),
   );
 

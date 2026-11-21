@@ -144,13 +144,16 @@ test("review several changed files across scopes, viewed marks and previews", as
   await expect(preview).toContainText(/turn-2\.md/);
   await expect(preview).toContainText("turn 2.");
 
-  // Wrap lines applies to the preview and stays on for the next file.
+  // Wrap lines applies to the preview, stays on for the next file and is
+  // saved for later previews.
   await preview
     .getByRole("button", { name: "File preview options", exact: true })
     .click();
 
+  const saved = page.waitForResponse(/\/api\/tools\/update_settings$/);
   await page.getByRole("menuitemcheckbox", { name: "Wrap lines" }).click();
   await expect(preview.locator("[data-wrap-lines=true]")).not.toHaveCount(0);
+  await saved;
 
   await preview
     .getByRole("button", { name: "Previous file", exact: true })
@@ -160,4 +163,13 @@ test("review several changed files across scopes, viewed marks and previews", as
   await expect(preview.locator("[data-wrap-lines=true]")).not.toHaveCount(0);
   await preview.getByRole("button", { name: "Close", exact: true }).click();
   await expect(changes).toContainText("1 of 2 viewed");
+
+  await page.reload();
+  await page.getByRole("tab", { name: "Changes" }).click();
+
+  await changes
+    .getByRole("button", { name: "Preview all changes", exact: true })
+    .click();
+
+  await expect(preview.locator("[data-wrap-lines=true]")).not.toHaveCount(0);
 });
