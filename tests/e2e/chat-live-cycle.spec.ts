@@ -29,7 +29,7 @@ for (const width of [1280, 420]) {
 
     await page.setViewportSize({ width, height: 800 });
     await page.reload();
-    const working = history.locator(".chat-working");
+    const working = page.locator(".chat-working");
     await expect(history).not.toHaveAttribute("aria-busy", "true");
 
     for (const [streamingAt, storedAt] of [
@@ -184,6 +184,7 @@ for (const width of [1280, 420]) {
     ] as const) {
       cycle.refresh(elapsed);
       await expect(working).toHaveText(label);
+      await expect(working).toBeInViewport({ ratio: 1 });
       expect((await visibleBox(working)).height).toBe(height);
       const current = await visibleBox(anchor);
       expect(Math.abs(current.y - start.y)).toBeLessThanOrEqual(1);

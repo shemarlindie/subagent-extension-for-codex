@@ -365,7 +365,7 @@ export function Composer({
             disabled={disabled}
             onClick={() => toggle(false)}
           >
-            <Icon name="chevron-down" size={12} />
+            <Icon name="chevron-down" size={11} />
             <span>{expandLabel(spent, hasMessage)}</span>
           </Button>
           {task && <TaskRunSettings task={task} />}
@@ -385,7 +385,7 @@ export function Composer({
                 disabled={disabled}
                 onClick={() => toggle(true)}
               >
-                <Icon name="chevron-down" size={12} />
+                <Icon name="chevron-down" size={11} />
               </Button>
             </TooltipWrapper>
             <div className="chat-composer-box" ref={box}>

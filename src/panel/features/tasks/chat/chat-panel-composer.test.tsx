@@ -122,6 +122,30 @@ test("a streaming reply keeps the working status", () => {
   assert.equal(status?.textContent, "Working");
 });
 
+test("a matching note in history does not hide the live status", () => {
+  const text = "Context compaction failed";
+
+  const { view } = setup(
+    { status: "running", live_activity: { text, state: "failed" } },
+    [],
+    [
+      {
+        kind: "note",
+        id: "compaction-failure",
+        event_id: 1,
+        timestamp: "2026-10-09T12:00:00Z",
+        note: "failure",
+        text,
+      },
+    ],
+  );
+
+  const history = view.getByRole("region", { name: "Chat history" });
+  const status = view.container.querySelector('.chat-working[role="status"]');
+  expect(history.textContent).toContain(text);
+  expect(status?.textContent).toBe(text);
+});
+
 test("on an idle task, Enter sends the message, which starts the next turn", async () => {
   const { tool, composer, type, view } = setup();
   type("Next, add tests");
