@@ -205,6 +205,7 @@ test("The Claude Agent SDK starts Claude Code as the extension, without private 
     CLAUDE_CODE_ENTRYPOINT: "dummy-app",
     USER_TOOLCHAIN_HOME: "/synthetic/toolchain",
     OPENAI_API_KEY: "synthetic-app-key",
+    PORT: "17317",
     SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: "synthetic-service-token",
   });
 
@@ -243,7 +244,11 @@ test("The Claude Agent SDK starts Claude Code as the extension, without private 
   assert.equal(spawned.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
   assert.equal(spawned.CLAUDE_CODE_ENTRYPOINT, "subagent-extension-for-codex");
 
-  for (const name of ["SUBAGENT_EXTENSION_FOR_CODEX_TOKEN", "OPENAI_API_KEY"]) {
+  for (const name of [
+    "SUBAGENT_EXTENSION_FOR_CODEX_TOKEN",
+    "OPENAI_API_KEY",
+    "PORT",
+  ]) {
     assert.equal(
       spawned[name],
       undefined,
