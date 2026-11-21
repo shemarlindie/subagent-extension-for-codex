@@ -874,12 +874,6 @@ body[data-expanded-panel="true"]
 .context-usage-tooltip-rows > span > :last-child {
   text-align: end;
 }
-/* Narrow panels show the ring alone, leaving the model name room. */
-@media (max-width: 400px) {
-  .context-usage-meter-percent {
-    display: none;
-  }
-}
 .prompt-cache-tooltip-help {
   display: flex;
   align-items: center;
