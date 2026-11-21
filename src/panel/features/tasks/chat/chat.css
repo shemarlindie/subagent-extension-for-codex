@@ -908,11 +908,19 @@ body[data-expanded-panel="true"]
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.prompt-cache-timer + li::before,
-.context-usage-meter + li::before,
+.prompt-cache-timer + .context-usage-meter::before,
 .task-run-setting + .task-run-setting::before {
   content: "·" / "";
   margin-inline: 6px;
+}
+/* A rule sets the task's settings apart from the usage stats before them. */
+.task-run-settings li + .task-run-summary::before {
+  content: "";
+  align-self: stretch;
+  width: 1px;
+  margin-block: 2px;
+  margin-inline: 8px;
+  background: var(--line);
 }
 .task-run-summary [data-compact="hidden"] {
   display: none;
