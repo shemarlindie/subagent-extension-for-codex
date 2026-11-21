@@ -423,6 +423,11 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         },
       ],
     },
+    {
+      id: "appearance",
+      title: "Appearance",
+      rows: [{ kind: "switch", ...described("panel.row_icons") }],
+    },
   ];
 
   return withClaudePolicy(sections, claudePolicy, values);

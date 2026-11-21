@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { expect, test, vi } from "vitest";
 
+import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
 
@@ -459,6 +460,7 @@ test("a held wait's view older than the one applied is ignored", async (t) => {
     revision: "boot:4",
     view: {
       built_at: Date.now(),
+      settings: panelSettingsDefaults,
       projects: transport.projects,
       list: { tasks: [task("older")] },
     },

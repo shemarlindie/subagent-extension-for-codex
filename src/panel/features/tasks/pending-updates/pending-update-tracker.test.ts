@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test } from "vitest";
 
+import { panelSettingsDefaults } from "../../../../shared/settings/settings-schema";
 import {
   deferred,
   flush,
@@ -55,6 +56,7 @@ test.for(["before", "after"] as const)(
       revision: "boot:2",
       view: {
         built_at: Date.now(),
+        settings: panelSettingsDefaults,
         projects: transport.projects,
         list: { tasks: [] },
         pending: { tasks: [update(1), update(2)] },

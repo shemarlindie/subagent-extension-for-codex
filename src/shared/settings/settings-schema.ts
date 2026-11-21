@@ -189,9 +189,30 @@ export const settingsSchema = z.strictObject({
     .strictObject(providerSettingsSchemas)
     .meta({ userOnly: true })
     .prefault({}),
+  // How the panel looks. It reads these with every view.
+  panel: z
+    .strictObject({
+      row_icons: z
+        .boolean()
+        .meta({
+          title: "Worker icons in task list",
+          description: "Show each task's worker profile icon before its title.",
+          keywords: ["profile", "researcher", "reviewer", "implementer", "row"],
+        })
+        .default(true),
+    })
+    .meta({ userOnly: true })
+    .prefault({}),
 });
 
 export type SettingsValues = z.infer<typeof settingsSchema>;
+
+/** The settings the panel applies to its own display. */
+export type PanelSettings = SettingsValues["panel"];
+
+/** Panel settings before the first view brings the saved ones. */
+export const panelSettingsDefaults: PanelSettings =
+  settingsSchema.shape.panel.parse({});
 
 /** A new user's settings, with the given default provider. */
 export const settingsDefaults = (provider: string): SettingsValues =>

@@ -206,3 +206,20 @@ test("evidence tabs support keyboard arrows and keep tab focus through refresh",
   await user.click(costInfo);
   assert.ok(screen.getByRole("dialog"));
 });
+
+test("the view's panel settings can hide worker icons", async (t) => {
+  await setup(
+    t,
+    (transport) => {
+      transport.panelSettings = { row_icons: false };
+    },
+    { view: "task-list" },
+  );
+
+  await waitFor(() =>
+    assert.equal(
+      document.getElementById("task-list")?.dataset.rowIcons,
+      "hidden",
+    ),
+  );
+});

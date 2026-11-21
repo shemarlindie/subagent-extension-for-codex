@@ -25,16 +25,20 @@ export async function composeView(
   const optional = (part: ViewPart, args?: Record<string, unknown>) =>
     args ? read(part, args) : undefined;
 
-  const [projects, list, chat, activity, pending] = await Promise.all([
-    read("projects", {}),
-    read("list", parts.list),
-    optional("chat", parts.chat),
-    optional("activity", parts.activity),
-    optional("pending", parts.pending),
-  ]);
+  const [settings, projects, list, chat, activity, pending] = await Promise.all(
+    [
+      read("settings", {}),
+      read("projects", {}),
+      read("list", parts.list),
+      optional("chat", parts.chat),
+      optional("activity", parts.activity),
+      optional("pending", parts.pending),
+    ],
+  );
 
   return {
     built_at: Date.now(),
+    settings,
     projects,
     list,
     ...(chat === undefined ? {} : { chat }),
