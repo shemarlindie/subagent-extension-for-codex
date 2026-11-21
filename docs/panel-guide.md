@@ -523,6 +523,15 @@ loading or failed. A later message recreates the worktree from its branch, or
 from the base commit if the branch was deleted. The panel never applies or
 pushes changes.
 
+## Plan usage
+
+When Claude Code signs in with a Claude plan, the header shows the most-used
+plan usage window as a ring and percentage. The meter turns the warning color at
+80%, and shows the reset time once a limit is reached. Narrow panels show only
+the ring. Hover or tap the meter for each window's usage and reset time. Usage
+includes your other Claude use. It refreshes after each turn, and every 5
+minutes while a panel is open.
+
 ## Pending worker updates
 
 In thread mode, the header counts worker updates Codex hasn't seen: turn

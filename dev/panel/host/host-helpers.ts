@@ -6,6 +6,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ProviderPolicy } from "../../../src/shared/providers/types";
 import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
 import type { Task } from "../../../src/shared/tasks/model";
+import type { PreviewPlanUsageState } from "../scenarios/plan-usage";
 import { previewOrgPolicy } from "../scenarios/preview-models";
 import { previewTool, type PreviewOptions } from "../scenarios/tools";
 import { saveSettings } from "../scenarios/view-tools";
@@ -30,6 +31,8 @@ export type Settings = {
   claudeSignInEnding: boolean;
   /** Fixtures only, as JSON; the live service asks Claude Code. */
   orgPolicy: string;
+  /** Fixtures only; the live service reads the account's plan usage. */
+  planUsage: PreviewPlanUsageState;
   /** Fixtures only; lets the preview simulate successful budget updates. */
   successfulBudgetUpdates: boolean;
   /** Fixtures only; delays content reads so loading placeholders can be inspected. */

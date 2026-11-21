@@ -3,6 +3,7 @@ import { useRef } from "react";
 
 import { NewTaskButton } from "../features/delegation/new-task/new-task-button";
 import { ProjectScope } from "../features/projects/project-scope";
+import { PlanUsageMeter } from "../features/providers/plan-usage-meter";
 import { PendingUpdatesIndicator } from "../features/tasks/pending-updates/pending-updates-indicator";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
@@ -84,7 +85,8 @@ export function Header({ taskRail }: HeaderProps) {
       </div>
       <div className="toolbar">
         <HeaderStatus />
-        {/* Outside the inline toolbar, so narrow panels keep it. */}
+        {/* Outside the inline toolbar, so narrow panels keep these. */}
+        <PlanUsageMeter />
         {threadMode && <PendingUpdatesIndicator />}
         {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
         <div className="toolbar toolbar-inline">

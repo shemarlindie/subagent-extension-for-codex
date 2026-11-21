@@ -123,6 +123,8 @@ Host settings:
 - **Automatically add chat projects** matches the user setting of that name.
 - **Claude Code unavailable** shows readiness notices in the panel and the New
   task form.
+- **Plan usage** sets the header meter's state: none, normal, close to the limit
+  or limit reached.
 - **Org policy (JSON)** applies a policy, in the shape discovery reports, to the
   composer's menus and Settings. **Insert example** fills in the fixture policy.
   Any policy comes with a saved mode it may outrank.

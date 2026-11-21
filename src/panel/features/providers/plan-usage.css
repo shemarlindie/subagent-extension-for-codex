@@ -1,0 +1,47 @@
+/* The header's plan usage meter, quiet like the service status beside it. */
+header .plan-usage-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+header .plan-usage-meter[data-warning],
+header .plan-usage-meter[data-warning]:hover {
+  color: var(--warn);
+}
+/* Narrow panels show the ring alone, as the context meter does. */
+@media (max-width: 400px) {
+  header .plan-usage-meter-value {
+    display: none;
+  }
+}
+.plan-usage-tooltip-status {
+  display: block;
+  font-weight: 600;
+}
+/* Each window's name, percentage and reset time. */
+.plan-usage-tooltip-rows {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: start;
+  gap: 2px 12px;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.plan-usage-tooltip-rows > span {
+  display: contents;
+}
+.plan-usage-tooltip-rows > span > :not(:nth-child(2)) {
+  color: var(--muted);
+}
+.plan-usage-tooltip-rows > span > :nth-child(2) {
+  text-align: end;
+}
+.plan-usage-tooltip-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}

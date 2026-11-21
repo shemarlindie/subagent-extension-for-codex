@@ -12,6 +12,7 @@ const READ_FIELDS = [
   "chat",
   "pendingUpdates",
   "panelSettings",
+  "planUsage",
 ] satisfies (keyof Snapshot)[];
 
 /**

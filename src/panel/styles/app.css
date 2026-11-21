@@ -29,6 +29,7 @@
 @import "../features/projects/projects.css";
 @import "../features/tasks/archive/archive.css";
 @import "../features/tasks/pending-updates/pending-updates.css";
+@import "../features/providers/plan-usage.css";
 @import "../shared/components/navigation/navigation.css";
 @import "../shared/components/motion/motion.css";
 @import "../shared/components/loading-skeleton/loading-skeleton.css";

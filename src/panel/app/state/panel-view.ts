@@ -1,3 +1,4 @@
+import type { PlanUsage } from "../../../shared/providers/plan-usage";
 import type { PanelSettings } from "../../../shared/settings/settings-schema";
 import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates";
@@ -22,6 +23,8 @@ export type PanelView = {
   /** The UTF-8 size of the view's other fields as JSON. */
   json_bytes: number;
   settings: PanelSettings;
+  /** The account's plan usage, once read, when plan limits apply. */
+  plan_usage?: PlanUsage;
   projects: Project[];
   list: TaskList;
   chat?: ChatRead;
