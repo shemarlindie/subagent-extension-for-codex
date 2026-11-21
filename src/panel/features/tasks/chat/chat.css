@@ -330,20 +330,17 @@ body[data-expanded-panel="true"]
   flex: none;
   height: 18px;
   min-width: 0;
-  padding-inline-start: calc(
-    var(--composer-inset-start) + var(--composer-caret-size) +
-      var(--composer-control-gap)
-  );
-  padding-inline-end: var(--detail-pad, 24px);
+  padding-inline: var(--composer-inset-start) var(--composer-inset-end);
   line-height: 18px;
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--composer-caret-size) minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  column-gap: var(--composer-control-gap);
   font-size: 12px;
   color: var(--muted);
 }
 .chat-working > .row-status-icon {
-  flex: none;
+  justify-self: center;
 }
 .chat-working > span {
   min-width: 0;
@@ -397,9 +394,14 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 .chat-footer {
-  --composer-inset-start: 8px;
   --composer-caret-size: 28px;
-  --composer-control-gap: 6px;
+  /* Center the chevron and status dot on the conversation's start edge. */
+  --composer-inset-start: calc(
+    var(--detail-pad, 24px) - var(--composer-caret-size) / 2
+  );
+  /* Match the chevron's visible inset, about half its 11px glyph. */
+  --composer-inset-end: calc(var(--detail-pad, 24px) - 5px);
+  --composer-control-gap: 2px;
   /* Keep the composer in reach when the inspector owns the scroll. */
   position: sticky;
   bottom: 0;
@@ -642,7 +644,7 @@ body[data-expanded-panel="true"]
 .chat-composer {
   --composer-input-padding: 12px;
   --composer-action-padding: 6px;
-  padding-inline: var(--composer-inset-start) var(--detail-pad, 24px);
+  padding-inline: var(--composer-inset-start) var(--composer-inset-end);
 }
 .chat-composer,
 .chat-composer-body {
