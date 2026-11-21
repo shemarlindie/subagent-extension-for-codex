@@ -118,20 +118,9 @@ test("reads run one at a time, wait for the interval and keep the last value on 
   assert.equal(watcher.mock.calls.length, 2);
 });
 
-/**
- * Runs a turn on a provider that a watcher follows. With `rateLimited`, the
- * turn sends a rate-limit event and ends only once a read has started.
- */
-async function watchedTurn(rateLimited: boolean) {
+test("a turn's end reads plan usage for watchers", async () => {
   const { c } = await context();
-  const read = Promise.withResolvers<void>();
-
-  const { launch: usageSession, calls } = usageLaunch(async () => {
-    read.resolve();
-
-    return usage(42);
-  });
-
+  const { launch: usageSession, calls } = usageLaunch(async () => usage(42));
   let turns = 0;
 
   const launch = (args: Parameters<typeof query>[0]) => {
@@ -141,15 +130,6 @@ async function watchedTurn(rateLimited: boolean) {
 
     return Object.assign(
       (async function* () {
-        if (rateLimited) {
-          yield {
-            type: "rate_limit_event",
-            rate_limit_info: { status: "allowed", rateLimitType: "five_hour" },
-          };
-
-          await read.promise;
-        }
-
         yield {
           type: "result",
           subtype: "success",
@@ -176,9 +156,4 @@ async function watchedTurn(rateLimited: boolean) {
   assert.equal(turns, 1);
   assert.equal(calls.mock.calls.length, 1);
   assert.equal(provider.planUsage.current()?.windows[0]?.utilization, 0.42);
-}
-
-test("a turn's end reads plan usage for watchers", () => watchedTurn(false));
-
-test("a rate-limit event reads plan usage during the turn", () =>
-  watchedTurn(true));
+});

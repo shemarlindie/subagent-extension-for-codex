@@ -413,9 +413,6 @@ export class ClaudeAgentProvider implements Provider {
           continue;
         }
 
-        // The event rarely carries utilization, so plan usage is read afresh.
-        if (m.type === "rate_limit_event") this.planUsage.refresh();
-
         // Compaction's own request emits no stream events. Its note shows the
         // context size after it, as the context usage meter does.
         if (m.type === "system" && m.subtype === "compact_boundary") {

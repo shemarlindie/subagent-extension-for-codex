@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 
+import type { ActivityRateLimitWindow } from "../../../shared/providers/activity/types";
 import type { PlanUsage } from "../../../shared/providers/plan-usage";
 import { titleCase } from "../../../shared/text";
 import { useSnapshot } from "../../app/state/controller-context";
 import { Infotip } from "../../shared/components/infotip";
-import { ProgressRing } from "../../shared/components/progress-ring/progress-ring";
+import { ProgressBar } from "../../shared/components/progress-bar/progress-bar";
 import {
   formatPlanTime,
   nextReset,
   percent,
   planUsageState,
+  WARNING_SHARE,
 } from "./plan-usage";
 
 /** The current time, taken again when a read arrives and when a window resets. */
@@ -30,9 +32,9 @@ function useResetClock(usage?: PlanUsage) {
 }
 
 /**
- * How much of the plan's usage limits the account has used, as a ring and
- * the most-used window's percentage, beside the header's status. Its note
- * lists every window. Nothing shows until a read finds plan limits.
+ * How much of the plan's usage limits the account has used, as the most-used
+ * window's percentage over a bar. Its note lists every window. Nothing shows
+ * until a read finds plan limits.
  */
 export function PlanUsageMeter() {
   const { planUsage, host } = useSnapshot(["planUsage", "host"]);
@@ -40,42 +42,45 @@ export function PlanUsageMeter() {
 
   if (!planUsage?.windows.length) return null;
 
-  const { windows, top, limited, warning } = planUsageState(planUsage, now);
+  const { windows, top, warning } = planUsageState(planUsage, now);
+  const time = (at: number) => formatPlanTime(at, now, host).toLowerCase();
 
-  const reset = (window: { resetsAt?: number }) =>
+  const reset = (window: ActivityRateLimitWindow) =>
     window.resetsAt === undefined
       ? undefined
-      : `Resets ${formatPlanTime(window.resetsAt * 1000, now, host)}`;
+      : `resets ${time(window.resetsAt * 1000)}`;
 
-  const topReset = reset(top);
-  const value = limited && topReset ? topReset : `${percent(top)}%`;
-
-  const status = limited
-    ? `Limit reached for the ${top.label}`
-    : `${planUsage.plan ? `${titleCase(planUsage.plan)} plan` : "Plan"} usage`;
-
-  const triggerLabel = limited
-    ? `Plan usage: ${status}${topReset ? `. ${topReset}` : ""}`
-    : `Plan usage: ${top.label} ${percent(top)}% used`;
+  const plan = planUsage.plan ? `${titleCase(planUsage.plan)} plan` : "Plan";
 
   return (
     <Infotip
-      triggerLabel={triggerLabel}
+      triggerLabel={[
+        `Plan usage: ${percent(top)}% ${top.label.toLowerCase()}`,
+        reset(top),
+      ]
+        .filter(Boolean)
+        .join(", ")}
       label={
         <>
-          <span className="plan-usage-tooltip-status">{status}</span>
+          <span className="plan-usage-tooltip-title">
+            <strong>{plan} usage</strong>
+            <span className="muted"> · updated {time(planUsage.read_at)}</span>
+          </span>
           <span className="plan-usage-tooltip-rows">
             {windows.map((window) => (
-              <span key={window.id}>
-                <span>{window.label}</span>
+              <span
+                key={window.id}
+                data-warning={window.utilization >= WARNING_SHARE || undefined}
+              >
                 <span>{percent(window)}%</span>
-                <span>{reset(window)}</span>
+                <span>
+                  {window.label.toLowerCase()}
+                  {window.resetsAt !== undefined && (
+                    <span className="muted">, {reset(window)}</span>
+                  )}
+                </span>
               </span>
             ))}
-          </span>
-          <span className="plan-usage-tooltip-note">
-            Includes your other Claude use. As of{" "}
-            {formatPlanTime(planUsage.read_at, now, host)}.
           </span>
         </>
       }
@@ -86,11 +91,11 @@ export function PlanUsageMeter() {
         className="text-button plan-usage-meter"
         data-warning={warning || undefined}
       >
-        <ProgressRing value={top.utilization} />
         {/* The trigger's accessible name already says this. */}
-        <span className="plan-usage-meter-value" aria-hidden="true">
-          {value}
+        <span aria-hidden="true" data-long={percent(top) >= 100 || undefined}>
+          {percent(top)}%
         </span>
+        <ProgressBar value={top.utilization} />
       </button>
     </Infotip>
   );

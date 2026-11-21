@@ -183,12 +183,9 @@ test("the plan usage meter shows the most-used window that has not reset", () =>
   expect(normal?.textContent).toBe("42%");
   expect(normal?.dataset.warning).toBeUndefined();
 
-  expect(meter(usage(0.86, 0))?.dataset.warning).toBe("true");
-
-  const limited = meter(usage(1, 0));
-  expect(limited?.textContent).toMatch(/^Resets /);
-
-  expect(limited?.getAttribute("aria-label")).toMatch(
-    /^Plan usage: Limit reached for the 5-hour window\. Resets /,
+  expect(normal?.getAttribute("aria-label")).toMatch(
+    /^Plan usage: 42% 5-hour window, resets \d/,
   );
+
+  expect(meter(usage(0.86, 0))?.dataset.warning).toBe("true");
 });

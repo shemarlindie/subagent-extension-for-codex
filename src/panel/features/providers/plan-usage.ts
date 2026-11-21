@@ -6,7 +6,7 @@ import {
 } from "../../shared/utils/user-date-time";
 
 /** Share of a window where the warning color starts, as for context usage. */
-const WARNING_SHARE = 0.8;
+export const WARNING_SHARE = 0.8;
 
 /** A window's used share as a whole percentage. */
 export const percent = (window: ActivityRateLimitWindow) =>
@@ -30,7 +30,6 @@ export function planUsageState(usage: PlanUsage, now: number) {
   return {
     windows,
     top,
-    limited: top.utilization >= 1,
     warning: top.utilization >= WARNING_SHARE,
   };
 }

@@ -19,7 +19,7 @@ import { turnlessSession } from "./session-reads.js";
 export const PLAN_USAGE_INTERVAL_MS = 30_000;
 
 /** How old a read may be before showing it starts another. */
-export const PLAN_USAGE_STALE_MS = 5 * 60_000;
+const PLAN_USAGE_STALE_MS = 5 * 60_000;
 
 type Limits = NonNullable<SDKControlGetUsageResponse["rate_limits"]>;
 

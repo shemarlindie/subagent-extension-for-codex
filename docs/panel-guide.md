@@ -525,12 +525,9 @@ pushes changes.
 
 ## Plan usage
 
-When Claude Code signs in with a Claude plan, the header shows the most-used
-plan usage window as a ring and percentage. The meter turns the warning color at
-80%, and shows the reset time once a limit is reached. Narrow panels show only
-the ring. Hover or tap the meter for each window's usage and reset time. Usage
-includes your other Claude use. It refreshes after each turn, and every 5
-minutes while a panel is open.
+With a Claude plan sign-in, the meter beside **Settings** shows the most-used
+usage window's percentage over a bar. Hover or tap it for every window and its
+reset time.
 
 ## Pending worker updates
 

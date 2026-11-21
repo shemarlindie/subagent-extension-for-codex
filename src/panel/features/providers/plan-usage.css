@@ -1,47 +1,47 @@
-/* The header's plan usage meter, quiet like the service status beside it. */
+/* The header's plan usage meter: the percentage over a bar, shaped unlike the
+   composer's context ring so the two don't read as one measure. */
 header .plan-usage-meter {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 4px;
-  font-size: 11px;
+  padding: 4px 0;
+  font-size: 10px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+header .plan-usage-meter .progress-bar {
+  width: 24px;
+}
+/* Three digits shrink to stay within the bar's width. */
+header .plan-usage-meter [data-long] {
+  font-size: 9px;
+}
 header .plan-usage-meter[data-warning],
-header .plan-usage-meter[data-warning]:hover {
+header .plan-usage-meter[data-warning]:hover,
+.plan-usage-tooltip-rows > [data-warning] {
   color: var(--warn);
 }
-/* Narrow panels show the ring alone, as the context meter does. */
-@media (max-width: 400px) {
-  header .plan-usage-meter-value {
-    display: none;
-  }
+/* The bar takes the Needs attention yellow, which text can't use for contrast. */
+header .plan-usage-meter[data-warning] .progress-bar-fill {
+  background: var(--status-input);
 }
-.plan-usage-tooltip-status {
+.plan-usage-tooltip-title {
   display: block;
-  font-weight: 600;
+  margin-bottom: 8px;
 }
-/* Each window's name, percentage and reset time. */
+/* Percentages right-aligned in their own column, so the window names line up. */
 .plan-usage-tooltip-rows {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto;
   justify-content: start;
-  gap: 2px 12px;
-  margin-top: 6px;
+  gap: 3px 6px;
   font-variant-numeric: tabular-nums;
 }
 .plan-usage-tooltip-rows > span {
   display: contents;
 }
-.plan-usage-tooltip-rows > span > :not(:nth-child(2)) {
-  color: var(--muted);
-}
-.plan-usage-tooltip-rows > span > :nth-child(2) {
+.plan-usage-tooltip-rows > span > :first-child {
   text-align: end;
-}
-.plan-usage-tooltip-note {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
 }
