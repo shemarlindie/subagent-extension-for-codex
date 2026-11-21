@@ -3,6 +3,44 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.9.0
+
+### Chat and composer
+
+- Chat keeps the answers to Claude's questions in the conversation (#154).
+- Claude's working status stays visible above the composer while a reply streams
+  (#164, #166).
+- The composer separates run settings from usage indicators. Hover over the
+  context ring to see the percentage (#159).
+
+### Task list and inline view
+
+- Tasks fit on one line with a status dot. Use **Needs attention** to find tasks
+  waiting for input or a rate limit reset, and **Working** to find active and
+  queued tasks (#156).
+- Click a task in the inline view to open it directly. The inline view shows
+  only nonzero counts (#161).
+
+### Panel preferences
+
+- **Wrap lines** remembers your choice separately for change and attachment
+  previews (#163).
+- Settings imports and exports now include panel preferences. If you previously
+  hid worker icons, turn them off again in **Settings → Appearance** (#157).
+
+### Fixes
+
+- Reopening a hidden panel skips announcements for tasks created while it was
+  hidden (#155).
+- Dropdown search fields and footers have clearer backgrounds in both themes
+  (#153, #162).
+- Dev servers started in delegated sessions can choose their own port because
+  the extension keeps its `PORT` out of those sessions (#160).
+
+### Diagnostics
+
+- Performance logs include panel view sizes alongside delivery times (#158).
+
 ## 0.8.0
 
 ### Breaking changes
