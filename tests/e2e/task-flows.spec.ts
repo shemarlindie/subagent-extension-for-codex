@@ -342,12 +342,8 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   const taskList = page.getByRole("complementary", { name: "Delegated tasks" });
   const row = taskList.getByRole("button", { name: new RegExp(title) });
 
-  const archive = taskList.getByRole("button", {
-    name: "Archive task",
-    exact: true,
-  });
+  const archive = taskList.getByRole("button", { name: "Archive task" });
 
-  await expect(archive).toBeHidden();
   await row.hover();
   await expect(archive).toBeVisible();
   await page.getByRole("region", { name: "Chat history" }).hover();

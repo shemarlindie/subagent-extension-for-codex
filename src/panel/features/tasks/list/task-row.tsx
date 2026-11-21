@@ -69,6 +69,8 @@ export const TaskRow = memo(function TaskRow({
 }: TaskRowProps) {
   const controller = useController();
 
+  const canArchive = archivable(task);
+
   const select = (event: MouseEvent<HTMLButtonElement>) => {
     if (!onActivate) {
       controller.run(() => controller.select(task.id));
@@ -113,7 +115,7 @@ export const TaskRow = memo(function TaskRow({
         >
           <TaskRowContent task={task} />
         </ContextMenu.Trigger>
-        {pressed === undefined && archivable(task) && (
+        {pressed === undefined && canArchive && (
           <Button
             variant="ghost"
             className="row-archive"
@@ -147,7 +149,7 @@ export const TaskRow = memo(function TaskRow({
             <ContextMenu.Item
               className="menu-item"
               data-action="archive"
-              disabled={!archivable(task)}
+              disabled={!canArchive}
               onClick={archive}
             >
               Archive

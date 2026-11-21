@@ -170,13 +170,16 @@
 }
 
 .task-row-container {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.task-row-container > .row,
+.row-archive {
+  grid-area: 1 / 1;
 }
 .row-archive {
-  position: absolute;
-  inset-inline-end: 3px;
-  top: 50%;
-  transform: translateY(-50%);
+  place-self: center end;
+  margin-inline-end: 3px;
   display: grid;
   place-items: center;
   width: 24px;
@@ -194,12 +197,11 @@
     visibility: hidden;
     transition:
       opacity var(--motion-base) var(--ease-out),
-      visibility 0s var(--motion-base);
+      visibility var(--motion-base);
   }
   .task-row-container:is(:hover, :focus-within) .row-archive {
     opacity: 1;
     visibility: visible;
-    transition-delay: 0s;
   }
   .row-signal {
     transition: opacity var(--motion-base) var(--ease-out);
