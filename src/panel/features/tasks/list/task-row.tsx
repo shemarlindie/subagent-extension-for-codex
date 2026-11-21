@@ -9,6 +9,7 @@ import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { Presence } from "../../../shared/components/motion/presence";
+import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { UnreadDot } from "../unread/unread-dot";
 import { rowStatus, statusTone } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
@@ -126,16 +127,16 @@ export const TaskRow = memo(function TaskRow({
           <TaskRowContent task={task} keepSlot={canArchive} />
         </ContextMenu.Trigger>
         {pressed === undefined && canArchive && (
-          <Button
-            variant="ghost"
-            className="row-archive"
-            aria-label="Archive task"
-            aria-description={task.title}
-            title="Archive task"
-            onClick={archive}
-          >
-            <Icon name="archive" size={12} />
-          </Button>
+          <TooltipWrapper label="Archive task">
+            <Button
+              variant="ghost"
+              className="row-archive"
+              aria-description={task.title}
+              onClick={archive}
+            >
+              <Icon name="archive" size={12} />
+            </Button>
+          </TooltipWrapper>
         )}
       </div>
       <ContextMenu.Portal>
