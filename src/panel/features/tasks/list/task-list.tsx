@@ -217,7 +217,8 @@ export function TaskList() {
 
   const order = tasks.map((task) => task.id).join();
 
-  useListMotion(listRef, "data-task", order);
+  // Rows move whole, Archive included.
+  useListMotion(listRef, "data-task-row", order);
   useListMotion(listRef, "data-task-group", order);
 
   // Selection and task data can arrive after mount; scroll once the row exists.

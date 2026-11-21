@@ -95,9 +95,15 @@ export const TaskRow = memo(function TaskRow({
       controller.taskActions.archive.setArchived([task], true),
     );
 
+  // The container hovers and moves as one, so pointing at Archive keeps the
+  // row's hover, and Archive slides with the row when the list moves.
   return (
     <ContextMenu.Root disabled={pressed !== undefined}>
-      <div className="task-row-container">
+      <div
+        className="task-row-container"
+        data-task-row={task.id}
+        onPointerEnter={repaceTitleSlide}
+      >
         <ContextMenu.Trigger
           render={
             <button
@@ -108,12 +114,11 @@ export const TaskRow = memo(function TaskRow({
               aria-pressed={pressed}
               aria-disabled={disabled}
               onClick={select}
-              onPointerEnter={repaceTitleSlide}
               onFocus={repaceTitleSlide}
             />
           }
         >
-          <TaskRowContent task={task} />
+          <TaskRowContent task={task} keepSlot={canArchive} />
         </ContextMenu.Trigger>
         {pressed === undefined && canArchive && (
           <Button
@@ -161,13 +166,16 @@ export const TaskRow = memo(function TaskRow({
   );
 });
 
-type TaskRowContentProps = Pick<TaskRowProps, "task">;
+type TaskRowContentProps = Pick<TaskRowProps, "task"> & {
+  /** Keeps the dot's slot when empty, for Archive to show in. */
+  keepSlot: boolean;
+};
 
 // The title comes first so screen readers hear it first; CSS puts the icon
 // before it. A title too long for the row scrolls to its end on hover or focus.
 // The icon tells profiles apart, so the worker's name is for screen readers
 // only.
-function TaskRowContent({ task }: TaskRowContentProps) {
+function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
   const worker = profileLabel(task.worker_profile);
 
   return (
@@ -185,7 +193,7 @@ function TaskRowContent({ task }: TaskRowContentProps) {
         />
         <span className="visually-hidden">{worker}</span>
       </span>
-      <TaskRowSignal task={task} />
+      <TaskRowSignal task={task} keepSlot={keepSlot} />
     </>
   );
 }
@@ -193,10 +201,12 @@ function TaskRowContent({ task }: TaskRowContentProps) {
 /**
  * One dot at most: a task that needs input, then one at work, then one with
  * something unread. Screen readers hear the unread state and status whichever
- * dot shows. Without a dot, the title takes the slot's space, and the slot
- * folds in or out as a dot comes or goes.
+ * dot shows. A row that can be archived keeps the slot for Archive, so its
+ * title keeps its width while the dot fades in or out. On other rows, the
+ * title takes an empty slot's space, and the slot folds in or out as a dot
+ * comes or goes.
  */
-function TaskRowSignal({ task }: TaskRowContentProps) {
+function TaskRowSignal({ task, keepSlot }: TaskRowContentProps) {
   const { kind, label } = rowStatus(task);
   const quiet = statusTone(kind) === "quiet";
 
@@ -209,9 +219,17 @@ function TaskRowSignal({ task }: TaskRowContentProps) {
   return (
     <>
       {task.unread && !quiet && <span className="visually-hidden">Unread</span>}
-      <Presence show={Boolean(dot)} as="span" variant="fold">
-        <span className="row-signal">{dot}</span>
-      </Presence>
+      {keepSlot ? (
+        <span className="row-signal">
+          <Presence show={Boolean(dot)} as="span" variant="pop">
+            {dot}
+          </Presence>
+        </span>
+      ) : (
+        <Presence show={Boolean(dot)} as="span" variant="fold">
+          <span className="row-signal">{dot}</span>
+        </Presence>
+      )}
       {quiet && <span className="visually-hidden">{label}</span>}
     </>
   );
