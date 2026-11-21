@@ -916,9 +916,8 @@ body[data-expanded-panel="true"]
 /* A rule sets the task's settings apart from the usage stats before them. */
 .task-run-settings li + .task-run-summary::before {
   content: "";
-  align-self: stretch;
   width: 1px;
-  margin-block: 2px;
+  height: 0.75em;
   margin-inline: 8px;
   background: var(--line);
 }
