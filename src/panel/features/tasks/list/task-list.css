@@ -7,6 +7,10 @@
   justify-content: space-between;
   gap: 12px;
 }
+/* The expand button overhangs the heading, so the scope sits under the title. */
+.preview-heading .toolbar-icon-button {
+  margin-block: -6px;
+}
 .inline-preview p {
   margin: 6px 0;
 }
@@ -19,7 +23,17 @@
   margin-top: 10px;
   padding-top: 4px;
 }
+.preview-task-open {
+  /* The inset fill reaches past the text, which stays aligned with the counts. */
+  display: block;
+  width: calc(100% + 16px);
+  border-color: transparent;
+  margin: 4px -8px 0;
+  padding: 4px 8px;
+  text-align: left;
+}
 .preview-task-title {
+  margin-bottom: 2px;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
