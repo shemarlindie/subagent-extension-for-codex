@@ -69,6 +69,10 @@ can't be republished. If only the GitHub release and its tag are missing, create
 the release by hand on the branch's head, which also creates the tag. Otherwise,
 close the pull request without merging and release the next version.
 
+If an install fails because npm returns 404 for the tarball, npm's CDN hasn't
+caught up yet. Wait a few minutes and re-run the failed jobs, which also runs
+the merge.
+
 If the merge job fails after publishing, `main` keeps listing the previous
 version, so users stay on it. Re-run the job, which covers a flaky check or a
 slow re-run. If a new conflict with `main` blocks the merge, merge `main` into
@@ -91,7 +95,7 @@ The workflow (`.github/workflows/release.yml`):
    GitHub release with an attested zip, marked as a prerelease when the version
    has a suffix.
 4. Installs `<owner>/<repo>@v<version>` with Codex on Linux, macOS and Windows,
-   once npm serves the version.
+   2 minutes after the publish, which gives npm's CDN time to serve it.
 5. For a final release, re-runs the pull request's **Listed version published**
    check, marks the pull request ready, merges it with a merge commit, deletes
    the release branch and starts CI on `main`. GitHub doesn't start CI for
