@@ -122,7 +122,7 @@ export const TaskRow = memo(function TaskRow({
             title="Archive task"
             onClick={archive}
           >
-            <Icon name="archive" size={14} />
+            <Icon name="archive" size={12} />
           </Button>
         )}
       </div>
