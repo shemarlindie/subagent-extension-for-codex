@@ -59,6 +59,7 @@ export class TimingReporter {
       groups: 0,
       stale_count: 0,
       error_count: 0,
+      json_bytes: 0,
     };
 
     record.count = bounded(record.count + 1);
@@ -76,6 +77,10 @@ export class TimingReporter {
     record.rows = bounded(record.rows + (work.rows ?? 0));
     record.groups = bounded(record.groups + (work.groups ?? 0));
     record.stale_count = bounded(record.stale_count + (work.stale_count ?? 0));
+
+    record.json_bytes = bounded(
+      (record.json_bytes ?? 0) + (work.json_bytes ?? 0),
+    );
 
     record.error_count = bounded(
       record.error_count + Number(work.outcome === "error"),

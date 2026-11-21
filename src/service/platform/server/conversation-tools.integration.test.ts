@@ -699,6 +699,7 @@ test("an update wait returns the panel view as of its revision, except for draft
     draft?: unknown;
     view?: {
       built_at: number;
+      json_bytes: number;
       projects: unknown;
       list: { tasks: PanelTask[] };
       chat?: { items: { id: string }[]; next_cursor: number };
@@ -732,8 +733,9 @@ test("an update wait returns the panel view as of its revision, except for draft
     const first = await wait({ view: parts });
     assert.equal(first.revision, store.revision("alice"));
     assert.ok(first.view);
-    const { built_at: builtAt, ...view } = first.view;
+    const { built_at: builtAt, json_bytes: jsonBytes, ...view } = first.view;
     assert.ok(Math.abs(Date.now() - builtAt) < 10_000);
+    assert.equal(jsonBytes, Buffer.byteLength(JSON.stringify(view)));
 
     assert.deepEqual(view.projects, await user("list_projects", {}));
     assert.deepEqual(view.list, await user("app_list_tasks", parts.list));
@@ -799,6 +801,7 @@ test("an update wait returns the panel view as of its revision, except for draft
 
     assert.deepEqual(Object.keys(missing.view ?? {}).sort(), [
       "built_at",
+      "json_bytes",
       "list",
       "pending",
       "projects",

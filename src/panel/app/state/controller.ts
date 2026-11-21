@@ -637,7 +637,9 @@ export class Controller {
    */
   private async applyView({ revision, view, request }: ViewRead) {
     // Panel and service share the machine's clock.
-    this.timing.observe("view", "deliver", Date.now() - view.built_at);
+    this.timing.observe("view", "deliver", Date.now() - view.built_at, {
+      json_bytes: view.json_bytes,
+    });
 
     // A held wait and an immediate read can return out of order.
     const older = olderRevision(revision, this.viewRevision);

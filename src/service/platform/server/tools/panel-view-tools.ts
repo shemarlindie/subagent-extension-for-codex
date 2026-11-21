@@ -59,8 +59,8 @@ export function panelViewTools(c: Control, owner: string) {
     const known = (await c.projects?.listWithGit()) ?? [];
     const { chat, activity, pending } = parts;
 
-    return () =>
-      c.store.reads.measure("view", (work) => {
+    return () => {
+      const read = c.store.reads.measure("view", (work) => {
         // A selected task that is gone or not the owner's has no details.
         const chatTask = chat && c.store.find(chat.task_id, owner);
         const activityTask = activity && c.store.find(activity.task_id, owner);
@@ -93,12 +93,16 @@ export function panelViewTools(c: Control, owner: string) {
 
         work.rows = read.list.tasks.length;
 
-        return {
-          ...read,
-          ...(c.draining && { updating: true }),
-          built_at: Date.now(),
-        };
+        return { ...read, ...(c.draining && { updating: true }) };
       });
+
+      // The panel logs the size with the view's delivery time.
+      return {
+        ...read,
+        json_bytes: Buffer.byteLength(JSON.stringify(read)),
+        built_at: Date.now(),
+      };
+    };
   };
 
   return {
@@ -120,7 +124,7 @@ export function panelViewTools(c: Control, owner: string) {
     }),
     app_wait_for_updates: tool({
       readOnly: true,
-      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, it also returns view as of the returned revision, with built_at in epoch milliseconds. Its projects are as list_projects returns them, and its list takes app_list_tasks arguments and returns that shape. chat { items, next_cursor } is a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. Cursor 0 also returns the request with its attachments. An item read again replaces the earlier one with its id. activity { events, dropped } holds a task's newest Activity events after a cursor, with a tally of the older events outside the window. pending { tasks } lists the worker updates Codex hasn't seen in a conversation, grouped by task and newest first: turn replies, failures, budget stops and requests Codex may answer, leaving out archived tasks. updating is true while a newer service waits for running turns to end before it takes over. The wait leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
+      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, it also returns view as of the returned revision, with built_at in epoch milliseconds and json_bytes, the UTF-8 size of its other fields as JSON. Its projects are as list_projects returns them, and its list takes app_list_tasks arguments and returns that shape. chat { items, next_cursor } is a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. Cursor 0 also returns the request with its attachments. An item read again replaces the earlier one with its id. activity { events, dropped } holds a task's newest Activity events after a cursor, with a tally of the older events outside the window. pending { tasks } lists the worker updates Codex hasn't seen in a conversation, grouped by task and newest first: turn replies, failures, budget stops and requests Codex may answer, leaving out archived tasks. updating is true while a newer service waits for running turns to end before it takes over. The wait leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
       schema: z.strictObject({
         after: z.string().max(200).optional(),
         draft: taskId

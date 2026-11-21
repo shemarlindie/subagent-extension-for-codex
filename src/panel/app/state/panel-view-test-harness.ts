@@ -10,7 +10,7 @@ type ViewParts = {
 };
 
 /** A part of a view, named as the view names it. */
-type ViewPart = keyof Omit<PanelView, "built_at">;
+type ViewPart = keyof Omit<PanelView, "built_at" | "json_bytes">;
 
 /**
  * Answers an update wait's `view` from each requested part's own read, as
@@ -35,6 +35,7 @@ export async function composeView(
 
   return {
     built_at: Date.now(),
+    json_bytes: 0,
     projects,
     list,
     ...(chat === undefined ? {} : { chat }),

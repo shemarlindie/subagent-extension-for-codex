@@ -288,7 +288,9 @@ changed, and views older than one already applied. Unused work fields are zero.
 Views from held update waits have no `fetch`, since the hold dominates it. Only
 reads at once, after a scope or selection change or on a console revision,
 record it. `deliver` shows how long the host takes to return a response,
-including for held waits.
+including for held waits. Its `json_bytes` totals the views' sizes as the
+service serialized them, so `json_bytes / count` beside `total_ms / count` shows
+whether delivery slows as views grow. The host's own framing is not counted.
 
 `fetch` includes `decode`, and grouping can repeat as the Activity list renders.
 These elapsed spans do not measure isolated CPU work, rendering completion or

@@ -18,6 +18,8 @@ type ViewArgs = {
 export type PanelView = {
   /** When the service built it, in epoch milliseconds. */
   built_at: number;
+  /** The UTF-8 size of the view's other fields as JSON. */
+  json_bytes: number;
   projects: Project[];
   list: TaskList;
   chat?: ChatRead;
