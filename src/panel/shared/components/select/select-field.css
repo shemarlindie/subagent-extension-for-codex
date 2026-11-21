@@ -222,6 +222,8 @@ form .select-trigger {
   flex: none;
   width: auto;
   margin: 4px 4px 0;
+  /* Sets the field off from the popup and its options in both themes. */
+  background: var(--surface);
 }
 .lookup-list {
   overflow-y: auto;
