@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { expect, test, vi } from "vitest";
 
 import { decodedEvent } from "../../../shared/events/decode";
+import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
 import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { UpdateRead } from "./panel-view";
@@ -252,6 +253,7 @@ test("a poll overlapping a refresh keeps each activity event once and appends ne
     view: {
       built_at: Date.now(),
       json_bytes: 0,
+      settings: panelSettingsDefaults,
       projects: transport.projects,
       list: { tasks: transport.tasks },
       chat: { items: [], next_cursor: 0 },

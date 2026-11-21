@@ -111,6 +111,13 @@ export class TimingReporter {
     }
   }
 
+  /** Times a view's travel from the service, which shares the machine's clock. */
+  deliver(view: { built_at: number; json_bytes: number }) {
+    this.observe("view", "deliver", Date.now() - view.built_at, {
+      json_bytes: view.json_bytes,
+    });
+  }
+
   merge<T>(operation: PanelLoadOperation, rows: number, run: () => T): T {
     const started = performance.now();
     let outcome: "success" | "error" = "error";

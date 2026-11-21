@@ -1,4 +1,5 @@
 import type { PanelView } from "../../../src/panel/app/state/panel-view";
+import { panelSettingsDefaults } from "../../../src/shared/settings/settings-schema";
 import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
 
 type WaitRead = { revision: string; draft?: Draft | null };
@@ -11,7 +12,7 @@ type ViewParts = {
 };
 
 /** A part of a view, named as the view names it. */
-export type ViewPart = keyof Omit<PanelView, "built_at">;
+export type ViewPart = keyof Omit<PanelView, "built_at" | "settings">;
 
 /**
  * Adds the view an update wait asked for, built from each part's fixture
@@ -42,6 +43,8 @@ export function withPreviewView(
     ...read,
     view: {
       built_at: Date.now(),
+      // Fixtures keep the default panel settings.
+      settings: panelSettingsDefaults,
       projects: readPart("projects", {}),
       list: readPart("list", view.list),
       ...(view.chat && { chat: readPart("chat", view.chat) }),

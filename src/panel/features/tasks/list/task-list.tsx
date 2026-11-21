@@ -29,7 +29,6 @@ import { animateScrollIntoView } from "../../../shared/utils/animate-scroll-into
 import { NewTaskRow } from "../../delegation/new-task/new-task-row";
 import { projectDisplayName } from "../../projects/selectors";
 import { ProjectGroups, useProjectGroups } from "./project-groups";
-import { useRowIcons } from "./row-icons";
 import { TaskListCount } from "./task-list-count";
 import { TaskListScrollbar } from "./task-list-scrollbar";
 import { TaskListSkeleton } from "./task-list-skeleton";
@@ -99,6 +98,7 @@ export function TaskList() {
     taskListLoading,
     composing,
     scopeVersion,
+    panelSettings,
   } = useSnapshot(
     [
       "projects",
@@ -107,11 +107,11 @@ export function TaskList() {
       "conversation",
       "taskListLoading",
       "scopeVersion",
+      "panelSettings",
     ],
     (state) => ({ composing: Boolean(state.newTask) }),
   );
 
-  const rowIcons = useRowIcons();
   const tasks = visibleTasks(list);
   const total = scopedTasks({ ...list, search: "" }).length;
   const filter = effectiveFilter(list);
@@ -351,7 +351,7 @@ export function TaskList() {
             <div
               id="task-list"
               ref={listRef}
-              data-row-icons={rowIcons ? undefined : "hidden"}
+              data-row-icons={panelSettings.row_icons ? undefined : "hidden"}
               onKeyDown={openContextMenu}
               onClick={clearOnBlank}
             />

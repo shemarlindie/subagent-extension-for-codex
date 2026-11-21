@@ -10,7 +10,7 @@ type ViewParts = {
 };
 
 /** A part of a view, named as the view names it. */
-type ViewPart = "projects" | keyof ViewParts;
+type ViewPart = keyof Omit<PanelView, "built_at" | "json_bytes">;
 
 /**
  * Answers an update wait's `view` from each requested part's own read, as
@@ -25,17 +25,21 @@ export async function composeView(
   const optional = (part: ViewPart, args?: Record<string, unknown>) =>
     args ? read(part, args) : undefined;
 
-  const [projects, list, chat, activity, pending] = await Promise.all([
-    read("projects", {}),
-    read("list", parts.list),
-    optional("chat", parts.chat),
-    optional("activity", parts.activity),
-    optional("pending", parts.pending),
-  ]);
+  const [settings, projects, list, chat, activity, pending] = await Promise.all(
+    [
+      read("settings", {}),
+      read("projects", {}),
+      read("list", parts.list),
+      optional("chat", parts.chat),
+      optional("activity", parts.activity),
+      optional("pending", parts.pending),
+    ],
+  );
 
   return {
     built_at: Date.now(),
     json_bytes: 0,
+    settings,
     projects,
     list,
     ...(chat === undefined ? {} : { chat }),

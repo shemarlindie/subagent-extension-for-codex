@@ -636,10 +636,7 @@ export class Controller {
    * a rerun due instead.
    */
   private async applyView({ revision, view, request }: ViewRead) {
-    // Panel and service share the machine's clock.
-    this.timing.observe("view", "deliver", Date.now() - view.built_at, {
-      json_bytes: view.json_bytes,
-    });
+    this.timing.deliver(view);
 
     // A held wait and an immediate read can return out of order.
     const older = olderRevision(revision, this.viewRevision);
@@ -651,7 +648,10 @@ export class Controller {
     }
 
     this.viewRevision = revision;
-    this.patch({ updating: view.updating ?? false });
+
+    const { updating = false, settings: panelSettings } = view;
+    this.patch({ updating, panelSettings });
+
     const projectUpdate = this.reconcileProjects(view.projects);
 
     if (this.state.conversation && projectUpdate.removed) {

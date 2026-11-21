@@ -1,3 +1,4 @@
+import type { PanelSettings } from "../../../shared/settings/settings-schema";
 import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates";
 import type { ChatRead } from "../../features/tasks/chat/chat-state";
@@ -20,6 +21,7 @@ export type PanelView = {
   built_at: number;
   /** The UTF-8 size of the view's other fields as JSON. */
   json_bytes: number;
+  settings: PanelSettings;
   projects: Project[];
   list: TaskList;
   chat?: ChatRead;

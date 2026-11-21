@@ -40,7 +40,11 @@ import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
 import { changeCounts } from "../../src/shared/changes/changes.js";
 import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
-import { withSetting } from "../../src/shared/settings/settings-schema.js";
+import {
+  panelSettingsDefaults,
+  withSetting,
+  type PanelSettings,
+} from "../../src/shared/settings/settings-schema.js";
 import {
   windowActivity,
   windowTurnActivity,
@@ -182,6 +186,8 @@ export class FakeTransport implements Transport {
   messages: string[] = [];
   /** A view's pending update tasks. */
   pendingUpdates: PendingTaskUpdates[] = [];
+  /** A view's panel settings. */
+  panelSettings: PanelSettings = panelSettingsDefaults;
   async share(data: Record<string, unknown>) {
     this.shared.push(data);
   }
@@ -224,6 +230,7 @@ export class FakeTransport implements Transport {
       }
 
       const view = await composeView(args.view, (part, partArgs) => {
+        if (part === "settings") return this.panelSettings;
         if (part === "projects") return this.tool("list_projects");
         if (part === "list") return this.tool("app_list_tasks", partArgs);
 
