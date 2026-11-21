@@ -345,10 +345,15 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   const archive = taskList.getByRole("button", { name: "Archive task" });
 
   await row.hover();
-  await expect(archive).toBeVisible();
+  await expect(archive).toHaveCSS("opacity", "1");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-current", "true");
   await page.getByRole("region", { name: "Chat history" }).hover();
-  await expect(archive).toBeHidden();
-  await row.focus();
+  await expect(archive).toHaveCSS("opacity", "0");
+  await row.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(row).toBeFocused();
+  await expect(archive).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
   await expect(archive).toBeFocused();
   await page.keyboard.press("Enter");

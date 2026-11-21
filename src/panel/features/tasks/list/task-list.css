@@ -186,33 +186,31 @@
   height: 24px;
   padding: 0;
   color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+/* Leave the same trailing slot for Archive on rows without a dot. */
+.task-row-container:has(.row-archive) .row:not(:has(.row-signal)) {
+  padding-inline-end: 28px;
+}
+.row-signal {
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+.task-row-container:has(:focus-visible) .row-archive {
+  opacity: 1;
+  pointer-events: auto;
+}
+.task-row-container:has(.row-archive):has(:focus-visible) .row-signal {
+  opacity: 0;
 }
 @media (hover: hover) {
-  /* Leave the same trailing slot for Archive on rows without a dot. */
-  .task-row-container:has(.row-archive) .row:not(:has(.row-signal)) {
-    padding-inline-end: 28px;
-  }
-  .row-archive {
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity var(--motion-base) var(--ease-out),
-      visibility var(--motion-base);
-  }
-  .task-row-container:is(:hover, :focus-within) .row-archive {
+  .task-row-container:hover .row-archive {
     opacity: 1;
-    visibility: visible;
+    pointer-events: auto;
   }
-  .row-signal {
-    transition: opacity var(--motion-base) var(--ease-out);
-  }
-  .task-row-container:has(.row-archive):is(:hover, :focus-within) .row-signal {
+  .task-row-container:hover:has(.row-archive) .row-signal {
     opacity: 0;
-  }
-}
-@media (hover: none) {
-  .task-row-container:has(.row-archive) .row {
-    padding-inline-end: 30px;
   }
 }
 /* The title comes first in the DOM, so screen readers hear it before the
