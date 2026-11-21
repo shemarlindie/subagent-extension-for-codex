@@ -177,8 +177,10 @@
 .row-archive {
   grid-area: 1 / 1;
 }
-/* Archive centres over the dot's slot. */
+/* Archive centres over the dot's slot. Its layer keeps it above the dot, which
+   fades into a layer of its own, and under a sticky group header. */
 .row-archive {
+  position: relative;
   place-self: center end;
   margin-inline-end: 3px;
   display: grid;

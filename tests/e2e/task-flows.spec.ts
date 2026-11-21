@@ -405,10 +405,22 @@ test("archive a completed task, restore it, and explicitly delete it", async ({
   await page.getByRole("button", { name: "Tasks", exact: true }).click();
   await expect(row).toHaveCount(0);
 
-  // Archiving the last listed task leaves focus on the list's count.
-  await neighbourRow.focus();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Enter");
+  // Archive takes the pointer over an unread row's hidden dot. Archiving the
+  // last listed task leaves focus on the list's count.
+  await neighbourRow.click({ button: "right" });
+
+  await page
+    .getByRole("menuitem", { name: "Mark unread", exact: true })
+    .click();
+
+  await expect(neighbourRow).toHaveAttribute("data-unread", "");
+  await neighbourRow.hover();
+
+  await neighbourRow
+    .locator("..")
+    .getByRole("button", { name: "Archive task" })
+    .click();
+
   await expect(neighbourRow).toHaveCount(0);
   await expect(taskList.locator(".list-count")).toBeFocused();
 
