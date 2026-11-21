@@ -1,7 +1,8 @@
 import type { ActivityRateLimitWindow } from "../activity/types.js";
 import type { ClaudeRateLimitWindowInfo } from "./events.js";
 
-const labels: Record<
+/** Each Claude rate-limit window's name, as the panel shows it. */
+export const claudeRateLimitLabels: Record<
   NonNullable<ClaudeRateLimitWindowInfo["rateLimitType"]>,
   string
 > = {
@@ -35,5 +36,5 @@ export function claudeRateLimitWindows(
       ? resetTime
       : undefined;
 
-  return [{ id, label: labels[id], utilization, resetsAt }];
+  return [{ id, label: claudeRateLimitLabels[id], utilization, resetsAt }];
 }

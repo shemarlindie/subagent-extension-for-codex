@@ -3,6 +3,7 @@ import { useRef } from "react";
 
 import { NewTaskButton } from "../features/delegation/new-task/new-task-button";
 import { ProjectScope } from "../features/projects/project-scope";
+import { PlanUsageMeter } from "../features/providers/plan-usage-meter";
 import { PendingUpdatesIndicator } from "../features/tasks/pending-updates/pending-updates-indicator";
 import { Button, buttonClass } from "../shared/components/button/button";
 import { Icon } from "../shared/components/icons/icons";
@@ -84,39 +85,37 @@ export function Header({ taskRail }: HeaderProps) {
       </div>
       <div className="toolbar">
         <HeaderStatus />
-        {/* Outside the inline toolbar, so narrow panels keep it. */}
         {threadMode && <PendingUpdatesIndicator />}
-        {/* Narrow panels swap these for the menu below; both stay mounted so CSS decides. */}
-        <div className="toolbar toolbar-inline">
-          {projectCandidate && (
-            <TooltipWrapper
-              label={`Let tasks run and edit files in ${projectCandidate}. It stays allowed until you remove it in Manage projects.`}
-              triggerLabel="Allow tasks here"
-            >
-              <Button
-                id="add-chat-project"
-                variant="ghost"
-                className="toolbar-icon-button"
-                disabled={!connected || !scopeKnown || busy}
-                onClick={() => controller.addProject()}
-              >
-                <Icon name="plus" size={14} />
-              </Button>
-            </TooltipWrapper>
-          )}
-          <TooltipWrapper label="Settings">
+        {/* Narrow panels swap the toolbar-inline buttons for the menu below; both stay mounted so CSS decides. */}
+        {projectCandidate && (
+          <TooltipWrapper
+            label={`Let tasks run and edit files in ${projectCandidate}. It stays allowed until you remove it in Manage projects.`}
+            triggerLabel="Allow tasks here"
+          >
             <Button
-              id="settings"
+              id="add-chat-project"
               variant="ghost"
-              className="toolbar-icon-button"
-              aria-label="Settings"
-              disabled={blocked}
-              onClick={settings}
+              className="toolbar-icon-button toolbar-inline"
+              disabled={!connected || !scopeKnown || busy}
+              onClick={() => controller.addProject()}
             >
-              <Icon name="settings" size={14} />
+              <Icon name="plus" size={14} />
             </Button>
           </TooltipWrapper>
-        </div>
+        )}
+        <PlanUsageMeter />
+        <TooltipWrapper label="Settings">
+          <Button
+            id="settings"
+            variant="ghost"
+            className="toolbar-icon-button toolbar-inline"
+            aria-label="Settings"
+            disabled={blocked}
+            onClick={settings}
+          >
+            <Icon name="settings" size={14} />
+          </Button>
+        </TooltipWrapper>
         <Menu.Root>
           <TooltipWrapper label="Panel actions">
             <Menu.Trigger

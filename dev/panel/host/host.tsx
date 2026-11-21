@@ -29,6 +29,10 @@ import {
 } from "../../../src/panel/shared/components/icons/icons";
 import type { Task } from "../../../src/shared/tasks/model";
 import { PREVIEW_THREAD } from "../scenarios/fixtures";
+import {
+  previewPlanUsageStates,
+  type PreviewPlanUsageState,
+} from "../scenarios/plan-usage";
 import { previewTool } from "../scenarios/tools";
 import { FixtureCheck } from "./fixture-check";
 import {
@@ -87,6 +91,7 @@ const fixtureReadTools = new Set([
   "list_projects",
   "app_list_tasks",
   "list_workers",
+  "app_refresh_plan_usage",
   "app_wait_for_updates",
 ]);
 
@@ -107,6 +112,7 @@ const defaults: Settings = {
   claudeUnavailable: false,
   claudeSignInEnding: false,
   orgPolicy: "",
+  planUsage: "normal",
   successfulBudgetUpdates: false,
   slowAsyncReads: false,
   addedProjects: [],
@@ -272,6 +278,7 @@ export function Host() {
     claudeUnavailable,
     claudeSignInEnding,
     orgPolicy,
+    planUsage,
     successfulBudgetUpdates,
     slowAsyncReads,
   } = settings;
@@ -289,6 +296,7 @@ export function Host() {
     claudeUnavailable,
     claudeSignInEnding,
     orgPolicy,
+    planUsage,
     successfulBudgetUpdates,
     slowAsyncReads,
   ]);
@@ -376,6 +384,7 @@ export function Host() {
           claudeUnavailable: current.claudeUnavailable,
           claudeSignInEnding: current.claudeSignInEnding,
           orgPolicy: parseOrgPolicy(current.orgPolicy),
+          planUsage: current.planUsage,
           successfulBudgetUpdates: current.successfulBudgetUpdates,
           deferTaskList: current.slowAsyncReads,
           addedProjects: added.current,
@@ -777,6 +786,32 @@ export function Host() {
               >
                 Claude sign-in ending
               </FixtureCheck>
+              <label
+                title={
+                  source === "live"
+                    ? "The live service reads your account's usage."
+                    : undefined
+                }
+              >
+                Plan usage
+                <select
+                  value={planUsage}
+                  disabled={source === "live"}
+                  onChange={(e) =>
+                    update({
+                      planUsage: e.target.value as PreviewPlanUsageState,
+                    })
+                  }
+                >
+                  {Object.entries(previewPlanUsageStates).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
               <OrgPolicyField
                 value={orgPolicy}
                 disabled={source === "live"}

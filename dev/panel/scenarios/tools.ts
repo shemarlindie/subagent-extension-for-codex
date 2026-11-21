@@ -26,6 +26,7 @@ import {
   withoutOriginalResponses,
 } from "./original-response-tools";
 import { previewMarkSeen, previewPendingUpdates } from "./pending-update-tools";
+import { previewPlanUsage, type PreviewPlanUsageState } from "./plan-usage";
 import {
   previewClaudeReadiness,
   previewClaudeUnavailable,
@@ -58,6 +59,8 @@ export type PreviewOptions = {
   claudeSignInEnding?: boolean;
   /** Applies an org policy, as discovery reports it. */
   orgPolicy?: ProviderPolicy;
+  /** Which plan usage the view reports. Normal when unset. */
+  planUsage?: PreviewPlanUsageState;
   /** Applies budget changes to fixture tasks instead of rejecting the action. */
   successfulBudgetUpdates?: boolean;
   /** Leaves launch task data to the delayed list read when inspecting loading. */
@@ -210,14 +213,7 @@ function panelContext(args: Record<string, unknown>, options: PreviewOptions) {
           }
         : {}),
     },
-    ...(target
-      ? {
-          panel_selection: {
-            task_id: target.id,
-            tab: "chat",
-          },
-        }
-      : {}),
+    ...(target && { panel_selection: { task_id: target.id, tab: "chat" } }),
   };
 }
 
@@ -362,6 +358,7 @@ export function previewTool(
       args,
       previewTool(name, wait, options) as { revision: string },
       (part, partArgs) => previewViewPart(part, partArgs, options),
+      previewPlanUsage(options.planUsage),
     );
   }
 
@@ -496,6 +493,7 @@ export function previewTool(
       };
     })(),
     app_record_timing: {},
+    app_refresh_plan_usage: {},
     app_get_original_response: originalResponseResult(
       eventsFor(args.task_id),
       args,

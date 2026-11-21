@@ -1,7 +1,10 @@
 import { Popover } from "@base-ui/react/popover";
 import type { ReactElement, ReactNode } from "react";
 
-type InfotipProps = { children: ReactElement } & (
+type InfotipProps = {
+  children: ReactElement;
+  onOpenChange?: (open: boolean) => void;
+} & (
   | { label: string; triggerLabel?: string }
   | { label: ReactNode; triggerLabel: string }
 );
@@ -10,9 +13,14 @@ type InfotipProps = { children: ReactElement } & (
  * A note for an info trigger. It looks like a tooltip, but Base UI disables
  * tooltips on touch, so a popover lets tap and click open it too.
  */
-export function Infotip({ label, children, triggerLabel }: InfotipProps) {
+export function Infotip({
+  label,
+  children,
+  triggerLabel,
+  onOpenChange,
+}: InfotipProps) {
   return (
-    <Popover.Root>
+    <Popover.Root onOpenChange={onOpenChange}>
       <Popover.Trigger
         openOnHover
         delay={250}

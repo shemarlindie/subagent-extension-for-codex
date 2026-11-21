@@ -153,6 +153,11 @@ export class Control {
     this.prompts = new SessionPrompts(store, this.attachments);
     this.drafts = new Drafts(store.bus);
     this.activity = new ActivityPages(store);
+
+    // Plan usage is the account's, so every owner's panel shows it.
+    for (const provider of providers.values()) {
+      provider.planUsage?.watch(() => store.sharedChanged());
+    }
   }
 
   async recover() {

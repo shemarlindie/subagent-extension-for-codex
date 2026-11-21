@@ -1,4 +1,5 @@
 import type { PanelView } from "../../../src/panel/app/state/panel-view";
+import type { PlanUsage } from "../../../src/shared/providers/plan-usage";
 import {
   panelSettingsDefaults,
   type PanelSettings,
@@ -14,8 +15,12 @@ type ViewParts = {
   pending?: Record<string, unknown>;
 };
 
-// Panel settings saved while the dev host page stays open.
-let previewPanelSettings: PanelSettings = panelSettingsDefaults;
+// Panel settings saved while the dev host page stays open. The plan usage
+// meter starts on so the Plan usage host setting shows it.
+let previewPanelSettings: PanelSettings = {
+  ...panelSettingsDefaults,
+  plan_usage_meter: true,
+};
 
 /** Saves a settings update, which fixtures allow only for panel settings. */
 export function saveSettings(set: unknown) {
@@ -33,7 +38,10 @@ export function saveSettings(set: unknown) {
 }
 
 /** A part of a view, named as the view names it. */
-export type ViewPart = keyof Omit<PanelView, "built_at" | "settings">;
+export type ViewPart = keyof Omit<
+  PanelView,
+  "built_at" | "settings" | "plan_usage"
+>;
 
 /**
  * Adds the view an update wait asked for, built from each part's fixture
@@ -45,6 +53,7 @@ export function withPreviewView(
   args: Record<string, unknown>,
   read: WaitRead,
   readPart: (part: ViewPart, args: Record<string, unknown>) => unknown,
+  planUsage?: PlanUsage,
 ) {
   const view = args.view as ViewParts;
 
@@ -65,6 +74,7 @@ export function withPreviewView(
     view: {
       built_at: Date.now(),
       settings: previewPanelSettings,
+      ...(planUsage && { plan_usage: planUsage }),
       projects: readPart("projects", {}),
       list: readPart("list", view.list),
       ...(view.chat && { chat: readPart("chat", view.chat) }),
