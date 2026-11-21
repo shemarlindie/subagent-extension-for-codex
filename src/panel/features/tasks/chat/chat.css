@@ -13,7 +13,7 @@ body[data-expanded-panel="true"]
   padding-inline: 0;
 }
 
-/* Chat: the conversation scrolls; the queue and composer stay at the bottom. */
+/* The conversation scrolls. The footer keeps the status and composer in reach. */
 .chat {
   display: flex;
   flex-direction: column;
@@ -37,6 +37,10 @@ body[data-expanded-panel="true"]
 }
 .chat-timeline[aria-busy="true"]::-webkit-scrollbar {
   display: none;
+}
+.chat-with-history .chat-timeline {
+  /* Keep the final line clear of the strongest part of the fade. */
+  padding-block-end: 28px;
 }
 .chat-history {
   display: flex;
@@ -326,6 +330,11 @@ body[data-expanded-panel="true"]
   flex: none;
   height: 18px;
   min-width: 0;
+  padding-inline-start: calc(
+    var(--composer-inset-start) + var(--composer-caret-size) +
+      var(--composer-control-gap)
+  );
+  padding-inline-end: var(--detail-pad, 24px);
   line-height: 18px;
   display: flex;
   align-items: center;
@@ -388,12 +397,38 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 .chat-footer {
-  position: relative;
+  --composer-inset-start: 8px;
+  --composer-caret-size: 28px;
+  --composer-control-gap: 6px;
+  /* Keep the composer in reach when the inspector owns the scroll. */
+  position: sticky;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 0 2px;
   background: var(--bg);
+}
+.chat-with-history .chat-footer {
+  padding-block-start: 0;
+  background: none;
+}
+.chat-with-history .chat-footer::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline: 0;
+  inset-block: -52px 0;
+  /* Reach full opacity at the top of the footer. */
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--bg) 8%, transparent) 24px,
+    color-mix(in srgb, var(--bg) 48%, transparent) 35px,
+    color-mix(in srgb, var(--bg) 88%, transparent) 44px,
+    var(--bg) 52px
+  );
+  pointer-events: none;
 }
 .chat-scroll-latest {
   position: absolute;
@@ -605,11 +640,9 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 .chat-composer {
-  --composer-caret-size: 28px;
-  --composer-control-gap: 6px;
   --composer-input-padding: 12px;
   --composer-action-padding: 6px;
-  padding-inline: 8px var(--detail-pad, 24px);
+  padding-inline: var(--composer-inset-start) var(--detail-pad, 24px);
 }
 .chat-composer,
 .chat-composer-body {
@@ -988,11 +1021,6 @@ body[data-expanded-panel="true"]
   color: var(--danger);
   margin-top: 4px;
 }
-/* A page that scrolls as a whole keeps the composer in reach. */
-.chat-panel .chat-footer {
-  position: sticky;
-  bottom: 0;
-}
 /* In the expanded panel the conversation scrolls on its own, above the composer. */
 body[data-expanded-panel="true"]
   .detail:not([data-stacked])
@@ -1016,5 +1044,5 @@ body[data-expanded-panel="true"]
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0;
-  padding: 14px var(--detail-pad);
+  padding-block-start: 14px;
 }

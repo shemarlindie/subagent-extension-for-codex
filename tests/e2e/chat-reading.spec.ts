@@ -360,12 +360,12 @@ test("activity labels reserve one line without moving the conversation", async (
   await expect(history).toContainText("Fixture session turn: 1.");
   await expect(history).not.toHaveAttribute("aria-busy", "true");
   await expect.poll(() => distanceFromEnd(history)).toBeLessThanOrEqual(2);
-  const working = history.locator(".chat-working");
+  const working = page.locator(".chat-working");
   await expect(working).toBeEmpty();
 
   const geometry = () =>
     history.evaluate((element) => {
-      const status = element.querySelector(".chat-working");
+      const status = element.closest(".chat")?.querySelector(".chat-working");
       const lastMessage = [...element.querySelectorAll("article")].at(-1);
       if (!status || !lastMessage) throw new Error("Chat is missing a row");
 
@@ -416,7 +416,7 @@ test("activity labels reserve one line without moving the conversation", async (
 });
 
 streamingTest(
-  "streamed replies follow the end, hold a reading position in history and return to latest",
+  "streamed replies keep activity visible, follow the end and hold the reader's place",
   async ({ consolePage: page, replyStream }) => {
     await page.setViewportSize({ width: 1280, height: 640 });
     await recordChatScroll(page);
@@ -430,6 +430,7 @@ streamingTest(
     const history = page.getByRole("region", { name: "Chat history" });
     await expect(history).toContainText("Fixture reply line 30.");
     const streaming = history.locator("[aria-busy=true]");
+    const working = page.locator(".chat-working");
 
     const latest = page.getByRole("button", {
       name: "Scroll to latest message",
@@ -464,6 +465,7 @@ streamingTest(
       .toBeGreaterThan(partial);
 
     await expect(latest).toBeHidden();
+    await expect(working).toBeInViewport({ ratio: 1 });
 
     // The arrival fade must finish while the reply is still streaming.
     await expect.poll(() => rowMotion(page, true)).toContain("finish");
@@ -500,6 +502,8 @@ streamingTest(
     await expect
       .poll(async () => (await streaming.textContent())?.length ?? 0)
       .toBeGreaterThan(readingPartial);
+
+    await expect(working).toBeInViewport({ ratio: 1 });
 
     replyStream.resume(3, 80);
 

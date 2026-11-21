@@ -6,25 +6,16 @@ import {
   type RefObject,
 } from "react";
 
-import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status";
 import type { BudgetRaise } from "../../../../../shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
-import { statusLabel } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
 import { providerName } from "../../../providers/provider-name";
-import { rowStatus } from "../../list/task-status";
-import { TaskStatusIcon } from "../../list/task-status-icon";
 import { newMessagesIndex } from "../../unread/new-messages";
 import { NewMessagesDivider } from "../../unread/new-messages-divider";
 import { useLeavingDivider } from "../../unread/use-leaving-divider";
 import type { NewMessages } from "../../unread/use-new-messages-from";
-import {
-  composerMode,
-  draftRow,
-  responseOutcome,
-  spentBudget,
-} from "../chat-model";
+import { draftRow, responseOutcome, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
@@ -51,8 +42,8 @@ type ChatTimelineProps = {
 
 /**
  * The conversation: messages, answers to questions, turn outcomes and notes,
- * then what the worker is doing now or the input it waits for. It follows new
- * messages while the reader is at the end.
+ * then any input the worker is waiting for. It follows new messages while the
+ * reader is at the end.
  */
 export function ChatTimeline({
   task,
@@ -65,12 +56,7 @@ export function ChatTimeline({
   onBudgetApply,
   newMessages,
 }: ChatTimelineProps) {
-  const { chat, workers, draft, events } = useSnapshot([
-    "chat",
-    "workers",
-    "draft",
-    "events",
-  ]);
+  const { chat, workers, draft } = useSnapshot(["chat", "workers", "draft"]);
 
   const taskChat = task && chat?.task === task.id ? chat : undefined;
   const worker = task ? providerName(task.provider, workers) : "";
@@ -95,22 +81,6 @@ export function ChatTimeline({
 
   const visibleItems = items && (draftItem ? [...items, draftItem] : items);
 
-  const activity =
-    task?.status === "running" && events.length
-      ? currentActivityStatus(events, task)
-      : task?.live_activity;
-
-  const presentation = task
-    ? rowStatus({ ...task, live_activity: activity })
-    : undefined;
-
-  let working: string | undefined;
-
-  if (task && composerMode(task) === "busy") {
-    working =
-      task.status === "running" && activity ? activity.text : statusLabel(task);
-  }
-
   const newFrom = newMessages?.from;
 
   const newIndex =
@@ -121,9 +91,6 @@ export function ChatTimeline({
   const newId = newIndex === undefined ? undefined : items?.[newIndex]?.id;
   const { leaving, left } = useLeavingDivider(newId);
 
-  const latest = items?.at(-1);
-  const workingShownInNote = latest?.kind === "note" && latest.text === working;
-  const workingLabel = workingShownInNote ? undefined : working;
   const spent = task ? spentBudget(task) : undefined;
   const loading = !task || !items || !positionRestored;
 
@@ -222,23 +189,6 @@ export function ChatTimeline({
           streaming
         />
       )}
-      {/* Reserved before the task loads so the latest-edge skeleton holds still. */}
-      <div
-        className="chat-working"
-        role={workingLabel ? "status" : undefined}
-        aria-atomic="true"
-      >
-        {workingLabel && presentation && (
-          <>
-            <TaskStatusIcon
-              kind={presentation.kind}
-              label={workingLabel}
-              decorative
-            />
-            <span title={workingLabel}>{workingLabel}</span>
-          </>
-        )}
-      </div>
       {task && spent && (
         <BudgetLimitNotice
           taskId={task.id}
