@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { createServer } from "vite";
 
+import { withCleanup } from "./capture-cleanup";
 import { checkCaptureFrames, describeFrameCheck } from "./frame-check";
 
 export const ORIGIN = "http://127.0.0.1:5317";
@@ -72,25 +73,26 @@ export async function capturePngFrames(
       );
     });
 
-    try {
-      await cdp.send("Page.startScreencast", {
-        format: "png",
-        maxWidth: size.width,
-        maxHeight: size.height,
-      });
+    await withCleanup(
+      async () => {
+        await cdp.send("Page.startScreencast", {
+          format: "png",
+          maxWidth: size.width,
+          maxHeight: size.height,
+        });
 
-      try {
-        await recording();
-      } finally {
+        await withCleanup(recording, async () => {
+          active = false;
+          end = Date.now() / 1000;
+          await cdp.send("Page.stopScreencast");
+        });
+      },
+      async () => {
         active = false;
-        end = Date.now() / 1000;
-        await cdp.send("Page.stopScreencast");
-      }
-    } finally {
-      active = false;
-      await Promise.all(pending);
-      await cdp.detach();
-    }
+        await Promise.all(pending);
+        await cdp.detach();
+      },
+    );
 
     if (frameError !== undefined) throw frameError;
 
