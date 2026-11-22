@@ -40,7 +40,7 @@ export function validateOutputCanvas(output: OutputCanvas) {
 // Round to the nearest encodable size, including for subpixel fits.
 const evenSize = (value: number) => Math.max(2, Math.round(value / 2) * 2);
 
-export function fitCanvas(
+function fitCanvas(
   crop: CaptureRect,
   { width, height, fit = "contain" }: OutputCanvas,
 ) {
