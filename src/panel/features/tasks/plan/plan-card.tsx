@@ -67,8 +67,10 @@ export function PlanCard({ taskId, plan, working }: PlanCardProps) {
         >
           <PlanStepIcon status={current?.status ?? "pending"} state={state} />
           <span className="plan-card-current">{current?.content}</span>
-          <span className="plan-card-count">{count}</span>
-          <Chevron size={9} />
+          <span className="plan-card-count">
+            {count}
+            <Chevron size={9} />
+          </span>
         </button>
       ) : (
         <>

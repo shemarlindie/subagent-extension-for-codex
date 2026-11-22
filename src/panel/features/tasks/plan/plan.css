@@ -2,9 +2,8 @@
 .plan-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--tint) 8%, transparent);
   border-radius: var(--border-radius-lg);
-  background: var(--surface);
+  background: var(--user-bubble-bg);
   font-size: 13px;
   line-height: 18px;
 }
@@ -14,11 +13,12 @@
 /* Collapsed, the whole row expands it. */
 .plan-card-row {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto 12px;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
   column-gap: 10px;
   align-items: center;
   width: 100%;
-  padding: 10px 14px;
+  /* Centres the row on the expanded card's first step and collapse control. */
+  padding: 12px 14px;
   border: 0;
   background: none;
   color: var(--text);
@@ -30,8 +30,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* The count and caret sit in the same place in both forms, so nothing shifts on toggle. */
 .plan-card-count,
 .plan-card-collapse {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -39,11 +43,8 @@
 /* Sits in the top corner, beside the first step, as in Claude Code. */
 .plan-card-collapse {
   position: absolute;
-  top: 9px;
+  top: 10px;
   right: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
   height: 22px;
   padding: 0 6px;
   border: 0;
@@ -51,7 +52,8 @@
   background: none;
   font-family: inherit;
 }
-.plan-card-collapse .chevron {
+/* The pinned card grows upward, so its caret points up to expand and down to collapse. */
+.plan-card:not(.plan-history) > .plan-card-row .chevron {
   transform: rotate(180deg);
 }
 .plan-card-collapse:hover,
@@ -120,6 +122,7 @@
 /* A past plan in Chat: one muted row that opens to its final steps. */
 .plan-history .plan-card-row {
   grid-template-columns: 16px minmax(0, 1fr) 12px;
+  padding-block: 10px;
 }
 .plan-history .plan-card-current {
   color: var(--muted);
