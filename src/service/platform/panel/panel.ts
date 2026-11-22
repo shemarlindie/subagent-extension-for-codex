@@ -14,7 +14,7 @@ import { preloadPanelHtml, readPanelHtml } from "./panel-html.js";
 
 // Bump the URI when resource metadata or the panel's tool calls change, to
 // invalidate host caches.
-export const panelUri = "ui://subagent-extension-for-codex/app-v7";
+export const panelUri = "ui://subagent-extension-for-codex/app-v8";
 const globalPanelToolName = "app_open_subagent_extension_for_codex_global";
 
 const entrypoints = {

@@ -193,7 +193,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.equal(
       (opener._meta as any).ui.resourceUri,
-      "ui://subagent-extension-for-codex/app-v7",
+      "ui://subagent-extension-for-codex/app-v8",
     );
 
     const resources = await client.listResources();
@@ -202,7 +202,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
       resources.resources.some(
         (resource) =>
           resource.name === "Delegated Work" &&
-          resource.uri === "ui://subagent-extension-for-codex/app-v7",
+          resource.uri === "ui://subagent-extension-for-codex/app-v8",
       ),
     );
 
@@ -229,7 +229,7 @@ describe("HTTP auth, CSRF, origin checks, MCP tools and UI resource metadata", (
 
     assert.ok(uiContent);
 
-    assert.equal(uiContent.uri, "ui://subagent-extension-for-codex/app-v7");
+    assert.equal(uiContent.uri, "ui://subagent-extension-for-codex/app-v8");
     assert.equal(uiContent.mimeType, "text/html;profile=mcp-app");
     assert.ok("text" in uiContent);
 
