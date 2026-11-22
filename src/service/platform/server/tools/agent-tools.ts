@@ -118,7 +118,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     get_task: tool({
       readOnly: true,
       description:
-        "Read a task's full state: status, turn (the number of turns started), pending input, draft (the message being written), pending steers not yet taken, queue (messages waiting for their own turn, and whether an interrupt paused it), branch for worktree tasks and an excerpt of the latest reply. Read the conversation with list_messages.",
+        "Read a task's full state: status, turn (the number of turns started), pending input, draft (the message being written), pending steers not yet taken, queue (messages waiting for their own turn, and whether an interrupt paused it), plan (the worker's latest steps and their status, with stale when a later message reached the worker), branch for worktree tasks and an excerpt of the latest reply. Read the conversation with list_messages.",
       schema: taskId,
       run: (a) => {
         const t = c.store.get(a.task_id, owner);
@@ -136,7 +136,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       readOnly: true,
       conversation: "chat",
       description:
-        "List your tasks as summaries, newest first, optionally filtered by conversation and repository. null conversation_id means all conversations. Each summary has the task's status, turn, the kind of any pending_input, error, queued message count and an excerpt of its latest reply. Read a task's full state with get_task and its conversation with list_messages.",
+        "List your tasks as summaries, newest first, optionally filtered by conversation and repository. null conversation_id means all conversations. Each summary has the task's status, turn, the kind of any pending_input, error, queued message count, plan progress (done, total and the current step) and an excerpt of its latest reply. Read a task's full state with get_task and its conversation with list_messages.",
       schema: z.object({
         conversation_id: z.string().nullable().optional(),
         repository: z.string().optional(),
@@ -217,7 +217,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     }),
     list_messages: tool({
       readOnly: true,
-      description: `Read a task's conversation after a cursor: the request, messages from you and the user, worker messages and each successful turn's reply (kind reply). Pass next_cursor back as after. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits for a new message, the end of the turn or an input request. A wait that times out includes draft, the message being written. Also returns status, turn, running, pending_input and queued_messages, the queued message count. Read what a turn changed with get_changes(scope: "turn"). ${PARENT_SUPERVISION_PROTOCOL}`,
+      description: `Read a task's conversation after a cursor: the request, messages from you and the user, worker messages and each successful turn's reply (kind reply). Pass next_cursor back as after. With wait_seconds (at most ${MAX_MESSAGE_WAIT_SECONDS}), it waits for a new message, the end of the turn or an input request. A wait that times out includes draft, the message being written. Also returns status, turn, running, pending_input, queued_messages (the queued message count) and plan progress while the worker has a plan. A plan update alone doesn't end a wait. Read what a turn changed with get_changes(scope: "turn"). ${PARENT_SUPERVISION_PROTOCOL}`,
       schema: taskId.extend({
         after: z.number().int().nonnegative().default(0),
         wait_seconds: z

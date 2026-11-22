@@ -31,7 +31,8 @@ To delegate a task:
 3. Read replies with `list_messages`, which supports long polling. Read recorded
    edits with `get_changes`, using `scope: "turn"` for the latest turn.
    `list_tasks` returns summaries, without archived tasks unless `archived` asks
-   for them. Read a task's full state with `get_task`.
+   for them. Read a task's full state with `get_task`. See
+   [Worker plans](#worker-plans) for the plan a worker can show.
 4. Continue with `send_message`. Inspect pending input before answering it with
    `submit_input` and its request ID. A message that starts with a Claude Code
    command, such as `/compact`, runs it as its own turn. See
@@ -53,6 +54,16 @@ raise the mode or route approvals to itself beyond the settings, or turn off a
 sandbox the settings turn on. See
 [Claude permissions](configuration.md#claude-permissions) and
 [session restrictions](configuration.md#claude-session-restrictions).
+
+### Worker plans
+
+A Claude worker can show its plan for a multi-step request as a list of steps.
+`get_task` returns it as `plan`, with each step's `content` and `status`
+(`pending`, `in_progress` or `completed`). `list_tasks` summaries and
+`list_messages` add `plan: { done, total, current?, stale? }` while a plan
+exists. `stale` means your message or the user's reached the worker after its
+latest plan update, so the steps may change. A plan update doesn't end a
+`list_messages` wait or count as a pending worker update.
 
 ### Attachments
 

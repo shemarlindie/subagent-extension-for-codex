@@ -90,6 +90,7 @@ async function context() {
     input: async () => ({ approved: false }),
     acceptSteers: (s) => (sink = s),
     steerTaken: (id) => taken.push(id),
+    planUpdated: () => {},
     delta: (id, text) => deltas.push([id, text]),
   };
 

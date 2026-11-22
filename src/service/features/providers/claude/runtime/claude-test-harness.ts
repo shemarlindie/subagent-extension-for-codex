@@ -120,6 +120,15 @@ export async function context() {
     input: async () => ({ approved: false, message: "User declined" }),
     acceptSteers: () => {},
     steerTaken: () => {},
+    planUpdated: (steps, changed) => {
+      if (steps.length) {
+        task.plan = { steps, turn: task.turn, updated_at: now() };
+      } else {
+        delete task.plan;
+      }
+
+      events.push({ type: "agent.plan", data: { steps, changed } });
+    },
     delta: () => {},
   };
 

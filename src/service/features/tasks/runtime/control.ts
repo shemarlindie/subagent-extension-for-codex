@@ -17,6 +17,7 @@ import {
   type Task,
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
+import { markPlanStale } from "../../../../shared/tasks/plan.js";
 import { now } from "../../../../shared/time.js";
 import { logError } from "../../../platform/logging/logger.js";
 import { Attachments } from "../../attachments/attachments.js";
@@ -78,6 +79,7 @@ import {
   taskDeletionPreview,
   type DeletionVersions,
 } from "./task-deletion.js";
+import { planRecorder } from "./task-plan.js";
 import { startTask } from "./task-start.js";
 import { WorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
@@ -427,10 +429,12 @@ export class Control {
           // The session has it now, like the turn's prompt.
           this.store.messages.add(t.id, taken);
           t.instructions_sent = this.store.messages.count(t.id);
+          markPlanStale(t.plan);
           this.store.save(t);
           this.store.event(t, "task.steer_taken", { message_id: id });
         });
       },
+      planUpdated: planRecorder(this.store, t),
       delta: (messageId, text) =>
         this.drafts.append(t.owner, t.id, messageId, text),
       emit: <K extends EventType, D extends EventPayloadMap[K]>(

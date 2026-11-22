@@ -542,6 +542,37 @@ test("file tool events keep paths and errors without file contents outside full 
   ]);
 });
 
+test("worker tool calls and their results leave no tool rows", () => {
+  const { normalize } = recorder();
+
+  normalize(
+    assistantMessage([
+      {
+        type: "tool_use",
+        id: "plan",
+        name: "mcp__delegated_work__update_plan",
+        input: { advance: true },
+      },
+      { type: "tool_use", id: "read", name: "Read", input: { file_path: "a" } },
+    ]),
+  );
+
+  const events = normalize(
+    userMessage([
+      { type: "tool_result", tool_use_id: "plan", content: "Plan updated" },
+      { type: "tool_result", tool_use_id: "read", content: "a" },
+    ]),
+  );
+
+  assert.deepEqual(
+    events.map((e) => [e.type, e.data.id]),
+    [
+      ["tool.started", "read"],
+      ["tool.completed", "read"],
+    ],
+  );
+});
+
 test("assistant thinking blocks retain their typed content and source message", () => {
   const message = assistantMessage([
     { type: "text", text: "Visible text", citations: null },

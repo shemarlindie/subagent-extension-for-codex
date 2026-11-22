@@ -18,6 +18,8 @@ import {
 } from "../configuration/attachment-access.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import { recordClaudeFileEdits } from "./file-edits.js";
+import { isWorkerTool, workerToolNames } from "./worker-tool-names.js";
+import { workerMcpServers, workerToolsPrompt } from "./worker-tools.js";
 
 /** The reason shown when a permission prompt is denied without a message. */
 function defaultDenialMessage(tool: string) {
@@ -64,6 +66,7 @@ function systemPromptAppend(c: RunContext) {
   const parts = [
     environment,
     `You are an independent ${c.task.worker_profile}. ${rules.join(" ")}`,
+    workerToolsPrompt,
   ];
 
   if (c.task.profile_instructions) {
@@ -143,8 +146,10 @@ export async function claudeTurnOptions(
     includePartialMessages: true,
     settings: {
       bashEditDiffEnabled: true,
-      // Inside the sandbox, Claude Code applies it to every program.
       permissions: {
+        // The worker tools change nothing in the workspace.
+        allow: workerToolNames,
+        // Inside the sandbox, Claude Code applies it to every program.
         deny: [
           adminTokenRule(adminToken),
           ...(attachments ? attachmentRules(attachments) : []),
@@ -152,6 +157,7 @@ export async function claudeTurnOptions(
       },
     },
     ...settingsOptions(policy),
+    mcpServers: workerMcpServers(c),
     permissionMode: nativeMode,
     ...(nativeMode === "bypassPermissions"
       ? { allowDangerouslySkipPermissions: true }
@@ -225,6 +231,9 @@ export async function claudeTurnOptions(
       ],
     },
     canUseTool: async (tool, input, { signal }) => {
+      // A policy that keeps only managed rules drops the allow rule.
+      if (isWorkerTool(tool)) return { behavior: "allow", updatedInput: input };
+
       if (tool === "AskUserQuestion") {
         const answer = await c.input(tool, input, signal);
 

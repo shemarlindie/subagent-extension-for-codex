@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AttachmentError } from "../attachments/attachment-error.js";
 import { attachmentsSchema } from "../attachments/model.js";
+import type { TaskPlan } from "./plan.js";
 import { reasoningLevels } from "./reasoning.js";
 
 export const roles = ["researcher", "reviewer", "implementer"] as const;
@@ -275,6 +276,8 @@ export interface Task extends Omit<Start, "attachments"> {
    * user's undo. Task reads leave them out.
    */
   removed_queue?: QueuedMessage[];
+  /** The worker's latest plan. */
+  plan?: TaskPlan;
   /** The number of turns started, the current one included. */
   turn: number;
   /** Sum of the finished turns' run times. */

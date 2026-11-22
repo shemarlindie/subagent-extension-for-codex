@@ -17,6 +17,7 @@ import type {
 } from "../../../shared/providers/types.js";
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
 import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
+import type { PlanStep } from "../../../shared/tasks/plan-contract.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
 
 /** A message sent into a running turn. */
@@ -57,6 +58,12 @@ export interface RunContext {
   promptHeld(): void;
   /** Reports that the turn took a steer. One it never takes is left over. */
   steerTaken(id: string): void;
+  /**
+   * Saves the worker's plan on the task and records it. `changed` lists the
+   * steps whose status changed when the contents match the previous plan's.
+   * An empty list clears the plan.
+   */
+  planUpdated(steps: PlanStep[], changed?: number[]): void;
   /**
    * Streams text as the worker writes a message, before the message itself
    * is emitted. Deltas aren't stored.

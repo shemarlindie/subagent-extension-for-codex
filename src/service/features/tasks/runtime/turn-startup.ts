@@ -1,5 +1,6 @@
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Task } from "../../../../shared/tasks/model.js";
+import { markPlanStale } from "../../../../shared/tasks/plan.js";
 import { now } from "../../../../shared/time.js";
 import type { Changes } from "../../changes/changes.js";
 import type { Projects } from "../../projects/projects.js";
@@ -173,6 +174,8 @@ async function beginTurn(
   t.started_at ??= now();
   t.run_started_at = new Date(begin).toISOString();
   t.session_owner = c.ownerWorker;
+  // The turn's message reaches the worker after its plan.
+  markPlanStale(t.plan);
 
   c.store.transaction(() => {
     if (newSession && t.turn > 1) {

@@ -1,0 +1,14 @@
+/**
+ * The worker-facing MCP server's name. It joins the user's own servers when a
+ * session loads them, so it has to be one a user is unlikely to pick.
+ */
+export const WORKER_SERVER = "delegated_work";
+
+/** The tool names Claude Code calls, for the settings allow rule. */
+export const workerToolNames = [`mcp__${WORKER_SERVER}__update_plan`];
+
+/**
+ * Calls to these render through their own events, not as tool rows. Kept
+ * apart from the server, so the event normalizer doesn't load the SDK.
+ */
+export const isWorkerTool = (name: string) => workerToolNames.includes(name);

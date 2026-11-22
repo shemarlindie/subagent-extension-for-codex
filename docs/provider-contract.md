@@ -42,6 +42,15 @@ queue. Claude uses native streaming input and cancels untaken messages at turn
 end, so the CLI cannot run them as an extra turn. An interrupt ends the current
 turn and keeps the session where possible.
 
+A provider reports the worker's plan with
+`RunContext.planUpdated(steps, changed?)`. Task control saves it on the task,
+records an `agent.plan` event and marks an open plan stale when a steer is taken
+or a turn starts. Claude workers get an `update_plan` tool from the in-process
+`delegated_work` MCP server, which every turn loads. Its tools change nothing in
+the workspace, so they run without approval. The one exception is `dontAsk`
+under an org policy that keeps only managed permission rules, which denies them.
+Their calls don't appear as tool rows.
+
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the
 control plane accounts for the increase across resumed turns.
