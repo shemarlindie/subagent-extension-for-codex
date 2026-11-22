@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 
-import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
@@ -956,11 +955,9 @@ export class Control {
       const t = this.mutableTask(owner, id);
       const inputs = options.attachments ?? [];
       refuseAttachedCommand(this.runsCommands(t), message, inputs.length);
-      // References read the project folder, which must still be approved.
-      if (inputs.length) await this.projects?.resolve(t.repository);
 
-      return sendAttached(this.attachments, t, m, inputs, (snapshots) =>
-        this.sendOnce(owner, id, m, snapshots, options, record),
+      return sendAttached(this, t, m, inputs, (save) =>
+        this.sendOnce(owner, id, m, save, options, record),
       );
     };
 
@@ -971,7 +968,7 @@ export class Control {
     owner: string,
     id: string,
     m: TaskMessage,
-    snapshots: TaskAttachment[],
+    save: () => void,
     options: SendOptions,
     record: RecordSend,
   ): Promise<SentMessage> {
@@ -981,7 +978,7 @@ export class Control {
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
-      return this.followUp(owner, id, m, snapshots, options, record);
+      return this.followUp(owner, id, m, save, options, record);
     }
 
     const t = a?.task ?? stored;
@@ -1007,7 +1004,7 @@ export class Control {
         () => {
           if (options.budget) raiseBudget(t, options.budget);
           queueSent(this.store, t, m, delivery);
-          this.attachments.save(t.id, snapshots);
+          save();
           record(m.id, "queued");
         },
         options.request_id,
@@ -1024,7 +1021,7 @@ export class Control {
         if (!a) this.store.messages.add(t.id, m);
         else t.pending_steers.push(m);
         recordMessage(this.store, t, m, delivery);
-        this.attachments.save(t.id, snapshots);
+        save();
         this.store.save(t);
 
         record(
@@ -1066,7 +1063,7 @@ export class Control {
     owner: string,
     id: string,
     m: TaskMessage,
-    snapshots: TaskAttachment[],
+    save: () => void,
     options: SendOptions,
     record: RecordSend,
   ): Promise<SentMessage> {
@@ -1094,7 +1091,7 @@ export class Control {
     const current = this.mutableTask(owner, id);
 
     if (this.active.has(id) || BUSY.includes(current.status)) {
-      return this.sendOnce(owner, id, m, snapshots, options, record);
+      return this.sendOnce(owner, id, m, save, options, record);
     }
 
     const before = queueSnapshot(t);
@@ -1104,7 +1101,7 @@ export class Control {
       t,
       () => {
         this.store.messages.add(t.id, m);
-        this.attachments.save(t.id, snapshots);
+        save();
         delete t.queue_paused;
         requeue(t);
         this.store.save(t);

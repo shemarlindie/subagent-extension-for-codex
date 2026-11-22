@@ -1,10 +1,10 @@
-import type {
-  AttachmentInput,
-  TaskAttachment,
-} from "../../../../shared/attachments/model.js";
+import type { AttachmentInput } from "../../../../shared/attachments/model.js";
 import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
 import type { Task, TaskMessage } from "../../../../shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
+import type { Projects } from "../../projects/projects.js";
+
+type AttachmentServices = { attachments: Attachments; projects?: Projects };
 
 /** Refuses attachments on a command, which needs the whole prompt to itself. */
 export function refuseAttachedCommand(
@@ -19,19 +19,28 @@ export function refuseAttachedCommand(
 
 /**
  * Snapshots a message's attachments from the approved project folder, also
- * for worktree tasks, then sends it. A failed send keeps none of them.
+ * for worktree tasks, then sends it. The send calls `save` in the transaction
+ * that records the message, which fails if the project lost its approval
+ * meanwhile. A failed send keeps none of the snapshots.
  */
 export async function sendAttached<T>(
-  attachments: Attachments,
+  { attachments, projects }: AttachmentServices,
   t: Task,
   m: TaskMessage,
   inputs: AttachmentInput[],
-  send: (snapshots: TaskAttachment[]) => Promise<T>,
+  send: (save: () => void) => Promise<T>,
 ) {
+  if (inputs.length) await projects?.resolve(t.repository);
   const snapshots = await attachments.prepare(t.id, t.repository, inputs, m.id);
 
+  const save = () => {
+    if (!snapshots.length) return;
+    projects?.assertApproved(t.repository);
+    attachments.save(t.id, snapshots);
+  };
+
   try {
-    return await send(snapshots);
+    return await send(save);
   } catch (error) {
     await attachments.discardUnsaved(t.id, snapshots);
     throw error;

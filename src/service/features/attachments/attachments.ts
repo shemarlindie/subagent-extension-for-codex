@@ -268,7 +268,12 @@ export class Attachments {
             lines: lineCount(text),
           };
 
-          await writeFile(join(folder, row.file), text, {
+          const path = join(folder, row.file);
+          // Nothing saved holds a reserved position, so a file there is left
+          // over from a send that a crash or failed removal cut short.
+          await rm(path, { force: true });
+
+          await writeFile(path, text, {
             mode: 0o600,
             flag: "wx",
           });
@@ -294,8 +299,8 @@ export class Attachments {
       if (messageId === undefined) {
         await this.discard(taskId);
       } else {
-        this.release(taskId, first, first + inputs.length - 1);
         await this.removeFiles(taskId, rows);
+        this.release(taskId, first, first + inputs.length - 1);
       }
 
       throw error;
@@ -304,7 +309,11 @@ export class Attachments {
     return rows;
   }
 
-  /** Gives reserved positions back unless a later send reserved after them. */
+  /**
+   * Gives reserved positions back unless a later send reserved after them.
+   * Callers remove the positions' files first, so a removal still running
+   * can't delete the next send's file.
+   */
   private release(taskId: string, first: number, last: number) {
     if (this.reserved.get(taskId) === last) {
       this.reserved.set(taskId, first - 1);
@@ -320,8 +329,8 @@ export class Attachments {
     // A send saves all its snapshots in one transaction, or none.
     if (this.list(taskId).some((a) => a.position === first.position)) return;
 
-    this.release(taskId, first.position, last.position);
     await this.removeFiles(taskId, rows);
+    this.release(taskId, first.position, last.position);
   }
 
   /** Removes snapshot files. Failures are logged, and the files go with the task. */
