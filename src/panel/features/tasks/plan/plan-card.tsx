@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { planProgress, type TaskPlan } from "../../../../shared/tasks/plan";
 import { useSessionState } from "../../../app/state/session/use-session-state";
@@ -13,13 +13,15 @@ type PlanCardProps = {
   plan: TaskPlan;
   /** The worker is at work on its current step. */
   working: boolean;
+  /** Called after the card changes size, so Chat can stay at its latest message. */
+  onResize?: () => void;
 };
 
 /**
  * The worker's plan above Chat's composer while it has steps left, as Claude
  * Code shows it.
  */
-export function PlanCard({ taskId, plan, working }: PlanCardProps) {
+export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
   const card = useRef<HTMLElement>(null);
 
   const [choice, setChoice] = useSessionState(
@@ -31,11 +33,17 @@ export function PlanCard({ taskId, plan, working }: PlanCardProps) {
   const collapsed = planCollapsed(plan, choice);
   const stale = Boolean(plan.stale);
 
+  const shape = `${collapsed}\n${stale}\n${plan.steps.map((s) => s.content).join("\n")}`;
+  const lastShape = useRef(shape);
+
   // Eases every change that resizes the card: its form, its steps and the caption.
-  useAnimatedHeight(
-    card,
-    `${collapsed}\n${stale}\n${plan.steps.map((s) => s.content).join("\n")}`,
-  );
+  useAnimatedHeight(card, shape);
+
+  useLayoutEffect(() => {
+    // Measuring a shorter card can clamp Chat before the animation starts.
+    if (shape !== lastShape.current) onResize?.();
+    lastShape.current = shape;
+  }, [shape, onResize]);
 
   const { done, total } = planProgress(plan.steps);
   const count = `${done} of ${total}`;

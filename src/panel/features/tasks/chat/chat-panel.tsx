@@ -130,7 +130,10 @@ export const ChatPanel = memo(function ChatPanel({
           badge={unread && <UnreadDot className="scroll-latest-unread" />}
           onClick={scrollToLatest}
         />
-        <ChatProgress task={task} />
+        <ChatProgress
+          task={task}
+          onPlanResize={pinned ? resumeFollowing : undefined}
+        />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
         {task && (
           <MessageQueue

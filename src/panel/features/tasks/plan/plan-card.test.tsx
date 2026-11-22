@@ -32,9 +32,19 @@ function setup() {
 
   onTestFinished(() => controller.dispose());
 
-  const card = (p: TaskPlan, working = true, taskId = "a") => (
+  const card = (
+    p: TaskPlan,
+    working = true,
+    taskId = "a",
+    onResize?: () => void,
+  ) => (
     <ControllerContext.Provider value={controller}>
-      <PlanCard taskId={taskId} plan={p} working={working} />
+      <PlanCard
+        taskId={taskId}
+        plan={p}
+        working={working}
+        onResize={onResize}
+      />
     </ControllerContext.Provider>
   );
 
@@ -100,6 +110,27 @@ test("collapsing stays with its task across remounts until the plan changes", as
   again.rerender(card(plan(steps("in_progress", "pending", "pending"))));
 
   assert.equal(visibleSteps().length, 3);
+});
+
+test("the card reports each resize so Chat can keep its latest message in view", async () => {
+  const { card } = setup();
+  let resizes = 0;
+  const onResize = () => resizes++;
+
+  const view = render(
+    card(plan(steps("in_progress", "pending")), true, "a", onResize),
+  );
+
+  assert.equal(resizes, 0);
+
+  await userEvent.click(screen.getByRole("button", { name: /Collapse plan/ }));
+  assert.equal(resizes, 1);
+
+  view.rerender(
+    card(plan(steps("in_progress", "pending"), true), true, "a", onResize),
+  );
+
+  assert.equal(resizes, 2);
 });
 
 test("a stale plan says so and pauses its current step", () => {

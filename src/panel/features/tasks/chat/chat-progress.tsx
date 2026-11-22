@@ -8,10 +8,14 @@ import { TaskStatusIcon } from "../list/task-status-icon";
 import { PlanCard } from "../plan/plan-card";
 import { composerMode } from "./chat-model";
 
-type ChatProgressProps = { task?: Task };
+type ChatProgressProps = {
+  task?: Task;
+  /** Called after the plan card changes size. */
+  onPlanResize?: () => void;
+};
 
 /** The worker's plan and what it is doing now, above the composer. */
-export function ChatProgress({ task }: ChatProgressProps) {
+export function ChatProgress({ task, onPlanResize }: ChatProgressProps) {
   const { events } = useSnapshot(["events"]);
 
   let status: ReturnType<typeof rowStatus> | undefined;
@@ -38,7 +42,14 @@ export function ChatProgress({ task }: ChatProgressProps) {
       {/* Keyed so switching tasks swaps the card instead of animating it. */}
       {task && (
         <Presence key={task.id} show={Boolean(plan)}>
-          {plan && <PlanCard taskId={task.id} plan={plan} working={working} />}
+          {plan && (
+            <PlanCard
+              taskId={task.id}
+              plan={plan}
+              working={working}
+              onResize={onPlanResize}
+            />
+          )}
         </Presence>
       )}
       <div className="chat-working" role="status" aria-atomic="true">
