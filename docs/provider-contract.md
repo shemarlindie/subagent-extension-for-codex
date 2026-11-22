@@ -31,12 +31,10 @@ details save only the code.
 The task conversation layer builds the prompt. A new session receives the
 original request, workspace context, the request's attachment list and bounded
 conversation history. A resumed session receives unsent messages and any
-workspace reminder. Each sent message, steers included, carries the list of its
-attachments.
+workspace reminder. Each sent message carries the list of its attachments.
 
 `RunContext.attachments` is the real path the provider exposes to the worker for
-read-only access without prompts. Task control sets it on every turn, since a
-steer can bring the task's first attachment.
+read-only access without prompts. Task control sets it on every turn.
 
 During a turn, the provider must tell accepted steers apart from steers the
 worker actually consumed. Unconsumed steers return to the front of the task's
