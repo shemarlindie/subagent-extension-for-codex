@@ -10,7 +10,7 @@ in Codex.
 Users add `main`'s marketplace, `.agents/plugins/marketplace.json`, which
 installs the plugin from npm at the exact version it lists. Codex refreshes it
 on startup, so a version reaches users when `main` lists it. Each release has
-its own branch:
+its own branch. Use the `release` skill to go through these steps with an agent.
 
 1. On an up-to-date `main`, run `npm run release:prepare`. Pass a version to
    choose it yourself, which a prerelease needs:
