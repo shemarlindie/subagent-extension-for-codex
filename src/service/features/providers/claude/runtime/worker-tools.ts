@@ -17,7 +17,7 @@ import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel when a request takes several steps. Send the whole list once with one step in progress, then advance as each step finishes. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes. Skip it for quick answers.";
+  "Use update_plan to show your plan as a checklist in the user's panel for any request that takes several steps. Send the whole list once with one step in progress, then advance as each step finishes. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes. Skip it for quick answers.";
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a

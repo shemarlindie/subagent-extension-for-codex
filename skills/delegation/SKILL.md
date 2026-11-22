@@ -34,7 +34,8 @@ checkout’s uncommitted changes, attach `{ source: "diff" }`.
 ## Write the request
 
 Pass the user's full request in `description`, below the title line the field
-asks for. The worker does not see this conversation.
+asks for. The worker does not see this conversation. Include the user's
+constraints, and leave what the worker may change to its profile.
 
 Give the worker what it can't find itself in `attachments`, on the request or a
 follow-up. Attach project content by reference, regardless of size:
