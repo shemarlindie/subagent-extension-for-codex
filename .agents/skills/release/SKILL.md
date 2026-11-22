@@ -11,8 +11,9 @@ skill covers what an agent adds to it.
 ## 1. Draft the notes
 
 Run `echo n | npm run release:prepare`, adding `-- <version>` when the user
-chose one. It drafts the notes, then exits with "Cancelled" and keeps them. If
-`CHANGELOG.md` already has the section, add any commits it misses.
+chose one. It drafts the notes from `feat`, `fix` and breaking commits, then
+exits with "Cancelled" and keeps them. Check every commit since the last release
+and add user-visible changes the notes miss, such as `perf` commits.
 
 ## 2. Clean up the notes
 
@@ -29,8 +30,8 @@ Check each entry against its pull request.
 ## 3. Preview with the user
 
 Show the user the section and what you merged or left out. Apply their edits
-and wait for approval. Then run `npm run release:prepare -- --yes`, with the
-same version if the user chose one.
+and wait for approval. Stop here if the user only asked for notes. Otherwise run
+`npm run release:prepare -- --yes`, with the same version if the user chose one.
 
 ## 4. Publish and monitor
 
