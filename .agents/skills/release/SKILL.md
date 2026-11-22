@@ -34,8 +34,8 @@ edits and wait for approval.
 ## 4. Open the pull request
 
 Run `npm run release:prepare -- --yes`, with the same version if the user chose
-one. When the release pull request is already open, commit and push the notes to
-its branch instead.
+one. When the release pull request is already open and its version isn't
+published, commit and push the notes to its branch instead.
 
 ## 5. Publish and monitor
 

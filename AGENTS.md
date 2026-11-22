@@ -92,8 +92,8 @@ check it.
 - Validate the resulting behavior and the relevant architectural boundaries.
   Focused checks are enough while iterating.
 - Before any commit, push or pull request, you must run the full
-  `review-and-improve` skill on changes not yet reviewed. Commits the `release`
-  skill makes are exempt.
+  `review-and-improve` skill on changes not yet reviewed. Commits that only
+  change release notes and versions are exempt.
 - HTTP integration suites need localhost TCP listeners on `127.0.0.1`. Request
   sandbox escalation up front if needed. Never skip these tests because listener
   binding is denied. CI runners need the same access.
