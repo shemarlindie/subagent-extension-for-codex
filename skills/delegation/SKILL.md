@@ -36,13 +36,14 @@ checkout’s uncommitted changes, attach `{ source: "diff" }`.
 Pass the user's full request in `description`, below the title line the field
 asks for. The worker does not see this conversation.
 
-Give the worker what it can't find itself in `attachments`. Attach project
-content by reference, regardless of size: `{ source: "file", path }` with an
-optional line range, or `{ source: "diff", paths? }` for uncommitted changes.
-Use inline text, `{ source: "inline", format, text }`, only for short content
-that exists only in this chat, such as decisions or constraints. Write each
-summary as one sentence on what the attachment is and why the worker needs it,
-such as "The failing test's log, which shows the timeout."
+Give the worker what it can't find itself in `attachments`, on the request or a
+follow-up. Attach project content by reference, regardless of size:
+`{ source: "file", path }` with an optional line range, or
+`{ source: "diff", paths? }` for uncommitted changes. Use inline text,
+`{ source: "inline", format, text }`, only for short content that exists only
+in this chat, such as decisions or constraints. Write each summary as one
+sentence on what the attachment is and why the worker needs it, such as "The
+failing test's log, which shows the timeout."
 
 Start independent tasks together. Start a task that needs another task's
 result after that task finishes, and attach the result inline.
@@ -53,9 +54,8 @@ Follow the `list_messages` and `get_message` descriptions while the task runs.
 A worker's reply is its own account. Check its edits with `get_changes` before
 reporting them, and inspect the diffs before applying or building on them.
 
-Continue a finished task with `send_message`, which takes `attachments` like the
-request. When a turn stops at its budget, raise the budget in `send_message`.
-Only deleting a task ends it.
+Continue a finished task with `send_message`. When a turn stops at its budget,
+raise the budget in `send_message`. Only deleting a task ends it.
 
 ## Respect authority
 
