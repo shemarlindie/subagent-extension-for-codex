@@ -143,16 +143,17 @@ export class SessionPrompts {
 
   /**
    * The turn's only unsent message when the provider runs it as a command,
-   * which needs the whole prompt to itself.
+   * which needs the whole prompt to itself. Commands carry no attachments, so
+   * this reads the raw text.
    */
   unsentCommand(t: Task, provider: Provider) {
-    const [message, ...rest] = this.unsent(t);
+    const [m, ...rest] = this.store.messages.list(t.id, t.instructions_sent);
 
     return provider.capabilities.slash_commands &&
-      message !== undefined &&
+      m !== undefined &&
       !rest.length &&
-      slashCommand(message)
-      ? message
+      slashCommand(m.message)
+      ? m.message
       : undefined;
   }
 

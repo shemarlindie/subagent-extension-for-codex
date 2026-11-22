@@ -157,8 +157,8 @@ const TASK_FOLDER =
 
 /**
  * Task attachments: content snapshotted into one file each under
- * `<root>/<task id>/`, with metadata in `task_attachments`. They never change
- * after the task starts and go with the task.
+ * `<root>/<task id>/`, with metadata in `task_attachments`. Each message's
+ * attachments are snapshotted when accepted and deleted with the task.
  */
 export class Attachments {
   private realRoot?: string;

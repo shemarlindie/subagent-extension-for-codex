@@ -125,7 +125,6 @@ export class Control {
   /** The panel's activity pages, with each task's tally of older events. */
   activity: ActivityPages;
   projects?: Projects;
-  /** Snapshots of start_task attachments, beside the worktrees. */
   attachments: Attachments;
   private projectGuard = new ProjectGuard();
   constructor(
