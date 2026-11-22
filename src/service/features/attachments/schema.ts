@@ -18,9 +18,10 @@ export const taskAttachments = sqliteTable(
     task_id: text()
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade" }),
+    /** The message it came with: a follow-up's id, or `request`. */
+    message_id: text().notNull(),
+    /** Its place in that message, from 1. */
     position: integer().notNull(),
-    /** The follow-up message it came with. NULL means the task's initial request. */
-    message_id: text(),
     title: text().notNull(),
     summary: text().notNull(),
     format: text({ enum: attachmentFormats }).notNull(),
@@ -38,5 +39,5 @@ export const taskAttachments = sqliteTable(
     start_line: integer(),
     end_line: integer(),
   },
-  (t) => [primaryKey({ columns: [t.task_id, t.position] })],
+  (t) => [primaryKey({ columns: [t.task_id, t.message_id, t.position] })],
 );

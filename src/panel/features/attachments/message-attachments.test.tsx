@@ -10,6 +10,7 @@ import type { Transport } from "../../app/state/types";
 import { MessageAttachments } from "./message-attachments";
 
 const note = (position: number): MessageAttachment => ({
+  message_id: "request",
   position,
   title: `Note ${position}`,
   summary: `Summary ${position}.`,

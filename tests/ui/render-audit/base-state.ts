@@ -24,6 +24,7 @@ const AT = "2026-11-15T12:00:00.000Z";
 export const SELECTED = "one";
 
 const attachment: MessageAttachment = {
+  message_id: "request",
   position: 1,
   title: "Login handler",
   summary: "The handler the review starts from.",

@@ -30,11 +30,8 @@ export function chatRead(
   // Pages of worker output alone skip the read.
   const attached = messages.length ? attachments.list(task.id) : [];
 
-  for (const { file: _, message_id, ...a } of attached) {
-    const message = messages.find((m) =>
-      message_id ? m.id === message_id : m.kind === "request",
-    );
-
+  for (const { file: _, ...a } of attached) {
+    const message = messages.find((m) => m.id === a.message_id);
     if (message) message.attachments = [...(message.attachments ?? []), a];
   }
 

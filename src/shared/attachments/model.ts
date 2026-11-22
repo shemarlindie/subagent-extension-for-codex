@@ -103,10 +103,10 @@ export const attachmentsSchema = z
 
 /** A stored attachment's metadata. The content is a file in the task's attachment folder. */
 export interface TaskAttachment {
-  /** Its number within the task, from 1, continuing across messages. */
+  /** The message it came with: a follow-up's id, or `request`. */
+  message_id: string;
+  /** Its place in that message, from 1. */
   position: number;
-  /** The follow-up message it came with. Absent for the task's request. */
-  message_id?: string;
   title: string;
   summary: string;
   format: AttachmentFormat;
@@ -129,7 +129,7 @@ export interface TaskAttachment {
 }
 
 /** An attachment as Chat lists it under its message, without where it's stored. */
-export type MessageAttachment = Omit<TaskAttachment, "file" | "message_id">;
+export type MessageAttachment = Omit<TaskAttachment, "file">;
 
 /** The most bytes of content one `app_get_attachment` page holds. */
 export const ATTACHMENT_PAGE_BYTES = 512 * 1024;

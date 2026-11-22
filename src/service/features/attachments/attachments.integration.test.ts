@@ -461,7 +461,12 @@ test("attachment pages keep characters whole, stay with one version and report a
       c,
       owner,
       "app_get_attachment",
-      { task_id: t.id, position: 1, ...(cursor ? { cursor } : {}) },
+      {
+        task_id: t.id,
+        message_id: "request",
+        position: 1,
+        ...(cursor ? { cursor } : {}),
+      },
       "user",
     ) as Promise<AttachmentPage>;
 
@@ -512,7 +517,7 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
   },
 );
 
-test("follow-up attachments continue the task's positions from the project folder and reach the worker", async () => {
+test("follow-up attachments number within their message, come from the project folder and reach the worker", async () => {
   const recorder = new PromptRecorder();
   const { c, store, repo } = await setup(recorder);
   // Only in the project folder, so the worktree task can't read it itself.
@@ -536,16 +541,11 @@ test("follow-up attachments continue the task's positions from the project folde
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
   const folder = c.attachments.folder(t.id);
-  const [request, followUp] = c.attachments.list(t.id);
+  const [request] = c.attachments.list(t.id, "request");
+  const [followUp] = c.attachments.list(t.id, sent.message_id);
   assert.ok(request && followUp);
-
-  assert.deepEqual(
-    c.attachments.list(t.id).map((a) => [a.position, a.message_id]),
-    [
-      [1, undefined],
-      [2, sent.message_id],
-    ],
-  );
+  // Each message numbers its own attachments.
+  assert.equal(followUp.position, 1);
 
   const requestList = `Attachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, request.file)}`;
   const followUpList = `Attachments, read them as needed:\n- notes.md (3 lines): Notes.\n  ${join(folder, followUp.file)}`;
@@ -654,7 +654,7 @@ test("steers and queued messages need an approved project and carry their snapsh
   finish();
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
-  const [snapshot] = c.attachments.ofMessage(t.id, queued.message_id);
+  const [snapshot] = c.attachments.list(t.id, queued.message_id);
   assert.ok(snapshot);
   assert.equal(await readFile(join(folder, snapshot.file), "utf8"), "before\n");
 });

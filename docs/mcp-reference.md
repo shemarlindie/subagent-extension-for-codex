@@ -279,13 +279,14 @@ it again, at most every 10 seconds. The view has `updating: true` while the
 service
 [drains for an update](task-continuation.md#updates-and-service-handoff).
 
-`app_get_attachment` reads an attachment by `task_id` and its `position`, its
-number within the task, which continues across messages. It reads in pages of at
-most 512 KiB that end on whole characters. Each page returns the attachment's
-metadata. Pass `next_cursor` for the next page. A cursor fails once the stored
-file's content changes. `state` is `unavailable` when the stored file is
-missing, larger than any attachment or not UTF-8 text. See
-[Transport](panel-guide.md#transport) for panel refresh behavior.
+`app_get_attachment` reads an attachment by `task_id`, the `message_id` of the
+message it came with (`request` for the task's request) and its `position` in
+that message, from 1. It reads in pages of at most 512 KiB that end on whole
+characters. Each page returns the attachment's metadata. Pass `next_cursor` for
+the next page. A cursor fails once the stored file's content changes. `state` is
+`unavailable` when the stored file is missing, larger than any attachment or not
+UTF-8 text. See [Transport](panel-guide.md#transport) for panel refresh
+behavior.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See

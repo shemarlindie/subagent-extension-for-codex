@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
+import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages.js";
 import type { Task, TaskMessage } from "../../../../shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
@@ -60,7 +61,7 @@ export class SessionPrompts {
   sessionPrompt(t: Task) {
     const workspaceContext = this.workspaceContext(t);
     const attached = this.byMessage(t);
-    const attachments = this.attachmentList(t, attached.get(undefined));
+    const attachments = this.attachmentList(t, attached.get(REQUEST_ID));
     const transcript = t.turn > 1 ? this.transcript(t, attached) : "";
 
     return [
@@ -88,9 +89,9 @@ export class SessionPrompts {
     return "This task runs in the current repository, including staged, unstaged and untracked files. Write profiles edit this checkout directly. Preserve unrelated uncommitted changes.";
   }
 
-  /** The task's attachments by the message they came with, the request's under undefined. */
+  /** The task's attachments by the message they came with. */
   private byMessage(t: Task) {
-    const attached = new Map<string | undefined, TaskAttachment[]>();
+    const attached = new Map<string, TaskAttachment[]>();
 
     for (const a of this.attachments.list(t.id)) {
       attached.set(a.message_id, [...(attached.get(a.message_id) ?? []), a]);
@@ -129,7 +130,7 @@ export class SessionPrompts {
     return this.withAttachments(
       t,
       m.message,
-      this.attachments.ofMessage(t.id, m.id),
+      this.attachments.list(t.id, m.id),
     );
   }
 
@@ -176,10 +177,7 @@ export class SessionPrompts {
    * session's prompt, newest kept within a bound. Messages the worker hasn't
    * received are left out, since the prompt ends with them.
    */
-  private transcript(
-    t: Task,
-    attached: Map<string | undefined, TaskAttachment[]>,
-  ) {
+  private transcript(t: Task, attached: Map<string, TaskAttachment[]>) {
     const received = new Set(
       this.store.messages.list(t.id, 0, t.instructions_sent).map((m) => m.id),
     );

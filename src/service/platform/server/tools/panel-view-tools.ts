@@ -129,14 +129,16 @@ export function panelViewTools(c: Control, owner: string) {
     app_get_attachment: tool({
       readOnly: true,
       description:
-        "User interface only: a page of a task's attachment, by its position in the task, with the attachment's metadata. state is unavailable when its stored file is missing, too large or not UTF-8 text. Pass next_cursor for more content.",
+        "User interface only: a page of a task's attachment, by the id of the message it came with and its position in that message, with the attachment's metadata. state is unavailable when its stored file is missing, too large or not UTF-8 text. Pass next_cursor for more content.",
       schema: taskId.extend({
+        message_id: z.string().min(1).max(200),
         position: z.number().int().positive(),
         cursor: z.string().max(100).optional(),
       }),
       run: (a) =>
         c.attachments.page(
           c.store.get(a.task_id, owner).id,
+          a.message_id,
           a.position,
           a.cursor,
         ),

@@ -334,8 +334,7 @@ function previewViewPart(
   for (const item of items) {
     if (item.kind !== "message" || item.message.from === "worker") continue;
     const { message } = item;
-    const sent = message.kind === "request" ? undefined : message.id;
-    const attachments = chatAttachments(task.id, sent);
+    const attachments = chatAttachments(task.id, message.id);
     if (attachments?.length) message.attachments = attachments;
   }
 

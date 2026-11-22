@@ -1,6 +1,7 @@
 // A parent-started review whose request carries attachments of every kind,
 // including one whose stored file is missing, and a parent follow-up with two more.
 import type { TaskAttachment } from "../../../src/shared/attachments/model";
+import { REQUEST_ID } from "../../../src/shared/tasks/conversation/messages";
 import type { Task } from "../../../src/shared/tasks/model";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
@@ -104,13 +105,14 @@ const lines = (text: string) => text.split("\n").length - 1;
 export const previewAttachments: Record<string, PreviewAttachment[]> = {
   [ID]: [
     {
+      message_id: REQUEST_ID,
       position: 1,
       title: "Uncommitted changes",
       summary:
         "The change under review: the prompt builder and the stored task schema.",
       format: "diff",
       source: "diff",
-      file: "1-uncommitted-changes.diff",
+      file: "request-1-uncommitted-changes.diff",
       chars: diff.length,
       lines: lines(diff),
       files: 2,
@@ -119,13 +121,14 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       content: diff,
     },
     {
+      message_id: REQUEST_ID,
       position: 2,
       title: "session-prompts.ts:44-55",
       summary: "The prompt builder as committed, for comparing section order.",
       format: "code",
       source: "file",
       path: "src/service/features/tasks/conversation/session-prompts.ts",
-      file: "2-session-prompts-ts-44-55.ts",
+      file: "request-2-session-prompts-ts-44-55.ts",
       chars: code.length,
       lines: lines(code),
       start_line: 44,
@@ -133,6 +136,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       content: code,
     },
     {
+      message_id: REQUEST_ID,
       position: 3,
       title: "provider-contract.md",
       summary:
@@ -140,80 +144,84 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       format: "markdown",
       source: "file",
       path: "docs/provider-contract.md",
-      file: "3-provider-contract-md.md",
+      file: "request-3-provider-contract-md.md",
       chars: contract.length,
       lines: lines(contract),
       content: contract,
     },
     {
+      message_id: REQUEST_ID,
       position: 4,
       title: "Decisions",
       summary:
         "Choices made in the chat that aren't written down in the project.",
       format: "markdown",
       source: "inline",
-      file: "4-decisions.md",
+      file: "request-4-decisions.md",
       chars: decisions.length,
       lines: lines(decisions),
       content: decisions,
     },
     {
+      message_id: REQUEST_ID,
       position: 5,
       title: "notes.md",
       summary: "A plain-text note whose label names a Markdown file.",
       format: "text",
       source: "inline",
       path: "notes.md",
-      file: "5-notes-md.md",
+      file: "request-5-notes-md.md",
       chars: literal.length,
       lines: lines(literal),
       content: literal,
     },
     {
+      message_id: REQUEST_ID,
       position: 6,
       title: "attachment-count-limits-proposed-in-the-chat.ts",
       summary: "The attachment count limit, as proposed in the chat.",
       format: "code",
       source: "inline",
       path: "src/shared/attachments/attachment-count-limits-proposed-in-the-chat.ts",
-      file: "6-attachment-count-limits-proposed-in-the-chat.ts",
+      file: "request-6-attachment-count-limits-proposed-in-the-chat.ts",
       chars: snippet.length,
       lines: lines(snippet),
       content: snippet,
     },
     {
+      message_id: REQUEST_ID,
       position: 7,
       title: "old-plan.md",
       summary: "The earlier plan, for comparison.",
       format: "markdown",
       source: "file",
       path: "docs/old-plan.md",
-      file: "7-old-plan-md.md",
+      file: "request-7-old-plan-md.md",
       chars: 1200,
       lines: 42,
     },
     // The parent agent's follow-up brings two more.
     {
-      position: 8,
       message_id: FOLLOW_UP,
+      position: 1,
       title: "Test output",
       summary: "The failing prompt test's output after the change.",
       format: "text",
       source: "inline",
-      file: "8-test-output.txt",
+      file: `${FOLLOW_UP}-1-test-output.txt`,
       chars: testOutput.length,
       lines: lines(testOutput),
       content: testOutput,
     },
     {
-      position: 9,
       message_id: FOLLOW_UP,
+      position: 2,
       title: "session-prompts.test.ts:12-20",
       summary: "The legacy prompt test that now fails.",
       format: "code",
       source: "file",
       path: "src/service/features/tasks/conversation/session-prompts.test.ts",
-      file: "9-session-prompts-test-ts-12-20.ts",
+      file: `${FOLLOW_UP}-2-session-prompts-test-ts-12-20.ts`,
       chars: legacyTest.length,
       lines: lines(legacyTest),
       start_line: 12,
@@ -223,17 +231,11 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
   ],
 };
 
-/**
- * The attachments Chat lists under a fixture task's request, or under the
- * sent message `messageId`.
- */
-export const chatAttachments = (taskId: string, messageId?: string) =>
+/** The attachments Chat lists under a fixture task's message `messageId`. */
+export const chatAttachments = (taskId: string, messageId: string) =>
   previewAttachments[taskId]
     ?.filter((attachment) => attachment.message_id === messageId)
-    .map(
-      ({ file: _, content: _content, message_id: _id, ...attachment }) =>
-        attachment,
-    );
+    .map(({ file: _, content: _content, ...attachment }) => attachment);
 
 const reply =
   "The prompt lists attachments after the workspace note, and a task without them keeps its old prompt. Resumed sessions don't get the list again.";

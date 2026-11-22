@@ -33,6 +33,7 @@ test("Chat cursors return the same items as a full read and list attachments wit
   store.save(task);
 
   const note = {
+    message_id: "request",
     position: 1,
     title: "Note",
     summary: "A decision.",
@@ -42,7 +43,7 @@ test("Chat cursors return the same items as a full read and list attachments wit
     lines: 1,
   } as const;
 
-  attachments.save(task.id, [{ ...note, file: "1-note.txt" }]);
+  attachments.save(task.id, [{ ...note, file: "request-1-note.txt" }]);
   const block = { role: "assistant", message_id: "msg_1" } as const;
   store.event(task, "task.started", { turn: 1 });
   // Two text blocks of one message merge into one item at the later event.
@@ -62,11 +63,8 @@ test("Chat cursors return the same items as a full read and list attachments wit
   store.eventOpaque(task, "claude.activity", { type: "result" });
 
   // A follow-up and its attachment, listed with it on every page it's on.
-  const followUp = { ...note, position: 2, title: "Log" };
-
-  attachments.save(task.id, [
-    { ...followUp, message_id: "msg_follow", file: "2-log.txt" },
-  ]);
+  const followUp = { ...note, message_id: "msg_follow", title: "Log" };
+  attachments.save(task.id, [{ ...followUp, file: "msg_follow-1-log.txt" }]);
 
   store.event(task, "task.instruction", {
     message_id: "msg_follow",

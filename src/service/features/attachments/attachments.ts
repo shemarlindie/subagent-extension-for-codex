@@ -2,7 +2,7 @@ import { lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { readdir, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
-import { asc, eq, max } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
@@ -80,7 +80,7 @@ const slug = (title: string) =>
 
 type Resolved = Omit<
   TaskAttachment,
-  "position" | "file" | "chars" | "lines"
+  "message_id" | "position" | "file" | "chars" | "lines"
 > & {
   text: string;
 };
@@ -151,9 +151,6 @@ async function resolveAttachment(
   };
 }
 
-/** An attachment written to disk, which its send numbers as it saves it. */
-export type Snapshot = Omit<TaskAttachment, "position">;
-
 /** Generated task IDs, the only folder names the sweep removes. */
 const TASK_FOLDER =
   /^task_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -206,23 +203,20 @@ export class Attachments {
   }
 
   /**
-   * Snapshots each attachment into the task's folder as it resolves, and
-   * returns their metadata for the caller to save. `messageId` names the
-   * follow-up they come with and prefixes their file names, so one send's
-   * files never clash with another's. If any attachment fails, it removes what
-   * it wrote, and the caller removes the rest with `discardUnsaved` when the
-   * send fails later.
+   * Snapshots each attachment of message `messageId` into the task's folder
+   * as it resolves, and returns their metadata for the caller to save. File
+   * names start with the message id, so messages never share one. If any
+   * attachment fails, it removes what it wrote.
    */
   async prepare(
     taskId: string,
     project: string,
     inputs: AttachmentInput[],
-    messageId?: string,
+    messageId: string,
   ) {
     if (!inputs.length) return [];
     const folder = this.ensureFolder(taskId);
-    const prefix = messageId === undefined ? "" : `${messageId}-`;
-    const rows: Snapshot[] = [];
+    const rows: TaskAttachment[] = [];
     let bytes = 0;
 
     try {
@@ -243,8 +237,9 @@ export class Attachments {
 
           const row = {
             ...attachment,
-            ...(messageId === undefined ? {} : { message_id: messageId }),
-            file: `${prefix}${index + 1}-${slug(attachment.title)}${storedExtension(attachment.format, attachment.path)}`,
+            message_id: messageId,
+            position: index + 1,
+            file: `${messageId}-${index + 1}-${slug(attachment.title)}${storedExtension(attachment.format, attachment.path)}`,
             chars: text.length,
             lines: lineCount(text),
           };
@@ -271,13 +266,7 @@ export class Attachments {
         }
       }
     } catch (error) {
-      // A request's task isn't saved yet, so its whole folder goes.
-      if (messageId === undefined) {
-        await this.discard(taskId);
-      } else {
-        await this.removeFiles(taskId, rows);
-      }
-
+      await this.removeFiles(taskId, rows);
       throw error;
     }
 
@@ -285,15 +274,15 @@ export class Attachments {
   }
 
   /** Removes a failed send's snapshots unless the send saved them first. */
-  async discardUnsaved(taskId: string, rows: Snapshot[]) {
-    const messageId = rows[0]?.message_id;
+  async discardUnsaved(taskId: string, rows: TaskAttachment[]) {
+    const [first] = rows;
     // A send saves all its snapshots in one transaction, or none.
-    if (!messageId || this.ofMessage(taskId, messageId).length) return;
+    if (!first || this.list(taskId, first.message_id).length) return;
     await this.removeFiles(taskId, rows);
   }
 
   /** Removes snapshot files. Failures are logged, and the files go with the task. */
-  private async removeFiles(taskId: string, rows: Snapshot[]) {
+  private async removeFiles(taskId: string, rows: TaskAttachment[]) {
     const folder = this.folder(taskId);
 
     for (const row of rows) {
@@ -305,45 +294,36 @@ export class Attachments {
     }
   }
 
-  /**
-   * Saves the metadata, numbering the snapshots after the task's highest
-   * position. The send runs this in its transaction, so sends never share one.
-   */
-  save(taskId: string, snapshots: Snapshot[]) {
-    if (!snapshots.length) return;
-
-    const last =
-      this.store.database.orm
-        .select({ position: max(taskAttachments.position) })
-        .from(taskAttachments)
-        .where(eq(taskAttachments.task_id, taskId))
-        .get()?.position ?? 0;
+  /** Saves the metadata. */
+  save(taskId: string, rows: TaskAttachment[]) {
+    if (!rows.length) return;
 
     this.store.database.orm
       .insert(taskAttachments)
-      .values(
-        snapshots.map((a, index) => ({
-          ...a,
-          task_id: taskId,
-          position: last + index + 1,
-        })),
-      )
+      .values(rows.map((a) => ({ ...a, task_id: taskId })))
       .run();
   }
 
-  /** A task's attachments, in the order sent. */
-  list(taskId: string): TaskAttachment[] {
+  /** A task's attachments, or those of message `messageId`, each message's in order. */
+  list(taskId: string, messageId?: string): TaskAttachment[] {
     return this.store.database.orm
       .select()
       .from(taskAttachments)
-      .where(eq(taskAttachments.task_id, taskId))
+      .where(
+        and(
+          eq(taskAttachments.task_id, taskId),
+          messageId === undefined
+            ? undefined
+            : eq(taskAttachments.message_id, messageId),
+        ),
+      )
       .orderBy(asc(taskAttachments.position))
       .all()
       .map((row) => {
         const { task_id: _, ...stored } = checkStored(
           rowSchema,
           row,
-          `attachment ${row.task_id}/${row.position}`,
+          `attachment ${row.task_id}/${row.message_id}/${row.position}`,
         );
 
         return Object.fromEntries(
@@ -352,14 +332,17 @@ export class Attachments {
       });
   }
 
-  /** The attachments that came with the follow-up `messageId`. */
-  ofMessage(taskId: string, messageId: string) {
-    return this.list(taskId).filter((a) => a.message_id === messageId);
-  }
+  /** A page of an attachment, by its message and its place there. */
+  async page(
+    taskId: string,
+    messageId: string,
+    position: number,
+    cursor?: string,
+  ) {
+    const stored = this.list(taskId, messageId).find(
+      (a) => a.position === position,
+    );
 
-  /** A page of one of the task's attachments, by its position. */
-  async page(taskId: string, position: number, cursor?: string) {
-    const stored = this.list(taskId).find((a) => a.position === position);
     if (!stored) throw new AttachmentError("Attachment not found");
     const { file, ...attachment } = stored;
 
@@ -373,6 +356,7 @@ export class Attachments {
     if (page.state === "unavailable") {
       logEvent("warn", "attachments.unavailable", {
         task_id: taskId,
+        message_id: messageId,
         position,
       });
     }

@@ -11,6 +11,9 @@ export const MESSAGE_EVENTS = [
   "agent.reply",
 ];
 
+/** The id of a task's request in its conversation and attachments. */
+export const REQUEST_ID = "request";
+
 /** One message in a task's conversation. */
 export type ConversationMessage = {
   /**
@@ -83,7 +86,7 @@ export function conversation(
   // The task's request always opens its conversation.
   const messages: [ConversationMessage, ...ConversationMessage[]] = [
     {
-      id: "request",
+      id: REQUEST_ID,
       event_id: 0,
       timestamp: task.created_at,
       turn,
