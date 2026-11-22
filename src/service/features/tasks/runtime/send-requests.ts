@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
+import type { AttachmentInput } from "../../../../shared/attachments/model.js";
 import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
 import type {
   BudgetRaise,
@@ -16,6 +17,7 @@ export type SendOptions = {
   delivery?: Delivery;
   budget?: BudgetRaise;
   request_id?: string;
+  attachments?: AttachmentInput[];
 };
 
 const sendStates = ["started", "pending_steer", "queued"] as const;
@@ -74,6 +76,14 @@ export class SendRequests {
                 a.localeCompare(b),
               )
             : null,
+          // Left out when empty, so earlier receipts still match.
+          ...(options.attachments?.length
+            ? {
+                attachments: options.attachments.map((a) =>
+                  Object.entries(a).sort(([x], [y]) => x.localeCompare(y)),
+                ),
+              }
+            : {}),
         }),
       )
       .digest("hex");

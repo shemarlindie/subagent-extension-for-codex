@@ -41,7 +41,8 @@ export interface RunContext {
   task: Task;
   /**
    * The real path of the task's attachment folder, which the worker reads
-   * and must not change. Absent when the task has no attachments.
+   * and must not change. Task control always sets it, since a steer can bring
+   * the first attachment mid-turn.
    */
   attachments?: string;
   /** Aborted to interrupt the turn, which then ends as interrupted. */

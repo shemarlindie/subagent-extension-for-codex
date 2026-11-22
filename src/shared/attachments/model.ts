@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-/** Bounds on `start_task` attachments. Reference sizes count UTF-8 bytes. */
+/** Bounds on one message's attachments. Reference sizes count UTF-8 bytes. */
 export const ATTACHMENT_LIMITS = {
   count: 20,
   summaryChars: 200,
   titleChars: 60,
   inlineChars: 8_000,
   referenceBytes: 2 * 1024 * 1024,
-  taskBytes: 10 * 1024 * 1024,
+  messageBytes: 10 * 1024 * 1024,
   paths: 50,
   pathChars: 1024,
 } as const;
@@ -103,8 +103,10 @@ export const attachmentsSchema = z
 
 /** A stored attachment's metadata. The content is a file in the task's attachment folder. */
 export interface TaskAttachment {
-  /** Its place in the request, from 1. */
+  /** Its number within the task, from 1, continuing across messages. */
   position: number;
+  /** The follow-up message it came with. Absent for the task's request. */
+  message_id?: string;
   title: string;
   summary: string;
   format: AttachmentFormat;
@@ -126,8 +128,8 @@ export interface TaskAttachment {
   end_line?: number;
 }
 
-/** An attachment as Chat lists it under the request, without its private file name. */
-export type RequestAttachment = Omit<TaskAttachment, "file">;
+/** An attachment as Chat lists it under its message, without where it's stored. */
+export type RequestAttachment = Omit<TaskAttachment, "file" | "message_id">;
 
 /** The most bytes of content one `app_get_attachment` page holds. */
 export const ATTACHMENT_PAGE_BYTES = 512 * 1024;

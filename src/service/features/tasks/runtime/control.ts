@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
 import type { EventType } from "../../../../shared/events/event-types.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
@@ -65,6 +66,7 @@ import {
   type QueuePlacement,
 } from "./queue.js";
 import { commitSend } from "./send-acceptance.js";
+import { refuseAttachedCommand, sendAttached } from "./send-attachments.js";
 import {
   SendRequests,
   type RecordSend,
@@ -401,9 +403,8 @@ export class Control {
   private runContext(t: Task, a: Active, sentBefore: number): RunContext {
     return {
       task: t,
-      ...(this.attachments.list(t.id).length
-        ? { attachments: this.attachments.folder(t.id) }
-        : {}),
+      // Even when empty, since a steer can bring the first attachment.
+      attachments: this.attachments.ensureFolder(t.id),
       fileChanged: (edit) => this.changes.record(t, edit),
       editUnrecorded: (path, source) =>
         this.changes.unrecorded(t, path, source),
@@ -598,7 +599,8 @@ export class Control {
    * a command, waits at the front of the queue instead.
    */
   private deliver(t: Task, a: Active, steer: TaskMessage) {
-    if (!a.sink || a.sink({ id: steer.id, text: steer.message })) return true;
+    const text = this.prompts.delivered(t, steer);
+    if (!a.sink || a.sink({ id: steer.id, text })) return true;
     const before = queueSnapshot(t);
     t.pending_steers = t.pending_steers.filter((m) => m.id !== steer.id);
     holdSteer(t, steer);
@@ -948,26 +950,38 @@ export class Control {
     from: Sender,
     options: SendOptions = {},
   ) {
-    return this.sendRequests.run(owner, id, from, message, options, (record) =>
-      this.sendOnce(owner, id, message, from, options, record),
-    );
+    const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
+
+    const send = async (record: RecordSend) => {
+      const t = this.mutableTask(owner, id);
+      const inputs = options.attachments ?? [];
+      refuseAttachedCommand(this.runsCommands(t), message, inputs.length);
+      // References read the project folder, which must still be approved.
+      if (inputs.length) await this.projects?.resolve(t.repository);
+
+      return sendAttached(this.attachments, t, m, inputs, (snapshots) =>
+        this.sendOnce(owner, id, m, snapshots, options, record),
+      );
+    };
+
+    return this.sendRequests.run(owner, id, from, message, options, send);
   }
 
   private async sendOnce(
     owner: string,
     id: string,
-    message: string,
-    from: Sender,
+    m: TaskMessage,
+    snapshots: TaskAttachment[],
     options: SendOptions,
     record: RecordSend,
   ): Promise<SentMessage> {
     const delivery = options.delivery ?? "steer";
-    await this.checkCommand(this.mutableTask(owner, id), message);
+    await this.checkCommand(this.mutableTask(owner, id), m.message);
     const stored = this.mutableTask(owner, id);
     const a = this.active.get(id);
 
     if (!a && !BUSY.includes(stored.status)) {
-      return this.followUp(owner, id, message, from, options, record);
+      return this.followUp(owner, id, m, snapshots, options, record);
     }
 
     const t = a?.task ?? stored;
@@ -981,12 +995,10 @@ export class Control {
     // An interrupt starts a turn with its message, so it never waits.
     if (delivery !== "interrupt") checkWaitingLimit(t, 1);
 
-    const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
-
     // A turn waiting to start takes a steer with its unsent messages, unless
     // one of them is a command, which then waits at the front of the queue.
     const held =
-      !a && !joinsUnsent(this.store, t, message, this.runsCommands(t));
+      !a && !joinsUnsent(this.store, t, m.message, this.runsCommands(t));
 
     if (delivery === "queue" || held) {
       commitSend(
@@ -995,6 +1007,7 @@ export class Control {
         () => {
           if (options.budget) raiseBudget(t, options.budget);
           queueSent(this.store, t, m, delivery);
+          this.attachments.save(t.id, snapshots);
           record(m.id, "queued");
         },
         options.request_id,
@@ -1011,6 +1024,7 @@ export class Control {
         if (!a) this.store.messages.add(t.id, m);
         else t.pending_steers.push(m);
         recordMessage(this.store, t, m, delivery);
+        this.attachments.save(t.id, snapshots);
         this.store.save(t);
 
         record(
@@ -1051,8 +1065,8 @@ export class Control {
   private async followUp(
     owner: string,
     id: string,
-    message: string,
-    from: Sender,
+    m: TaskMessage,
+    snapshots: TaskAttachment[],
     options: SendOptions,
     record: RecordSend,
   ): Promise<SentMessage> {
@@ -1080,10 +1094,9 @@ export class Control {
     const current = this.mutableTask(owner, id);
 
     if (this.active.has(id) || BUSY.includes(current.status)) {
-      return this.sendOnce(owner, id, message, from, options, record);
+      return this.sendOnce(owner, id, m, snapshots, options, record);
     }
 
-    const m: TaskMessage = { id: `msg_${randomUUID()}`, message, from };
     const before = queueSnapshot(t);
 
     commitSend(
@@ -1091,6 +1104,7 @@ export class Control {
       t,
       () => {
         this.store.messages.add(t.id, m);
+        this.attachments.save(t.id, snapshots);
         delete t.queue_paused;
         requeue(t);
         this.store.save(t);
@@ -1140,6 +1154,9 @@ export class Control {
   ) {
     await this.checkCommand(this.queueTask(owner, id), message);
     const t = this.queueTask(owner, id);
+
+    const attached = this.attachments.list(t.id, [messageId]).length;
+    refuseAttachedCommand(this.runsCommands(t), message, attached);
     editQueuedMessage(this.store, t, messageId, message);
 
     return t;

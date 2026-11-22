@@ -5,8 +5,9 @@ import type { Store } from "../storage/store.js";
 
 /**
  * A task's Chat after cursor `after`, as a panel view returns it. An item
- * read again replaces the earlier one with its id, and a cursor of 0 also
- * returns the request with its attachments, which never change.
+ * read again replaces the earlier one with its id, so each sent message
+ * carries its attachments, which never change, whenever it's read. A cursor
+ * of 0 also returns the request with its attachments.
  */
 export function chatRead(
   store: Store,
@@ -20,11 +21,29 @@ export function chatRead(
     (item) => item.event_id > after || (after === 0 && item.event_id === 0),
   );
 
-  const request = items[0];
+  const messages = items.flatMap((item) =>
+    item.kind === "message" && item.message.from !== "worker"
+      ? [item.message]
+      : [],
+  );
 
-  if (after === 0 && request?.kind === "message") {
-    const attached = attachments.list(task.id).map(({ file: _, ...a }) => a);
-    if (attached.length) request.message.attachments = attached;
+  const request = messages.find((m) => m.kind === "request");
+  const sent = messages.filter((m) => m.kind === "message");
+
+  const attached = [
+    ...(request ? attachments.list(task.id, "request") : []),
+    ...attachments.list(
+      task.id,
+      sent.map((m) => m.id),
+    ),
+  ];
+
+  for (const { file: _, message_id, ...a } of attached) {
+    const message = message_id
+      ? sent.find((m) => m.id === message_id)
+      : request;
+
+    if (message) message.attachments = [...(message.attachments ?? []), a];
   }
 
   return { items, next_cursor: Math.max(after, events.at(-1)?.id ?? 0) };

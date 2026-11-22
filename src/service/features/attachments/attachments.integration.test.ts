@@ -21,6 +21,8 @@ import type { AttachmentPage } from "../../../shared/attachments/model.js";
 import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
 import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";
+import type { RunContext } from "../providers/types.js";
+import { chatRead } from "../tasks/conversation/chat-read.js";
 import { SessionPrompts } from "../tasks/conversation/session-prompts.js";
 import {
   input,
@@ -510,3 +512,212 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     );
   },
 );
+
+test("follow-up attachments continue the task's positions from the project folder and reach the worker and Chat", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+  // Only in the project folder, so the worktree task can't read it itself.
+  await writeFile(join(repo, "notes.md"), "one\ntwo\nthree\n");
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [
+      { source: "inline", summary: "A decision.", format: "text", text: "X" },
+    ],
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  const sent = await c.send("alice", t.id, "Check this", "parent", {
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  });
+
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const folder = c.attachments.folder(t.id);
+  const [request, followUp] = c.attachments.list(t.id);
+  assert.ok(request && followUp);
+
+  assert.deepEqual(
+    c.attachments.list(t.id).map((a) => [a.position, a.message_id]),
+    [
+      [1, undefined],
+      [2, sent.message_id],
+    ],
+  );
+
+  const page = (await callTool(
+    c,
+    "alice",
+    "app_get_attachment",
+    { task_id: t.id, position: 2 },
+    "user",
+  )) as AttachmentPage;
+
+  assert.equal(page.content, "one\ntwo\nthree\n");
+
+  const requestList = `Attachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, request.file)}`;
+  const followUpList = `Attachments, read them as needed:\n- notes.md (3 lines): Notes.\n  ${join(folder, followUp.file)}`;
+  assert.equal(recorder.prompts[1], `Check this\n\n${followUpList}`);
+
+  // A new session lists each attachment with the message it came with.
+  const prompt = new SessionPrompts(store, c.attachments).sessionPrompt(
+    store.get(t.id, "alice"),
+  );
+
+  assert.ok(prompt.startsWith(`Investigate\n\n${requestList}\n\n`));
+  assert.ok(prompt.includes(`Parent agent:\nCheck this\n\n${followUpList}`));
+
+  const messages = chatRead(store, c.attachments, store.get(t.id, "alice"), 0)
+    .items.flatMap((item) => (item.kind === "message" ? [item.message] : []))
+    .filter((m) => m.from !== "worker");
+
+  assert.deepEqual(
+    messages.map((m) => [m.text, m.attachments?.map((a) => a.title)]),
+    [
+      ["Investigate", ["Note"]],
+      ["Check this", ["notes.md"]],
+    ],
+  );
+});
+
+test("steers and queued messages carry their snapshots into a task that started without attachments", async () => {
+  const provider = new PromptRecorder();
+  const run = provider.run.bind(provider);
+  let context: RunContext | undefined;
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+  const delivered: string[] = [];
+
+  provider.run = async (ctx, prompt) => {
+    if (!context) {
+      context = ctx;
+
+      ctx.acceptSteers((steer) => {
+        delivered.push(steer.text);
+
+        return true;
+      });
+
+      await finished;
+    }
+
+    return run(ctx, prompt);
+  };
+
+  const { c, store, repo } = await setup(provider);
+  await writeFile(join(repo, "notes.md"), "before\n");
+  const t = await c.start("alice", input(repo));
+  await until(() => !!context);
+  const folder = c.attachments.folder(t.id);
+
+  // The worker can read a steer's attachments, though the task had none.
+  assert.equal(context?.attachments, folder);
+  await access(folder);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: `${text}.`,
+    format: "text" as const,
+    text,
+  });
+
+  // Concurrent sends never share a position.
+  await Promise.all([
+    c.send("alice", t.id, "First", "user", { attachments: [note("A")] }),
+    c.send("alice", t.id, "Second", "user", { attachments: [note("B")] }),
+  ]);
+
+  assert.deepEqual(
+    c.attachments.list(t.id).map((a) => a.position),
+    [1, 2],
+  );
+
+  const [first] = c.attachments.list(t.id);
+  assert.ok(first);
+
+  assert.ok(
+    delivered.includes(
+      `First\n\nAttachments, read them as needed:\n- Note (1 line): A.\n  ${join(folder, first.file)}`,
+    ),
+  );
+
+  const queued = await c.send("alice", t.id, "Later", "user", {
+    delivery: "queue",
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  });
+
+  // The snapshot holds what the sender saw, and undo restores it intact.
+  await writeFile(join(repo, "notes.md"), "after\n");
+  c.removeQueued("alice", t.id, queued.message_id, "user");
+
+  c.restoreQueued("alice", t.id, [{ message_id: queued.message_id, index: 0 }]);
+
+  finish();
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const [snapshot] = c.attachments.list(t.id, [queued.message_id]);
+  assert.ok(snapshot);
+  assert.equal(await readFile(join(folder, snapshot.file), "utf8"), "before\n");
+
+  assert.match(
+    provider.prompts[1] ?? "",
+    /^Later\n\nAttachments, read them as needed:\n- notes\.md/,
+  );
+});
+
+test("a failed send keeps no message or snapshot, and retries match on attachments", async () => {
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const messages = store.messages.count(t.id);
+  const folder = c.attachments.folder(t.id);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: "Note.",
+    format: "text" as const,
+    text,
+  });
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", {
+      attachments: [
+        note("x"),
+        { source: "file", path: "missing.md", summary: "S." },
+      ],
+    }),
+    /Attachment 2 \(missing\.md\): missing\.md doesn't exist/,
+  );
+
+  // A send that fails after its snapshot also removes it.
+  store.database.client.exec(
+    "CREATE TRIGGER reject_attachment BEFORE INSERT ON task_attachments BEGIN SELECT RAISE(ABORT, 'attachment write failed'); END",
+  );
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", { attachments: [note("x")] }),
+    /attachment write failed/,
+  );
+
+  store.database.client.exec("DROP TRIGGER reject_attachment");
+  assert.equal(store.messages.count(t.id), messages);
+  assert.deepEqual(c.attachments.list(t.id), []);
+  assert.deepEqual(await readdir(folder), []);
+
+  const send = (text: string) =>
+    c.send("alice", t.id, "Check", "user", {
+      request_id: "retry",
+      attachments: [note(text)],
+    });
+
+  const sent = await send("x");
+  assert.equal((await send("x")).message_id, sent.message_id);
+  await assert.rejects(send("y"), /different payload/);
+
+  // Failed sends leave no gap in the positions.
+  assert.deepEqual(
+    c.attachments.list(t.id).map((a) => [a.position, a.message_id]),
+    [[1, sent.message_id]],
+  );
+});

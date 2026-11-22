@@ -8,7 +8,7 @@ import { Attachments } from "../../attachments/attachments.js";
 import { Store } from "../storage/store.js";
 import { chatRead } from "./chat-read.js";
 
-test("Chat cursors return the same items as a full read and list attachment metadata once", (t) => {
+test("Chat cursors return the same items as a full read and list attachments with their messages", (t) => {
   const store = new Store(":memory:");
   t.onTestFinished(() => store.close());
   // Listing reads only the database, so the folder is never made.
@@ -61,11 +61,28 @@ test("Chat cursors return the same items as a full read and list attachment meta
   store.event(task, "task.failed", { error_code: "cost_budget_exhausted" });
   store.eventOpaque(task, "claude.activity", { type: "result" });
 
+  // A follow-up and its attachment, listed with it on every page it's on.
+  const followUp = { ...note, position: 2, title: "Log" };
+
+  attachments.save(task.id, [
+    { ...followUp, message_id: "msg_follow", file: "2-log.txt" },
+  ]);
+
+  store.event(task, "task.instruction", {
+    message_id: "msg_follow",
+    message: "Try again",
+    from: "parent",
+    delivery: "steer",
+  });
+
   const newest = store.lastEventId(task.id);
   const all = chatItems(task, store.chatEvents(task.id));
   const [request] = all;
+  const sent = all.at(-1);
   assert.equal(request?.kind, "message");
+  assert.equal(sent?.kind, "message");
   request.message.attachments = [note];
+  sent.message.attachments = [followUp];
   const chatNewest = Math.max(...all.map((item) => item.event_id));
 
   for (let after = 0; after <= newest + 1; after++) {

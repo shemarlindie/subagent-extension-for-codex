@@ -52,7 +52,7 @@ function workspaceRule(task: Task) {
 function systemPromptAppend(c: RunContext) {
   const rules = [
     c.attachments
-      ? "Work only in the provided task workspace, apart from reading the attachments the request lists, which are read-only."
+      ? "Work only in the provided task workspace, apart from reading the attachments that messages list, which are read-only."
       : "Work only in the provided task workspace.",
     "End each turn with a plain reply that says what you did, what you found and what is left.",
     "Follow the configured native permission mode for tool execution.",

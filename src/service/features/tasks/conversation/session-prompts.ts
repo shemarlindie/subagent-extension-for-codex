@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { TaskAttachment } from "../../../../shared/attachments/model.js";
 import { eventPayload } from "../../../../shared/events/payload.js";
 import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Task, TaskMessage } from "../../../../shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
 import type { Store } from "../storage/store.js";
@@ -59,8 +59,9 @@ export class SessionPrompts {
    */
   sessionPrompt(t: Task) {
     const workspaceContext = this.workspaceContext(t);
-    const attachments = this.attachmentList(t);
-    const transcript = t.turn > 1 ? this.transcript(t) : "";
+    const attached = this.byMessage(t);
+    const attachments = this.attachmentList(t, attached.get(undefined));
+    const transcript = t.turn > 1 ? this.transcript(t, attached) : "";
 
     return [
       t.description,
@@ -68,7 +69,7 @@ export class SessionPrompts {
       ...(t.context ?? []),
       ...(attachments ? [attachments] : []),
       ...(transcript ? [transcript] : []),
-      ...this.unsent(t),
+      ...this.unsent(t, attached),
     ].join("\n\n");
   }
 
@@ -87,9 +88,19 @@ export class SessionPrompts {
     return "This task runs in the current repository, including staged, unstaged and untracked files. Write profiles edit this checkout directly. Preserve unrelated uncommitted changes.";
   }
 
-  /** The task's attachments, each with its summary, size and file. */
-  private attachmentList(t: Task) {
-    const attachments = this.attachments.list(t.id);
+  /** The task's attachments by the message they came with, the request's under undefined. */
+  private byMessage(t: Task) {
+    const attached = new Map<string | undefined, TaskAttachment[]>();
+
+    for (const a of this.attachments.list(t.id)) {
+      attached.set(a.message_id, [...(attached.get(a.message_id) ?? []), a]);
+    }
+
+    return attached;
+  }
+
+  /** Attachments, each with its summary, size and file. */
+  private attachmentList(t: Task, attachments: TaskAttachment[] = []) {
     if (!attachments.length) return "";
     const folder = this.attachments.folder(t.id);
 
@@ -102,11 +113,31 @@ export class SessionPrompts {
     ].join("\n");
   }
 
+  /** A message's text, then the list of its attachments. */
+  private withAttachments(
+    t: Task,
+    message: string,
+    attachments?: TaskAttachment[],
+  ) {
+    const list = this.attachmentList(t, attachments);
+
+    return list ? `${message}\n\n${list}` : message;
+  }
+
+  /** A steer as the worker receives it, with its attachments listed. */
+  delivered(t: Task, m: TaskMessage) {
+    return this.withAttachments(
+      t,
+      m.message,
+      this.attachments.list(t.id, [m.id]),
+    );
+  }
+
   /** The messages the worker's session hasn't received, in order. */
-  private unsent(t: Task) {
+  private unsent(t: Task, attached = this.byMessage(t)) {
     return this.store.messages
       .list(t.id, t.instructions_sent)
-      .map((m) => m.message);
+      .map((m) => this.withAttachments(t, m.message, attached.get(m.id)));
   }
 
   /**
@@ -145,7 +176,10 @@ export class SessionPrompts {
    * session's prompt, newest kept within a bound. Messages the worker hasn't
    * received are left out, since the prompt ends with them.
    */
-  private transcript(t: Task) {
+  private transcript(
+    t: Task,
+    attached: Map<string | undefined, TaskAttachment[]>,
+  ) {
     const received = new Set(
       this.store.messages.list(t.id, 0, t.instructions_sent).map((m) => m.id),
     );
@@ -171,7 +205,14 @@ export class SessionPrompts {
         entry = `Your reply:\n${reply.text}`;
       } else if (instruction) {
         const sender = instruction.from === "parent" ? "Parent agent" : "User";
-        entry = `${sender}:\n${instruction.message}`;
+
+        const message = this.withAttachments(
+          t,
+          instruction.message,
+          attached.get(instruction.message_id),
+        );
+
+        entry = `${sender}:\n${message}`;
       }
 
       if (entry === undefined) continue;
