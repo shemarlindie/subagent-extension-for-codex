@@ -3,7 +3,7 @@ import { memo, useMemo, useRef, useState } from "react";
 import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
-import { RequestAttachments } from "../../../attachments/request-attachments";
+import { MessageAttachments } from "../../../attachments/message-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";
 import { MessageText } from "../../shared/message-text";
 import { markdownParts } from "../drafts/complete-paragraphs";
@@ -85,9 +85,9 @@ export const ChatMessageView = memo(function ChatMessageView({
         <div className="chat-sender">Parent agent</div>
       )}
       {messageBody(message, content)}
-      {taskId && message.kind === "request" && message.attachments?.length ? (
+      {taskId && message.attachments?.length ? (
         // Keyed by task, so another task's row fits and folds afresh.
-        <RequestAttachments
+        <MessageAttachments
           key={taskId}
           taskId={taskId}
           attachments={message.attachments}

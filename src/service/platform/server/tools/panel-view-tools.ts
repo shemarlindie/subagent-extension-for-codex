@@ -129,14 +129,16 @@ export function panelViewTools(c: Control, owner: string) {
     app_get_attachment: tool({
       readOnly: true,
       description:
-        "User interface only: a page of a task's attachment, by its position in the request, with the attachment's metadata. state is unavailable when its stored file is missing, too large or not UTF-8 text. Pass next_cursor for more content.",
+        "User interface only: a page of a task's attachment, by the id of the message it came with and its position in that message, with the attachment's metadata. state is unavailable when its stored file is missing, too large or not UTF-8 text. Pass next_cursor for more content.",
       schema: taskId.extend({
+        message_id: z.string().min(1).max(200),
         position: z.number().int().positive(),
         cursor: z.string().max(100).optional(),
       }),
       run: (a) =>
         c.attachments.page(
           c.store.get(a.task_id, owner).id,
+          a.message_id,
           a.position,
           a.cursor,
         ),
@@ -160,7 +162,7 @@ export function panelViewTools(c: Control, owner: string) {
     }),
     app_wait_for_updates: tool({
       readOnly: true,
-      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, it also returns view as of the returned revision, with built_at in epoch milliseconds and json_bytes, the UTF-8 size of its other fields as JSON. Its settings are the owner's panel settings, values.panel in get_settings. plan_usage, present when the plan_usage_meter panel setting is on and a read found plan limits, is the account's plan usage: { plan, windows: [{ id, label, utilization as a fraction, resetsAt in Unix seconds }], read_at in epoch milliseconds }. Its projects are as list_projects returns them, and its list takes app_list_tasks arguments and returns that shape. chat { items, next_cursor } is a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. Cursor 0 also returns the request with its attachments. An item read again replaces the earlier one with its id. activity { events, dropped } holds a task's newest Activity events after a cursor, with a tally of the older events outside the window. pending { tasks } lists the worker updates Codex hasn't seen in a conversation, grouped by task and newest first: turn replies, failures, budget stops and requests Codex may answer, leaving out archived tasks. updating is true while a newer service waits for running turns to end before it takes over. The wait leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
+      description: `User interface only: waits for something the panel should show. It returns the owner's current revision as soon as it differs from after, and with a draft target, as soon as that task's draft grows past after_length, becomes another message or clears; otherwise after wait_ms (at most ${MAX_UPDATE_WAIT_MS}). Without after, or with wait_ms 0, it returns at once, so it also reads a draft. A revision is boot:count, and the count only grows within a boot. With view, it also returns view as of the returned revision, with built_at in epoch milliseconds and json_bytes, the UTF-8 size of its other fields as JSON. Its settings are the owner's panel settings, values.panel in get_settings. plan_usage, present when the plan_usage_meter panel setting is on and a read found plan limits, is the account's plan usage: { plan, windows: [{ id, label, utilization as a fraction, resetsAt in Unix seconds }], read_at in epoch milliseconds }. Its projects are as list_projects returns them, and its list takes app_list_tasks arguments and returns that shape. chat { items, next_cursor } is a task's Chat after a cursor: its messages, an outcome row for each turn's end, and notes for a new session, a recreated worktree and compaction. Cursor 0 also returns the request, and messages carry their attachments. An item read again replaces the earlier one with its id. activity { events, dropped } holds a task's newest Activity events after a cursor, with a tally of the older events outside the window. pending { tasks } lists the worker updates Codex hasn't seen in a conversation, grouped by task and newest first: turn replies, failures, budget stops and requests Codex may answer, leaving out archived tasks. updating is true while a newer service waits for running turns to end before it takes over. The wait leaves view out when only the draft changed, and leaves out chat and activity for a task the owner doesn't have.`,
       schema: z.strictObject({
         after: z.string().max(200).optional(),
         draft: taskId

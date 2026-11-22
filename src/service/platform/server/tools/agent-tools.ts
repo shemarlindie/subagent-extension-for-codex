@@ -179,6 +179,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
           delivery: a.delivery,
           budget: a.budget,
           request_id: a.request_id,
+          attachments: a.attachments,
         });
 
         return {

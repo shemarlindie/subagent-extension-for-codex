@@ -21,6 +21,7 @@ import type { AttachmentPage } from "../../../shared/attachments/model.js";
 import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
 import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";
+import type { RunContext } from "../providers/types.js";
 import { SessionPrompts } from "../tasks/conversation/session-prompts.js";
 import {
   input,
@@ -460,7 +461,12 @@ test("attachment pages keep characters whole, stay with one version and report a
       c,
       owner,
       "app_get_attachment",
-      { task_id: t.id, position: 1, ...(cursor ? { cursor } : {}) },
+      {
+        task_id: t.id,
+        message_id: "request",
+        position: 1,
+        ...(cursor ? { cursor } : {}),
+      },
       "user",
     ) as Promise<AttachmentPage>;
 
@@ -510,3 +516,203 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     );
   },
 );
+
+test("follow-up attachments number within their message, come from the project folder and reach the worker", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+  // Only in the project folder, so the worktree task can't read it itself.
+  await writeFile(join(repo, "notes.md"), "one\ntwo\nthree\n");
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [
+      { source: "inline", summary: "A decision.", format: "text", text: "X" },
+    ],
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  const sent = (await callTool(c, "alice", "send_message", {
+    task_id: t.id,
+    message: "Check this",
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  })) as { message_id: string };
+
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const folder = c.attachments.folder(t.id);
+  const [request] = c.attachments.list(t.id, "request");
+  const [followUp] = c.attachments.list(t.id, sent.message_id);
+  assert.ok(request && followUp);
+  // Each message numbers its own attachments.
+  assert.equal(followUp.position, 1);
+
+  const requestList = `Attachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, request.file)}`;
+  const followUpList = `Attachments, read them as needed:\n- notes.md (3 lines): Notes.\n  ${join(folder, followUp.file)}`;
+  assert.equal(recorder.prompts[1], `Check this\n\n${followUpList}`);
+
+  // A new session lists each attachment with the message it came with.
+  const prompt = new SessionPrompts(store, c.attachments).sessionPrompt(
+    store.get(t.id, "alice"),
+  );
+
+  assert.ok(prompt.startsWith(`Investigate\n\n${requestList}\n\n`));
+  assert.ok(prompt.includes(`Parent agent:\nCheck this\n\n${followUpList}`));
+});
+
+test("steers and queued messages need an approved project and carry their snapshots into a task that started without attachments", async () => {
+  const provider = new PromptRecorder();
+  const run = provider.run.bind(provider);
+  let context: RunContext | undefined;
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+  const delivered: string[] = [];
+
+  provider.run = async (ctx, prompt) => {
+    if (!context) {
+      context = ctx;
+
+      ctx.acceptSteers((steer) => {
+        delivered.push(steer.text);
+
+        return true;
+      });
+
+      await finished;
+    }
+
+    return run(ctx, prompt);
+  };
+
+  const { c, store, repo } = await setup(provider);
+  await writeFile(join(repo, "notes.md"), "before\n");
+  const t = await c.start("alice", input(repo));
+  await until(() => !!context);
+  const folder = c.attachments.folder(t.id);
+
+  // The worker can read a steer's attachments, though the task had none.
+  assert.equal(context?.attachments, folder);
+  await access(folder);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: `${text}.`,
+    format: "text" as const,
+    text,
+  });
+
+  await c.send("alice", t.id, "First", "user", { attachments: [note("A")] });
+  const [first] = c.attachments.list(t.id);
+  assert.ok(first);
+
+  assert.ok(
+    delivered.includes(
+      `First\n\nAttachments, read them as needed:\n- Note (1 line): A.\n  ${join(folder, first.file)}`,
+    ),
+  );
+
+  // Approval is checked before the project is read, so a missing file fails on
+  // approval first, and again as the send saves.
+  c.workspaces.allowedRoots = [];
+  c.projects = new Projects(store.database, c.workspaces);
+
+  await assert.rejects(
+    c.send("alice", t.id, "Third", "user", {
+      attachments: [{ source: "file", path: "missing.md", summary: "S." }],
+    }),
+    /outside allowed roots/,
+  );
+
+  const { repository } = await c.projects.register(repo);
+  const prepare = c.attachments.prepare.bind(c.attachments);
+
+  c.attachments.prepare = (...args) => {
+    c.projects?.remove(repository, true);
+
+    return prepare(...args);
+  };
+
+  await assert.rejects(
+    c.send("alice", t.id, "Third", "user", { attachments: [note("C")] }),
+    /outside allowed roots/,
+  );
+
+  c.attachments.prepare = prepare;
+  await c.projects.register(repo);
+
+  const queued = await c.send("alice", t.id, "Later", "user", {
+    delivery: "queue",
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  });
+
+  // The snapshot holds what the sender saw, and undo restores it intact.
+  await writeFile(join(repo, "notes.md"), "after\n");
+  c.removeQueued("alice", t.id, queued.message_id, "user");
+
+  c.restoreQueued("alice", t.id, [{ message_id: queued.message_id, index: 0 }]);
+
+  finish();
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const [snapshot] = c.attachments.list(t.id, queued.message_id);
+  assert.ok(snapshot);
+  assert.equal(await readFile(join(folder, snapshot.file), "utf8"), "before\n");
+});
+
+test("a failed send keeps no message or snapshot, and retries match on attachments", async () => {
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const messages = store.messages.count(t.id);
+  const folder = c.attachments.folder(t.id);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: "Note.",
+    format: "text" as const,
+    text,
+  });
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", {
+      attachments: [
+        note("x"),
+        { source: "file", path: "missing.md", summary: "S." },
+      ],
+    }),
+    /Attachment 2 \(missing\.md\): missing\.md doesn't exist/,
+  );
+
+  // A send that fails after its snapshot also removes it.
+  store.database.client.exec(
+    "CREATE TRIGGER reject_attachment BEFORE INSERT ON task_attachments BEGIN SELECT RAISE(ABORT, 'attachment write failed'); END",
+  );
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", { attachments: [note("x")] }),
+    /attachment write failed/,
+  );
+
+  store.database.client.exec("DROP TRIGGER reject_attachment");
+  assert.equal(store.messages.count(t.id), messages);
+  assert.deepEqual(c.attachments.list(t.id), []);
+  assert.deepEqual(await readdir(folder), []);
+
+  const send = async (text: string) =>
+    (await callTool(
+      c,
+      "alice",
+      "app_send_message",
+      {
+        task_id: t.id,
+        message: "Check",
+        request_id: "retry",
+        attachments: [note(text)],
+      },
+      "user",
+    )) as { message_id: string };
+
+  const sent = await send("x");
+  assert.equal((await send("x")).message_id, sent.message_id);
+  await assert.rejects(send("y"), /different payload/);
+});

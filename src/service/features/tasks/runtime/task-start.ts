@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
+import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages.js";
 import {
   assertNoLegacyContext,
   startSchema,
@@ -87,13 +88,14 @@ export async function startTask(
       runtime_ms: 0,
     };
 
-    const snapshots = await c.attachments.prepare(
-      t.id,
-      repository,
-      attachments ?? [],
-    );
-
     try {
+      const snapshots = await c.attachments.prepare(
+        t.id,
+        repository,
+        attachments ?? [],
+        REQUEST_ID,
+      );
+
       c.store.transaction(() => {
         // In the transaction, so a CLI revocation can't land before the save.
         check();
@@ -103,7 +105,8 @@ export async function startTask(
         if (limited) c.store.event(t, "agent.limited", limited);
       });
     } catch (error) {
-      if (snapshots.length) await c.attachments.discard(t.id);
+      // The task isn't saved, so its whole folder goes.
+      if (attachments?.length) await c.attachments.discard(t.id);
       throw error;
     }
 

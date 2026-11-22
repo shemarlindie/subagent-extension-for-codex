@@ -1,4 +1,4 @@
-import type { RequestAttachment } from "../../attachments/model.js";
+import type { MessageAttachment } from "../../attachments/model.js";
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import type { Delivery, Sender, TaskView } from "../model.js";
@@ -10,6 +10,9 @@ export const MESSAGE_EVENTS = [
   "agent.message",
   "agent.reply",
 ];
+
+/** The id of a task's request in its conversation and attachments. */
+export const REQUEST_ID = "request";
 
 /** One message in a task's conversation. */
 export type ConversationMessage = {
@@ -30,8 +33,8 @@ export type ConversationMessage = {
   delivery?: Delivery;
   /** A steer the running turn hasn't taken, or one waiting in the queue. */
   state?: "pending_steer" | "queued";
-  /** The request's attachments, which Chat reads with the request. */
-  attachments?: RequestAttachment[];
+  /** The request's or a sent message's attachments, which Chat reads with it. */
+  attachments?: MessageAttachment[];
 };
 
 /** A worker message's SDK id, so its text blocks and draft share it. */
@@ -83,7 +86,7 @@ export function conversation(
   // The task's request always opens its conversation.
   const messages: [ConversationMessage, ...ConversationMessage[]] = [
     {
-      id: "request",
+      id: REQUEST_ID,
       event_id: 0,
       timestamp: task.created_at,
       turn,

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { useController } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
@@ -10,9 +10,9 @@ import {
   type AttachmentFit,
 } from "./attachment-fit";
 
-type RequestAttachmentsProps = {
+type MessageAttachmentsProps = {
   taskId: string;
-  attachments: RequestAttachment[];
+  attachments: MessageAttachment[];
 };
 
 /** Reads the hidden copies' widths and fits the row to its current width. */
@@ -54,13 +54,13 @@ function useAttachmentFit(count: number) {
 }
 
 /**
- * The request's attachments in one right-aligned row. Chips that don't fit
+ * A message's attachments in one right-aligned row. Chips that don't fit
  * hide behind "+N more", which expands the row in place.
  */
-export function RequestAttachments({
+export function MessageAttachments({
   taskId,
   attachments,
-}: RequestAttachmentsProps) {
+}: MessageAttachmentsProps) {
   const controller = useController();
   const count = attachments.length;
   const { row, measure, fit } = useAttachmentFit(count);
@@ -68,7 +68,7 @@ export function RequestAttachments({
   const hidden = count - fit.shown;
   const shown = expanded ? attachments : attachments.slice(0, fit.shown);
 
-  const open = (attachment: RequestAttachment) => {
+  const open = (attachment: MessageAttachment) => {
     const task = findTask(controller.getSnapshot(), taskId);
 
     if (task) {
@@ -80,10 +80,10 @@ export function RequestAttachments({
   const counts = Array.from({ length: count - 1 }, (_, index) => index + 1);
 
   return (
-    <div className="request-attachments" data-expanded={expanded || undefined}>
+    <div className="message-attachments" data-expanded={expanded || undefined}>
       <div
         ref={row}
-        className="request-attachments-row"
+        className="message-attachments-row"
         role="group"
         aria-label="Attachments"
       >
@@ -100,7 +100,7 @@ export function RequestAttachments({
           <button
             key="toggle"
             type="button"
-            className="request-attachments-toggle"
+            className="message-attachments-toggle"
             aria-expanded={expanded}
             aria-label={
               expanded
@@ -113,7 +113,7 @@ export function RequestAttachments({
           </button>
         )}
       </div>
-      <div className="request-attachments-measure" aria-hidden="true" inert>
+      <div className="message-attachments-measure" aria-hidden="true" inert>
         <div ref={measure}>
           {attachments.map((attachment) => (
             <span
@@ -127,7 +127,7 @@ export function RequestAttachments({
           {counts.map((hiddenCount) => (
             <span
               key={hiddenCount}
-              className="request-attachments-toggle"
+              className="message-attachments-toggle"
               data-label={hiddenCount}
             >
               {moreLabel(hiddenCount)}

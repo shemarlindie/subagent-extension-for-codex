@@ -5,7 +5,7 @@ import {
   ATTACHMENT_LIMITS,
   ATTACHMENT_PAGE_BYTES,
   type AttachmentPage,
-  type RequestAttachment,
+  type MessageAttachment,
 } from "../../../shared/attachments/model.js";
 import {
   decodeFileCursor,
@@ -71,7 +71,7 @@ async function storedBytes(path: string) {
  */
 export async function attachmentPage(
   path: string,
-  attachment: RequestAttachment,
+  attachment: MessageAttachment,
   cursor?: string,
 ): Promise<AttachmentPage> {
   const unavailable = { attachment, state: "unavailable" } as const;

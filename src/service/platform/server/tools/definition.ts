@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { attachmentsSchema } from "../../../../shared/attachments/model.js";
 import {
   budgetRaiseSchema,
   deliveries,
@@ -40,6 +41,7 @@ export const messageInput = taskId.extend({
     .describe(
       "Raise the task's budget first, so a turn stopped by its budget can carry on. Each limit can only go up: a higher amount, or null for no limit.",
     ),
+  attachments: attachmentsSchema,
 });
 
 /**

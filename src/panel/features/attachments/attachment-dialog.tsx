@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import type {
   AttachmentPage,
-  RequestAttachment,
+  MessageAttachment,
 } from "../../../shared/attachments/model.js";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
@@ -27,17 +27,18 @@ type Read = { position: number } & (
 );
 
 /**
- * Reads the whole attachment at `position`. Returns nothing until that read
- * settles, so a step never shows the previous attachment's content.
+ * Reads the whole attachment at `position` in message `messageId`. Returns
+ * nothing until that read settles, so a step never shows the previous
+ * attachment's content.
  */
-function useAttachment(task: Task, position: number) {
+function useAttachment(task: Task, messageId: string, position: number) {
   const controller = useController();
   const [read, setRead] = useState<Read>();
 
   useEffect(() => {
     let current = true;
 
-    readAttachment(task.id, position, (args) =>
+    readAttachment(task.id, { message_id: messageId, position }, (args) =>
       controller.tool<AttachmentPage>("app_get_attachment", args),
     ).then(
       (page) => current && setRead({ position, status: "ready", page }),
@@ -53,12 +54,12 @@ function useAttachment(task: Task, position: number) {
     return () => {
       current = false;
     };
-  }, [controller, task.id, position]);
+  }, [controller, task.id, messageId, position]);
 
   return read?.position === position ? read : undefined;
 }
 
-type AttachmentHeaderProps = { attachment: RequestAttachment };
+type AttachmentHeaderProps = { attachment: MessageAttachment };
 
 function AttachmentHeader({ attachment }: AttachmentHeaderProps) {
   return (
@@ -74,12 +75,12 @@ function AttachmentHeader({ attachment }: AttachmentHeaderProps) {
 
 type AttachmentPreviewProps = {
   task: Task;
-  attachment: RequestAttachment;
+  attachment: MessageAttachment;
 };
 
 /** An attachment's summary and origin, then its content in a file viewer. */
 function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
-  const read = useAttachment(task, attachment.position);
+  const read = useAttachment(task, attachment.message_id, attachment.position);
   const page = read?.status === "ready" ? read.page : undefined;
   const controller = useController();
 
@@ -162,8 +163,8 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
 }
 
 type AttachmentNavProps = {
-  attachment: RequestAttachment;
-  attachments: RequestAttachment[];
+  attachment: MessageAttachment;
+  attachments: MessageAttachment[];
 };
 
 /** Steps through the message's attachments in the order its chips show. */

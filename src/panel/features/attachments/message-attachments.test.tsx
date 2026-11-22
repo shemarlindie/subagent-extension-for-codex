@@ -3,13 +3,14 @@ import { cleanup, render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Transport } from "../../app/state/types";
-import { RequestAttachments } from "./request-attachments";
+import { MessageAttachments } from "./message-attachments";
 
-const note = (position: number): RequestAttachment => ({
+const note = (position: number): MessageAttachment => ({
+  message_id: "request",
   position,
   title: `Note ${position}`,
   summary: `Summary ${position}.`,
@@ -46,7 +47,7 @@ test("hidden chips fold behind a toggle that keeps focus as the row expands and 
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <RequestAttachments taskId="task" attachments={attachments} />
+      <MessageAttachments taskId="task" attachments={attachments} />
     </ControllerContext.Provider>,
   );
 

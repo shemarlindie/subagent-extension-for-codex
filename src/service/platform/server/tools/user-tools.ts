@@ -83,6 +83,7 @@ export function userTools(
           delivery: a.delivery,
           budget: a.budget,
           request_id: a.request_id,
+          attachments: a.attachments,
         });
 
         return {
