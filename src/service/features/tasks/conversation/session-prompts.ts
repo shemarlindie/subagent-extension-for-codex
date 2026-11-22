@@ -60,8 +60,9 @@ export class SessionPrompts {
    */
   sessionPrompt(t: Task) {
     const workspaceContext = this.workspaceContext(t);
-    const attachments = this.attachmentList(t, REQUEST_ID);
-    const transcript = t.turn > 1 ? this.transcript(t) : "";
+    const attached = this.byMessage(t);
+    const attachments = this.attachmentList(t, attached.get(REQUEST_ID));
+    const transcript = t.turn > 1 ? this.transcript(t, attached) : "";
 
     return [
       t.description,
@@ -69,7 +70,7 @@ export class SessionPrompts {
       ...(t.context ?? []),
       ...(attachments ? [attachments] : []),
       ...(transcript ? [transcript] : []),
-      ...this.unsent(t),
+      ...this.unsent(t, attached),
     ].join("\n\n");
   }
 
@@ -88,9 +89,19 @@ export class SessionPrompts {
     return "This task runs in the current repository, including staged, unstaged and untracked files. Write profiles edit this checkout directly. Preserve unrelated uncommitted changes.";
   }
 
-  /** Message `messageId`'s attachments, each with its summary, size and file. */
-  private attachmentList(t: Task, messageId: string) {
-    const attachments = this.attachments.list(t.id, messageId);
+  /** The task's attachments by the message they came with. */
+  private byMessage(t: Task) {
+    const attached = new Map<string, TaskAttachment[]>();
+
+    for (const a of this.attachments.list(t.id)) {
+      attached.set(a.message_id, [...(attached.get(a.message_id) ?? []), a]);
+    }
+
+    return attached;
+  }
+
+  /** Attachments, each with its summary, size and file. */
+  private attachmentList(t: Task, attachments: TaskAttachment[] = []) {
     if (!attachments.length) return "";
     const folder = this.attachments.folder(t.id);
 
@@ -104,22 +115,30 @@ export class SessionPrompts {
   }
 
   /** A message's text, then the list of its attachments. */
-  private withAttachments(t: Task, messageId: string, message: string) {
-    const list = this.attachmentList(t, messageId);
+  private withAttachments(
+    t: Task,
+    message: string,
+    attachments?: TaskAttachment[],
+  ) {
+    const list = this.attachmentList(t, attachments);
 
     return list ? `${message}\n\n${list}` : message;
   }
 
   /** A steer as the worker receives it, with its attachments listed. */
   delivered(t: Task, m: TaskMessage) {
-    return this.withAttachments(t, m.id, m.message);
+    return this.withAttachments(
+      t,
+      m.message,
+      this.attachments.list(t.id, m.id),
+    );
   }
 
   /** The messages the worker's session hasn't received, in order. */
-  private unsent(t: Task) {
+  private unsent(t: Task, attached = this.byMessage(t)) {
     return this.store.messages
       .list(t.id, t.instructions_sent)
-      .map((m) => this.withAttachments(t, m.id, m.message));
+      .map((m) => this.withAttachments(t, m.message, attached.get(m.id)));
   }
 
   /**
@@ -158,7 +177,7 @@ export class SessionPrompts {
    * session's prompt, newest kept within a bound. Messages the worker hasn't
    * received are left out, since the prompt ends with them.
    */
-  private transcript(t: Task) {
+  private transcript(t: Task, attached: Map<string, TaskAttachment[]>) {
     const received = new Set(
       this.store.messages.list(t.id, 0, t.instructions_sent).map((m) => m.id),
     );
@@ -187,8 +206,8 @@ export class SessionPrompts {
 
         const message = this.withAttachments(
           t,
-          instruction.message_id,
           instruction.message,
+          attached.get(instruction.message_id),
         );
 
         entry = `${sender}:\n${message}`;
