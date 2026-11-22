@@ -6,33 +6,37 @@ description: Prepare, publish and monitor a release of the extension. Use when a
 # Release
 
 Follow [Release a version](../../../docs/releasing.md#release-a-version). This
-skill covers what an agent adds to it. If the release pull request is already
-open, work on its branch: edit the notes there, or go to step 4 to publish.
+skill covers what an agent adds to it.
+
+Start at step 1 on `main`. When the release pull request is already open, check
+out its branch and start at step 2 to revise the notes or step 4 to publish.
 
 ## 1. Draft the notes
 
 Run `echo n | npm run release:prepare`, adding `-- <version>` when the user
 chose one. It drafts the notes, then exits with "Cancelled" and keeps them.
-Check every commit since the last release and add user-visible changes the
-draft misses.
 
 ## 2. Clean up the notes
 
-Match the style of recent sections in `CHANGELOG.md`:
+Check every commit since the last release against its pull request. Then
+rewrite the section to match recent ones in `CHANGELOG.md`:
 
 - Group entries under headings for the areas users see. Keep **Breaking
   changes** first and **Fixes** last.
 - Give a feature and its follow-ups one entry that lists every pull request,
   such as `(#164, #166)`.
-- Leave out changes users can't see, such as dev tooling, CI and tests.
-
-Check each entry against its pull request.
+- Add user-visible changes the draft misses. Leave out changes users can't see,
+  such as dev tooling, CI and tests.
 
 ## 3. Preview with the user
 
-Show the user the section and what you merged or left out. Apply their edits
-and wait for approval. Stop here if the user only asked for notes. Otherwise run
-`npm run release:prepare -- --yes`, with the same version if the user chose one.
+Show the user the section and what you added, merged or left out. Apply their
+edits and wait for approval. Then do one of these:
+
+- On an open release pull request's branch, commit and push the notes.
+- If the user only asked for notes, stop.
+- Otherwise run `npm run release:prepare -- --yes`, with the same version if the
+  user chose one.
 
 ## 4. Publish and monitor
 
