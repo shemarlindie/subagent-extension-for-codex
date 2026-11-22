@@ -7,7 +7,7 @@ description: Prepare, publish and monitor a release of the extension. Use when a
 
 Follow [Release a version](../../../docs/releasing.md#release-a-version). This
 skill covers what an agent adds to it. If the release pull request is already
-open, go to step 4 and use its branch.
+open, work on its branch: edit the notes there, or go to step 4 to publish.
 
 ## 1. Draft the notes
 
