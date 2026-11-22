@@ -1,45 +1,51 @@
 import { useRef } from "react";
 
-import { planProgress } from "../../../../shared/tasks/plan";
+import { planProgress, type TaskPlan } from "../../../../shared/tasks/plan";
 import { useSessionState } from "../../../app/state/session/use-session-state";
-import type { Task } from "../../../app/state/types";
 import { Chevron } from "../../../shared/components/chevron";
 import { useAnimatedHeight } from "../../../shared/components/motion/use-animated-height";
 import { planCollapseChoice, planCollapsed } from "./plan-collapse";
-import { PlanStepIcon } from "./plan-step-icon";
+import { PlanStepIcon, type PlanStepState } from "./plan-step-icon";
 import { PlanSteps } from "./plan-steps";
 
-type PlanCardProps = { task: Task };
+type PlanCardProps = {
+  taskId: string;
+  plan: TaskPlan;
+  /** The worker is at work on its current step. */
+  working: boolean;
+};
 
 /**
- * The worker's latest plan above Chat's composer, as Claude Code shows it.
- * It stays after the turn ends, until the worker clears or replaces it.
+ * The worker's plan above Chat's composer while it has steps left, as Claude
+ * Code shows it.
  */
-export function PlanCard({ task }: PlanCardProps) {
+export function PlanCard({ taskId, plan, working }: PlanCardProps) {
   const card = useRef<HTMLElement>(null);
 
   const [choice, setChoice] = useSessionState(
     "task",
-    task.id,
+    taskId,
     (state) => state.planCollapse,
   );
 
-  const plan = task.plan;
-  const collapsed = plan ? planCollapsed(plan, choice) : false;
-  useAnimatedHeight(card, collapsed);
-  if (!plan?.steps.length) return null;
+  const collapsed = planCollapsed(plan, choice);
+  const stale = Boolean(plan.stale);
+
+  // Eases every change that resizes the card: its form, its steps and the caption.
+  useAnimatedHeight(
+    card,
+    `${collapsed}\n${stale}\n${plan.steps.map((s) => s.content).join("\n")}`,
+  );
 
   const { done, total } = planProgress(plan.steps);
   const count = `${done} of ${total}`;
-  const stale = Boolean(plan.stale);
-  const spin = task.status === "running";
+  let state: PlanStepState = working ? "working" : "paused";
+  if (stale) state = "stale";
 
   const toggle = () =>
     setChoice({ planCollapse: planCollapseChoice(plan, !collapsed) });
 
-  const label = `${stale ? "Plan from before your last message" : "Plan"}, ${
-    done === total ? `all ${total} steps done` : `${count} steps done`
-  }`;
+  const label = `${stale ? "Plan from before your last message" : "Plan"}, ${count} steps done`;
 
   // The step in progress, or the next one when none is.
   const current = plan.steps.find((s) => s.status !== "completed");
@@ -56,20 +62,12 @@ export function PlanCard({ task }: PlanCardProps) {
         <button
           type="button"
           className="plan-card-row"
-          data-done={current ? undefined : ""}
           aria-expanded={false}
           onClick={toggle}
         >
-          <PlanStepIcon
-            status={current?.status ?? "completed"}
-            stale={stale}
-            spin={spin}
-          />
-          <span className="plan-card-current">
-            {current?.content ??
-              (total === 1 ? "Step done" : `All ${total} steps done`)}
-          </span>
-          {current && <span className="plan-card-count">{count}</span>}
+          <PlanStepIcon status={current?.status ?? "pending"} state={state} />
+          <span className="plan-card-current">{current?.content}</span>
+          <span className="plan-card-count">{count}</span>
           <Chevron size={9} />
         </button>
       ) : (
@@ -89,7 +87,7 @@ export function PlanCard({ task }: PlanCardProps) {
               Plan from before your last message
             </p>
           )}
-          <PlanSteps steps={plan.steps} stale={stale} spin={spin} />
+          <PlanSteps steps={plan.steps} state={state} />
         </>
       )}
     </section>

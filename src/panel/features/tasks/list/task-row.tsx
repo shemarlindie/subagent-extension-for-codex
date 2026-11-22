@@ -2,7 +2,7 @@ import { ContextMenu } from "@base-ui/react/context-menu";
 import { memo, type MouseEvent, type SyntheticEvent } from "react";
 
 import { archivable } from "../../../../shared/tasks/archive.js";
-import { planOpen, planProgress } from "../../../../shared/tasks/plan.js";
+import { pinnedPlan, planProgress } from "../../../../shared/tasks/plan.js";
 import { useController } from "../../../app/state/controller-context";
 import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
@@ -208,8 +208,9 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
 
 /** How far the worker's plan has got, while it has steps left. */
 function TaskRowPlan({ task }: Pick<TaskRowProps, "task">) {
-  if (!task.plan || !planOpen(task.plan.steps)) return null;
-  const { done, total } = planProgress(task.plan.steps);
+  const plan = pinnedPlan(task.plan);
+  if (!plan) return null;
+  const { done, total } = planProgress(plan.steps);
 
   return (
     <span className="row-plan">

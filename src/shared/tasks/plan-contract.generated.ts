@@ -16,3 +16,7 @@ export const agentPlanPayloadSchema = z.object({
   steps: z.array(planStepSchema),
   changed: z.array(z.number()).optional(),
 });
+
+export const taskPlanEndedPayloadSchema = z.object({
+  steps: z.array(planStepSchema),
+});

@@ -11,6 +11,7 @@ import {
   askPermission,
   captureOptions,
   context,
+  preToolUseHook,
   setClaudeOptions,
 } from "./claude-test-harness.js";
 import { ClaudeAgentProvider } from "./provider.js";
@@ -128,11 +129,16 @@ test("update_plan saves the plan through the run context and answers in one line
 
   // An invalid call is an error that changes nothing.
   assert.deepEqual(await call({}), {
-    text: "Send either items or advance: true.",
+    text: "Send one of items, advance: true, or done and start.",
     isError: true,
   });
 
   assert.equal(c.task.plan?.steps[1]?.status, "in_progress");
+
+  assert.deepEqual(await call({ done: [2] }), {
+    text: "Plan updated: all 2 steps are done.",
+    isError: false,
+  });
 
   assert.deepEqual(await call({ items: [] }), {
     text: "Plan cleared.",
@@ -140,4 +146,68 @@ test("update_plan saves the plan through the run context and answers in one line
   });
 
   assert.equal(c.task.plan, undefined);
+});
+
+test("an open plan returns to the worker after compaction or in a new session, and subagents can't change it", async () => {
+  const { c } = await context();
+  const options = await launch(c);
+  const sessionStart = options.hooks?.SessionStart?.[0]?.hooks[0];
+  assert.ok(sessionStart);
+  const signal = new AbortController().signal;
+  const base = { session_id: "x", transcript_path: "x", cwd: "x" };
+
+  const reminder = async (source: "startup" | "resume" | "compact") => {
+    const output = (await sessionStart(
+      { ...base, hook_event_name: "SessionStart", source },
+      undefined,
+      { signal },
+    )) as { hookSpecificOutput?: { additionalContext?: string } };
+
+    return output.hookSpecificOutput?.additionalContext;
+  };
+
+  const plan = (status: "in_progress" | "completed") => ({
+    steps: [
+      { content: "Read", status: "completed" as const },
+      { content: "Report", status },
+    ],
+    turn: 1,
+    updated_at: "",
+  });
+
+  c.task.plan = plan("in_progress");
+
+  const expected = [
+    "Your plan for this task, as the user's panel shows it:",
+    "1. [completed] Read",
+    "2. [in_progress] Report",
+    "Keep it current with update_plan: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.",
+  ].join("\n");
+
+  assert.equal(await reminder("compact"), expected);
+  assert.equal(await reminder("startup"), expected);
+  // A resumed session still has its update_plan calls.
+  assert.equal(await reminder("resume"), undefined);
+  c.task.plan = plan("completed");
+  assert.equal(await reminder("compact"), undefined);
+
+  const decision = async (agent_id?: string) => {
+    const output = (await preToolUseHook(options)(
+      {
+        ...base,
+        hook_event_name: "PreToolUse",
+        tool_name: TOOL,
+        tool_input: { advance: true },
+        tool_use_id: "x",
+        ...(agent_id ? { agent_id } : {}),
+      },
+      "x",
+      { signal },
+    )) as { hookSpecificOutput?: { permissionDecision?: string } };
+
+    return output.hookSpecificOutput?.permissionDecision;
+  };
+
+  assert.equal(await decision("subagent-1"), "deny");
+  assert.equal(await decision(), undefined);
 });

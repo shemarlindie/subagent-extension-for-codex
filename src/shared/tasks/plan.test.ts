@@ -3,12 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { PlanStep } from "./plan-contract.js";
-import {
-  applyPlanUpdate,
-  markPlanStale,
-  planResultLine,
-  type TaskPlan,
-} from "./plan.js";
+import { applyPlanUpdate } from "./plan.js";
 
 const steps = (...statuses: PlanStep["status"][]): PlanStep[] =>
   statuses.map((status, i) => ({ content: `Step ${i + 1}`, status }));
@@ -77,6 +72,45 @@ test("advance completes the step in progress and starts the next pending one", (
   });
 });
 
+test("done and start catch the plan up by step number", () => {
+  // Past step 1, the worker completes 1 and 2 and starts 3.
+  assert.deepEqual(
+    applyPlanUpdate(steps("in_progress", "pending", "pending", "pending"), {
+      done: [1, 2],
+      start: 3,
+    }),
+    {
+      kind: "updated",
+      steps: steps("completed", "completed", "in_progress", "pending"),
+      changed: [0, 1, 2],
+    },
+  );
+
+  // Starting another step leaves an unfinished one pending.
+  assert.deepEqual(
+    applyPlanUpdate(steps("in_progress", "pending"), { start: 2 }),
+    {
+      kind: "updated",
+      steps: steps("pending", "in_progress"),
+      changed: [0, 1],
+    },
+  );
+
+  // done alone starts nothing.
+  assert.deepEqual(
+    applyPlanUpdate(steps("in_progress", "pending"), { done: [1] }),
+    { kind: "updated", steps: steps("completed", "pending"), changed: [0] },
+  );
+
+  assert.deepEqual(
+    applyPlanUpdate(steps("completed", "pending"), { done: [1] }),
+    {
+      kind: "unchanged",
+      message: "Plan unchanged: those steps already have that status.",
+    },
+  );
+});
+
 test("invalid updates change nothing and say why", () => {
   const error = (current: PlanStep[] | undefined, input: object) => {
     const result = applyPlanUpdate(current, input);
@@ -85,16 +119,25 @@ test("invalid updates change nothing and say why", () => {
     return result.error;
   };
 
-  assert.equal(error(undefined, {}), "Send either items or advance: true.");
+  const oneForm = "Send one of items, advance: true, or done and start.";
+  assert.equal(error(undefined, {}), oneForm);
+  assert.equal(error(steps("pending"), { advance: true, start: 1 }), oneForm);
 
   assert.equal(
-    error(undefined, { items: [], advance: true }),
-    "Send either items or advance: true.",
+    error(undefined, { done: [1] }),
+    "There is no plan yet. Send items first.",
   );
 
+  for (const input of [{ done: [0] }, { start: 3 }]) {
+    assert.equal(
+      error(steps("pending", "pending"), input),
+      "Step numbers run from 1 to 2.",
+    );
+  }
+
   assert.equal(
-    error(undefined, { advance: true }),
-    "There is no plan to advance.",
+    error(steps("pending", "pending"), { done: [1], start: 1 }),
+    "A step can't be both done and started.",
   );
 
   assert.equal(
@@ -113,34 +156,4 @@ test("invalid updates change nothing and say why", () => {
     error(undefined, { items: steps("in_progress", "in_progress") }),
     "At most one step can be in progress.",
   );
-});
-
-test("the result line says where the plan stands", () => {
-  assert.equal(
-    planResultLine(steps("completed", "completed", "in_progress", "pending")),
-    "Plan updated: step 3 of 4 is in progress.",
-  );
-
-  assert.equal(
-    planResultLine(steps("completed", "completed")),
-    "Plan updated: all 2 steps are done.",
-  );
-
-  assert.equal(planResultLine([]), "Plan cleared.");
-});
-
-test("only a plan with steps left goes stale", () => {
-  const plan = (s: PlanStep[]): TaskPlan => ({
-    steps: s,
-    turn: 1,
-    updated_at: "2026-11-21T00:00:00.000Z",
-  });
-
-  const open = plan(steps("completed", "in_progress"));
-  markPlanStale(open);
-  assert.equal(open.stale, true);
-
-  const finished = plan(steps("completed"));
-  markPlanStale(finished);
-  assert.equal(finished.stale, undefined);
 });

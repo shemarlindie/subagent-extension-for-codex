@@ -1,16 +1,17 @@
 import type { PlanStepStatus } from "../../../../shared/tasks/plan-contract";
 import { Icon } from "../../../shared/components/icons/icons";
 
-type PlanStepIconProps = {
-  status: PlanStepStatus;
-  /** A message reached the worker after the plan, so the current step waits. */
-  stale?: boolean;
-  /** The current step turns slowly while the worker is on it. */
-  spin?: boolean;
-};
+/**
+ * Where the worker is on the current step: on it, stopped for compaction, input
+ * or the end of the turn, or past it since a message reached it after the
+ * plan. Activity's past rows leave it out.
+ */
+export type PlanStepState = "working" | "paused" | "stale";
+
+type PlanStepIconProps = { status: PlanStepStatus; state?: PlanStepState };
 
 /** A step's status as Claude Code draws it, named for screen readers. */
-export function PlanStepIcon({ status, stale, spin }: PlanStepIconProps) {
+export function PlanStepIcon({ status, state }: PlanStepIconProps) {
   if (status === "completed") {
     return <Icon name="check-circle-filled" size={14} label="Done" />;
   }
@@ -19,18 +20,27 @@ export function PlanStepIcon({ status, stale, spin }: PlanStepIconProps) {
     return <Icon name="circle-dashed" size={14} label="Pending" />;
   }
 
-  return stale ? (
-    <Icon
-      name="more-circle"
-      size={14}
-      label="Waiting for the worker to update the plan"
-    />
-  ) : (
+  if (state === "paused" || state === "stale") {
+    return (
+      <Icon
+        name="more-circle"
+        size={14}
+        label={
+          state === "stale"
+            ? "Waiting for the worker to update the plan"
+            : "Paused"
+        }
+      />
+    );
+  }
+
+  // The current step turns slowly while the worker is on it.
+  return (
     <Icon
       name="circle-progress"
       size={14}
       label="In progress"
-      className={spin ? "plan-step-spin" : undefined}
+      className={state === "working" ? "plan-step-spin" : undefined}
     />
   );
 }

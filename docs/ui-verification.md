@@ -170,9 +170,10 @@ Host settings:
 | Outline the sketch                          | Repository with no commits: the fallback notice. **Field notes** and **Sketch** show their icons in **Manage projects…**, and adding a path with `no-git` in it adds a folder without Git. |
 | Speed up the production build               | 60-file recorded diff, listed as 61 files because its rename shows as a deletion and an addition. Removal asks before discarding checkout changes.                                         |
 | Profile the production build                | Large added files and multiple pages of diff and file previews.                                                                                                                            |
-| Plan: split billing                         | Running task with a plan 3 of 7 steps done: the expanded card with the spinning current step, the row count and Plan rows in Activity.                                                     |
-| Plan: steered mid-step                      | A taken steer makes the plan stale: the **Plan from before your last message** caption and the waiting icon on the current step.                                                           |
-| Plan: finished                              | Completed task whose plan is done: the card starts collapsed as **All 7 steps done**, and the row shows no count.                                                                          |
+| Plan: split billing                         | Running plan, 3 of 7 steps done: the card, the row count and Plan rows in Activity.                                                                                                        |
+| Plan: steered mid-step                      | Stale plan after a taken steer: the caption and the paused current step.                                                                                                                   |
+| Plan: finished                              | Finished plan: a history row in Chat, no card and no row count.                                                                                                                            |
+| Plan: set aside                             | Plan left stale at the turn's end: a history row with steps left, and no card.                                                                                                             |
 
 Read state:
 

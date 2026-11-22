@@ -19,7 +19,11 @@ import {
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import { recordClaudeFileEdits } from "./file-edits.js";
 import { isWorkerTool, workerToolNames } from "./worker-tool-names.js";
-import { workerMcpServers, workerToolsPrompt } from "./worker-tools.js";
+import {
+  planReminder,
+  workerMcpServers,
+  workerToolsPrompt,
+} from "./worker-tools.js";
 
 /** The reason shown when a permission prompt is denied without a message. */
 function defaultDenialMessage(tool: string) {
@@ -178,6 +182,7 @@ export async function claudeTurnOptions(
       append: systemPromptAppend(c),
     },
     hooks: {
+      SessionStart: [{ hooks: [planReminder(c)] }],
       PostToolUse: [
         {
           hooks: [
@@ -203,6 +208,12 @@ export async function claudeTurnOptions(
           hooks: [
             async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
+
+              // Subagents share the worker's tools, but the plan is the worker's own.
+              if (input.agent_id && isWorkerTool(input.tool_name)) {
+                return denied("Only the main worker keeps the plan");
+              }
+
               const toolInput = input.tool_input as Record<string, unknown>;
 
               if (

@@ -364,12 +364,16 @@ response, ask Codex about it or open that turn's activity. Hover or activate a
 timestamp for its full date and time. Failures keep their error. Notes mark
 compaction, new sessions and recreated worktrees.
 
-When the worker shows a [plan](mcp-reference.md#worker-plans), a card above the
-working status lists its steps. An open plan starts expanded and a finished one
-collapsed. Collapsed, the card shows the current step and progress. Your choice
-holds until the worker sends a new list or finishes the plan. A message that
-reaches the worker after its latest update labels the card **Plan from before
-your last message** until the worker updates it.
+A worker's [plan](mcp-reference.md#worker-plans) shows as a card above the
+working status while it has steps left. The current step spins while the worker
+is on it and pauses while it compacts or waits, or after its turn ends. Once a
+new message reaches the worker, the card reads **Plan from before your last
+message** until the worker updates it. If that turn ends without an update, the
+plan is set aside.
+
+A plan leaves the card when it finishes, is replaced or cleared, or is set
+aside. It stays in Chat as a one-line history row that expands to its steps. The
+worker's next update to a set-aside plan pins it again.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |

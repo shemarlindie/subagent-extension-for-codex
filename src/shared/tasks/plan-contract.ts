@@ -14,3 +14,11 @@ export interface AgentPlanPayload {
    */
   changed?: number[];
 }
+
+/**
+ * A plan leaving the pinned card, with its final steps: finished, replaced or
+ * cleared with steps left, or set aside when a turn ended with it stale.
+ */
+export interface TaskPlanEndedPayload {
+  steps: PlanStep[];
+}

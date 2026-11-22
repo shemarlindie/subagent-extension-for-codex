@@ -129,6 +129,14 @@ export function serviceSummary(e: Event) {
   const plan = eventPayload(e, "agent.plan");
   if (plan) return planSummaryText(plan);
 
+  const ended = eventPayload(e, "task.plan_ended");
+
+  if (ended) {
+    const { done, total } = planProgress(ended.steps);
+
+    return `${done} of ${total} steps done`;
+  }
+
   const queueChanged = eventPayload(e, "task.queue_changed");
 
   if (queueChanged) {
@@ -145,6 +153,7 @@ const eventTitles: Partial<Record<string, string>> = {
   "agent.completed": "Turn completed",
   "agent.limited": "Session limited",
   "agent.plan": "Plan",
+  "task.plan_ended": "Plan ended",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
   "task.instruction": "Message",

@@ -8,15 +8,27 @@ export interface TaskPlan {
   updated_at: string;
   /** A steer or a new turn's message reached the worker after this update. */
   stale?: true;
+  /**
+   * A turn ended with the plan stale, so it left the pinned card. The steps
+   * stay, so the worker can pick it back up.
+   */
+  set_aside?: true;
 }
 
 const MAX_PLAN_STEPS = 30;
 const MAX_PLAN_STEP_LENGTH = 200;
 
-/** What the worker's update_plan call sends: exactly one of the two. */
+/**
+ * What the worker's update_plan call sends: a whole list, an advance, or
+ * steps marked by number to catch up.
+ */
 export interface PlanUpdateInput {
   items?: PlanStep[];
   advance?: boolean;
+  /** 1-based numbers of steps to complete. */
+  done?: number[];
+  /** The 1-based number of the step to start. */
+  start?: number;
 }
 
 /**
@@ -78,6 +90,33 @@ function advanced(steps: PlanStep[]) {
   );
 }
 
+/**
+ * Completes the steps in `done` and starts `start`. A different step that was
+ * in progress goes back to pending, since only `done` says it finished.
+ */
+function marked(steps: PlanStep[], done: number[], start?: number) {
+  return steps.map((s, i): PlanStep => {
+    if (i + 1 === start) return { ...s, status: "in_progress" };
+    if (done.includes(i + 1)) return { ...s, status: "completed" };
+
+    return start !== undefined && s.status === "in_progress"
+      ? { ...s, status: "pending" }
+      : s;
+  });
+}
+
+function validMarks(total: number, done: number[], start?: number) {
+  const numbers = start === undefined ? done : [...done, start];
+
+  if (numbers.some((n) => n < 1 || n > total)) {
+    return `Step numbers run from 1 to ${total}.`;
+  }
+
+  return start !== undefined && done.includes(start)
+    ? "A step can't be both done and started."
+    : undefined;
+}
+
 const allDone = (total: number) =>
   total === 1 ? "the only step is done" : `all ${total} steps are done`;
 
@@ -86,10 +125,13 @@ export function applyPlanUpdate(
   current: PlanStep[] | undefined,
   input: PlanUpdateInput,
 ): PlanUpdateResult {
-  const { items, advance } = input;
+  const { items, advance, done, start } = input;
+  const marks = done !== undefined || start !== undefined;
 
-  if ((items === undefined) === (advance !== true)) {
-    return invalid("Send either items or advance: true.");
+  if (
+    [items !== undefined, advance === true, marks].filter(Boolean).length !== 1
+  ) {
+    return invalid("Send one of items, advance: true, or done and start.");
   }
 
   if (items) {
@@ -102,14 +144,27 @@ export function applyPlanUpdate(
     return { kind: "updated", steps, ...(changed?.length ? { changed } : {}) };
   }
 
-  if (!current?.length) return invalid("There is no plan to advance.");
-  const steps = advanced(current);
+  if (!current?.length) {
+    return invalid("There is no plan yet. Send items first.");
+  }
+
+  if (marks) {
+    const problem = validMarks(current.length, done ?? [], start);
+    if (problem) return invalid(problem);
+  }
+
+  const steps = advance
+    ? advanced(current)
+    : marked(current, done ?? [], start);
+
   const changed = changedSteps(current, steps) ?? [];
 
   if (!changed.length) {
     return {
       kind: "unchanged",
-      message: `Plan unchanged: ${allDone(current.length)}.`,
+      message: advance
+        ? `Plan unchanged: ${allDone(current.length)}.`
+        : "Plan unchanged: those steps already have that status.",
     };
   }
 
@@ -139,6 +194,10 @@ export function planSummary(plan: TaskPlan) {
 export const planOpen = (steps: PlanStep[]) =>
   steps.some((s) => s.status !== "completed");
 
+/** The plan Chat pins: one with steps left that no turn set aside. */
+export const pinnedPlan = (plan: TaskPlan | undefined) =>
+  plan && planOpen(plan.steps) && !plan.set_aside ? plan : undefined;
+
 /** The tool's one-line result, as Claude Desktop words it. */
 export function planResultLine(steps: PlanStep[]) {
   if (!steps.length) return "Plan cleared.";
@@ -152,12 +211,4 @@ export function planResultLine(steps: PlanStep[]) {
   return planOpen(steps)
     ? `Plan updated: ${planProgress(steps).done} of ${total} steps are done.`
     : `Plan updated: ${allDone(total)}.`;
-}
-
-/**
- * Marks a plan with steps left as made before the worker's latest message,
- * for a taken steer or a new turn.
- */
-export function markPlanStale(plan: TaskPlan | undefined) {
-  if (plan && planOpen(plan.steps)) plan.stale = true;
 }

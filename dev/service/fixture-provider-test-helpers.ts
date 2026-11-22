@@ -7,7 +7,6 @@ import {
   resolveClaudePolicy,
 } from "../../src/shared/providers/claude/permissions.js";
 import { startSchema, type Task } from "../../src/shared/tasks/model.js";
-import type { PlanStep } from "../../src/shared/tasks/plan-contract.js";
 import {
   FixtureProvider,
   type FixtureProviderOptions,
@@ -60,8 +59,7 @@ export function context(currentTask = task()) {
     signal: controller.signal,
     acceptSteers: () => {},
     steerTaken: () => {},
-    planUpdated: (steps: PlanStep[], changed?: number[]) =>
-      events.push({ type: "agent.plan", data: { steps, changed } }),
+    planUpdated: () => {},
     delta: () => {},
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),

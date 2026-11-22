@@ -5,13 +5,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { onTestFinished, test } from "vitest";
 
+import type { ChatPlan } from "../../../../shared/tasks/conversation/chat";
 import type { TaskPlan } from "../../../../shared/tasks/plan";
 import type { PlanStep } from "../../../../shared/tasks/plan-contract";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
-import { task } from "../../../app/state/controller-test-harness";
-import type { Task, Transport } from "../../../app/state/types";
+import type { Transport } from "../../../app/state/types";
 import { PlanCard } from "./plan-card";
+import { PlanHistoryRow } from "./plan-history-row";
 
 const steps = (...statuses: PlanStep["status"][]): PlanStep[] =>
   statuses.map((status, i) => ({ content: `Step ${i + 1}`, status }));
@@ -33,20 +34,14 @@ function setup() {
 
   onTestFinished(() => controller.dispose());
 
-  const card = (row: Task) => (
+  const card = (p: TaskPlan, working = true, taskId = "a") => (
     <ControllerContext.Provider value={controller}>
-      <PlanCard task={row} />
+      <PlanCard taskId={taskId} plan={p} working={working} />
     </ControllerContext.Provider>
   );
 
   return { card };
 }
-
-const running = (p?: TaskPlan, id = "a"): Task => ({
-  ...task(id),
-  status: "running",
-  ...(p ? { plan: p } : {}),
-});
 
 const visibleSteps = () =>
   screen
@@ -59,9 +54,7 @@ const visibleSteps = () =>
 test("an open plan shows every step, and collapsing leaves the current one", async () => {
   const { card } = setup();
 
-  const view = render(
-    card(running(plan(steps("completed", "in_progress", "pending")))),
-  );
+  const view = render(card(plan(steps("completed", "in_progress", "pending"))));
 
   assert.ok(screen.getByRole("region", { name: "Plan, 1 of 3 steps done" }));
 
@@ -71,8 +64,16 @@ test("an open plan shows every step, and collapsing leaves the current one", asy
     ["Pending", "Step 3"],
   ]);
 
-  // The current step turns while the task runs.
+  // The current step turns while the worker is on it, and pauses otherwise,
+  // as during a compaction.
   assert.ok(view.container.querySelector(".plan-step-spin"));
+
+  view.rerender(
+    card(plan(steps("completed", "in_progress", "pending")), false),
+  );
+
+  assert.equal(view.container.querySelector(".plan-step-spin"), null);
+  assert.deepEqual(visibleSteps()[1], ["Paused", "Step 2"]);
 
   await userEvent.click(
     screen.getByRole("button", { name: "Collapse plan, 1 of 3 steps done" }),
@@ -86,28 +87,26 @@ test("an open plan shows every step, and collapsing leaves the current one", asy
 
 test("collapsing stays with its task across remounts until the plan changes", async () => {
   const { card } = setup();
-  const open = running(plan(steps("in_progress", "pending")));
+  const open = plan(steps("in_progress", "pending"));
   const view = render(card(open));
   await userEvent.click(screen.getByRole("button", { name: /Collapse plan/ }));
 
   // Another task's plan is unaffected, and the first stays collapsed on return.
-  view.rerender(card(running(plan(steps("in_progress", "pending")), "b")));
+  view.rerender(card(plan(steps("in_progress", "pending")), true, "b"));
   assert.equal(visibleSteps().length, 2);
   view.unmount();
   const again = render(card(open));
   assert.equal(visibleSteps().length, 0);
 
   // A new list opens expanded.
-  again.rerender(
-    card(running(plan(steps("in_progress", "pending", "pending")))),
-  );
+  again.rerender(card(plan(steps("in_progress", "pending", "pending"))));
 
   assert.equal(visibleSteps().length, 3);
 });
 
 test("a stale plan says so and pauses its current step", () => {
   const { card } = setup();
-  render(card(running(plan(steps("completed", "in_progress"), true))));
+  render(card(plan(steps("completed", "in_progress"), true)));
 
   assert.ok(screen.getByText("Plan from before your last message"));
 
@@ -117,25 +116,30 @@ test("a stale plan says so and pauses its current step", () => {
   ]);
 });
 
-test("a finished plan collapses to one line, and an empty one shows nothing", () => {
-  const { card } = setup();
+test("an ended plan folds into one Chat row that expands to its steps", async () => {
+  onTestFinished(cleanup);
 
-  const done = {
-    ...running(plan(steps("completed", "completed"))),
-    status: "completed" as const,
+  const item: ChatPlan = {
+    kind: "plan",
+    id: "e1",
+    event_id: 1,
+    timestamp: "",
+    steps: steps("completed", "pending"),
   };
 
-  const view = render(card(done));
-
+  render(<PlanHistoryRow item={item} />);
   const row = screen.getByRole("button", { expanded: false });
 
   assert.equal(
     row.querySelector(".plan-card-current")?.textContent,
-    "All 2 steps done",
+    "Plan · 1 of 2 steps done",
   );
 
-  assert.equal(row.querySelector(".plan-card-count"), null);
+  assert.deepEqual(visibleSteps(), []);
+  await userEvent.click(row);
 
-  view.rerender(card(running(plan([]))));
-  assert.equal(view.container.innerHTML, "");
+  assert.deepEqual(visibleSteps(), [
+    ["Done", "Step 1"],
+    ["Pending", "Step 2"],
+  ]);
 });

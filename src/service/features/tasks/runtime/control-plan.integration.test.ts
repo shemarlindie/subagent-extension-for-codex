@@ -17,22 +17,33 @@ import {
 const steps = (...statuses: PlanStep["status"][]): PlanStep[] =>
   statuses.map((status, i) => ({ content: `Step ${i + 1}`, status }));
 
-test("the worker's plan is saved on the task, goes stale on a new message and reaches Codex without waking it", async () => {
+test("the worker's plan is saved on the task, goes stale on a new message, ends into history and reaches Codex without waking it", async () => {
   const provider = new TestProvider();
   const run = provider.run.bind(provider);
   let context: RunContext | undefined;
-  let finish!: () => void;
-  const finished = new Promise<void>((resolve) => (finish = resolve));
+  let runs = 0;
+  let gate: Promise<void> | undefined;
+  let open = () => {};
+
+  const hold = () => {
+    gate = new Promise((resolve) => (open = resolve));
+  };
+
+  const finish = () => {
+    gate = undefined;
+    open();
+  };
 
   provider.run = async (ctx, prompt) => {
-    if (!context) {
-      context = ctx;
-      ctx.acceptSteers(() => true);
-      await finished;
-    }
+    context = ctx;
+    runs++;
+    ctx.acceptSteers(() => true);
+    await gate;
 
     return run(ctx, prompt);
   };
+
+  hold();
 
   const { c, store, repo } = await setup(provider);
 
@@ -94,6 +105,24 @@ test("the worker's plan is saved on the task, goes stale on a new message and re
       steps: [],
     });
 
+    // A cleared or finished plan leaves the card for Chat history, once.
+    const ended = () => eventData(store, task.id, "task.plan_ended");
+    context.planUpdated(steps("completed", "completed"));
+    context.planUpdated(steps("completed", "completed"));
+
+    assert.deepEqual(ended(), [
+      { steps: steps("completed", "in_progress") },
+      { steps: steps("completed", "completed") },
+    ]);
+
+    // A finished plan never goes stale.
+    const late = await c.send("alice", task.id, "Also b", "user", {
+      delivery: "steer",
+    });
+
+    context.steerTaken(late.message_id);
+    assert.equal(plan()?.stale, undefined);
+
     // The plan stays after the turn ends, and the next turn's message makes it stale.
     context.planUpdated(steps("in_progress"));
     finish();
@@ -107,7 +136,15 @@ test("the worker's plan is saved on the task, goes stale on a new message and re
       return t.turn === 2 && t.status === "completed";
     });
 
-    assert.equal(plan()?.stale, true);
+    // A turn that leaves it stale sets it aside, and any update picks it back up.
+    assert.equal(plan()?.set_aside, true);
+    assert.deepEqual(ended().at(-1), { steps: steps("in_progress") });
+    hold();
+    await c.send("alice", task.id, "Pick it up", "user");
+    await until(() => runs === 3);
+    context.planUpdated(steps("completed", "in_progress"));
+    assert.equal(plan()?.set_aside, undefined);
+    assert.equal(ended().length, 3);
   } finally {
     finish();
     await c.close();

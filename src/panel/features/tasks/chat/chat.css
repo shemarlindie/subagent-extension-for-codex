@@ -441,7 +441,7 @@ body[data-expanded-panel="true"]
 .chat-footer > .chat-queue {
   padding-inline: var(--detail-pad, 24px);
 }
-.chat-footer > .plan-card {
+.chat-footer .plan-card {
   margin-inline: var(--detail-pad, 24px);
 }
 .chat-queue {

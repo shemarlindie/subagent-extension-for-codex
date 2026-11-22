@@ -30,9 +30,6 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.plan-card-row[data-done] .plan-card-current {
-  color: var(--muted);
-}
 .plan-card-count,
 .plan-card-collapse {
   color: var(--muted);
@@ -119,4 +116,17 @@
 .activity-group .plan-steps {
   gap: 4px;
   margin-top: 6px;
+}
+/* A past plan in Chat: one muted row that opens to its final steps. */
+.plan-history .plan-card-row {
+  grid-template-columns: 16px minmax(0, 1fr) 12px;
+}
+.plan-history .plan-card-current {
+  color: var(--muted);
+}
+.plan-history .plan-card-row[data-panel-open] .chevron {
+  transform: rotate(180deg);
+}
+.plan-history-steps {
+  padding: 0 14px 12px;
 }

@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import { activityContentSchema } from "../providers/activity/presentation-contract.generated.js";
 import { taskEventPayloadMapSchema } from "../tasks/event-contract.generated.js";
-import { agentPlanPayloadSchema } from "../tasks/plan-contract.generated.js";
+import {
+  agentPlanPayloadSchema,
+  taskPlanEndedPayloadSchema,
+} from "../tasks/plan-contract.generated.js";
 
 export const eventEnvelopeSchema = z.object({
   id: z.number(),
@@ -135,4 +138,5 @@ export const eventPayloadMapSchema = taskEventPayloadMapSchema.extend({
   "agent.permission_decided": agentPermissionDecidedPayloadSchema,
   "agent.input_decision": agentInputDecisionPayloadSchema,
   "agent.plan": agentPlanPayloadSchema,
+  "task.plan_ended": taskPlanEndedPayloadSchema,
 });

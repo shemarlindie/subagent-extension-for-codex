@@ -17,7 +17,6 @@ import {
   type Task,
   type TaskMessage,
 } from "../../../../shared/tasks/model.js";
-import { markPlanStale } from "../../../../shared/tasks/plan.js";
 import { now } from "../../../../shared/time.js";
 import { logError } from "../../../platform/logging/logger.js";
 import { Attachments } from "../../attachments/attachments.js";
@@ -79,7 +78,7 @@ import {
   taskDeletionPreview,
   type DeletionVersions,
 } from "./task-deletion.js";
-import { planRecorder } from "./task-plan.js";
+import { markPlanStale, planRecorder, setPlanAside } from "./task-plan.js";
 import { startTask } from "./task-start.js";
 import { WorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
@@ -539,6 +538,7 @@ export class Control {
           cost_usd: (t.cost_usd ?? 0) - turn.costBefore,
         });
 
+        setPlanAside(this.store, t);
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
         recordStatusEvent(this.store, t);

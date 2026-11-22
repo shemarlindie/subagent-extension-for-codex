@@ -1,6 +1,5 @@
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import type { Task } from "../../../../shared/tasks/model.js";
-import { markPlanStale } from "../../../../shared/tasks/plan.js";
 import { now } from "../../../../shared/time.js";
 import type { Changes } from "../../changes/changes.js";
 import type { Projects } from "../../projects/projects.js";
@@ -13,6 +12,7 @@ import type { Store } from "../storage/store.js";
 import { worktreeClaimed } from "../storage/task-rows.js";
 import { logStartLimited } from "./execution-logging.js";
 import { limitTurnModel } from "./policy-check.js";
+import { markPlanStale } from "./task-plan.js";
 import { measureTaskWait } from "./timing.js";
 
 /** What readying a turn reads and writes. */

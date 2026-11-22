@@ -1,8 +1,13 @@
-import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
+import {
+  createSdkMcpServer,
+  tool,
+  type HookCallback,
+} from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 
 import {
   applyPlanUpdate,
+  pinnedPlan,
   planProgress,
   planResultLine,
 } from "../../../../../shared/tasks/plan.js";
@@ -12,7 +17,43 @@ import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel when a request takes several steps. Send the whole list once, then advance as each step finishes. Skip it for quick answers.";
+  "Use update_plan to show your plan as a checklist in the user's panel when a request takes several steps. Send the whole list once with one step in progress, then advance as each step finishes. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes. Skip it for quick answers.";
+
+/**
+ * A SessionStart hook that hands an open plan back to the worker when its
+ * context starts without the update_plan calls: after a compaction, or in a
+ * new session for a task that already has a plan. A resumed session still
+ * has them.
+ */
+export function planReminder(c: RunContext): HookCallback {
+  return async (input) => {
+    // A set-aside plan stays out, so the reminder doesn't revive it.
+    const plan = pinnedPlan(c.task.plan);
+
+    if (
+      input.hook_event_name !== "SessionStart" ||
+      input.source === "resume" ||
+      !plan
+    ) {
+      return {};
+    }
+
+    const steps = plan.steps.map(
+      (s, i) => `${i + 1}. [${s.status}] ${s.content}`,
+    );
+
+    return {
+      hookSpecificOutput: {
+        hookEventName: "SessionStart",
+        additionalContext: [
+          "Your plan for this task, as the user's panel shows it:",
+          ...steps,
+          "Keep it current with update_plan: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.",
+        ].join("\n"),
+      },
+    };
+  };
+}
 
 const text = (value: string, isError?: true) => ({
   content: [{ type: "text" as const, text: value }],
@@ -33,7 +74,7 @@ export function workerMcpServers(c: RunContext) {
     tools: [
       tool(
         "update_plan",
-        "Show your step-by-step plan as a checklist in the user's panel. Send the whole list with items, then call with advance: true as each step finishes. Send items again when the plan changes.",
+        "Show your step-by-step plan as a checklist in the user's panel. Send items with the whole list, or advance: true to complete the step in progress and start the next. To catch up after getting ahead, send done with the 1-based numbers of finished steps and start with the number of the step you're on. Send items again when the plan changes.",
         {
           items: z
             .array(
@@ -44,6 +85,8 @@ export function workerMcpServers(c: RunContext) {
             )
             .optional(),
           advance: z.boolean().optional(),
+          done: z.array(z.number().int()).optional(),
+          start: z.number().int().optional(),
         },
         async (input) => {
           const update = applyPlanUpdate(c.task.plan?.steps, input);
