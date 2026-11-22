@@ -157,7 +157,7 @@ body[data-expanded-panel="true"]
   align-items: flex-end;
 }
 /* Attachment chips take the widest bubble's width, however short the request. */
-.chat-message > .request-attachments {
+.chat-message > .message-attachments {
   width: var(--bubble-max-width);
 }
 .chat-bubble {

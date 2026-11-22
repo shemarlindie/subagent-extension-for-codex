@@ -18,7 +18,7 @@ import {
   previewArchivedAt,
   previewArchiveTool,
 } from "./archive-tools";
-import { requestAttachments } from "./attachment-scenarios";
+import { chatAttachments } from "./attachment-scenarios";
 import { previewProjects, previewTasks } from "./fixtures";
 import { livePreview, type PreviewData } from "./live-preview";
 import {
@@ -330,12 +330,13 @@ function previewViewPart(
     (item) => item.event_id > after || (after === 0 && item.event_id === 0),
   );
 
-  // As the service does, the first read adds the request's attachments.
-  const request = items[0];
-  const attachments = requestAttachments(task.id);
-
-  if (after === 0 && request?.kind === "message" && attachments) {
-    request.message.attachments = attachments;
+  // As the service does, each read of the request or a sent message adds its attachments.
+  for (const item of items) {
+    if (item.kind !== "message" || item.message.from === "worker") continue;
+    const { message } = item;
+    const sent = message.kind === "request" ? undefined : message.id;
+    const attachments = chatAttachments(task.id, sent);
+    if (attachments?.length) message.attachments = attachments;
   }
 
   return { items, next_cursor: Math.max(after, events.at(-1)?.id ?? 0) };

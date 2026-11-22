@@ -1,16 +1,16 @@
-/* The request's attachments in a right-aligned row. Chat sets its width. */
-.request-attachments {
+/* A message's attachments in a right-aligned row. Chat sets its width. */
+.message-attachments {
   position: relative;
   min-width: 0;
 }
-.request-attachments-row {
+.message-attachments-row {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
-.request-attachments[data-expanded] .request-attachments-row {
+.message-attachments[data-expanded] .message-attachments-row {
   flex-wrap: wrap;
 }
 .attachment-chip {
@@ -71,7 +71,7 @@
 .attachment-removed {
   color: var(--danger);
 }
-.request-attachments-toggle {
+.message-attachments-toggle {
   flex: none;
   height: 24px;
   padding: 0 4px;
@@ -82,11 +82,11 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.request-attachments-toggle:hover {
+.message-attachments-toggle:hover {
   text-decoration: underline;
 }
 /* Unshown copies the row measures to decide what fits. */
-.request-attachments-measure {
+.message-attachments-measure {
   position: absolute;
   top: 0;
   left: 0;
@@ -96,7 +96,7 @@
   visibility: hidden;
   pointer-events: none;
 }
-.request-attachments-measure > div {
+.message-attachments-measure > div {
   display: flex;
   width: max-content;
 }

@@ -351,9 +351,9 @@ shows as typed. Draft replies stream a paragraph at a time, and the stored
 message replaces them, adding the last paragraph. Code blocks in Chat and
 Activity have a copy action in their header.
 
-A request's [attachments](mcp-reference.md#attachments) show as chips under it,
-with a summary on hover or focus. Chips that don't fit fold behind **+N more**,
-and a chip opens its attachment in a file viewer.
+[Attachments](mcp-reference.md#attachments) on the request or a follow-up show
+as chips under it, with a summary on hover or focus. Chips that don't fit fold
+behind **+N more**, and a chip opens its attachment in a file viewer.
 
 Your messages offer **Copy message** and the time sent. Actions appear on hover
 or keyboard focus, and stay visible on touch devices.

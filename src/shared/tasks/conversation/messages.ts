@@ -1,4 +1,4 @@
-import type { RequestAttachment } from "../../attachments/model.js";
+import type { MessageAttachment } from "../../attachments/model.js";
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import type { Delivery, Sender, TaskView } from "../model.js";
@@ -30,8 +30,8 @@ export type ConversationMessage = {
   delivery?: Delivery;
   /** A steer the running turn hasn't taken, or one waiting in the queue. */
   state?: "pending_steer" | "queued";
-  /** The request's attachments, which Chat reads with the request. */
-  attachments?: RequestAttachment[];
+  /** The request's or a sent message's attachments, which Chat reads with it. */
+  attachments?: MessageAttachment[];
 };
 
 /** A worker message's SDK id, so its text blocks and draft share it. */

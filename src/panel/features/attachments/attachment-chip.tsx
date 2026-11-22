@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties } from "react";
 
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import {
@@ -13,7 +13,7 @@ import {
 /** Characters a long title keeps visible at its end, such as its extension. */
 const TITLE_END = 12;
 
-type AttachmentChipContentProps = { attachment: RequestAttachment };
+type AttachmentChipContentProps = { attachment: MessageAttachment };
 
 /** A chip's icon, title and size, shared by the chip and its measured copy. */
 export function AttachmentChipContent({
@@ -53,7 +53,7 @@ export function AttachmentChipContent({
 }
 
 type AttachmentChipProps = {
-  attachment: RequestAttachment;
+  attachment: MessageAttachment;
   /** A narrow row truncates the first chip's title to this width. */
   maxWidth?: number;
   onOpen: () => void;

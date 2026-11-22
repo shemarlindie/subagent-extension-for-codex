@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import { vi, type TestContext } from "vitest";
 
 import type { Task } from "../../../src/panel/app/state/types";
-import type { RequestAttachment } from "../../../src/shared/attachments/model.js";
+import type { MessageAttachment } from "../../../src/shared/attachments/model.js";
 import { decodeEventEnvelope } from "../../../src/shared/events/decode.js";
 import {
   chatItems,
@@ -23,7 +23,7 @@ const AT = "2026-11-15T12:00:00.000Z";
 
 export const SELECTED = "one";
 
-const attachment: RequestAttachment = {
+const attachment: MessageAttachment = {
   position: 1,
   title: "Login handler",
   summary: "The handler the review starts from.",

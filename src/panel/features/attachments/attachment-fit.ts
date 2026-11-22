@@ -1,4 +1,4 @@
-/** Measured widths for laying out a request's attachment row, in px. */
+/** Measured widths for laying out a message's attachment row, in px. */
 export type FitWidths = {
   /** The row's width. */
   available: number;

@@ -1,4 +1,4 @@
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import type {
@@ -1675,7 +1675,7 @@ export class Controller {
   }
 
   /** Moves the open attachment preview to another of its message's attachments. */
-  showAttachment(attachment: RequestAttachment) {
+  showAttachment(attachment: MessageAttachment) {
     const { dialog } = this.state;
 
     if (

@@ -1,5 +1,5 @@
 // A parent-started review whose request carries attachments of every kind,
-// including one whose stored file is missing.
+// including one whose stored file is missing, and a parent follow-up with two more.
 import type { TaskAttachment } from "../../../src/shared/attachments/model";
 import type { Task } from "../../../src/shared/tasks/model";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
@@ -75,6 +75,22 @@ This note is plain text, so the dialog shows it as source.
 `;
 
 const snippet = `export const MAX_ATTACHMENTS = 20;
+`;
+
+const FOLLOW_UP = "msg_preview_attachments_1";
+
+const testOutput = ` FAIL  session-prompts.test.ts > a legacy task keeps its prompt
+AssertionError: expected 'Investigate\\n\\nfirst excerpt\\n' to equal 'Investigate\\n\\nfirst excerpt'
+`;
+
+const legacyTest = `test("a legacy task keeps its prompt", () => {
+  const task = legacyTask({ context: ["first excerpt"] });
+
+  assert.equal(
+    prompts.sessionPrompt(task),
+    "Investigate\\n\\nfirst excerpt",
+  );
+});
 `;
 
 type PreviewAttachment = TaskAttachment & {
@@ -176,22 +192,72 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       chars: 1200,
       lines: 42,
     },
+    // The parent agent's follow-up brings two more.
+    {
+      position: 8,
+      message_id: FOLLOW_UP,
+      title: "Test output",
+      summary: "The failing prompt test's output after the change.",
+      format: "text",
+      source: "inline",
+      file: "8-test-output.txt",
+      chars: testOutput.length,
+      lines: lines(testOutput),
+      content: testOutput,
+    },
+    {
+      position: 9,
+      message_id: FOLLOW_UP,
+      title: "session-prompts.test.ts:12-20",
+      summary: "The legacy prompt test that now fails.",
+      format: "code",
+      source: "file",
+      path: "src/service/features/tasks/conversation/session-prompts.test.ts",
+      file: "9-session-prompts-test-ts-12-20.ts",
+      chars: legacyTest.length,
+      lines: lines(legacyTest),
+      start_line: 12,
+      end_line: 20,
+      content: legacyTest,
+    },
   ],
 };
 
-/** The attachments Chat lists under a fixture task's request. */
-export const requestAttachments = (taskId: string) =>
-  previewAttachments[taskId]?.map(
-    ({ file: _, content: _content, ...attachment }) => attachment,
-  );
+/**
+ * The attachments Chat lists under a fixture task's request, or under the
+ * sent message `messageId`.
+ */
+export const chatAttachments = (taskId: string, messageId?: string) =>
+  previewAttachments[taskId]
+    ?.filter((attachment) => attachment.message_id === messageId)
+    .map(
+      ({ file: _, content: _content, message_id: _id, ...attachment }) =>
+        attachment,
+    );
 
 const reply =
   "The prompt lists attachments after the workspace note, and a task without them keeps its old prompt. Resumed sessions don't get the list again.";
+
+const followUpReply =
+  "The legacy test still expects `context` before the workspace note. The change keeps that order, so the test fails only on the trailing newline it added. Update the expected string.";
 
 const timeline = new Timeline(ID, at(132), 2700);
 begin(timeline, ["Read", "Bash"]);
 timeline.say("Reading the diff first, then the provider contract.");
 timeline.finish(reply, 1, { duration_ms: 84000, total_cost_usd: 0.31 });
+
+timeline
+  .add("task.instruction", {
+    message_id: FOLLOW_UP,
+    message:
+      "The legacy prompt test fails now. Check whether the change or the test is wrong.",
+    from: "parent",
+    delivery: "steer",
+  })
+  .add("task.queued", {}, 100)
+  .add("task.started", { turn: 2 }, 300)
+  .say("Comparing the failing output with the test's expected prompt.")
+  .finish(followUpReply, 2, { duration_ms: 51000, total_cost_usd: 0.18 });
 
 export const attachmentTimeline = timeline;
 
@@ -205,8 +271,10 @@ export const attachmentTask: Task = {
   worker_profile: "reviewer",
   created_by: "parent",
   status: "completed",
-  runtime_ms: 84000,
-  cost_usd: 0.31,
+  turn: 2,
+  instructions_sent: 1,
+  runtime_ms: 135000,
+  cost_usd: 0.49,
   completed_at: at(134),
   ...timestamps(132, 2),
 };

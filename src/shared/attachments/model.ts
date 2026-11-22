@@ -129,14 +129,14 @@ export interface TaskAttachment {
 }
 
 /** An attachment as Chat lists it under its message, without where it's stored. */
-export type RequestAttachment = Omit<TaskAttachment, "file" | "message_id">;
+export type MessageAttachment = Omit<TaskAttachment, "file" | "message_id">;
 
 /** The most bytes of content one `app_get_attachment` page holds. */
 export const ATTACHMENT_PAGE_BYTES = 512 * 1024;
 
 /** A page of an attachment's content, as `app_get_attachment` returns it. */
 export interface AttachmentPage {
-  attachment: RequestAttachment;
+  attachment: MessageAttachment;
   /** "unavailable": the stored file is missing, larger than any attachment or not UTF-8 text. */
   state: "present" | "unavailable";
   /** UTF-8 text; this page's part of it. */

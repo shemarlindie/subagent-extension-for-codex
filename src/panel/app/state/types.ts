@@ -1,9 +1,9 @@
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import type { Event } from "../../../shared/events/types.js";
 import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
 import type { PanelSettings } from "../../../shared/settings/settings-schema.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
-import type { GitState } from "../../../shared/tasks/model.js";
+import type { GitState, Sender } from "../../../shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
@@ -149,13 +149,15 @@ type FileDialog = {
   scope: number;
 };
 
-/** One of the request's attachments, from its chip. A reload doesn't restore it. */
+/** One of a message's attachments, from its chip. A reload doesn't restore it. */
 export type AttachmentDialog = {
   kind: "attachment";
   task: Task;
-  attachment: RequestAttachment;
+  attachment: MessageAttachment;
   /** All of the message's attachments, to step through in order. */
-  attachments: RequestAttachment[];
+  attachments: MessageAttachment[];
+  /** Who sent the message, which an inline attachment's origin names. */
+  from: Sender;
   scope: number;
 };
 

@@ -1,9 +1,10 @@
-import type { RequestAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import type { Sender } from "../../../shared/tasks/model.js";
 import type { IconName } from "../../shared/components/icons/icons";
 import type { PreviewFile } from "../file-preview/file-format";
 
 /** The chip and dialog icon for an attachment's kind. */
-export function attachmentIcon(attachment: RequestAttachment): IconName {
+export function attachmentIcon(attachment: MessageAttachment): IconName {
   if (attachment.source === "diff") return "file-diff";
   if (attachment.source === "inline" && !attachment.path) return "note";
 
@@ -11,7 +12,7 @@ export function attachmentIcon(attachment: RequestAttachment): IconName {
 }
 
 /** "+12 −3" for a diff, "lines 44–55" for a line range, otherwise its line count. */
-export function attachmentSize(attachment: RequestAttachment) {
+export function attachmentSize(attachment: MessageAttachment) {
   const { start_line: start, end_line: end } = attachment;
 
   if (attachment.source === "diff") {
@@ -29,7 +30,7 @@ export function attachmentSize(attachment: RequestAttachment) {
 export function attachmentRange({
   start_line: start,
   end_line: end,
-}: RequestAttachment) {
+}: MessageAttachment) {
   if (start === undefined || end === undefined) return undefined;
 
   return start === end ? `L${start}` : `L${start}–${end}`;
@@ -43,7 +44,7 @@ export function displayTitle({
   title,
   start_line,
   end_line,
-}: RequestAttachment) {
+}: MessageAttachment) {
   const suffix = `:${start_line}-${end_line}`;
 
   return start_line !== undefined &&
@@ -54,7 +55,7 @@ export function displayTitle({
 }
 
 /** Where an attachment came from, with its size, for the dialog's header. */
-export function attachmentOrigin(attachment: RequestAttachment) {
+export function attachmentOrigin(attachment: MessageAttachment, from: Sender) {
   const files = attachment.files ?? 0;
 
   const size =
@@ -63,7 +64,7 @@ export function attachmentOrigin(attachment: RequestAttachment) {
       : attachmentSize(attachment);
 
   if (attachment.source === "inline") {
-    return `Inline from the parent agent · ${size}`;
+    return `Inline from ${from === "parent" ? "the parent agent" : "you"} · ${size}`;
   }
 
   return attachment.path ? `${attachment.path} · ${size}` : size;
@@ -83,7 +84,7 @@ const extensions = {
  * attachment without one is named for its title and format.
  */
 export function attachmentFile(
-  attachment: RequestAttachment,
+  attachment: MessageAttachment,
   content: string,
 ): PreviewFile {
   return {
