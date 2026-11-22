@@ -5,11 +5,11 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="1.937"
+  stroke-width="2.119"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
   <path
-    d="M11.598 7.016A5 5 0 0 1 16.984 12.402M12.402 16.984A5 5 0 0 1 7.016 11.598M2 12H7M17 12H22M2 2l20 20"
+    d="M11.56 6.547A5.47 5.47 0 0 1 17.453 12.44M12.44 17.453A5.47 5.47 0 0 1 6.547 11.56M1.06 12H6.53M17.47 12H22.94M1.06 1.06l21.88 21.88"
   ></path>
 </svg>

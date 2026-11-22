@@ -5,9 +5,11 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="2"
+  stroke-width="2.286"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <path d="M7 7.5 2.5 12 7 16.5M17 7.5l4.5 4.5-4.5 4.5M13.5 5.5l-3 13"></path>
+  <path
+    d="M6.286 6.857 1.143 12l5.143 5.143M17.714 6.857l5.143 5.143-5.143 5.143M13.714 4.571l-3.428 14.858"
+  ></path>
 </svg>
