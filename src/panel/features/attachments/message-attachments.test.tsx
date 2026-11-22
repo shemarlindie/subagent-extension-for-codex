@@ -46,7 +46,7 @@ test("hidden chips fold behind a toggle that keeps focus as the row expands and 
 
   const view = render(
     <ControllerContext.Provider value={controller}>
-      <MessageAttachments taskId="task" attachments={attachments} from="user" />
+      <MessageAttachments taskId="task" attachments={attachments} />
     </ControllerContext.Provider>,
   );
 

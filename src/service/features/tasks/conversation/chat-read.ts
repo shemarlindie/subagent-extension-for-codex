@@ -27,21 +27,13 @@ export function chatRead(
       : [],
   );
 
-  const request = messages.find((m) => m.kind === "request");
-  const sent = messages.filter((m) => m.kind === "message");
-
-  const attached = [
-    ...(request ? attachments.list(task.id, "request") : []),
-    ...attachments.list(
-      task.id,
-      sent.map((m) => m.id),
-    ),
-  ];
+  // Pages of worker output alone skip the read.
+  const attached = messages.length ? attachments.list(task.id) : [];
 
   for (const { file: _, message_id, ...a } of attached) {
-    const message = message_id
-      ? sent.find((m) => m.id === message_id)
-      : request;
+    const message = messages.find((m) =>
+      message_id ? m.id === message_id : m.kind === "request",
+    );
 
     if (message) message.attachments = [...(message.attachments ?? []), a];
   }

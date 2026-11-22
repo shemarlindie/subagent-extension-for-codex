@@ -1,5 +1,4 @@
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
-import type { Sender } from "../../../shared/tasks/model.js";
 import type { IconName } from "../../shared/components/icons/icons";
 import type { PreviewFile } from "../file-preview/file-format";
 
@@ -55,7 +54,7 @@ export function displayTitle({
 }
 
 /** Where an attachment came from, with its size, for the dialog's header. */
-export function attachmentOrigin(attachment: MessageAttachment, from: Sender) {
+export function attachmentOrigin(attachment: MessageAttachment) {
   const files = attachment.files ?? 0;
 
   const size =
@@ -64,7 +63,7 @@ export function attachmentOrigin(attachment: MessageAttachment, from: Sender) {
       : attachmentSize(attachment);
 
   if (attachment.source === "inline") {
-    return `Inline from ${from === "parent" ? "the parent agent" : "you"} · ${size}`;
+    return `Inline · ${size}`;
   }
 
   return attachment.path ? `${attachment.path} · ${size}` : size;

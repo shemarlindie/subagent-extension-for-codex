@@ -129,7 +129,7 @@ export class SessionPrompts {
     return this.withAttachments(
       t,
       m.message,
-      this.attachments.list(t.id, [m.id]),
+      this.attachments.ofMessage(t.id, m.id),
     );
   }
 

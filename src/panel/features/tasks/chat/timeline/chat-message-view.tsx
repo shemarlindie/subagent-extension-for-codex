@@ -85,13 +85,12 @@ export const ChatMessageView = memo(function ChatMessageView({
         <div className="chat-sender">Parent agent</div>
       )}
       {messageBody(message, content)}
-      {taskId && message.from !== "worker" && message.attachments?.length ? (
+      {taskId && message.attachments?.length ? (
         // Keyed by task, so another task's row fits and folds afresh.
         <MessageAttachments
           key={taskId}
           taskId={taskId}
           attachments={message.attachments}
-          from={message.from}
         />
       ) : undefined}
       {showUserActions && (

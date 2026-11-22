@@ -80,10 +80,9 @@ that exists only in the chat, such as decisions or another task's result.
 
 - Inline `format` is `diff`, `code`, `markdown` or `text`. Its `path` is only a
   label that picks highlighting. The service never reads it.
-- References resolve from the task's approved project folder, also for a
-  worktree task's follow-ups, since the worker can already read its worktree. A
-  path must stay inside the folder after symlinks resolve, and outside `.git`.
-  `paths` takes up to 50 literal paths of at most 1,024 characters.
+- References resolve from the task's approved project folder, also for worktree
+  tasks. A path must stay inside the folder after symlinks resolve, and outside
+  `.git`. `paths` takes up to 50 literal paths of at most 1,024 characters.
 - A diff fails in a folder without Git, in a repository with no commits, and
   when there are no changes. Tracked changes show as `git diff HEAD` shows them,
   with Git's built-in line-ending and encoding conversions, so a change to line

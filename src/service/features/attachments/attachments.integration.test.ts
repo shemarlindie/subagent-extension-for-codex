@@ -601,17 +601,7 @@ test("steers and queued messages need an approved project and carry their snapsh
     text,
   });
 
-  // Concurrent sends never share a position.
-  await Promise.all([
-    c.send("alice", t.id, "First", "user", { attachments: [note("A")] }),
-    c.send("alice", t.id, "Second", "user", { attachments: [note("B")] }),
-  ]);
-
-  assert.deepEqual(
-    c.attachments.list(t.id).map((a) => a.position),
-    [1, 2],
-  );
-
+  await c.send("alice", t.id, "First", "user", { attachments: [note("A")] });
   const [first] = c.attachments.list(t.id);
   assert.ok(first);
 
@@ -664,7 +654,7 @@ test("steers and queued messages need an approved project and carry their snapsh
   finish();
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
-  const [snapshot] = c.attachments.list(t.id, [queued.message_id]);
+  const [snapshot] = c.attachments.ofMessage(t.id, queued.message_id);
   assert.ok(snapshot);
   assert.equal(await readFile(join(folder, snapshot.file), "utf8"), "before\n");
 });
@@ -722,15 +712,7 @@ test("a failed send keeps no message or snapshot, and retries match on attachmen
       "user",
     )) as { message_id: string };
 
-  // A crash between writing a snapshot and saving it leaves its file behind.
-  await writeFile(join(folder, "1-note.txt"), "stale");
   const sent = await send("x");
   assert.equal((await send("x")).message_id, sent.message_id);
   await assert.rejects(send("y"), /different payload/);
-
-  // Failed sends leave no gap in the positions.
-  assert.deepEqual(
-    c.attachments.list(t.id).map((a) => [a.position, a.message_id]),
-    [[1, sent.message_id]],
-  );
 });

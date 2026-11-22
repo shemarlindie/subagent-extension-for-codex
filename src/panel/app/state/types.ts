@@ -3,7 +3,7 @@ import type { Event } from "../../../shared/events/types.js";
 import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
 import type { PanelSettings } from "../../../shared/settings/settings-schema.js";
 import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
-import type { GitState, Sender } from "../../../shared/tasks/model.js";
+import type { GitState } from "../../../shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
@@ -156,8 +156,6 @@ export type AttachmentDialog = {
   attachment: MessageAttachment;
   /** All of the message's attachments, to step through in order. */
   attachments: MessageAttachment[];
-  /** Who sent the message, which an inline attachment's origin names. */
-  from: Sender;
   scope: number;
 };
 

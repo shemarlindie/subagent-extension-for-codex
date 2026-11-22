@@ -1152,7 +1152,7 @@ export class Control {
     await this.checkCommand(this.queueTask(owner, id), message);
     const t = this.queueTask(owner, id);
 
-    const attached = this.attachments.list(t.id, [messageId]).length;
+    const attached = this.attachments.ofMessage(t.id, messageId).length;
     refuseAttachedCommand(this.runsCommands(t), message, attached);
     editQueuedMessage(this.store, t, messageId, message);
 

@@ -5,7 +5,6 @@ import type {
   AttachmentPage,
   MessageAttachment,
 } from "../../../shared/attachments/model.js";
-import type { Sender } from "../../../shared/tasks/model.js";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
@@ -59,17 +58,15 @@ function useAttachment(task: Task, position: number) {
   return read?.position === position ? read : undefined;
 }
 
-type AttachmentHeaderProps = { attachment: MessageAttachment; from: Sender };
+type AttachmentHeaderProps = { attachment: MessageAttachment };
 
-function AttachmentHeader({ attachment, from }: AttachmentHeaderProps) {
+function AttachmentHeader({ attachment }: AttachmentHeaderProps) {
   return (
     <div className="attachment-header">
       <Icon name={attachmentIcon(attachment)} size={13} />
       <div>
         <p className="attachment-summary">{attachment.summary}</p>
-        <p className="attachment-origin">
-          {attachmentOrigin(attachment, from)}
-        </p>
+        <p className="attachment-origin">{attachmentOrigin(attachment)}</p>
       </div>
     </div>
   );
@@ -78,11 +75,10 @@ function AttachmentHeader({ attachment, from }: AttachmentHeaderProps) {
 type AttachmentPreviewProps = {
   task: Task;
   attachment: MessageAttachment;
-  from: Sender;
 };
 
 /** An attachment's summary and origin, then its content in a file viewer. */
-function AttachmentPreview({ task, attachment, from }: AttachmentPreviewProps) {
+function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
   const read = useAttachment(task, attachment.position);
   const page = read?.status === "ready" ? read.page : undefined;
   const controller = useController();
@@ -134,7 +130,7 @@ function AttachmentPreview({ task, attachment, from }: AttachmentPreviewProps) {
           />,
           optionsTarget,
         )}
-      <AttachmentHeader attachment={attachment} from={from} />
+      <AttachmentHeader attachment={attachment} />
       {!read && (
         <div
           className="file-preview-loading"
@@ -192,8 +188,8 @@ function AttachmentNav({ attachment, attachments }: AttachmentNavProps) {
 
 export const attachmentDialog = defineDialog<"attachment">({
   title: ({ attachment }) => displayTitle(attachment),
-  render: ({ task, attachment, from }) => (
-    <AttachmentPreview task={task} attachment={attachment} from={from} />
+  render: ({ task, attachment }) => (
+    <AttachmentPreview task={task} attachment={attachment} />
   ),
   headingActions: ({ attachment, attachments }) => (
     <div className="attachment-heading-actions">

@@ -54,8 +54,8 @@ A worker's reply is its own account. Check its edits with `get_changes` before
 reporting them, and inspect the diffs before applying or building on them.
 
 Continue a finished task with `send_message`, which takes `attachments` like the
-request. When a turn stops at its budget,
-raise the budget in `send_message`. Only deleting a task ends it.
+request. When a turn stops at its budget, raise the budget in `send_message`.
+Only deleting a task ends it.
 
 ## Respect authority
 

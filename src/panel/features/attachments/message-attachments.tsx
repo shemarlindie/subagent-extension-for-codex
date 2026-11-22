@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
-import type { Sender } from "../../../shared/tasks/model.js";
 import { useController } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
@@ -14,8 +13,6 @@ import {
 type MessageAttachmentsProps = {
   taskId: string;
   attachments: MessageAttachment[];
-  /** Who sent the message, which an inline attachment's origin names. */
-  from: Sender;
 };
 
 /** Reads the hidden copies' widths and fits the row to its current width. */
@@ -63,7 +60,6 @@ function useAttachmentFit(count: number) {
 export function MessageAttachments({
   taskId,
   attachments,
-  from,
 }: MessageAttachmentsProps) {
   const controller = useController();
   const count = attachments.length;
@@ -76,13 +72,7 @@ export function MessageAttachments({
     const task = findTask(controller.getSnapshot(), taskId);
 
     if (task) {
-      controller.open({
-        kind: "attachment",
-        task,
-        attachment,
-        attachments,
-        from,
-      });
+      controller.open({ kind: "attachment", task, attachment, attachments });
     }
   };
 
