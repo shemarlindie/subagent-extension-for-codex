@@ -27,8 +27,20 @@ type Bounds = [minX: number, minY: number, maxX: number, maxY: number];
 const VIEWBOX = 24;
 const TOLERANCE = 0.05;
 
+// Reads a plain number. A unit or percentage would make every fit check pass.
+function numberAttribute(element: Element, name: string): number {
+  const raw = element.getAttribute(name) ?? "0";
+  const value = Number(raw);
+
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`unmeasurable ${name}="${raw}"`);
+  }
+
+  return value;
+}
+
 function shapeBounds(shape: Element): Bounds {
-  const value = (name: string) => Number(shape.getAttribute(name) ?? 0);
+  const value = (name: string) => numberAttribute(shape, name);
 
   switch (shape.tagName) {
     case "path":
@@ -59,7 +71,6 @@ function inkedBounds(source: string): Bounds {
     "image/svg+xml",
   ).documentElement;
 
-  const halfStroke = Number(svg.getAttribute("stroke-width")) / 2;
   const bounds: Bounds = [Infinity, Infinity, -Infinity, -Infinity];
 
   for (const element of svg.querySelectorAll("*")) {
@@ -72,7 +83,10 @@ function inkedBounds(source: string): Bounds {
     const pad =
       element.closest("[stroke]")?.getAttribute("stroke") === "none"
         ? 0
-        : halfStroke;
+        : numberAttribute(
+            element.closest("[stroke-width]") ?? svg,
+            "stroke-width",
+          ) / 2;
 
     const [minX, minY, maxX, maxY] = shapeBounds(element);
     bounds[0] = Math.min(bounds[0], minX - pad);

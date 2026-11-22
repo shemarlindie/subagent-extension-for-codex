@@ -195,10 +195,10 @@ inspect pending states in the fixture UI.
   Scale the source geometry and stroke width together until the artwork, strokes
   included, reaches the edges on its longer axis, and center it on the other.
   The icon unit test checks this fit and accepts only `path`, `circle`, `rect`
-  and `g` elements without transforms. Every file sets a stroke width on the
-  root `<svg>`, which the catalog requires. Pick `size` for the visible size,
-  and render shapes that cover more area, such as squares, a little smaller than
-  circles beside them.
+  and `g` elements without transforms, with unitless numbers. Every file sets a
+  stroke width on the root `<svg>`, which the catalog requires. Pick `size` for
+  the visible size, and render shapes that cover more area, such as squares, a
+  little smaller than circles beside them.
 - `ProgressBar` and `ProgressRing` draw a decorative fill for a 0 to 1 value in
   the current color. Pair them with text or a label that states the value.
 - `TooltipWrapper` labels controls for mouse and keyboard users. Base UI turns
