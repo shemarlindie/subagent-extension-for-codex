@@ -280,6 +280,13 @@
   transform: translateX(min(0px, 100cqw - 100%));
   transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
 }
+/* The worker's plan progress, before the dot. */
+.row-plan {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 /* A fixed slot keeps every dot centred in the same place. It fades while
    Archive shows over it. */
 .row-signal {

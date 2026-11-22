@@ -46,6 +46,7 @@
 @import "../features/changes/changes.css";
 @import "../shared/components/command-line/command-line.css";
 @import "../features/tasks/chat/chat.css";
+@import "../features/tasks/plan/plan.css";
 @import "../features/tasks/chat/composer/command-menu.css";
 @import "../features/attachments/attachments.css";
 @import "../features/delegation/delegation.css";

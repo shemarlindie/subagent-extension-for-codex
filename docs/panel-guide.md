@@ -126,7 +126,8 @@ project and search filters. Press `/` to search and Escape to clear it.
 Under **All projects**, tasks group by project, ordered by each group's newest
 task. Project headers stay visible as their rows scroll.
 
-Each row shows the worker icon, the title and at most one dot: yellow when the
+Each row shows the worker icon, the title, progress such as `3/7` while the
+worker's [plan](#chat-tab) has open steps, and at most one dot: yellow when the
 task needs input or waits for a rate limit, gray while it is queued, pulsing
 gray while it works, and the accent color when it is unread. Hover a long title
 to see the rest. **Details** shows the task's total runtime. **Settings >
@@ -363,6 +364,13 @@ response, ask Codex about it or open that turn's activity. Hover or activate a
 timestamp for its full date and time. Failures keep their error. Notes mark
 compaction, new sessions and recreated worktrees.
 
+When the worker shows a [plan](mcp-reference.md#worker-plans), a card above the
+working status lists its steps. An open plan starts expanded and a finished one
+collapsed. Collapsed, the card shows the current step and progress. Your choice
+holds until the worker sends a new list or finishes the plan. A message that
+reaches the worker after its latest update labels the card **Plan from before
+your last message** until the worker updates it.
+
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
 | Enter                             | Start an idle task's next turn, or steer during a run. |
@@ -442,6 +450,8 @@ cancelled work never appears successful.
 - Worker and parent-agent text renders as Markdown, as in Chat. Your messages
   and tool output show as written.
 - Thinking shows elapsed time.
+- Plan rows show a new list in full, and an update to the same list shows only
+  the steps whose status changed.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
 - File tool rows show the path and options. Successful results show "File

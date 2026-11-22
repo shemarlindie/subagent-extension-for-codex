@@ -9,6 +9,7 @@ import { useSessionState } from "../../../app/state/session/use-session-state";
 import type { Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
 import { useReadingScroll } from "../evidence/use-reading-scroll";
+import { PlanCard } from "../plan/plan-card";
 import { NEW_MESSAGES_ID } from "../unread/new-messages";
 import { UnreadDot } from "../unread/unread-dot";
 import { useMarkRead } from "../unread/use-mark-read";
@@ -130,6 +131,7 @@ export const ChatPanel = memo(function ChatPanel({
           badge={unread && <UnreadDot className="scroll-latest-unread" />}
           onClick={scrollToLatest}
         />
+        {task && <PlanCard task={task} />}
         <ChatWorkingStatus task={task} />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
         {task && (

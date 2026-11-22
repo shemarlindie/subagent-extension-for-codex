@@ -136,7 +136,7 @@ export function planSummary(plan: TaskPlan) {
 }
 
 /** The plan has steps left to do. */
-const planOpen = (steps: PlanStep[]) =>
+export const planOpen = (steps: PlanStep[]) =>
   steps.some((s) => s.status !== "completed");
 
 /** The tool's one-line result, as Claude Desktop words it. */

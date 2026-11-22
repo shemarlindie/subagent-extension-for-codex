@@ -1,6 +1,7 @@
 import type { ChangesReading } from "../../../features/changes/changes-reading";
 import type { DelegateValues } from "../../../features/delegation/delegate-values";
 import type { ReadingState } from "../../../features/tasks/evidence/reading-state";
+import type { PlanCollapse } from "../../../features/tasks/plan/plan-collapse";
 import type { QuestionDraft, Tab } from "../types";
 
 export type TaskSessionState = {
@@ -26,6 +27,8 @@ export type TaskSessionState = {
     activity: ReadingState;
     changes: ChangesReading;
   };
+  /** Whether the user collapsed or expanded the worker's current plan. */
+  planCollapse?: PlanCollapse;
   /** Changed files the reader marked viewed: each path's change signature. */
   viewedChanges: ReadonlyMap<string, string>;
 };

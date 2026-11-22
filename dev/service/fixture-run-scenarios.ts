@@ -1,9 +1,11 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 import { structuredPatch } from "diff";
 
 import type { RunContext } from "../../src/service/features/providers/types.js";
+import { applyPlanUpdate } from "../../src/shared/tasks/plan.js";
 import type { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import type { FixtureRunEvents } from "./fixture-run-events.js";
 import { fixtureToolInput } from "./fixture-run-events.js";
@@ -134,6 +136,28 @@ export async function runFixtureInputs(
   }
 }
 
+/** Shows a plan and advances it a step at a time, as update_plan calls would. */
+async function runFixturePlan(
+  c: RunContext,
+  { steps, paceMs }: NonNullable<FixtureScenarios["plan"]>,
+  actions: string[],
+) {
+  let plan = applyPlanUpdate(undefined, {
+    items: Array.from({ length: steps }, (_, index) => ({
+      content: `Fixture step ${index + 1}`,
+      status: index === 0 ? "in_progress" : "pending",
+    })),
+  });
+
+  while (plan.kind === "updated") {
+    c.planUpdated(plan.steps, plan.changed);
+    await setTimeout(paceMs, undefined, { signal: c.signal });
+    plan = applyPlanUpdate(plan.steps, { advance: true });
+  }
+
+  actions.push(`Worked through a ${steps}-step fixture plan.`);
+}
+
 export async function runFixtureActions(
   c: RunContext,
   scenarios: FixtureScenarios,
@@ -141,6 +165,8 @@ export async function runFixtureActions(
   events: FixtureRunEvents,
   actions: string[],
 ) {
+  if (scenarios.plan) await runFixturePlan(c, scenarios.plan, actions);
+
   for (const name of scenarios.toolNames) {
     const input = fixtureToolInput(
       name,

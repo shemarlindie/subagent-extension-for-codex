@@ -78,3 +78,29 @@ test("a row names its title, worker, unread state and status", () => {
     hidden: true,
   });
 });
+
+test("a row counts its plan's steps while some are left", () => {
+  const steps = (...done: boolean[]) =>
+    done.map((d, i) => ({
+      content: `Step ${i + 1}`,
+      status: d ? ("completed" as const) : ("pending" as const),
+    }));
+
+  const count = (row: Task) =>
+    renderRow(row)
+      .view.container.querySelector(".row-plan")
+      ?.textContent?.replace("Plan, ", " · ");
+
+  const plan = (s: ReturnType<typeof steps>) => ({
+    ...task("a"),
+    plan: { steps: s, turn: 1, updated_at: "" },
+  });
+
+  assert.equal(
+    count(plan(steps(true, false, false))),
+    "1/3 · 1 of 3 steps done",
+  );
+
+  assert.equal(count(plan(steps(true, true))), undefined);
+  assert.equal(count(task("b")), undefined);
+});

@@ -55,6 +55,8 @@ export interface FixtureScenarios {
   slow: boolean;
   late: boolean;
   waitMs?: number;
+  /** A plan of this many steps, which advances every `pace` ms. */
+  plan?: { steps: number; paceMs: number };
   costUsd?: number;
   completionSubtype?: string;
   completionIsError: boolean;
@@ -287,6 +289,16 @@ export function readScenarios(
 
       if (Number.isSafeInteger(value) && value >= 0) {
         scenarios.waitMs = Math.min(value, 60_000);
+      }
+    } else if (kind === "plan") {
+      const steps = Number(field(args, "steps") ?? 4);
+      const pace = Number(field(args, "pace") ?? 1000);
+
+      if (Number.isSafeInteger(steps) && Number.isSafeInteger(pace)) {
+        scenarios.plan = {
+          steps: Math.max(1, Math.min(steps, 30)),
+          paceMs: Math.max(0, Math.min(pace, 10_000)),
+        };
       }
     } else if (kind === "cost") {
       const value = Number(field(args, "usd") ?? 0);

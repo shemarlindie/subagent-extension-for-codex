@@ -1,0 +1,122 @@
+/* The worker's plan, drawn as Claude Code draws it: a soft card with no header. */
+.plan-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tint) 8%, transparent);
+  border-radius: var(--border-radius-lg);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 18px;
+}
+.plan-card[data-expanded] {
+  padding: 12px 14px;
+}
+/* Collapsed, the whole row expands it. */
+.plan-card-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto 12px;
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.plan-card-current {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.plan-card-row[data-done] .plan-card-current {
+  color: var(--muted);
+}
+.plan-card-count,
+.plan-card-collapse {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+/* Sits in the top corner, beside the first step, as in Claude Code. */
+.plan-card-collapse {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--border-radius-sm);
+  background: none;
+  font-family: inherit;
+}
+.plan-card-collapse .chevron {
+  transform: rotate(180deg);
+}
+.plan-card-collapse:hover,
+.plan-card-row:hover {
+  background: var(--hover);
+}
+.plan-card-caption {
+  margin: 0 64px 6px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.plan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The first step leaves room for the collapse control in the corner. */
+.plan-card .plan-steps > :first-child {
+  padding-right: 56px;
+}
+.plan-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  color: var(--muted);
+}
+.plan-step[data-status="in_progress"] {
+  color: var(--text);
+}
+.plan-step > svg,
+.plan-card-row > svg {
+  justify-self: center;
+  color: var(--muted);
+}
+/* Centres the icon on a step's first line when its text wraps. */
+.plan-step > svg {
+  margin-top: 2px;
+}
+.plan-step-text {
+  overflow-wrap: anywhere;
+}
+/* A slow turn, so the current step reads as in progress without pulling the eye. */
+.plan-step-spin {
+  transform-origin: center;
+  animation: plan-step-spin 2.4s linear infinite;
+}
+@keyframes plan-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-step-spin {
+    animation: none;
+  }
+}
+/* In Activity the steps sit under the row's summary, closer together. */
+.activity-group .plan-steps {
+  gap: 4px;
+  margin-top: 6px;
+}

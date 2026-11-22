@@ -122,6 +122,25 @@ test("fixture tool and content scenarios produce representative synthetic events
   assert.ok(opaqueBlocks.some((content) => content.type === "custom_block"));
 });
 
+test("the fixture plan scenario shows a plan and advances it to the end", async () => {
+  const f = context();
+  await fixtureProvider().run(f.runContext, "[fixture:plan steps=2 pace=0]");
+
+  const plans = f.events
+    .filter((event) => event.type === "agent.plan")
+    .map((event) => event.data);
+
+  assert.deepEqual(
+    plans.map((plan) => plan.changed),
+    [undefined, [0, 1], [1]],
+  );
+
+  assert.deepEqual(plans.at(-1)?.steps, [
+    { content: "Fixture step 1", status: "completed" },
+    { content: "Fixture step 2", status: "completed" },
+  ]);
+});
+
 test("fixture child workers follow the subagents setting", async () => {
   const provider = fixtureProvider();
   const f = context();
