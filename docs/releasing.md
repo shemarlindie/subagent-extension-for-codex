@@ -10,7 +10,7 @@ in Codex.
 Users add `main`'s marketplace, `.agents/plugins/marketplace.json`, which
 installs the plugin from npm at the exact version it lists. Codex refreshes it
 on startup, so a version reaches users when `main` lists it. Each release has
-its own branch:
+its own branch. Use the `release` skill to go through these steps with an agent.
 
 1. On an up-to-date `main`, run `npm run release:prepare`. Pass a version to
    choose it yourself, which a prerelease needs:
@@ -31,12 +31,12 @@ version in `package.json`, `package-lock.json`, `plugin.json` and the
 marketplace. Unless `CHANGELOG.md` already has a `## <version>` section, it
 drafts one with Features and Fixes sections from the `feat` and `fix` commits,
 writing `None` in an empty section. Breaking commits of any type go in a
-Breaking changes section first, which appears only when there are some. Add what
-users must change to each item. After you confirm, it creates
-`chore/release-v<version>`, commits, pushes and opens a draft pull request to
-`main` that links to the notes. If you decline, it restores the version files
-and keeps `CHANGELOG.md`, so the next run uses your notes. It needs the `gh`
-CLI, signed in.
+Breaking changes section first, and `perf` commits in a Performance section
+before Fixes. Each appears only when there are some. Add what users must change
+to each item. After you confirm, it creates `chore/release-v<version>`, commits,
+pushes and opens a draft pull request to `main` that links to the notes. If you
+decline, it restores the version files and keeps `CHANGELOG.md`, so the next run
+uses your notes. It needs the `gh` CLI, signed in.
 
 When `main` already lists an unreleased version, as with the first release, run
 the **Release** workflow on `main`, with no branch or pull request.
