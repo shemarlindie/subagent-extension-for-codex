@@ -17,7 +17,7 @@ import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel for any request that takes several steps. Send the whole list once with one step in progress, then advance as each step finishes. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes. Skip it for quick answers.";
+  "Use update_plan to show your plan as a checklist in the user's panel, where they follow your progress. For any request that edits files or runs more than one command, send the whole list in the same message as your first other tool call. Then advance in the same message as the call that starts each next step, and once more before your final reply. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes.";
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a
@@ -72,7 +72,7 @@ export function workerMcpServers(c: RunContext) {
     tools: [
       tool(
         "update_plan",
-        "Show your step-by-step plan as a checklist in the user's panel. Send items with the whole list, or advance: true to complete the step in progress and start the next. To catch up after getting ahead, send done with the 1-based numbers of finished steps and start with the number of the step you're on. Send items again when the plan changes.",
+        "Show your step-by-step plan as a checklist in the user's panel. Send it in the same message as your next tool call when there is one. Send items with the whole list, or advance: true to complete the step in progress and start the next. To catch up after getting ahead, send done with the 1-based numbers of finished steps and start with the number of the step you're on. Send items again when the plan changes.",
         {
           items: z
             .array(
