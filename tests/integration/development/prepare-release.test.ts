@@ -125,6 +125,7 @@ test.skipIf(process.platform === "win32")(
     for (const message of [
       "feat(panel): add a setting",
       "docs: explain it",
+      "perf(panel): render faster",
       "feat(mcp)!: rename a tool",
       "refactor: rework\n\nBREAKING CHANGE: drops a setting",
     ]) {
@@ -156,7 +157,8 @@ plugin.json
     );
 
     // Breaking commits of any type are listed only under Breaking changes.
-    // Features and Fixes list feat and fix commits or say None.
+    // Features and Fixes list feat and fix commits or say None. Performance
+    // lists perf commits.
     assert.equal(
       await show("CHANGELOG.md"),
       `# Changelog
@@ -173,6 +175,10 @@ Intro.
 ### Features
 
 - Add a setting
+
+### Performance
+
+- Render faster
 
 ### Fixes
 

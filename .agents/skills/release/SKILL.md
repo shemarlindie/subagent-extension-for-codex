@@ -11,9 +11,9 @@ skill covers what an agent adds to it.
 ## 1. Draft the notes
 
 Run `echo n | npm run release:prepare`, adding `-- <version>` when the user
-chose one. It drafts the notes from `feat`, `fix` and breaking commits, then
-exits with "Cancelled" and keeps them. Check every commit since the last release
-and add user-visible changes the notes miss, such as `perf` commits.
+chose one. It drafts the notes, then exits with "Cancelled" and keeps them.
+Check every commit since the last release and add user-visible changes the
+draft misses.
 
 ## 2. Clean up the notes
 

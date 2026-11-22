@@ -2,7 +2,7 @@
 //   npm run release:prepare [-- [--yes] [<version>]]
 // Without a version, it picks the next one from the conventional commits since
 // the last release. Without a CHANGELOG.md section for the version, it drafts
-// one from the feat and fix commits. It makes the changes locally and asks to
+// one from the feat, perf and fix commits. It makes the changes locally and asks to
 // confirm before committing and pushing, so the notes can be edited first.
 // --yes skips the confirmation. The pull request starts as a draft and stays
 // one until the Release workflow publishes and merges it. See
@@ -162,10 +162,11 @@ function withDraft(changelog) {
         : ["None"]),
     ].join("\n");
 
-  // Breaking commits of any type go only under Breaking changes, which is left
-  // out when there are none.
+  // Breaking commits of any type go only under Breaking changes. It and
+  // Performance are left out when they have no commits.
   const breaking = commits.filter((commit) => commit.breaking);
   const other = commits.filter((commit) => !commit.breaking);
+  const performance = other.filter((commit) => commit.type === "perf");
 
   const groups = [
     ...(breaking.length ? [group("Breaking changes", breaking)] : []),
@@ -173,6 +174,7 @@ function withDraft(changelog) {
       "Features",
       other.filter((commit) => commit.type === "feat"),
     ),
+    ...(performance.length ? [group("Performance", performance)] : []),
     group(
       "Fixes",
       other.filter((commit) => commit.type === "fix"),
