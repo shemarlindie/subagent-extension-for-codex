@@ -12,7 +12,6 @@ import type { Store } from "../storage/store.js";
 import { worktreeClaimed } from "../storage/task-rows.js";
 import { logStartLimited } from "./execution-logging.js";
 import { limitTurnModel } from "./policy-check.js";
-import { markPlanStale } from "./task-plan.js";
 import { measureTaskWait } from "./timing.js";
 
 /** What readying a turn reads and writes. */
@@ -174,8 +173,6 @@ async function beginTurn(
   t.started_at ??= now();
   t.run_started_at = new Date(begin).toISOString();
   t.session_owner = c.ownerWorker;
-  // The turn's message reaches the worker after its plan.
-  markPlanStale(t.plan);
 
   c.store.transaction(() => {
     if (newSession && t.turn > 1) {

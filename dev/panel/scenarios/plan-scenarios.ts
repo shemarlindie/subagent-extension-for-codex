@@ -1,5 +1,5 @@
 // Tasks whose worker shows a plan: one in progress, one made stale by a steer,
-// one finished and one set aside when its turn ended stale.
+// one finished and one that ended with its turn while it had steps left.
 import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
 import type { Task } from "../../../src/shared/tasks/model";
 import {
@@ -53,9 +53,9 @@ class PlanTimeline extends Timeline {
       : this.add("task.plan_ended", { steps: update.steps }, 0);
   }
 
-  /** The plan as the task stores it after the last update. */
-  taskPlan(flags: Pick<TaskPlan, "stale" | "set_aside"> = {}): TaskPlan {
-    return { steps: this.steps, turn: 1, updated_at: this.end, ...flags };
+  /** The plan as the running turn's task stores it after the last update. */
+  taskPlan(flags: Pick<TaskPlan, "stale"> = {}): TaskPlan {
+    return { steps: this.steps, ...flags };
   }
 }
 
@@ -93,30 +93,30 @@ stale
   })
   .add("task.steer_taken", { message_id: steer }, 400);
 
-// The same steer, but the turn ends without the worker updating the plan.
-const asideSteer = "msg_preview_plan_aside_1";
-const aside = new PlanTimeline("preview-plan-aside", at(176), 7300);
-begin(aside, ["Read", "Edit"]);
-aside.plan({ items: pending(billingSteps.slice(2, 6)) });
-aside.plan({ advance: true });
+// The user stops the worker early, so the plan ends with the turn.
+const stopSteer = "msg_preview_plan_unfinished_1";
+const unfinished = new PlanTimeline("preview-plan-unfinished", at(176), 7300);
+begin(unfinished, ["Read", "Edit"]);
+unfinished.plan({ items: pending(billingSteps.slice(2, 6)) });
+unfinished.plan({ advance: true });
 
-aside
+unfinished
   .add("task.instruction", {
-    message_id: asideSteer,
+    message_id: stopSteer,
     message: "Stop here and summarize what moved.",
     from: "user",
     delivery: "steer",
   })
-  .add("task.steer_taken", { message_id: asideSteer }, 400);
+  .add("task.steer_taken", { message_id: stopSteer }, 400);
 
-const asideReply =
+const unfinishedReply =
   "Invoice code moved to `billing/invoices`. Payments are untouched.";
 
-aside
-  .turnResult(asideReply)
-  .reply(asideReply, 1)
+unfinished
+  .turnResult(unfinishedReply)
+  .reply(unfinishedReply, 1)
   .turnEnded(1, "completed")
-  .add("task.plan_ended", { steps: aside.steps }, 0)
+  .add("task.plan_ended", { steps: unfinished.steps }, 0)
   .add("task.completed", {}, 200);
 
 const done = new PlanTimeline("preview-plan-done", at(174), 7200);
@@ -133,7 +133,7 @@ const doneReply =
 done.say(doneReply);
 done.finish(doneReply, 1, { duration_ms: 400000, total_cost_usd: 1.18 });
 
-export const planTimelines = [progress, stale, aside, done];
+export const planTimelines = [progress, stale, unfinished, done];
 
 const description =
   "Split billing into invoices and payments without changing public behaviour.";
@@ -168,12 +168,11 @@ export const planTasks: Task[] = [
   },
   {
     ...planTask,
-    ...worktree(aside.taskId),
-    id: aside.taskId,
-    title: "Plan: set aside",
+    ...worktree(unfinished.taskId),
+    id: unfinished.taskId,
+    title: "Plan: unfinished",
     status: "completed",
     instructions_sent: 1,
-    plan: aside.taskPlan({ stale: true, set_aside: true }),
     runtime_ms: 64000,
     completed_at: at(178),
     ...timestamps(176, 2),
@@ -184,7 +183,6 @@ export const planTasks: Task[] = [
     id: done.taskId,
     title: "Plan: finished",
     status: "completed",
-    plan: done.taskPlan(),
     runtime_ms: 400000,
     cost_usd: 1.18,
     completed_at: at(181),

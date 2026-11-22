@@ -78,11 +78,15 @@ import {
   taskDeletionPreview,
   type DeletionVersions,
 } from "./task-deletion.js";
-import { markPlanStale, planRecorder, setPlanAside } from "./task-plan.js";
+import { endPlan, markPlanStale, planRecorder } from "./task-plan.js";
 import { startTask } from "./task-start.js";
 import { WorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
-import { recordStatusEvent, type Active } from "./turn-outcome.js";
+import {
+  interruptLostTurn,
+  recordStatusEvent,
+  type Active,
+} from "./turn-outcome.js";
 import {
   startTurn,
   turnPrompt,
@@ -172,24 +176,7 @@ export class Control {
 
     for (const t of this.store.withStatus(BUSY)) {
       if (["starting", "running", "waiting"].includes(t.status)) {
-        t.status = "interrupted";
-        delete t.pending_input;
-        delete t.waiting_reason;
-
-        t.error = "Service restarted; send a message to continue.";
-        delete t.error_code;
-        t.completed_at = now();
-        // Steers still inside the provider were lost with it, so they wait
-        // at the front of the queue, which pauses as after any interrupt.
-        const queue = queueSnapshot(t);
-        leaveOver(t);
-        if (t.queue.length) t.queue_paused = true;
-
-        commitQueue(this.store, t, queue, () =>
-          this.store.event(t, "task.interrupted", {
-            reason: "service_restart",
-          }),
-        );
+        interruptLostTurn(this.store, t);
       } else {
         this.queueWaits.queued(t.id, "recovery");
       }
@@ -538,7 +525,7 @@ export class Control {
           cost_usd: (t.cost_usd ?? 0) - turn.costBefore,
         });
 
-        setPlanAside(this.store, t);
+        endPlan(this.store, t);
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
         recordStatusEvent(this.store, t);

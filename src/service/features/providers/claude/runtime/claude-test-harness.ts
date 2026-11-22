@@ -122,7 +122,7 @@ export async function context() {
     steerTaken: () => {},
     planUpdated: (steps, changed) => {
       if (steps.length) {
-        task.plan = { steps, turn: task.turn, updated_at: now() };
+        task.plan = { steps };
       } else {
         delete task.plan;
       }

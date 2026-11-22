@@ -17,33 +17,20 @@ import {
 const steps = (...statuses: PlanStep["status"][]): PlanStep[] =>
   statuses.map((status, i) => ({ content: `Step ${i + 1}`, status }));
 
-test("the worker's plan is saved on the task, goes stale on a new message, ends into history and reaches Codex without waking it", async () => {
+test("the worker's plan is saved on the task, goes stale on a steer, ends into history and reaches Codex without waking it", async () => {
   const provider = new TestProvider();
   const run = provider.run.bind(provider);
   let context: RunContext | undefined;
-  let runs = 0;
-  let gate: Promise<void> | undefined;
-  let open = () => {};
-
-  const hold = () => {
-    gate = new Promise((resolve) => (open = resolve));
-  };
-
-  const finish = () => {
-    gate = undefined;
-    open();
-  };
+  let finish = () => {};
+  const gate = new Promise<void>((resolve) => (finish = resolve));
 
   provider.run = async (ctx, prompt) => {
     context = ctx;
-    runs++;
     ctx.acceptSteers(() => true);
     await gate;
 
     return run(ctx, prompt);
   };
-
-  hold();
 
   const { c, store, repo } = await setup(provider);
 
@@ -57,7 +44,6 @@ test("the worker's plan is saved on the task, goes stale on a new message, ends 
     context.planUpdated(steps("completed", "in_progress"), [0, 1]);
 
     assert.deepEqual(plan()?.steps, steps("completed", "in_progress"));
-    assert.equal(plan()?.turn, 1);
 
     assert.deepEqual(eventData(store, task.id, "agent.plan"), [
       { steps: steps("in_progress", "pending") },
@@ -123,28 +109,12 @@ test("the worker's plan is saved on the task, goes stale on a new message, ends 
     context.steerTaken(late.message_id);
     assert.equal(plan()?.stale, undefined);
 
-    // The plan stays after the turn ends, and the next turn's message makes it stale.
-    context.planUpdated(steps("in_progress"));
+    // The plan ends with its turn, and a finished one isn't recorded again.
+    // Restart recovery's test covers a plan with steps left.
     finish();
     await until(() => store.get(task.id, "alice").status === "completed");
-    assert.equal(plan()?.stale, undefined);
-    await c.send("alice", task.id, "Next", "user");
-
-    await until(() => {
-      const t = store.get(task.id, "alice");
-
-      return t.turn === 2 && t.status === "completed";
-    });
-
-    // A turn that leaves it stale sets it aside, and any update picks it back up.
-    assert.equal(plan()?.set_aside, true);
-    assert.deepEqual(ended().at(-1), { steps: steps("in_progress") });
-    hold();
-    await c.send("alice", task.id, "Pick it up", "user");
-    await until(() => runs === 3);
-    context.planUpdated(steps("completed", "in_progress"));
-    assert.equal(plan()?.set_aside, undefined);
-    assert.equal(ended().length, 3);
+    assert.equal(plan(), undefined);
+    assert.equal(ended().length, 2);
   } finally {
     finish();
     await c.close();

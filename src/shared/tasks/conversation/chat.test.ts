@@ -144,7 +144,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       runtime_ms: 2000,
       cost_usd: 0.2,
     }),
-    // A plan set aside at the turn's end doesn't separate the failure from it.
+    // A plan that ends with the turn doesn't separate the failure from it.
     event(10, "task.plan_ended", {
       steps: [{ content: "Run the tests", status: "in_progress" }],
     }),

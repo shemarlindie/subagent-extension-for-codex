@@ -276,7 +276,7 @@ export interface Task extends Omit<Start, "attachments"> {
    * user's undo. Task reads leave them out.
    */
   removed_queue?: QueuedMessage[];
-  /** The worker's latest plan. */
+  /** The worker's plan for the running turn. */
   plan?: TaskPlan;
   /** The number of turns started, the current one included. */
   turn: number;

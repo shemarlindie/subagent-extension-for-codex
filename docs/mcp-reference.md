@@ -56,12 +56,12 @@ sandbox the settings turn on. See
 
 ### Worker plans
 
-A Claude worker can show its plan for a multi-step request. `get_task` returns
-it as `plan`, with each step's `content` and `status` (`pending`, `in_progress`
-or `completed`). `list_tasks` summaries and `list_messages` add
-`plan: { done, total, current?, stale? }`. `stale` means a message reached the
-worker after its latest plan update. A plan update doesn't end a `list_messages`
-wait.
+A Claude worker can show its plan for a multi-step request. The plan lasts one
+turn. While the turn runs, `get_task` returns it as `plan`, with each step's
+`content` and `status` (`pending`, `in_progress` or `completed`). `list_tasks`
+summaries and `list_messages` add `plan: { done, total, current?, stale? }`.
+`stale` means a message reached the worker after its latest plan update. A plan
+update doesn't end a `list_messages` wait.
 
 ### Attachments
 

@@ -16,8 +16,8 @@ export interface AgentPlanPayload {
 }
 
 /**
- * A plan leaving the pinned card, with its final steps: finished, replaced or
- * cleared with steps left, or set aside when a turn ended with it stale.
+ * A plan leaving the pinned card, with its final steps: finished, or replaced,
+ * cleared or ended with its turn while it had steps left.
  */
 export interface TaskPlanEndedPayload {
   steps: PlanStep[];

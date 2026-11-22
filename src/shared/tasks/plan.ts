@@ -1,18 +1,10 @@
 import type { AgentPlanPayload, PlanStep } from "./plan-contract.js";
 
-/** The worker's latest plan, on the task. */
+/** The worker's plan for the running turn, on the task. It ends with the turn. */
 export interface TaskPlan {
   steps: PlanStep[];
-  /** The turn that last updated it. */
-  turn: number;
-  updated_at: string;
-  /** A steer or a new turn's message reached the worker after this update. */
+  /** A steer reached the worker after this update. */
   stale?: true;
-  /**
-   * A turn ended with the plan stale, so it left the pinned card. The steps
-   * stay, so the worker can pick it back up.
-   */
-  set_aside?: true;
 }
 
 const MAX_PLAN_STEPS = 30;
@@ -194,9 +186,9 @@ export function planSummary(plan: TaskPlan) {
 export const planOpen = (steps: PlanStep[]) =>
   steps.some((s) => s.status !== "completed");
 
-/** The plan Chat pins: one with steps left that no turn set aside. */
+/** The plan Chat pins: one with steps left. */
 export const pinnedPlan = (plan: TaskPlan | undefined) =>
-  plan && planOpen(plan.steps) && !plan.set_aside ? plan : undefined;
+  plan && planOpen(plan.steps) ? plan : undefined;
 
 /** The tool's one-line result, as Claude Desktop words it. */
 export function planResultLine(steps: PlanStep[]) {

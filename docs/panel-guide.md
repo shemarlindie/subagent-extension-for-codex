@@ -366,14 +366,13 @@ compaction, new sessions and recreated worktrees.
 
 A worker's [plan](mcp-reference.md#worker-plans) shows as a card above the
 working status while it has steps left. The current step spins while the worker
-is on it and pauses while it compacts or waits, or after its turn ends. Once a
-new message reaches the worker, the card reads **Plan from before your last
-message** until the worker updates it. If that turn ends without an update, the
-plan is set aside.
+is on it and pauses while it compacts or waits. Once a message you send during
+the turn reaches the worker, the card reads **Plan from before your last
+message** until the worker updates it.
 
-A plan leaves the card when it finishes, is replaced or cleared, or is set
-aside. It stays in Chat as a one-line history row that expands to its steps. The
-worker's next update to a set-aside plan pins it again.
+A plan lasts one turn. It leaves the card when it finishes, is replaced or
+cleared, or its turn ends. It stays in Chat as a one-line history row that
+expands to its steps.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |

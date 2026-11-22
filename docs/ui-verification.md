@@ -173,7 +173,7 @@ Host settings:
 | Plan: split billing                         | Running plan, 3 of 7 steps done: the card, the row count and Plan rows in Activity.                                                                                                        |
 | Plan: steered mid-step                      | Stale plan after a taken steer: the caption and the paused current step.                                                                                                                   |
 | Plan: finished                              | Finished plan: a history row in Chat, no card and no row count.                                                                                                                            |
-| Plan: set aside                             | Plan left stale at the turn's end: a history row with steps left, and no card.                                                                                                             |
+| Plan: unfinished                            | Plan ended with its turn: a history row with steps left, and no card.                                                                                                                      |
 
 Read state:
 

@@ -148,7 +148,7 @@ test("update_plan saves the plan through the run context and answers in one line
   assert.equal(c.task.plan, undefined);
 });
 
-test("an open plan returns to the worker after compaction or in a new session, and subagents can't change it", async () => {
+test("an open plan returns to the worker after compaction, and subagents can't change it", async () => {
   const { c } = await context();
   const options = await launch(c);
   const sessionStart = options.hooks?.SessionStart?.[0]?.hooks[0];
@@ -171,8 +171,6 @@ test("an open plan returns to the worker after compaction or in a new session, a
       { content: "Read", status: "completed" as const },
       { content: "Report", status },
     ],
-    turn: 1,
-    updated_at: "",
   });
 
   c.task.plan = plan("in_progress");
@@ -185,8 +183,7 @@ test("an open plan returns to the worker after compaction or in a new session, a
   ].join("\n");
 
   assert.equal(await reminder("compact"), expected);
-  assert.equal(await reminder("startup"), expected);
-  // A resumed session still has its update_plan calls.
+  assert.equal(await reminder("startup"), undefined);
   assert.equal(await reminder("resume"), undefined);
   c.task.plan = plan("completed");
   assert.equal(await reminder("compact"), undefined);

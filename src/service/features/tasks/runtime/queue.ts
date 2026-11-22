@@ -39,8 +39,8 @@ export function recordQueueChange(
 }
 
 /**
- * Saves a task whose queue changed since `before`, with any events `record`
- * adds, then the queue change, in one transaction.
+ * Saves a task whose queue changed since `before`, with anything `record`
+ * changes or adds, then the queue change, in one transaction.
  */
 export function commitQueue(
   store: Store,
@@ -49,8 +49,8 @@ export function commitQueue(
   record?: () => void,
 ) {
   store.transaction(() => {
-    store.save(t);
     record?.();
+    store.save(t);
     recordQueueChange(store, t, before);
   });
 }

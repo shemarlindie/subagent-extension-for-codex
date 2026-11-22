@@ -20,19 +20,17 @@ export const workerToolsPrompt =
   "Use update_plan to show your plan as a checklist in the user's panel when a request takes several steps. Send the whole list once with one step in progress, then advance as each step finishes. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes. Skip it for quick answers.";
 
 /**
- * A SessionStart hook that hands an open plan back to the worker when its
- * context starts without the update_plan calls: after a compaction, or in a
- * new session for a task that already has a plan. A resumed session still
- * has them.
+ * A SessionStart hook that hands an open plan back to the worker after a
+ * compaction drops its update_plan calls. A plan lasts one turn, so a turn's
+ * new or resumed session never needs it.
  */
 export function planReminder(c: RunContext): HookCallback {
   return async (input) => {
-    // A set-aside plan stays out, so the reminder doesn't revive it.
     const plan = pinnedPlan(c.task.plan);
 
     if (
       input.hook_event_name !== "SessionStart" ||
-      input.source === "resume" ||
+      input.source !== "compact" ||
       !plan
     ) {
       return {};

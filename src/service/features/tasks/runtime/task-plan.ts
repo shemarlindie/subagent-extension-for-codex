@@ -5,7 +5,6 @@ import {
   planOpen,
   type TaskPlan,
 } from "../../../../shared/tasks/plan.js";
-import { now } from "../../../../shared/time.js";
 import type { Store } from "../storage/store.js";
 
 const sameSteps = (a: PlanStep[], b: PlanStep[]) =>
@@ -29,7 +28,7 @@ export const planRecorder =
       (!before || planOpen(before.steps) || !sameSteps(before.steps, steps));
 
     if (steps.length) {
-      t.plan = { steps, turn: t.turn, updated_at: now() };
+      t.plan = { steps };
     } else {
       delete t.plan;
     }
@@ -48,20 +47,16 @@ export const planRecorder =
   };
 
 /**
- * At a turn's end, sets aside a plan the worker left stale through the turn,
- * so it leaves the pinned card. Call inside the turn's transaction.
+ * Ends the plan with its turn. One with steps left records `task.plan_ended`,
+ * as a finished plan already did. Call in the transaction that saves the task.
  */
-export function setPlanAside(store: Store, t: Task) {
+export function endPlan(store: Store, t: Task) {
   const pinned = pinnedPlan(t.plan);
-  if (!pinned?.stale) return;
-  pinned.set_aside = true;
-  store.event(t, "task.plan_ended", { steps: pinned.steps });
+  if (pinned) store.event(t, "task.plan_ended", { steps: pinned.steps });
+  delete t.plan;
 }
 
-/**
- * Marks a plan with steps left as made before the worker's latest message,
- * for a taken steer or a new turn.
- */
+/** Marks a plan with steps left as made before a steer the worker took. */
 export function markPlanStale(plan: TaskPlan | undefined) {
   if (plan && planOpen(plan.steps)) plan.stale = true;
 }

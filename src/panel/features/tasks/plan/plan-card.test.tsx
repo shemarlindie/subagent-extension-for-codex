@@ -19,8 +19,6 @@ const steps = (...statuses: PlanStep["status"][]): PlanStep[] =>
 
 const plan = (s: PlanStep[], stale?: true): TaskPlan => ({
   steps: s,
-  turn: 1,
-  updated_at: "2026-11-21T00:00:00.000Z",
   ...(stale ? { stale } : {}),
 });
 
