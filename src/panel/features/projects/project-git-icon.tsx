@@ -23,7 +23,11 @@ export function ProjectGitIcon({ git, folder, name }: ProjectGitIconProps) {
         className="text-button muted project-git-icon"
         aria-label={`${tag} in ${name}`}
       >
-        <Icon name={git === "none" ? "git-off" : "git-commit-off"} size={14} />
+        {git === "none" ? (
+          <Icon name="git-off" size={14} />
+        ) : (
+          <Icon name="git-commit-off" size={13} />
+        )}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner className="tooltip-positioner" sideOffset={6}>

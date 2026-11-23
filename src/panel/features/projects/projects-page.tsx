@@ -148,7 +148,7 @@ export function ProjectsPage() {
                             setArchive({ repository: project.repository, name })
                           }
                         >
-                          <Icon name="archive-view" size={16} />
+                          <Icon name="archive-view" size={15} />
                         </Button>
                       </TooltipWrapper>
                       <TooltipWrapper

@@ -27,7 +27,7 @@ export function NewTaskRow() {
     >
       <span className="row-title">{title || "New task"}</span>
       <span className="row-worker" title={state}>
-        <Icon name="pencil-simple" size={12} className="row-worker-icon" />
+        <Icon name="pencil-simple" size={10} className="row-worker-icon" />
         <span className="visually-hidden">{state}</span>
       </span>
     </button>

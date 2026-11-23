@@ -135,7 +135,6 @@ export function ModelTable({
             {hasProfileIcon && (
               <WorkerProfileIcon
                 profile={scope.id}
-                size={12}
                 className="setting-profile-icon"
               />
             )}

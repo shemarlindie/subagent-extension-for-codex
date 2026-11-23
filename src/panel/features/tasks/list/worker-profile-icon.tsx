@@ -13,17 +13,15 @@ export function workerProfileIconName(profile: string): IconName | undefined {
 
 export function WorkerProfileIcon({
   profile,
-  size = 10,
   className,
 }: {
   profile: string;
-  size?: number;
   className?: string;
 }) {
   return (
     <Icon
       name={workerProfileIconName(profile) ?? "quiet-constellation"}
-      size={size}
+      size={10}
       className={className}
     />
   );
