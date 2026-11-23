@@ -33,15 +33,19 @@ const THEME_ID = "visual-theme";
 /**
  * Reports the content's height, applies the panel's theme updates, and hands
  * link clicks to the panel, since the sandbox lets the frame open nothing
- * itself. Fragment links stay inside.
+ * itself. Fragment links stay in the document through `location.hash`, since
+ * the frame resolves their `href` against `about:blank` and would navigate
+ * away from the visual.
  *
  * The root's box measures the content, and the body's scroll height adds
  * absolutely positioned content past it, since the document's style makes the
  * body their containing block. The root's own scroll height never drops below
  * the frame's, so a frame measured by it could never shrink. Content such as a
- * popover can appear without resizing the root, so DOM changes, hovers and
- * finished transitions report too. A frame that fits its content can't scroll,
- * even by a rounded pixel, or it would keep the wheel from scrolling Chat.
+ * popover can appear without resizing the root, through the DOM or CSS states
+ * like `:hover`, `:focus-within`, `:checked` and `:target`, so DOM changes, the
+ * events behind those states and finished transitions report too. A frame that
+ * fits its content can't scroll, even by a rounded pixel, or it would keep the
+ * wheel from scrolling Chat.
  */
 const FRAME_SCRIPT = `(() => {
   const post = (message) => parent.postMessage(message, "*");
@@ -60,7 +64,10 @@ const FRAME_SCRIPT = `(() => {
   new MutationObserver(report).observe(root, {
     subtree: true, childList: true, attributes: true, characterData: true,
   });
-  for (const type of ["pointerover", "pointerout", "transitionend", "animationend"]) {
+  for (const type of [
+    "pointerover", "pointerout", "focusin", "focusout", "input", "change",
+    "hashchange", "transitionend", "animationend",
+  ]) {
     addEventListener(type, report);
   }
   addEventListener("message", (event) => {
@@ -70,9 +77,10 @@ const FRAME_SCRIPT = `(() => {
   addEventListener("click", (event) => {
     const link = event.target instanceof Element ? event.target.closest("a") : null;
     const href = link?.getAttribute("href") ?? link?.getAttribute("xlink:href");
-    if (!href || href.startsWith("#")) return;
+    if (!href) return;
     event.preventDefault();
-    post({ type: "visual-link", href });
+    if (href.startsWith("#")) location.hash = href;
+    else post({ type: "visual-link", href });
   });
 })();`;
 
