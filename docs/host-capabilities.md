@@ -63,14 +63,14 @@ active turn. Global panels and the standalone console send nothing to the chat.
 - A queued result does not show that Codex received the message or began a new
   turn.
 
-## Settings file export
+## File downloads
 
-**Export file** uses the portable `App.downloadFile` call when the host
-advertises `downloadFile`, sending the file as a base64 `blob` resource. The
-host decides where the file goes and whether to prompt. Without the capability,
-exports go to the home folder, as
+Settings **Export file** and visual downloads use the portable
+`App.downloadFile` call when the host advertises `downloadFile`. The host
+decides where the file goes and whether to prompt. Without the capability,
+settings exports go to the home folder, as
 [Copy settings between computers](configuration.md#copy-settings-between-computers)
-describes.
+describes, and visual downloads show that the host can't save files.
 
 Observed in the Codex desktop app 26.1117: Codex advertises `downloadFile`, asks
 the user to confirm each download in its own dialog and saves to `~/Downloads`.

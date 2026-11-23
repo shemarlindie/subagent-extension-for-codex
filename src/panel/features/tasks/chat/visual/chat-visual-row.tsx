@@ -3,6 +3,7 @@ import { memo, useRef } from "react";
 import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { VisualFrame } from "./visual-frame";
+import { VisualMenu } from "./visual-menu";
 
 type ChatVisualRowProps = {
   item: ChatVisual;
@@ -28,6 +29,7 @@ export const ChatVisualRow = memo(function ChatVisualRow({
       aria-label={`Visual: ${item.title}`}
     >
       <VisualFrame title={item.title} code={item.code} />
+      <VisualMenu item={item} />
     </article>
   );
 });

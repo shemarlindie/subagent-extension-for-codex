@@ -1070,3 +1070,38 @@ body[data-expanded-panel="true"]
 .visual-link a {
   color: var(--accent);
 }
+.chat-message[data-kind="visual"] {
+  position: relative;
+}
+/* The visual's menu sits on a surface over its top right corner, inset to
+   clear a scrolling frame's scrollbar. It shows on hover or focus, or always
+   where nothing hovers. */
+.visual-menu {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+.visual-menu:hover {
+  background: linear-gradient(var(--hover), var(--hover)), var(--surface);
+}
+.chat-message[data-kind="visual"]:is(:hover, :focus-within) .visual-menu,
+.visual-menu[data-popup-open] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .visual-menu {
+    opacity: 1;
+  }
+}
+.visual-note {
+  margin: 4px 0 0;
+}

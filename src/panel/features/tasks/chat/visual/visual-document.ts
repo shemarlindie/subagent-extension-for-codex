@@ -110,22 +110,55 @@ export function visualThemeCss(root: Element) {
   return `:root { ${tokens.join(" ")} color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
+const BASE_STYLE =
+  ":root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }";
+
 /**
- * The frame document for a visual's code. The policy and script come first in
- * the head, so they apply before any of the visual's own markup. A visual
- * that's a whole HTML document still renders, since the parser folds its
- * `html` and `head` tags into this one.
+ * A document for a visual's code. The policy comes first in the head, so it
+ * applies before anything else. A visual that's a whole HTML document still
+ * renders, since the parser folds its `html` and `head` tags into this one.
  */
-export function visualDocument(code: string, themeCss: string) {
+function visualPage(head: string[], code: string) {
   return [
     "<!doctype html>",
     '<html><head><meta charset="utf-8">',
     `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`,
-    `<script>${FRAME_SCRIPT}</script>`,
-    `<style id="${THEME_ID}">${themeCss}</style>`,
-    "<style>:root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }</style>",
+    ...head,
+    `<style>${BASE_STYLE}</style>`,
     "</head><body>",
     code,
     "</body></html>",
   ].join("\n");
+}
+
+/** The frame document, whose script runs before the visual's own markup. */
+export function visualDocument(code: string, themeCss: string) {
+  return visualPage(
+    [
+      `<script>${FRAME_SCRIPT}</script>`,
+      `<style id="${THEME_ID}">${themeCss}</style>`,
+    ],
+    code,
+  );
+}
+
+/**
+ * A visual as a page of its own, in the theme it was saved in. Without the
+ * frame script it scrolls and its links navigate. In Chat the panel shows
+ * through the frame, so the page paints the panel's background itself.
+ */
+export function savedVisualDocument(
+  title: string,
+  code: string,
+  themeCss: string,
+) {
+  const escaped = title.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+
+  return visualPage(
+    [
+      `<title>${escaped}</title>`,
+      `<style>${themeCss} :root { background: var(--background); }</style>`,
+    ],
+    code,
+  );
 }
