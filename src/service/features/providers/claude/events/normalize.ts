@@ -149,6 +149,14 @@ function normalizeClaudeMessage(
     return fields;
   };
 
+  // Whether the message also becomes activity: when it's empty or failed, or
+  // under full events when its blocks recorded nothing, as worker tool blocks
+  // don't, so its original response still reaches diagnostics.
+  const unrecorded = (content: readonly unknown[]) =>
+    !content.length ||
+    ("error" in m && Boolean(m.error)) ||
+    (responseRef !== undefined && !recorded);
+
   const emit = <K extends EventType, D extends EventPayloadMap[K]>(
     type: K,
     data: D,
@@ -245,9 +253,7 @@ function normalizeClaudeMessage(
         }
       }
 
-      if (!content.length || ("error" in m && m.error)) {
-        emitActivity(m);
-      }
+      if (unrecorded(content)) emitActivity(m);
     }
   } else if (m.type === "system" && m.subtype === "init") {
     emit("agent.started", { model: m.model, tools: m.tools });
