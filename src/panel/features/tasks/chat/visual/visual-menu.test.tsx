@@ -22,31 +22,41 @@ const item: ChatVisual = {
   code: "<svg><text>Jan</text></svg>",
 };
 
-test("the menu saves the visual as a page, notes a host that can't save, and copies the latest code", async () => {
-  const files: File[] = [];
-  let result: SaveResult = "saved";
-
+/** Renders the menu with the host's save, and rerenders it with a version. */
+function renderMenu(
+  saveFile: (file: File) => Promise<SaveResult>,
+  visual: ChatVisual = item,
+) {
   const controller = {
-    transport: {
-      saveFile: async (file: File) => {
-        files.push(file);
-
-        return result;
-      },
-    },
+    transport: { saveFile },
     report: vi.fn(),
   } as unknown as Controller;
 
-  const menu = (visual: ChatVisual) => (
+  const menu = (next: ChatVisual) => (
     <ControllerContext.Provider value={controller}>
       <Tooltip.Provider>
-        <VisualMenu item={visual} />
+        <VisualMenu item={next} />
       </Tooltip.Provider>
     </ControllerContext.Provider>
   );
 
-  const { rerender } = render(menu(item));
-  const user = userEvent.setup();
+  const { rerender } = render(menu(visual));
+
+  return {
+    rerender: (next: ChatVisual) => rerender(menu(next)),
+    user: userEvent.setup(),
+  };
+}
+
+test("the menu saves the visual as a page, notes a host that can't save, and copies the latest code", async () => {
+  const files: File[] = [];
+  let result: SaveResult = "saved";
+
+  const { rerender, user } = renderMenu(async (file) => {
+    files.push(file);
+
+    return result;
+  });
 
   const choose = async (name: string) => {
     await user.click(screen.getByRole("button", { name: /Download|Copied/ }));
@@ -71,7 +81,7 @@ test("the menu saves the visual as a page, notes a host that can't save, and cop
   );
 
   const latest = { ...item, code: "<svg><text>Feb</text></svg>" };
-  rerender(menu(latest));
+  rerender(latest);
   expect(screen.queryByRole("alert")).toBeNull();
 
   await choose("Copy code");
@@ -79,27 +89,30 @@ test("the menu saves the visual as a page, notes a host that can't save, and cop
   expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
 });
 
+test("an open menu offers a PNG when the current version can draw one", async () => {
+  const sized = {
+    ...item,
+    code: '<svg viewBox="0 0 4 2"><text>Jan</text></svg>',
+  };
+
+  const { rerender, user } = renderMenu(vi.fn(), sized);
+  await user.click(screen.getByRole("button", { name: /Download/ }));
+  await screen.findByRole("menuitem", { name: /PNG/ });
+
+  rerender(item);
+  expect(screen.queryByRole("menuitem", { name: /PNG/ })).toBeNull();
+  expect(screen.getByRole("menuitem", { name: /HTML/ })).toBeTruthy();
+
+  rerender(sized);
+  expect(await screen.findByRole("menuitem", { name: /PNG/ })).toBeTruthy();
+});
+
 test("a save that finishes after a later one leaves the later outcome in place", async () => {
   const pending: ((result: SaveResult) => void)[] = [];
 
-  const controller = {
-    transport: {
-      saveFile: () =>
-        new Promise<SaveResult>((resolve) => pending.push(resolve)),
-    },
-    report: vi.fn(),
-  } as unknown as Controller;
-
-  const menu = (visual: ChatVisual) => (
-    <ControllerContext.Provider value={controller}>
-      <Tooltip.Provider>
-        <VisualMenu item={visual} />
-      </Tooltip.Provider>
-    </ControllerContext.Provider>
+  const { rerender, user } = renderMenu(
+    () => new Promise<SaveResult>((resolve) => pending.push(resolve)),
   );
-
-  const { rerender } = render(menu(item));
-  const user = userEvent.setup();
 
   const save = async () => {
     await user.click(screen.getByRole("button", { name: /Download/ }));
@@ -110,7 +123,7 @@ test("a save that finishes after a later one leaves the later outcome in place",
   };
 
   await save();
-  rerender(menu({ ...item, code: "<svg><text>Feb</text></svg>" }));
+  rerender({ ...item, code: "<svg><text>Feb</text></svg>" });
   await save();
   await act(async () => pending[1]?.("unsupported"));
   await act(async () => pending[0]?.("unsupported"));

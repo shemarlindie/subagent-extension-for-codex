@@ -1,5 +1,5 @@
 import { Menu } from "@base-ui/react/menu";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
 import { useController } from "../../../../app/state/controller-context";
@@ -9,7 +9,8 @@ import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { copyText } from "../../../../shared/utils/copy-text";
 import { errorMessage } from "../../../../shared/utils/error-message";
 import { writeClipboardText } from "../../../../shared/utils/write-clipboard";
-import { visualPageFile } from "./visual-export";
+import { visualPageFile, visualPngFile } from "./visual-export";
+import { prepareVisualImage } from "./visual-image";
 
 type VisualMenuProps = { item: ChatVisual };
 
@@ -22,6 +23,9 @@ type VersionNote = { code: string; text: string };
  */
 export function VisualMenu({ item }: VisualMenuProps) {
   const controller = useController();
+  const [open, setOpen] = useState(false);
+  // The version the menu showed last, so its items stay while it closes.
+  const [shownCode, setShownCode] = useState<string>();
   const [note, setNote] = useState<VersionNote>();
   // A new version must not inherit the previous one's checkmark or note.
   const [copiedCode, setCopiedCode] = useState<string>();
@@ -80,11 +84,25 @@ export function VisualMenu({ item }: VisualMenuProps) {
     if (text && latest()) setNote({ code, text });
   }
 
+  // Prepared when the menu first shows a version, so the PNG item appears only
+  // when the file can be made.
+  const menuCode = open ? item.code : shownCode;
+
+  const image = useMemo(
+    () => (menuCode === undefined ? undefined : prepareVisualImage(menuCode)),
+    [menuCode],
+  );
+
+  function toggle(next: boolean) {
+    setOpen(next);
+    if (!next) setShownCode(item.code);
+  }
+
   const label = copied ? "Copied" : "Download or copy";
 
   return (
     <>
-      <Menu.Root>
+      <Menu.Root open={open} onOpenChange={toggle}>
         <TooltipWrapper label={label}>
           <Menu.Trigger
             className={buttonClass("default", { className: "visual-menu" })}
@@ -110,6 +128,18 @@ export function VisualMenu({ item }: VisualMenuProps) {
               >
                 Download HTML page
               </Menu.Item>
+              {image && (
+                <Menu.Item
+                  className="menu-item"
+                  onClick={() =>
+                    void save((root) =>
+                      visualPngFile(item, image.svg, image.size, root),
+                    )
+                  }
+                >
+                  Download PNG image
+                </Menu.Item>
+              )}
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

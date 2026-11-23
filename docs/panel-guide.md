@@ -374,7 +374,9 @@ network access. A link you click in a visual shows below it, and opens outside
 the panel from there. A new version of a visual replaces it where it is. The
 menu in a visual's corner copies its code or downloads it as an HTML page in the
 panel's current theme. The page runs the visual's scripts and blocks their
-requests, but outside the frame a script can still open another page.
+requests, but outside the frame a script can still open another page. A visual
+that's one SVG element with a size also downloads as a PNG image, a still at
+twice that size, or smaller for a very large SVG.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
