@@ -80,6 +80,7 @@ import {
 } from "./task-deletion.js";
 import { endPlan, markPlanStale, planRecorder } from "./task-plan.js";
 import { startTask } from "./task-start.js";
+import { visualRecorder } from "./task-visual.js";
 import { WorktreeChanges } from "./task-worktree.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import {
@@ -421,6 +422,7 @@ export class Control {
         });
       },
       planUpdated: planRecorder(this.store, t),
+      visualShown: visualRecorder(this.store, t),
       delta: (messageId, text) =>
         this.drafts.append(t.owner, t.id, messageId, text),
       emit: <K extends EventType, D extends EventPayloadMap[K]>(

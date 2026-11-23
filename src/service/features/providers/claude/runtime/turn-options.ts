@@ -211,9 +211,9 @@ export async function claudeTurnOptions(
             async (input): Promise<HookJSONOutput> => {
               if (input.hook_event_name !== "PreToolUse") return {};
 
-              // Subagents share the worker's tools, but the plan is the worker's own.
+              // Subagents share the worker's tools, but the panel shows the worker's own plan and visuals.
               if (input.agent_id && isWorkerTool(input.tool_name)) {
-                return denied("Only the main worker keeps the plan");
+                return denied("Only the main worker uses the panel tools");
               }
 
               const toolInput = input.tool_input as Record<string, unknown>;

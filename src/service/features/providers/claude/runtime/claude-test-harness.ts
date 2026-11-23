@@ -129,6 +129,7 @@ export async function context() {
 
       events.push({ type: "agent.plan", data: { steps, changed } });
     },
+    visualShown: vi.fn(() => 1),
     delta: () => {},
   };
 

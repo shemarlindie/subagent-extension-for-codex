@@ -278,6 +278,8 @@ export interface Task extends Omit<Start, "attachments"> {
   removed_queue?: QueuedMessage[];
   /** The worker's plan for the running turn. */
   plan?: TaskPlan;
+  /** How many visuals the worker has shown, which numbers the next one. */
+  visuals?: number;
   /** The number of turns started, the current one included. */
   turn: number;
   /** Sum of the finished turns' run times. */

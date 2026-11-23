@@ -62,6 +62,13 @@ A Claude worker can show a plan for its current turn. `get_task` returns it as
 means a message reached the worker after its latest plan update. A plan update
 doesn't end a `list_messages` wait.
 
+### Worker visuals
+
+A Claude worker can show visuals, such as charts and diagrams, in the panel's
+Chat. `list_messages` gives each one a message of kind `visual` whose text names
+its number and title. The code stays out. A new version of a visual keeps its
+message id and returns as a new message.
+
 ### Attachments
 
 `attachments` gives the worker up to 20 artifacts it can't find itself.

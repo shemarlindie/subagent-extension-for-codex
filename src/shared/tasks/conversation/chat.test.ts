@@ -160,6 +160,7 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       }
 
       if (item.kind === "plan") return [item.kind, item.steps[0]?.content];
+      if (item.kind === "visual") return [item.kind, item.title];
 
       return [item.kind, item.kind === "note" ? item.note : item.from];
     }),

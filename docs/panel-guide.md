@@ -368,6 +368,11 @@ working status until it finishes or its turn ends, then stays in Chat as a
 collapsed row. After you message the worker mid-turn, the card reads **Plan from
 before your last message** until the worker updates it.
 
+[Visuals](mcp-reference.md#worker-visuals) a worker shows, such as charts and
+diagrams, span Chat in the panel's theme. Each runs in a sandboxed frame without
+network access, and its links open outside the panel. A new version of a visual
+replaces it where it is.
+
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
 | Enter                             | Start an idle task's next turn, or steer during a run. |

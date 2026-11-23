@@ -6,6 +6,7 @@
 export const READ_EVENTS = [
   "agent.message",
   "agent.reply",
+  "agent.visual",
   "task.turn_ended",
   "task.failed",
   "agent.input_required",

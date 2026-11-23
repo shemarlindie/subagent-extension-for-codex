@@ -1051,3 +1051,10 @@ body[data-expanded-panel="true"]
   margin: 0;
   padding-block-start: 14px;
 }
+/* A visual spans Chat, with no bubble, and blends into it. */
+.visual-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}

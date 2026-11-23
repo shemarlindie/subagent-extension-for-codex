@@ -3,6 +3,7 @@ import type { Event } from "../../events/types.js";
 import { failureMessage } from "../failure.js";
 import type { Sender, Task } from "../model.js";
 import type { PlanStep } from "../plan-contract.js";
+import { visualId } from "../visual.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
 /**
@@ -22,6 +23,7 @@ export const CHAT_EVENTS = [
   "agent.limited",
   "agent.input_required",
   "task.plan_ended",
+  "agent.visual",
 ];
 
 /**
@@ -87,8 +89,19 @@ export type ChatPlan = {
   steps: PlanStep[];
 };
 
+/** A visual the worker showed, at its latest version. */
+export type ChatVisual = {
+  kind: "visual";
+  id: string;
+  event_id: number;
+  timestamp: string;
+  visual: number;
+  title: string;
+  code: string;
+};
+
 export type ChatItem =
-  ChatMessage | TurnOutcome | ChatNote | ChatAnswers | ChatPlan;
+  ChatMessage | TurnOutcome | ChatNote | ChatAnswers | ChatPlan | ChatVisual;
 
 /** A context compaction, which Claude reports as a system message. */
 const isCompaction = (e: Event) => {
@@ -179,6 +192,33 @@ function endedPlan(e: Event): ChatPlan | undefined {
   };
 }
 
+function shownVisual(e: Event): ChatVisual | undefined {
+  const shown = eventPayload(e, "agent.visual");
+  if (!shown) return undefined;
+
+  return {
+    kind: "visual",
+    id: visualId(shown.visual),
+    event_id: e.id,
+    timestamp: e.timestamp,
+    ...shown,
+  };
+}
+
+/**
+ * Puts a visual's new version where the visual is, if it's among `items`. A
+ * read that starts after the first version gets it as a new item, which the
+ * panel puts in place.
+ */
+function replacedVisual(items: ChatItem[], marker: ChatItem) {
+  if (marker.kind !== "visual") return false;
+  const index = items.findIndex((item) => item.id === marker.id);
+  if (index < 0) return false;
+  items[index] = marker;
+
+  return true;
+}
+
 function answered(e: Event): ChatAnswers | undefined {
   const decision = eventPayload(e, "agent.input_decision");
   if (!decision?.answers) return undefined;
@@ -198,7 +238,8 @@ function answered(e: Event): ChatAnswers | undefined {
 
 /**
  * Chat for a task, in order: its conversation (see `conversation`), answers
- * to the worker's questions, plans that left the pinned card, an outcome row
+ * to the worker's questions, plans that left the pinned card, visuals at
+ * their latest version where they were first shown, an outcome row
  * where each turn ended, with a failed turn's error, standalone task
  * failures, and small notes for a new session, worktree recreation,
  * compaction and a session limited to less than the task asked for. A
@@ -228,9 +269,11 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
       message && message.event_id <= until;
       message = messages[++next]
     ) {
+      // Visuals show as their own items, with their code.
       if (
-        commandReplies.has(message.event_id) &&
-        compactedTurns.has(message.turn)
+        message.kind === "visual" ||
+        (commandReplies.has(message.event_id) &&
+          compactedTurns.has(message.turn))
       ) {
         continue;
       }
@@ -286,9 +329,9 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
         failedOutcome = undefined;
       }
 
-      const marker = note(e) ?? answered(e) ?? endedPlan(e);
+      const marker = note(e) ?? answered(e) ?? endedPlan(e) ?? shownVisual(e);
 
-      if (marker) {
+      if (marker && !replacedVisual(items, marker)) {
         flush(e.id);
         items.push(marker);
 

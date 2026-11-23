@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Options, Settings } from "@anthropic-ai/claude-agent-sdk";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { onTestFinished, test } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import type { RunContext } from "../../types.js";
@@ -17,6 +17,7 @@ import {
 import { ClaudeAgentProvider } from "./provider.js";
 
 const TOOL = "mcp__delegated_work__update_plan";
+const VISUAL_TOOL = "mcp__delegated_work__show_visual";
 
 async function launch(c: RunContext) {
   let options: Options | undefined;
@@ -44,11 +45,8 @@ async function workerTools(options: Options) {
 
   return {
     mcp,
-    call: async (args: Record<string, unknown>) => {
-      const result = await mcp.callTool({
-        name: "update_plan",
-        arguments: args,
-      });
+    call: async (args: Record<string, unknown>, name = "update_plan") => {
+      const result = await mcp.callTool({ name, arguments: args });
 
       const [content] = result.content as Array<{ text: string }>;
 
@@ -72,12 +70,16 @@ test("turns load the worker tools always and allow them in every mode", async ()
   const { mcp } = await workerTools(options);
   const settings = options.settings as Settings;
 
-  assert.deepEqual(settings.permissions?.allow, [TOOL]);
+  assert.deepEqual(settings.permissions?.allow, [TOOL, VISUAL_TOOL]);
   assert.equal(options.allowedTools, undefined);
 
   const { tools } = await mcp.listTools();
-  assert.equal(tools[0]?.annotations?.readOnlyHint, true);
-  assert.equal(tools[0]?._meta?.["anthropic/alwaysLoad"], true);
+  assert.equal(tools.length, 2);
+
+  for (const tool of tools) {
+    assert.equal(tool.annotations?.readOnlyHint, true, tool.name);
+    assert.equal(tool._meta?.["anthropic/alwaysLoad"], true, tool.name);
+  }
 
   // Without the allow rule, as under managed-only rules, the approver isn't asked.
   assert.equal(
@@ -124,6 +126,37 @@ test("update_plan saves the plan through the run context and answers in one line
   });
 
   assert.equal(c.task.plan?.steps[1]?.status, "in_progress");
+});
+
+test("show_visual records the visual through the run context and names its number", async () => {
+  const { c } = await context();
+  const { call } = await workerTools(await launch(c));
+  const visual = { title: "Signups", code: "<svg></svg>" };
+
+  assert.deepEqual(await call(visual, "show_visual"), {
+    text: "Shown as visual 1.",
+    isError: false,
+  });
+
+  assert.deepEqual(await call({ ...visual, replaces: 1 }, "show_visual"), {
+    text: "Visual 1 replaced.",
+    isError: false,
+  });
+
+  assert.deepEqual(vi.mocked(c.visualShown).mock.calls, [
+    ["Signups", "<svg></svg>", undefined],
+    ["Signups", "<svg></svg>", 1],
+  ]);
+
+  // The service's refusal reaches the worker as an error.
+  vi.mocked(c.visualShown).mockImplementation(() => {
+    throw new Error("There is no visual 4.");
+  });
+
+  assert.deepEqual(await call({ ...visual, replaces: 4 }, "show_visual"), {
+    text: "There is no visual 4.",
+    isError: true,
+  });
 });
 
 test("an open plan returns to the worker after compaction, and subagents can't change it", async () => {

@@ -4,10 +4,11 @@ import { responseOutcome } from "../chat/chat-model";
 /** The row id of Chat's "New" divider, which Chat opens at. */
 export const NEW_MESSAGES_ID = "new-messages";
 
-// Worker messages and replies, turn outcomes and failures; the user's and
-// parent's own messages, and notes such as compaction, never are.
+// Worker messages, replies and visuals, turn outcomes and failures; the
+// user's and parent's own messages, and notes such as compaction, never are.
 const fromTask = (item: ChatItem) =>
   item.kind === "outcome" ||
+  item.kind === "visual" ||
   (item.kind === "note" && item.note === "failure") ||
   (item.kind === "message" && item.message.from === "worker");
 

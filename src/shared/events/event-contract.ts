@@ -4,6 +4,7 @@ import type {
   AgentPlanPayload,
   TaskPlanEndedPayload,
 } from "../tasks/plan-contract.js";
+import type { AgentVisualPayload } from "../tasks/visual-contract.js";
 
 export interface EventEnvelope {
   id: number;
@@ -125,4 +126,5 @@ export interface EventPayloadMap extends TaskEventPayloadMap {
   "agent.input_decision": AgentInputDecisionPayload;
   "agent.plan": AgentPlanPayload;
   "task.plan_ended": TaskPlanEndedPayload;
+  "agent.visual": AgentVisualPayload;
 }

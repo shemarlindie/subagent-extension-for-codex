@@ -2,6 +2,7 @@ import type { MessageAttachment } from "../../attachments/model.js";
 import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import type { Delivery, Sender, TaskView } from "../model.js";
+import { visualId, visualPlaceholder } from "../visual.js";
 
 /** Events a conversation is derived from, besides the task's own request. */
 export const MESSAGE_EVENTS = [
@@ -9,6 +10,7 @@ export const MESSAGE_EVENTS = [
   "task.instruction",
   "agent.message",
   "agent.reply",
+  "agent.visual",
 ];
 
 /** The id of a task's request in its conversation and attachments. */
@@ -27,8 +29,11 @@ export type ConversationMessage = {
   /** The turn it belongs to. */
   turn: number;
   from: Sender | "worker";
-  /** `reply` is the text that ended a successful turn. */
-  kind: "request" | "message" | "reply";
+  /**
+   * `reply` is the text that ended a successful turn. `visual` stands in for
+   * a visual the panel shows, which Chat reads as its own item.
+   */
+  kind: "request" | "message" | "reply" | "visual";
   text: string;
   delivery?: Delivery;
   /** A steer the running turn hasn't taken, or one waiting in the queue. */
@@ -72,8 +77,10 @@ function queueState(
 /**
  * A task's conversation from its events, in order: its request, the
  * messages the user and parent sent, the worker's messages and each
- * successful turn's reply. A reply that repeats the turn's last worker
- * message takes that message's place and id, so it doesn't show twice.
+ * successful turn's reply, with a line for each visual the worker showed. A
+ * reply that repeats the turn's last worker message takes that message's
+ * place and id, so it doesn't show twice. A visual's new version updates its
+ * line.
  */
 export function conversation(
   task: TaskView,
@@ -140,6 +147,28 @@ export function conversation(
         kind: "message",
         text,
       });
+    }
+
+    const visual = eventPayload(e, "agent.visual");
+
+    if (visual) {
+      const id = visualId(visual.visual);
+      const text = visualPlaceholder(visual.visual, visual.title);
+      const shown = messages.find((m) => m.id === id);
+
+      if (shown) {
+        Object.assign(shown, { event_id: e.id, timestamp: e.timestamp, text });
+      } else {
+        messages.push({
+          id,
+          event_id: e.id,
+          timestamp: e.timestamp,
+          turn,
+          from: "worker",
+          kind: "visual",
+          text,
+        });
+      }
     }
 
     const reply = eventPayload(e, "agent.reply");

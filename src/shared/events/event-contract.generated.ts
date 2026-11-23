@@ -7,6 +7,7 @@ import {
   agentPlanPayloadSchema,
   taskPlanEndedPayloadSchema,
 } from "../tasks/plan-contract.generated.js";
+import { agentVisualPayloadSchema } from "../tasks/visual-contract.generated.js";
 
 export const eventEnvelopeSchema = z.object({
   id: z.number(),
@@ -139,4 +140,5 @@ export const eventPayloadMapSchema = taskEventPayloadMapSchema.extend({
   "agent.input_decision": agentInputDecisionPayloadSchema,
   "agent.plan": agentPlanPayloadSchema,
   "task.plan_ended": taskPlanEndedPayloadSchema,
+  "agent.visual": agentVisualPayloadSchema,
 });
