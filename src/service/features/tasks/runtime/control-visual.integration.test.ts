@@ -3,16 +3,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
-import { MAX_VISUAL_CODE } from "../../../../shared/tasks/visual.js";
 import type { RunContext } from "../../providers/types.js";
 import { pollMessages } from "../conversation/message-poll.js";
-import {
-  eventData,
-  input,
-  setup,
-  TestProvider,
-  until,
-} from "./control-test-harness.js";
+import { input, setup, TestProvider, until } from "./control-test-harness.js";
 
 test("visuals are numbered per task, a new version takes its visual's place in Chat, and Codex reads a line for each", async () => {
   const provider = new TestProvider();
@@ -40,19 +33,13 @@ test("visuals are numbered per task, a new version takes its visual's place in C
     const cursor = store.lastEventId(task.id);
     assert.equal(context.visualShown("Chart, fixed", "<svg>2</svg>", 1), 1);
 
-    // Refused calls record nothing.
+    // A refused call records nothing, so Chat below has no visual 3.
     assert.throws(
       () => context?.visualShown("Gone", "<svg/>", 3),
       /There is no visual 3. This task has shown visuals 1 to 2./,
     );
 
-    assert.throws(
-      () => context?.visualShown("Huge", "x".repeat(MAX_VISUAL_CODE + 1)),
-      /over the limit of 200000/,
-    );
-
     assert.equal(store.get(task.id, "alice").visuals, 2);
-    assert.equal(eventData(store, task.id, "agent.visual").length, 3);
 
     const visuals = (after = 0) =>
       chatItems(

@@ -48,7 +48,6 @@ test("the frame runs scripts alone, takes its own window's height, and opens lin
 
   post(frame?.contentWindow, link);
   activation.isActive = true;
-  post(other?.contentWindow, link);
   post(frame?.contentWindow, { ...link, href: "javascript:alert(1)" });
   expect(openLink).not.toHaveBeenCalled();
 

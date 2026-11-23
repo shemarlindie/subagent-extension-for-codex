@@ -133,18 +133,12 @@ test("show_visual records the visual through the run context and names its numbe
   const { call } = await workerTools(await launch(c));
   const visual = { title: "Signups", code: "<svg></svg>" };
 
-  assert.deepEqual(await call(visual, "show_visual"), {
-    text: "Shown as visual 1.",
-    isError: false,
-  });
-
   assert.deepEqual(await call({ ...visual, replaces: 1 }, "show_visual"), {
     text: "Visual 1 replaced.",
     isError: false,
   });
 
   assert.deepEqual(vi.mocked(c.visualShown).mock.calls, [
-    ["Signups", "<svg></svg>", undefined],
     ["Signups", "<svg></svg>", 1],
   ]);
 

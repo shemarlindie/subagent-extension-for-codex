@@ -48,10 +48,7 @@ records an `agent.plan` event and marks an open plan stale when a steer is
 taken. The plan ends with its turn, and `task.plan_ended` records its move to
 Chat history.
 
-A provider shows a worker's visual with
-`RunContext.visualShown(title, code, replaces?)`, which returns its number in
-the task. A new version keeps the number of the visual it replaces. Task control
-refuses code over 200,000 characters and a number the task hasn't shown.
+A provider shows a worker's visual in Chat with `RunContext.visualShown`.
 
 Claude workers get `update_plan` and `show_visual` from the in-process
 `delegated_work` MCP server. Their calls need no approval and show no tool rows.
