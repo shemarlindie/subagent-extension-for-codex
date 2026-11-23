@@ -168,6 +168,8 @@ export async function claudeTurnOptions(
       : {}),
     tools: { type: "preset", preset: "claude_code" },
     disallowedTools: [
+      // It publishes to the signed-in claude.ai account, outside the task.
+      "Artifact",
       ...(policy.subagents ? [] : ["Agent", "Task"]),
       ...(readOnlyProfile(c.task.worker_profile) ? ["ExitPlanMode"] : []),
     ],
