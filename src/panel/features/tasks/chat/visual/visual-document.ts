@@ -110,8 +110,50 @@ export function visualThemeCss(root: Element) {
   return `:root { ${tokens.join(" ")} color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
-const BASE_STYLE =
-  ":root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }";
+/** The widest a top-level SVG without a pixel width draws. */
+const MAX_UNSIZED_SVG_WIDTH = 720;
+
+/** A top-level SVG without a pixel width. */
+const UNSIZED_SVG = (at: string) =>
+  `${at}:not([width]):not([height]), ${at}[width$="%"]`;
+
+/**
+ * A top-level SVG scales evenly, so extra width only enlarges it. It centers
+ * and shrinks to fit, keeping its shape. One with a pixel width keeps it, and
+ * one without stops at the cap.
+ */
+const BASE_STYLE = [
+  ":root { color: var(--text); font-family: var(--font-sans); }",
+  "body { margin: 0; position: relative; }",
+  "body > svg { display: block; margin-inline: auto; max-width: 100%; }",
+  "body > svg[width][height] { height: auto; }",
+  `${UNSIZED_SVG("body > svg")} { max-width: min(100%, ${MAX_UNSIZED_SVG_WIDTH}px); }`,
+].join(" ");
+
+/**
+ * Rules that stop each top-level SVG without a pixel width at its viewBox
+ * width, below the cap, since its text is drawn at viewBox scale. CSS can't
+ * read the viewBox, so each rule matches the attribute's text, which must be
+ * plain numbers to quote as is.
+ */
+function viewBoxWidthStyle(code: string) {
+  const { body } = new DOMParser().parseFromString(code, "text/html");
+  const rules = new Set<string>();
+
+  for (const svg of body.querySelectorAll(":scope > svg[viewBox]")) {
+    const box = svg.getAttribute("viewBox") ?? "";
+    if (!/^[\d\s.,eE+-]+$/.test(box)) continue;
+
+    const width = Number(box.trim().split(/[\s,]+/)[2]);
+    if (!(width > 0 && width < MAX_UNSIZED_SVG_WIDTH)) continue;
+
+    rules.add(
+      `${UNSIZED_SVG(`body > svg[viewBox="${box}"]`)} { max-width: min(100%, ${width}px); }`,
+    );
+  }
+
+  return [...rules].join(" ");
+}
 
 /**
  * A document for a visual's code. The policy comes first in the head, so it
@@ -124,7 +166,7 @@ function visualPage(head: string[], code: string) {
     '<html><head><meta charset="utf-8">',
     `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`,
     ...head,
-    `<style>${BASE_STYLE}</style>`,
+    `<style>${BASE_STYLE} ${viewBoxWidthStyle(code)}</style>`,
     "</head><body>",
     code,
     "</body></html>",
