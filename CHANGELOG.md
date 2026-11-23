@@ -3,6 +3,34 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.10.0
+
+### Workers
+
+- Claude workers show a step-by-step plan. An open plan sits above the composer
+  and collapses to its current step, the task row shows its progress, such as
+  3/7, and Chat keeps each finished plan as a row. Codex reads the plan through
+  `get_task`, `list_tasks` and `list_messages` (#174, #176).
+- Workers can show charts, diagrams and small interactive pages in Chat with the
+  `show_visual` tool. Visuals follow the panel theme and can't reach the
+  network. Codex sees each one as a `visual` line in `list_messages` (#178).
+- Workers can no longer use Claude Code's `Artifact` tool, which publishes pages
+  to claude.ai that Codex can't open (#177).
+
+### Chat and composer
+
+- Follow-up messages can carry attachments, like the request. `send_message` and
+  `app_send_message` accept `attachments`, and Chat shows them under each
+  message (#172).
+
+### Panel
+
+- Turn on **Settings → Appearance → Plan usage meter** to see your Claude plan
+  usage in the panel header. Hover or tap it for each limit window's usage and
+  reset time. It turns the warning color at 80% (#169).
+- Task rows show Archive on hover or keyboard focus. On touch, long-press a row
+  to archive it (#170).
+
 ## 0.9.0
 
 ### Chat and composer
