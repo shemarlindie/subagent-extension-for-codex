@@ -49,10 +49,17 @@ export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
   let state: PlanStepState = working ? "working" : "paused";
   if (stale) state = "stale";
 
-  const label = `${stale ? "Plan from before your last message" : "Plan"}, ${count} steps done`;
+  const title = stale ? "Plan from before your last message" : "Plan";
+  const label = `${title}, ${count} steps done`;
 
-  // The step in progress, or the next one when none is.
-  const current = plan.steps.find((s) => s.status !== "completed");
+  // The step in progress, or the next one when none is. Catching up with
+  // `start` can leave earlier steps pending.
+  const current =
+    plan.steps.find((s) => s.status === "in_progress") ??
+    plan.steps.find((s) => s.status === "pending");
+
+  // Collapsed, the row shows the current step, unless the plan is stale.
+  const showStep = collapsed && !stale;
 
   // One row in both forms, so the count and caret stay put and focus stays on it.
   // Only the label fades between forms.
@@ -68,16 +75,14 @@ export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
       }
     >
       <Collapsible.Trigger className="plan-card-row">
-        {collapsed ? (
+        {showStep ? (
           <span key="step" className="plan-card-label motion-swap">
             <PlanStepIcon status={current?.status ?? "pending"} state={state} />
             <span className="plan-card-current">{current?.content}</span>
           </span>
         ) : (
           <span key="plan" className="plan-card-label motion-swap">
-            <span className="plan-card-current plan-card-title">
-              {stale ? "Plan from before your last message" : "Plan"}
-            </span>
+            <span className="plan-card-current plan-card-title">{title}</span>
           </span>
         )}
         <span className="plan-card-count">

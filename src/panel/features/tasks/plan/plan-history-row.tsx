@@ -29,15 +29,19 @@ export const PlanHistoryRow = memo(function PlanHistoryRow({
       className="plan-card plan-history"
       data-chat-item={item.id}
     >
+      {/* Laid out as the pinned card's row, so a plan reads the same before and after it ends. */}
       <Collapsible.Trigger className="plan-card-row">
-        <PlanStepIcon
-          status={done === total ? "completed" : "in_progress"}
-          state="paused"
-        />
-        <span className="plan-card-current">
-          Plan · {done} of {total} {total === 1 ? "step" : "steps"} done
+        <span className="plan-card-label">
+          <PlanStepIcon
+            status={done === total ? "completed" : "in_progress"}
+            state="paused"
+          />
+          <span className="plan-card-current">Plan</span>
         </span>
-        <Chevron size={9} />
+        <span className="plan-card-count">
+          {done} of {total}
+          <Chevron size={9} />
+        </span>
       </Collapsible.Trigger>
       <Collapsible.Panel className="collapse-panel">
         <div className="plan-history-steps">

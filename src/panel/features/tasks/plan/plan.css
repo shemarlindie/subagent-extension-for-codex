@@ -67,6 +67,11 @@
 .plan-history-steps {
   padding: 0 14px 12px;
 }
+/* A long plan scrolls inside the pinned card, so the composer stays in view. */
+.plan-card-steps {
+  max-height: 40vh;
+  overflow-y: auto;
+}
 .plan-steps {
   display: flex;
   flex-direction: column;
@@ -86,7 +91,6 @@
   color: var(--text);
 }
 .plan-step > svg,
-.plan-card-row > svg,
 .plan-card-label > svg {
   justify-self: center;
   color: var(--muted);
@@ -120,7 +124,6 @@
 }
 /* A past plan in Chat: one muted row that opens to its final steps. */
 .plan-history .plan-card-row {
-  grid-template-columns: 16px minmax(0, 1fr) 12px;
   padding-block: 10px;
 }
 .plan-history .plan-card-current {

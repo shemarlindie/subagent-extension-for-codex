@@ -83,14 +83,23 @@ test("an open plan shows every step, and collapsing leaves the current one", asy
   assert.equal(view.container.querySelector(".plan-step-spin"), null);
   assert.deepEqual(visibleSteps()[1], ["Paused", "Step 2"]);
 
-  const header = screen.getByRole("button", { expanded: true });
-  assert.equal(header.textContent, "Plan1 of 3");
-  await userEvent.click(header);
+  await userEvent.click(screen.getByRole("button", { expanded: true }));
 
   assert.deepEqual(visibleSteps(), []);
-  const row = screen.getByRole("button", { expanded: false });
-  assert.equal(row.querySelector(".plan-card-current")?.textContent, "Step 2");
-  assert.equal(row.querySelector(".plan-card-count")?.textContent, "1 of 3");
+
+  const current = () =>
+    screen
+      .getByRole("button", { expanded: false })
+      .querySelector(".plan-card-current")?.textContent;
+
+  assert.equal(current(), "Step 2");
+
+  // Catching up with `start: 3` can leave an earlier step pending.
+  view.rerender(
+    card(plan(steps("pending", "completed", "in_progress")), false),
+  );
+
+  assert.equal(current(), "Step 3");
 });
 
 test("collapsing stays with its task across remounts until the plan changes", async () => {
@@ -140,7 +149,7 @@ test("the card reports each resize so Chat can keep its latest message in view",
   assert.equal(resizes, 2);
 });
 
-test("a stale plan says so and pauses its current step", () => {
+test("a stale plan says so in both forms and pauses its current step", async () => {
   const { card } = setup();
   render(card(plan(steps("completed", "in_progress"), true)));
 
@@ -153,6 +162,13 @@ test("a stale plan says so and pauses its current step", () => {
     "Waiting for the worker to update the plan",
     "Step 2",
   ]);
+
+  await userEvent.click(screen.getByRole("button", { expanded: true }));
+
+  assert.equal(
+    screen.getByRole("button", { expanded: false }).textContent,
+    "Plan from before your last message1 of 2",
+  );
 });
 
 test("an ended plan folds into one Chat row that expands to its steps", async () => {
@@ -169,10 +185,7 @@ test("an ended plan folds into one Chat row that expands to its steps", async ()
   render(<PlanHistoryRow item={item} />);
   const row = screen.getByRole("button", { expanded: false });
 
-  assert.equal(
-    row.querySelector(".plan-card-current")?.textContent,
-    "Plan · 1 of 2 steps done",
-  );
+  assert.equal(row.querySelector(".plan-card-count")?.textContent, "1 of 2");
 
   assert.deepEqual(visibleSteps(), []);
   await userEvent.click(row);
