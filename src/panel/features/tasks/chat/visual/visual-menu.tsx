@@ -9,7 +9,6 @@ import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { copyText } from "../../../../shared/utils/copy-text";
 import { errorMessage } from "../../../../shared/utils/error-message";
 import { writeClipboardText } from "../../../../shared/utils/write-clipboard";
-import { visualThemeCss } from "./visual-document";
 import { visualPageFile } from "./visual-export";
 
 type VisualMenuProps = { item: ChatVisual };
@@ -28,35 +27,59 @@ export function VisualMenu({ item }: VisualMenuProps) {
   const [copiedCode, setCopiedCode] = useState<string>();
   const copied = copiedCode === item.code;
   const resetTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Only the latest action shows its outcome, whichever finishes last.
+  const latestAction = useRef(0);
 
-  useEffect(() => () => clearTimeout(resetTimer.current), []);
+  useEffect(
+    () => () => {
+      latestAction.current++;
+      clearTimeout(resetTimer.current);
+    },
+    [],
+  );
+
+  /** Starts an action and returns whether it's still the latest. */
+  function startAction() {
+    const action = ++latestAction.current;
+    setNote(undefined);
+
+    return () => action === latestAction.current;
+  }
 
   async function copy() {
     const { code } = item;
-    setNote(undefined);
-    if (!(await copyText(code, writeClipboardText, controller.report))) return;
+    const latest = startAction();
+
+    const copied = await copyText(code, writeClipboardText, (error) => {
+      if (latest()) controller.report(error);
+    });
+
+    if (!copied || !latest()) return;
 
     setCopiedCode(code);
     clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setCopiedCode(undefined), 1500);
   }
 
-  async function save(file: () => File) {
+  /** Saves the file, built at the click in the panel's theme then. */
+  async function save(file: (root: Element) => File | Promise<File>) {
     const { code } = item;
-    setNote(undefined);
+    const latest = startAction();
+    let text: string | undefined;
 
     try {
-      const result = await controller.transport.saveFile(file());
+      const result = await controller.transport.saveFile(
+        await file(document.documentElement),
+      );
 
-      if (result === "unsupported") {
-        setNote({ code, text: "This host can't save files." });
-      }
+      if (result === "unsupported") text = "This host can't save files.";
     } catch (error) {
-      setNote({ code, text: errorMessage(error) });
+      text = errorMessage(error);
     }
+
+    if (text && latest()) setNote({ code, text });
   }
 
-  const theme = () => visualThemeCss(document.documentElement);
   const label = copied ? "Copied" : "Download or copy";
 
   return (
@@ -83,7 +106,7 @@ export function VisualMenu({ item }: VisualMenuProps) {
               <Menu.Separator className="menu-separator" />
               <Menu.Item
                 className="menu-item"
-                onClick={() => void save(() => visualPageFile(item, theme()))}
+                onClick={() => void save((root) => visualPageFile(item, root))}
               >
                 Download HTML page
               </Menu.Item>

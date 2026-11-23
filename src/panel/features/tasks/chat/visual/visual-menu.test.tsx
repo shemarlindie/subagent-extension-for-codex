@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Tooltip } from "@base-ui/react/tooltip";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -77,4 +77,45 @@ test("the menu saves the visual as a page, notes a host that can't save, and cop
   await choose("Copy code");
   expect(await navigator.clipboard.readText()).toBe(latest.code);
   expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
+});
+
+test("a save that finishes after a later one leaves the later outcome in place", async () => {
+  const pending: ((result: SaveResult) => void)[] = [];
+
+  const controller = {
+    transport: {
+      saveFile: () =>
+        new Promise<SaveResult>((resolve) => pending.push(resolve)),
+    },
+    report: vi.fn(),
+  } as unknown as Controller;
+
+  const menu = (visual: ChatVisual) => (
+    <ControllerContext.Provider value={controller}>
+      <Tooltip.Provider>
+        <VisualMenu item={visual} />
+      </Tooltip.Provider>
+    </ControllerContext.Provider>
+  );
+
+  const { rerender } = render(menu(item));
+  const user = userEvent.setup();
+
+  const save = async () => {
+    await user.click(screen.getByRole("button", { name: /Download/ }));
+
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Download HTML page" }),
+    );
+  };
+
+  await save();
+  rerender(menu({ ...item, code: "<svg><text>Feb</text></svg>" }));
+  await save();
+  await act(async () => pending[1]?.("unsupported"));
+  await act(async () => pending[0]?.("unsupported"));
+
+  expect(screen.getByRole("alert").textContent).toBe(
+    "This host can't save files.",
+  );
 });

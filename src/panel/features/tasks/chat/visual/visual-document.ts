@@ -145,7 +145,9 @@ export function visualDocument(code: string, themeCss: string) {
 /**
  * A visual as a page of its own, in the theme it was saved in. Without the
  * frame script it scrolls and its links navigate. In Chat the panel shows
- * through the frame, so the page paints the panel's background itself.
+ * through the frame, so the page paints the panel's background itself. Its
+ * scripts keep running, so interactive visuals work. The CSP stops their
+ * requests, but nothing in a page can stop a script from navigating it.
  */
 export function savedVisualDocument(
   title: string,

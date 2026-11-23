@@ -1,5 +1,5 @@
 import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
-import { savedVisualDocument } from "./visual-document";
+import { savedVisualDocument, visualThemeCss } from "./visual-document";
 
 type ExportedVisual = Pick<ChatVisual, "visual" | "title" | "code">;
 
@@ -9,11 +9,11 @@ type ExportedVisual = Pick<ChatVisual, "visual" | "title" | "code">;
  */
 export function visualFileName(
   { visual, title }: ExportedVisual,
-  extension: string,
+  extension: "html",
 ) {
   const slug = title
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .slice(0, 60)
@@ -22,11 +22,15 @@ export function visualFileName(
   return `${slug || `visual-${visual}`}.${extension}`;
 }
 
-/** The visual as an HTML page in the given theme. */
-export function visualPageFile(visual: ExportedVisual, themeCss: string) {
-  return new File(
-    [savedVisualDocument(visual.title, visual.code, themeCss)],
-    visualFileName(visual, "html"),
-    { type: "text/html" },
+/** The visual as a page, in the theme `root` has now. */
+export function visualPageFile(visual: ExportedVisual, root: Element) {
+  const page = savedVisualDocument(
+    visual.title,
+    visual.code,
+    visualThemeCss(root),
   );
+
+  return new File([page], visualFileName(visual, "html"), {
+    type: "text/html",
+  });
 }
