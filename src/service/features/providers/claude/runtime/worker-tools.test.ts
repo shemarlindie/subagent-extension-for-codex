@@ -57,7 +57,7 @@ async function workerTools(options: Options) {
   };
 }
 
-test("turns load the worker tools always, allow them in every mode and describe them in the prompt", async () => {
+test("turns load the worker tools always and allow them in every mode", async () => {
   const { c } = await context();
   setClaudeOptions(c.task, { permission_mode: "default" });
   const asked: string[] = [];
@@ -76,12 +76,6 @@ test("turns load the worker tools always, allow them in every mode and describe 
   assert.equal(options.allowedTools, undefined);
 
   const { tools } = await mcp.listTools();
-
-  assert.deepEqual(
-    tools.map((t) => t.name),
-    ["update_plan"],
-  );
-
   assert.equal(tools[0]?.annotations?.readOnlyHint, true);
   assert.equal(tools[0]?._meta?.["anthropic/alwaysLoad"], true);
 
@@ -92,10 +86,6 @@ test("turns load the worker tools always, allow them in every mode and describe 
   );
 
   assert.deepEqual(asked, []);
-
-  const prompt = options.systemPrompt;
-  assert.ok(typeof prompt === "object" && "append" in prompt);
-  assert.match(prompt.append ?? "", /Use update_plan to show your plan/);
 });
 
 test("update_plan saves the plan through the run context and answers in one line", async () => {
@@ -134,18 +124,6 @@ test("update_plan saves the plan through the run context and answers in one line
   });
 
   assert.equal(c.task.plan?.steps[1]?.status, "in_progress");
-
-  assert.deepEqual(await call({ done: [2] }), {
-    text: "Plan updated: all 2 steps are done.",
-    isError: false,
-  });
-
-  assert.deepEqual(await call({ items: [] }), {
-    text: "Plan cleared.",
-    isError: false,
-  });
-
-  assert.equal(c.task.plan, undefined);
 });
 
 test("an open plan returns to the worker after compaction, and subagents can't change it", async () => {

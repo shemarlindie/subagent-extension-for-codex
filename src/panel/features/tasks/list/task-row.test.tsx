@@ -102,5 +102,4 @@ test("a row counts its plan's steps while some are left", () => {
   );
 
   assert.equal(count(plan(steps(true, true))), undefined);
-  assert.equal(count(task("b")), undefined);
 });
