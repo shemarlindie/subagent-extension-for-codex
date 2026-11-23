@@ -1051,7 +1051,7 @@ body[data-expanded-panel="true"]
   margin: 0;
   padding-block-start: 14px;
 }
-/* A visual spans Chat, with no bubble, and blends into it. */
+/* The frame is transparent, so the visual blends into its card. */
 .visual-frame {
   display: block;
   width: 100%;
@@ -1070,12 +1070,20 @@ body[data-expanded-panel="true"]
 .visual-link a {
   color: var(--accent);
 }
+/* The card spans Chat, or centers around a lone element's reported width plus
+   its padding and border. Without that width the calc is invalid, which leaves
+   no maximum. */
 .chat-message[data-kind="visual"] {
   position: relative;
+  width: 100%;
+  max-width: calc(var(--visual-width) + 26px);
+  margin-inline: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
-/* The visual's menu sits on a surface over its top right corner, inset to
-   clear a scrolling frame's scrollbar. It shows on hover or focus, or always
-   where nothing hovers. */
+/* The visual's menu sits on a surface in its card's top right corner. It
+   shows on hover or focus, or always where nothing hovers. */
 .visual-menu {
   position: absolute;
   top: 6px;

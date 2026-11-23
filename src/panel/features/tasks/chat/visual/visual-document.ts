@@ -1,15 +1,21 @@
-/** What a visual's frame tells the panel. */
+/**
+ * What a visual's frame tells the panel. `width` is a lone element's width
+ * when it draws narrower than the frame, and otherwise 0.
+ */
 type VisualFrameMessage =
-  | { type: "visual-height"; height: number }
+  | { type: "visual-size"; height: number; width: number }
   | { type: "visual-link"; href: string };
 
 /** A frame message, from data a visual's own scripts can also post. */
 export function frameMessage(data: unknown): VisualFrameMessage | undefined {
   if (typeof data !== "object" || data === null) return undefined;
-  const { type, height, href } = data as Record<string, unknown>;
+  const { type, height, width, href } = data as Record<string, unknown>;
 
-  if (type === "visual-height" && typeof height === "number") {
-    return Number.isFinite(height) ? { type, height } : undefined;
+  if (type === "visual-size" && typeof height === "number") {
+    if (!Number.isFinite(height)) return undefined;
+    const narrower = typeof width === "number" && Number.isFinite(width);
+
+    return { type, height, width: narrower ? Math.max(width, 0) : 0 };
   }
 
   return type === "visual-link" && typeof href === "string"
@@ -46,19 +52,44 @@ const THEME_ID = "visual-theme";
  * events behind those states and finished transitions report too. A frame that
  * fits its content can't scroll, even by a rounded pixel, or it would keep the
  * wheel from scrolling Chat.
+ *
+ * A visual that's one element, such as an SVG or a wrapper with a max width,
+ * beside any style and script elements, also reports its width while it draws
+ * narrower than the frame, so the panel can fit the visual's card to it. The
+ * element centers unless it sets its own margins, so it doesn't move when the
+ * card fits. Overflowing content counts toward the width, so the card doesn't
+ * clip it.
  */
 const FRAME_SCRIPT = `(() => {
   const post = (message) => parent.postMessage(message, "*");
   const root = document.documentElement;
+  const loneElement = () => {
+    const shown = [...(document.body?.children ?? [])].filter(
+      (element) => !["style", "script"].includes(element.localName),
+    );
+    return shown.length === 1 ? shown[0] : undefined;
+  };
   let reported;
+  let centered;
   const report = () => {
     const height = Math.ceil(
       Math.max(root.getBoundingClientRect().height, document.body?.scrollHeight ?? 0),
     );
-    if (height === reported) return;
-    reported = height;
+    const lone = loneElement();
+    // Setting the style again would report again, so it's set once.
+    if (lone && lone !== centered) {
+      centered = lone;
+      const { marginLeft, marginRight } = getComputedStyle(lone);
+      if (marginLeft === "0px" && marginRight === "0px") lone.style.marginInline = "auto";
+    }
+    const drawn = Math.ceil(
+      Math.max(lone?.getBoundingClientRect().width ?? 0, lone?.scrollWidth ?? 0),
+    );
+    const width = drawn < root.clientWidth ? drawn : 0;
+    if (height === reported?.height && width === reported?.width) return;
+    reported = { height, width };
     root.style.overflow = height > ${MAX_VISUAL_HEIGHT} ? "auto" : "hidden";
-    post({ type: "visual-height", height });
+    post({ type: "visual-size", height, width });
   };
   new ResizeObserver(report).observe(root);
   new MutationObserver(report).observe(root, {

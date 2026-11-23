@@ -12,9 +12,9 @@ test("a saved visual keeps its code, theme, background and policy, and leaves ou
   expect(saved).toContain(theme);
   expect(saved).toContain("background: var(--background)");
   expect(saved).toContain('http-equiv="Content-Security-Policy"');
-  // The frame script reports heights, which only Chat's frame needs.
-  expect(visualDocument("", theme)).toContain("visual-height");
-  expect(saved).not.toContain("visual-height");
+  // The frame script reports sizes, which only Chat's frame needs.
+  expect(visualDocument("", theme)).toContain("visual-size");
+  expect(saved).not.toContain("visual-size");
 });
 
 test("a top-level SVG without a pixel width stops at a viewBox width below the cap", () => {
