@@ -65,6 +65,12 @@ export interface RunContext {
    */
   planUpdated(steps: PlanStep[], changed?: number[]): void;
   /**
+   * Shows a visual in Chat and returns its number. With `replaces`, the new
+   * version takes that visual's place and number. Throws for code over
+   * `MAX_VISUAL_CODE` or a number the task hasn't shown.
+   */
+  visualShown(title: string, code: string, replaces?: number): number;
+  /**
    * Streams text as the worker writes a message, before the message itself
    * is emitted. Deltas aren't stored.
    */

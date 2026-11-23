@@ -48,11 +48,13 @@ records an `agent.plan` event and marks an open plan stale when a steer is
 taken. The plan ends with its turn, and `task.plan_ended` records its move to
 Chat history.
 
-Claude workers get `update_plan` from the in-process `delegated_work` MCP
-server. Its calls need no approval and show no tool rows. Subagents can't call
-it. A `SessionStart` hook gives an open plan back to the worker after a
-compaction. Claude Code's `Artifact` tool is blocked, since it publishes to the
-signed-in claude.ai account outside the task.
+A provider shows a worker's visual in Chat with `RunContext.visualShown`.
+
+Claude workers get `update_plan` and `show_visual` from the in-process
+`delegated_work` MCP server. Their calls need no approval and show no tool rows.
+Subagents can't call them. A `SessionStart` hook gives an open plan back to the
+worker after a compaction. Claude Code's `Artifact` tool is blocked, since it
+publishes to the signed-in claude.ai account outside the task.
 
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the

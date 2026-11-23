@@ -18,6 +18,7 @@ import { useLeavingDivider } from "../../unread/use-leaving-divider";
 import type { NewMessages } from "../../unread/use-new-messages-from";
 import { draftRow, responseOutcome, spentBudget } from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
+import { ChatVisualRow } from "../visual/chat-visual-row";
 import { BudgetLimitNotice } from "./budget-limit-notice";
 import { ChatMessageView } from "./chat-message-view";
 import { ChatNoteRow } from "./chat-note-row";
@@ -158,6 +159,10 @@ export function ChatTimeline({
                   } else if (item.kind === "plan") {
                     row = (
                       <PlanHistoryRow item={item} arriving={animateArrivals} />
+                    );
+                  } else if (item.kind === "visual") {
+                    row = (
+                      <ChatVisualRow item={item} arriving={animateArrivals} />
                     );
                   } else {
                     row = <ChatNoteRow note={item} />;

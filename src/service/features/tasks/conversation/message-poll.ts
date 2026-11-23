@@ -15,6 +15,7 @@ const WAKE = new Set([
   "task.instruction",
   "agent.message",
   "agent.reply",
+  "agent.visual",
   "task.turn_ended",
   "agent.input_required",
 ]);

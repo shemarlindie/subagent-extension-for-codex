@@ -11,13 +11,14 @@ import {
   planProgress,
   planResultLine,
 } from "../../../../../shared/tasks/plan.js";
+import { MAX_VISUAL_CODE } from "../../../../../shared/tasks/visual.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel, where they follow your progress. For any request that edits files or runs more than one command, send the whole list in the same message as your first other tool call. Then advance in the same message as the call that starts each next step, and once more before your final reply. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes.";
+  "Use update_plan to show your plan as a checklist in the user's panel, where they follow your progress. For any request that edits files or runs more than one command, send the whole list in the same message as your first other tool call. Then advance in the same message as the call that starts each next step, and once more before your final reply. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a
@@ -95,6 +96,37 @@ export function workerMcpServers(c: RunContext) {
           logEvent("debug", "provider.plan_updated", { steps: total, done });
 
           return text(planResultLine(update.steps));
+        },
+        { annotations: { readOnlyHint: true } },
+      ),
+      tool(
+        "show_visual",
+        `Show a visual in the user's panel, such as a chart, diagram, mockup or small interactive page. Pass self-contained SVG or HTML in code, at most ${MAX_VISUAL_CODE} characters. It renders in a sandboxed frame without network access, so only inline scripts, inline styles and data URL images work. A link the user clicks shows below the visual, for them to open in their browser. Use the CSS variables --text, --muted, --background, --surface, --border and --accent so it matches the panel's light and dark themes. Use it whenever a visual would show something better than text. To fix or update a visual you showed, pass its number in replaces.`,
+        {
+          title: z.string(),
+          code: z.string(),
+          replaces: z.number().int().optional(),
+        },
+        async ({ title, code, replaces }) => {
+          let visual: number;
+
+          try {
+            visual = c.visualShown(title, code, replaces);
+          } catch (error) {
+            return text((error as Error).message, true);
+          }
+
+          logEvent("debug", "provider.visual_shown", {
+            visual,
+            chars: code.length,
+            replaced: replaces !== undefined,
+          });
+
+          return text(
+            replaces === undefined
+              ? `Shown as visual ${visual}.`
+              : `Visual ${visual} replaced.`,
+          );
         },
         { annotations: { readOnlyHint: true } },
       ),

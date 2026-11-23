@@ -137,6 +137,9 @@ export function serviceSummary(e: Event) {
     return `${done} of ${total} steps done`;
   }
 
+  const visual = eventPayload(e, "agent.visual");
+  if (visual) return `${visual.visual}: ${visual.title}`;
+
   const queueChanged = eventPayload(e, "task.queue_changed");
 
   if (queueChanged) {
@@ -154,6 +157,7 @@ const eventTitles: Partial<Record<string, string>> = {
   "agent.limited": "Session limited",
   "agent.plan": "Plan",
   "task.plan_ended": "Plan ended",
+  "agent.visual": "Visual",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
   "task.instruction": "Message",

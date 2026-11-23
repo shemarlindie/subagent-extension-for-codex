@@ -5,7 +5,9 @@
 export const WORKER_SERVER = "delegated_work";
 
 /** The tool names Claude Code calls, for the settings allow rule. */
-export const workerToolNames = [`mcp__${WORKER_SERVER}__update_plan`];
+export const workerToolNames = ["update_plan", "show_visual"].map(
+  (name) => `mcp__${WORKER_SERVER}__${name}`,
+);
 
 /**
  * Calls to these render through their own events, not as tool rows. Kept
