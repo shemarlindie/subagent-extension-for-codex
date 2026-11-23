@@ -39,7 +39,7 @@ import {
   promptCacheTimelines,
 } from "./prompt-cache-scenarios";
 
-export { previewLiveStatus, previewStreamingDrafts } from "./live-scenarios";
+export { previewStreamingDrafts } from "./live-scenarios";
 export { PREVIEW_THREAD, previewProjects } from "./scenario-context";
 
 /**

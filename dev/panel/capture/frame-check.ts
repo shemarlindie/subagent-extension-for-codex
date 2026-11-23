@@ -23,7 +23,7 @@ type FrameCheck = {
   dropped: number;
 };
 
-export const SYNC = "frame-check-sync";
+const SYNC = "frame-check-sync";
 const REFRESH_MS = 1000 / 60;
 
 export async function checkCaptureFrames(
@@ -83,11 +83,7 @@ async function endTrace(cdp: CDPSession) {
   }
 }
 
-export function checkFrames(
-  events: TraceEvent[],
-  wall: number,
-  shots: number[],
-) {
+function checkFrames(events: TraceEvent[], wall: number, shots: number[]) {
   const mark = events.find((event) => event.name === SYNC);
   const [first] = shots;
   const last = shots.at(-1);
