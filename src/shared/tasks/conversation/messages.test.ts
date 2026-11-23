@@ -89,6 +89,29 @@ test("a conversation has the request, messages, worker messages and replies in o
   );
 });
 
+test("a visual's line leaves the reply to the turn's message, and a new version moves to its turn", () => {
+  const visual = (id: number, title: string) =>
+    event(id, "agent.visual", { visual: 1, title, code: "<svg/>" });
+
+  const messages = conversation(task, [
+    event(1, "task.started", { turn: 1 }),
+    said(2, "Here's the chart.", "sdk_1"),
+    visual(3, "Chart"),
+    event(4, "agent.reply", { text: "Here's the chart.", turn: 1 }),
+    event(5, "task.started", { turn: 2 }),
+    visual(6, "Chart, fixed"),
+  ]);
+
+  assert.deepEqual(
+    messages.map((m) => [m.id, m.event_id, m.turn, m.kind]),
+    [
+      ["request", 0, 1, "request"],
+      ["sdk_1", 4, 1, "reply"],
+      ["visual_1", 6, 2, "visual"],
+    ],
+  );
+});
+
 test("sent messages show whether a turn has taken them yet", () => {
   const messages = conversation(
     {

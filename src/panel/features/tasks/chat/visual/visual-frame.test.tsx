@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { Controller } from "../../../../app/state/controller";
@@ -14,7 +20,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 
 afterEach(cleanup);
 
-test("the frame runs scripts alone, takes its own window's height, and opens links only after a click", () => {
+test("the frame runs scripts alone, takes its own window's height, and shows the links it asks for as the panel's own", () => {
   const openLink = vi.fn(async () => {});
 
   const controller = {
@@ -42,16 +48,12 @@ test("the frame runs scripts alone, takes its own window's height, and opens lin
   post(frame?.contentWindow, { type: "visual-height", height: 400 });
   expect(frame?.style.height).toBe("400px");
 
-  const link = { type: "visual-link", href: "https://x.dev/" };
-  const activation = { isActive: false };
-  vi.stubGlobal("navigator", { ...navigator, userActivation: activation });
+  post(frame?.contentWindow, { type: "visual-link", href: "javascript:x" });
+  expect(screen.queryByRole("link")).toBeNull();
 
-  post(frame?.contentWindow, link);
-  activation.isActive = true;
-  post(frame?.contentWindow, { ...link, href: "javascript:alert(1)" });
+  // The frame's request opens nothing until the user clicks the destination.
+  post(frame?.contentWindow, { type: "visual-link", href: "https://x.dev/" });
   expect(openLink).not.toHaveBeenCalled();
-
-  post(frame?.contentWindow, link);
+  fireEvent.click(screen.getByRole("link", { name: "https://x.dev/" }));
   expect(openLink).toHaveBeenCalledWith("https://x.dev/");
-  vi.unstubAllGlobals();
 });

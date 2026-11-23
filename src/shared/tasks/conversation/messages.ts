@@ -157,7 +157,12 @@ export function conversation(
       const shown = messages.find((m) => m.id === id);
 
       if (shown) {
-        Object.assign(shown, { event_id: e.id, timestamp: e.timestamp, text });
+        Object.assign(shown, {
+          event_id: e.id,
+          timestamp: e.timestamp,
+          turn,
+          text,
+        });
       } else {
         messages.push({
           id,
@@ -178,7 +183,8 @@ export function conversation(
       const replyTurn = reply.turn;
 
       const last = messages.findLast(
-        (m) => m.from === "worker" && m.turn === replyTurn,
+        (m) =>
+          m.from === "worker" && m.kind !== "visual" && m.turn === replyTurn,
       );
 
       if (last && last.kind === "message" && same(last.text, text)) {

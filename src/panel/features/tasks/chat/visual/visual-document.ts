@@ -30,14 +30,21 @@ export const MAX_VISUAL_HEIGHT = 1600;
 /**
  * Reports the content's height, and hands link clicks to the panel, since
  * the sandbox lets the frame open nothing itself. Fragment links stay inside.
- * A frame that fits its content can't scroll, even by a rounded pixel, or it
- * would keep the wheel from scrolling Chat.
+ *
+ * The root's box measures the content, and the body's scroll height adds
+ * absolutely positioned content past it, since the document's style makes the
+ * body their containing block. The root's own scroll height never drops below
+ * the frame's, so a frame measured by it could never shrink. A frame that fits
+ * its content can't scroll, even by a rounded pixel, or it would keep the
+ * wheel from scrolling Chat.
  */
 const FRAME_SCRIPT = `(() => {
   const post = (message) => parent.postMessage(message, "*");
   const root = document.documentElement;
   const report = () => {
-    const height = Math.ceil(root.scrollHeight);
+    const height = Math.ceil(
+      Math.max(root.getBoundingClientRect().height, document.body?.scrollHeight ?? 0),
+    );
     root.style.overflow = height > ${MAX_VISUAL_HEIGHT} ? "auto" : "hidden";
     post({ type: "visual-height", height });
   };
@@ -91,7 +98,7 @@ export function visualDocument(code: string, themeCss: string) {
     '<html><head><meta charset="utf-8">',
     `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`,
     `<script>${FRAME_SCRIPT}</script>`,
-    `<style>${themeCss} :root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; }</style>`,
+    `<style>${themeCss} :root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }</style>`,
     "</head><body>",
     code,
     "</body></html>",

@@ -1058,3 +1058,15 @@ body[data-expanded-panel="true"]
   border: 0;
   background: transparent;
 }
+/* A link the visual asked to open, which the user opens from here. */
+.visual-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.visual-link a {
+  color: var(--accent);
+}
