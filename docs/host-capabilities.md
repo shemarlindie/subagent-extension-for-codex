@@ -66,11 +66,16 @@ active turn. Global panels and the standalone console send nothing to the chat.
 ## Settings file export
 
 **Export file** uses the portable `App.downloadFile` call when the host
-advertises `downloadFile`. The host decides where the file goes and whether to
-prompt. The Codex desktop app 26.1029.61003 doesn't advertise it, so its exports
-go to the home folder, as
+advertises `downloadFile`, sending the file as a base64 `blob` resource. The
+host decides where the file goes and whether to prompt. Without the capability,
+exports go to the home folder, as
 [Copy settings between computers](configuration.md#copy-settings-between-computers)
 describes.
+
+Observed in the Codex desktop app 26.1117: Codex advertises `downloadFile`, asks
+the user to confirm each download in its own dialog and saves to `~/Downloads`.
+A cancelled dialog returns an error, which the panel can't tell apart from a
+refusal.
 
 ## Project context and registration
 

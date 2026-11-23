@@ -370,6 +370,7 @@ export type { Event } from "../../../shared/events/types.js";
 
 export type {
   HostState,
+  SaveResult,
   Transport,
   TransportEvents,
 } from "../../transports/types.js";

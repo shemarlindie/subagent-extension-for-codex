@@ -324,9 +324,7 @@ test("the service saves an export only when the host or browser can't, and never
   assert.equal(serviceSaves().length, 1);
 
   // A host that declines has no download, and the service must not save instead.
-  transport.saveJson = async () => {
-    throw new Error("The host didn't save the file.");
-  };
+  transport.saveFile = async () => "declined";
 
   await user.click(exportFile);
   await screen.findByText(/didn't save the file\. Use Copy JSON instead\./);

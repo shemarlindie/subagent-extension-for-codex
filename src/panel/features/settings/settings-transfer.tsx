@@ -85,15 +85,20 @@ function SettingsTransfer({
       );
 
       if (action === "save") {
-        const exported = await controller.transport.saveJson(
-          "delegated-work-settings.json",
-          document,
+        const saved = await controller.transport.saveFile(
+          new File([document], "delegated-work-settings.json", {
+            type: "application/json",
+          }),
         );
 
-        if (exported) {
+        if (saved === "saved") {
           setStatus({ kind: "exported" });
 
           return;
+        }
+
+        if (saved === "declined") {
+          throw new Error("The host didn't save the file.");
         }
 
         const { path } = await controller.tool<{ path: string }>(
