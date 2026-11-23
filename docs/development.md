@@ -617,8 +617,9 @@ boundaries. Leave framework and standard-library behavior to their own tests.
 Use the smallest fixtures that cross the relevant boundary, such as one row past
 a rendering block, unless the test checks scale itself.
 
-Keep fixture replay and preview simulation tests when production flows cannot
-exercise their behavior.
+Test tooling under `dev/` only for fixture coverage contracts, such as SDK and
+event coverage, and for the scrubbing that keeps private data out of committed
+fixtures. Product tests that run the fixture worker cover the rest.
 
 Wait for readiness signals or explicit checkpoints instead of fixed sleeps. Use
 worker checkpoints for queue and steer assertions, reserving elapsed-time waits

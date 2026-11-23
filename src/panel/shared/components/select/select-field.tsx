@@ -95,7 +95,7 @@ function SelectTrigger({
                 {option.icon && (
                   <Icon
                     name={option.icon}
-                    size={12}
+                    size={10}
                     className="select-worker-icon"
                   />
                 )}
@@ -168,7 +168,7 @@ export function SelectOptions({ options, action, footer }: SelectOptionsProps) {
                   {option.icon && (
                     <Icon
                       name={option.icon}
-                      size={12}
+                      size={10}
                       className="select-worker-icon"
                     />
                   )}

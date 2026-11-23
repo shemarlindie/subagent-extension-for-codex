@@ -195,7 +195,6 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
       <span className="row-worker" title={worker}>
         <WorkerProfileIcon
           profile={task.worker_profile}
-          size={12}
           className="row-worker-icon"
         />
         <span className="visually-hidden">{worker}</span>

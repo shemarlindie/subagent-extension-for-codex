@@ -5,13 +5,13 @@
   height="24"
   fill="none"
   stroke="currentColor"
-  stroke-width="2"
+  stroke-width="2.143"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
   <path
-    d="M16.5 8.5V4.25a2.5 2.5 0 0 0-2.5-2.5H4.5A2.5 2.5 0 0 0 2 4.25v15a2.5 2.5 0 0 0 2.5 2.5H12M5.5 6.5H13M5.5 11H10"
+    d="M16.607 8.518V3.964a2.679 2.679 0 0 0-2.678-2.678H3.75A2.679 2.679 0 0 0 1.071 3.964v16.072a2.679 2.679 0 0 0 2.679 2.678H11.786M4.821 6.375H12.857M4.821 11.196H9.643"
   ></path>
-  <circle cx="17" cy="16" r="4.3"></circle>
-  <path d="m20.04 19.04 2.36 2.36"></path>
+  <circle cx="17.143" cy="16.554" r="4.607"></circle>
+  <path d="m20.4 19.811 2.529 2.528"></path>
 </svg>

@@ -9,7 +9,7 @@ import { checkCaptureFrames, describeFrameCheck } from "./frame-check";
 
 type CapturedFrame = { file: string; time: number };
 
-export function frameTimeline(frames: CapturedFrame[], end: number) {
+function frameTimeline(frames: CapturedFrame[], end: number) {
   const last = frames.at(-1);
   if (!last) throw new Error("Cannot write a timeline without captured frames");
 

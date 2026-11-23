@@ -193,11 +193,6 @@ export const previewStreamingDrafts = [
   },
 ];
 
-/** Expected inspector status line for each live task, keyed by task id. */
-export const previewLiveStatus = Object.fromEntries(
-  liveStates.map((live) => [live.timeline.taskId, live.status]),
-);
-
 export const statusTasks: Task[] = liveStates.map((live, index) => ({
   ...taskBase,
   id: live.timeline.taskId,

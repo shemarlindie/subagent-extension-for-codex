@@ -125,7 +125,7 @@ function ChipSelectValue({
 }: ChipSelectValueProps) {
   return (
     <>
-      {icon && <Icon name={icon} size={12} className="chip-select-icon" />}
+      {icon && <Icon name={icon} size={10} className="chip-select-icon" />}
       {!iconOnly && <span className="chip-select-value">{text}</span>}
       {(!iconOnly || loading) && (
         <span className="chip-select-caret" aria-hidden="true">

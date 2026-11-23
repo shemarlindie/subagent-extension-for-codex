@@ -131,7 +131,7 @@ export function TaskRunSettings({ task }: TaskRunSettingsProps) {
       >
         <li className="task-run-summary run-setting-trigger" tabIndex={0}>
           <span className="task-run-profile">
-            <WorkerProfileIcon profile={task.worker_profile} size={12} />
+            <WorkerProfileIcon profile={task.worker_profile} />
             <span className="visually-hidden">{profile}</span>
           </span>
           {settings.map(({ label, compact }) => (
