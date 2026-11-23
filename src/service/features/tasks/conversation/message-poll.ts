@@ -3,6 +3,7 @@ import {
   conversation,
   MESSAGE_EVENTS,
 } from "../../../../shared/tasks/conversation/messages.js";
+import { planSummary } from "../../../../shared/tasks/plan.js";
 import type { Store } from "../storage/store.js";
 import type { Drafts } from "./drafts.js";
 
@@ -65,6 +66,7 @@ export async function pollMessages(
       ),
       pending_input: task.pending_input ?? null,
       queued_messages: task.queue.length,
+      ...(task.plan ? { plan: planSummary(task.plan) } : {}),
       ...(draft ? { draft } : {}),
     };
   } finally {

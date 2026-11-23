@@ -8,7 +8,7 @@ import type {
 import { decodeClaudeRateLimitWindowInfo } from "../../../../../shared/providers/claude/events.js";
 import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
 import { scalarText } from "../../../../../shared/text.js";
-import { decodeClaudeActivityContent } from "./content.js";
+import { decodeClaudeActivityContent, toolBlocksOnly } from "./content.js";
 import { claudeStreamPresentation } from "./stream-presentation.js";
 import {
   informational,
@@ -343,7 +343,12 @@ export function claudeActivityPresentation(
   const level = informational(e.rawResponse)?.level;
 
   // Claude Code shows info-level lines only in its transcript view.
-  const isQuiet = quiet.has(key) || hookHeartbeat || level === "info";
+  const isQuiet =
+    quiet.has(key) ||
+    hookHeartbeat ||
+    level === "info" ||
+    // Worker tool blocks that full events keep, hidden as their tool rows are.
+    (e.type === "claude.activity" && toolBlocksOnly(e.rawResponse));
 
   const failed = activityFailed(e);
   const summaryIsResponse = e.type === "claude.activity" && d.type === "result";

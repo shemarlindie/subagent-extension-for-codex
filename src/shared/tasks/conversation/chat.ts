@@ -2,6 +2,7 @@ import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { failureMessage } from "../failure.js";
 import type { Sender, Task } from "../model.js";
+import type { PlanStep } from "../plan-contract.js";
 import { conversation, type ConversationMessage } from "./messages.js";
 
 /**
@@ -20,6 +21,7 @@ export const CHAT_EVENTS = [
   "task.worktree_recreated",
   "agent.limited",
   "agent.input_required",
+  "task.plan_ended",
 ];
 
 /**
@@ -76,7 +78,17 @@ export type ChatAnswers = {
   answers: { question: string; answer: string }[];
 };
 
-export type ChatItem = ChatMessage | TurnOutcome | ChatNote | ChatAnswers;
+/** A plan that left the pinned card, with its final steps. */
+export type ChatPlan = {
+  kind: "plan";
+  id: string;
+  event_id: number;
+  timestamp: string;
+  steps: PlanStep[];
+};
+
+export type ChatItem =
+  ChatMessage | TurnOutcome | ChatNote | ChatAnswers | ChatPlan;
 
 /** A context compaction, which Claude reports as a system message. */
 const isCompaction = (e: Event) => {
@@ -154,6 +166,19 @@ function note(e: Event): ChatNote | undefined {
   return undefined;
 }
 
+function endedPlan(e: Event): ChatPlan | undefined {
+  const ended = eventPayload(e, "task.plan_ended");
+  if (!ended) return undefined;
+
+  return {
+    kind: "plan",
+    id: `evt_${e.id}`,
+    event_id: e.id,
+    timestamp: e.timestamp,
+    steps: ended.steps,
+  };
+}
+
 function answered(e: Event): ChatAnswers | undefined {
   const decision = eventPayload(e, "agent.input_decision");
   if (!decision?.answers) return undefined;
@@ -173,11 +198,11 @@ function answered(e: Event): ChatAnswers | undefined {
 
 /**
  * Chat for a task, in order: its conversation (see `conversation`), answers
- * to the worker's questions, an outcome row where each turn ended, with a
- * failed turn's error, standalone task failures, and small notes for a new
- * session, worktree recreation, compaction and a session limited to less than
- * the task asked for. A compaction's note stands in for the output of the
- * command that ran it.
+ * to the worker's questions, plans that left the pinned card, an outcome row
+ * where each turn ended, with a failed turn's error, standalone task
+ * failures, and small notes for a new session, worktree recreation,
+ * compaction and a session limited to less than the task asked for. A
+ * compaction's note stands in for the output of the command that ran it.
  */
 export function chatItems(task: Task, events: Event[]): ChatItem[] {
   const sorted = [...events].sort((a, b) => a.id - b.id);
@@ -261,7 +286,7 @@ export function chatItems(task: Task, events: Event[]): ChatItem[] {
         failedOutcome = undefined;
       }
 
-      const marker = note(e) ?? answered(e);
+      const marker = note(e) ?? answered(e) ?? endedPlan(e);
 
       if (marker) {
         flush(e.id);

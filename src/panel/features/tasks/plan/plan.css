@@ -1,0 +1,131 @@
+/* The worker's plan: a soft card whose top row toggles its steps. */
+.plan-card {
+  overflow: hidden;
+  border-radius: var(--border-radius-lg);
+  background: var(--user-bubble-bg);
+  font-size: 13px;
+  line-height: 18px;
+}
+.plan-card-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--border-radius-lg);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.plan-card-current {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Collapsed, the label is the current step. Expanded, it is the plan's title. */
+.plan-card-label {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+.plan-card-title {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.plan-card-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.plan-card-row:hover {
+  background: var(--hover);
+}
+/* The focus ring sits inset and rounded with the card, which clips anything outside it. */
+.plan-card-row[aria-expanded="true"] {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.plan-card-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+/* Steps open below the row, so the caret points down to open and up when open. */
+.plan-card-row .chevron {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.plan-card-row[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.plan-card-steps,
+.plan-history-steps {
+  padding: 0 14px 12px;
+}
+/* A long plan scrolls inside the pinned card, so the composer stays in view. */
+.plan-card-steps {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.plan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plan-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  color: var(--muted);
+}
+.plan-step[data-status="in_progress"] {
+  color: var(--text);
+}
+.plan-step > svg,
+.plan-card-label > svg {
+  justify-self: center;
+  color: var(--muted);
+}
+/* Centres the icon on a step's first line when its text wraps. */
+.plan-step > svg {
+  margin-top: 2px;
+}
+.plan-step-text {
+  overflow-wrap: anywhere;
+}
+/* A slow turn, so the current step reads as in progress without pulling the eye. */
+.plan-step-spin {
+  transform-origin: center;
+  animation: plan-step-spin 2.4s linear infinite;
+}
+@keyframes plan-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-step-spin {
+    animation: none;
+  }
+}
+/* In Activity the steps sit under the row's summary, closer together. */
+.activity-group .plan-steps {
+  gap: 4px;
+  margin-top: 6px;
+}
+/* A past plan in Chat: one muted row that opens to its final steps. */
+.plan-history .plan-card-row {
+  padding-block: 10px;
+}
+.plan-history .plan-card-current {
+  color: var(--muted);
+}

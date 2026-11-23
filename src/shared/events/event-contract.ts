@@ -1,5 +1,9 @@
 import type { ActivityContent } from "../providers/activity/presentation-contract.js";
 import type { TaskEventPayloadMap } from "../tasks/event-contract.js";
+import type {
+  AgentPlanPayload,
+  TaskPlanEndedPayload,
+} from "../tasks/plan-contract.js";
 
 export interface EventEnvelope {
   id: number;
@@ -119,4 +123,6 @@ export interface EventPayloadMap extends TaskEventPayloadMap {
   "agent.input_submitted": AgentInputSubmittedPayload;
   "agent.permission_decided": AgentPermissionDecidedPayload;
   "agent.input_decision": AgentInputDecisionPayload;
+  "agent.plan": AgentPlanPayload;
+  "task.plan_ended": TaskPlanEndedPayload;
 }

@@ -215,3 +215,15 @@ export function claudeActivityBlock(
     ? { type: "text", text: content }
     : content;
 }
+
+/** A message whose content is only tool calls or results. */
+export function toolBlocksOnly(m: SDKMessage | undefined) {
+  if (m?.type !== "assistant" && m?.type !== "user") return false;
+  const content: string | { type: string }[] = m.message.content;
+
+  return (
+    Array.isArray(content) &&
+    content.length > 0 &&
+    content.every((b) => b.type === "tool_use" || b.type === "tool_result")
+  );
+}

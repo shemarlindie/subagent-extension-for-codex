@@ -33,6 +33,7 @@ import {
   statusTimelines,
 } from "./live-scenarios";
 import { orgPolicyTasks, orgPolicyTimelines } from "./org-policy-scenarios";
+import { planTasks, planTimelines } from "./plan-scenarios";
 import { projectTasks } from "./project-scenarios";
 import {
   promptCacheTasks,
@@ -112,6 +113,7 @@ export const previewTasks: Task[] = [
     orgPolicyTasks,
     promptCacheTasks,
     contextUsageTasks,
+    planTasks,
   );
 
 const timelinesById = new Map(
@@ -161,5 +163,6 @@ export const previewEvents: Event[] = [
     "preview-context-full",
   ].flatMap((id) => byId(timelinesById, id).events),
   ...statusTimelines.flatMap((timeline) => timeline.events),
+  ...planTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),
 ].map(decodedEvent);

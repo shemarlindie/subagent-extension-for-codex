@@ -170,6 +170,10 @@ Host settings:
 | Outline the sketch                          | Repository with no commits: the fallback notice. **Field notes** and **Sketch** show their icons in **Manage projects…**, and adding a path with `no-git` in it adds a folder without Git. |
 | Speed up the production build               | 60-file recorded diff, listed as 61 files because its rename shows as a deletion and an addition. Removal asks before discarding checkout changes.                                         |
 | Profile the production build                | Large added files and multiple pages of diff and file previews.                                                                                                                            |
+| Plan: split billing                         | 3 of 7 steps done: the card, the row count and Plan rows in Activity.                                                                                                                      |
+| Plan: steered mid-step                      | Stale header after a taken steer.                                                                                                                                                          |
+| Plan: finished                              | History row in Chat, with no card or row count.                                                                                                                                            |
+| Plan: unfinished                            | History row with steps left.                                                                                                                                                               |
 
 Read state:
 

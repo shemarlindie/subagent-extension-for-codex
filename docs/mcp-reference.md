@@ -54,6 +54,14 @@ sandbox the settings turn on. See
 [Claude permissions](configuration.md#claude-permissions) and
 [session restrictions](configuration.md#claude-session-restrictions).
 
+### Worker plans
+
+A Claude worker can show a plan for its current turn. `get_task` returns it as
+`plan`, with each step's `content` and `status`. `list_tasks` summaries and
+`list_messages` add `plan: { done, total, current?, stale? }`, where `stale`
+means a message reached the worker after its latest plan update. A plan update
+doesn't end a `list_messages` wait.
+
 ### Attachments
 
 `attachments` gives the worker up to 20 artifacts it can't find itself.

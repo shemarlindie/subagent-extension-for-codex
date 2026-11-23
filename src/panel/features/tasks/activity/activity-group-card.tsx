@@ -23,6 +23,7 @@ import { reuseUnchanged } from "../../../shared/utils/reuse-unchanged";
 import { useNow } from "../../../shared/utils/use-now";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import { formatDuration } from "../list/duration";
+import { PlanSteps } from "../plan/plan-steps";
 import { MessageText } from "../shared/message-text";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
@@ -129,6 +130,8 @@ function GroupCard({
     (event) =>
       replyText(event) !== undefined || compactionSummary(event) !== undefined,
   );
+
+  const plan = eventPayload(group.events[0], "agent.plan");
 
   const userMessages = group.events.flatMap((event) => {
     const text = userMessageText(event);
@@ -304,6 +307,9 @@ function GroupCard({
             {group.summary}
           </p>
         ))}
+      {plan && plan.steps.length > 0 && (
+        <PlanSteps steps={plan.steps} only={plan.changed} />
+      )}
       {stats.map((text, index) => (
         <p key={index} className="activity-group-stats">
           {text}

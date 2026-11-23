@@ -14,7 +14,7 @@ import { UnreadDot } from "../unread/unread-dot";
 import { useMarkRead } from "../unread/use-mark-read";
 import { useNewMessagesFrom } from "../unread/use-new-messages-from";
 import { composerMode } from "./chat-model";
-import { ChatWorkingStatus } from "./chat-working-status";
+import { ChatProgress } from "./chat-progress";
 import { Composer } from "./composer/composer";
 import { MessageQueue } from "./queue/message-queue";
 import { ChatTimeline } from "./timeline/chat-timeline";
@@ -130,7 +130,10 @@ export const ChatPanel = memo(function ChatPanel({
           badge={unread && <UnreadDot className="scroll-latest-unread" />}
           onClick={scrollToLatest}
         />
-        <ChatWorkingStatus task={task} />
+        <ChatProgress
+          task={task}
+          onPlanResize={pinned ? resumeFollowing : undefined}
+        />
         {/* Keyed so switching tasks swaps the queue instead of animating its rows. */}
         {task && (
           <MessageQueue

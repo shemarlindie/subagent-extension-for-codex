@@ -113,7 +113,7 @@ test("Chat shows a compaction failure between replies without ending the turn", 
   });
 });
 
-test("Chat puts outcome rows where turns end, with a failure's error, and notes between messages", () => {
+test("Chat puts outcome rows where turns end, with a failure's error, and notes and ended plans between messages", () => {
   const items = chatItems(task, [
     event(1, "task.started", { turn: 1 }),
     event(2, "agent.reply", { text: "Moved them.", turn: 1 }),
@@ -144,7 +144,11 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       runtime_ms: 2000,
       cost_usd: 0.2,
     }),
-    event(10, "task.failed", { error_code: "cost_budget_exhausted" }),
+    // A plan that ends with the turn doesn't separate the failure from it.
+    event(10, "task.plan_ended", {
+      steps: [{ content: "Run the tests", status: "in_progress" }],
+    }),
+    event(11, "task.failed", { error_code: "cost_budget_exhausted" }),
   ]);
 
   assert.deepEqual(
@@ -154,6 +158,8 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       if (item.kind === "outcome") {
         return [item.kind, item.turn, item.outcome, item.error, item.event_id];
       }
+
+      if (item.kind === "plan") return [item.kind, item.steps[0]?.content];
 
       return [item.kind, item.kind === "note" ? item.note : item.from];
     }),
@@ -166,7 +172,8 @@ test("Chat puts outcome rows where turns end, with a failure's error, and notes 
       ["note", "session"],
       ["note", "compaction"],
       // A read after the outcome row gets it again, with the error.
-      ["outcome", 2, "failed", "Cost limit reached.", 10],
+      ["outcome", 2, "failed", "Cost limit reached.", 11],
+      ["plan", "Run the tests"],
     ],
   );
 });

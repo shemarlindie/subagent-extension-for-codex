@@ -59,6 +59,7 @@ export function context(currentTask = task()) {
     signal: controller.signal,
     acceptSteers: () => {},
     steerTaken: () => {},
+    planUpdated: () => {},
     delta: () => {},
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),

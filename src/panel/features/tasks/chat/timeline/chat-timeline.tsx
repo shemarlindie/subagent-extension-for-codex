@@ -11,6 +11,7 @@ import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";
 import { providerName } from "../../../providers/provider-name";
+import { PlanHistoryRow } from "../../plan/plan-history-row";
 import { newMessagesIndex } from "../../unread/new-messages";
 import { NewMessagesDivider } from "../../unread/new-messages-divider";
 import { useLeavingDivider } from "../../unread/use-leaving-divider";
@@ -153,6 +154,10 @@ export function ChatTimeline({
                         item={item}
                         arriving={animateArrivals}
                       />
+                    );
+                  } else if (item.kind === "plan") {
+                    row = (
+                      <PlanHistoryRow item={item} arriving={animateArrivals} />
                     );
                   } else {
                     row = <ChatNoteRow note={item} />;

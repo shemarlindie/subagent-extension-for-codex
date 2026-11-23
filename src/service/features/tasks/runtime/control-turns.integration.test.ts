@@ -356,7 +356,7 @@ test("runtime budget stops a worker waiting for input", async () => {
   await c.close();
 });
 
-test("restart recovery marks live task interrupted and clears stale permissions", async () => {
+test("restart recovery marks live task interrupted, ends its plan and clears stale permissions", async () => {
   const { c, store, repo } = await setup();
   const t = await c.start("alice", input(repo, "[input]"));
   await until(() => !!store.get(t.id, "alice").pending_input);
@@ -372,10 +372,14 @@ test("restart recovery marks live task interrupted and clears stale permissions"
     input: { command: "pwd" },
   };
 
+  const steps = [{ content: "Check", status: "in_progress" as const }];
+  old.plan = { steps };
   store.save(old);
   await c.recover();
   assert.equal(store.get(t.id, "alice").status, "interrupted");
   assert.equal(store.get(t.id, "alice").pending_input, undefined);
+  assert.equal(store.get(t.id, "alice").plan, undefined);
+  assert.deepEqual(eventData(store, t.id, "task.plan_ended"), [{ steps }]);
   await c.close();
 });
 

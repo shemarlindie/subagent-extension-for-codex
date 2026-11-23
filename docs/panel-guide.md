@@ -126,11 +126,11 @@ project and search filters. Press `/` to search and Escape to clear it.
 Under **All projects**, tasks group by project, ordered by each group's newest
 task. Project headers stay visible as their rows scroll.
 
-Each row shows the worker icon, the title and at most one dot: yellow when the
-task needs input or waits for a rate limit, gray while it is queued, pulsing
-gray while it works, and the accent color when it is unread. Hover a long title
-to see the rest. **Details** shows the task's total runtime. **Settings >
-Appearance** can hide worker icons.
+Each row shows the worker icon, the title, [plan](#chat-tab) progress such as
+`3/7`, and at most one dot: yellow when the task needs input or waits for a rate
+limit, gray while it is queued, pulsing gray while it works, and the accent
+color when it is unread. Hover a long title to see the rest. **Details** shows
+the task's total runtime. **Settings > Appearance** can hide worker icons.
 
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
@@ -362,6 +362,11 @@ Turn outcomes show duration, estimated cost and time. Their actions copy the
 response, ask Codex about it or open that turn's activity. Hover or activate a
 timestamp for its full date and time. Failures keep their error. Notes mark
 compaction, new sessions and recreated worktrees.
+
+A worker's [plan](mcp-reference.md#worker-plans) shows as a card above the
+working status until it finishes or its turn ends, then stays in Chat as a
+collapsed row. After you message the worker mid-turn, the card reads **Plan from
+before your last message** until the worker updates it.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |

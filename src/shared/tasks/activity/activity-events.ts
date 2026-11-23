@@ -5,6 +5,8 @@ import { activityPresentation } from "../../providers/activity/presentation.js";
 import { scalarText } from "../../text.js";
 import { slashCommand } from "../conversation/commands.js";
 import { failureMessage } from "../failure.js";
+import type { AgentPlanPayload } from "../plan-contract.js";
+import { planProgress } from "../plan.js";
 
 export type ActivityState = "running" | "completed" | "failed" | "info";
 
@@ -104,6 +106,15 @@ export const boundaries = new Set([
   "task.started",
 ]);
 
+/** A new list counts its steps, and an update says how far it has got. */
+function planSummaryText({ steps, changed }: AgentPlanPayload) {
+  if (!steps.length) return "Plan cleared";
+  const { done, total } = planProgress(steps);
+  if (changed) return `${done} of ${total}`;
+
+  return total === 1 ? "1 step" : `${total} steps`;
+}
+
 /** Summaries for service events whose fields don't read as one. */
 export function serviceSummary(e: Event) {
   const turnEnded = eventPayload(e, "task.turn_ended");
@@ -114,6 +125,17 @@ export function serviceSummary(e: Event) {
 
   const limited = eventPayload(e, "agent.limited");
   if (limited) return limited.reason;
+
+  const plan = eventPayload(e, "agent.plan");
+  if (plan) return planSummaryText(plan);
+
+  const ended = eventPayload(e, "task.plan_ended");
+
+  if (ended) {
+    const { done, total } = planProgress(ended.steps);
+
+    return `${done} of ${total} steps done`;
+  }
 
   const queueChanged = eventPayload(e, "task.queue_changed");
 
@@ -130,6 +152,8 @@ export function serviceSummary(e: Event) {
 const eventTitles: Partial<Record<string, string>> = {
   "agent.completed": "Turn completed",
   "agent.limited": "Session limited",
+  "agent.plan": "Plan",
+  "task.plan_ended": "Plan ended",
   "agent.reply": "Reply",
   "task.completed": "Task completed",
   "task.instruction": "Message",

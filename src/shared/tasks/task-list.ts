@@ -5,6 +5,7 @@ import type { Draft } from "./conversation/drafts.js";
 import { replyExcerpt } from "./conversation/reply.js";
 import type { ReadState } from "./conversation/unread.js";
 import type { Task, TaskView } from "./model.js";
+import { planSummary } from "./plan.js";
 
 /** The start of a task's latest reply, so a list can be scanned without opening each task. */
 export type ReplyExcerpt = { turn: number; text: string };
@@ -27,6 +28,8 @@ export type TaskSummary = Pick<
   reply?: ReplyExcerpt;
   queued_messages: number;
   archived_at?: string;
+  /** How far the worker's plan has got. */
+  plan?: ReturnType<typeof planSummary>;
 };
 
 /** A task as the panel lists it. Chat reads the conversation through its own tool. */
@@ -94,6 +97,7 @@ export function taskSummary(
     ...(excerpt ? { reply: excerpt } : {}),
     queued_messages: task.queue.length,
     ...(archivedAt ? { archived_at: archivedAt } : {}),
+    ...(task.plan ? { plan: planSummary(task.plan) } : {}),
   };
 }
 

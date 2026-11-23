@@ -8,6 +8,7 @@ import type { EventType } from "../../../../../shared/events/event-types.js";
 import type { ActivityContent } from "../../../../../shared/providers/activity/types.js";
 import { normalizedClaudeFields } from "../../../../../shared/providers/claude/responses.js";
 import type { RunContext } from "../../types.js";
+import { isWorkerTool } from "../runtime/worker-tool-names.js";
 import {
   claudeActivityContent,
   claudeActivityPresentation,
@@ -48,6 +49,7 @@ export function localCommandOutput(m: SDKMessage) {
 export function claudeMessageNormalizer(fullEvents = false) {
   const state: NormalizerState = {
     fileToolIds: fullEvents ? undefined : new Set<string>(),
+    workerToolIds: new Set<string>(),
     compacted: false,
   };
 
@@ -72,6 +74,8 @@ export function keptMeasurements(
 
 type NormalizerState = {
   fileToolIds: Set<string> | undefined;
+  /** Worker tool calls, whose results are left out with them. */
+  workerToolIds: Set<string>;
   /** A compaction ran, so the next synthetic user message is its summary. */
   compacted: boolean;
 };
@@ -128,7 +132,7 @@ function normalizeClaudeMessage(
   state: NormalizerState,
   measured: ClaudeMeasurements | undefined,
 ) {
-  const { fileToolIds } = state;
+  const { fileToolIds, workerToolIds } = state;
   const responseRef = fullEvents ? globalThis.crypto.randomUUID() : undefined;
   let recorded = false;
 
@@ -144,6 +148,14 @@ function normalizeClaudeMessage(
 
     return fields;
   };
+
+  // Whether the message also becomes activity: when it's empty or failed, or
+  // under full events when its blocks recorded nothing, as worker tool blocks
+  // don't, so its original response still reaches diagnostics.
+  const unrecorded = (content: readonly unknown[]) =>
+    !content.length ||
+    ("error" in m && Boolean(m.error)) ||
+    (responseRef !== undefined && !recorded);
 
   const emit = <K extends EventType, D extends EventPayloadMap[K]>(
     type: K,
@@ -222,6 +234,9 @@ function normalizeClaudeMessage(
       for (const b of content) {
         if (b.type === "text") {
           emitText(b.text, claudeActivityContent(b));
+        } else if (b.type === "tool_use" && isWorkerTool(b.name)) {
+          // Worker tools record their own events.
+          workerToolIds.add(b.id);
         } else if (b.type === "tool_use") {
           emit("tool.started", {
             id: b.id,
@@ -229,7 +244,7 @@ function normalizeClaudeMessage(
             input: storedToolInput(b.id, b.name, b.input, fileToolIds),
           });
         } else if (b.type === "tool_result") {
-          emitToolResult(b);
+          if (!workerToolIds.delete(b.tool_use_id)) emitToolResult(b);
         } else {
           emit("agent.content", {
             role: m.type,
@@ -238,9 +253,7 @@ function normalizeClaudeMessage(
         }
       }
 
-      if (!content.length || ("error" in m && m.error)) {
-        emitActivity(m);
-      }
+      if (unrecorded(content)) emitActivity(m);
     }
   } else if (m.type === "system" && m.subtype === "init") {
     emit("agent.started", { model: m.model, tools: m.tools });
