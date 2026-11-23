@@ -518,6 +518,9 @@ export class Control {
 
       // The turn's end, what follows it and the task's new status commit together.
       this.store.transaction(() => {
+        // A plan with steps left ends inside its turn, before the outcome row.
+        endPlan(this.store, t);
+
         this.store.event(t, "task.turn_ended", {
           turn: t.turn,
           outcome,
@@ -525,7 +528,6 @@ export class Control {
           cost_usd: (t.cost_usd ?? 0) - turn.costBefore,
         });
 
-        endPlan(this.store, t);
         this.endTurn(t, outcome, a.sendPending);
         this.store.save(t);
         recordStatusEvent(this.store, t);
