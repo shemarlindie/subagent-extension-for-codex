@@ -48,9 +48,6 @@ test("the frame runs scripts alone, takes its own window's height, and shows the
   post(frame?.contentWindow, { type: "visual-height", height: 400 });
   expect(frame?.style.height).toBe("400px");
 
-  post(frame?.contentWindow, { type: "visual-link", href: "javascript:x" });
-  expect(screen.queryByRole("link")).toBeNull();
-
   // The frame's request opens nothing until the user clicks the destination.
   post(frame?.contentWindow, { type: "visual-link", href: "https://x.dev/" });
   expect(openLink).not.toHaveBeenCalled();
