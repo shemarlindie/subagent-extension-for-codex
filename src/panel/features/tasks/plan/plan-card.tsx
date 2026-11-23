@@ -1,3 +1,4 @@
+import { Collapsible } from "@base-ui/react/collapsible";
 import { useLayoutEffect, useRef } from "react";
 
 import { planProgress, type TaskPlan } from "../../../../shared/tasks/plan";
@@ -17,12 +18,9 @@ type PlanCardProps = {
   onResize?: () => void;
 };
 
-/**
- * The worker's plan above Chat's composer while it has steps left, as Claude
- * Code shows it.
- */
+/** The worker's plan above Chat's composer while it has steps left. */
 export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
-  const card = useRef<HTMLElement>(null);
+  const card = useRef<HTMLDivElement>(null);
 
   const [choice, setChoice] = useSessionState(
     "task",
@@ -33,10 +31,11 @@ export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
   const collapsed = planCollapsed(plan, choice);
   const stale = Boolean(plan.stale);
 
-  const shape = `${collapsed}\n${stale}\n${plan.steps.map((s) => s.content).join("\n")}`;
+  const shape = `${collapsed}\n${plan.steps.map((s) => s.content).join("\n")}`;
   const lastShape = useRef(shape);
 
-  // Eases every change that resizes the card: its form, its steps and the caption.
+  // Eases changes to the open steps. The panel eases its own opening and closing,
+  // so the card measures no change then.
   useAnimatedHeight(card, shape);
 
   useLayoutEffect(() => {
@@ -50,56 +49,47 @@ export function PlanCard({ taskId, plan, working, onResize }: PlanCardProps) {
   let state: PlanStepState = working ? "working" : "paused";
   if (stale) state = "stale";
 
-  const toggle = () =>
-    setChoice({ planCollapse: planCollapseChoice(plan, !collapsed) });
-
   const label = `${stale ? "Plan from before your last message" : "Plan"}, ${count} steps done`;
 
   // The step in progress, or the next one when none is.
   const current = plan.steps.find((s) => s.status !== "completed");
 
-  // One element in both forms, so its height eases between them.
+  // One row in both forms, so the count and caret stay put and focus stays on it.
+  // Only the label fades between forms.
   return (
-    <section
+    <Collapsible.Root
       ref={card}
       className="plan-card"
-      data-expanded={collapsed ? undefined : ""}
+      role="region"
       aria-label={label}
+      open={!collapsed}
+      onOpenChange={(open) =>
+        setChoice({ planCollapse: planCollapseChoice(plan, !open) })
+      }
     >
-      {collapsed ? (
-        <button
-          type="button"
-          className="plan-card-row"
-          aria-expanded={false}
-          onClick={toggle}
-        >
-          <PlanStepIcon status={current?.status ?? "pending"} state={state} />
-          <span className="plan-card-current">{current?.content}</span>
-          <span className="plan-card-count">
-            {count}
-            <Chevron size={9} />
+      <Collapsible.Trigger className="plan-card-row">
+        {collapsed ? (
+          <span key="step" className="plan-card-label motion-swap">
+            <PlanStepIcon status={current?.status ?? "pending"} state={state} />
+            <span className="plan-card-current">{current?.content}</span>
           </span>
-        </button>
-      ) : (
-        <>
-          <button
-            type="button"
-            className="plan-card-collapse"
-            aria-expanded
-            aria-label={`Collapse plan, ${count} steps done`}
-            onClick={toggle}
-          >
-            {count}
-            <Chevron size={9} />
-          </button>
-          {stale && (
-            <p className="plan-card-caption">
-              Plan from before your last message
-            </p>
-          )}
+        ) : (
+          <span key="plan" className="plan-card-label motion-swap">
+            <span className="plan-card-current plan-card-title">
+              {stale ? "Plan from before your last message" : "Plan"}
+            </span>
+          </span>
+        )}
+        <span className="plan-card-count">
+          {count}
+          <Chevron size={9} />
+        </span>
+      </Collapsible.Trigger>
+      <Collapsible.Panel className="collapse-panel">
+        <div className="plan-card-steps">
           <PlanSteps steps={plan.steps} state={state} />
-        </>
-      )}
-    </section>
+        </div>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   );
 }

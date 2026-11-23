@@ -1,25 +1,20 @@
-/* The worker's plan, drawn as Claude Code draws it: a soft card with no header. */
+/* The worker's plan: a soft card whose top row toggles its steps. */
 .plan-card {
-  position: relative;
   overflow: hidden;
   border-radius: var(--border-radius-lg);
   background: var(--user-bubble-bg);
   font-size: 13px;
   line-height: 18px;
 }
-.plan-card[data-expanded] {
-  padding: 12px 14px;
-}
-/* Collapsed, the whole row expands it. */
 .plan-card-row {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 10px;
   align-items: center;
   width: 100%;
-  /* Centres the row on the expanded card's first step and collapse control. */
   padding: 12px 14px;
   border: 0;
+  border-radius: var(--border-radius-lg);
   background: none;
   color: var(--text);
   font: inherit;
@@ -30,9 +25,18 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* The count and caret sit in the same place in both forms, so nothing shifts on toggle. */
-.plan-card-count,
-.plan-card-collapse {
+/* Collapsed, the label is the current step. Expanded, it is the plan's title. */
+.plan-card-label {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+.plan-card-title {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.plan-card-count {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -40,30 +44,28 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-/* Sits in the top corner, beside the first step, as in Claude Code. */
-.plan-card-collapse {
-  position: absolute;
-  top: 10px;
-  right: 8px;
-  height: 22px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--border-radius-sm);
-  background: none;
-  font-family: inherit;
-}
-/* The pinned card grows upward, so its caret points up to expand and down to collapse. */
-.plan-card:not(.plan-history) > .plan-card-row .chevron {
-  transform: rotate(180deg);
-}
-.plan-card-collapse:hover,
 .plan-card-row:hover {
   background: var(--hover);
 }
-.plan-card-caption {
-  margin: 0 64px 6px 0;
-  color: var(--muted);
-  font-size: 12px;
+/* The focus ring sits inset and rounded with the card, which clips anything outside it. */
+.plan-card-row[aria-expanded="true"] {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.plan-card-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+/* Steps open below the row, so the caret points down to open and up when open. */
+.plan-card-row .chevron {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.plan-card-row[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.plan-card-steps,
+.plan-history-steps {
+  padding: 0 14px 12px;
 }
 .plan-steps {
   display: flex;
@@ -72,10 +74,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-/* The first step leaves room for the collapse control in the corner. */
-.plan-card .plan-steps > :first-child {
-  padding-right: 56px;
 }
 .plan-step {
   display: grid;
@@ -88,7 +86,8 @@
   color: var(--text);
 }
 .plan-step > svg,
-.plan-card-row > svg {
+.plan-card-row > svg,
+.plan-card-label > svg {
   justify-self: center;
   color: var(--muted);
 }
@@ -126,10 +125,4 @@
 }
 .plan-history .plan-card-current {
   color: var(--muted);
-}
-.plan-history .plan-card-row[data-panel-open] .chevron {
-  transform: rotate(180deg);
-}
-.plan-history-steps {
-  padding: 0 14px 12px;
 }
