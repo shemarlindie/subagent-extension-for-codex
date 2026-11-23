@@ -27,30 +27,46 @@ const POLICY =
 /** Content can grow with its frame, so the frame stops here and scrolls. */
 export const MAX_VISUAL_HEIGHT = 1600;
 
+/** The style element that holds the panel's theme, which the panel updates. */
+const THEME_ID = "visual-theme";
+
 /**
- * Reports the content's height, and hands link clicks to the panel, since
- * the sandbox lets the frame open nothing itself. Fragment links stay inside.
+ * Reports the content's height, applies the panel's theme updates, and hands
+ * link clicks to the panel, since the sandbox lets the frame open nothing
+ * itself. Fragment links stay inside.
  *
  * The root's box measures the content, and the body's scroll height adds
  * absolutely positioned content past it, since the document's style makes the
  * body their containing block. The root's own scroll height never drops below
- * the frame's, so a frame measured by it could never shrink. A frame that fits
- * its content can't scroll, even by a rounded pixel, or it would keep the
- * wheel from scrolling Chat.
+ * the frame's, so a frame measured by it could never shrink. Content such as a
+ * popover can appear without resizing the root, so DOM changes, hovers and
+ * finished transitions report too. A frame that fits its content can't scroll,
+ * even by a rounded pixel, or it would keep the wheel from scrolling Chat.
  */
 const FRAME_SCRIPT = `(() => {
   const post = (message) => parent.postMessage(message, "*");
   const root = document.documentElement;
+  let reported;
   const report = () => {
     const height = Math.ceil(
       Math.max(root.getBoundingClientRect().height, document.body?.scrollHeight ?? 0),
     );
+    if (height === reported) return;
+    reported = height;
     root.style.overflow = height > ${MAX_VISUAL_HEIGHT} ? "auto" : "hidden";
     post({ type: "visual-height", height });
   };
-  const observer = new ResizeObserver(report);
-  observer.observe(root);
-  addEventListener("DOMContentLoaded", () => observer.observe(document.body));
+  new ResizeObserver(report).observe(root);
+  new MutationObserver(report).observe(root, {
+    subtree: true, childList: true, attributes: true, characterData: true,
+  });
+  for (const type of ["pointerover", "pointerout", "transitionend", "animationend"]) {
+    addEventListener(type, report);
+  }
+  addEventListener("message", (event) => {
+    if (event.source !== parent || event.data?.type !== "visual-theme") return;
+    document.getElementById("${THEME_ID}").textContent = event.data.css;
+  });
   addEventListener("click", (event) => {
     const link = event.target instanceof Element ? event.target.closest("a") : null;
     const href = link?.getAttribute("href") ?? link?.getAttribute("xlink:href");
@@ -98,7 +114,8 @@ export function visualDocument(code: string, themeCss: string) {
     '<html><head><meta charset="utf-8">',
     `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`,
     `<script>${FRAME_SCRIPT}</script>`,
-    `<style>${themeCss} :root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }</style>`,
+    `<style id="${THEME_ID}">${themeCss}</style>`,
+    "<style>:root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }</style>",
     "</head><body>",
     code,
     "</body></html>",

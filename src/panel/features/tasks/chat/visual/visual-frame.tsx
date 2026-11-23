@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";
@@ -16,6 +16,14 @@ const INITIAL_HEIGHT = 150;
 
 type VisualFrameProps = { title: string; code: string };
 
+/** One version of a visual, with the link it asked to open. */
+type Revision = { code: string; srcDoc: string; link?: string };
+
+const revision = (code: string, theme: string): Revision => ({
+  code,
+  srcDoc: visualDocument(code, theme),
+});
+
 /**
  * A worker's visual in a sandboxed frame. Scripts run on an opaque origin
  * with no network, and the frame can't reach the panel or navigate. It sizes
@@ -25,9 +33,21 @@ type VisualFrameProps = { title: string; code: string };
 export function VisualFrame({ title, code }: VisualFrameProps) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(INITIAL_HEIGHT);
-  const [link, setLink] = useState<string>();
   const theme = useVisualTheme();
-  const srcDoc = useMemo(() => visualDocument(code, theme), [code, theme]);
+
+  // A new version gets a new document, in the theme of the moment, and drops
+  // the link the previous version asked to open.
+  const [shown, setShown] = useState(() => revision(code, theme));
+  if (shown.code !== code) setShown(revision(code, theme));
+  const { srcDoc, link } = shown;
+
+  // Theme changes restyle the document in place, keeping its state.
+  useEffect(() => {
+    ref.current?.contentWindow?.postMessage(
+      { type: "visual-theme", css: theme },
+      "*",
+    );
+  }, [theme]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<unknown>) => {
@@ -43,7 +63,8 @@ export function VisualFrame({ title, code }: VisualFrameProps) {
         message?.type === "visual-link" &&
         linkKind(message.href) === "external"
       ) {
-        setLink(message.href);
+        const { href } = message;
+        setShown((s) => ({ ...s, link: href }));
       }
     };
 
@@ -71,7 +92,7 @@ export function VisualFrame({ title, code }: VisualFrameProps) {
             variant="ghost"
             className="chat-icon-button"
             aria-label="Dismiss link"
-            onClick={() => setLink(undefined)}
+            onClick={() => setShown((s) => ({ ...s, link: undefined }))}
           >
             <Icon name="close" size={8} />
           </Button>

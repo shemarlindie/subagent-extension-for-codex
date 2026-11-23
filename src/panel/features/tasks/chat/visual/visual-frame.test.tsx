@@ -57,3 +57,39 @@ test("the frame runs scripts alone, takes its own window's height, and shows the
   fireEvent.click(screen.getByRole("link", { name: "https://x.dev/" }));
   expect(openLink).toHaveBeenCalledWith("https://x.dev/");
 });
+
+test("a theme change restyles the frame in place, and a new version drops the previous one's link", async () => {
+  const { container, rerender } = render(
+    <VisualFrame title="Signups" code="<svg>1</svg>" />,
+  );
+
+  const frame = container.querySelector("iframe");
+  const first = frame?.getAttribute("srcdoc");
+  const send = vi.spyOn(frame?.contentWindow as Window, "postMessage");
+
+  await act(async () => {
+    document.documentElement.style.setProperty("--accent", "red");
+  });
+
+  expect(frame?.getAttribute("srcdoc")).toBe(first);
+
+  expect(send).toHaveBeenLastCalledWith(
+    expect.objectContaining({ css: expect.stringContaining("--accent: red") }),
+    "*",
+  );
+
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: frame?.contentWindow,
+        data: { type: "visual-link", href: "https://x.dev/" },
+      }),
+    );
+  });
+
+  expect(screen.getByRole("link")).toBeTruthy();
+  rerender(<VisualFrame title="Signups" code="<svg>2</svg>" />);
+  expect(screen.queryByRole("link")).toBeNull();
+  expect(frame?.getAttribute("srcdoc")).toContain("<svg>2</svg>");
+  document.documentElement.removeAttribute("style");
+});
