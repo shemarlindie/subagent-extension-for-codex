@@ -45,14 +45,13 @@ turn and keeps the session where possible.
 A provider reports the worker's plan with
 `RunContext.planUpdated(steps, changed?)`. Task control saves it on the task,
 records an `agent.plan` event and marks an open plan stale when a steer is
-taken. The plan ends with its turn. A `task.plan_ended` event records each plan
-that leaves the pinned card for Chat history.
+taken. The plan ends with its turn, and `task.plan_ended` records its move to
+Chat history.
 
 Claude workers get `update_plan` from the in-process `delegated_work` MCP
-server, which every turn loads. Its calls run without approval and show no tool
-rows. `dontAsk` under an org policy that keeps only managed permission rules
-denies them. A `PreToolUse` hook denies subagents' calls. A `SessionStart` hook
-gives an open plan back to the worker after a compaction.
+server. Its calls need no approval and show no tool rows. Subagents can't call
+it. A `SessionStart` hook gives an open plan back to the worker after a
+compaction.
 
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the

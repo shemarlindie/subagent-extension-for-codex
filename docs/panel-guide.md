@@ -126,12 +126,11 @@ project and search filters. Press `/` to search and Escape to clear it.
 Under **All projects**, tasks group by project, ordered by each group's newest
 task. Project headers stay visible as their rows scroll.
 
-Each row shows the worker icon, the title, progress such as `3/7` while the
-worker's [plan](#chat-tab) has open steps, and at most one dot: yellow when the
-task needs input or waits for a rate limit, gray while it is queued, pulsing
-gray while it works, and the accent color when it is unread. Hover a long title
-to see the rest. **Details** shows the task's total runtime. **Settings >
-Appearance** can hide worker icons.
+Each row shows the worker icon, the title, [plan](#chat-tab) progress such as
+`3/7`, and at most one dot: yellow when the task needs input or waits for a rate
+limit, gray while it is queued, pulsing gray while it works, and the accent
+color when it is unread. Hover a long title to see the rest. **Details** shows
+the task's total runtime. **Settings > Appearance** can hide worker icons.
 
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
@@ -365,14 +364,9 @@ timestamp for its full date and time. Failures keep their error. Notes mark
 compaction, new sessions and recreated worktrees.
 
 A worker's [plan](mcp-reference.md#worker-plans) shows as a card above the
-working status while it has steps left. The current step spins while the worker
-is on it and pauses while it compacts or waits. Once a message you send during
-the turn reaches the worker, the card reads **Plan from before your last
-message** until the worker updates it.
-
-A plan lasts one turn. It leaves the card when it finishes, is replaced or
-cleared, or its turn ends. It stays in Chat as a one-line history row that
-expands to its steps.
+working status until it finishes or its turn ends, then stays in Chat as a
+collapsed row. After you message the worker mid-turn, the card reads **Plan from
+before your last message** until the worker updates it.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
@@ -453,8 +447,6 @@ cancelled work never appears successful.
 - Worker and parent-agent text renders as Markdown, as in Chat. Your messages
   and tool output show as written.
 - Thinking shows elapsed time.
-- Plan rows show a new list in full, and an update to the same list shows only
-  the steps whose status changed.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
 - File tool rows show the path and options. Successful results show "File
