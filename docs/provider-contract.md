@@ -51,7 +51,8 @@ Chat history.
 Claude workers get `update_plan` from the in-process `delegated_work` MCP
 server. Its calls need no approval and show no tool rows. Subagents can't call
 it. A `SessionStart` hook gives an open plan back to the worker after a
-compaction.
+compaction. Claude Code's `Artifact` tool is blocked, since it publishes to the
+signed-in claude.ai account outside the task.
 
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the

@@ -14,7 +14,7 @@ test("default settings leave the sandbox and tools to the user's configuration a
   assert.equal(options.sandbox, undefined);
   assert.equal(options.managedSettings, undefined);
   assert.deepEqual(options.tools, { type: "preset", preset: "claude_code" });
-  assert.deepEqual(options.disallowedTools, []);
+  assert.deepEqual(options.disallowedTools, ["Artifact"]);
   assert.ok(options.env);
   assert.equal(options.env.USER_TOOLCHAIN_HOME, "/synthetic/toolchain");
 
@@ -44,7 +44,12 @@ test("the sandbox setting turns on Claude Code's sandbox, and subagents can be t
   });
 
   const noSubagents = await runWithPolicy({ ...parity, subagents: false });
-  assert.deepEqual(noSubagents.options.disallowedTools, ["Agent", "Task"]);
+
+  assert.deepEqual(noSubagents.options.disallowedTools, [
+    "Artifact",
+    "Agent",
+    "Task",
+  ]);
 });
 
 test("settings choose whether sessions load Claude Code settings and their MCP servers", async () => {
