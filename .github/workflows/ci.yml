@@ -62,7 +62,7 @@ jobs:
         id: chromium
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npx playwright install --with-deps chromium
-        timeout-minutes: 3
+        timeout-minutes: 5
       - name: Browser tests
         id: browser
         if: ${{ !cancelled() && steps.chromium.outcome == 'success' }}
