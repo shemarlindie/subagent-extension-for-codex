@@ -56,7 +56,12 @@ export class ConsoleTransport implements Transport {
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     return decodePanelToolResult<T>(
       name,
-      (await this.api("/api/tools/" + name, args)).result,
+      (
+        await this.api(
+          "/api/tools/" + (name === "start_task" ? "app_start_task" : name),
+          args,
+        )
+      ).result,
       this.events?.timing,
     );
   }

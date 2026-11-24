@@ -1,10 +1,13 @@
+import type { ComposerFile } from "../../../features/attachments/composer-file";
 import type { ChangesReading } from "../../../features/changes/changes-reading";
 import type { DelegateValues } from "../../../features/delegation/delegate-values";
 import type { ReadingState } from "../../../features/tasks/evidence/reading-state";
 import type { PlanCollapse } from "../../../features/tasks/plan/plan-collapse";
 import type { QuestionDraft, Tab } from "../types";
 
-export type TaskSessionState = {
+type DraftFiles = { files?: ComposerFile[]; fileErrors?: string[] };
+
+export type TaskSessionState = DraftFiles & {
   tab: Tab;
   composerDraft: string;
   /** Keeps pending send feedback visible if Chat remounts during the request. */
@@ -38,7 +41,7 @@ type QuestionSessionState = {
 };
 
 /** The new-task composer's message and the options the user changed. */
-type NewTaskSessionState = {
+type NewTaskSessionState = DraftFiles & {
   draft: Partial<DelegateValues>;
 };
 

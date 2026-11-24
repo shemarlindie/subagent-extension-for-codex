@@ -241,7 +241,7 @@ test.each(["before rejection", "after rejection"])(
   },
 );
 
-test("a timed out send retains its draft and retry ID while late delivery leaves the retry intact", async () => {
+test("a timed out send reuses its ID until a same-named file replaces the attachment", async () => {
   vi.useFakeTimers();
 
   onTestFinished(() => {
@@ -249,13 +249,31 @@ test("a timed out send retains its draft and retry ID while late delivery leaves
   });
 
   const { controller, view, input, send, type, enter, tool, write } = setup();
-  type("Keep this message");
-  enter();
-  const original = tool.mock.calls[0];
 
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(30000);
+  const file = (id: number, text: string) => ({
+    id,
+    name: "notes.txt",
+    size: text.length,
+    upload: {
+      source: "upload" as const,
+      name: "notes.txt",
+      summary: "User attached notes.txt.",
+      data: btoa(text),
+    },
   });
+
+  const attach = (id: number, text: string) =>
+    act(() =>
+      controller.session.update("task", "task-1", { files: [file(id, text)] }),
+    );
+
+  const timeOut = () => act(() => vi.advanceTimersByTimeAsync(30000));
+
+  type("Keep this message");
+  attach(1, "first");
+  enter();
+  const original = tool.mock.calls[0]?.[1];
+  await timeOut();
 
   expect(view.getByRole("alert").textContent).toContain(
     "Delivery could not be confirmed",
@@ -263,43 +281,40 @@ test("a timed out send retains its draft and retry ID while late delivery leaves
 
   expect(input.value).toBe("Keep this message");
   expect(send.disabled).toBe(false);
-  expect(controller.getSnapshot().busy).toBe(false);
 
   const retry = deferred<unknown>();
   tool.mockReturnValue(retry.promise);
   enter();
-  expect(tool.mock.calls[1]).toEqual(original);
-  type("A newer draft");
+  expect(tool.mock.calls[1]?.[1]).toEqual(original);
+  await timeOut();
+
+  // Both earlier calls still await acknowledgement when the replacement sends.
+  attach(2, "other");
+  const replacement = deferred<unknown>();
+  tool.mockReturnValue(replacement.promise);
+  enter();
+  const edited = tool.mock.calls[2]?.[1];
+  expect(edited?.request_id).not.toBe(original?.request_id);
+  expect(edited?.attachments).toEqual([file(2, "other").upload]);
 
   await act(async () => {
     write.resolve({});
-    await flush();
-  });
-
-  expect(input.value).toBe("A newer draft");
-  expect(send.disabled).toBe(true);
-  expect(controller.getSnapshot().busy).toBe(true);
-  expect(view.getByText("Sending…")).toBeTruthy();
-
-  await act(async () => {
     retry.resolve({});
     await flush();
   });
 
-  expect(input.value).toBe("A newer draft");
-  expect(send.disabled).toBe(false);
-  expect(controller.getSnapshot().busy).toBe(false);
-
-  tool.mockResolvedValue({});
-  type("Keep this message");
+  expect(view.getByRole("button", { name: "Remove notes.txt" })).toBeTruthy();
+  expect(input.value).toBe("Keep this message");
+  expect(send.disabled).toBe(true);
+  expect(controller.getSnapshot().busy).toBe(true);
 
   await act(async () => {
-    enter();
+    replacement.resolve({});
     await flush();
   });
 
-  expect(tool.mock.calls[2]).not.toEqual(original);
   expect(input.value).toBe("");
+  expect(view.queryByRole("button", { name: "Remove notes.txt" })).toBeNull();
 });
 
 test("a late acknowledgement clears the timed out draft and error, so the same text sends anew", async () => {

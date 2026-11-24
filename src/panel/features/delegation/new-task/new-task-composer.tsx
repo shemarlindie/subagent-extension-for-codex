@@ -18,6 +18,7 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../shared/forms/form-field-hint";
+import { useComposerFiles } from "../../attachments/composer-files";
 import {
   DELEGATE_FORM_FIELDS,
   workerChoices,
@@ -66,6 +67,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     () => controller.session.get("newTask", sessionId).draft,
   );
 
+  const attachments = useComposerFiles("newTask", sessionId, busy);
   const initialValues = newTaskInitialValues(newTask, scope);
 
   const form = useForm<DelegateValues>({
@@ -129,9 +131,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     (item) => item.provider === workerChoice(worker).provider,
   )?.readiness;
 
+  const actionBusy = busy || attachments.pending;
+
   const canSubmit =
     readsReady &&
-    !busy &&
+    !actionBusy &&
     hasMessage &&
     Boolean(repository) &&
     workerChoices(scope.workers).includes(worker) &&
@@ -147,6 +151,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         revision: repository === scope.repository ? values.revision : "HEAD",
       },
       box.current?.offsetHeight,
+      attachments.files.flatMap((file) => file.upload ?? []),
     );
 
     // On success the composer closes and the controller clears its draft.
@@ -214,7 +219,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
           <div className="chat-composer-input-row">
             {/* Holds the place of Chat's hide-composer caret. */}
             <span className="chat-composer-gutter" aria-hidden="true" />
-            <div ref={box} className="chat-composer-box new-task-box">
+            <div
+              ref={box}
+              className="chat-composer-box new-task-box"
+              {...attachments.handlers}
+            >
               <textarea
                 id="new-task-message"
                 aria-label="Task message"
@@ -230,10 +239,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
               <div className="new-task-box-footer">
                 <NewTaskOptions newTask={newTask} state={scope} />
                 <div className="chat-composer-actions">
+                  {attachments.button}
                   <Button
                     variant="text"
                     className="new-task-more"
-                    disabled={busy || dialogOpen}
+                    disabled={actionBusy || dialogOpen}
                     onClick={advanced}
                   >
                     More options…
@@ -253,6 +263,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
               </div>
             </div>
           </div>
+          {attachments.chips}
           <div className="chat-composer-meta chat-composer-field-feedback">
             <FormFieldHint id="new-task-hint" message={HINT} />
           </div>

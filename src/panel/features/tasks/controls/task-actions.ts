@@ -12,6 +12,7 @@ import {
   type UndoRecorder,
 } from "../../../app/state/undo-history";
 import { errorMessage } from "../../../shared/utils/error-message";
+import type { ComposerFile } from "../../attachments/composer-file";
 import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
@@ -141,13 +142,18 @@ export class TaskActions {
     message: string,
     delivery: Delivery,
     delivered?: () => void,
+    files?: ComposerFile[],
   ) {
     // Refuse before reserving a request, so a refused send can't pin delivery.
     if (this.context.snapshot().busy || this.context.closed()) {
       return "Wait for the last action.";
     }
 
-    const key = JSON.stringify([task.id, message]);
+    const key = JSON.stringify([
+      task.id,
+      message,
+      files?.map((file) => file.id) ?? [],
+    ]);
 
     // getRandomValues also works in the supported HTTP LAN console.
     // Preserve delivery when a task's status changes before an uncertain retry.
@@ -172,7 +178,14 @@ export class TaskActions {
 
     return this.run(
       "app_send_message",
-      { task_id: task.id, message, ...request },
+      {
+        task_id: task.id,
+        message,
+        ...request,
+        ...(files?.length
+          ? { attachments: files.map((file) => file.upload) }
+          : {}),
+      },
       {
         background: true,
         timeoutMessage: UNCONFIRMED_SEND,

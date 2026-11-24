@@ -176,6 +176,12 @@ export function QueuedMessageRow({
           )}
           {runsNext && <span className="chat-queue-note">Runs next · </span>}
           <CommandText text={message.message} />
+          {message.attachment_titles?.length ? (
+            <small className="chat-queue-note">
+              {" "}
+              · {message.attachment_titles.join(", ")}
+            </small>
+          ) : null}
         </p>
       ) : (
         <textarea

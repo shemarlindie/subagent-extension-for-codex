@@ -35,6 +35,7 @@ import { RevisionField } from "./fields/revision-field";
 import { WorkerField } from "./fields/worker-field";
 import { WorkspaceField } from "./fields/workspace-field";
 import { WorkspaceNoteView } from "./fields/workspace-note-view";
+import { newTaskSessionId } from "./new-task/new-task-values";
 import { startTaskArguments } from "./start-task";
 import { useAsyncDefaults, useProfileMode } from "./use-async-defaults";
 import { useProjectWorkers } from "./use-project-workers";
@@ -121,16 +122,21 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     controller.submit(async () => {
       await controller.addChatProjectForTask(values.repository);
 
-      return controller.tool<Task>(
-        "start_task",
-        startTaskArguments(
+      const files =
+        controller.getSnapshot().newTask &&
+        controller.session.get("newTask", newTaskSessionId(conversation)).files;
+
+      return controller.tool<Task>("start_task", {
+        ...startTaskArguments(
           values,
           scope.workers,
-          // Submitting checks the dialog's scope, so this is the conversation it opened in.
           conversation,
           projectGit(scope, values.repository),
         ),
-      );
+        ...(files?.length
+          ? { attachments: files.map((file) => file.upload) }
+          : {}),
+      });
     }, true),
   );
 

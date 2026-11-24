@@ -1,3 +1,4 @@
+import type { UploadInput } from "../../../../shared/attachments/model";
 import {
   settingAt,
   withSetting,
@@ -159,6 +160,7 @@ export class NewTaskLoader {
   async start(
     values: DelegateValues,
     composerHeight?: number,
+    attachments?: UploadInput[],
   ): Promise<string | undefined> {
     const state = this.context.snapshot();
     const newTask = state.newTask;
@@ -171,15 +173,15 @@ export class NewTaskLoader {
     try {
       await this.context.addChatProjectForTask(values.repository);
 
-      task = await this.context.tool<Task>(
-        "start_task",
-        startTaskArguments(
+      task = await this.context.tool<Task>("start_task", {
+        ...startTaskArguments(
           values,
           state.workers,
           state.conversation,
           projectGit(state, values.repository),
         ),
-      );
+        ...(attachments?.length ? { attachments } : {}),
+      });
     } catch (error) {
       return errorMessage(error);
     } finally {

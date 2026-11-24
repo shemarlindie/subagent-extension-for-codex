@@ -150,3 +150,18 @@
   font-family: var(--font-mono);
   font-size: 12px;
 }
+
+.composer-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-inline-start: 24px;
+}
+.composer-files .attachment-chip {
+  max-width: 100%;
+}
+.composer-files .attachment-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
