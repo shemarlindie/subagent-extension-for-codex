@@ -104,23 +104,19 @@ test("a row counts its plan's steps while some are left", () => {
   assert.equal(count(plan(steps(true, true))), undefined);
 });
 
-test("an idle row shows its latest question, or else its recap's first sentence", () => {
-  const reply = {
-    turn: 1,
-    text: "r",
-    recap: "Tests pass. Nothing is committed.",
-  };
+test("an idle row shows its latest question, and nothing for a recap alone", () => {
+  const reply = { turn: 1, text: "r", recap: "Tests pass." };
 
-  const recap = (patch: Partial<Task>) =>
+  const ask = (patch: Partial<Task>) =>
     renderRow({
       ...task("a"),
       status: "completed",
       turn: 1,
-      reply,
+      reply: { ...reply, ask: "Commit it?" },
       ...patch,
-    }).view.container.querySelector(".row-recap")?.textContent;
+    }).view.container.querySelector(".row-ask")?.textContent;
 
-  assert.equal(recap({}), "Tests pass.");
-  assert.equal(recap({ reply: { ...reply, ask: "Commit it?" } }), "Commit it?");
-  assert.equal(recap({ status: "running", turn: 2 }), undefined);
+  assert.equal(ask({}), "Commit it?");
+  assert.equal(ask({ reply }), undefined);
+  assert.equal(ask({ status: "running", turn: 2 }), undefined);
 });

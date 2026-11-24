@@ -238,7 +238,12 @@ function conversationTurn(cycle: number) {
 
   at(28_000, () => {
     timeline
-      .reply(finalReply, turn)
+      .reply(finalReply, turn, {
+        recap:
+          "The cycle finished its simulated work. Nothing was changed or verified.",
+        ask: "Run the cycle again?",
+        actions: [{ label: "Yes, run it" }, { label: "Not now" }],
+      })
       .turnEnded(turn, "completed", 28_000, 0)
       .add("task.completed");
   });

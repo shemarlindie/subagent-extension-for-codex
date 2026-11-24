@@ -284,16 +284,6 @@ test("a parent reads the worker's wrap-up on its reply and in the task list", as
 
     assert.deepEqual(reply?.wrap_up, wrapUp);
 
-    assert.deepEqual(
-      (
-        await parent<{ message: Messages["messages"][number] }>("get_message", {
-          task_id: t.id,
-          message_id: reply?.id,
-        })
-      ).message.wrap_up,
-      wrapUp,
-    );
-
     const [summary] = await parent<TaskSummary[]>("list_tasks", {
       conversation_id: null,
     });

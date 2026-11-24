@@ -202,30 +202,27 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
       </span>
       <TaskRowPlan task={task} />
       <TaskRowSignal task={task} keepSlot={keepSlot} />
-      <TaskRowRecap task={task} />
+      <TaskRowAsk task={task} />
     </>
   );
 }
 
 /**
- * The latest turn's question, or else its recap's first sentence, as where the
- * task stands while it waits for the next message.
+ * The latest turn's question, while the task waits for its answer. The line
+ * eases in and out so the row's height changes smoothly.
  */
-function TaskRowRecap({ task }: Pick<TaskRowProps, "task">) {
+function TaskRowAsk({ task }: Pick<TaskRowProps, "task">) {
   const { reply } = task;
 
-  if (
-    !reply?.recap ||
-    reply.turn !== task.turn ||
-    composerMode(task) !== "idle"
-  ) {
-    return null;
-  }
+  const ask =
+    reply?.turn === task.turn && composerMode(task) === "idle"
+      ? reply.ask
+      : undefined;
 
   return (
-    <span className="row-recap">
-      {reply.ask ?? /^.*?[.!?](?=\s|$)/.exec(reply.recap)?.[0] ?? reply.recap}
-    </span>
+    <Presence show={Boolean(ask)} as="span">
+      {ask && <span className="row-ask">{ask}</span>}
+    </Presence>
   );
 }
 

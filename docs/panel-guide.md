@@ -129,10 +129,9 @@ task. Project headers stay visible as their rows scroll.
 Each row shows the worker icon, the title, [plan](#chat-tab) progress such as
 `3/7`, and at most one dot: yellow when the task needs input or waits for a rate
 limit, gray while it is queued, pulsing gray while it works, and the accent
-color when it is unread. An idle task shows its worker's latest question under
-the title, or else the first sentence of its recap. Hover a long title to see
-the rest. **Details** shows the task's total runtime. **Settings > Appearance**
-can hide worker icons.
+color when it is unread. An idle task shows its worker's open question under the
+title. Hover a long title to see the rest. **Details** shows the task's total
+runtime. **Settings > Appearance** can hide worker icons.
 
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
