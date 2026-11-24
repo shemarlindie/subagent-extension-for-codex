@@ -31,8 +31,9 @@ function chart(scale: number) {
 
 const page = `<style>
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; padding: 4px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; }
-  .card:hover, .card[aria-pressed="true"] { border-color: var(--accent); }
+  .card { background: var(--fill); border: 0; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; }
+  .card:hover { background: color-mix(in srgb, var(--text) 10%, transparent); }
+  .card[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 15%, transparent); }
   .value { font-size: 20px; font-weight: 500; }
   .up { color: var(--success); font-size: 14px; }
   .tag { display: inline-block; margin-top: 4px; padding: 0 6px; border-radius: 4px; background: var(--fill); font-size: 11px; }

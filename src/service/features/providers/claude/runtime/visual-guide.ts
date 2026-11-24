@@ -20,12 +20,11 @@ Visuals should look native in the user's panel: flat, themed, readable in light 
 ## Look
 - Flat surfaces with no gradients, shadows, blur, glow or decorative textures.
 - Leave the root background transparent so the panel shows through.
-- Put cards and screens on var(--surface) with var(--radius) corners and 1px var(--border) lines. Use rounded corners only on boxes with borders on all sides.
 - Default to the quieter option. Too cluttered is the most common problem.
 
 ## Color
 - Use only theme variables for text, lines and fills. Never hard-code grays, black or white, since they disappear in one of the themes. Check every text against both a near-black and a white background.
-- Color carries meaning, never sequence. Give everything of one type the same color, and use 2 or 3 colors per visual. Keep neutral and structural parts in var(--surface), var(--border) and var(--muted).
+- Color carries meaning, never sequence. Give everything of one type the same color, and use 2 or 3 colors per visual. Keep neutral and structural parts in var(--fill), var(--border) and var(--muted).
 - Use role colors for meaning: var(--accent) for the main series, emphasis and links, and var(--success), var(--warning) and var(--danger) for good, caution and bad.
 - Use var(--series-1) to var(--series-8), in order, to tell categories apart. Past 8, fold the rest into an "Other" group.
 - Make tints with color-mix(in srgb, var(--accent) 15%, transparent), using any role or series color.
