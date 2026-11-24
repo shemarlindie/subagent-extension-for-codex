@@ -1,3 +1,8 @@
+import {
+  VISUAL_SERIES_COUNT,
+  type VisualToken,
+} from "../../../../../shared/tasks/visual";
+
 /**
  * What a visual's frame tells the panel. `width` is a lone element's width
  * when it draws narrower than the frame, and otherwise 0.
@@ -115,21 +120,24 @@ const FRAME_SCRIPT = `(() => {
   });
 })();`;
 
-/** Panel tokens a visual can use, by the names its tool description gives. */
-const THEME_TOKENS: [name: string, panel: string][] = [
-  ["--text", "--text"],
-  ["--muted", "--muted"],
-  ["--background", "--bg"],
-  ["--surface", "--surface"],
-  ["--border", "--line"],
-  ["--accent", "--accent"],
-  ["--warning", "--warn"],
-  ["--danger", "--danger"],
-  ["--fill", "--hover"],
-  ["--radius", "--radius"],
-  ["--font-sans", "--font-sans"],
-  ["--font-mono", "--font-mono"],
-];
+/**
+ * The panel token behind each visual token, plus `--font-sans` for the base
+ * style. `--success` has its own colors.
+ */
+const THEME_TOKENS = {
+  "--text": "--text",
+  "--muted": "--muted",
+  "--background": "--bg",
+  "--surface": "--surface",
+  "--border": "--line",
+  "--accent": "--accent",
+  "--warning": "--warn",
+  "--danger": "--danger",
+  "--fill": "--hover",
+  "--radius": "--radius",
+  "--font-sans": "--font-sans",
+  "--font-mono": "--font-mono",
+} satisfies Record<Exclude<VisualToken, "--success"> | "--font-sans", string>;
 
 /** Claude Code's token names, which workers also use, mapped onto ours. */
 const TOKEN_ALIASES = [
@@ -148,7 +156,7 @@ const TOKEN_ALIASES = [
 ].join(" ");
 
 /** Light and dark pairs of categorical colors, for marks rather than text. */
-const SERIES_COLORS: [light: string, dark: string][] = [
+const SERIES_COLORS = [
   ["#2a78d6", "#3987e5"],
   ["#eb6834", "#d95926"],
   ["#1baf7a", "#199e70"],
@@ -157,7 +165,9 @@ const SERIES_COLORS: [light: string, dark: string][] = [
   ["#008300", "#0ca30c"],
   ["#6250d6", "#9085e9"],
   ["#e34948", "#e66767"],
-];
+] as const satisfies readonly (readonly [light: string, dark: string])[] & {
+  length: typeof VISUAL_SERIES_COUNT;
+};
 
 /** A softer green than the host's success color, which is harsh in visuals. */
 const SUCCESS_COLOR: [light: string, dark: string] = ["#30a46c", "#3dd68c"];
@@ -171,7 +181,7 @@ export function visualThemeCss(root: Element) {
   const style = getComputedStyle(root);
   const dark = style.colorScheme === "dark";
 
-  const tokens = THEME_TOKENS.map(
+  const tokens = Object.entries(THEME_TOKENS).map(
     ([name, panel]) => `${name}: ${style.getPropertyValue(panel).trim()};`,
   );
 
