@@ -7,7 +7,8 @@ export interface TaskPlan {
   stale?: true;
 }
 
-const MAX_PLAN_STEPS = 30;
+/** Longer lists stop being glanceable in the panel. */
+export const MAX_PLAN_STEPS = 12;
 const MAX_PLAN_STEP_LENGTH = 200;
 
 /**
@@ -39,7 +40,7 @@ const invalid = (error: string): PlanUpdateResult => ({
 
 function validSteps(items: PlanStep[]) {
   if (items.length > MAX_PLAN_STEPS) {
-    return `A plan has at most ${MAX_PLAN_STEPS} steps.`;
+    return `A plan has at most ${MAX_PLAN_STEPS} steps. Use broader steps.`;
   }
 
   if (
