@@ -24,8 +24,7 @@ export function wrapUpError({ recap, ask, actions, blocked }: WrapUp) {
   }
 
   return actions.some(
-    (a) =>
-      "label" in a && (!a.label.trim() || a.label.length > MAX_ACTION_LABEL),
+    (a) => !a.label.trim() || a.label.length > MAX_ACTION_LABEL,
   )
     ? `Each label needs 1 to ${MAX_ACTION_LABEL} characters.`
     : undefined;

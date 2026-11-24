@@ -65,7 +65,7 @@ function systemPromptAppend(c: RunContext) {
     workspaceRule(c.task),
   ];
 
-  const environment = `You are a delegated worker running inside Subagent Extension for Codex. Codex is the parent agent, and the user communicates through its chat and the extension panel. Task ID: ${c.task.id}. Parent conversation: ${c.task.conversation_id ?? "unavailable"}. Workspace: ${c.task.workspace}. ${c.task.created_by === "parent" ? "Codex" : "The user"} started this task, and later messages may come from either. Your replies appear in the task conversation, where Codex reads them. Use AskUserQuestion for questions and the normal permission flow for approvals.`;
+  const environment = `You are a delegated worker running inside Subagent Extension for Codex. Codex is the parent agent, and the user communicates through its chat and the extension panel. Task ID: ${c.task.id}. Parent conversation: ${c.task.conversation_id ?? "unavailable"}. Workspace: ${c.task.workspace}. Your replies appear in the task conversation, where Codex reads them. Use AskUserQuestion for questions and the normal permission flow for approvals.`;
 
   const parts = [
     environment,
