@@ -26,22 +26,24 @@ function chart(scale: number) {
     return `<rect x="${x}" y="${220 - height}" width="40" height="${height}" rx="4" fill="var(--accent)"/><text x="${x + 20}" y="238" text-anchor="middle" font-size="12" fill="var(--muted)">${month}</text><text x="${x + 20}" y="${214 - height}" text-anchor="middle" font-size="12" fill="var(--text)">${value}</text>`;
   });
 
-  return `<svg viewBox="0 0 420 250" width="100%" role="img" aria-label="Monthly signups, January to June"><text x="20" y="20" font-size="14" font-weight="600" fill="var(--text)">Monthly signups</text><line x1="30" y1="220" x2="400" y2="220" stroke="var(--border)"/>${bars.join("")}</svg>`;
+  return `<svg viewBox="0 0 420 250" width="420" height="250" role="img" aria-label="Monthly signups, January to June"><text x="20" y="20" font-size="14" font-weight="500" fill="var(--text)">Monthly signups</text><line x1="30" y1="220" x2="400" y2="220" stroke="var(--border)"/>${bars.join("")}</svg>`;
 }
 
 const page = `<style>
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; padding: 4px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; }
   .card:hover, .card[aria-pressed="true"] { border-color: var(--accent); }
-  .value { font-size: 20px; font-weight: 600; }
+  .value { font-size: 20px; font-weight: 500; }
+  .up { color: var(--success); font-size: 14px; }
+  .tag { display: inline-block; margin-top: 4px; padding: 0 6px; border-radius: 4px; background: var(--fill); font-size: 11px; }
   .label, p { color: var(--muted); font-size: 12px; }
   a { color: var(--accent); }
 </style>
 <main style="max-width: 480px">
 <div class="cards">
   <button class="card" aria-pressed="false"><div class="value">1,014</div><div class="label">Signups this half</div></button>
-  <button class="card" aria-pressed="false"><div class="value">+100%</div><div class="label">June over January</div></button>
-  <button class="card" aria-pressed="false"><div class="value">March</div><div class="label">Lowest month</div></button>
+  <button class="card" aria-pressed="false"><div class="value"><span class="up" aria-hidden="true">▲</span> 100%</div><div class="label">June over January</div></button>
+  <button class="card" aria-pressed="false"><div class="value">March</div><div class="label">Lowest month</div><span class="tag">90 signups</span></button>
 </div>
 <p id="note">Select a card to pin it. Source: <a href="https://example.com/signups">signup dashboard</a>.</p>
 </main>

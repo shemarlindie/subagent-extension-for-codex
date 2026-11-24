@@ -47,7 +47,7 @@ function themedSvg(svg: string, root: Element) {
   const file = new DOMParser().parseFromString(svg, "image/svg+xml");
 
   const style = file.createElementNS("http://www.w3.org/2000/svg", "style");
-  style.textContent = `@layer { ${visualThemeCss(root)} :root { background: var(--background); } :root:not([color]) { color: var(--text); } :root:not([font-family]) { font-family: var(--font-sans); } }`;
+  style.textContent = `@layer { ${visualThemeCss(root)} :root { background: var(--background); } :root:not([color]) { color: var(--text); } :root:not([font-family]) { font-family: var(--font-sans); } :root:not([font-size]) { font-size: var(--font-size); } }`;
   file.documentElement.prepend(style);
 
   return new XMLSerializer().serializeToString(file.documentElement);

@@ -123,13 +123,19 @@ const THEME_TOKENS: [name: string, panel: string][] = [
   ["--surface", "--surface"],
   ["--border", "--line"],
   ["--accent", "--accent"],
+  ["--success", "--success"],
+  ["--warning", "--warn"],
+  ["--danger", "--danger"],
+  ["--fill", "--hover"],
+  ["--radius", "--radius"],
   ["--font-sans", "--font-sans"],
   ["--font-mono", "--font-mono"],
 ];
 
 /**
- * The panel's theme as CSS for a visual's root. The frame matches the panel's
- * color scheme, or the browser paints it an opaque default background.
+ * The panel's theme as CSS for a visual's root, with Chat's text size in
+ * `--font-size`. The frame matches the panel's color scheme, or the browser
+ * paints it an opaque default background.
  */
 export function visualThemeCss(root: Element) {
   const style = getComputedStyle(root);
@@ -138,7 +144,7 @@ export function visualThemeCss(root: Element) {
     ([name, panel]) => `${name}: ${style.getPropertyValue(panel).trim()};`,
   );
 
-  return `:root { ${tokens.join(" ")} color-scheme: ${style.colorScheme || "normal"}; }`;
+  return `:root { ${tokens.join(" ")} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
 /** The widest a top-level SVG without a pixel width draws. */
@@ -154,7 +160,7 @@ const UNSIZED_SVG = (at: string) =>
  * one without stops at the cap.
  */
 const BASE_STYLE = [
-  ":root { color: var(--text); font-family: var(--font-sans); }",
+  ":root { color: var(--text); font-family: var(--font-sans); font-size: var(--font-size); line-height: 1.5; }",
   "body { margin: 0; position: relative; }",
   "body > svg { display: block; margin-inline: auto; max-width: 100%; }",
   "body > svg[width][height] { height: auto; }",
