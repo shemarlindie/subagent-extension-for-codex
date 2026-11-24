@@ -22,6 +22,7 @@ package.
 | `[fixture:change]`                                 | Write and record a sample file. Requires a worktree task.              |
 | `[fixture:subagent count=2]`                       | Show child-worker lifecycles. Add `outcome=error` for failed children. |
 | `[fixture:plan steps=4 pace=1000]`                 | Show a plan and advance a step every `pace` ms until it's done.        |
+| `[fixture:wrap-up ask=reply blocked=true]`         | Wrap up the turn. `ask` is `reply`, `archive` or `ask_codex`.          |
 | `[fixture:activity type=status status=compacting]` | Show an SDK activity event.                                            |
 | `[fixture:stream]`                                 | Show a complete streaming-message lifecycle.                           |
 | `[fixture:reply lines=40 pace=30]`                 | Add reply paragraphs and stream each word after `pace` ms.             |

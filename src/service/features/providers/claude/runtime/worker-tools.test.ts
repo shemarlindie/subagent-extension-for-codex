@@ -19,6 +19,7 @@ import { ClaudeAgentProvider } from "./provider.js";
 const TOOL = "mcp__delegated_work__update_plan";
 const VISUAL_TOOL = "mcp__delegated_work__show_visual";
 const GUIDE_TOOL = "mcp__delegated_work__visual_guide";
+const WRAP_UP_TOOL = "mcp__delegated_work__wrap_up";
 
 async function launch(c: RunContext) {
   let options: Options | undefined;
@@ -75,12 +76,13 @@ test("turns load the worker tools always and allow them in every mode", async ()
     TOOL,
     VISUAL_TOOL,
     GUIDE_TOOL,
+    WRAP_UP_TOOL,
   ]);
 
   assert.equal(options.allowedTools, undefined);
 
   const { tools } = await mcp.listTools();
-  assert.equal(tools.length, 3);
+  assert.equal(tools.length, 4);
 
   for (const tool of tools) {
     assert.equal(tool.annotations?.readOnlyHint, true, tool.name);
@@ -155,6 +157,27 @@ test("show_visual records the visual through the run context and names its numbe
 
   assert.deepEqual(await call({ ...visual, replaces: 4 }, "show_visual"), {
     text: "There is no visual 4.",
+    isError: true,
+  });
+});
+
+test("wrap_up hands the wrap-up to the run context and asks for the reply", async () => {
+  const { c } = await context();
+  const { call } = await workerTools(await launch(c));
+
+  assert.deepEqual(await call({ recap: "Done.", blocked: false }, "wrap_up"), {
+    text: "Wrap-up shown. Write your final reply now, in full.",
+    isError: false,
+  });
+
+  assert.deepEqual(vi.mocked(c.wrappedUp).mock.calls, [[{ recap: "Done." }]]);
+
+  vi.mocked(c.wrappedUp).mockImplementation(() => {
+    throw new Error("An ask needs 1 or 2 actions.");
+  });
+
+  assert.deepEqual(await call({ recap: "Done.", ask: "Ship?" }, "wrap_up"), {
+    text: "An ask needs 1 or 2 actions.",
     isError: true,
   });
 });

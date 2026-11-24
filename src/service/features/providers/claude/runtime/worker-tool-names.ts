@@ -9,6 +9,7 @@ export const workerToolNames = [
   "update_plan",
   "show_visual",
   "visual_guide",
+  "wrap_up",
 ].map((name) => `mcp__${WORKER_SERVER}__${name}`);
 
 /**

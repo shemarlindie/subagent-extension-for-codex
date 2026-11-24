@@ -92,6 +92,7 @@ async function context() {
     steerTaken: (id) => taken.push(id),
     planUpdated: () => {},
     visualShown: () => 1,
+    wrappedUp: () => {},
     delta: (id, text) => deltas.push([id, text]),
   };
 
