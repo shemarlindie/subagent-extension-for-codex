@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import {
   applyPlanUpdate,
+  MAX_PLAN_STEPS,
   pinnedPlan,
   planProgress,
   planResultLine,
@@ -23,7 +24,7 @@ import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel, where they follow your progress. For any request that edits files or runs more than one command, send the whole list in the same message as your first other tool call. Then advance in the same message as the call that starts each next step, and once more before your final reply. If you get ahead of the list, catch up with done and start. Send the whole list again when the plan changes.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
+  "Use update_plan to show your plan as a checklist in the user's panel. The user follows your progress there while you work, so keeping it is part of the task. For any request that edits files or runs more than one command, send the whole plan with your very first tool call, even one that only reads a file. As each step finishes, advance in the same message as the call that starts the next, and once more before your final reply. Don't restate the plan as a list in your reply.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a
@@ -78,14 +79,28 @@ export function workerMcpServers(c: RunContext) {
     tools: [
       tool(
         "update_plan",
-        "Show your step-by-step plan as a checklist in the user's panel. Send it in the same message as your next tool call when there is one. Send items with the whole list, or advance: true to complete the step in progress and start the next. To catch up after getting ahead, send done with the 1-based numbers of finished steps and start with the number of the step you're on. Send items again when the plan changes.",
+        [
+          "Keep the checklist the user's panel shows while you work. Send it in the same message as another tool call, never alone, apart from the final advance.",
+          '- First call: items with the whole plan in order, the step you\'re starting in_progress and the rest pending. If you must look around first, make "Look at how X works" step one and send a refined list once you know.',
+          "- Next step: advance: true with the call that starts it.",
+          "- Out of order: done with the 1-based numbers of finished steps and start with the number of the step you're on, in one call, never several advances in a row.",
+          "- Plan changed, including right after a message from the user or Codex: items again with the whole new list, so the panel never shows an abandoned plan.",
+          "Keep exactly one step in progress while you work, and none once all are done.",
+        ].join("\n"),
         {
           items: z
             .array(
               z.object({
-                content: z.string(),
+                content: z
+                  .string()
+                  .describe(
+                    "A short imperative phrase of about seven words, without a number.",
+                  ),
                 status: z.enum(["pending", "in_progress", "completed"]),
               }),
+            )
+            .describe(
+              `The whole plan in order, at most ${MAX_PLAN_STEPS} steps.`,
             )
             .optional(),
           advance: z.boolean().optional(),

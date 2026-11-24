@@ -131,4 +131,9 @@ test("invalid updates change nothing and say why", () => {
     error(undefined, { items: steps("in_progress", "in_progress") }),
     "At most one step can be in progress.",
   );
+
+  assert.equal(
+    error(undefined, { items: steps(...Array(13).fill("pending")) }),
+    "A plan has at most 12 steps. Use broader steps.",
+  );
 });
