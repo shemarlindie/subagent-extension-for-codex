@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { panelAttachmentsSchema } from "../../../../shared/attachments/model.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { aboutInfo, openDataDirectory } from "../../service/about.js";
@@ -60,6 +61,9 @@ export function userTools(
     ...projectTools(c, owner),
     app_start_task: tool({
       ...tools.start_task,
+      schema: tools.start_task.schema.extend({
+        attachments: panelAttachmentsSchema,
+      }),
       // The panel already shows the new task, so it opens no inline panel.
       panel: false,
       description:
@@ -76,6 +80,9 @@ export function userTools(
     }),
     app_send_message: tool({
       ...tools.send_message,
+      schema: tools.send_message.schema.extend({
+        attachments: panelAttachmentsSchema,
+      }),
       description:
         "User interface only: send the user's message to a task, as send_message does.",
       run: async (a) => {

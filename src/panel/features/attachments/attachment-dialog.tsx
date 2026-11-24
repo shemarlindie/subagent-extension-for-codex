@@ -121,7 +121,8 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
   return (
     <div className="attachment-preview" ref={root} aria-busy={!read}>
       {/* Shown in every state, so the heading's controls never shift. */}
-      {optionsTarget &&
+      {attachment.format !== "image" &&
+        optionsTarget &&
         createPortal(
           <FilePreviewOptions
             wrapLines={wrapLines}

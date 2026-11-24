@@ -33,6 +33,10 @@ export async function sendAttached<T>(
   if (inputs.length) await projects?.resolve(t.repository);
   const snapshots = await attachments.prepare(t.id, t.repository, inputs, m.id);
 
+  if (snapshots.length) {
+    m.attachment_titles = snapshots.map((item) => item.title);
+  }
+
   const save = () => {
     if (!snapshots.length) return;
     projects?.assertApproved(t.repository);

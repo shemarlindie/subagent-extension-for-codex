@@ -11,6 +11,7 @@ import type { Store } from "../storage/store.js";
 
 /** An attachment's size: diff stats, or its line count. */
 function attachmentSize(a: TaskAttachment) {
+  if (a.format === "image") return `image, ${a.bytes} bytes`;
   const lines = `${a.lines} ${a.lines === 1 ? "line" : "lines"}`;
   if (a.source !== "diff") return lines;
 

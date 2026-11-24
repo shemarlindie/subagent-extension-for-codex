@@ -12,10 +12,11 @@ export const ATTACHMENT_LIMITS = {
   pathChars: 1024,
 } as const;
 
-export const attachmentFormats = ["diff", "code", "markdown", "text"] as const;
+const textFormats = ["diff", "code", "markdown", "text"] as const;
+export const attachmentFormats = [...textFormats, "image"] as const;
 export type AttachmentFormat = (typeof attachmentFormats)[number];
 
-export const attachmentSources = ["inline", "diff", "file"] as const;
+export const attachmentSources = ["inline", "diff", "file", "upload"] as const;
 
 type AttachmentSource = (typeof attachmentSources)[number];
 
@@ -42,7 +43,7 @@ const inlineAttachment = z.strictObject({
   source: z.literal("inline"),
   summary,
   title,
-  format: z.enum(attachmentFormats),
+  format: z.enum(textFormats),
   text: z
     .string()
     .min(1)
@@ -91,7 +92,29 @@ const attachmentInputSchema = z.discriminatedUnion("source", [
   fileAttachment,
 ]);
 
-export type AttachmentInput = z.infer<typeof attachmentInputSchema>;
+const uploadSchema = z.strictObject({
+  source: z.literal("upload"),
+  name: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^[^/\\\p{Cc}]+$/u),
+  summary,
+  data: z
+    .string()
+    .min(4)
+    .max(4 * Math.ceil(ATTACHMENT_LIMITS.referenceBytes / 3)),
+});
+
+export type UploadInput = z.infer<typeof uploadSchema>;
+
+export type AttachmentInput =
+  z.infer<typeof attachmentInputSchema> | UploadInput;
+
+export const panelAttachmentsSchema = z
+  .array(z.union([attachmentInputSchema, uploadSchema]))
+  .max(ATTACHMENT_LIMITS.count)
+  .optional();
 
 export const attachmentsSchema = z
   .array(attachmentInputSchema)
@@ -111,10 +134,12 @@ export interface TaskAttachment {
   summary: string;
   format: AttachmentFormat;
   source: AttachmentSource;
-  /** The project-relative path of a reference, or an inline item's label. */
+  /** A reference's project-relative path or the display filename of supplied content. */
   path?: string;
   /** The content's file name in the task's attachment folder. */
   file: string;
+  bytes?: number;
+  mime_type?: string;
   chars: number;
   lines: number;
   /** Diff stats. */
@@ -137,10 +162,12 @@ export const ATTACHMENT_PAGE_BYTES = 512 * 1024;
 /** A page of an attachment's content, as `app_get_attachment` returns it. */
 export interface AttachmentPage {
   attachment: MessageAttachment;
-  /** "unavailable": the stored file is missing, larger than any attachment or not UTF-8 text. */
+  /** "unavailable": the stored file is missing, too large or invalid for its stored format. */
   state: "present" | "unavailable";
-  /** UTF-8 text; this page's part of it. */
+  /** This page of UTF-8 text or base64 image data. */
   content?: string;
+  encoding?: "base64";
+  mime_type?: string;
   /** Pass back to read the next part; absent on the last one. */
   next_cursor?: string;
 }

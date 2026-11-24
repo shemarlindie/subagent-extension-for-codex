@@ -28,6 +28,8 @@ export const taskAttachments = sqliteTable(
     path: text(),
     source: text({ enum: attachmentSources }).notNull(),
     file: text().notNull(),
+    bytes: integer(),
+    mime_type: text(),
     chars: integer().notNull(),
     lines: integer().notNull(),
     files: integer(),

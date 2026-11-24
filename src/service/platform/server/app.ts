@@ -83,19 +83,22 @@ export function application(
     next();
   });
 
-  // A message's inline attachments can reach about 1 MiB as JSON. The service
-  // reads referenced files from disk. MCP calls name their tool in the body,
-  // so all of /mcp gets this limit.
+  // Ten MiB of uploads expand to about 13.4 MiB in base64.
   app.use(
     [
       "/mcp",
-      "/api/tools/start_task",
       "/api/tools/app_start_task",
       "/api/user-tools/app_start_task",
-      "/api/tools/send_message",
       "/api/tools/app_send_message",
       "/api/user-tools/app_send_message",
     ],
+    express.json({ limit: "15mb" }),
+  );
+
+  // A message's inline attachments can reach about 1 MiB as JSON. The service
+  // reads referenced files from disk.
+  app.use(
+    ["/api/tools/start_task", "/api/tools/send_message"],
     express.json({ limit: "2mb" }),
   );
 

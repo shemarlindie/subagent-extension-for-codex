@@ -27,6 +27,35 @@ export type PanelBridgeOptions = {
   onMessage?: (params: unknown) => void;
 };
 
+/** Keep local file contents out of the development inspector. */
+function inspectToolArgs(args: Record<string, unknown>) {
+  return Array.isArray(args.attachments)
+    ? {
+        ...args,
+        attachments: args.attachments.map((item) =>
+          item?.source === "upload"
+            ? { ...item, data: "[file contents omitted]" }
+            : item,
+        ),
+      }
+    : args;
+}
+
+export function inspectToolCall(
+  name: string,
+  served: unknown,
+  args: Record<string, unknown>,
+  result: CallToolResult,
+) {
+  return {
+    name,
+    served,
+    arguments: inspectToolArgs(args),
+    result:
+      name === "app_get_attachment" ? "[attachment page omitted]" : result,
+  };
+}
+
 /** Connects a bridge to the iframe, then loads the panel document into it. */
 export function connectPanel(
   iframe: HTMLIFrameElement,
@@ -48,7 +77,12 @@ export function connectPanel(
     try {
       return await options.callTool(name, args);
     } catch (error) {
-      record("tool error", { name, arguments: args, error: String(error) });
+      record("tool error", {
+        name,
+        arguments: inspectToolArgs(args),
+        error: String(error),
+      });
+
       throw error;
     }
   };

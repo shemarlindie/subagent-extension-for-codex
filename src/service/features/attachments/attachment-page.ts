@@ -7,6 +7,7 @@ import {
   type AttachmentPage,
   type MessageAttachment,
 } from "../../../shared/attachments/model.js";
+import { uploadMime } from "../../../shared/attachments/upload.js";
 import {
   decodeFileCursor,
   encodeFileCursor,
@@ -79,8 +80,19 @@ export async function attachmentPage(
   if (!bytes) return unavailable;
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
+  const image = attachment.format === "image";
+
   try {
-    decoder.decode(bytes);
+    if (image) {
+      if (
+        attachment.bytes !== bytes.length ||
+        uploadMime(bytes, attachment.title) !== attachment.mime_type
+      ) {
+        return unavailable;
+      }
+    } else {
+      decoder.decode(bytes);
+    }
   } catch {
     return unavailable;
   }
@@ -94,13 +106,28 @@ export async function attachmentPage(
 
   const offset = page?.offset ?? 0;
   if (offset > bytes.length) throw new Error("Invalid file cursor");
-  const end = Math.min(offset + ATTACHMENT_PAGE_BYTES, bytes.length);
-  const stop = end === bytes.length ? end : characterBoundary(bytes, end);
+
+  // Full image pages end on a base64 group so their strings can be joined.
+  const end = Math.min(
+    offset +
+      (image
+        ? ATTACHMENT_PAGE_BYTES - (ATTACHMENT_PAGE_BYTES % 3)
+        : ATTACHMENT_PAGE_BYTES),
+    bytes.length,
+  );
+
+  const stop =
+    image || end === bytes.length ? end : characterBoundary(bytes, end);
 
   return {
     attachment,
     state: "present",
-    content: decoder.decode(bytes.subarray(offset, stop)),
+    ...(image
+      ? { encoding: "base64" as const, mime_type: attachment.mime_type }
+      : {}),
+    content: image
+      ? bytes.subarray(offset, stop).toString("base64")
+      : decoder.decode(bytes.subarray(offset, stop)),
     ...(stop < bytes.length
       ? { next_cursor: encodeFileCursor(revision, stop) }
       : {}),

@@ -1,9 +1,11 @@
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import type { IconName } from "../../shared/components/icons/icons";
+import { formatBytes } from "../../shared/utils/format";
 import type { PreviewFile } from "../file-preview/file-format";
 
 /** The chip and dialog icon for an attachment's kind. */
 export function attachmentIcon(attachment: MessageAttachment): IconName {
+  if (attachment.format === "image") return "eye";
   if (attachment.source === "diff") return "file-diff";
   if (attachment.source === "inline" && !attachment.path) return "note";
 
@@ -12,6 +14,7 @@ export function attachmentIcon(attachment: MessageAttachment): IconName {
 
 /** "+12 −3" for a diff, "lines 44–55" for a line range, otherwise its line count. */
 export function attachmentSize(attachment: MessageAttachment) {
+  if (attachment.format === "image") return formatBytes(attachment.bytes ?? 0);
   const { start_line: start, end_line: end } = attachment;
 
   if (attachment.source === "diff") {
@@ -62,6 +65,8 @@ export function attachmentOrigin(attachment: MessageAttachment) {
       ? `${files} ${files === 1 ? "file" : "files"}, ${attachmentSize(attachment)}`
       : attachmentSize(attachment);
 
+  if (attachment.source === "upload") return `Uploaded by you · ${size}`;
+
   if (attachment.source === "inline") {
     return `Inline · ${size}`;
   }
@@ -70,6 +75,7 @@ export function attachmentOrigin(attachment: MessageAttachment) {
 }
 
 const extensions = {
+  image: "",
   diff: ".diff",
   code: ".txt",
   markdown: ".md",
@@ -90,7 +96,8 @@ export function attachmentFile(
     path:
       attachment.path ?? `${attachment.title}${extensions[attachment.format]}`,
     content,
-    format: attachment.format,
+    format: attachment.format === "image" ? undefined : attachment.format,
+    mime_type: attachment.mime_type,
     ...(attachment.start_line ? { start_line: attachment.start_line } : {}),
   };
 }

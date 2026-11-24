@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { AttachmentError } from "../attachments/attachment-error.js";
-import { attachmentsSchema } from "../attachments/model.js";
+import { panelAttachmentsSchema } from "../attachments/model.js";
 import type { TaskPlan } from "./plan.js";
 import { reasoningLevels } from "./reasoning.js";
 
@@ -93,7 +93,7 @@ export const startSchema = z.object({
     ),
   revision: z.string().default("HEAD"),
   conversation_id: z.string().optional(),
-  attachments: attachmentsSchema,
+  attachments: panelAttachmentsSchema,
   workspace_strategy: z
     .enum(["worktree", "current_repo"])
     .default("current_repo")
@@ -174,6 +174,7 @@ export type BudgetRaise = z.infer<typeof budgetRaiseSchema>;
 
 /** A message after the first, with the id it keeps from when it's sent. */
 export interface TaskMessage {
+  attachment_titles?: string[];
   id: string;
   message: string;
   from: Sender;

@@ -12,13 +12,15 @@ import {
   type AttachmentFormat,
   type AttachmentInput,
   type TaskAttachment,
+  type UploadInput,
 } from "../../../shared/attachments/model.js";
+import { uploadMime } from "../../../shared/attachments/upload.js";
 import { checkStored } from "../../platform/database/decode.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 import type { Store } from "../tasks/storage/store.js";
 import { attachmentPage } from "./attachment-page.js";
 import { uncommittedDiff } from "./diff.js";
-import { lineCount, readProjectFile } from "./project-file.js";
+import { decodeText, lineCount, readProjectFile } from "./project-file.js";
 import { taskAttachments } from "./schema.js";
 
 const rowSchema = createSelectSchema(taskAttachments, {
@@ -37,6 +39,7 @@ function fileFormat(path: string): AttachmentFormat {
 }
 
 const formatExtension: Record<AttachmentFormat, string> = {
+  image: "",
   diff: ".diff",
   code: ".txt",
   markdown: ".md",
@@ -61,7 +64,9 @@ const NOT_TEXT = new Set([
  * Code keeps its path's extension while that names text. A label is never
  * read, so other formats take their own.
  */
-function storedExtension(format: AttachmentFormat, path?: string) {
+function storedExtension({ format, path, mime_type }: Resolved) {
+  if (mime_type) return "." + mime_type.slice("image/".length);
+
   const extension = path === undefined ? "" : extname(path).toLowerCase();
 
   return format === "code" &&
@@ -82,14 +87,40 @@ type Resolved = Omit<
   TaskAttachment,
   "message_id" | "position" | "file" | "chars" | "lines"
 > & {
-  text: string;
+  content: string | Buffer;
 };
+
+function resolveUpload(input: UploadInput): Resolved {
+  const bytes = Buffer.from(input.data, "base64");
+
+  if (
+    !bytes.length ||
+    bytes.length > ATTACHMENT_LIMITS.referenceBytes ||
+    bytes.toString("base64") !== input.data
+  ) {
+    throw new AttachmentError("Invalid base64 or file exceeds 2 MiB.");
+  }
+
+  const mime = uploadMime(bytes, input.name);
+
+  return {
+    title: input.name,
+    path: input.name,
+    source: "upload",
+    summary: input.summary,
+    format: mime ? "image" : fileFormat(input.name),
+    ...(mime ? { mime_type: mime, bytes: bytes.length } : {}),
+    content: mime ? bytes : decodeText(bytes, input.name),
+  };
+}
 
 /** An attachment's content and metadata, read from the project for references. */
 async function resolveAttachment(
   project: string,
   input: AttachmentInput,
 ): Promise<Resolved> {
+  if (input.source === "upload") return resolveUpload(input);
+
   if (input.source === "inline") {
     return {
       title: input.title ?? (input.path ? basename(input.path) : "Note"),
@@ -97,7 +128,7 @@ async function resolveAttachment(
       format: input.format,
       source: "inline",
       ...(input.path === undefined ? {} : { path: input.path }),
-      text: input.text,
+      content: input.text,
     };
   }
 
@@ -119,7 +150,7 @@ async function resolveAttachment(
       source: "diff",
       ...(input.paths?.length === 1 ? { path: input.paths[0] } : {}),
       ...(input.paths ? { paths: input.paths } : {}),
-      text: diff.text,
+      content: diff.text,
       files: diff.files.length,
       additions: diff.additions,
       deletions: diff.deletions,
@@ -147,7 +178,7 @@ async function resolveAttachment(
     source: "file",
     path: file.path,
     ...(ranged ? { start_line: start, end_line: end } : {}),
-    text: file.text,
+    content: file.text,
   };
 }
 
@@ -222,12 +253,10 @@ export class Attachments {
     try {
       for (const [index, input] of inputs.entries()) {
         try {
-          const { text, ...attachment } = await resolveAttachment(
-            project,
-            input,
-          );
+          const resolved = await resolveAttachment(project, input);
 
-          bytes += Buffer.byteLength(text);
+          const { content, ...attachment } = resolved;
+          bytes += Buffer.byteLength(content);
 
           if (bytes > ATTACHMENT_LIMITS.messageBytes) {
             throw new AttachmentError(
@@ -239,12 +268,12 @@ export class Attachments {
             ...attachment,
             message_id: messageId,
             position: index + 1,
-            file: `${messageId}-${index + 1}-${slug(attachment.title)}${storedExtension(attachment.format, attachment.path)}`,
-            chars: text.length,
-            lines: lineCount(text),
+            file: `${messageId}-${index + 1}-${slug(attachment.title)}${storedExtension(resolved)}`,
+            chars: typeof content === "string" ? content.length : 0,
+            lines: typeof content === "string" ? lineCount(content) : 0,
           };
 
-          await writeFile(join(folder, row.file), text, {
+          await writeFile(join(folder, row.file), content, {
             mode: 0o600,
             flag: "wx",
           });
@@ -252,8 +281,10 @@ export class Attachments {
           rows.push(row);
         } catch (error) {
           const label =
-            input.title ??
-            (input.source === "diff" ? "diff" : (input.path ?? "note"));
+            input.source === "upload"
+              ? input.name
+              : (input.title ??
+                (input.source === "diff" ? "diff" : (input.path ?? "note")));
 
           // Keeps the class, so logs tell caller mistakes from failures.
           const Wrapper =
