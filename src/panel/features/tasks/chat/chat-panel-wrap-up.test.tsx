@@ -62,25 +62,3 @@ test("the latest turn's wrap-up answers with its buttons until the next message,
   expect(buttons(view.container, "reply_2")).toEqual([]);
   expect(view.getByText("Fixed it.")).toBeTruthy();
 });
-
-test("Archive archives the task", async () => {
-  const { view, tool } = setup(
-    {},
-    [],
-    [
-      reply(1, {
-        recap: "Done.",
-        ask: "Archive this task?",
-        actions: [{ action: "archive" }, { label: "Not yet" }],
-      }),
-    ],
-  );
-
-  fireEvent.click(view.getByRole("button", { name: "Archive" }));
-
-  await waitFor(() =>
-    expect(sent(tool).map(([name]) => name)).toContain(
-      "app_set_tasks_archived",
-    ),
-  );
-});

@@ -71,8 +71,8 @@ test("a wrap-up checks off the plan and reaches the reply, unless a steer follow
 
     const wrapUp = {
       recap: "Both steps are done.",
-      ask: "Archive this task?",
-      actions: [{ action: "archive" as const }, { label: "Not yet" }],
+      ask: "Commit it?",
+      actions: [{ label: "Yes, commit" }, { label: "Not yet" }],
     };
 
     context.wrappedUp({ recap: "Almost." });

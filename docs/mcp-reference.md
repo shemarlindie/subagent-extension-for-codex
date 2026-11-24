@@ -66,11 +66,12 @@ doesn't end a `list_messages` wait.
 
 A Claude worker can end a turn with a wrap-up, which Chat shows under its reply.
 `list_messages` and `get_message` give that reply `wrap_up`, with a `recap`, and
-an `ask` with reply `options` when the next move waits on someone. The panel
-shows the options as buttons, and can add Archive. `blocked` means the worker
-can't go on until someone answers. `list_tasks` summaries add `reply.recap`, and
-`reply.blocked` when set. Codex answers an `ask` on a turn it sent with
-`send_message`, and passes it to the user only when the decision is theirs.
+an `ask` with `actions` when the next move waits on someone. Each action is a
+`{ label }`, which the panel shows as a button that sends it. `blocked` means
+the worker can't go on until someone answers. `list_tasks` summaries add
+`reply.recap`, and `reply.blocked` when set. Codex answers an `ask` on a turn it
+sent with `send_message`, and passes it to the user only when the decision is
+theirs.
 
 ### Worker visuals
 

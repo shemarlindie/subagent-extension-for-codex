@@ -1,11 +1,5 @@
-/** A panel action a wrap-up button runs. */
-export type WrapUpPanelAction = "archive";
-
-/**
- * A wrap-up button: a reply that sends its label as a message, or a panel
- * action.
- */
-export type WrapUpAction = { label: string } | { action: WrapUpPanelAction };
+/** A wrap-up button, which sends its label as a message. */
+export type WrapUpAction = { label: string };
 
 /** How the worker summed up its turn, shown under the turn's reply. */
 export interface WrapUp {

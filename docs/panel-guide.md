@@ -371,9 +371,9 @@ before your last message** until the worker updates it.
 
 A worker's [wrap-up](mcp-reference.md#worker-wrap-ups) shows in a box under its
 reply: a recap, then any question with buttons that answer it. A reply button
-sends its label as your message, and **Archive** archives the task. Buttons show
-on the latest turn until you or Codex send the next message. A worker that can't
-go on until you answer marks the task **Needs input**.
+sends its label as your message. Buttons show on the latest turn until you or
+Codex send the next message. A worker that can't go on until you answer marks
+the task **Needs input** until that message.
 
 [Visuals](mcp-reference.md#worker-visuals) a worker shows, such as charts and
 diagrams, show in Chat in the panel's theme. Each runs in a sandboxed frame

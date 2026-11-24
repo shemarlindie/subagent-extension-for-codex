@@ -1,6 +1,6 @@
 // Tasks whose worker wraps up its turn: a recap alone, a question the user
-// answered with a reply button and a new one, a panel action, and a question
-// that blocks the worker.
+// answered with a reply button and a new one, and a question that blocks the
+// worker.
 import type { Task } from "../../../src/shared/tasks/model";
 import type { WrapUp } from "../../../src/shared/tasks/wrap-up-contract";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
@@ -50,19 +50,6 @@ const fixtures: WrapUpFixture[] = [
         "The export streams rows in batches of 500 and finished a 2 million row run in 4 minutes. The old timeout setting is still 10 minutes.",
       ask: "Lower the export timeout to 6 minutes?",
       actions: [{ label: "Yes, lower it" }, { label: "Keep 10 minutes" }],
-    },
-  },
-  {
-    id: "preview-wrap-up-action",
-    title: "Wrap-up: panel action",
-    description: "Find out whether the dark theme toggle still needs work.",
-    reply:
-      "The **Dark theme** toggle already saves to the profile and applies at once, and its tests pass. Nothing is left to do.",
-    wrapUp: {
-      recap:
-        "The dark theme toggle already works and its tests pass. Nothing was changed.",
-      ask: "Archive this task?",
-      actions: [{ action: "archive" }, { label: "Not yet" }],
     },
   },
   {

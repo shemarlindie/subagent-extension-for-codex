@@ -263,7 +263,7 @@ test("a parent reads the worker's wrap-up on its reply and in the task list", as
 
   try {
     const t = await start(
-      "Cache prices [fixture:wrap-up ask=reply blocked=true]",
+      "Cache prices [fixture:wrap-up ask=true blocked=true]",
     );
 
     await until(() => store.get(t.id, "alice").status === "completed");
@@ -278,8 +278,7 @@ test("a parent reads the worker's wrap-up on its reply and in the task list", as
       recap:
         "The fixture turn finished its simulated work. Nothing was changed or verified.",
       ask: "Apply the fixture fix?",
-      // Parents get the reply labels, without the panel's buttons.
-      options: ["Yes, apply it", "Not now"],
+      actions: [{ label: "Yes, apply it" }, { label: "Not now" }],
       blocked: true,
     };
 

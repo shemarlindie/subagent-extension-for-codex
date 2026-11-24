@@ -1,5 +1,4 @@
 import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
-import type { WrapUpAction } from "../../../../../shared/tasks/wrap-up-contract.js";
 import {
   useController,
   useSnapshot,
@@ -7,7 +6,6 @@ import {
 import { findTask } from "../../../../app/state/selectors";
 import type { Task } from "../../../../app/state/types";
 import { Button } from "../../../../shared/components/button/button";
-import { canToggleArchive } from "../../archive/archive-actions";
 
 type WrapUpBoxProps = {
   taskId?: string;
@@ -19,8 +17,7 @@ type WrapUpBoxProps = {
 /**
  * How the worker summed up its turn, for a reply that has a wrap-up: the
  * recap, then its question with buttons that answer it. Buttons show only
- * while the question is still the user's to answer, and Archive drops out
- * when the task can't be archived.
+ * while the question is still the user's to answer.
  */
 export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
   const controller = useController();
@@ -31,30 +28,18 @@ export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
 
   const wrapUp = message.wrap_up;
   if (!taskId || !wrapUp) return null;
+  const actions = answerable ? (wrapUp.actions ?? []) : [];
 
-  const offered = (action: WrapUpAction) =>
-    "label" in action ||
-    Boolean(task && !task.archived_at && canToggleArchive(task));
-
-  const actions = answerable ? (wrapUp.actions?.filter(offered) ?? []) : [];
-
-  const run = (action: WrapUpAction, current: Task) => {
-    if ("label" in action) {
-      controller.run(async () => {
-        const failure = await controller.taskActions.sendMessage(
-          current,
-          action.label,
-          "steer",
-        );
-
-        if (failure) controller.reportActionFailure(failure);
-      });
-    } else {
-      controller.run(() =>
-        controller.taskActions.archive.setArchived([current], true),
+  const reply = (label: string, current: Task) =>
+    controller.run(async () => {
+      const failure = await controller.taskActions.sendMessage(
+        current,
+        label,
+        "steer",
       );
-    }
-  };
+
+      if (failure) controller.reportActionFailure(failure);
+    });
 
   return (
     <section className="wrap-up" aria-label="Wrap-up">
@@ -62,13 +47,13 @@ export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
       {wrapUp.ask && <p className="wrap-up-ask">{wrapUp.ask}</p>}
       {task && actions.length > 0 && (
         <div className="wrap-up-actions">
-          {actions.map((action, index) => (
+          {actions.map(({ label }, index) => (
             <Button
-              key={"label" in action ? action.label : action.action}
+              key={label}
               variant={index === 0 ? "primary" : "default"}
-              onClick={() => run(action, task)}
+              onClick={() => reply(label, task)}
             >
-              {"label" in action ? action.label : "Archive"}
+              {label}
             </Button>
           ))}
         </div>

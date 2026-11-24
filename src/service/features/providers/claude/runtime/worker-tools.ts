@@ -190,22 +190,13 @@ export function workerMcpServers(c: RunContext) {
             .optional(),
           actions: z
             .array(
-              z.union([
-                z.object({
-                  label: z
-                    .string()
-                    .describe(
-                      `A reply button of at most ${MAX_ACTION_LABEL} characters: an answer back to you that the user or Codex could send, such as "Yes, fix it". A click sends it as the user's answer.`,
-                    ),
-                }),
-                z.object({
-                  action: z
-                    .literal("archive")
-                    .describe(
-                      "A panel button that archives the task, for when nothing is left to do.",
-                    ),
-                }),
-              ]),
+              z.object({
+                label: z
+                  .string()
+                  .describe(
+                    `A reply button of at most ${MAX_ACTION_LABEL} characters: an answer back to you that the user or Codex could send, such as "Yes, fix it". A click sends it as the user's answer.`,
+                  ),
+              }),
             )
             .describe(
               "1 or 2 answers to the ask, your pick first. Another is there only when the user might realistically pick it instead.",

@@ -1,7 +1,5 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import type { WrapUpPanelAction } from "../../src/shared/tasks/wrap-up-contract.js";
-
 export type FixtureStreamFrame = Extract<
   SDKMessage,
   { type: "stream_event" }
@@ -59,8 +57,8 @@ export interface FixtureScenarios {
   waitMs?: number;
   /** A plan of this many steps, which advances every `pace` ms. */
   plan?: { steps: number; paceMs: number };
-  /** A wrap-up, with an ask whose buttons are replies or a panel action. */
-  wrapUp?: { ask?: "reply" | WrapUpPanelAction; blocked: boolean };
+  /** A wrap-up, with an ask and reply buttons when `ask` is set. */
+  wrapUp?: { ask: boolean; blocked: boolean };
   costUsd?: number;
   completionSubtype?: string;
   completionIsError: boolean;
@@ -305,10 +303,8 @@ export function readScenarios(
         };
       }
     } else if (kind === "wrap-up") {
-      const ask = field(args, "ask");
-
       scenarios.wrapUp = {
-        ...(ask === "reply" || ask === "archive" ? { ask } : {}),
+        ask: args.ask === true,
         blocked: args.blocked === true,
       };
     } else if (kind === "cost") {
