@@ -3,6 +3,7 @@ import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import type { Delivery, Sender, TaskView } from "../model.js";
 import { visualId, visualPlaceholder } from "../visual.js";
+import type { WrapUp } from "../wrap-up-contract.js";
 
 /** Events a conversation is derived from, besides the task's own request. */
 export const MESSAGE_EVENTS = [
@@ -40,6 +41,8 @@ export type ConversationMessage = {
   state?: "pending_steer" | "queued";
   /** The request's or a sent message's attachments, which Chat reads with it. */
   attachments?: MessageAttachment[];
+  /** A reply's wrap-up from the worker. */
+  wrap_up?: WrapUp;
 };
 
 /** A worker message's SDK id, so its text blocks and draft share it. */
@@ -181,6 +184,7 @@ export function conversation(
     if (reply) {
       const text = reply.text;
       const replyTurn = reply.turn;
+      const wrapUp = reply.wrap_up ? { wrap_up: reply.wrap_up } : {};
 
       const last = messages.findLast(
         (m) =>
@@ -188,8 +192,7 @@ export function conversation(
       );
 
       if (last && last.kind === "message" && same(last.text, text)) {
-        last.kind = "reply";
-        last.event_id = e.id;
+        Object.assign(last, { kind: "reply", event_id: e.id, ...wrapUp });
         continue;
       }
 
@@ -201,6 +204,7 @@ export function conversation(
         from: "worker",
         kind: "reply",
         text,
+        ...wrapUp,
       });
     }
   }

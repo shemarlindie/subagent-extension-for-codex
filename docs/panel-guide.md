@@ -114,7 +114,7 @@ The task list offers search and these filters:
 | Filter          | Tasks                                                                                       |
 | --------------- | ------------------------------------------------------------------------------------------- |
 | Unread          | Tasks with something you haven't seen. See [Read and unread tasks](#read-and-unread-tasks). |
-| Needs attention | Tasks waiting on a question, permission request or rate limit reset.                        |
+| Needs attention | Tasks waiting on a question, permission request, blocked wrap-up or rate limit reset.       |
 | Failed          | Errors, reached limits, service restarts and compaction failures.                           |
 | Working         | Other unfinished tasks, including tasks with queued follow-up turns.                        |
 | Done            | Completed tasks and tasks you stopped.                                                      |
@@ -368,6 +368,13 @@ working status until it finishes or its turn ends, then stays in Chat as a
 collapsed row. After you message the worker mid-turn, the card reads **Plan from
 before your last message** until the worker updates it.
 
+A worker's [wrap-up](mcp-reference.md#worker-wrap-ups) shows in a box under its
+reply: a recap, then any question with buttons that answer it. A reply button
+sends its label as your message. **Archive** archives the task, and **Ask
+Codex** starts asking Codex about the reply, as the turn outcome's action does.
+Buttons show on the latest turn until you or Codex send the next message. A
+worker that can't go on until you answer marks the task **Needs input**.
+
 [Visuals](mcp-reference.md#worker-visuals) a worker shows, such as charts and
 diagrams, show in Chat in the panel's theme. Each runs in a sandboxed frame
 without network access. A link you click in a visual shows below it, and opens
@@ -544,10 +551,11 @@ tap it for every window and its reset time.
 ## Pending worker updates
 
 In thread mode, the header counts worker updates Codex hasn't seen: turn
-replies, failed turns, budget stops and questions or permission requests routed
-to Codex. The count turns the warning color while a worker waits for an answer.
-Codex sees an update when it reads it with `list_messages`, or a reply with
-`get_message`. Archived and deleted tasks don't count.
+replies, failed turns, budget stops, blocked wrap-ups and questions or
+permission requests routed to Codex. The count turns the warning color while a
+worker waits for an answer. Codex sees an update when it reads it with
+`list_messages`, or a reply with `get_message`. Archived and deleted tasks don't
+count.
 
 Select the count to review the updates by task. **Send to Codex** sends the
 checked ones in one message, and they stay counted until Codex reads them.

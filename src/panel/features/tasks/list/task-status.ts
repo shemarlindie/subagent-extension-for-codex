@@ -1,3 +1,4 @@
+import { blockedOnUser } from "../../../../shared/tasks/wrap-up.js";
 import type { Task } from "../../../app/state/types";
 
 /**
@@ -15,7 +16,10 @@ const LIMIT_LABELS: Partial<Record<string, string>> = {
 };
 
 export const statusLabel = (task: Task) => {
-  if (task.pending_input) return "Needs input";
+  if (task.pending_input || blockedOnUser(task, task.reply)) {
+    return "Needs input";
+  }
+
   if (stopped(task)) return "Stopped";
   // Running reads as Working, the name of its filter.
   if (task.status === "running") return "Working";
@@ -32,7 +36,7 @@ type RowKind = Task["status"] | "input" | "paused";
 
 // Live activity can mark a running task as failed, paused, or waiting for input.
 function rowKind(task: Task, activity: Task["live_activity"]): RowKind {
-  if (task.pending_input) return "input";
+  if (task.pending_input || blockedOnUser(task, task.reply)) return "input";
   if (activity?.state === "failed") return "failed";
   if (activity?.text.startsWith("Needs input")) return "input";
   if (activity?.text === "Waiting for rate limit reset") return "paused";

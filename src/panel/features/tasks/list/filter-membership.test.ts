@@ -60,6 +60,11 @@ const cases: [string, Partial<Task>, Filter[]][] = [
     },
     ["all", "attention"],
   ],
+  [
+    "blocked wrap-up",
+    { status: "completed", reply: { turn: 1, text: "r", blocked: true } },
+    ["all", "attention"],
+  ],
   ["stopped", { status: "interrupted" }, ["all", "completed"]],
   [
     "service restart",

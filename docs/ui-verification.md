@@ -174,6 +174,10 @@ Host settings:
 | Plan: steered mid-step                      | Stale header after a taken steer.                                                                                                                                                          |
 | Plan: finished                              | History row in Chat, with no card or row count.                                                                                                                                            |
 | Plan: unfinished                            | History row with steps left.                                                                                                                                                               |
+| Wrap-up: recap                              | Recap with no question.                                                                                                                                                                    |
+| Wrap-up: question                           | An answered turn's question without buttons, then the latest question with reply buttons.                                                                                                  |
+| Wrap-up: panel action                       | **Ask Codex** button, shown only in a Codex thread.                                                                                                                                        |
+| Wrap-up: blocked                            | **Needs input** on the row and in the **Needs attention** filter.                                                                                                                          |
 
 Read state:
 

@@ -16,7 +16,12 @@ import { newMessagesIndex } from "../../unread/new-messages";
 import { NewMessagesDivider } from "../../unread/new-messages-divider";
 import { useLeavingDivider } from "../../unread/use-leaving-divider";
 import type { NewMessages } from "../../unread/use-new-messages-from";
-import { draftRow, responseOutcome, spentBudget } from "../chat-model";
+import {
+  composerMode,
+  draftRow,
+  responseOutcome,
+  spentBudget,
+} from "../chat-model";
 import { PendingInput } from "../composer/pending-input";
 import { ChatVisualRow } from "../visual/chat-visual-row";
 import { BudgetLimitNotice } from "./budget-limit-notice";
@@ -94,6 +99,13 @@ export function ChatTimeline({
   const { leaving, left } = useLeavingDivider(newId);
 
   const spent = task ? spentBudget(task) : undefined;
+
+  // The latest turn's wrap-up takes answers until the next message is sent.
+  const answerableTurn =
+    task && composerMode(task) === "idle" && !task.queue.length
+      ? task.turn
+      : undefined;
+
   const loading = !task || !items || !positionRestored;
 
   const { historyRef, animateArrivals } = useHistoryMotion(
@@ -140,6 +152,10 @@ export function ChatTimeline({
                         outcome={responseOutcome(item, visibleItems[index + 1])}
                         streaming={item.id === draftItem?.id}
                         arriving={animateArrivals}
+                        answerable={
+                          Boolean(item.message.wrap_up) &&
+                          item.message.turn === answerableTurn
+                        }
                       />
                     );
                   } else if (item.kind === "outcome") {

@@ -12,6 +12,7 @@ import { ChatMessageActions } from "./chat-message-actions";
 import { MarkUnreadButton } from "./mark-unread-button";
 import { TurnOutcomeRow } from "./turn-outcome-row";
 import { useNewBlocksFade } from "./use-new-blocks-fade";
+import { WrapUpBox } from "./wrap-up-box";
 
 type ChatMessageViewProps = {
   taskId?: string;
@@ -23,6 +24,8 @@ type ChatMessageViewProps = {
   /** Expands a new message into a conversation that is already showing. */
   arriving?: boolean;
   outcome?: TurnOutcome;
+  /** The reply's wrap-up still waits on the user, so its buttons show. */
+  answerable?: boolean;
 };
 
 /**
@@ -38,6 +41,7 @@ export const ChatMessageView = memo(function ChatMessageView({
   streaming,
   arriving,
   outcome,
+  answerable,
 }: ChatMessageViewProps) {
   const ref = useRef<HTMLElement>(null);
   // A message that streams in keeps rendering in parts once stored, so each
@@ -49,7 +53,7 @@ export const ChatMessageView = memo(function ChatMessageView({
     [inParts, message.text],
   );
 
-  const contentKey = `${message.text}\0${streaming ?? false}\0${outcome?.id ?? ""}`;
+  const contentKey = `${message.text}\0${streaming ?? false}\0${outcome?.id ?? ""}\0${answerable ?? false}`;
   useAnimatedHeight(ref, contentKey, arriving);
   useNewBlocksFade(ref, contentKey);
 
@@ -85,6 +89,9 @@ export const ChatMessageView = memo(function ChatMessageView({
         <div className="chat-sender">Parent agent</div>
       )}
       {messageBody(message, content)}
+      {message.wrap_up && (
+        <WrapUpBox taskId={taskId} message={message} answerable={answerable} />
+      )}
       {taskId && message.attachments?.length ? (
         // Keyed by task, so another task's row fits and folds afresh.
         <MessageAttachments

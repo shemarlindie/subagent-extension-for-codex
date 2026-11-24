@@ -1,3 +1,4 @@
+import type { Task } from "./model.js";
 import type { WrapUp } from "./wrap-up-contract.js";
 
 export const MAX_RECAP = 300;
@@ -29,3 +30,15 @@ export function wrapUpError({ recap, ask, actions, blocked }: WrapUp) {
     ? `Each label needs 1 to ${MAX_ACTION_LABEL} characters.`
     : undefined;
 }
+
+/**
+ * The task's latest reply ended blocked on the user, who hasn't sent the next
+ * message yet. Sending one starts a new turn, which clears it.
+ */
+export const blockedOnUser = (
+  task: Pick<Task, "status" | "turn">,
+  reply?: { turn: number; blocked?: true },
+) =>
+  Boolean(reply?.blocked) &&
+  reply?.turn === task.turn &&
+  task.status === "completed";

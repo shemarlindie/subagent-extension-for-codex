@@ -62,6 +62,15 @@ A Claude worker can show a plan for its current turn. `get_task` returns it as
 means a message reached the worker after its latest plan update. A plan update
 doesn't end a `list_messages` wait.
 
+### Worker wrap-ups
+
+A Claude worker can end a turn with a wrap-up, which Chat shows under its reply.
+`list_messages` and `get_message` give that reply `wrap_up`, with a `recap`, and
+an `ask` with `actions` when the next move is the user's. Each action is a reply
+`{ label }` or a panel action `{ action: "archive" | "ask_codex" }`. `blocked`
+means the worker can't go on until someone answers. `list_tasks` summaries add
+`reply.blocked` when the latest reply's wrap-up has it.
+
 ### Worker visuals
 
 A Claude worker can show visuals, such as charts and diagrams, in the panel's

@@ -130,8 +130,8 @@ export async function resolvePanelContext(
 /**
  * The panel's task list, as its opening data and `app_list_tasks` carry it.
  * Unless asked, it leaves out completed tasks the user has read, except
- * those `filters` includes and the newest task, and counts them by
- * repository in `read_completed`. Only Done and All show them.
+ * those `filters` includes, ones blocked on the user and the newest task, and
+ * counts them by repository in `read_completed`. Only Done and All show them.
  */
 export function panelTaskList(
   c: Control,

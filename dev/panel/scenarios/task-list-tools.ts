@@ -1,4 +1,6 @@
 import type { Task } from "../../../src/shared/tasks/model";
+import type { ReplyExcerpt } from "../../../src/shared/tasks/task-list";
+import { blockedOnUser } from "../../../src/shared/tasks/wrap-up";
 import { previewArchivedAt } from "./archive-tools";
 
 export const newestFirst = (tasks: Task[]) =>
@@ -20,13 +22,15 @@ export const listed = (task: Task, args: Record<string, unknown>) =>
     (args.archived === "include" ||
       (args.archived === "only") === Boolean(previewArchivedAt(task.id))));
 
-type ListedTask = Pick<Task, "id" | "status" | "repository"> & {
+type ListedTask = Pick<Task, "id" | "status" | "repository" | "turn"> & {
   unread?: boolean;
+  reply?: ReplyExcerpt;
 };
 
 /**
  * Mirrors `app_list_tasks`, which leaves out read completed tasks unless
- * asked, except included ones and the newest, and counts them by repository.
+ * asked, except included, blocked and the newest ones, and counts them by
+ * repository.
  */
 export function lightList<T extends ListedTask>(
   tasks: T[],
@@ -40,7 +44,12 @@ export function lightList<T extends ListedTask>(
   const counts: Record<string, number> = {};
 
   const listed = tasks.filter((task) => {
-    if (keep.has(task.id) || task.status !== "completed" || task.unread) {
+    if (
+      keep.has(task.id) ||
+      task.status !== "completed" ||
+      task.unread ||
+      blockedOnUser(task, task.reply)
+    ) {
       return true;
     }
 
