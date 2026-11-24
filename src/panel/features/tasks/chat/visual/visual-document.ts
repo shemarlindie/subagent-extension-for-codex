@@ -123,7 +123,6 @@ const THEME_TOKENS: [name: string, panel: string][] = [
   ["--surface", "--surface"],
   ["--border", "--line"],
   ["--accent", "--accent"],
-  ["--success", "--success"],
   ["--warning", "--warn"],
   ["--danger", "--danger"],
   ["--fill", "--hover"],
@@ -160,6 +159,9 @@ const SERIES_COLORS: [light: string, dark: string][] = [
   ["#e34948", "#e66767"],
 ];
 
+/** A softer green than the host's success color, which is harsh in visuals. */
+const SUCCESS_COLOR: [light: string, dark: string] = ["#30a46c", "#3dd68c"];
+
 /**
  * The panel's theme as CSS for a visual's root, with Chat's text size in
  * `--font-size`. The frame matches the panel's color scheme, or the browser
@@ -177,7 +179,7 @@ export function visualThemeCss(root: Element) {
     (pair, i) => `--series-${i + 1}: ${pair[dark ? 1 : 0]};`,
   );
 
-  return `:root { ${tokens.join(" ")} ${series.join(" ")} ${TOKEN_ALIASES} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
+  return `:root { ${tokens.join(" ")} --success: ${SUCCESS_COLOR[dark ? 1 : 0]}; ${series.join(" ")} ${TOKEN_ALIASES} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
 /** The widest a top-level SVG without a pixel width draws. */
