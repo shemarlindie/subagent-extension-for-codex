@@ -167,10 +167,6 @@ const fixtureAsks = {
     ask: "Archive this task?",
     actions: [{ action: "archive" as const }, { label: "Not yet" }],
   },
-  ask_codex: {
-    ask: "Hand the next step to Codex?",
-    actions: [{ action: "ask_codex" as const }, { label: "Not yet" }],
-  },
 };
 
 /** Wraps up the turn, as a wrap_up call would. */

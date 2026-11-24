@@ -41,8 +41,7 @@ test("the latest turn's wrap-up answers with its buttons until the next message,
       reply(2, {
         recap: "Fixed it.",
         ask: "Ship it?",
-        // Outside a Codex thread there is no one to ask.
-        actions: [{ label: "Yes, ship it" }, { action: "ask_codex" }],
+        actions: [{ label: "Yes, ship it" }],
       }),
     ],
   );

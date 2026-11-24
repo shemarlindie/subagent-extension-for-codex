@@ -16,17 +16,14 @@ type WrapUpBoxProps = {
   answerable?: boolean;
 };
 
-const ACTION_LABELS = { archive: "Archive", ask_codex: "Ask Codex" };
-
 /**
  * How the worker summed up its turn, for a reply that has a wrap-up: the
  * recap, then its question with buttons that answer it. Buttons show only
- * while the question is still the user's to answer, and actions the panel
- * can't offer drop out.
+ * while the question is still the user's to answer, and Archive drops out
+ * when the task can't be archived.
  */
 export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
   const controller = useController();
-  const threadMode = useSnapshot((state) => Boolean(state.conversation));
 
   const task = useSnapshot((state) =>
     taskId ? findTask(state, taskId) : undefined,
@@ -37,9 +34,7 @@ export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
 
   const offered = (action: WrapUpAction) =>
     "label" in action ||
-    (action.action === "archive"
-      ? Boolean(task && !task.archived_at && canToggleArchive(task))
-      : threadMode);
+    Boolean(task && !task.archived_at && canToggleArchive(task));
 
   const actions = answerable ? (wrapUp.actions?.filter(offered) ?? []) : [];
 
@@ -54,15 +49,9 @@ export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
 
         if (failure) controller.reportActionFailure(failure);
       });
-    } else if (action.action === "archive") {
+    } else {
       controller.run(() =>
         controller.taskActions.archive.setArchived([current], true),
-      );
-    } else {
-      controller.prepareHandoff(
-        current,
-        { kind: "reply", id: message.id },
-        message.text,
       );
     }
   };
@@ -79,7 +68,7 @@ export function WrapUpBox({ taskId, message, answerable }: WrapUpBoxProps) {
               variant={index === 0 ? "primary" : "default"}
               onClick={() => run(action, task)}
             >
-              {"label" in action ? action.label : ACTION_LABELS[action.action]}
+              {"label" in action ? action.label : "Archive"}
             </Button>
           ))}
         </div>

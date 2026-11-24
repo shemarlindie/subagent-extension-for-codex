@@ -308,9 +308,7 @@ export function readScenarios(
       const ask = field(args, "ask");
 
       scenarios.wrapUp = {
-        ...(ask === "reply" || ask === "archive" || ask === "ask_codex"
-          ? { ask }
-          : {}),
+        ...(ask === "reply" || ask === "archive" ? { ask } : {}),
         blocked: args.blocked === true,
       };
     } else if (kind === "cost") {

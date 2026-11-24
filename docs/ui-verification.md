@@ -176,7 +176,7 @@ Host settings:
 | Plan: unfinished                            | History row with steps left.                                                                                                                                                               |
 | Wrap-up: recap                              | Recap with no question.                                                                                                                                                                    |
 | Wrap-up: question                           | An answered turn's question without buttons, then the latest question with reply buttons.                                                                                                  |
-| Wrap-up: panel action                       | **Ask Codex** button, shown only in a Codex thread.                                                                                                                                        |
+| Wrap-up: panel action                       | **Archive** button, which archives the task.                                                                                                                                               |
 | Wrap-up: blocked                            | **Needs input** on the row and in the **Needs attention** filter.                                                                                                                          |
 
 Read state:

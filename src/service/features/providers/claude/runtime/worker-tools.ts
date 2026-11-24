@@ -200,9 +200,9 @@ export function workerMcpServers(c: RunContext) {
                 }),
                 z.object({
                   action: z
-                    .enum(["archive", "ask_codex"])
+                    .literal("archive")
                     .describe(
-                      "Panel buttons for the user. archive archives the task. ask_codex has the user hand the next step to Codex, which does what you can't here, such as committing or merging. It only shows when the user sent the turn's message.",
+                      "A panel button that archives the task, for when nothing is left to do.",
                     ),
                 }),
               ]),

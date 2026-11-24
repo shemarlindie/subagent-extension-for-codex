@@ -55,14 +55,14 @@ const fixtures: WrapUpFixture[] = [
   {
     id: "preview-wrap-up-action",
     title: "Wrap-up: panel action",
-    description: "Add a dark theme toggle to the settings page.",
+    description: "Find out whether the dark theme toggle still needs work.",
     reply:
-      "Settings has a **Dark theme** toggle that saves to the profile and applies at once.",
+      "The **Dark theme** toggle already saves to the profile and applies at once, and its tests pass. Nothing is left to do.",
     wrapUp: {
       recap:
-        "The dark theme toggle saves to the profile and applies at once. Tests pass. The change is in the worktree, not committed.",
-      ask: "Hand the commit to Codex?",
-      actions: [{ action: "ask_codex" }, { label: "Not yet" }],
+        "The dark theme toggle already works and its tests pass. Nothing was changed.",
+      ask: "Archive this task?",
+      actions: [{ action: "archive" }, { label: "Not yet" }],
     },
   },
   {

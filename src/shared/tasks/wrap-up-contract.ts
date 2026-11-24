@@ -1,5 +1,5 @@
 /** A panel action a wrap-up button runs. */
-export type WrapUpPanelAction = "archive" | "ask_codex";
+export type WrapUpPanelAction = "archive";
 
 /**
  * A wrap-up button: a reply that sends its label as a message, or a panel

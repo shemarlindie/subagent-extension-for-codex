@@ -429,7 +429,7 @@ export class Control {
       },
       planUpdated,
       visualShown: visualRecorder(this.store, t),
-      wrappedUp: wrapUpRecorder(this.store, a, planUpdated),
+      wrappedUp: wrapUpRecorder(a, planUpdated),
       delta: (messageId, text) =>
         this.drafts.append(t.owner, t.id, messageId, text),
       emit: <K extends EventType, D extends EventPayloadMap[K]>(
