@@ -11,6 +11,8 @@ import { planSummary } from "./plan.js";
 export type ReplyExcerpt = {
   turn: number;
   text: string;
+  /** The reply's wrap-up recap. */
+  recap?: string;
   /** The worker can't go on until the user answers its wrap-up. */
   blocked?: true;
 };
@@ -70,6 +72,7 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   return {
     turn: reply.turn,
     text: replyExcerpt(reply.text),
+    ...(reply.wrap_up ? { recap: reply.wrap_up.recap } : {}),
     ...(reply.wrap_up?.blocked ? { blocked: true as const } : {}),
   };
 }

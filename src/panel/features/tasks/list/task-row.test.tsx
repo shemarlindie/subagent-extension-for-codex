@@ -103,3 +103,17 @@ test("a row counts its plan's steps while some are left", () => {
 
   assert.equal(count(plan(steps(true, true))), undefined);
 });
+
+test("an idle row shows its latest recap's first sentence", () => {
+  const recap = (patch: Partial<Task>) =>
+    renderRow({
+      ...task("a"),
+      status: "completed",
+      turn: 1,
+      reply: { turn: 1, text: "r", recap: "Tests pass. Nothing is committed." },
+      ...patch,
+    }).view.container.querySelector(".row-recap")?.textContent;
+
+  assert.equal(recap({}), "Tests pass.");
+  assert.equal(recap({ status: "running", turn: 2 }), undefined);
+});

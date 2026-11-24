@@ -11,6 +11,7 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { Presence } from "../../../shared/components/motion/presence";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
+import { composerMode } from "../chat/chat-model";
 import { UnreadDot } from "../unread/unread-dot";
 import { rowStatus, statusTone } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
@@ -201,7 +202,30 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
       </span>
       <TaskRowPlan task={task} />
       <TaskRowSignal task={task} keepSlot={keepSlot} />
+      <TaskRowRecap task={task} />
     </>
+  );
+}
+
+/**
+ * The first sentence of the latest turn's recap, as where the task stands,
+ * while it waits for the next message.
+ */
+function TaskRowRecap({ task }: Pick<TaskRowProps, "task">) {
+  const { reply } = task;
+
+  if (
+    !reply?.recap ||
+    reply.turn !== task.turn ||
+    composerMode(task) !== "idle"
+  ) {
+    return null;
+  }
+
+  return (
+    <span className="row-recap">
+      {/^.*?[.!?](?=\s|$)/.exec(reply.recap)?.[0] ?? reply.recap}
+    </span>
   );
 }
 
