@@ -633,10 +633,10 @@ navigation, focus restoration and scope changes.
 
 Unit tests, including the jsdom suites in `tests/ui/`, time out after 15
 seconds. Integration and browser tests allow 60 seconds for process and worktree
-setup. The `unit-dom` project uses VM threads, where objects from native APIs
-can cross VM realms, so keep process, SQLite and native-boundary tests in the
-Node projects. Put shared colocated test setup in a `<module>-test-harness.ts`
-file, which lint, type checks and builds treat as test code.
+setup. The `unit-dom` project uses VM forks, where objects from native APIs can
+cross VM realms, so keep process, SQLite and native-boundary tests in the Node
+projects. Put shared colocated test setup in a `<module>-test-harness.ts` file,
+which lint, type checks and builds treat as test code.
 
 Compare DOM nodes with Vitest's `expect`, never Node's assertion equality
 methods. Formatting a failed Node assertion can hang on jsdom's document graph.

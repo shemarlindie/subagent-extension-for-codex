@@ -53,7 +53,9 @@ export default defineConfig({
           name: "unit-dom",
           include: dom,
           // Reuse the worker while each file keeps its own DOM and module scope.
-          pool: "vmThreads",
+          // Each worker is a separate process, so a native crash fails only its
+          // own file and the run still reports.
+          pool: "vmForks",
           vmMemoryLimit: "512MB",
           environment: "jsdom",
           testTimeout: unitTimeout,
