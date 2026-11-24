@@ -50,11 +50,13 @@ Chat history.
 
 A provider shows a worker's visual in Chat with `RunContext.visualShown`.
 
-Claude workers get `update_plan` and `show_visual` from the in-process
-`delegated_work` MCP server. Their calls need no approval and show no tool rows.
-Subagents can't call them. A `SessionStart` hook gives an open plan back to the
-worker after a compaction. Claude Code's `Artifact` tool is blocked, since it
-publishes to the signed-in claude.ai account outside the task.
+Claude workers get `update_plan`, `show_visual` and `visual_guide` from the
+in-process `delegated_work` MCP server. Their calls need no approval and show no
+tool rows. Subagents can't call them. `visual_guide` returns style rules for
+visuals, plus a section for each kind the worker names. A `SessionStart` hook
+gives an open plan back to the worker after a compaction. Claude Code's
+`Artifact` tool is blocked, since it publishes to the signed-in claude.ai
+account outside the task.
 
 Text deltas are transient drafts. Completed messages and the final reply are
 durable. Report the cumulative session cost with `agent.completed`, and the

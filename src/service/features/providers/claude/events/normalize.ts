@@ -235,7 +235,7 @@ function normalizeClaudeMessage(
         if (b.type === "text") {
           emitText(b.text, claudeActivityContent(b));
         } else if (b.type === "tool_use" && isWorkerTool(b.name)) {
-          // Worker tools record their own events.
+          // Worker tools show no rows. Those with events record them themselves.
           workerToolIds.add(b.id);
         } else if (b.type === "tool_use") {
           emit("tool.started", {

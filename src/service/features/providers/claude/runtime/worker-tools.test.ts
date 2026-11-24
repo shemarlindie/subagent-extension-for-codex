@@ -18,6 +18,7 @@ import { ClaudeAgentProvider } from "./provider.js";
 
 const TOOL = "mcp__delegated_work__update_plan";
 const VISUAL_TOOL = "mcp__delegated_work__show_visual";
+const GUIDE_TOOL = "mcp__delegated_work__visual_guide";
 
 async function launch(c: RunContext) {
   let options: Options | undefined;
@@ -70,11 +71,16 @@ test("turns load the worker tools always and allow them in every mode", async ()
   const { mcp } = await workerTools(options);
   const settings = options.settings as Settings;
 
-  assert.deepEqual(settings.permissions?.allow, [TOOL, VISUAL_TOOL]);
+  assert.deepEqual(settings.permissions?.allow, [
+    TOOL,
+    VISUAL_TOOL,
+    GUIDE_TOOL,
+  ]);
+
   assert.equal(options.allowedTools, undefined);
 
   const { tools } = await mcp.listTools();
-  assert.equal(tools.length, 2);
+  assert.equal(tools.length, 3);
 
   for (const tool of tools) {
     assert.equal(tool.annotations?.readOnlyHint, true, tool.name);
@@ -151,6 +157,20 @@ test("show_visual records the visual through the run context and names its numbe
     text: "There is no visual 4.",
     isError: true,
   });
+});
+
+test("visual_guide answers with the shared rules and only the requested kinds", async () => {
+  const { c } = await context();
+  const { call } = await workerTools(await launch(c));
+
+  const { text = "" } = await call(
+    { kinds: ["mockup", "chart"] },
+    "visual_guide",
+  );
+
+  assert.match(text, /^# Visual style/);
+  assert.match(text, /## Charts[\s\S]*## Mockups/);
+  assert.doesNotMatch(text, /## Diagrams|## Interactive/);
 });
 
 test("an open plan returns to the worker after compaction, and subagents can't change it", async () => {
