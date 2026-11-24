@@ -91,7 +91,13 @@ class Streaming extends FixtureProvider {
 }
 
 type Messages = {
-  messages: { id: string; kind: string; from: string; text: string }[];
+  messages: {
+    id: string;
+    kind: string;
+    from: string;
+    text: string;
+    wrap_up?: unknown;
+  }[];
   next_cursor: number;
   status: string;
   turn: number;
@@ -247,6 +253,55 @@ test("a parent reads replies by long poll and sends follow-ups as messages", asy
       reply: task.reply,
       queued_messages: 0,
     } satisfies TaskSummary);
+  } finally {
+    await c.close();
+  }
+});
+
+test("a parent reads the worker's wrap-up on its reply and in the task list", async () => {
+  const { c, store, parent, start } = await setup();
+
+  try {
+    const t = await start(
+      "Cache prices [fixture:wrap-up ask=reply blocked=true]",
+    );
+
+    await until(() => store.get(t.id, "alice").status === "completed");
+
+    const { messages } = await parent<Messages>("list_messages", {
+      task_id: t.id,
+    });
+
+    const reply = messages.at(-1);
+
+    const wrapUp = {
+      recap:
+        "The fixture turn finished its simulated work. Nothing was changed or verified.",
+      ask: "Apply the fixture fix?",
+      actions: [{ label: "Yes, apply it" }, { label: "Not now" }],
+      blocked: true,
+    };
+
+    assert.deepEqual(reply?.wrap_up, wrapUp);
+
+    assert.deepEqual(
+      (
+        await parent<{ message: Messages["messages"][number] }>("get_message", {
+          task_id: t.id,
+          message_id: reply?.id,
+        })
+      ).message.wrap_up,
+      wrapUp,
+    );
+
+    const [summary] = await parent<TaskSummary[]>("list_tasks", {
+      conversation_id: null,
+    });
+
+    assert.deepEqual(
+      { recap: summary?.reply?.recap, blocked: summary?.reply?.blocked },
+      { recap: wrapUp.recap, blocked: true },
+    );
   } finally {
     await c.close();
   }
