@@ -52,7 +52,8 @@ A provider shows a worker's visual in Chat with `RunContext.visualShown`.
 
 A provider passes the worker's wrap-up with `RunContext.wrappedUp`. Task control
 checks off the plan and adds the latest wrap-up to the turn's `agent.reply` as
-`wrap_up`. A steer taken after it drops it.
+`wrap_up`, without `ask_codex` when Codex sent the turn's message. A steer taken
+after it drops it.
 
 Claude workers get `update_plan`, `wrap_up`, `show_visual` and `visual_guide`
 from the in-process `delegated_work` MCP server. Their calls need no approval

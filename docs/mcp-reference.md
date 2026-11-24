@@ -66,11 +66,12 @@ doesn't end a `list_messages` wait.
 
 A Claude worker can end a turn with a wrap-up, which Chat shows under its reply.
 `list_messages` and `get_message` give that reply `wrap_up`, with a `recap`, and
-an `ask` with `actions` when the next move is the user's. Each action is a reply
-`{ label }` or a panel action `{ action: "archive" | "ask_codex" }`. `blocked`
-means the worker can't go on until someone answers. `list_tasks` summaries add
-`reply.recap`, and `reply.blocked` when set. An `ask` is the worker's question
-for the user, which Codex relays or answers with `send_message`.
+an `ask` with reply `options` when the next move waits on someone. The panel
+shows the options as buttons, and can add Archive and, on turns the user sent,
+Ask Codex. `blocked` means the worker can't go on until someone answers.
+`list_tasks` summaries add `reply.recap`, and `reply.blocked` when set. Codex
+answers an `ask` on a turn it sent with `send_message`, and passes it to the
+user only when the decision is theirs.
 
 ### Worker visuals
 
@@ -334,7 +335,7 @@ the agent and defers to the tool descriptions. Together they give this protocol:
    as `after`. A timeout or empty message list does not mean the task completed.
 2. Inspect `status`, `running`, `pending_input` and `queued_messages`. Handle
    input, failures and interruptions explicitly. Check the final reply before
-   reporting success, and relay or answer its wrap-up's `ask`. A queued
+   reporting success, and answer its wrap-up's `ask` on turns you sent. A queued
    follow-up is still pending work.
 3. If you lose the cursor, read again from `after: 0`.
 

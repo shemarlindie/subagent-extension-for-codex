@@ -4,6 +4,7 @@ import {
   conversation,
   MESSAGE_EVENTS,
 } from "../../../../shared/tasks/conversation/messages.js";
+import type { ConversationMessage } from "../../../../shared/tasks/conversation/messages.js";
 import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
 import { WAITING_MESSAGE_LIMIT } from "../../../../shared/tasks/conversation/waiting-limit.js";
 import { startSchema } from "../../../../shared/tasks/model.js";
@@ -239,7 +240,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         // The parent has now seen the updates this read covered.
         c.parentSeen.markRange(owner, a.task_id, a.after, result.next_cursor);
 
-        return result;
+        return { ...result, messages: result.messages.map(parentMessage) };
       },
     }),
     get_message: tool({
@@ -261,7 +262,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
           c.parentSeen.markEvents(owner, [message.event_id]);
         }
 
-        return { message };
+        return { message: parentMessage(message) };
       },
     }),
     get_changes: tool({
@@ -295,5 +296,20 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       }),
       run: (a) => c.store.events(a.task_id, owner, a.after),
     }),
+  };
+}
+
+/**
+ * A reply as a parent agent reads it. Codex can't press the panel's buttons,
+ * so its wrap-up gives the reply labels as `options`, without panel actions.
+ */
+function parentMessage({ wrap_up, ...message }: ConversationMessage) {
+  if (!wrap_up) return message;
+  const { actions, ...rest } = wrap_up;
+  const options = actions?.flatMap((a) => ("label" in a ? [a.label] : []));
+
+  return {
+    ...message,
+    wrap_up: { ...rest, ...(options?.length ? { options } : {}) },
   };
 }

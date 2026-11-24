@@ -63,20 +63,26 @@ test("a wrap-up checks off the plan and reaches the reply, unless a steer follow
       undefined,
     );
 
-    // The next turn's latest wrap-up rides on its reply.
+    // The next turn's latest wrap-up rides on its reply. Codex sent the
+    // turn, so the user's hand-off button drops.
     const first = context;
     gate = new Promise<void>((resolve) => (finish = resolve));
-    await c.send("alice", task.id, "Next", "user");
+    await c.send("alice", task.id, "Next", "parent");
     await until(() => context !== first);
 
     const wrapUp = {
       recap: "Both steps are done.",
-      ask: "Archive this task?",
-      actions: [{ action: "archive" as const }, { label: "Not yet" }],
+      ask: "Commit it?",
+      actions: [{ label: "Yes, commit" }],
     };
 
     context.wrappedUp({ recap: "Almost." });
-    context.wrappedUp(wrapUp);
+
+    context.wrappedUp({
+      ...wrapUp,
+      actions: [{ action: "ask_codex" }, ...wrapUp.actions],
+    });
+
     finish();
     await until(() => eventData(store, task.id, "agent.reply").length === 2);
 

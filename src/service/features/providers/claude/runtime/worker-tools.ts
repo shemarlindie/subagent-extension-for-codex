@@ -185,7 +185,7 @@ export function workerMcpServers(c: RunContext) {
           ask: z
             .string()
             .describe(
-              `Only when the next move is the user's call, such as a choice or a go-ahead: that one decision in at most ${MAX_ASK} characters, with no reason, recommendation or list of the options.`,
+              `Only when the next move is the user's call, such as a choice or a go-ahead: that one decision in at most ${MAX_ASK} characters, with no reason, recommendation or list of the options. Codex reads every reply and the user sees the panel, so either may answer it.`,
             )
             .optional(),
           actions: z
@@ -195,14 +195,14 @@ export function workerMcpServers(c: RunContext) {
                   label: z
                     .string()
                     .describe(
-                      `A reply button of at most ${MAX_ACTION_LABEL} characters, in the user's words back to you, such as "Yes, fix it". A click sends it as their answer.`,
+                      `A reply button of at most ${MAX_ACTION_LABEL} characters: an answer back to you that the user or Codex could send, such as "Yes, fix it". A click sends it as the user's answer.`,
                     ),
                 }),
                 z.object({
                   action: z
                     .enum(["archive", "ask_codex"])
                     .describe(
-                      "archive archives the task. ask_codex has the user hand the next step to Codex, which does what you can't here, such as committing or merging.",
+                      "Panel buttons for the user. archive archives the task. ask_codex has the user hand the next step to Codex, which does what you can't here, such as committing or merging. It only shows when the user sent the turn's message.",
                     ),
                 }),
               ]),

@@ -278,7 +278,8 @@ test("a parent reads the worker's wrap-up on its reply and in the task list", as
       recap:
         "The fixture turn finished its simulated work. Nothing was changed or verified.",
       ask: "Apply the fixture fix?",
-      actions: [{ label: "Yes, apply it" }, { label: "Not now" }],
+      // Parents get the reply labels, without the panel's buttons.
+      options: ["Yes, apply it", "Not now"],
       blocked: true,
     };
 
