@@ -149,10 +149,16 @@ const TOKEN_ALIASES = [
   "--surface-2: var(--background);",
   "--bg-neutral: var(--fill);",
   "--border-strong: color-mix(in srgb, var(--text) 25%, transparent);",
-  ...["accent", "success", "warning", "danger"].map(
-    (role) =>
-      `--text-${role}: var(--${role}); --border-${role}: var(--${role}); --bg-${role}: color-mix(in srgb, var(--${role}) 15%, transparent);`,
-  ),
+  ...["accent", "success", "warning", "danger"].map((role) => {
+    // The soft success green is too light for small text, so its text color
+    // mixes in the text color.
+    const text =
+      role === "success"
+        ? "color-mix(in srgb, var(--success) 70%, var(--text))"
+        : `var(--${role})`;
+
+    return `--text-${role}: ${text}; --border-${role}: var(--${role}); --bg-${role}: color-mix(in srgb, var(--${role}) 15%, transparent);`;
+  }),
 ].join(" ");
 
 /** Light and dark pairs of categorical colors, for marks rather than text. */
