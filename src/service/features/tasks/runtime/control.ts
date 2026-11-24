@@ -82,6 +82,7 @@ import { endPlan, markPlanStale, planRecorder } from "./task-plan.js";
 import { startTask } from "./task-start.js";
 import { visualRecorder } from "./task-visual.js";
 import { WorktreeChanges } from "./task-worktree.js";
+import { wrapUpRecorder } from "./task-wrap-up.js";
 import { measureTaskWait, recordTaskTiming, sendRef } from "./timing.js";
 import {
   interruptLostTurn,
@@ -343,6 +344,7 @@ export class Control {
         text: output.reply,
         turn: t.turn,
         ...(output.commandOutput ? { command_output: true as const } : {}),
+        ...(a.wrapUp ? { wrap_up: a.wrapUp } : {}),
       });
 
       t.status = "completed";
@@ -388,6 +390,8 @@ export class Control {
 
   /** What the provider calls back into while the turn runs. */
   private runContext(t: Task, a: Active, sentBefore: number): RunContext {
+    const planUpdated = planRecorder(this.store, t);
+
     return {
       task: t,
       // Even when empty, since a steer can bring the first attachment.
@@ -417,12 +421,15 @@ export class Control {
           this.store.messages.add(t.id, taken);
           t.instructions_sent = this.store.messages.count(t.id);
           markPlanStale(t.plan);
+          // The work goes on, so the worker wraps up again when done.
+          delete a.wrapUp;
           this.store.save(t);
           this.store.event(t, "task.steer_taken", { message_id: id });
         });
       },
-      planUpdated: planRecorder(this.store, t),
+      planUpdated,
       visualShown: visualRecorder(this.store, t),
+      wrappedUp: wrapUpRecorder(a, planUpdated),
       delta: (messageId, text) =>
         this.drafts.append(t.owner, t.id, messageId, text),
       emit: <K extends EventType, D extends EventPayloadMap[K]>(

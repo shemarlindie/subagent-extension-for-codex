@@ -164,6 +164,17 @@ export function applyPlanUpdate(
   return { kind: "updated", steps, changed };
 }
 
+/**
+ * What wrap_up does to the plan: checks off every step, as Claude Desktop's
+ * does. Undefined when no step is left.
+ */
+export function planWrappedUp(steps: PlanStep[] | undefined) {
+  if (!steps || !planOpen(steps)) return undefined;
+  const update = applyPlanUpdate(steps, { done: steps.map((_, i) => i + 1) });
+
+  return update.kind === "updated" ? update : undefined;
+}
+
 /** How far the plan has got, and the step in progress. */
 export function planProgress(steps: PlanStep[]) {
   const current = steps.find((s) => s.status === "in_progress")?.content;

@@ -16,6 +16,7 @@ import type { RunContext } from "../../../src/service/features/providers/types";
 import { decodedEvent } from "../../../src/shared/events/decode";
 import type { Event } from "../../../src/shared/events/types";
 import { normalizedClaudeFields } from "../../../src/shared/providers/claude/responses";
+import type { WrapUp } from "../../../src/shared/tasks/wrap-up-contract";
 import { at } from "./scenario-context";
 
 export type Data = Record<string, unknown>;
@@ -378,9 +379,10 @@ export class Timeline {
     text: string,
     turn = 1,
     fields: Partial<Extract<SDKResultMessage, { subtype: "success" }>> = {},
+    wrapUp?: WrapUp,
   ) {
     return this.turnResult(text, fields)
-      .reply(text, turn)
+      .reply(text, turn, wrapUp)
       .turnEnded(turn, "completed", fields.duration_ms, fields.total_cost_usd)
       .add("task.completed", {}, 200);
   }
@@ -400,13 +402,10 @@ export class Timeline {
   }
 
   /** The service's record of a turn's reply. */
-  reply(text: string, turn = 1) {
+  reply(text: string, turn = 1, wrapUp?: WrapUp) {
     return this.add(
       "agent.reply",
-      {
-        text,
-        turn,
-      },
+      { text, turn, ...(wrapUp ? { wrap_up: wrapUp } : {}) },
       100,
     );
   }

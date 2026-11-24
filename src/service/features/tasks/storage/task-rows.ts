@@ -37,10 +37,17 @@ const readEventTypes = sql.join(
 );
 
 /**
- * A completed task the owner has read, as `isUnread` decides: no
- * `READ_EVENTS` event after its read mark, and not marked unread.
+ * The latest turn's reply ended with a blocked wrap-up, as `blockedOnUser`
+ * decides, so the task waits on the user's answer.
  */
-const readCompleted = sql<number>`${tasks.status} = 'completed' and coalesce((select max(read_event.id) from ${events} read_event where read_event.task_id = ${tasks.id} and read_event.type in (${readEventTypes})), 0) <= coalesce((select iif(${taskRead.unread}, -1, ${taskRead.through}) from ${taskRead} where ${taskRead.task_id} = ${tasks.id}), 0)`;
+const blocked = sql`coalesce((select json_extract(reply.data, '$.wrap_up.blocked') = 1 and json_extract(reply.data, '$.turn') = json_extract(${tasks.body}, '$.turn') from ${events} reply where reply.task_id = ${tasks.id} and reply.type = 'agent.reply' order by reply.id desc limit 1), 0)`;
+
+/**
+ * A completed task the owner has read, as `isUnread` decides: no
+ * `READ_EVENTS` event after its read mark, and not marked unread. One blocked
+ * on the user still needs attention, so it doesn't count.
+ */
+const readCompleted = sql<number>`${tasks.status} = 'completed' and not ${blocked} and coalesce((select max(read_event.id) from ${events} read_event where read_event.task_id = ${tasks.id} and read_event.type in (${readEventTypes})), 0) <= coalesce((select iif(${taskRead.unread}, -1, ${taskRead.through}) from ${taskRead} where ${taskRead.task_id} = ${tasks.id}), 0)`;
 
 /** The condition for an owner's tasks that match `filters`. */
 export function taskFilters(owner: string, filters: TaskFilters) {

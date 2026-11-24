@@ -1,4 +1,5 @@
 import type { Task } from "../../../../shared/tasks/model.js";
+import type { WrapUp } from "../../../../shared/tasks/wrap-up-contract.js";
 import { now } from "../../../../shared/time.js";
 import type { Steer } from "../../providers/types.js";
 import type { PendingInput } from "../input/pending-input.js";
@@ -61,6 +62,8 @@ export interface Active {
   sendPending?: boolean;
   /** Where the provider takes steers, once it registers. */
   sink?: (steer: Steer) => boolean;
+  /** The worker's wrap-up, for the turn's reply. */
+  wrapUp?: WrapUp;
   abort: AbortController;
   done: Promise<void>;
 }

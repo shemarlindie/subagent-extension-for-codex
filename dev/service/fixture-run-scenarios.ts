@@ -158,6 +158,27 @@ async function runFixturePlan(
   actions.push(`Worked through a ${steps}-step fixture plan.`);
 }
 
+/** Wraps up the turn, as a wrap_up call would. */
+function runFixtureWrapUp(
+  c: RunContext,
+  { ask, blocked }: NonNullable<FixtureScenarios["wrapUp"]>,
+  actions: string[],
+) {
+  c.wrappedUp({
+    recap:
+      "The fixture turn finished its simulated work. Nothing was changed or verified.",
+    ...(ask
+      ? {
+          ask: "Apply the fixture fix?",
+          actions: [{ label: "Yes, apply it" }, { label: "Not now" }],
+        }
+      : {}),
+    ...(ask && blocked ? { blocked } : {}),
+  });
+
+  actions.push("Wrapped up the fixture turn.");
+}
+
 export async function runFixtureActions(
   c: RunContext,
   scenarios: FixtureScenarios,
@@ -328,4 +349,6 @@ export async function runFixtureActions(
       );
     }
   }
+
+  if (scenarios.wrapUp) runFixtureWrapUp(c, scenarios.wrapUp, actions);
 }

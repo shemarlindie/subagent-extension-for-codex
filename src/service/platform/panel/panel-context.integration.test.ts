@@ -518,7 +518,7 @@ test("the panel's opening tasks carry their read state", async (t) => {
   assert.equal(opened?.read_through, 0);
 });
 
-test("the task list leaves out read completed tasks unless asked, keeping included ones and the newest", async (t) => {
+test("the task list leaves out read completed tasks unless asked, keeping included, blocked and newest ones", async (t) => {
   const f = await fixture(t);
   const a = await f.repo("a");
   const b = await f.repo("b");
@@ -542,7 +542,27 @@ test("the task list leaves out read completed tasks unless asked, keeping includ
   f.c.store.markRead(marked);
   f.c.store.markUnread(marked);
   f.seed("running", b, { created_at: "2026-01-06T00:00:00.000Z" });
-  f.c.store.markRead(completed("newest", a, 7));
+
+  // A worker blocked on the user's answer still needs attention.
+  const blocked = f.seed("blocked", b, {
+    status: "completed",
+    turn: 1,
+    created_at: "2026-01-07T00:00:00.000Z",
+  });
+
+  f.c.store.event(blocked, "agent.reply", {
+    text: "Which store?",
+    turn: 1,
+    wrap_up: {
+      recap: "Waiting on the store.",
+      ask: "Which store?",
+      actions: [{ label: "SQLite" }],
+      blocked: true,
+    },
+  });
+
+  f.c.store.markRead(blocked);
+  f.c.store.markRead(completed("newest", a, 8));
 
   const ids = (includeReadCompleted: boolean) => {
     const list = panelTaskList(
@@ -556,12 +576,13 @@ test("the task list leaves out read completed tasks unless asked, keeping includ
   };
 
   assert.deepEqual(ids(false), {
-    tasks: ["newest", "running", "marked", "unread", "included"],
+    tasks: ["newest", "blocked", "running", "marked", "unread", "included"],
     read_completed: { [a]: 1, [b]: 1 },
   });
 
   assert.deepEqual(ids(true).tasks, [
     "newest",
+    "blocked",
     "running",
     "marked",
     "unread",

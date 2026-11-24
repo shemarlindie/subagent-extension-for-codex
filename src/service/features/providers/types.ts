@@ -18,6 +18,7 @@ import type {
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
 import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
 import type { PlanStep } from "../../../shared/tasks/plan-contract.js";
+import type { WrapUp } from "../../../shared/tasks/wrap-up-contract.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
 
 /** A message sent into a running turn. */
@@ -70,6 +71,12 @@ export interface RunContext {
    * `MAX_VISUAL_CODE` or a number the task hasn't shown.
    */
   visualShown(title: string, code: string, replaces?: number): number;
+  /**
+   * Holds the worker's wrap-up for the turn's reply and checks off the plan.
+   * A later call replaces it, and a steer taken after it drops it. Throws for
+   * a wrap-up that breaks the field rules.
+   */
+  wrappedUp(wrapUp: WrapUp): void;
   /**
    * Streams text as the worker writes a message, before the message itself
    * is emitted. Deltas aren't stored.

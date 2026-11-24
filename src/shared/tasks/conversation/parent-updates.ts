@@ -2,6 +2,7 @@ import { eventPayload } from "../../events/payload.js";
 import type { Event } from "../../events/types.js";
 import { failureMessage, isBudgetFailure } from "../failure.js";
 import type { Task } from "../model.js";
+import { blockedOnUser } from "../wrap-up.js";
 import { replyExcerpt } from "./reply.js";
 
 /** Events that can give the parent agent a worker update to see. */
@@ -55,11 +56,16 @@ export function parentUpdate(
   const reply = eventPayload(e, "agent.reply");
 
   if (reply) {
-    return {
-      ...base,
-      kind: "reply",
-      text: replyExcerpt(reply.text, SNIPPET_CHARS),
-    };
+    const { ask, blocked } = reply.wrap_up ?? {};
+
+    // A blocked wrap-up's question waits on an answer, like a request.
+    return ask && blockedOnUser(task, { turn: reply.turn, blocked })
+      ? { ...base, kind: "request", text: replyExcerpt(ask, SNIPPET_CHARS) }
+      : {
+          ...base,
+          kind: "reply",
+          text: replyExcerpt(reply.text, SNIPPET_CHARS),
+        };
   }
 
   const failed = eventPayload(e, "task.failed");

@@ -17,6 +17,11 @@ import {
   VISUAL_SERIES_COUNT,
   visualTokens,
 } from "../../../../../shared/tasks/visual.js";
+import {
+  MAX_ACTION_LABEL,
+  MAX_ASK,
+  MAX_RECAP,
+} from "../../../../../shared/tasks/wrap-up.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { visualGuide, visualKinds } from "./visual-guide.js";
@@ -24,7 +29,7 @@ import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
 export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel. The user follows your progress there while you work, so keeping it is part of the task. For any request that edits files or runs more than one command, send the whole plan with your very first tool call, even one that only reads a file. As each step finishes, advance in the same message as the call that starts the next, and once more before your final reply. Don't restate the plan as a list in your reply.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
+  "Use update_plan to show your plan as a checklist in the user's panel. The user follows your progress there while you work, so keeping it is part of the task. For any request that edits files or runs more than one command, send the whole plan with your very first tool call, even one that only reads a file. As each step finishes, advance in the same message as the call that starts the next. Don't restate the plan as a list in your reply.\n\nWhen the work is done, call wrap_up, then write your final reply in full. Its box under your reply tells the user where things stand and asks them anything the next move waits on.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a
@@ -80,9 +85,9 @@ export function workerMcpServers(c: RunContext) {
       tool(
         "update_plan",
         [
-          "Keep the checklist the user's panel shows while you work. Send it in the same message as another tool call, never alone, apart from the final advance.",
+          "Keep the checklist the user's panel shows while you work. Send it in the same message as another tool call, never alone.",
           '- First call: items with the whole plan in order, the step you\'re starting in_progress and the rest pending. If you must look around first, make "Look at how X works" step one and send a refined list once you know.',
-          "- Next step: advance: true with the call that starts it.",
+          "- Next step: advance: true with the call that starts it. wrap_up checks off the rest.",
           "- Out of order: done with the 1-based numbers of finished steps and start with the number of the step you're on, in one call, never several advances in a row.",
           "- Plan changed, including right after a message from the user or Codex: items again with the whole new list, so the panel never shows an abandoned plan.",
           "Keep exactly one step in progress while you work, and none once all are done.",
@@ -160,6 +165,66 @@ export function workerMcpServers(c: RunContext) {
           });
 
           return text(visualGuide(kinds));
+        },
+        { annotations: { readOnlyHint: true } },
+      ),
+      tool(
+        "wrap_up",
+        [
+          "Fill the box the user's panel shows under your final reply: a recap of where things stand and, when the next move is the user's call, one question with buttons that answer it.",
+          "Call it once the turn's work is done, in every turn where you kept a plan, changed files, ran commands or did multi-step work. Skip it for short answers and pure conversation. It checks off your plan, so no closing update_plan is needed. A message from the user or Codex after it means the work goes on, so call it again once that's done.",
+          "Then write your final reply, the full answer. The recap never replaces it, and a reply written before the call is lost.",
+          "When the work leaves a real next step, make it the ask, with a button to do it. Finish unfinished or unverified parts of this task now or name them in the recap, never offer them as a follow-up. Don't repeat an offer the user passed over unless what it acts on changed.",
+        ].join("\n"),
+        {
+          recap: z
+            .string()
+            .describe(
+              `What is now true or changed, then what isn't done or verified, in two or three short sentences of at most ${MAX_RECAP} characters. Addressed to the user, it stands on its own without pointing elsewhere in the conversation, and makes no recommendation.`,
+            ),
+          ask: z
+            .string()
+            .describe(
+              `Only when the next move is the user's call, such as a choice or a go-ahead: that one decision in at most ${MAX_ASK} characters, with no reason, recommendation or list of the options. Codex reads every reply and the user sees the panel, so either may answer it.`,
+            )
+            .optional(),
+          actions: z
+            .array(
+              z.object({
+                label: z
+                  .string()
+                  .describe(
+                    `A reply button of at most ${MAX_ACTION_LABEL} characters: an answer back to you that the user or Codex could send, such as "Yes, fix it". A click sends it as the user's answer.`,
+                  ),
+              }),
+            )
+            .describe(
+              "1 or 2 answers to the ask, your pick first. Another is there only when the user might realistically pick it instead.",
+            )
+            .optional(),
+          blocked: z
+            .boolean()
+            .describe("True when your work can't go on until the user answers.")
+            .optional(),
+        },
+        async ({ recap, ask, actions, blocked }) => {
+          try {
+            c.wrappedUp({
+              recap,
+              ...(ask === undefined ? {} : { ask }),
+              ...(actions ? { actions } : {}),
+              ...(blocked ? { blocked } : {}),
+            });
+          } catch (error) {
+            return text((error as Error).message, true);
+          }
+
+          logEvent("debug", "provider.wrapped_up", {
+            ask: ask !== undefined,
+            blocked: blocked === true,
+          });
+
+          return text("Wrap-up shown. Write your final reply now, in full.");
         },
         { annotations: { readOnlyHint: true } },
       ),

@@ -40,6 +40,7 @@ import {
   promptCacheTimelines,
 } from "./prompt-cache-scenarios";
 import { visualTasks, visualTimelines } from "./visual-scenarios";
+import { wrapUpTasks, wrapUpTimelines } from "./wrap-up-scenarios";
 
 export { previewStreamingDrafts } from "./live-scenarios";
 export { PREVIEW_THREAD, previewProjects } from "./scenario-context";
@@ -116,6 +117,7 @@ export const previewTasks: Task[] = [
     contextUsageTasks,
     planTasks,
     visualTasks,
+    wrapUpTasks,
   );
 
 const timelinesById = new Map(
@@ -167,5 +169,6 @@ export const previewEvents: Event[] = [
   ...statusTimelines.flatMap((timeline) => timeline.events),
   ...planTimelines.flatMap((timeline) => timeline.events),
   ...visualTimelines.flatMap((timeline) => timeline.events),
+  ...wrapUpTimelines.flatMap((timeline) => timeline.events),
   ...recordedFixtures.flatMap((recorded) => recorded.events),
 ].map(decodedEvent);

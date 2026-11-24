@@ -201,7 +201,9 @@ export class SessionPrompts {
       let entry: string | undefined;
 
       if (reply) {
-        entry = `Your reply:\n${reply.text}`;
+        // A button answer only makes sense next to the question it answers.
+        const ask = reply.wrap_up?.ask;
+        entry = `Your reply:\n${reply.text}${ask ? `\n\nYour question under it:\n${ask}` : ""}`;
       } else if (instruction) {
         const sender = instruction.from === "parent" ? "Parent agent" : "User";
 

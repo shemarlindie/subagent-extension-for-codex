@@ -61,6 +61,7 @@ export function context(currentTask = task()) {
     steerTaken: () => {},
     planUpdated: () => {},
     visualShown: () => 1,
+    wrappedUp: () => {},
     delta: () => {},
     emit: (type: string, data: Record<string, unknown>) =>
       events.push({ type, data }),

@@ -11,6 +11,7 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";
 import { Presence } from "../../../shared/components/motion/presence";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
+import { composerMode } from "../chat/chat-model";
 import { UnreadDot } from "../unread/unread-dot";
 import { rowStatus, statusTone } from "./task-status";
 import { TaskStatusIcon } from "./task-status-icon";
@@ -201,7 +202,27 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
       </span>
       <TaskRowPlan task={task} />
       <TaskRowSignal task={task} keepSlot={keepSlot} />
+      <TaskRowAsk task={task} />
     </>
+  );
+}
+
+/**
+ * The latest turn's question, while the task waits for its answer. The line
+ * eases in and out so the row's height changes smoothly.
+ */
+function TaskRowAsk({ task }: Pick<TaskRowProps, "task">) {
+  const { reply } = task;
+
+  const ask =
+    reply?.turn === task.turn && composerMode(task) === "idle"
+      ? reply.ask
+      : undefined;
+
+  return (
+    <Presence show={Boolean(ask)} as="span">
+      {ask && <span className="row-ask">{ask}</span>}
+    </Presence>
   );
 }
 

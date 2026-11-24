@@ -8,7 +8,16 @@ import type { Task, TaskView } from "./model.js";
 import { planSummary } from "./plan.js";
 
 /** The start of a task's latest reply, so a list can be scanned without opening each task. */
-export type ReplyExcerpt = { turn: number; text: string };
+export type ReplyExcerpt = {
+  turn: number;
+  text: string;
+  /** The reply's wrap-up recap. */
+  recap?: string;
+  /** The wrap-up's question. */
+  ask?: string;
+  /** The worker can't go on until the user answers its wrap-up. */
+  blocked?: true;
+};
 
 /** What a parent agent needs to find a task and decide whether to read it. */
 export type TaskSummary = Pick<
@@ -65,6 +74,9 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
   return {
     turn: reply.turn,
     text: replyExcerpt(reply.text),
+    ...(reply.wrap_up ? { recap: reply.wrap_up.recap } : {}),
+    ...(reply.wrap_up?.ask ? { ask: reply.wrap_up.ask } : {}),
+    ...(reply.wrap_up?.blocked ? { blocked: true as const } : {}),
   };
 }
 

@@ -8,6 +8,7 @@ import {
   taskPlanEndedPayloadSchema,
 } from "../tasks/plan-contract.generated.js";
 import { agentVisualPayloadSchema } from "../tasks/visual-contract.generated.js";
+import { wrapUpSchema } from "../tasks/wrap-up-contract.generated.js";
 
 export const eventEnvelopeSchema = z.object({
   id: z.number(),
@@ -54,6 +55,7 @@ const agentReplyPayloadSchema = z.object({
   text: z.string(),
   turn: z.number(),
   command_output: z.literal(true).optional(),
+  wrap_up: wrapUpSchema.optional(),
 });
 
 const agentStartedPayloadSchema = z.object({

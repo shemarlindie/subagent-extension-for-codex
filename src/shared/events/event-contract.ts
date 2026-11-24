@@ -5,6 +5,7 @@ import type {
   TaskPlanEndedPayload,
 } from "../tasks/plan-contract.js";
 import type { AgentVisualPayload } from "../tasks/visual-contract.js";
+import type { WrapUp } from "../tasks/wrap-up-contract.js";
 
 export interface EventEnvelope {
   id: number;
@@ -50,6 +51,7 @@ interface AgentReplyPayload {
   turn: number;
   /** The text is what a command such as /compact printed. */
   command_output?: true;
+  wrap_up?: WrapUp;
 }
 
 interface AgentStartedPayload {

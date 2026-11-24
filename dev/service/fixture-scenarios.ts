@@ -57,6 +57,8 @@ export interface FixtureScenarios {
   waitMs?: number;
   /** A plan of this many steps, which advances every `pace` ms. */
   plan?: { steps: number; paceMs: number };
+  /** A wrap-up, with an ask and reply buttons when `ask` is set. */
+  wrapUp?: { ask: boolean; blocked: boolean };
   costUsd?: number;
   completionSubtype?: string;
   completionIsError: boolean;
@@ -300,6 +302,11 @@ export function readScenarios(
           paceMs: Math.max(0, Math.min(pace, 10_000)),
         };
       }
+    } else if (kind === "wrap-up") {
+      scenarios.wrapUp = {
+        ask: args.ask === true,
+        blocked: args.blocked === true,
+      };
     } else if (kind === "cost") {
       const value = Number(field(args, "usd") ?? 0);
 

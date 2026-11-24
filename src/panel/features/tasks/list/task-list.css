@@ -280,6 +280,25 @@
   transform: translateX(min(0px, 100cqw - 100%));
   transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
 }
+/* The worker's open question, across the whole line under the title. */
+.row:has(.row-ask) {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+.row-ask {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* Archive stays over the dot, on the title's line. */
+.task-row-container:has(.row-ask) .row-archive {
+  align-self: start;
+  margin-block-start: 3px;
+}
 /* The worker's plan progress, before the dot. */
 .row-plan {
   flex: none;

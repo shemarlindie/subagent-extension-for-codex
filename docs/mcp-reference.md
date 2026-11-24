@@ -62,6 +62,17 @@ A Claude worker can show a plan for its current turn. `get_task` returns it as
 means a message reached the worker after its latest plan update. A plan update
 doesn't end a `list_messages` wait.
 
+### Worker wrap-ups
+
+A Claude worker can end a turn with a wrap-up, which Chat shows under its reply.
+`list_messages` and `get_message` give that reply `wrap_up`, with a `recap`, and
+an `ask` with `actions` when the next move waits on someone. Each action is a
+`{ label }`, which the panel shows as a button that sends it. `blocked` means
+the worker can't go on until someone answers. `list_tasks` summaries add
+`reply.recap`, and `reply.ask` and `reply.blocked` when set. Codex answers an
+`ask` on a turn it sent with `send_message`, and passes it to the user only when
+the decision is theirs.
+
 ### Worker visuals
 
 A Claude worker can show visuals, such as charts and diagrams, in the panel's
@@ -324,7 +335,8 @@ the agent and defers to the tool descriptions. Together they give this protocol:
    as `after`. A timeout or empty message list does not mean the task completed.
 2. Inspect `status`, `running`, `pending_input` and `queued_messages`. Handle
    input, failures and interruptions explicitly. Check the final reply before
-   reporting success. A queued follow-up is still pending work.
+   reporting success, and answer its wrap-up's `ask` on turns you sent. A queued
+   follow-up is still pending work.
 3. If you lose the cursor, read again from `after: 0`.
 
 Workers never message the parent directly. Codex learns of results by polling,
