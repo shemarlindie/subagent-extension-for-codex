@@ -1,15 +1,21 @@
-/** What a visual's frame tells the panel. */
+/**
+ * What a visual's frame tells the panel. `width` is a lone element's width
+ * when it draws narrower than the frame, and otherwise 0.
+ */
 type VisualFrameMessage =
-  | { type: "visual-height"; height: number }
+  | { type: "visual-size"; height: number; width: number }
   | { type: "visual-link"; href: string };
 
 /** A frame message, from data a visual's own scripts can also post. */
 export function frameMessage(data: unknown): VisualFrameMessage | undefined {
   if (typeof data !== "object" || data === null) return undefined;
-  const { type, height, href } = data as Record<string, unknown>;
+  const { type, height, width, href } = data as Record<string, unknown>;
 
-  if (type === "visual-height" && typeof height === "number") {
-    return Number.isFinite(height) ? { type, height } : undefined;
+  if (type === "visual-size" && typeof height === "number") {
+    if (!Number.isFinite(height)) return undefined;
+    const narrower = typeof width === "number" && Number.isFinite(width);
+
+    return { type, height, width: narrower ? Math.max(width, 0) : 0 };
   }
 
   return type === "visual-link" && typeof href === "string"
@@ -46,19 +52,44 @@ const THEME_ID = "visual-theme";
  * events behind those states and finished transitions report too. A frame that
  * fits its content can't scroll, even by a rounded pixel, or it would keep the
  * wheel from scrolling Chat.
+ *
+ * A visual that's one element, such as an SVG or a wrapper with a max width,
+ * beside any style and script elements, also reports its width while it draws
+ * narrower than the frame, so the panel can fit the visual's card to it. The
+ * element centers unless it sets its own margins, so it doesn't move when the
+ * card fits. Overflowing content counts toward the width, so the card doesn't
+ * clip it.
  */
 const FRAME_SCRIPT = `(() => {
   const post = (message) => parent.postMessage(message, "*");
   const root = document.documentElement;
+  const loneElement = () => {
+    const shown = [...(document.body?.children ?? [])].filter(
+      (element) => !["style", "script"].includes(element.localName),
+    );
+    return shown.length === 1 ? shown[0] : undefined;
+  };
   let reported;
+  let centered;
   const report = () => {
     const height = Math.ceil(
       Math.max(root.getBoundingClientRect().height, document.body?.scrollHeight ?? 0),
     );
-    if (height === reported) return;
-    reported = height;
+    const lone = loneElement();
+    // Setting the style again would report again, so it's set once.
+    if (lone && lone !== centered) {
+      centered = lone;
+      const { marginLeft, marginRight } = getComputedStyle(lone);
+      if (marginLeft === "0px" && marginRight === "0px") lone.style.marginInline = "auto";
+    }
+    const drawn = Math.ceil(
+      Math.max(lone?.getBoundingClientRect().width ?? 0, lone?.scrollWidth ?? 0),
+    );
+    const width = drawn < root.clientWidth ? drawn : 0;
+    if (height === reported?.height && width === reported?.width) return;
+    reported = { height, width };
     root.style.overflow = height > ${MAX_VISUAL_HEIGHT} ? "auto" : "hidden";
-    post({ type: "visual-height", height });
+    post({ type: "visual-size", height, width });
   };
   new ResizeObserver(report).observe(root);
   new MutationObserver(report).observe(root, {
@@ -110,22 +141,99 @@ export function visualThemeCss(root: Element) {
   return `:root { ${tokens.join(" ")} color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
+/** The widest a top-level SVG without a pixel width draws. */
+const MAX_UNSIZED_SVG_WIDTH = 720;
+
+/** A top-level SVG without a pixel width. */
+const UNSIZED_SVG = (at: string) =>
+  `${at}:not([width]):not([height]), ${at}[width$="%"]`;
+
 /**
- * The frame document for a visual's code. The policy and script come first in
- * the head, so they apply before any of the visual's own markup. A visual
- * that's a whole HTML document still renders, since the parser folds its
- * `html` and `head` tags into this one.
+ * A top-level SVG scales evenly, so extra width only enlarges it. It centers
+ * and shrinks to fit, keeping its shape. One with a pixel width keeps it, and
+ * one without stops at the cap.
  */
-export function visualDocument(code: string, themeCss: string) {
+const BASE_STYLE = [
+  ":root { color: var(--text); font-family: var(--font-sans); }",
+  "body { margin: 0; position: relative; }",
+  "body > svg { display: block; margin-inline: auto; max-width: 100%; }",
+  "body > svg[width][height] { height: auto; }",
+  `${UNSIZED_SVG("body > svg")} { max-width: min(100%, ${MAX_UNSIZED_SVG_WIDTH}px); }`,
+].join(" ");
+
+/**
+ * Rules that stop each top-level SVG without a pixel width at its viewBox
+ * width, below the cap, since its text is drawn at viewBox scale. CSS can't
+ * read the viewBox, so each rule matches the attribute's text, which must be
+ * plain numbers to quote as is.
+ */
+function viewBoxWidthStyle(code: string) {
+  const { body } = new DOMParser().parseFromString(code, "text/html");
+  const rules = new Set<string>();
+
+  for (const svg of body.querySelectorAll(":scope > svg[viewBox]")) {
+    const box = svg.getAttribute("viewBox") ?? "";
+    if (!/^[\d\s.,eE+-]+$/.test(box)) continue;
+
+    const width = Number(box.trim().split(/[\s,]+/)[2]);
+    if (!(width > 0 && width < MAX_UNSIZED_SVG_WIDTH)) continue;
+
+    rules.add(
+      `${UNSIZED_SVG(`body > svg[viewBox="${box}"]`)} { max-width: min(100%, ${width}px); }`,
+    );
+  }
+
+  return [...rules].join(" ");
+}
+
+/**
+ * A document for a visual's code. The policy comes first in the head, so it
+ * applies before anything else. A visual that's a whole HTML document still
+ * renders, since the parser folds its `html` and `head` tags into this one.
+ */
+function visualPage(head: string[], code: string) {
   return [
     "<!doctype html>",
     '<html><head><meta charset="utf-8">',
     `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`,
-    `<script>${FRAME_SCRIPT}</script>`,
-    `<style id="${THEME_ID}">${themeCss}</style>`,
-    "<style>:root { color: var(--text); font-family: var(--font-sans); } body { margin: 0; position: relative; }</style>",
+    ...head,
+    `<style>${BASE_STYLE} ${viewBoxWidthStyle(code)}</style>`,
     "</head><body>",
     code,
     "</body></html>",
   ].join("\n");
+}
+
+/** The frame document, whose script runs before the visual's own markup. */
+export function visualDocument(code: string, themeCss: string) {
+  return visualPage(
+    [
+      `<script>${FRAME_SCRIPT}</script>`,
+      `<style id="${THEME_ID}">${themeCss}</style>`,
+    ],
+    code,
+  );
+}
+
+/**
+ * A visual as a page of its own, in the theme it was saved in. Without the
+ * frame script it scrolls and its links navigate. In Chat the panel shows
+ * through the frame, so the page paints the panel's background itself. Its
+ * scripts keep running, so interactive visuals work. The CSP stops their
+ * requests, but nothing in a page can stop a script from navigating it.
+ */
+export function savedVisualDocument(
+  title: string,
+  code: string,
+  themeCss: string,
+) {
+  const escaped = title.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+
+  return visualPage(
+    [
+      `<title>${escaped}</title>`,
+      `<style>${themeCss} :root { background: var(--background); }</style>`,
+    ],
+    code,
+  );
 }

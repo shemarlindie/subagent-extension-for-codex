@@ -12,6 +12,12 @@ export type HostState = {
   displayMode: "inline" | "fullscreen" | "pip";
 };
 
+/**
+ * How a save went. A host without file downloads is `unsupported`. A host
+ * error is `declined`, and includes a cancelled dialog.
+ */
+export type SaveResult = "saved" | "unsupported" | "declined";
+
 export type TransportEvents = {
   timing?: ObservePanelTiming;
   scope(data: PanelData): void;
@@ -41,7 +47,7 @@ export interface Transport {
   expand?(): Promise<void>;
   /** Opens an external link through the host, which may block new windows. */
   openLink?(url: string): Promise<void>;
-  /** Saves through the host or browser. False when the service has to save it. */
-  saveJson(name: string, text: string): Promise<boolean>;
+  /** Saves a file through the host or browser. */
+  saveFile(file: File): Promise<SaveResult>;
   login?(token: string): Promise<void>;
 }

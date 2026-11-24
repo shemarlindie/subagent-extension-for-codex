@@ -14,7 +14,12 @@ import {
 /** Until the frame reports its content. */
 const INITIAL_HEIGHT = 150;
 
-type VisualFrameProps = { title: string; code: string };
+type VisualFrameProps = {
+  title: string;
+  code: string;
+  /** Receives a lone element's width while it draws narrower than the frame. */
+  onWidth?: (width: number) => void;
+};
 
 /** One version of a visual, with the link it asked to open. */
 type Revision = { code: string; srcDoc: string; link?: string };
@@ -30,7 +35,7 @@ const revision = (code: string, theme: string): Revision => ({
  * itself to its content. A link it asks to open shows below it as the panel's
  * own link, since the visual's scripts choose the destination.
  */
-export function VisualFrame({ title, code }: VisualFrameProps) {
+export function VisualFrame({ title, code, onWidth }: VisualFrameProps) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(INITIAL_HEIGHT);
   const theme = useVisualTheme();
@@ -55,8 +60,9 @@ export function VisualFrame({ title, code }: VisualFrameProps) {
       if (!ref.current || event.source !== ref.current.contentWindow) return;
       const message = frameMessage(event.data);
 
-      if (message?.type === "visual-height") {
+      if (message?.type === "visual-size") {
         setHeight(Math.min(Math.max(message.height, 1), MAX_VISUAL_HEIGHT));
+        if (message.width > 0) onWidth?.(message.width);
       }
 
       if (
@@ -71,7 +77,7 @@ export function VisualFrame({ title, code }: VisualFrameProps) {
     window.addEventListener("message", onMessage);
 
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [onWidth]);
 
   return (
     <>

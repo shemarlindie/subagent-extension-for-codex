@@ -6,7 +6,12 @@ import {
 
 import { version } from "../../../package.json";
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
-import type { PanelData, Transport, TransportEvents } from "../app/state/types";
+import type {
+  PanelData,
+  SaveResult,
+  Transport,
+  TransportEvents,
+} from "../app/state/types";
 import { decodePanelToolResult } from "./event-decoding";
 import { HostContextCompatibilityTransport } from "./host-context-compat";
 
@@ -22,6 +27,18 @@ function toolRequestOptions(name: string, args: Record<string, unknown>) {
   }
 
   return undefined;
+}
+
+async function base64(file: Blob) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+
+  // Chunks keep each call's arguments within the engine's limit.
+  for (let start = 0; start < bytes.length; start += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
+  }
+
+  return btoa(binary);
 }
 
 export class HostTransport implements Transport {
@@ -165,9 +182,9 @@ export class HostTransport implements Transport {
     if (result.isError) throw new Error("The host declined to open the link.");
   }
 
-  async saveJson(name: string, text: string) {
+  async saveFile(file: File): Promise<SaveResult> {
     if (this.disposed) throw new Error("The console has closed.");
-    if (!this.app.getHostCapabilities()?.downloadFile) return false;
+    if (!this.app.getHostCapabilities()?.downloadFile) return "unsupported";
 
     const result = await this.app.downloadFile(
       {
@@ -175,9 +192,9 @@ export class HostTransport implements Transport {
           {
             type: "resource",
             resource: {
-              uri: `file:///${encodeURIComponent(name)}`,
-              mimeType: "application/json",
-              text,
+              uri: `file:///${encodeURIComponent(file.name)}`,
+              mimeType: file.type,
+              blob: await base64(file),
             },
           },
         ],
@@ -186,9 +203,7 @@ export class HostTransport implements Transport {
     );
 
     // A cancelled save and a refusal look the same here.
-    if (result.isError) throw new Error("The host didn't save the file.");
-
-    return true;
+    return result.isError ? "declined" : "saved";
   }
 
   async expand() {

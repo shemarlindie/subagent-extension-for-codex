@@ -20,8 +20,9 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 
 afterEach(cleanup);
 
-test("the frame runs scripts alone, takes its own window's height, and shows the links it asks for as the panel's own", () => {
+test("the frame runs scripts alone, takes its own window's size, and shows the links it asks for as the panel's own", () => {
   const openLink = vi.fn(async () => {});
+  const onWidth = vi.fn();
 
   const controller = {
     transport: { openLink },
@@ -30,7 +31,7 @@ test("the frame runs scripts alone, takes its own window's height, and shows the
 
   const { container } = render(
     <ControllerContext.Provider value={controller}>
-      <VisualFrame title="Signups" code="<svg></svg>" />
+      <VisualFrame title="Signups" code="<svg></svg>" onWidth={onWidth} />
       <iframe title="Other" />
     </ControllerContext.Provider>,
   );
@@ -43,10 +44,16 @@ test("the frame runs scripts alone, takes its own window's height, and shows the
       window.dispatchEvent(new MessageEvent("message", { source, data }));
     });
 
-  post(other?.contentWindow, { type: "visual-height", height: 400 });
+  post(other?.contentWindow, { type: "visual-size", height: 400 });
   expect(frame?.style.height).toBe("150px");
-  post(frame?.contentWindow, { type: "visual-height", height: 400 });
+  post(frame?.contentWindow, { type: "visual-size", height: 400, width: 420 });
   expect(frame?.style.height).toBe("400px");
+  expect(onWidth).toHaveBeenCalledWith(420);
+
+  // A visual that fills the frame, or a script's invalid width, keeps the fit.
+  post(frame?.contentWindow, { type: "visual-size", height: 400, width: 0 });
+  post(frame?.contentWindow, { type: "visual-size", height: 400, width: -9 });
+  expect(onWidth).toHaveBeenCalledTimes(1);
 
   // The frame's request opens nothing until the user clicks the destination.
   post(frame?.contentWindow, { type: "visual-link", href: "https://x.dev/" });

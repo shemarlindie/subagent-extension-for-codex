@@ -353,7 +353,11 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);
 
-  assert.equal(await transport.saveJson("settings.json", "{}"), false);
+  const file = new File(['{"é":1}'], "my settings.json", {
+    type: "application/json",
+  });
+
+  assert.equal(await transport.saveFile(file), "unsupported");
 
   const downloads: unknown[] = [];
   let isError = false;
@@ -367,7 +371,7 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
     },
   });
 
-  assert.equal(await transport.saveJson("settings.json", "{}"), true);
+  assert.equal(await transport.saveFile(file), "saved");
 
   assert.deepEqual(downloads, [
     {
@@ -375,9 +379,9 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
         {
           type: "resource",
           resource: {
-            uri: "file:///settings.json",
+            uri: "file:///my%20settings.json",
             mimeType: "application/json",
-            text: "{}",
+            blob: Buffer.from('{"é":1}').toString("base64"),
           },
         },
       ],
@@ -385,11 +389,7 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
   ]);
 
   isError = true;
-
-  await assert.rejects(
-    transport.saveJson("settings.json", "{}"),
-    /didn't save the file/,
-  );
+  assert.equal(await transport.saveFile(file), "declined");
 
   transport.dispose();
 });

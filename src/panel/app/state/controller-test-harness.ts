@@ -103,8 +103,8 @@ export class FakeTransport implements Transport {
     await this.connectGate;
   }
 
-  async saveJson() {
-    return false;
+  async saveFile() {
+    return "unsupported" as const;
   }
 
   async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {

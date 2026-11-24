@@ -21,6 +21,7 @@ import { composeView } from "../../src/panel/app/state/panel-view-test-harness";
 import type {
   HostState,
   Project,
+  SaveResult,
   SettingsDocument,
   Task,
   Transport,
@@ -205,8 +206,8 @@ export class FakeTransport implements Transport {
     events.host(this.host);
   }
 
-  async saveJson() {
-    return false;
+  async saveFile(): Promise<SaveResult> {
+    return "unsupported";
   }
 
   async expand() {

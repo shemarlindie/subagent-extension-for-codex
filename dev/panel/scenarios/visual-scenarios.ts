@@ -1,5 +1,6 @@
 // A task whose worker shows visuals: a chart it replaces with a fixed
-// version, and a small interactive page with a link.
+// version, and a small interactive page with a link in a wrapper with a max
+// width, as the show_visual description asks.
 import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
 import type { Task } from "../../../src/shared/tasks/model";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
@@ -36,12 +37,14 @@ const page = `<style>
   .label, p { color: var(--muted); font-size: 12px; }
   a { color: var(--accent); }
 </style>
+<main style="max-width: 480px">
 <div class="cards">
   <button class="card" aria-pressed="false"><div class="value">1,014</div><div class="label">Signups this half</div></button>
   <button class="card" aria-pressed="false"><div class="value">+100%</div><div class="label">June over January</div></button>
   <button class="card" aria-pressed="false"><div class="value">March</div><div class="label">Lowest month</div></button>
 </div>
 <p id="note">Select a card to pin it. Source: <a href="https://example.com/signups">signup dashboard</a>.</p>
+</main>
 <script>
   for (const card of document.querySelectorAll(".card")) {
     card.addEventListener("click", () => {

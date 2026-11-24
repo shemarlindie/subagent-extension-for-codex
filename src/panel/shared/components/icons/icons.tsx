@@ -69,6 +69,7 @@ const ICON_NAMES = [
   "bug",
   "copy",
   "external-link",
+  "download",
   "enter",
   "reply",
   "paper-plane",

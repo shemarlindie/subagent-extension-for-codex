@@ -369,9 +369,10 @@ collapsed row. After you message the worker mid-turn, the card reads **Plan from
 before your last message** until the worker updates it.
 
 [Visuals](mcp-reference.md#worker-visuals) a worker shows, such as charts and
-diagrams, span Chat in the panel's theme. Each runs in a sandboxed frame without
-network access. A link you click in a visual shows below it, and opens outside
-the panel from there. A new version of a visual replaces it where it is.
+diagrams, show in Chat in the panel's theme. Each runs in a sandboxed frame
+without network access. A link you click in a visual shows below it, and opens
+outside the panel from there. The menu in a visual's corner copies its code or
+downloads it in the current theme, as an HTML page or, for one sized SVG, a PNG.
 
 | Composer action                   | Behavior                                               |
 | --------------------------------- | ------------------------------------------------------ |
