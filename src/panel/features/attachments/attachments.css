@@ -157,11 +157,30 @@
   gap: 4px;
   margin-inline-start: 24px;
 }
-.composer-files .attachment-chip {
-  max-width: 100%;
+.composer-file-chip {
+  padding: 0;
+  gap: 0;
 }
-.composer-files .attachment-chip span {
+.composer-file-chip button {
+  height: 100%;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.composer-file-preview {
+  padding: 0 6px 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.composer-file-remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+}
+.composer-file-chip button:hover {
+  background: var(--hover);
 }

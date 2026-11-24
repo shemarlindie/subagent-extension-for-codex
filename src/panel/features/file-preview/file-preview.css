@@ -423,13 +423,22 @@
  * diffs. They take the full available height so switching views or files never
  * resizes them. Only the active view renders, and longer content scrolls inside.
  */
-#dialog.dialog:is([data-kind="file"], [data-kind="attachment"]) {
+#dialog.dialog:is(
+    [data-kind="file"],
+    [data-kind="attachment"],
+    [data-kind="draft-attachment"]
+  ) {
   display: flex;
   flex-direction: column;
   width: min(960px, calc(100vw - 32px));
   height: calc(100dvh - 40px);
 }
-.dialog:is([data-kind="file"], [data-kind="attachment"]) > .dialog-heading {
+.dialog:is(
+    [data-kind="file"],
+    [data-kind="attachment"],
+    [data-kind="draft-attachment"]
+  )
+  > .dialog-heading {
   flex: none;
 }
 .file-preview-toolbar {

@@ -9,7 +9,12 @@ import { useController } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
-import { fileLimit, loadFile, type ComposerFile } from "./composer-file";
+import {
+  draftPreview,
+  fileLimit,
+  loadFile,
+  type ComposerFile,
+} from "./composer-file";
 
 let nextId = 0;
 const empty: ComposerFile[] = [];
@@ -20,7 +25,8 @@ export function useComposerFiles(
   id: string,
   disabled: boolean,
 ) {
-  const { session } = useController();
+  const controller = useController();
+  const { session } = controller;
 
   const [files, update] = useSessionState(
     scope,
@@ -33,12 +39,12 @@ export function useComposerFiles(
 
   async function read(file: File, entry: ComposerFile) {
     try {
-      const upload = await loadFile(file, entry.name);
+      const loaded = await loadFile(file, entry.name);
 
       if (current().includes(entry)) {
         update({
           files: current().map((item) =>
-            item === entry ? { ...entry, upload } : item,
+            item === entry ? { ...entry, ...loaded } : item,
           ),
         });
       }
@@ -132,19 +138,37 @@ export function useComposerFiles(
     chips: (files.length > 0 || Boolean(errors?.length)) && (
       <div className="composer-files">
         {files.map((item) => (
-          <button
-            type="button"
-            className="attachment-chip"
-            key={item.id}
-            title={item.name}
-            aria-label={`Remove ${item.name}`}
-            disabled={disabled}
-            onClick={() =>
-              update({ files: current().filter((file) => file.id !== item.id) })
-            }
-          >
-            <span>{item.name}</span> ×
-          </button>
+          <span className="attachment-chip composer-file-chip" key={item.id}>
+            <button
+              type="button"
+              className="composer-file-preview"
+              title={item.name}
+              aria-label={`Preview ${item.name}`}
+              disabled={disabled || !item.upload}
+              onClick={() =>
+                item.upload &&
+                controller.open({
+                  kind: "draft-attachment",
+                  file: draftPreview(item.upload, item.mime),
+                })
+              }
+            >
+              {item.name}
+            </button>
+            <button
+              type="button"
+              className="composer-file-remove"
+              aria-label={`Remove ${item.name}`}
+              disabled={disabled}
+              onClick={() =>
+                update({
+                  files: current().filter((file) => file.id !== item.id),
+                })
+              }
+            >
+              <Icon name="close" size={9} />
+            </button>
+          </span>
         ))}
         {errors?.length ? (
           <div role="alert" className="form-error">

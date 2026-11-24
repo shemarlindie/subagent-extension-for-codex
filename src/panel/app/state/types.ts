@@ -8,6 +8,7 @@ import type {
   ChangeCountsState,
   ChangesState,
 } from "../../features/changes/types.js";
+import type { PreviewFile } from "../../features/file-preview/file-format";
 import type { Project } from "../../features/projects/types.js";
 import type { Worker } from "../../features/providers/types.js";
 import type {
@@ -149,8 +150,14 @@ type FileDialog = {
   scope: number;
 };
 
+type DraftAttachmentDialog = {
+  kind: "draft-attachment";
+  file: PreviewFile;
+  scope: number;
+};
+
 /** One of a message's attachments, from its chip. A reload doesn't restore it. */
-export type AttachmentDialog = {
+type AttachmentDialog = {
   kind: "attachment";
   task: Task;
   attachment: MessageAttachment;
@@ -181,6 +188,7 @@ export type DialogState =
   | DeleteDialog
   | FileDialog
   | AttachmentDialog
+  | DraftAttachmentDialog
   | WorktreeDialog;
 
 /** The settings page's dialog, loaded or still loading. */
@@ -195,6 +203,7 @@ export type OpenDialogRequest = Unscoped<
   | DeleteDialog
   | FileDialog
   | AttachmentDialog
+  | DraftAttachmentDialog
   | WorktreeDialog
   | PendingUpdatesDialog
 >;

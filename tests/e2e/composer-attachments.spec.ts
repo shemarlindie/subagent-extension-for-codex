@@ -18,12 +18,19 @@ test("choose and drop request files, then paste and preview a follow-up image", 
     buffer: Buffer.from("Selected from disk"),
   });
 
+  await page.getByRole("button", { name: "Preview notes.txt" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Selected from disk");
+  await page.keyboard.press("Escape");
+
   await request.evaluate((field) => {
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(new File(["Dropped from disk"], "details.txt"));
+    dataTransfer.items.add(new File(["Exclude from request"], "extra.txt"));
     field.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer }));
   });
 
+  await page.getByRole("button", { name: "Remove extra.txt" }).click();
   await page.getByRole("button", { name: "Start task", exact: true }).click();
   const history = page.getByRole("region", { name: "Chat history" });
   await expect(history).toContainText("Fixture session turn: 1.");
@@ -60,6 +67,13 @@ test("choose and drop request files, then paste and preview a follow-up image", 
     );
   });
 
+  await page.getByRole("button", { name: "Preview screenshot.png" }).click();
+
+  await expect(
+    dialog.getByRole("img", { name: "screenshot.png" }),
+  ).toHaveJSProperty("naturalWidth", 12);
+
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await history.getByRole("button", { name: /^screenshot\.png/ }).click();
 

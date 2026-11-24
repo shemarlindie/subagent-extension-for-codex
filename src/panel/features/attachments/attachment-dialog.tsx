@@ -203,3 +203,8 @@ export const attachmentDialog = defineDialog<"attachment">({
     </div>
   ),
 });
+
+export const draftAttachmentDialog = defineDialog<"draft-attachment">({
+  title: ({ file }) => file.path,
+  render: ({ file }) => <FilePreview file={file} />,
+});
