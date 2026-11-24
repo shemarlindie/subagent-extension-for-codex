@@ -132,6 +132,34 @@ const THEME_TOKENS: [name: string, panel: string][] = [
   ["--font-mono", "--font-mono"],
 ];
 
+/** Claude Code's token names, which workers also use, mapped onto ours. */
+const TOKEN_ALIASES = [
+  "--text-primary: var(--text);",
+  "--text-secondary: var(--muted);",
+  "--text-muted: var(--muted);",
+  "--surface-0: var(--surface);",
+  "--surface-1: var(--background);",
+  "--surface-2: var(--background);",
+  "--bg-neutral: var(--fill);",
+  "--border-strong: color-mix(in srgb, var(--text) 25%, transparent);",
+  ...["accent", "success", "warning", "danger"].map(
+    (role) =>
+      `--text-${role}: var(--${role}); --border-${role}: var(--${role}); --bg-${role}: color-mix(in srgb, var(--${role}) 15%, transparent);`,
+  ),
+].join(" ");
+
+/** Light and dark pairs of categorical colors, for marks rather than text. */
+const SERIES_COLORS: [light: string, dark: string][] = [
+  ["#2a78d6", "#3987e5"],
+  ["#eb6834", "#d95926"],
+  ["#1baf7a", "#199e70"],
+  ["#eda100", "#c98500"],
+  ["#e87ba4", "#d55181"],
+  ["#008300", "#0ca30c"],
+  ["#6250d6", "#9085e9"],
+  ["#e34948", "#e66767"],
+];
+
 /**
  * The panel's theme as CSS for a visual's root, with Chat's text size in
  * `--font-size`. The frame matches the panel's color scheme, or the browser
@@ -139,12 +167,17 @@ const THEME_TOKENS: [name: string, panel: string][] = [
  */
 export function visualThemeCss(root: Element) {
   const style = getComputedStyle(root);
+  const dark = style.colorScheme === "dark";
 
   const tokens = THEME_TOKENS.map(
     ([name, panel]) => `${name}: ${style.getPropertyValue(panel).trim()};`,
   );
 
-  return `:root { ${tokens.join(" ")} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
+  const series = SERIES_COLORS.map(
+    (pair, i) => `--series-${i + 1}: ${pair[dark ? 1 : 0]};`,
+  );
+
+  return `:root { ${tokens.join(" ")} ${series.join(" ")} ${TOKEN_ALIASES} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
 /** The widest a top-level SVG without a pixel width draws. */

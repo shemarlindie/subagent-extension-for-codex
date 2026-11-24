@@ -12,8 +12,7 @@ export const workerToolNames = [
 ].map((name) => `mcp__${WORKER_SERVER}__${name}`);
 
 /**
- * Calls to these show no tool rows. update_plan and show_visual render
- * through their own events, and visual_guide only answers the worker. Kept
- * apart from the server, so the event normalizer doesn't load the SDK.
+ * Calls to these show no tool rows. Kept apart from the server, so the event
+ * normalizer doesn't load the SDK.
  */
 export const isWorkerTool = (name: string) => workerToolNames.includes(name);
