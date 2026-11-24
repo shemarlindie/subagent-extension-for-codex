@@ -299,8 +299,12 @@ test("a parent reads the worker's wrap-up on its reply and in the task list", as
     });
 
     assert.deepEqual(
-      { recap: summary?.reply?.recap, blocked: summary?.reply?.blocked },
-      { recap: wrapUp.recap, blocked: true },
+      {
+        recap: summary?.reply?.recap,
+        ask: summary?.reply?.ask,
+        blocked: summary?.reply?.blocked,
+      },
+      { recap: wrapUp.recap, ask: wrapUp.ask, blocked: true },
     );
   } finally {
     await c.close();

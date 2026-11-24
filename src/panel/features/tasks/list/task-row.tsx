@@ -208,8 +208,8 @@ function TaskRowContent({ task, keepSlot }: TaskRowContentProps) {
 }
 
 /**
- * The first sentence of the latest turn's recap, as where the task stands,
- * while it waits for the next message.
+ * The latest turn's question, or else its recap's first sentence, as where the
+ * task stands while it waits for the next message.
  */
 function TaskRowRecap({ task }: Pick<TaskRowProps, "task">) {
   const { reply } = task;
@@ -224,7 +224,7 @@ function TaskRowRecap({ task }: Pick<TaskRowProps, "task">) {
 
   return (
     <span className="row-recap">
-      {/^.*?[.!?](?=\s|$)/.exec(reply.recap)?.[0] ?? reply.recap}
+      {reply.ask ?? /^.*?[.!?](?=\s|$)/.exec(reply.recap)?.[0] ?? reply.recap}
     </span>
   );
 }

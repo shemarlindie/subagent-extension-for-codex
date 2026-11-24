@@ -69,9 +69,9 @@ A Claude worker can end a turn with a wrap-up, which Chat shows under its reply.
 an `ask` with `actions` when the next move waits on someone. Each action is a
 `{ label }`, which the panel shows as a button that sends it. `blocked` means
 the worker can't go on until someone answers. `list_tasks` summaries add
-`reply.recap`, and `reply.blocked` when set. Codex answers an `ask` on a turn it
-sent with `send_message`, and passes it to the user only when the decision is
-theirs.
+`reply.recap`, and `reply.ask` and `reply.blocked` when set. Codex answers an
+`ask` on a turn it sent with `send_message`, and passes it to the user only when
+the decision is theirs.
 
 ### Worker visuals
 

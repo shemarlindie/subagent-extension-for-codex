@@ -280,8 +280,8 @@
   transform: translateX(min(0px, 100cqw - 100%));
   transition: transform var(--row-title-slide-duration, 0.6s) ease-in-out 0.3s;
 }
-/* Where an idle task stands, from its worker's recap, on a line under the
-   title. It lines up with the title after the worker icon. */
+/* Where an idle task stands, from its worker's wrap-up, across the whole line
+   under the title. */
 .row:has(.row-recap) {
   flex-wrap: wrap;
   row-gap: 0;
@@ -289,15 +289,11 @@
 .row-recap {
   flex-basis: 100%;
   min-width: 0;
-  padding-inline-start: 18px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--muted);
   font-size: 11px;
-}
-#task-list[data-row-icons="hidden"] .row-recap {
-  padding-inline-start: 0;
 }
 /* Archive stays over the dot, on the title's line. */
 .task-row-container:has(.row-recap) .row-archive {

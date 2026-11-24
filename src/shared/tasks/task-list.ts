@@ -13,6 +13,8 @@ export type ReplyExcerpt = {
   text: string;
   /** The reply's wrap-up recap. */
   recap?: string;
+  /** The wrap-up's question. */
+  ask?: string;
   /** The worker can't go on until the user answers its wrap-up. */
   blocked?: true;
 };
@@ -73,6 +75,7 @@ export function replyFrom(event?: Event): ReplyExcerpt | undefined {
     turn: reply.turn,
     text: replyExcerpt(reply.text),
     ...(reply.wrap_up ? { recap: reply.wrap_up.recap } : {}),
+    ...(reply.wrap_up?.ask ? { ask: reply.wrap_up.ask } : {}),
     ...(reply.wrap_up?.blocked ? { blocked: true as const } : {}),
   };
 }
