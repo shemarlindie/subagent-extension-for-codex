@@ -5,12 +5,14 @@
 export const WORKER_SERVER = "delegated_work";
 
 /** The tool names Claude Code calls, for the settings allow rule. */
-export const workerToolNames = ["update_plan", "show_visual"].map(
-  (name) => `mcp__${WORKER_SERVER}__${name}`,
-);
+export const workerToolNames = [
+  "update_plan",
+  "show_visual",
+  "visual_guide",
+].map((name) => `mcp__${WORKER_SERVER}__${name}`);
 
 /**
- * Calls to these render through their own events, not as tool rows. Kept
- * apart from the server, so the event normalizer doesn't load the SDK.
+ * Calls to these show no tool rows. Kept apart from the server, so the event
+ * normalizer doesn't load the SDK.
  */
 export const isWorkerTool = (name: string) => workerToolNames.includes(name);

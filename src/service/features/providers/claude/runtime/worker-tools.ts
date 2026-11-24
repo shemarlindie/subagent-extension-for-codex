@@ -11,9 +11,14 @@ import {
   planProgress,
   planResultLine,
 } from "../../../../../shared/tasks/plan.js";
-import { MAX_VISUAL_CODE } from "../../../../../shared/tasks/visual.js";
+import {
+  MAX_VISUAL_CODE,
+  VISUAL_SERIES_COUNT,
+  visualTokens,
+} from "../../../../../shared/tasks/visual.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
+import { visualGuide, visualKinds } from "./visual-guide.js";
 import { WORKER_SERVER } from "./worker-tool-names.js";
 
 /** The system prompt paragraph about the worker tools. */
@@ -101,7 +106,7 @@ export function workerMcpServers(c: RunContext) {
       ),
       tool(
         "show_visual",
-        `Show a visual in the user's panel, such as a chart, diagram, mockup or small interactive page. Pass self-contained SVG or HTML in code, at most ${MAX_VISUAL_CODE} characters. It renders in a sandboxed frame without network access, so only inline scripts, inline styles and data URL images work. A link the user clicks shows below the visual, for them to open in their browser. Use the CSS variables --text, --muted, --background, --surface, --border and --accent so it matches the panel's light and dark themes. Give an SVG visual a width and height in pixels, at the size its text reads well. Without them, it draws at its viewBox width, up to 720 pixels. It shrinks to fit a narrow panel. Wrap an HTML visual in one element with a max-width at its ideal width. Use it whenever a visual would show something better than text. To fix or update a visual you showed, pass its number in replaces.`,
+        `Show a visual in the user's panel, such as a chart, diagram, mockup or small interactive page. Before your first visual, call visual_guide with the kinds you're drawing, and again for a new kind. Pass self-contained SVG or HTML in code, at most ${MAX_VISUAL_CODE} characters. It renders in a sandboxed frame without network access, so only inline scripts, inline styles and data URL images work. A link the user clicks shows below the visual, for them to open in their browser. Use the CSS variables ${visualTokens.join(", ")} and --series-1 to --series-${VISUAL_SERIES_COUNT} so it matches the panel's light and dark themes. Give an SVG visual a width and height in pixels equal to its viewBox, at most 720 wide, so its text draws at the size you set. It shrinks to fit a narrow panel. Wrap an HTML visual in one element with a max-width at its ideal width. Use it whenever a visual would show something better than text. To fix or update a visual you showed, pass its number in replaces.`,
         {
           title: z.string(),
           code: z.string(),
@@ -127,6 +132,19 @@ export function workerMcpServers(c: RunContext) {
               ? `Shown as visual ${visual}.`
               : `Visual ${visual} replaced.`,
           );
+        },
+        { annotations: { readOnlyHint: true } },
+      ),
+      tool(
+        "visual_guide",
+        "Get the style rules for show_visual, plus a section for each kind of visual you're drawing.",
+        { kinds: z.array(z.enum(visualKinds)) },
+        async ({ kinds }) => {
+          logEvent("debug", "provider.visual_guide_read", {
+            kinds: kinds.join(","),
+          });
+
+          return text(visualGuide(kinds));
         },
         { annotations: { readOnlyHint: true } },
       ),

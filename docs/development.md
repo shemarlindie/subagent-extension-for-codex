@@ -565,9 +565,12 @@ path as unused, declare its entry point in `knip.json`.
 
 [UI verification](ui-verification.md) covers manual browser checks, and
 [Live Claude checks](claude-verification.md#live-claude-checks) cover opt-in
-tests that make model calls. Before changing performance behavior, compare
-message latency and scheduler work with the timing records, transport
-measurements and resource samples in
+tests that make model calls. Probes that run Claude Code outside the provider
+should carry the extension's entrypoint, as worker sessions do. Pass
+`claudeEnvironment(process.env)` as the Agent SDK's `env`, or prefix a CLI run
+with `CLAUDE_CODE_ENTRYPOINT=subagent-extension-for-codex`. Before changing
+performance behavior, compare message latency and scheduler work with the timing
+records, transport measurements and resource samples in
 [Measure performance](logging.md#measure-performance).
 
 ### Choosing test coverage

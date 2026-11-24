@@ -1,3 +1,8 @@
+import {
+  VISUAL_SERIES_COUNT,
+  type VisualToken,
+} from "../../../../../shared/tasks/visual";
+
 /**
  * What a visual's frame tells the panel. `width` is a lone element's width
  * when it draws narrower than the frame, and otherwise 0.
@@ -115,30 +120,82 @@ const FRAME_SCRIPT = `(() => {
   });
 })();`;
 
-/** Panel tokens a visual can use, by the names its tool description gives. */
-const THEME_TOKENS: [name: string, panel: string][] = [
-  ["--text", "--text"],
-  ["--muted", "--muted"],
-  ["--background", "--bg"],
-  ["--surface", "--surface"],
-  ["--border", "--line"],
-  ["--accent", "--accent"],
-  ["--font-sans", "--font-sans"],
-  ["--font-mono", "--font-mono"],
-];
+/**
+ * The panel token behind each visual token, plus `--font-sans` for the base
+ * style. `--success` has its own colors.
+ */
+const THEME_TOKENS = {
+  "--text": "--text",
+  "--muted": "--muted",
+  "--background": "--bg",
+  "--surface": "--surface",
+  "--border": "--line",
+  "--accent": "--accent",
+  "--warning": "--warn",
+  "--danger": "--danger",
+  "--fill": "--hover",
+  "--radius": "--radius",
+  "--font-sans": "--font-sans",
+  "--font-mono": "--font-mono",
+} satisfies Record<Exclude<VisualToken, "--success"> | "--font-sans", string>;
+
+/** Claude Code's token names, which workers also use, mapped onto ours. */
+const TOKEN_ALIASES = [
+  "--text-primary: var(--text);",
+  "--text-secondary: var(--muted);",
+  "--text-muted: var(--muted);",
+  "--surface-0: var(--surface);",
+  "--surface-1: var(--background);",
+  "--surface-2: var(--background);",
+  "--bg-neutral: var(--fill);",
+  "--border-strong: color-mix(in srgb, var(--text) 25%, transparent);",
+  ...["accent", "success", "warning", "danger"].map((role) => {
+    // The soft success green is too light for small text, so its text color
+    // mixes in the text color.
+    const text =
+      role === "success"
+        ? "color-mix(in srgb, var(--success) 70%, var(--text))"
+        : `var(--${role})`;
+
+    return `--text-${role}: ${text}; --border-${role}: var(--${role}); --bg-${role}: color-mix(in srgb, var(--${role}) 15%, transparent);`;
+  }),
+].join(" ");
+
+/** Light and dark pairs of categorical colors, for marks rather than text. */
+const SERIES_COLORS = [
+  ["#2a78d6", "#3987e5"],
+  ["#eb6834", "#d95926"],
+  ["#1baf7a", "#199e70"],
+  ["#eda100", "#c98500"],
+  ["#e87ba4", "#d55181"],
+  ["#008300", "#0ca30c"],
+  ["#6250d6", "#9085e9"],
+  ["#e34948", "#e66767"],
+] as const satisfies readonly (readonly [light: string, dark: string])[] & {
+  length: typeof VISUAL_SERIES_COUNT;
+};
+
+/** A softer green than the host's success color, which is harsh in visuals. */
+const SUCCESS_COLOR: [light: string, dark: string] = ["#30a46c", "#3dd68c"];
 
 /**
- * The panel's theme as CSS for a visual's root. The frame matches the panel's
- * color scheme, or the browser paints it an opaque default background.
+ * The panel's theme as CSS for a visual's root, with Chat's text size in
+ * `--font-size`. The frame matches the panel's color scheme, or the browser
+ * paints it an opaque default background.
  */
 export function visualThemeCss(root: Element) {
   const style = getComputedStyle(root);
+  const dark = style.colorScheme === "dark";
 
-  const tokens = THEME_TOKENS.map(
+  const tokens = Object.entries(THEME_TOKENS).map(
     ([name, panel]) => `${name}: ${style.getPropertyValue(panel).trim()};`,
   );
 
-  return `:root { ${tokens.join(" ")} color-scheme: ${style.colorScheme || "normal"}; }`;
+  const series = SERIES_COLORS.map(
+    (pair, i) => `--series-${i + 1}: ${pair[dark ? 1 : 0]};`,
+  );
+
+  return `:root { ${tokens.join(" ")} --success: ${SUCCESS_COLOR[dark ? 1 : 0]}; ${series.join(" ")} ${TOKEN_ALIASES} --font-size: ${style.fontSize}; color-scheme: ${style.colorScheme || "normal"}; }`;
 }
 
 /** The widest a top-level SVG without a pixel width draws. */
@@ -154,7 +211,7 @@ const UNSIZED_SVG = (at: string) =>
  * one without stops at the cap.
  */
 const BASE_STYLE = [
-  ":root { color: var(--text); font-family: var(--font-sans); }",
+  ":root { color: var(--text); font-family: var(--font-sans); font-size: var(--font-size); line-height: 1.5; }",
   "body { margin: 0; position: relative; }",
   "body > svg { display: block; margin-inline: auto; max-width: 100%; }",
   "body > svg[width][height] { height: auto; }",
