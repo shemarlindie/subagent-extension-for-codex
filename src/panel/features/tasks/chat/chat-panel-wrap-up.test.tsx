@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
 import type { WrapUp } from "../../../../shared/tasks/wrap-up-contract";
 import { getElement } from "../../../shared/utils/dom-test-harness";
-import { sent, setup } from "./chat-panel-test-harness";
+import { base, sent, setup } from "./chat-panel-test-harness";
 
 const reply = (turn: number, wrapUp: WrapUp): ChatItem => ({
   kind: "message",
@@ -61,4 +61,25 @@ test("the latest turn's wrap-up answers with its buttons until the next message,
   updateTask({ status: "running", turn: 3 });
   expect(buttons(view.container, "reply_2")).toEqual([]);
   expect(view.getByText("Fixed it.")).toBeTruthy();
+});
+
+test("a spent budget holds the buttons until it's raised", () => {
+  const { view } = setup(
+    {
+      turn: 1,
+      budget: { ...base.budget, max_cost_usd: 1 },
+      cost_usd: 1.2,
+    },
+    [],
+    [
+      reply(1, {
+        recap: "Found it.",
+        ask: "Fix it?",
+        actions: [{ label: "Yes" }],
+      }),
+    ],
+  );
+
+  expect(view.getByText("Fix it?")).toBeTruthy();
+  expect(buttons(view.container, "reply_1")).toEqual([]);
 });

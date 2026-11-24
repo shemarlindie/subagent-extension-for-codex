@@ -96,7 +96,14 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   const { c, store, repo } = await setup(recorder);
   const t = await c.start("alice", input(repo, "Review the parser"));
   await until(() => store.get(t.id, "alice").status === "completed");
-  await c.send("alice", t.id, "Check the lexer too", "parent");
+
+  await c.send(
+    "alice",
+    t.id,
+    "Check the lexer too [fixture:wrap-up ask=true]",
+    "parent",
+  );
+
   await until(() => store.get(t.id, "alice").turn === 2);
   await until(() => store.get(t.id, "alice").status === "completed");
 
@@ -104,7 +111,7 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   const moved = store.get(t.id, "alice");
   moved.session_owner = "another-worker";
   store.save(moved);
-  await c.send("alice", t.id, "Summarise both", "user");
+  await c.send("alice", t.id, "Yes, apply it", "user");
   await until(() => store.get(t.id, "alice").turn === 3);
   await until(() => store.get(t.id, "alice").status === "completed");
 
@@ -123,10 +130,12 @@ test("a follow-up without a resumable session starts a new one carrying the conv
   assert.match(prompt, /continues in a new session/);
   assert.match(prompt, /Parent agent:\nCheck the lexer too/);
   assert.match(prompt, /Your reply:\nFixture task completed/);
-  assert.ok(prompt.endsWith("Summarise both"));
+  // A button answer keeps the question it answers.
+  assert.match(prompt, /Your question under it:\nApply the fixture fix\?/);
+  assert.ok(prompt.endsWith("Yes, apply it"));
 
   assert.ok(
-    prompt.indexOf("Check the lexer too") < prompt.indexOf("Summarise both"),
+    prompt.indexOf("Check the lexer too") < prompt.indexOf("Yes, apply it"),
   );
 
   assert.equal(store.get(t.id, "alice").session_owner, c.ownerWorker);

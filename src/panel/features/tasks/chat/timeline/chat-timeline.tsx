@@ -100,9 +100,10 @@ export function ChatTimeline({
 
   const spent = task ? spentBudget(task) : undefined;
 
-  // The latest turn's wrap-up takes answers until the next message is sent.
+  // The latest turn's wrap-up takes answers until the next message is sent,
+  // and not while a spent budget needs raising first.
   const answerableTurn =
-    task && composerMode(task) === "idle" && !task.queue.length
+    task && composerMode(task) === "idle" && !task.queue.length && !spent
       ? task.turn
       : undefined;
 
