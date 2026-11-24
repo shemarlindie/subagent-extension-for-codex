@@ -43,7 +43,7 @@ const page = `<style>
 <main style="max-width: 480px">
 <div class="cards">
   <button class="card" aria-pressed="false"><div class="value">1,014</div><div class="label">Signups this half</div></button>
-  <button class="card" aria-pressed="false"><div class="value"><span class="up" aria-hidden="true">▲</span> 100%</div><div class="label">June over January</div></button>
+  <button class="card" aria-pressed="false"><div class="value"><span class="up" role="img" aria-label="Up">▲</span> 100%</div><div class="label">June over January</div></button>
   <button class="card" aria-pressed="false"><div class="value">March</div><div class="label">Lowest month</div><span class="tag">90 signups</span></button>
 </div>
 <p id="note">Select a card to pin it. Source: <a href="https://example.com/signups">signup dashboard</a>.</p>
