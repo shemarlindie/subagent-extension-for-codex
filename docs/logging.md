@@ -58,9 +58,7 @@ Other fields add task, turn, provider or tool context when available.
   that ends without the line was killed outright. A failed tool call writes
   `Proxy tool failed:` with the tool, the HTTP status or error type, and the
   duration. `Proxy transport error:` reports a message the proxy couldn't read.
-  A message over 70 MB closes the proxy's stdio transport, and later calls wait
-  until Codex times them out. Codex desktop keeps this stderr in
-  `~/.codex/logs_2.sqlite`.
+  Codex desktop keeps this stderr in `~/.codex/logs_2.sqlite`.
 - Match a failed HTTP response's `X-Request-Id` to `request_id` in the logs. The
   service generates this ID and carries it through asynchronous tool handling.
   `http.request` records the method, a fixed route label, status, `duration_ms`

@@ -359,9 +359,8 @@ panel's file viewer in
 [hosts that can't open files](host-capabilities.md#opening-files).
 
 In **New task**, **Advanced task** or a follow-up, choose **Attach files**, drop
-files onto the message, or paste a copied file or screenshot. Copied text pastes
-as text even when the clipboard also holds an image. You can attach UTF-8 text,
-PNG, JPEG, GIF and WebP images, and PDF, Word, Excel, PowerPoint and
+files onto the message, or paste a copied file or screenshot. You can attach
+UTF-8 text, PNG, JPEG, GIF and WebP images, and PDF, Word, Excel, PowerPoint and
 OpenDocument files, up to 20 per message and 50 MiB in total. In a composer,
 select a chip to open its file before sending. The panel's own viewer previews
 text and images only. Workers open documents with their own tools.

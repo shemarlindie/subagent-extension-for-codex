@@ -80,16 +80,9 @@ refusal.
 ## Opening files
 
 When the host advertises `capabilities.experimental["openai/files"]`, attachment
-chips open their file in the host's viewer through `openai/files/open` from
-`@openai/mcp-extensions`, which takes an absolute path. A sent attachment opens
-its stored snapshot. A draft file opens a copy the service stages under the
-attachments folder, which the send then reuses. Other hosts open the panel's
-preview.
-
-Observed in the Codex desktop app 26.1120: each open adds a tab to Codex's side
-panel, and PDFs, images and text render there. Any absolute path opens. A
-missing path opens an empty tab. Untested: Office files, and whether the side
-panel lets the user edit the opened file.
+chips open their file in the host's viewer through `openai/files/open`. Other
+hosts use the panel's preview. Verified in the Codex desktop app 26.1120 with
+PDFs, images and text.
 
 ## Project context and registration
 
