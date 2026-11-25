@@ -312,6 +312,14 @@ once the stored file's content changes. Missing or unreadable snapshots return
 `state: "unavailable"`. See [Transport](panel-guide.md#transport) for panel
 refresh behavior.
 
+For [hosts that open files](host-capabilities.md#opening-files),
+`app_get_attachment_path` returns the absolute path of the same attachment's
+stored file, and fails when the file is missing. `app_stage_file` takes a draft
+file's `name` and base64 `data`, writes a copy and returns `{ id, path }`. A
+panel send can then pass `{ source: "upload", name, summary, staged: id }` in
+place of `data`. The copy lasts a day after it was last staged, and a send fails
+if it expired or changed.
+
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See
 [Panel network access](host-capabilities.md#panel-network-access).

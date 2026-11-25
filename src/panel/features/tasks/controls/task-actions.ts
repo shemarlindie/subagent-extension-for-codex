@@ -36,10 +36,14 @@ interface TaskActionContext {
   undo: UndoRecorder;
 }
 
+/**
+ * A send's retry identity. A retry resends the same attachments, even when
+ * opening a file staged it since.
+ */
 type PendingMessageRequest = {
   request_id: string;
   delivery: Delivery;
-};
+} & ReturnType<typeof uploadArguments>;
 
 const UNCONFIRMED_SEND =
   "Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.";
@@ -163,6 +167,7 @@ export class TaskActions {
         (part) => part.toString(16).padStart(8, "0"),
       ).join(""),
       delivery,
+      ...uploadArguments(files),
     };
 
     this.sendRequests.set(key, request);
@@ -182,7 +187,6 @@ export class TaskActions {
         task_id: task.id,
         message,
         ...request,
-        ...uploadArguments(files),
       },
       {
         background: true,

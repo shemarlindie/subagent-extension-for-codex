@@ -317,6 +317,53 @@ test("a timed out send reuses its ID until a same-named file replaces the attach
   expect(view.queryByRole("button", { name: "Remove notes.txt" })).toBeNull();
 });
 
+test("a draft file opens in the host through a staged copy that the send reuses", async () => {
+  const { controller, view, type, enter, tool } = setup();
+  const openFile = vi.fn(async (_path: string) => {});
+  Object.assign(controller.transport, { openFile });
+
+  (controller as unknown as { patch(patch: object): void }).patch({
+    host: { ...controller.getSnapshot().host, canOpenFiles: true },
+  });
+
+  const upload = {
+    source: "upload" as const,
+    name: "Spec.pdf",
+    summary: "User attached Spec.pdf.",
+    data: btoa("%PDF-1.4"),
+  };
+
+  act(() =>
+    controller.session.update("task", "task-1", {
+      files: [
+        { id: 1, name: "Spec.pdf", size: 8, mime: "application/pdf", upload },
+      ],
+    }),
+  );
+
+  const staged = { id: "a".repeat(64), path: "/data/staged/a/Spec.pdf" };
+  tool.mockResolvedValueOnce(staged);
+
+  await act(async () => {
+    fireEvent.click(view.getByRole("button", { name: "Open Spec.pdf" }));
+    await flush();
+  });
+
+  expect(tool).toHaveBeenLastCalledWith("app_stage_file", {
+    name: "Spec.pdf",
+    data: upload.data,
+  });
+
+  expect(openFile).toHaveBeenCalledWith(staged.path);
+  type("Review the spec");
+  enter();
+  const { data: _, ...reference } = upload;
+
+  expect(tool.mock.lastCall?.[1]?.attachments).toEqual([
+    { ...reference, staged: staged.id },
+  ]);
+});
+
 test("a late acknowledgement clears the timed out draft and error, so the same text sends anew", async () => {
   vi.useFakeTimers();
 

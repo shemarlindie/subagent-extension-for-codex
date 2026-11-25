@@ -77,6 +77,20 @@ the user to confirm each download in its own dialog and saves to `~/Downloads`.
 A cancelled dialog returns an error, which the panel can't tell apart from a
 refusal.
 
+## Opening files
+
+When the host advertises `capabilities.experimental["openai/files"]`, attachment
+chips open their file in the host's viewer through `openai/files/open` from
+`@openai/mcp-extensions`, which takes an absolute path. A sent attachment opens
+its stored snapshot. A draft file opens a copy the service stages under the
+attachments folder, which the send then reuses. Other hosts open the panel's
+preview.
+
+Observed in the Codex desktop app 26.1120: each open adds a tab to Codex's side
+panel, and PDFs, images and text render there. Any absolute path opens. A
+missing path opens an empty tab. Untested: Office files, and whether the side
+panel lets the user edit the opened file.
+
 ## Project context and registration
 
 Portable MCP Apps host context has presentation fields but no standard

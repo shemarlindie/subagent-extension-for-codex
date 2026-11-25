@@ -3,6 +3,7 @@ import {
   applyDocumentTheme,
   applyHostStyleVariables,
 } from "@modelcontextprotocol/ext-apps";
+import { OpenAIExtensions } from "@openai/mcp-extensions/app";
 
 import { version } from "../../../package.json";
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
@@ -45,13 +46,17 @@ export class HostTransport implements Transport {
   readonly embedded = true;
   private disposed = false;
   private events?: TransportEvents;
+  private extensions: OpenAIExtensions;
   constructor(
     private app: App = new App(
       { name: "Delegated Work", version },
       {},
       { autoResize: true },
     ),
-  ) {}
+  ) {
+    // Codex's extensions, which must wrap the app before it connects.
+    this.extensions = new OpenAIExtensions(app);
+  }
 
   async connect(events: TransportEvents) {
     this.events = events;
@@ -108,6 +113,7 @@ export class HostTransport implements Transport {
       ),
       canSend: Boolean(capabilities?.message?.text),
       canShare: Boolean(capabilities?.updateModelContext?.structuredContent),
+      canOpenFiles: Boolean(this.extensions.files),
     });
   }
 
@@ -180,6 +186,13 @@ export class HostTransport implements Transport {
     if (this.disposed) throw new Error("The console has closed.");
     const result = await this.app.openLink({ url });
     if (result.isError) throw new Error("The host declined to open the link.");
+  }
+
+  async openFile(path: string) {
+    if (this.disposed) throw new Error("The console has closed.");
+    const files = this.extensions.files;
+    if (!files) throw new Error("This host can't open files.");
+    await files.open(path);
   }
 
   async saveFile(file: File): Promise<SaveResult> {

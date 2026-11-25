@@ -1,5 +1,6 @@
 import { useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 
+import type { StagedFile } from "../../../shared/attachments/model";
 import { useController } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import {
@@ -64,14 +65,35 @@ export function useDraftFiles(
     }
   }
 
-  /** Previews a file in the panel. */
-  function open({ upload, mime }: DraftFile) {
+  /**
+   * Opens a file in the host's viewer through a staged copy, which the send
+   * then reuses. Other hosts get the panel's preview.
+   */
+  async function open({ id: fileId, upload, mime }: DraftFile) {
     if (!upload) return;
+    const { transport } = controller;
 
-    controller.open({
-      kind: "draft-attachment",
-      file: draftPreview(upload, mime),
+    if (!controller.getSnapshot().host.canOpenFiles || !transport.openFile) {
+      controller.open({
+        kind: "draft-attachment",
+        file: draftPreview(upload, mime),
+      });
+
+      return;
+    }
+
+    const staged = await controller.tool<StagedFile>("app_stage_file", {
+      name: upload.name,
+      data: upload.data,
     });
+
+    update({
+      files: current().map((item) =>
+        item.id === fileId ? { ...item, staged: staged.id } : item,
+      ),
+    });
+
+    await transport.openFile(staged.path);
   }
 
   function add(selected: File[]) {
@@ -101,7 +123,7 @@ export function useDraftFiles(
     errors,
     pending: files.some((item) => !item.upload),
     add,
-    open,
+    open: (file: DraftFile) => controller.run(() => open(file)),
     remove: (fileId: number) =>
       update({
         files: current().filter((file) => file.id !== fileId),

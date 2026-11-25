@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -84,6 +85,67 @@ test("only panel tools can supply local file bytes for worker snapshots", async 
     await readFile(join(folder, image.file)),
     Buffer.from(png, "base64"),
   );
+});
+
+test("a send reuses a staged file, and the host opens stored files by path", async () => {
+  const { c, repo, store } = await setup();
+  const { id } = await c.start("alice", input(repo));
+  await until(() => store.get(id, "alice").status === "completed");
+  const pdf = Buffer.from("%PDF-1.4\n%%EOF\n");
+
+  const staged = (await callTool(
+    c,
+    "alice",
+    "app_stage_file",
+    { name: "Spec.pdf", data: pdf.toString("base64") },
+    "user",
+  )) as { id: string; path: string };
+
+  assert.match(staged.path, /\/Spec\.pdf$/);
+  assert.deepEqual(await readFile(staged.path), pdf);
+
+  const send = () =>
+    callTool(
+      c,
+      "alice",
+      "app_send_message",
+      {
+        task_id: id,
+        message: "Review the spec",
+        attachments: [
+          {
+            source: "upload",
+            name: "Spec.pdf",
+            summary: "User attached Spec.pdf.",
+            staged: staged.id,
+          },
+        ],
+      },
+      "user",
+    ) as Promise<{ message_id: string }>;
+
+  const { message_id } = await send();
+  const [document] = c.attachments.list(id, message_id);
+  assert.ok(document);
+  const stored = join(c.attachments.folder(id), document.file);
+  assert.deepEqual(await readFile(stored), pdf);
+
+  const located = { task_id: id, message_id, position: 1 };
+
+  assert.deepEqual(
+    await callTool(c, "alice", "app_get_attachment_path", located, "user"),
+    { path: stored },
+  );
+
+  await assert.rejects(
+    callTool(c, "bob", "app_get_attachment_path", located, "user"),
+  );
+
+  // An edited or expired copy can't stand in for what the user attached.
+  await writeFile(staged.path, "edited");
+  await assert.rejects(send(), /expired or changed/);
+  await c.attachments.staged.sweep(Date.now() + 2 * 24 * 60 * 60 * 1000);
+  assert.equal(existsSync(staged.path), false);
 });
 
 test("a rejected upload batch leaves no follow-up or partial snapshot", async () => {

@@ -197,6 +197,7 @@ export class FakeTransport implements Transport {
     canSend: false,
     canShare: false,
     canExpand: true,
+    canOpenFiles: false,
     displayMode: "fullscreen",
   };
 

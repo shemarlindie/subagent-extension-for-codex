@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { readdir, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 
@@ -11,6 +11,7 @@ import {
   ATTACHMENT_LIMITS,
   type AttachmentFormat,
   type AttachmentInput,
+  type StagedUploadInput,
   type TaskAttachment,
   type UploadInput,
 } from "../../../shared/attachments/model.js";
@@ -25,6 +26,7 @@ import { attachmentPage } from "./attachment-page.js";
 import { uncommittedDiff } from "./diff.js";
 import { decodeText, lineCount, readProjectFile } from "./project-file.js";
 import { taskAttachments } from "./schema.js";
+import { decodeUpload, StagedFiles } from "./staged-files.js";
 
 const rowSchema = createSelectSchema(taskAttachments, {
   paths: z.array(z.string()).nullable(),
@@ -94,19 +96,10 @@ type Resolved = Omit<
   content: string | Buffer;
 };
 
-function resolveUpload(input: UploadInput): Resolved {
-  const bytes = Buffer.from(input.data, "base64");
-
-  if (
-    !bytes.length ||
-    bytes.length > ATTACHMENT_LIMITS.messageBytes ||
-    bytes.toString("base64") !== input.data
-  ) {
-    throw new AttachmentError(
-      `Invalid base64 or file exceeds ${ATTACHMENT_LIMITS.messageBytes / 1024 / 1024} MB.`,
-    );
-  }
-
+function resolveUpload(
+  input: UploadInput | StagedUploadInput,
+  bytes: Buffer,
+): Resolved {
   const mime = uploadMime(bytes, input.name);
   let format: AttachmentFormat = fileFormat(input.name);
   if (mime) format = mime.startsWith("image/") ? "image" : "document";
@@ -122,13 +115,11 @@ function resolveUpload(input: UploadInput): Resolved {
   };
 }
 
-/** An attachment's content and metadata, read from the project for references. */
+/** A reference's content and metadata, read from the project, or inline text. */
 async function resolveAttachment(
   project: string,
-  input: AttachmentInput,
+  input: Exclude<AttachmentInput, { source: "upload" }>,
 ): Promise<Resolved> {
-  if (input.source === "upload") return resolveUpload(input);
-
   if (input.source === "inline") {
     return {
       title: input.title ?? (input.path ? basename(input.path) : "Note"),
@@ -197,10 +188,12 @@ const TASK_FOLDER =
 /**
  * Task attachments: content snapshotted into one file each under
  * `<root>/<task id>/`, with metadata in `task_attachments`. Each message's
- * attachments are snapshotted when accepted and deleted with the task.
+ * attachments are snapshotted when accepted and deleted with the task. Draft
+ * files the user opens before sending are staged under `<root>/staged/`.
  */
 export class Attachments {
   private realRoot?: string;
+  readonly staged = new StagedFiles(() => join(this.base(), "staged"));
 
   constructor(
     private store: Store,
@@ -261,7 +254,10 @@ export class Attachments {
     try {
       for (const [index, input] of inputs.entries()) {
         try {
-          const resolved = await resolveAttachment(project, input);
+          const resolved =
+            input.source === "upload"
+              ? resolveUpload(input, await this.uploadBytes(input))
+              : await resolveAttachment(project, input);
 
           const { content, ...attachment } = resolved;
           bytes += Buffer.byteLength(content);
@@ -310,6 +306,13 @@ export class Attachments {
     }
 
     return rows;
+  }
+
+  /** An upload's bytes, from its content or its staged copy. */
+  private async uploadBytes(input: UploadInput | StagedUploadInput) {
+    return "data" in input
+      ? decodeUpload(input.data)
+      : await this.staged.read(input);
   }
 
   /** Removes a failed send's snapshots unless the send saved them first. */
@@ -371,6 +374,31 @@ export class Attachments {
       });
   }
 
+  /** An attachment, by its message and its place there. */
+  private find(taskId: string, messageId: string, position: number) {
+    const stored = this.list(taskId, messageId).find(
+      (a) => a.position === position,
+    );
+
+    if (!stored) throw new AttachmentError("Attachment not found");
+
+    return stored;
+  }
+
+  /** An attachment's stored file, for the host to open. */
+  filePath(taskId: string, messageId: string, position: number) {
+    const path = join(
+      this.folder(taskId),
+      this.find(taskId, messageId, position).file,
+    );
+
+    if (!existsSync(path)) {
+      throw new AttachmentError("The attachment's stored file is missing.");
+    }
+
+    return path;
+  }
+
   /** A page of an attachment, by its message and its place there. */
   async page(
     taskId: string,
@@ -378,12 +406,7 @@ export class Attachments {
     position: number,
     cursor?: string,
   ) {
-    const stored = this.list(taskId, messageId).find(
-      (a) => a.position === position,
-    );
-
-    if (!stored) throw new AttachmentError("Attachment not found");
-    const { file, ...attachment } = stored;
+    const { file, ...attachment } = this.find(taskId, messageId, position);
 
     const page = await attachmentPage(
       join(this.folder(taskId), file),
@@ -421,9 +444,11 @@ export class Attachments {
 
   /**
    * Removes task folders whose task is gone, left by a crash or a failed
-   * removal. Leaves anything else in the root alone.
+   * removal, and expired staged copies. Leaves anything else in the root
+   * alone.
    */
   async sweep(taskExists: (id: string) => boolean) {
+    await this.staged.sweep();
     const entries = await readdir(this.base(), { withFileTypes: true });
 
     for (const entry of entries) {

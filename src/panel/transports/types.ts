@@ -9,6 +9,8 @@ export type HostState = {
   canSend: boolean;
   canShare: boolean;
   canExpand: boolean;
+  /** The host opens files by path in its own viewer. */
+  canOpenFiles: boolean;
   displayMode: "inline" | "fullscreen" | "pip";
 };
 
@@ -47,6 +49,8 @@ export interface Transport {
   expand?(): Promise<void>;
   /** Opens an external link through the host, which may block new windows. */
   openLink?(url: string): Promise<void>;
+  /** Opens an absolute path in the host's viewer, when the host can. */
+  openFile?(path: string): Promise<void>;
   /** Saves a file through the host or browser. */
   saveFile(file: File): Promise<SaveResult>;
   login?(token: string): Promise<void>;

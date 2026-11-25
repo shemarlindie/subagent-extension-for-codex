@@ -1,5 +1,6 @@
 import {
   ATTACHMENT_LIMITS,
+  type StagedUploadInput,
   type UploadInput,
 } from "../../../shared/attachments/model";
 import { uploadMime } from "../../../shared/attachments/upload";
@@ -13,6 +14,8 @@ export type DraftFile = {
   upload?: UploadInput;
   /** A small copy of an image for its chip and hover preview. */
   thumbnail?: string;
+  /** The content hash of the copy staged for the host to open, which a send reuses. */
+  staged?: string;
 };
 
 /** The hover preview's largest side at 2x pixel density. */
@@ -91,9 +94,20 @@ export function draftPreview(upload: UploadInput, mime?: string): PreviewFile {
   };
 }
 
-/** The start or send request's `attachments`, left out when there are none. */
+/**
+ * The start or send request's `attachments`, left out when there are none. A
+ * staged file sends its hash in place of its content.
+ */
 export function uploadArguments(files: readonly DraftFile[] = []) {
-  const attachments = files.flatMap((file) => file.upload ?? []);
+  const attachments = files.flatMap(
+    ({ upload, staged }): (UploadInput | StagedUploadInput)[] => {
+      if (!upload) return [];
+      if (!staged) return [upload];
+      const { data: _, ...rest } = upload;
+
+      return [{ ...rest, staged }];
+    },
+  );
 
   return attachments.length ? { attachments } : {};
 }

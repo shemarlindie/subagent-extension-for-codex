@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { TooltipWrapper } from "../../shared/components/tooltip";
@@ -46,7 +47,7 @@ export function DraftFileChipContent({
 type DraftFileChipProps = {
   file: DraftFile;
   disabled: boolean;
-  /** Selecting the chip previews its file, unless it's a document. */
+  /** Whether the panel's preview can open, for hosts that don't open files. */
   previewable: boolean;
   /** A narrow row truncates the first chip to this width. */
   maxWidth?: number;
@@ -54,7 +55,11 @@ type DraftFileChipProps = {
   onRemove: () => void;
 };
 
-/** A draft attachment. Hovering an image shows it larger. */
+/**
+ * A draft attachment. Selecting it opens the file in the host's viewer, or
+ * else previews a text file or image in the panel. Hovering an image shows it
+ * larger.
+ */
 export function DraftFileChip({
   file,
   disabled,
@@ -63,12 +68,13 @@ export function DraftFileChip({
   onOpen,
   onRemove,
 }: DraftFileChipProps) {
+  const hostOpens = useSnapshot((state) => state.host.canOpenFiles);
   const chip = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const { thumbnail } = file;
   const label = `${file.name}, ${formatBytes(file.size)}`;
-  const opens = previewable && draftPreviewable(file);
+  const opens = hostOpens || (previewable && draftPreviewable(file));
 
   const handleOpenChange = (next: boolean) => {
     if (next) setTruncated(titleTruncated(chip.current));
@@ -88,7 +94,9 @@ export function DraftFileChip({
             <img className="draft-file-preview" src={thumbnail} alt="" />
           ) : undefined
         }
-        triggerLabel={opens ? `Preview ${file.name}` : label}
+        triggerLabel={
+          opens ? `${hostOpens ? "Open" : "Preview"} ${file.name}` : label
+        }
         open={open && (truncated || Boolean(thumbnail))}
         onOpenChange={handleOpenChange}
       >

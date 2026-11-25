@@ -354,15 +354,17 @@ Activity have a copy action in their header.
 
 [Attachments](mcp-reference.md#attachments) on the request or a follow-up show
 as chips under it, with a summary on hover or focus. Chips that don't fit fold
-behind **+N more**, and a chip opens its attachment in a file viewer.
+behind **+N more**, and a chip opens its attachment in Codex's viewer, or the
+panel's file viewer in
+[hosts that can't open files](host-capabilities.md#opening-files).
 
 In **New task**, **Advanced task** or a follow-up, choose **Attach files**, drop
 files onto the message, or paste a copied file or screenshot. Copied text pastes
 as text even when the clipboard also holds an image. You can attach UTF-8 text,
 PNG, JPEG, GIF and WebP images, and PDF, Word, Excel, PowerPoint and
-OpenDocument files, up to 20 per message and 50 MiB in total. The panel previews
-text and images. Workers open documents with their own tools. In a composer,
-select a chip to preview its file before sending.
+OpenDocument files, up to 20 per message and 50 MiB in total. In a composer,
+select a chip to open its file before sending. The panel's own viewer previews
+text and images only. Workers open documents with their own tools.
 
 Your messages offer **Copy message** and the time sent. Actions appear on hover
 or keyboard focus, and stay visible on touch devices.

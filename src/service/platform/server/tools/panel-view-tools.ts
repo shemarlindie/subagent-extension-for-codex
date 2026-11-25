@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { stageFileSchema } from "../../../../shared/attachments/model.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { chatRead } from "../../../features/tasks/conversation/chat-read.js";
@@ -142,6 +143,28 @@ export function panelViewTools(c: Control, owner: string) {
           a.position,
           a.cursor,
         ),
+    }),
+    app_get_attachment_path: tool({
+      readOnly: true,
+      description:
+        "User interface only: { path }, the absolute path of a task's stored attachment, by the id of the message it came with and its position in that message, for the host to open. Fails when the stored file is missing.",
+      schema: taskId.extend({
+        message_id: z.string().min(1).max(200),
+        position: z.number().int().positive(),
+      }),
+      run: (a) => ({
+        path: c.attachments.filePath(
+          c.store.get(a.task_id, owner).id,
+          a.message_id,
+          a.position,
+        ),
+      }),
+    }),
+    app_stage_file: tool({
+      description:
+        'User interface only: writes a draft file the user wants to open before sending it, and returns { id, path }: its content hash and absolute path. A send can pass { source: "upload", name, summary, staged: id } in place of its data while the copy lasts, a day after it was last staged.',
+      schema: stageFileSchema,
+      run: (a) => c.attachments.staged.stage(a.name, a.data),
     }),
     app_refresh_plan_usage: tool({
       readOnly: true,

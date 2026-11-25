@@ -95,29 +95,54 @@ const attachmentInputSchema = z.discriminatedUnion("source", [
   fileAttachment,
 ]);
 
+/** A file's own name, which also names its staged copy. */
+const uploadName = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(/^[^/\\\p{Cc}]+$/u)
+  .refine((name) => name !== "." && name !== "..", "Invalid file name.");
+
+/** A file's base64 content. */
+const uploadData = z
+  .string()
+  .min(4)
+  .max(4 * Math.ceil(ATTACHMENT_LIMITS.messageBytes / 3));
+
 const uploadSchema = z.strictObject({
   source: z.literal("upload"),
-  name: z
-    .string()
-    .min(1)
-    .max(255)
-    .regex(/^[^/\\\p{Cc}]+$/u),
+  name: uploadName,
   summary,
-  data: z
-    .string()
-    .min(4)
-    .max(4 * Math.ceil(ATTACHMENT_LIMITS.messageBytes / 3)),
+  data: uploadData,
+});
+
+/** A file the panel staged for the host to open, sent by its content hash. */
+const stagedUploadSchema = z.strictObject({
+  source: z.literal("upload"),
+  name: uploadName,
+  summary,
+  staged: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
 export type UploadInput = z.infer<typeof uploadSchema>;
+export type StagedUploadInput = z.infer<typeof stagedUploadSchema>;
 
 export type AttachmentInput =
-  z.infer<typeof attachmentInputSchema> | UploadInput;
+  z.infer<typeof attachmentInputSchema> | UploadInput | StagedUploadInput;
 
 export const panelAttachmentsSchema = z
-  .array(z.union([attachmentInputSchema, uploadSchema]))
+  .array(z.union([attachmentInputSchema, uploadSchema, stagedUploadSchema]))
   .max(ATTACHMENT_LIMITS.count)
   .optional();
+
+/** A draft file to stage for the host to open. */
+export const stageFileSchema = z.strictObject({
+  name: uploadName,
+  data: uploadData,
+});
+
+/** A staged copy: its content hash, which a send passes as `staged`, and its absolute path. */
+export type StagedFile = { id: string; path: string };
 
 export const attachmentsSchema = z
   .array(attachmentInputSchema)

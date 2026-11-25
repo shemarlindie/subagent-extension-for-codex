@@ -7,7 +7,7 @@ import type { DraftFiles } from "./use-draft-files";
 type DraftAttachmentsProps = {
   attachments: DraftFiles;
   disabled: boolean;
-  /** False inside a dialog, which can't open the preview over itself. */
+  /** False inside a dialog, which can't open the panel's preview over itself. */
   previewable?: boolean;
 };
 
