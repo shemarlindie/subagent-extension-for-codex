@@ -39,14 +39,19 @@ function useAttachment(task: Task, messageId: string, position: number) {
   const [read, setRead] = useState<Read>();
 
   useEffect(() => {
-    let current = true;
+    // Closing the dialog or stepping away stops reading further pages.
+    const reading = new AbortController();
+    const { signal } = reading;
 
-    readAttachment(task.id, { message_id: messageId, position }, (args) =>
-      controller.tool<AttachmentPage>("app_get_attachment", args),
+    readAttachment(
+      task.id,
+      { message_id: messageId, position },
+      (args) => controller.tool<AttachmentPage>("app_get_attachment", args),
+      signal,
     ).then(
-      (page) => current && setRead({ position, status: "ready", page }),
+      (page) => !signal.aborted && setRead({ position, status: "ready", page }),
       (error: unknown) =>
-        current &&
+        !signal.aborted &&
         setRead({
           position,
           status: "error",
@@ -54,9 +59,7 @@ function useAttachment(task: Task, messageId: string, position: number) {
         }),
     );
 
-    return () => {
-      current = false;
-    };
+    return () => reading.abort();
   }, [controller, task.id, messageId, position]);
 
   return read?.position === position ? read : undefined;

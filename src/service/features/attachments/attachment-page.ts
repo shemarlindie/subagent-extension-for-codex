@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { BigIntStats } from "node:fs";
 import { open, type FileHandle } from "node:fs/promises";
 
 import {
@@ -37,39 +38,54 @@ function characterBoundary(bytes: Uint8Array, end: number) {
   return start - 1 + length <= end ? end : start - 1;
 }
 
-/** The whole stored file, or undefined when it is gone or not one a task wrote. */
-async function storedBytes(path: string) {
-  let file: FileHandle;
+/** One version of a stored file, recognized without reading its content. */
+const revisionOf = (info: BigIntStats) =>
+  createHash("sha256")
+    .update(`${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}`)
+    .digest("hex");
+
+/** Reads `length` bytes at `offset`, or undefined when the file is shorter. */
+async function readRange(file: FileHandle, offset: number, length: number) {
+  const bytes = Buffer.alloc(length);
+  const { bytesRead } = await file.read(bytes, 0, length, offset);
+
+  return bytesRead === length ? bytes : undefined;
+}
+
+/** Whether the whole file still holds what was stored: its format, or UTF-8 text. */
+async function validContent(
+  file: FileHandle,
+  size: number,
+  attachment: MessageAttachment,
+) {
+  // One byte more shows a file that grew after the size was read.
+  const bytes = Buffer.alloc(size + 1);
+  const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+  if (bytesRead !== size) return false;
+  const content = bytes.subarray(0, size);
 
   try {
-    file = await open(path, OPEN_FLAGS);
-  } catch {
-    return undefined;
-  }
-
-  try {
-    const info = await file.stat();
-
-    if (!info.isFile() || info.size > ATTACHMENT_LIMITS.messageBytes) {
-      return undefined;
+    if (isBinaryFormat(attachment.format)) {
+      return (
+        attachment.bytes === size &&
+        uploadMime(content, attachment.title) === attachment.mime_type
+      );
     }
 
-    // One byte more shows a file that grew after the size was read.
-    const bytes = Buffer.alloc(info.size + 1);
-    const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+    new TextDecoder("utf-8", { fatal: true }).decode(content);
 
-    return bytesRead === info.size ? bytes.subarray(0, bytesRead) : undefined;
-  } finally {
-    await file.close();
+    return true;
+  } catch {
+    return false;
   }
 }
 
 /**
- * One page of an attachment's stored file, ending on a whole character. Each
- * page reads the whole file, at most 50 MiB, and its cursor carries the
- * content's hash, so pages never mix two versions of a file. A file that is
- * gone, isn't a regular file, is larger than any attachment or doesn't
- * match its stored format is unavailable.
+ * One page of an attachment's stored file, ending on a whole character. The
+ * first page checks the whole file, and later pages read only their range.
+ * Cursors carry the file's revision, so pages never mix two versions of a
+ * file. A file that is gone, isn't a regular file, is larger than any
+ * attachment or doesn't match its stored format is unavailable.
  */
 export async function attachmentPage(
   path: string,
@@ -77,60 +93,81 @@ export async function attachmentPage(
   cursor?: string,
 ): Promise<AttachmentPage> {
   const unavailable = { attachment, state: "unavailable" } as const;
-  const bytes = await storedBytes(path);
-  if (!bytes) return unavailable;
-  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-
-  const binary = isBinaryFormat(attachment.format);
+  const page = cursor ? decodeFileCursor(cursor) : undefined;
+  let file: FileHandle;
 
   try {
-    if (binary) {
-      if (
-        attachment.bytes !== bytes.length ||
-        uploadMime(bytes, attachment.title) !== attachment.mime_type
-      ) {
-        return unavailable;
-      }
-    } else {
-      decoder.decode(bytes);
-    }
+    file = await open(path, OPEN_FLAGS);
   } catch {
     return unavailable;
   }
 
-  const revision = createHash("sha256").update(bytes).digest("hex");
-  const page = cursor ? decodeFileCursor(cursor) : undefined;
+  try {
+    const info = await file.stat({ bigint: true });
 
-  if (page && page.tree !== revision) {
-    throw new Error("The attachment changed while it was read");
+    if (!info.isFile() || info.size > ATTACHMENT_LIMITS.messageBytes) {
+      return unavailable;
+    }
+
+    const size = Number(info.size);
+    const revision = revisionOf(info);
+
+    if (page && page.tree !== revision) {
+      throw new Error("The attachment changed while it was read");
+    }
+
+    if (!page && !(await validContent(file, size, attachment))) {
+      return unavailable;
+    }
+
+    const offset = page?.offset ?? 0;
+    if (offset > size) throw new Error("Invalid file cursor");
+    const binary = isBinaryFormat(attachment.format);
+
+    // Full binary pages end on a base64 group so their strings can be joined.
+    const end = Math.min(
+      offset +
+        (binary
+          ? ATTACHMENT_PAGE_BYTES - (ATTACHMENT_PAGE_BYTES % 3)
+          : ATTACHMENT_PAGE_BYTES),
+      size,
+    );
+
+    const bytes = await readRange(file, offset, end - offset);
+    if (!bytes) throw new Error("The attachment changed while it was read");
+
+    const stop =
+      binary || end === size
+        ? end
+        : offset + characterBoundary(bytes, bytes.length);
+
+    const chunk = bytes.subarray(0, stop - offset);
+    let content: string;
+
+    if (binary) {
+      content = chunk.toString("base64");
+    } else {
+      try {
+        content = new TextDecoder("utf-8", {
+          fatal: true,
+          ignoreBOM: true,
+        }).decode(chunk);
+      } catch {
+        // A cursor from this function starts on a whole character.
+        throw new Error("Invalid file cursor");
+      }
+    }
+
+    return {
+      attachment,
+      state: "present",
+      ...(binary
+        ? { encoding: "base64" as const, mime_type: attachment.mime_type }
+        : {}),
+      content,
+      ...(stop < size ? { next_cursor: encodeFileCursor(revision, stop) } : {}),
+    };
+  } finally {
+    await file.close();
   }
-
-  const offset = page?.offset ?? 0;
-  if (offset > bytes.length) throw new Error("Invalid file cursor");
-
-  // Full binary pages end on a base64 group so their strings can be joined.
-  const end = Math.min(
-    offset +
-      (binary
-        ? ATTACHMENT_PAGE_BYTES - (ATTACHMENT_PAGE_BYTES % 3)
-        : ATTACHMENT_PAGE_BYTES),
-    bytes.length,
-  );
-
-  const stop =
-    binary || end === bytes.length ? end : characterBoundary(bytes, end);
-
-  return {
-    attachment,
-    state: "present",
-    ...(binary
-      ? { encoding: "base64" as const, mime_type: attachment.mime_type }
-      : {}),
-    content: binary
-      ? bytes.subarray(offset, stop).toString("base64")
-      : decoder.decode(bytes.subarray(offset, stop)),
-    ...(stop < bytes.length
-      ? { next_cursor: encodeFileCursor(revision, stop) }
-      : {}),
-  };
 }
