@@ -73,6 +73,19 @@ function AttachmentHeader({ attachment }: AttachmentHeaderProps) {
   );
 }
 
+/** A document has no viewer, so the dialog shows only its summary and origin. */
+function DocumentAttachment({ attachment }: AttachmentHeaderProps) {
+  return (
+    <div className="attachment-preview">
+      <AttachmentHeader attachment={attachment} />
+      <p className="help">
+        The panel can't preview this file type. The worker opens it with its own
+        tools.
+      </p>
+    </div>
+  );
+}
+
 type AttachmentPreviewProps = {
   task: Task;
   attachment: MessageAttachment;
@@ -190,9 +203,12 @@ function AttachmentNav({ attachment, attachments }: AttachmentNavProps) {
 
 export const attachmentDialog = defineDialog<"attachment">({
   title: ({ attachment }) => displayTitle(attachment),
-  render: ({ task, attachment }) => (
-    <AttachmentPreview task={task} attachment={attachment} />
-  ),
+  render: ({ task, attachment }) =>
+    attachment.format === "document" ? (
+      <DocumentAttachment attachment={attachment} />
+    ) : (
+      <AttachmentPreview task={task} attachment={attachment} />
+    ),
   headingActions: ({ attachment, attachments }) => (
     <div className="attachment-heading-actions">
       {/* A lone attachment has nowhere to step to. */}

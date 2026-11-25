@@ -731,6 +731,12 @@ body[data-expanded-panel="true"]
 .chat-composer-box:focus-within {
   border-color: var(--accent);
 }
+/* Draft files line up with the message box's edge. */
+.chat-composer .draft-attachments {
+  padding-inline-start: calc(
+    var(--composer-caret-size) + var(--composer-control-gap)
+  );
+}
 .chat-composer textarea {
   flex: 1;
   align-self: center;

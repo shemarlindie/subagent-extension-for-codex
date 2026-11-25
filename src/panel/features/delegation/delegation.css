@@ -55,3 +55,15 @@
 .task-budget-fields > .help:empty {
   display: none;
 }
+
+/* The description's attach action, then its files. */
+.description-files {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-block-start: 6px;
+}
+.description-files .draft-attachments {
+  flex: 1;
+  min-width: 0;
+}

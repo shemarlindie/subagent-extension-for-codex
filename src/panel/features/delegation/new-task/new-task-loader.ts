@@ -1,4 +1,3 @@
-import type { UploadInput } from "../../../../shared/attachments/model";
 import {
   settingAt,
   withSetting,
@@ -13,6 +12,7 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import { uploadArguments, type DraftFile } from "../../attachments/draft-file";
 import type { Defaults } from "../../settings/types";
 import {
   applyDelegateRead,
@@ -160,7 +160,7 @@ export class NewTaskLoader {
   async start(
     values: DelegateValues,
     composerHeight?: number,
-    attachments?: UploadInput[],
+    files?: readonly DraftFile[],
   ): Promise<string | undefined> {
     const state = this.context.snapshot();
     const newTask = state.newTask;
@@ -180,7 +180,7 @@ export class NewTaskLoader {
           state.conversation,
           projectGit(state, values.repository),
         ),
-        ...(attachments?.length ? { attachments } : {}),
+        ...uploadArguments(files),
       });
     } catch (error) {
       return errorMessage(error);

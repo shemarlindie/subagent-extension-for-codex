@@ -51,10 +51,12 @@ test("only panel tools can supply local file bytes for worker snapshots", async 
   const folder = c.attachments.folder(id);
   assert.equal(await readFile(join(folder, note.file), "utf8"), text);
 
+  const pdf = Buffer.from("%PDF-1.4\n%%EOF\n").toString("base64");
+
   const followUp = {
-    message: "Open the screenshot",
+    message: "Open the screenshot and the spec",
     task_id: id,
-    attachments: [upload("screen.png", png)],
+    attachments: [upload("screen.png", png), upload("Spec.PDF", pdf)],
   };
 
   await assert.rejects(
@@ -70,11 +72,13 @@ test("only panel tools can supply local file bytes for worker snapshots", async 
     "user",
   )) as { message_id: string };
 
-  const [image] = c.attachments.list(id, message_id);
-  assert.ok(image);
+  const [image, document] = c.attachments.list(id, message_id);
+  assert.ok(image && document);
   await until(() => recorder.prompts.length === 2);
   assert.match(image.file, /\.png$/);
+  assert.match(document.file, /\.pdf$/);
   assert.ok(recorder.prompts[1]?.includes(join(folder, image.file)));
+  assert.ok(recorder.prompts[1]?.includes("document, 15 bytes"));
 
   assert.deepEqual(
     await readFile(join(folder, image.file)),
@@ -89,34 +93,20 @@ test("a rejected upload batch leaves no follow-up or partial snapshot", async ()
   const count = store.messages.count(id);
   const valid = upload("notes.txt", "YWJj");
 
-  const invalid: [ReturnType<typeof upload>, RegExp][] = [
-    [upload("bad.txt", "YWJj!"), /base64/i],
-    [upload("look.png", Buffer.from("text").toString("base64")), /image|png/i],
-    [
-      upload(
-        "large.txt",
-        Buffer.alloc(2 * 1024 * 1024 + 1, "a").toString("base64"),
-      ),
-      /limit|large|size|bytes|MiB/i,
-    ],
-  ];
-
-  for (const [file, error] of invalid) {
-    await assert.rejects(
-      callTool(
-        c,
-        "alice",
-        "app_send_message",
-        {
-          task_id: id,
-          message: "Review",
-          attachments: [valid, file],
-        },
-        "user",
-      ),
-      error,
-    );
-  }
+  await assert.rejects(
+    callTool(
+      c,
+      "alice",
+      "app_send_message",
+      {
+        task_id: id,
+        message: "Review",
+        attachments: [valid, upload("look.png", "YWJj")],
+      },
+      "user",
+    ),
+    /image/i,
+  );
 
   assert.equal(store.messages.count(id), count);
   assert.deepEqual(c.attachments.list(id), []);

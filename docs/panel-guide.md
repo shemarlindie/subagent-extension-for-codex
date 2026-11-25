@@ -356,11 +356,13 @@ Activity have a copy action in their header.
 as chips under it, with a summary on hover or focus. Chips that don't fit fold
 behind **+N more**, and a chip opens its attachment in a file viewer.
 
-In **New task** or a follow-up, choose **Attach files**, drop files onto the
-composer, or paste a copied file or screenshot. You can attach UTF-8 text, PNG,
-JPEG, GIF and WebP files. Each message allows up to 20 files, 2 MiB each and 10
-MiB total. Select a filename to preview it before sending. Select **×** to
-remove it.
+In **New task**, **Advanced task** or a follow-up, choose **Attach files**, drop
+files onto the message, or paste a copied file or screenshot. Copied text pastes
+as text even when the clipboard also holds an image. You can attach UTF-8 text,
+PNG, JPEG, GIF and WebP images, and PDF, Word, Excel, PowerPoint and
+OpenDocument files, up to 20 per message and 50 MiB in total. The panel previews
+text and images. Workers open documents with their own tools. In a composer,
+select a chip to preview its file before sending.
 
 Your messages offer **Copy message** and the time sent. Actions appear on hover
 or keyboard focus, and stay visible on touch devices.

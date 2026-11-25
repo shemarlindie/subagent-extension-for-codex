@@ -5,13 +5,36 @@ import {
 import { uploadMime } from "../../../shared/attachments/upload";
 import type { PreviewFile } from "../file-preview/file-format";
 
-export type ComposerFile = {
+export type DraftFile = {
   id: number;
   name: string;
   size: number;
   mime?: string;
   upload?: UploadInput;
+  /** A small copy of an image for its chip and hover preview. */
+  thumbnail?: string;
 };
+
+/** The hover preview's largest side at 2x pixel density. */
+const THUMBNAIL_SIZE = 400;
+
+/** Decodes the image, which also validates it, and scales a small copy. */
+async function imageThumbnail(file: File) {
+  const image = await createImageBitmap(file);
+
+  const scale = Math.min(
+    1,
+    THUMBNAIL_SIZE / Math.max(image.width, image.height),
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+
+  return canvas.toDataURL("image/webp");
+}
 
 export async function loadFile(file: File, name: string) {
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -25,11 +48,12 @@ export async function loadFile(file: File, name: string) {
     throw new Error("Invalid or unsupported image.");
   }
 
-  if (mime) {
-    const image = await createImageBitmap(file);
-    image.close();
-  } else {
+  let thumbnail;
+
+  if (!mime) {
     new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } else if (mime.startsWith("image/")) {
+    thumbnail = await imageThumbnail(file);
   }
 
   let binary = "";
@@ -45,8 +69,12 @@ export async function loadFile(file: File, name: string) {
     data: btoa(binary),
   };
 
-  return { upload, mime };
+  return { upload, mime, thumbnail };
 }
+
+/** Whether the panel can preview the file. Documents have no viewer. */
+export const draftPreviewable = ({ mime }: DraftFile) =>
+  !mime || mime.startsWith("image/");
 
 /** Decode local text only when its preview opens. Images already have base64 content. */
 export function draftPreview(upload: UploadInput, mime?: string): PreviewFile {
@@ -63,20 +91,25 @@ export function draftPreview(upload: UploadInput, mime?: string): PreviewFile {
   };
 }
 
-export function fileLimit(file: File, prior: ComposerFile[]) {
+/** The start or send request's `attachments`, left out when there are none. */
+export function uploadArguments(files: readonly DraftFile[] = []) {
+  const attachments = files.flatMap((file) => file.upload ?? []);
+
+  return attachments.length ? { attachments } : {};
+}
+
+export function fileLimit(file: File, prior: DraftFile[]) {
   if (!file.size) return "Empty file or folder.";
 
-  if (file.size > ATTACHMENT_LIMITS.referenceBytes) {
-    return "File exceeds 2 MiB.";
+  if (prior.length >= ATTACHMENT_LIMITS.count) {
+    return `Choose up to ${ATTACHMENT_LIMITS.count} files.`;
   }
-
-  if (prior.length >= ATTACHMENT_LIMITS.count) return "Choose up to 20 files.";
 
   if (
     prior.reduce((sum, item) => sum + item.size, file.size) >
     ATTACHMENT_LIMITS.messageBytes
   ) {
-    return "Files exceed 10 MiB.";
+    return `Files exceed ${ATTACHMENT_LIMITS.messageBytes / 1024 / 1024} MiB.`;
   }
 
   return undefined;

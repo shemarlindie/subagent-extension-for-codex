@@ -1,13 +1,13 @@
-import type { ComposerFile } from "../../../features/attachments/composer-file";
+import type { DraftFile } from "../../../features/attachments/draft-file";
 import type { ChangesReading } from "../../../features/changes/changes-reading";
 import type { DelegateValues } from "../../../features/delegation/delegate-values";
 import type { ReadingState } from "../../../features/tasks/evidence/reading-state";
 import type { PlanCollapse } from "../../../features/tasks/plan/plan-collapse";
 import type { QuestionDraft, Tab } from "../types";
 
-type DraftFiles = { files?: ComposerFile[]; fileErrors?: string[] };
+type FilesDraft = { files?: DraftFile[]; fileErrors?: string[] };
 
-export type TaskSessionState = DraftFiles & {
+export type TaskSessionState = FilesDraft & {
   tab: Tab;
   composerDraft: string;
   /** Keeps pending send feedback visible if Chat remounts during the request. */
@@ -41,7 +41,7 @@ type QuestionSessionState = {
 };
 
 /** The new-task composer's message and the options the user changed. */
-type NewTaskSessionState = DraftFiles & {
+type NewTaskSessionState = FilesDraft & {
   draft: Partial<DelegateValues>;
 };
 
@@ -49,6 +49,8 @@ type SessionStates = {
   task: TaskSessionState;
   question: QuestionSessionState;
   newTask: NewTaskSessionState;
+  /** The Advanced task form's files. Its fields persist with the dialog. */
+  delegate: FilesDraft;
 };
 
 export type SessionScope = keyof SessionStates;
@@ -74,6 +76,7 @@ const defaults = {
   }),
   question: (): QuestionSessionState => ({}),
   newTask: (): NewTaskSessionState => ({ draft: {} }),
+  delegate: (): FilesDraft => ({}),
 };
 
 /** In-memory UI state. Its lifetime is the owning controller's session. */
@@ -82,6 +85,7 @@ export class SessionStateStore {
     task: new Map(),
     question: new Map(),
     newTask: new Map(),
+    delegate: new Map(),
   };
 
   constructor(private drafts?: ComposerDraftPersistence) {}
@@ -116,7 +120,10 @@ export class SessionStateStore {
         listeners: new Set(),
       };
 
-      const text = scope === "question" ? "" : this.drafts?.read(scope, id);
+      const text =
+        scope === "task" || scope === "newTask"
+          ? this.drafts?.read(scope, id)
+          : "";
 
       if (text && scope === "task") {
         (entry.value as TaskSessionState).composerDraft = text;

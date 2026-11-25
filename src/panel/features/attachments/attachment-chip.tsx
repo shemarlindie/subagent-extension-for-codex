@@ -13,31 +13,38 @@ import {
 /** Characters a long title keeps visible at its end, such as its extension. */
 const TITLE_END = 12;
 
+type AttachmentChipTitleProps = { title: string };
+
+/** A chip's title. A long one truncates in the middle, so its extension stays visible. */
+export function AttachmentChipTitle({ title }: AttachmentChipTitleProps) {
+  const split = title.length > TITLE_END * 2;
+
+  return (
+    <span className="attachment-chip-title" data-split={split || undefined}>
+      {split ? (
+        <>
+          <span className="attachment-chip-title-start">
+            {title.slice(0, -TITLE_END)}
+          </span>
+          <span>{title.slice(-TITLE_END)}</span>
+        </>
+      ) : (
+        title
+      )}
+    </span>
+  );
+}
+
 type AttachmentChipContentProps = { attachment: MessageAttachment };
 
 /** A chip's icon, title and size, shared by the chip and its measured copy. */
 export function AttachmentChipContent({
   attachment,
 }: AttachmentChipContentProps) {
-  const title = displayTitle(attachment);
-  // A long title truncates in the middle, so its extension stays visible.
-  const split = title.length > TITLE_END * 2;
-
   return (
     <>
       <Icon name={attachmentIcon(attachment)} size={11} />
-      <span className="attachment-chip-title" data-split={split || undefined}>
-        {split ? (
-          <>
-            <span className="attachment-chip-title-start">
-              {title.slice(0, -TITLE_END)}
-            </span>
-            <span>{title.slice(-TITLE_END)}</span>
-          </>
-        ) : (
-          title
-        )}
-      </span>
+      <AttachmentChipTitle title={displayTitle(attachment)} />
       <span className="attachment-chip-size">
         {attachment.source === "diff" ? (
           <>
@@ -52,21 +59,21 @@ export function AttachmentChipContent({
   );
 }
 
-type AttachmentChipProps = {
-  attachment: MessageAttachment;
-  /** A narrow row truncates the first chip's title to this width. */
-  maxWidth?: number;
-  onOpen: () => void;
-};
-
 /** Whether the title, or a split title's start, is cut off. */
-function titleTruncated(chip: HTMLElement | null) {
+export function titleTruncated(chip: HTMLElement | null) {
   const title = chip?.querySelector<HTMLElement>(".attachment-chip-title");
 
   return [title, ...(title?.children ?? [])].some(
     (part) => part && part.scrollWidth > part.clientWidth,
   );
 }
+
+type AttachmentChipProps = {
+  attachment: MessageAttachment;
+  /** A narrow row truncates the first chip's title to this width. */
+  maxWidth?: number;
+  onOpen: () => void;
+};
 
 /**
  * One attachment under the request. Its summary shows as a tooltip, after the

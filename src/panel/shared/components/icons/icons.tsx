@@ -78,6 +78,7 @@ const ICON_NAMES = [
   "file-code",
   "file-text",
   "note",
+  "paperclip",
   // The task list resizer draws its own narrower grip inline.
   "grip-vertical",
   "grip-vertical-double",

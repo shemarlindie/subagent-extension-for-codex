@@ -12,7 +12,7 @@ import {
   type UndoRecorder,
 } from "../../../app/state/undo-history";
 import { errorMessage } from "../../../shared/utils/error-message";
-import type { ComposerFile } from "../../attachments/composer-file";
+import { uploadArguments, type DraftFile } from "../../attachments/draft-file";
 import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
@@ -142,7 +142,7 @@ export class TaskActions {
     message: string,
     delivery: Delivery,
     delivered?: () => void,
-    files?: ComposerFile[],
+    files?: DraftFile[],
   ) {
     // Refuse before reserving a request, so a refused send can't pin delivery.
     if (this.context.snapshot().busy || this.context.closed()) {
@@ -182,9 +182,7 @@ export class TaskActions {
         task_id: task.id,
         message,
         ...request,
-        ...(files?.length
-          ? { attachments: files.map((file) => file.upload) }
-          : {}),
+        ...uploadArguments(files),
       },
       {
         background: true,

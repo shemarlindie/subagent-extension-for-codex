@@ -6,15 +6,18 @@ export const ATTACHMENT_LIMITS = {
   summaryChars: 200,
   titleChars: 60,
   inlineChars: 8_000,
-  referenceBytes: 2 * 1024 * 1024,
-  messageBytes: 10 * 1024 * 1024,
+  messageBytes: 50 * 1024 * 1024,
   paths: 50,
   pathChars: 1024,
 } as const;
 
 const textFormats = ["diff", "code", "markdown", "text"] as const;
-export const attachmentFormats = [...textFormats, "image"] as const;
+export const attachmentFormats = [...textFormats, "image", "document"] as const;
 export type AttachmentFormat = (typeof attachmentFormats)[number];
+
+/** Whether an attachment is stored as bytes: an image or a document. */
+export const isBinaryFormat = (format: AttachmentFormat) =>
+  format === "image" || format === "document";
 
 export const attachmentSources = ["inline", "diff", "file", "upload"] as const;
 
@@ -103,7 +106,7 @@ const uploadSchema = z.strictObject({
   data: z
     .string()
     .min(4)
-    .max(4 * Math.ceil(ATTACHMENT_LIMITS.referenceBytes / 3)),
+    .max(4 * Math.ceil(ATTACHMENT_LIMITS.messageBytes / 3)),
 });
 
 export type UploadInput = z.infer<typeof uploadSchema>;
@@ -164,7 +167,7 @@ export interface AttachmentPage {
   attachment: MessageAttachment;
   /** "unavailable": the stored file is missing, too large or invalid for its stored format. */
   state: "present" | "unavailable";
-  /** This page of UTF-8 text or base64 image data. */
+  /** This page of UTF-8 text, or base64 image or document data. */
   content?: string;
   encoding?: "base64";
   mime_type?: string;

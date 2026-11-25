@@ -54,13 +54,12 @@ test("choose and drop request files, then paste and preview a follow-up image", 
     );
 
     if (!blob) throw new Error("Unable to create the PNG fixture");
+
     const clipboardData = new DataTransfer();
 
     clipboardData.items.add(
       new File([blob], "screenshot.png", { type: blob.type }),
     );
-
-    clipboardData.items.add("Clipboard fallback", "text/plain");
 
     field.dispatchEvent(
       new ClipboardEvent("paste", { bubbles: true, clipboardData }),

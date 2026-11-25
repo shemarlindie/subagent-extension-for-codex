@@ -118,8 +118,8 @@ that exists only in the chat, such as decisions or another task's result.
   `paths` can leave it out.
 - File references need a regular UTF-8 text file. Binary files fail. Path checks
   are best-effort and do not provide filesystem isolation.
-- Each reference allows 2 MB, and one message's attachments together allow 10
-  MB. Errors name the attachment and suggest `paths` or a line range.
+- One message's attachments together allow 50 MB. Errors name the attachment and
+  suggest `paths` or a line range.
 
 The panel also accepts [local files](panel-guide.md#chat-tab) with a user
 request or follow-up.
@@ -306,9 +306,9 @@ provider reports usage windows for the signed-in plan, and
 `app_get_attachment` reads an attachment by `task_id`, the `message_id` of the
 message it came with (`request` for the task's request) and its `position` in
 that message. Text pages hold up to 512 KiB and end on whole characters. Image
-content uses base64 and includes its MIME type. Each page returns the
-attachment's metadata. Pass `next_cursor` for the next page. A cursor fails once
-the stored file's content changes. Missing or unreadable snapshots return
+and document content uses base64 and includes its MIME type. Each page returns
+the attachment's metadata. Pass `next_cursor` for the next page. A cursor fails
+once the stored file's content changes. Missing or unreadable snapshots return
 `state: "unavailable"`. See [Transport](panel-guide.md#transport) for panel
 refresh behavior.
 

@@ -4,6 +4,7 @@ import { open, type FileHandle } from "node:fs/promises";
 import {
   ATTACHMENT_LIMITS,
   ATTACHMENT_PAGE_BYTES,
+  isBinaryFormat,
   type AttachmentPage,
   type MessageAttachment,
 } from "../../../shared/attachments/model.js";
@@ -49,7 +50,7 @@ async function storedBytes(path: string) {
   try {
     const info = await file.stat();
 
-    if (!info.isFile() || info.size > ATTACHMENT_LIMITS.referenceBytes) {
+    if (!info.isFile() || info.size > ATTACHMENT_LIMITS.messageBytes) {
       return undefined;
     }
 
@@ -65,10 +66,10 @@ async function storedBytes(path: string) {
 
 /**
  * One page of an attachment's stored file, ending on a whole character. Each
- * page reads the whole file, at most 2 MiB, and its cursor carries the
+ * page reads the whole file, at most 50 MiB, and its cursor carries the
  * content's hash, so pages never mix two versions of a file. A file that is
- * gone, isn't a regular file, is larger than any attachment or isn't UTF-8
- * text is unavailable.
+ * gone, isn't a regular file, is larger than any attachment or doesn't
+ * match its stored format is unavailable.
  */
 export async function attachmentPage(
   path: string,
@@ -80,10 +81,10 @@ export async function attachmentPage(
   if (!bytes) return unavailable;
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
-  const image = attachment.format === "image";
+  const binary = isBinaryFormat(attachment.format);
 
   try {
-    if (image) {
+    if (binary) {
       if (
         attachment.bytes !== bytes.length ||
         uploadMime(bytes, attachment.title) !== attachment.mime_type
@@ -107,25 +108,25 @@ export async function attachmentPage(
   const offset = page?.offset ?? 0;
   if (offset > bytes.length) throw new Error("Invalid file cursor");
 
-  // Full image pages end on a base64 group so their strings can be joined.
+  // Full binary pages end on a base64 group so their strings can be joined.
   const end = Math.min(
     offset +
-      (image
+      (binary
         ? ATTACHMENT_PAGE_BYTES - (ATTACHMENT_PAGE_BYTES % 3)
         : ATTACHMENT_PAGE_BYTES),
     bytes.length,
   );
 
   const stop =
-    image || end === bytes.length ? end : characterBoundary(bytes, end);
+    binary || end === bytes.length ? end : characterBoundary(bytes, end);
 
   return {
     attachment,
     state: "present",
-    ...(image
+    ...(binary
       ? { encoding: "base64" as const, mime_type: attachment.mime_type }
       : {}),
-    content: image
+    content: binary
       ? bytes.subarray(offset, stop).toString("base64")
       : decoder.decode(bytes.subarray(offset, stop)),
     ...(stop < bytes.length

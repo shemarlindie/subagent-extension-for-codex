@@ -83,7 +83,7 @@ export function application(
     next();
   });
 
-  // Ten MiB of uploads expand to about 13.4 MiB in base64.
+  // 50 MiB of uploads expand to about 67 MiB in base64.
   app.use(
     [
       "/mcp",
@@ -92,7 +92,7 @@ export function application(
       "/api/tools/app_send_message",
       "/api/user-tools/app_send_message",
     ],
-    express.json({ limit: "15mb" }),
+    express.json({ limit: "70mb" }),
   );
 
   // A message's inline attachments can reach about 1 MiB as JSON. The service

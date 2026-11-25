@@ -14,7 +14,10 @@ import {
   type TaskAttachment,
   type UploadInput,
 } from "../../../shared/attachments/model.js";
-import { uploadMime } from "../../../shared/attachments/upload.js";
+import {
+  uploadExtension,
+  uploadMime,
+} from "../../../shared/attachments/upload.js";
 import { checkStored } from "../../platform/database/decode.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 import type { Store } from "../tasks/storage/store.js";
@@ -40,6 +43,7 @@ function fileFormat(path: string): AttachmentFormat {
 
 const formatExtension: Record<AttachmentFormat, string> = {
   image: "",
+  document: "",
   diff: ".diff",
   code: ".txt",
   markdown: ".md",
@@ -65,7 +69,7 @@ const NOT_TEXT = new Set([
  * read, so other formats take their own.
  */
 function storedExtension({ format, path, mime_type }: Resolved) {
-  if (mime_type) return "." + mime_type.slice("image/".length);
+  if (mime_type) return uploadExtension(mime_type);
 
   const extension = path === undefined ? "" : extname(path).toLowerCase();
 
@@ -95,20 +99,24 @@ function resolveUpload(input: UploadInput): Resolved {
 
   if (
     !bytes.length ||
-    bytes.length > ATTACHMENT_LIMITS.referenceBytes ||
+    bytes.length > ATTACHMENT_LIMITS.messageBytes ||
     bytes.toString("base64") !== input.data
   ) {
-    throw new AttachmentError("Invalid base64 or file exceeds 2 MiB.");
+    throw new AttachmentError(
+      `Invalid base64 or file exceeds ${ATTACHMENT_LIMITS.messageBytes / 1024 / 1024} MB.`,
+    );
   }
 
   const mime = uploadMime(bytes, input.name);
+  let format: AttachmentFormat = fileFormat(input.name);
+  if (mime) format = mime.startsWith("image/") ? "image" : "document";
 
   return {
     title: input.name,
     path: input.name,
     source: "upload",
     summary: input.summary,
-    format: mime ? "image" : fileFormat(input.name),
+    format,
     ...(mime ? { mime_type: mime, bytes: bytes.length } : {}),
     content: mime ? bytes : decodeText(bytes, input.name),
   };
@@ -136,7 +144,7 @@ async function resolveAttachment(
     const diff = await uncommittedDiff(
       project,
       input.paths,
-      ATTACHMENT_LIMITS.referenceBytes,
+      ATTACHMENT_LIMITS.messageBytes,
     );
 
     // A diff of one file is named after it.
@@ -160,7 +168,7 @@ async function resolveAttachment(
   const file = await readProjectFile(
     project,
     input.path,
-    ATTACHMENT_LIMITS.referenceBytes,
+    ATTACHMENT_LIMITS.messageBytes,
     input,
   );
 
