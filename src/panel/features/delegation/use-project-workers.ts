@@ -18,9 +18,14 @@ export function useProjectWorkers(
 ) {
   const controller = useController();
 
-  // A cleared record, such as after Claude becomes ready, asks again.
-  const all = useSnapshot((state) => state.projectWorkers);
-  const loaded = repository ? all[repository] : undefined;
+  const loaded = useSnapshot((state) =>
+    repository ? state.projectWorkers[repository] : undefined,
+  );
+
+  // A project or global worker change, such as Claude becoming ready, clears
+  // the folder's record and drops a pending read. A record that was still
+  // empty looks the same, so the change itself asks again.
+  const { projects, workers } = useSnapshot(["projects", "workers"]);
 
   // Opening a form or choosing a folder reads its latest workers.
   useEffect(() => {
@@ -29,7 +34,7 @@ export function useProjectWorkers(
 
   useEffect(() => {
     if (repository && !loaded) controller.projectWorkerReads.load(repository);
-  }, [controller, repository, loaded, all]);
+  }, [controller, repository, loaded, projects, workers]);
 
   return {
     workers: loaded ?? (repository ? NO_WORKERS : fallback),
