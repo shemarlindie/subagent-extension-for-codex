@@ -25,6 +25,7 @@ import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { descriptionIds } from "../../../../shared/utils/description-ids";
 import { AttachFilesButton } from "../../../attachments/attach-files-button";
 import { DraftAttachments } from "../../../attachments/draft-attachments";
+import { draftFileIds } from "../../../attachments/draft-file";
 import { useDraftFiles } from "../../../attachments/use-draft-files";
 import { providerName } from "../../../providers/provider-name";
 import { composerMode, spentBudget } from "../chat-model";
@@ -250,7 +251,8 @@ export function Composer({
       const session = controller.session.get("task", sessionTaskId);
 
       updateSession({
-        ...(session.composerDraft === text && session.files === files
+        ...(session.composerDraft === text &&
+        draftFileIds(session.files) === draftFileIds(files)
           ? { composerDraft: "", files: undefined, fileErrors: undefined }
           : {}),
         ...(session.composerError === failure

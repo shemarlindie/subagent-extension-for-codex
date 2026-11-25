@@ -12,7 +12,11 @@ import {
   type UndoRecorder,
 } from "../../../app/state/undo-history";
 import { errorMessage } from "../../../shared/utils/error-message";
-import { uploadArguments, type DraftFile } from "../../attachments/draft-file";
+import {
+  draftFileIds,
+  uploadArguments,
+  type DraftFile,
+} from "../../attachments/draft-file";
 import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
@@ -153,11 +157,7 @@ export class TaskActions {
       return "Wait for the last action.";
     }
 
-    const key = JSON.stringify([
-      task.id,
-      message,
-      files?.map((file) => file.id) ?? [],
-    ]);
+    const key = JSON.stringify([task.id, message, draftFileIds(files)]);
 
     // getRandomValues also works in the supported HTTP LAN console.
     // Preserve delivery when a task's status changes before an uncertain retry.

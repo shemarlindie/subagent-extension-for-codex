@@ -318,7 +318,7 @@ test("a timed out send reuses its ID until a same-named file replaces the attach
 });
 
 test("a draft file opens in the host through a staged copy that the send reuses", async () => {
-  const { controller, view, type, enter, tool } = setup();
+  const { controller, view, input, type, enter, tool, write } = setup();
   const openFile = vi.fn(async (_path: string) => {});
   Object.assign(controller.transport, { openFile });
 
@@ -362,6 +362,22 @@ test("a draft file opens in the host through a staged copy that the send reuses"
   expect(tool.mock.lastCall?.[1]?.attachments).toEqual([
     { ...reference, staged: staged.id },
   ]);
+
+  // Opening it again while the send awaits acknowledgement keeps the same file.
+  tool.mockResolvedValueOnce(staged);
+
+  await act(async () => {
+    fireEvent.click(view.getByRole("button", { name: "Open Spec.pdf" }));
+    await flush();
+  });
+
+  await act(async () => {
+    write.resolve({});
+    await flush();
+  });
+
+  expect(input.value).toBe("");
+  expect(view.queryByRole("button", { name: "Open Spec.pdf" })).toBeNull();
 });
 
 test("a late acknowledgement clears the timed out draft and error, so the same text sends anew", async () => {

@@ -18,6 +18,13 @@ export type DraftFile = {
   staged?: string;
 };
 
+/**
+ * The draft's files in order, by id. Opening a file replaces the list with
+ * its staged copy, so the same selection compares by id.
+ */
+export const draftFileIds = (files?: DraftFile[]) =>
+  (files ?? []).map((file) => file.id).join();
+
 /** The hover preview's largest side at 2x pixel density. */
 const THUMBNAIL_SIZE = 400;
 
