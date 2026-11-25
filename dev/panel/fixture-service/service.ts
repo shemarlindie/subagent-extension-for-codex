@@ -5,6 +5,7 @@
 // Tasks with change fixtures get disposable repositories and recorded edit hunks.
 import { execFileSync } from "node:child_process";
 import {
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -229,21 +230,32 @@ function seedChanges(
   }
 }
 
+const attachmentFiles = join(
+  import.meta.dirname,
+  "../scenarios/attachment-files",
+);
+
 /** Stores the fixture attachments. One has no file, as if removed by hand. */
 function seedAttachments(control: Control) {
   for (const [taskId, attachments] of Object.entries(previewAttachments)) {
     const folder = control.attachments.folder(taskId);
     mkdirSync(folder, { recursive: true });
 
-    for (const { content, ...attachment } of attachments) {
-      if (content !== undefined) {
-        writeFileSync(join(folder, attachment.file), content);
+    for (const { content, asset, ...attachment } of attachments) {
+      const target = join(folder, attachment.file);
+
+      if (asset) {
+        copyFileSync(join(attachmentFiles, asset), target);
+      } else if (content !== undefined) {
+        writeFileSync(target, content);
       }
     }
 
     control.attachments.save(
       taskId,
-      attachments.map(({ content: _, ...attachment }) => attachment),
+      attachments.map(
+        ({ content: _, asset: _asset, ...attachment }) => attachment,
+      ),
     );
   }
 }
