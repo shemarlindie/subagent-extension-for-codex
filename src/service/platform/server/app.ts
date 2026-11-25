@@ -91,6 +91,8 @@ export function application(
       "/api/user-tools/app_start_task",
       "/api/tools/app_send_message",
       "/api/user-tools/app_send_message",
+      "/api/tools/app_stage_file",
+      "/api/user-tools/app_stage_file",
     ],
     express.json({ limit: "70mb" }),
   );
@@ -385,7 +387,15 @@ export function application(
         return;
       }
 
-      res.status(500).json({ error: error.message });
+      // Body parsing rejects an oversized or malformed request with a client status.
+      const client =
+        "status" in error &&
+        typeof error.status === "number" &&
+        error.status < 500;
+
+      res
+        .status(client ? Number(error.status) : 500)
+        .json({ error: error.message });
     },
   );
 
