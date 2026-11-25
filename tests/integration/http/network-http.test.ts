@@ -112,10 +112,15 @@ test.each([
 
         expect(wrongToken.status).toBe(401);
 
-        const unauthenticated = await fetch(`${base}/api/tools/list_tasks`, {
-          method: "POST",
-          headers: { Origin: lanOrigin },
-        });
+        // A malformed body still gets 401, since bodies are parsed after authentication.
+        const unauthenticated = await fetch(
+          `${base}/api/user-tools/app_send_message`,
+          {
+            method: "POST",
+            headers: { Origin: lanOrigin, "Content-Type": "application/json" },
+            body: "{",
+          },
+        );
 
         expect(unauthenticated.status).toBe(401);
 
