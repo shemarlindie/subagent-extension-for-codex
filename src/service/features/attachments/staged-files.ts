@@ -22,7 +22,7 @@ import { logError, logEvent } from "../../platform/logging/logger.js";
 /** Content hashes, the only folder names the sweep removes. */
 const STAGED_FOLDER = /^[0-9a-f]{64}$/;
 
-/** How long a staged copy stays after it was last staged. */
+/** How long after it was last staged a copy can be removed. */
 const STAGED_TTL_MS = 24 * 60 * 60 * 1000;
 
 const sha256 = (bytes: Buffer) =>
@@ -55,7 +55,7 @@ export class StagedFiles {
 
   /**
    * Writes a draft file where the host can open it and returns the copy.
-   * Staging it again keeps it another day.
+   * Staging it again keeps it at least another day.
    */
   async stage(name: string, data: string): Promise<StagedFile> {
     const bytes = decodeUpload(data);

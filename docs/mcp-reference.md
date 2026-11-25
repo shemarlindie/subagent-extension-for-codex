@@ -317,8 +317,8 @@ For [hosts that open files](host-capabilities.md#opening-files),
 stored file, and fails when the file is missing. `app_stage_file` takes a draft
 file's `name` and base64 `data`, writes a copy and returns `{ id, path }`. A
 panel send can then pass `{ source: "upload", name, summary, staged: id }` in
-place of `data`. The copy lasts a day after it was last staged, and a send fails
-if it expired or changed.
+place of `data`. A copy not staged again for a day can be removed, and a send
+fails once its copy is gone or changed.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See

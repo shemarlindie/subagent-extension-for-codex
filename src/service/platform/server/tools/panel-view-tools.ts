@@ -162,7 +162,7 @@ export function panelViewTools(c: Control, owner: string) {
     }),
     app_stage_file: tool({
       description:
-        'User interface only: writes a draft file the user wants to open before sending it, and returns { id, path }: its content hash and absolute path. A send can pass { source: "upload", name, summary, staged: id } in place of its data while the copy lasts, a day after it was last staged.',
+        'User interface only: writes a draft file the user wants to open before sending it, and returns { id, path }: its content hash and absolute path. A send can pass { source: "upload", name, summary, staged: id } in place of its data while the copy exists. A copy not staged again for a day can be removed.',
       schema: stageFileSchema,
       run: (a) => c.attachments.staged.stage(a.name, a.data),
     }),
