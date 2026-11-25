@@ -83,9 +83,9 @@ async function validContent(
 /**
  * One page of an attachment's stored file, ending on a whole character. The
  * first page checks the whole file, and later pages read only their range.
- * Cursors carry the file's revision, so pages never mix two versions of a
- * file. A file that is gone, isn't a regular file, is larger than any
- * attachment or doesn't match its stored format is unavailable.
+ * A cursor fails if the file changed after the page that returned it. A file
+ * that is gone, isn't a regular file, is larger than any attachment or doesn't
+ * match its stored format is unavailable.
  */
 export async function attachmentPage(
   path: string,
