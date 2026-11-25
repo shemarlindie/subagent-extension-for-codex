@@ -824,6 +824,19 @@ body[data-expanded-panel="true"]
   padding: 0;
   border-radius: 50%;
 }
+/*
+ * Secondary icons stay quiet until pointed at. Stop takes the send button's
+ * place, so it keeps full contrast.
+ */
+.chat-icon-button.ghost:not([data-action="stop"]) {
+  color: var(--muted);
+}
+.chat-icon-button.ghost:not([data-action="stop"], :disabled):is(
+    :hover,
+    :focus-visible
+  ) {
+  color: var(--text);
+}
 .chat-composer-field-feedback {
   padding-inline-start: calc(
     var(--composer-caret-size) + var(--composer-control-gap)
