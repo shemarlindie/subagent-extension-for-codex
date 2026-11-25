@@ -105,19 +105,29 @@
 }
 
 /*
- * A draft's file toolbar names it, so the toolbar takes the heading's place
- * beside the close button. The title stays for AT.
+ * An attachment's file toolbar names it, so the toolbar takes the heading's
+ * place beside the close button. The title stays for AT.
  */
-.dialog[data-kind="draft-attachment"] .dialog-heading {
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .dialog-heading {
   z-index: 2;
   height: 0;
   padding: 0;
 }
-.dialog[data-kind="draft-attachment"] .file-preview-toolbar {
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .file-preview-toolbar {
   top: calc(-1 * var(--dialog-pad));
-  padding-inline-end: 44px;
+  padding-inline-end: calc(44px + var(--attachment-actions-width, 0px));
 }
-.dialog[data-kind="draft-attachment"] .dialog-heading > h2 {
+/* The name stands in for the title, so it wraps instead of truncating. */
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .file-name {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .dialog-heading
+  > h2 {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -126,34 +136,19 @@
   white-space: nowrap;
 }
 
-/*
- * The heading's attachment steps and file preview options, beside the close
- * button. They move below the title when it would otherwise get too narrow.
- */
-.dialog[data-kind="attachment"] .dialog-heading {
-  flex-wrap: wrap;
-  row-gap: 4px;
-}
-.dialog[data-kind="attachment"] .dialog-heading > h2 {
-  flex: 1 1 12rem;
-  overflow-wrap: anywhere;
-}
+/* A sent attachment's steps and file preview options, beside the close button. */
 .attachment-heading-actions {
+  position: absolute;
+  top: 8px;
+  right: 44px;
   display: flex;
-  flex: none;
   align-items: center;
   gap: 8px;
-  margin-block-start: -4px;
-  margin-inline-start: auto;
 }
 .attachment-options-target {
   display: flex;
 }
-/* The file toolbar pins just under the heading, which grows when it wraps. */
-.dialog[data-kind="attachment"] .file-preview-toolbar {
-  top: calc(var(--attachment-heading-height, 56px) - var(--dialog-pad) - 4px);
-}
-/* The attachment dialog's summary and origin, above the file viewer. */
+/* A parent-sent attachment's summary and origin, above its file viewer. */
 .attachment-header {
   display: flex;
   align-items: flex-start;

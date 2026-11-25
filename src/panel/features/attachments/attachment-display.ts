@@ -67,7 +67,7 @@ export function displayTitle({
     : title;
 }
 
-/** Where an attachment came from, with its size, for the dialog's header. */
+/** Where an attachment the parent agent sent came from, with its size. */
 export function attachmentOrigin(attachment: MessageAttachment) {
   const files = attachment.files ?? 0;
 
@@ -75,8 +75,6 @@ export function attachmentOrigin(attachment: MessageAttachment) {
     attachment.source === "diff"
       ? `${files} ${files === 1 ? "file" : "files"}, ${attachmentSize(attachment)}`
       : attachmentSize(attachment);
-
-  if (attachment.source === "upload") return `Uploaded by you · ${size}`;
 
   if (attachment.source === "inline") {
     return `Inline · ${size}`;
