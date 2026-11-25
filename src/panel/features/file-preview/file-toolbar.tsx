@@ -6,8 +6,7 @@ import { fileName, formatName, type FileFormat } from "./file-format";
 
 type FileToolbarProps = {
   path: string;
-  /** The file's format, or "document" for a file the panel can't show. */
-  format: FileFormat | "document";
+  format: FileFormat;
   bytes: number;
   /** The view switcher, actions and progress after the file's name. */
   children?: ReactNode;
@@ -25,7 +24,7 @@ export function FileToolbar({
       <FileBadge path={path} format={format} />
       <span className="file-meta">
         <span className="file-name">{fileName(path)}</span>
-        <span>{format === "document" ? "Document" : formatName(format)}</span>
+        <span>{formatName(format)}</span>
         <span>{formatBytes(bytes)}</span>
       </span>
       {children}

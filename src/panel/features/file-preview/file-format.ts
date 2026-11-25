@@ -18,7 +18,7 @@ export type PreviewFile = {
 
 /** How a file is rendered; detected from its MIME type, then its extension. */
 export type FileFormat =
-  "diff" | "json" | "markdown" | "csv" | "image" | "code" | "text";
+  "diff" | "json" | "markdown" | "csv" | "image" | "code" | "text" | "document";
 
 /** `diff` renders a diff file's content; `changes` renders the previewed file's own diff. */
 export type FileView =
@@ -108,6 +108,7 @@ const FORMAT_NAMES: Record<FileFormat, string> = {
   image: "Image",
   code: "Code",
   text: "Text",
+  document: "Document",
 };
 
 /** The highlight.js language for formats that have a fixed one, rather than the path's. */
@@ -144,6 +145,7 @@ const FORMAT_MIMES: Record<FileFormat, string> = {
   image: "image/png",
   code: "text/plain",
   text: "text/plain",
+  document: "application/octet-stream",
 };
 
 export function baseMime(
@@ -184,6 +186,8 @@ export function fileFormat(file: PreviewFile): FileFormat {
   const known = MIME_FORMATS[mime];
   if (known) return known;
   if (mime.startsWith("image/")) return "image";
+  // Other binary types, such as PDFs, have no viewer.
+  if (!mime.startsWith("text/")) return "document";
   const extension = extensionOf(file.path);
 
   if (extension === "md" || extension === "markdown") return "markdown";
@@ -308,6 +312,8 @@ export function fileViews(file: PreviewFile): FileViews {
     case "json":
     case "text":
       return ["source"];
+    case "document":
+      throw new Error("Documents have no viewer");
   }
 }
 

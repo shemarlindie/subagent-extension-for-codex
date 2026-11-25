@@ -95,7 +95,7 @@ function AttachmentToolbar({ attachment }: AttachmentProps) {
   return (
     <FileToolbar
       path={file.path}
-      format={attachment.format === "document" ? "document" : fileFormat(file)}
+      format={fileFormat(file)}
       bytes={
         isBinaryFormat(attachment.format)
           ? (attachment.bytes ?? 0)

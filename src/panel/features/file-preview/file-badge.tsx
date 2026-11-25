@@ -2,7 +2,7 @@ import { fileBadge, type FileFormat } from "./file-format";
 
 type FileBadgeProps = {
   path: string;
-  format: FileFormat | "document";
+  format: FileFormat;
 };
 
 export function FileBadge({ path, format }: FileBadgeProps) {

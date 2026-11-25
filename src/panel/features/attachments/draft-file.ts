@@ -4,7 +4,7 @@ import {
   type UploadInput,
 } from "../../../shared/attachments/model";
 import { uploadMime } from "../../../shared/attachments/upload";
-import type { PreviewFile } from "../file-preview/file-format";
+import { fileFormat, type PreviewFile } from "../file-preview/file-format";
 
 export type DraftFile = {
   id: number;
@@ -83,8 +83,8 @@ export async function loadFile(file: File, name: string) {
 }
 
 /** Whether the panel can preview the file. Documents have no viewer. */
-export const draftPreviewable = ({ mime }: DraftFile) =>
-  !mime || mime.startsWith("image/");
+export const draftPreviewable = ({ name, mime }: DraftFile) =>
+  fileFormat({ path: name, content: "", mime_type: mime }) !== "document";
 
 /** Decode local text only when its preview opens. Images already have base64 content. */
 export function draftPreview(upload: UploadInput, mime?: string): PreviewFile {
