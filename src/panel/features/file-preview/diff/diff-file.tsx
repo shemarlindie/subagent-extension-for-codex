@@ -2,12 +2,14 @@ import {
   useDeferredValue,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type SyntheticEvent,
 } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
+import { useAnimatedHeight } from "../../../shared/components/motion/use-animated-height";
 import { chunks } from "../../../shared/utils/chunks";
 import { pathLanguage } from "../file-format";
 import { highlightLine } from "../highlight";
@@ -73,6 +75,11 @@ export function DiffFile({
   const deferredOpen = useDeferredValue(open);
   const renderRows = open && deferredOpen && !placeholder;
   const language = pathLanguage(diffPath(file));
+  const body = useRef<HTMLDivElement>(null);
+
+  // The rows can be taller than the placeholder or progress before them, as
+  // when lines wrap, so files below ease to the new height instead of jumping.
+  useAnimatedHeight(body, renderRows);
 
   const renamed =
     file.from && file.to && file.from !== file.to && !file.new && !file.deleted;
@@ -121,17 +128,20 @@ export function DiffFile({
         )}
       </summary>
       {/* A collapsed file unmounts its rows. */}
-      {open && note && <p className="help diff-file-note">{note}</p>}
-      {open &&
-        (placeholder ??
-          (deferredOpen ? (
-            <DiffRows file={file} language={language} emptyNote={emptyNote} />
-          ) : (
-            <Progress
-              label={`Rendering ${diffPath(file)}`}
-              className="diff-progress"
-            />
-          )))}
+      {open && (
+        <div ref={body}>
+          {note && <p className="help diff-file-note">{note}</p>}
+          {placeholder ??
+            (deferredOpen ? (
+              <DiffRows file={file} language={language} emptyNote={emptyNote} />
+            ) : (
+              <Progress
+                label={`Rendering ${diffPath(file)}`}
+                className="diff-progress"
+              />
+            ))}
+        </div>
+      )}
     </details>
   );
 }
