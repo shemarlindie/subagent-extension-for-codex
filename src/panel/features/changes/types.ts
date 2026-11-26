@@ -47,7 +47,8 @@ export type FileDiffsState = {
   task: string;
   scope: ChangeScope;
   revision: string;
-  files: Record<string, FileDiff>;
+  /** A Map, so a path such as `constructor` finds no inherited entry. */
+  files: Map<string, FileDiff>;
 };
 
 /** The selected task's change totals, for its tab count and Details. */

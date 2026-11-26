@@ -153,7 +153,7 @@ export class ChangeLoader {
                 task: task.id,
                 scope: next,
                 revision: data.revision,
-                files: {},
+                files: new Map(),
               },
             }),
       });
@@ -170,7 +170,7 @@ export class ChangeLoader {
    */
   loadDiff(path: string) {
     const diffs = this.context.snapshot().changeDiffs;
-    const status = diffs?.files[path]?.status;
+    const status = diffs?.files.get(path)?.status;
     if (!diffs || (status && status !== "error")) return Promise.resolve();
     this.setDiff(diffs, path, { status: "loading" });
     this.diffReads = this.diffReads.then(() => this.readDiff(diffs, path));
@@ -192,7 +192,7 @@ export class ChangeLoader {
 
   private setDiff(diffs: FileDiffsState, path: string, diff: FileDiff) {
     this.context.patch({
-      changeDiffs: { ...diffs, files: { ...diffs.files, [path]: diff } },
+      changeDiffs: { ...diffs, files: new Map(diffs.files).set(path, diff) },
     });
   }
 

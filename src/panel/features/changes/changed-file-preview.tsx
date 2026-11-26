@@ -20,6 +20,7 @@ import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
 import { ChangedFileNav } from "./changed-file-nav";
 import { listedDiffs } from "./changed-files";
+import { DiffReadError } from "./diff-read-error";
 import { OpenFileButton } from "./open-file-button";
 import { readChangedFile } from "./read-changes";
 import type { ChangedFileContent } from "./types";
@@ -71,15 +72,12 @@ function useChangedFiles(task: Task) {
   return (changes?.task === task.id && changes.data?.files) || [];
 }
 
-/**
- * A listed file's diff, read once the preview shows it. Undefined until read,
- * or when the file has none.
- */
+/** A listed file's diff read, which starts once the preview shows the file. */
 function useFileDiff(task: Task, path: string) {
   const controller = useController();
   const file = useChangedFiles(task).find((file) => file.path === path);
 
-  const diff = useSnapshot((state) => listedDiffs(state, task.id)?.[path]);
+  const diff = useSnapshot((state) => listedDiffs(state, task.id)?.get(path));
 
   const needsDiff = Boolean(file && !file.incomplete);
 
@@ -89,7 +87,7 @@ function useFileDiff(task: Task, path: string) {
     }
   }, [controller, needsDiff, diff, path]);
 
-  return diff?.status === "ready" ? diff.diff : undefined;
+  return diff;
 }
 
 type ChangedFileViewedProps = {
@@ -137,7 +135,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
   // The file showing: the one asked for once read, until then the last one.
   const shown = read?.path ?? path;
   const loading = read?.path !== path;
-  const diff = useFileDiff(task, shown);
+  const diffRead = useFileDiff(task, shown);
+  const diff = diffRead?.status === "ready" ? diffRead.diff : undefined;
 
   const file = read?.status === "ready" ? read.file : undefined;
 
@@ -323,6 +322,14 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
                   <div className="diff-view">
                     <DiffFile file={diff} initiallyOpen />
                   </div>
+                )}
+                {diffRead?.status === "error" && (
+                  <DiffReadError
+                    error={diffRead.error}
+                    onRetry={() =>
+                      controller.run(() => controller.changes.loadDiff(shown))
+                    }
+                  />
                 )}
               </>
             )}

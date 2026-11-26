@@ -316,10 +316,10 @@ test("diffs read one at a time in the order asked, and a stale read reloads the 
   assert.deepEqual(reads, ["a.ts@r1", "b.ts@r1"]);
   assert.equal(controller.getSnapshot().changes?.data?.revision, "r2");
   assert.equal(diffs()?.revision, "r2");
-  assert.deepEqual(diffs()?.files, {});
+  assert.equal(diffs()?.files.size, 0);
 
   await controller.changes.loadDiff("b.ts");
-  const read = diffs()?.files["b.ts"];
+  const read = diffs()?.files.get("b.ts");
   assert.equal(read?.status === "ready" && read.diff?.additions, 1);
   assert.deepEqual(reads.at(-1), "b.ts@r2");
 });

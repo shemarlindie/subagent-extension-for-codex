@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useState } from "react";
 
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -7,6 +7,7 @@ import { DiffFile } from "../file-preview/diff/diff-file";
 import { Progress } from "../file-preview/progress";
 import { standIn } from "./changed-files";
 import { FILE_ATTRIBUTE } from "./changes-reading";
+import { DiffReadError } from "./diff-read-error";
 import type { FileDiff, ListedChange } from "./types";
 import { ViewedToggle } from "./viewed-toggle";
 
@@ -83,21 +84,24 @@ export const ChangedFileSection = memo(function ChangedFileSection({
   }
 
   const needsDiff = open && !file.incomplete;
+  const error = needsDiff && diff?.status === "error" ? diff.error : undefined;
+  const failed = error !== undefined;
 
   useEffect(() => {
     if (needsDiff && !diff) onLoadDiff(file.path);
   }, [needsDiff, diff, file.path, onLoadDiff]);
 
+  // A file picked in the tree is ready to scroll to once its read fails too,
+  // which brings Retry into view.
+  useLayoutEffect(() => {
+    if (failed) onContentReady?.();
+  }, [failed, onContentReady]);
+
   let placeholder;
 
-  if (needsDiff && diff?.status === "error") {
+  if (failed) {
     placeholder = (
-      <div className="diff-file-note changed-file-diff-error">
-        <p className="form-error" role="alert">
-          {diff.error}
-        </p>
-        <Button onClick={() => onLoadDiff(file.path)}>Retry</Button>
-      </div>
+      <DiffReadError error={error} onRetry={() => onLoadDiff(file.path)} />
     );
   } else if (needsDiff && diff?.status !== "ready") {
     placeholder = (

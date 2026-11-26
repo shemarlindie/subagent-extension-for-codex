@@ -43,7 +43,7 @@ const readDiffs: FileDiffsState = {
   task: task.id,
   scope: "task",
   revision: "r1",
-  files: Object.fromEntries(
+  files: new Map(
     [
       ...paths.map((path) => [path, diffOf(path, `${path} content`)]),
       ["gone.ts", gone],
@@ -204,7 +204,7 @@ test("the preview steps through the changed files in order, wrapping at the ends
 test("the preview reads a file's diff it doesn't have yet", async () => {
   const { loadDiff } = setup("a.ts", data, undefined, {
     ...readDiffs,
-    files: {},
+    files: new Map(),
   });
 
   await act(async () => {});

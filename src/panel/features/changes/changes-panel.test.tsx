@@ -81,7 +81,7 @@ function diffs(
     task: task.id,
     scope: list.scope,
     revision: list.revision,
-    files: Object.fromEntries(
+    files: new Map(
       Object.entries(files).map(([path, diff]) => [
         path,
         typeof diff === "string"
@@ -449,6 +449,67 @@ test("a long list shows every file at once and reads a diff only when its file o
   await waitFor(() =>
     expect(third.querySelector(".diff-row.add")?.textContent).toContain("new"),
   );
+});
+
+test("picking a file whose diff read fails scrolls to its Retry", async () => {
+  const paths = Array.from({ length: 9 }, (_, index) => `src/file-${index}.ts`);
+
+  const list: ChangeList = {
+    ...data,
+    files: paths.map((path) => ({ ...changedFile, path })),
+  };
+
+  const { view, update, loadDiff } = setup(
+    { ...loaded, data: list },
+    diffs(list, {}),
+  );
+
+  const scroller = getElement<HTMLElement>(view.container, ".changes");
+
+  const last = getElement<HTMLDetailsElement>(
+    view.container,
+    '[data-changed-file="src/file-8.ts"]',
+  );
+
+  scroller.style.overflowY = "auto";
+  let scrollTop = 0;
+
+  Object.defineProperties(scroller, {
+    clientHeight: { configurable: true, value: 200 },
+    scrollHeight: { configurable: true, value: 2000 },
+    scrollTop: {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => (scrollTop = value),
+    },
+  });
+
+  vi.spyOn(scroller, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, 0, 500, 200),
+  );
+
+  vi.spyOn(last, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, 1000 - scrollTop, 500, 100),
+  );
+
+  fireEvent.click(view.getByRole("button", { name: "Files" }));
+  fireEvent.click(view.getByRole("button", { name: "src/file-8.ts" }));
+
+  await waitFor(() =>
+    expect(loadDiff).toHaveBeenLastCalledWith("src/file-8.ts"),
+  );
+
+  expect(scroller.scrollTop).toBe(0);
+
+  update(
+    { ...loaded, data: list },
+    diffs(list, {
+      "src/file-8.ts": { status: "error", error: "Read failed" },
+    }),
+  );
+
+  await waitFor(() => expect(scroller.scrollTop).toBe(1000));
+  assert.ok(last.contains(view.getByRole("button", { name: "Retry" })));
 });
 
 test("a diff that can't be parsed still has a section to read and mark", () => {

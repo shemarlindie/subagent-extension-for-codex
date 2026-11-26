@@ -135,7 +135,7 @@ export function ChangesView({
             <ChangedFileSection
               key={path}
               file={file}
-              diff={fileDiffs?.[path]}
+              diff={fileDiffs?.get(path)}
               remembered={reading.open.get(path)}
               openByDefault={opensByDefault(files.length, index)}
               viewed={isViewed(viewed, file)}
