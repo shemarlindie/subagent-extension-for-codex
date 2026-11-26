@@ -1,3 +1,4 @@
+import { OCTET_STREAM } from "../../../shared/attachments/file-type.js";
 import {
   isBinaryFormat,
   type MessageAttachment,
@@ -9,6 +10,7 @@ import type { PreviewFile } from "../file-preview/file-format";
 /** The chip and dialog icon for an attachment's kind. */
 export function attachmentIcon(attachment: MessageAttachment): IconName {
   if (attachment.format === "image") return "eye";
+  if (attachment.mime_type === OCTET_STREAM) return "file";
   if (attachment.source === "diff") return "file-diff";
   if (attachment.source === "inline" && !attachment.path) return "note";
 

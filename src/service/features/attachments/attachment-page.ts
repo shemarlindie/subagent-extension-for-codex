@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { BigIntStats } from "node:fs";
 import { open, type FileHandle } from "node:fs/promises";
 
+import { fileMime } from "../../../shared/attachments/file-type.js";
 import {
   ATTACHMENT_LIMITS,
   ATTACHMENT_PAGE_BYTES,
@@ -9,7 +10,6 @@ import {
   type AttachmentPage,
   type MessageAttachment,
 } from "../../../shared/attachments/model.js";
-import { uploadMime } from "../../../shared/attachments/upload.js";
 import {
   decodeFileCursor,
   encodeFileCursor,
@@ -68,7 +68,8 @@ async function validContent(
     if (isBinaryFormat(attachment.format)) {
       return (
         attachment.bytes === size &&
-        uploadMime(content, attachment.title) === attachment.mime_type
+        fileMime(content, attachment.path ?? attachment.title) ===
+          attachment.mime_type
       );
     }
 

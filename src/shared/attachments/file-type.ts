@@ -1,5 +1,7 @@
-import { imageMime, isBinary } from "../changes/changes.js";
-import { AttachmentError } from "./attachment-error.js";
+import { isBinary } from "../changes/changes.js";
+
+/** The type of bytes that are neither text nor a known image or document. */
+export const OCTET_STREAM = "application/octet-stream";
 
 /**
  * Whether a JPEG has its end-of-image marker. Some cameras append data after
@@ -39,8 +41,25 @@ const DOCUMENTS: Partial<Record<string, { mime: string; signature: string }>> =
 const suffix = (name: string) =>
   /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? "";
 
-/** The stored file's extension for an upload's detected type. */
-export function uploadExtension(mime: string) {
+/**
+ * A document's type when its suffix names one and its bytes start with that
+ * document's signature. The start of a file is enough.
+ */
+export function documentMime(bytes: Uint8Array, name: string) {
+  const key = suffix(name);
+  // An own key only, so a suffix such as `constructor` isn't a document.
+  const document = Object.hasOwn(DOCUMENTS, key) ? DOCUMENTS[key] : undefined;
+  if (!document) return undefined;
+
+  const start = String.fromCharCode(
+    ...bytes.subarray(0, document.signature.length),
+  );
+
+  return start === document.signature ? document.mime : undefined;
+}
+
+/** The stored file's extension for a detected image or document type. */
+export function mimeExtension(mime: string) {
   const document = Object.entries(DOCUMENTS).find(
     ([, entry]) => entry?.mime === mime,
   );
@@ -48,60 +67,58 @@ export function uploadExtension(mime: string) {
   return `.${document?.[0] ?? mime.slice("image/".length)}`;
 }
 
+/** Whether bytes are UTF-8 text. */
+function isText(bytes: Uint8Array) {
+  if (isBinary(bytes)) return false;
+
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Detect an image's raster container, or a document by its suffix and
- * signature. An image or document suffix must agree with the bytes. Other
- * files must be text.
+ * A file's type by its bytes: an image's raster container, or a document
+ * whose suffix matches its signature. Undefined for UTF-8 text, and
+ * octet-stream for anything else, whatever the name says.
  */
-export function uploadMime(bytes: Uint8Array, name: string) {
+export function fileMime(bytes: Uint8Array, name: string) {
   const tag = (offset: number, length: number) =>
     String.fromCharCode(...bytes.subarray(offset, offset + length));
 
-  const document = DOCUMENTS[suffix(name)];
-
-  if (document) {
-    if (tag(0, document.signature.length) !== document.signature) {
-      throw new AttachmentError("Invalid or unsupported document.");
-    }
-
-    return document.mime;
-  }
-
+  const document = documentMime(bytes, name);
+  if (document) return document;
   const end = bytes.length;
-  let mime: string | undefined;
 
   if (
     tag(0, 8) === "\x89PNG\r\n\x1a\n" &&
     tag(12, 4) === "IHDR" &&
     tag(end - 8, 4) === "IEND"
   ) {
-    mime = "image/png";
-  } else if (tag(0, 3) === "\xff\xd8\xff" && hasJpegEnd(bytes)) {
-    mime = "image/jpeg";
-  } else if (
+    return "image/png";
+  }
+
+  if (tag(0, 3) === "\xff\xd8\xff" && hasJpegEnd(bytes)) return "image/jpeg";
+
+  if (
     ["GIF87a", "GIF89a"].includes(tag(0, 6)) &&
     end > 13 &&
     bytes[end - 1] === 0x3b
   ) {
-    mime = "image/gif";
-  } else if (
+    return "image/gif";
+  }
+
+  if (
     tag(0, 4) === "RIFF" &&
     tag(8, 4) === "WEBP" &&
     ["VP8 ", "VP8L", "VP8X"].includes(tag(12, 4)) &&
     new DataView(bytes.buffer, bytes.byteOffset).getUint32(4, true) === end - 8
   ) {
-    mime = "image/webp";
+    return "image/webp";
   }
 
-  const expected = imageMime(name);
-
-  if (expected && expected !== mime) {
-    throw new AttachmentError("Invalid or unsupported image.");
-  }
-
-  if (!mime && isBinary(bytes)) {
-    throw new AttachmentError("Unsupported binary file.");
-  }
-
-  return mime;
+  return isText(bytes) ? undefined : OCTET_STREAM;
 }

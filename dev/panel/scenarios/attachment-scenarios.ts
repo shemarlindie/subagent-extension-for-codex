@@ -233,7 +233,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       end_line: 20,
       content: legacyTest,
     },
-    // The user's follow-up uploads an image and a PDF.
+    // The user's follow-up uploads an image, a PDF and an archive.
     {
       message_id: USER_FOLLOW_UP,
       position: 1,
@@ -263,6 +263,22 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       chars: 0,
       lines: 0,
       asset: "launch-brief.pdf",
+    },
+    // A file type the panel doesn't recognize.
+    {
+      message_id: USER_FOLLOW_UP,
+      position: 3,
+      title: "rollout-metrics.zip",
+      summary: "User attached rollout-metrics.zip.",
+      format: "document",
+      source: "upload",
+      path: "rollout-metrics.zip",
+      file: `${USER_FOLLOW_UP}-3-rollout-metrics-zip.zip`,
+      mime_type: "application/octet-stream",
+      bytes: 191,
+      chars: 0,
+      lines: 0,
+      asset: "rollout-metrics.zip",
     },
   ],
 };

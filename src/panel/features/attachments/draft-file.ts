@@ -1,9 +1,9 @@
+import { fileMime } from "../../../shared/attachments/file-type";
 import {
   ATTACHMENT_LIMITS,
   type StagedUploadInput,
   type UploadInput,
 } from "../../../shared/attachments/model";
-import { uploadMime } from "../../../shared/attachments/upload";
 import { fileFormat, type PreviewFile } from "../file-preview/file-format";
 
 export type DraftFile = {
@@ -48,23 +48,12 @@ async function imageThumbnail(file: File) {
 
 export async function loadFile(file: File, name: string) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const mime = uploadMime(bytes, name);
+  const mime = fileMime(bytes, name);
 
-  if (
-    file.type.startsWith("image/") &&
-    file.type !== "image/svg+xml" &&
-    file.type !== mime
-  ) {
-    throw new Error("Invalid or unsupported image.");
-  }
-
-  let thumbnail;
-
-  if (!mime) {
-    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } else if (mime.startsWith("image/")) {
-    thumbnail = await imageThumbnail(file);
-  }
+  // The service accepts an image the browser can't decode, so neither drops it.
+  const thumbnail = mime?.startsWith("image/")
+    ? await imageThumbnail(file).catch(() => undefined)
+    : undefined;
 
   let binary = "";
 

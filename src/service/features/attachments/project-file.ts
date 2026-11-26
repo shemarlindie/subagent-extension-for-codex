@@ -3,6 +3,7 @@ import { open, realpath, stat, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import { documentMime } from "../../../shared/attachments/file-type.js";
 import { isBinary } from "../../../shared/changes/changes.js";
 import { changePath } from "../changes/paths.js";
 
@@ -93,16 +94,16 @@ async function openProjectFile(project: string, relative: string) {
 /**
  * Lines `start` to `end` of a file, or to its end, as bytes. Reads in chunks
  * and keeps one slice of each, so lines before the range cost no memory.
- * Fails once the selection passes `limit` bytes, or when the file starts
- * with binary data, even outside the range.
+ * Fails once the selection passes `limit` bytes, or when `checkStart` throws
+ * for the first chunk, even outside the range.
  */
 async function readLines(
   file: FileHandle,
-  name: string,
   start: number,
   end: number | undefined,
   limit: number,
   tooLarge: () => Error,
+  checkStart?: (chunk: Buffer) => void,
 ) {
   const parts: Buffer[] = [];
   const buffer = Buffer.alloc(CHUNK_BYTES);
@@ -115,9 +116,7 @@ async function readLines(
     if (!bytesRead) break;
     const chunk = buffer.subarray(0, bytesRead);
 
-    if (first && isBinary(chunk)) {
-      throw new AttachmentError(`${name} is a binary file.`);
-    }
+    if (first) checkStart?.(chunk);
 
     first = false;
     let from = line >= start ? 0 : -1;
@@ -152,7 +151,9 @@ async function readLines(
 }
 
 /**
- * A regular project file's text, or the selected lines, and its mode.
+ * A regular project file's bytes, or the selected lines, and its mode. A line
+ * range needs a file that starts as text, and the caller decodes only the
+ * selected lines, so reading stops at the range on a file of any size.
  * `project` is the approved canonical project path. `limit` bounds the bytes
  * read into memory.
  */
@@ -190,18 +191,27 @@ export async function readProjectFile(
 
     const tooLarge = () =>
       new AttachmentError(
-        `${relative} is over the ${limit / 1024 / 1024} MB attachment limit${ranged ? " for the selected lines" : ""}. Attach a line range with start_line and end_line.`,
+        `${relative} is over the ${limit / 1024 / 1024} MB attachment limit${ranged ? " for the selected lines" : ""}. For a text file, attach a line range with start_line and end_line.`,
       );
 
     if (!ranged && info.size > limit) throw tooLarge();
 
+    // A document can start with text, such as a PDF's header line.
+    const textOnly = (chunk: Buffer) => {
+      if (isBinary(chunk) || documentMime(chunk, relative)) {
+        throw new AttachmentError(
+          `${relative} is a binary file. Line ranges are for text files.`,
+        );
+      }
+    };
+
     const bytes = await readLines(
       file,
-      relative,
       range.start_line ?? 1,
       range.end_line,
       limit,
       tooLarge,
+      ranged ? textOnly : undefined,
     );
 
     if (ranged && !bytes.length) {
@@ -213,7 +223,7 @@ export async function readProjectFile(
     return {
       path: relative,
       mode: info.mode,
-      text: decodeText(bytes, relative),
+      bytes,
     };
   } finally {
     await file.close();

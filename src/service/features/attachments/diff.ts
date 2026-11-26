@@ -2,6 +2,7 @@ import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import { fileMime } from "../../../shared/attachments/file-type.js";
 import { gitBytes, gitState } from "../workspaces/git.js";
 import {
   decodeText,
@@ -9,6 +10,9 @@ import {
   projectPath,
   readProjectFile,
 } from "./project-file.js";
+
+const binaryFile = (path: string) =>
+  new AttachmentError(`${path} is a binary file. Pass paths to leave it out.`);
 
 const GIT_TIMEOUT_MS = 30_000;
 /** Room for the file list Git prints before the patch. */
@@ -150,11 +154,7 @@ function trackedChanges(output: Buffer) {
     const [added, deleted] = record.split("\t", 2);
     const path = record.slice(`${added}\t${deleted}\t`.length);
 
-    if (added === "-" || deleted === "-") {
-      throw new AttachmentError(
-        `${path} is a binary file. Pass paths to leave it out.`,
-      );
-    }
+    if (added === "-" || deleted === "-") throw binaryFile(path);
 
     files.push(path);
     additions += Number(added);
@@ -174,9 +174,15 @@ async function untrackedPatch(
   const info = await lstat(join(project, path));
   if (!info.isFile()) return undefined;
   if (info.size > room) throw tooLarge();
-  const { text, mode } = await readProjectFile(project, path, room);
+  const { bytes, mode } = await readProjectFile(project, path, room);
+  // Classified like a file reference, so a document with a text header fails too.
+  if (fileMime(bytes, path)) throw binaryFile(path);
 
-  return newFilePatch(path, text, mode & 0o111 ? "100755" : "100644");
+  return newFilePatch(
+    path,
+    decodeText(bytes, path),
+    mode & 0o111 ? "100755" : "100644",
+  );
 }
 
 /**

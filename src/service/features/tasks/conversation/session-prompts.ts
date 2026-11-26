@@ -12,9 +12,9 @@ import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
 import type { Store } from "../storage/store.js";
 
-/** An attachment's size: diff stats, or its line count. */
+/** An attachment's size: its type and bytes, diff stats, or its line count. */
 function attachmentSize(a: TaskAttachment) {
-  if (isBinaryFormat(a.format)) return `${a.format}, ${a.bytes} bytes`;
+  if (isBinaryFormat(a.format)) return `${a.mime_type}, ${a.bytes} bytes`;
   const lines = `${a.lines} ${a.lines === 1 ? "line" : "lines"}`;
   if (a.source !== "diff") return lines;
 
