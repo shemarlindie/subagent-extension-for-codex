@@ -43,6 +43,9 @@ export class DraftFollower {
    */
   private full?: DraftState;
 
+  /** Changes to `full`, counted so a full read knows whether it is newer. */
+  private changes = 0;
+
   /** Chat reads started, numbered so `show` knows which began after a clear. */
   private reads = 0;
 
@@ -95,6 +98,7 @@ export class DraftFollower {
     };
 
     this.full = { task: task.id, ...previous.draft };
+    this.changes++;
 
     return visible(this.full);
   }
@@ -106,6 +110,7 @@ export class DraftFollower {
 
   /** Keeps `draft` in full, and patches it when its shown part changes. */
   private set(draft: DraftState | undefined) {
+    if (draft !== this.full) this.changes++;
     this.full = draft;
     const shown = this.context.snapshot().draft;
     const next = draft && visible(draft);
@@ -159,14 +164,14 @@ export class DraftFollower {
   /** Full draft reads started, numbered so a later one can follow an earlier. */
   private draftReads = 0;
 
-  /** The draft the last applied full read set, or none, and its number. */
-  private recovered?: { draft?: DraftState; read: number };
+  /** The last applied full read's number, and the change it made. */
+  private recovered?: { read: number; changes: number };
 
   /** Reads the selected task's draft in full, after a missed update. */
   private async readDraft() {
     const id = this.context.snapshot().selected;
     if (!id) return;
-    const known = this.full;
+    const started = this.changes;
     const number = ++this.draftReads;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
@@ -179,15 +184,13 @@ export class DraftFollower {
     if (recovered && recovered.read > number) return;
 
     // A draft set or cleared since the read started is newer, so it stays,
-    // unless an earlier full read set it.
-    const earlier = this.full !== undefined && recovered?.draft === this.full;
+    // unless an earlier full read made the last change.
+    const current =
+      this.changes === started || this.changes === recovered?.changes;
 
-    if (
-      this.context.snapshot().selected === id &&
-      (this.full === known || earlier)
-    ) {
+    if (this.context.snapshot().selected === id && current) {
       this.set(read.draft ? { task: id, ...read.draft } : undefined);
-      this.recovered = { draft: this.full, read: number };
+      this.recovered = { read: number, changes: this.changes };
     }
   }
 

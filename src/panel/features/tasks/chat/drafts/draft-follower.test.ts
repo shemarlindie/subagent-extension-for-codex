@@ -130,24 +130,34 @@ test("a wait that returns after a newer draft read keeps the newer one", async (
   assert.equal(state().draft?.text, "A\n\nB");
 });
 
-test("overlapping recovery reads after a gap each apply in turn", async () => {
-  const { follower, state, holdReads } = fixture();
-  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "A" });
-  const first = deferred<unknown>();
-  holdReads(first.promise);
-  follower.apply({ task_id: "a", message_id: "m", offset: 5, text: "x" });
-  const second = deferred<unknown>();
-  holdReads(second.promise);
-  follower.apply({ task_id: "a", message_id: "m", offset: 6, text: "y" });
+test.each([
+  {
+    finds: "a draft",
+    draft: { message_id: "m", text: "A\n\nB\n\nxy" },
+    shown: "A\n\nB",
+  },
+  { finds: "none", draft: null, shown: undefined },
+])(
+  "overlapping recovery reads after a gap each apply in turn when the first finds $finds",
+  async ({ draft, shown }) => {
+    const { follower, state, holdReads } = fixture();
+    follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "A" });
+    const first = deferred<unknown>();
+    holdReads(first.promise);
+    follower.apply({ task_id: "a", message_id: "m", offset: 5, text: "x" });
+    const second = deferred<unknown>();
+    holdReads(second.promise);
+    follower.apply({ task_id: "a", message_id: "m", offset: 6, text: "y" });
 
-  first.resolve({ draft: { message_id: "m", text: "A\n\nB\n\nxy" } });
-  await flush();
-  assert.equal(state().draft?.text, "A\n\nB");
+    first.resolve({ draft });
+    await flush();
+    assert.equal(state().draft?.text, shown);
 
-  second.resolve({ draft: { message_id: "m", text: "A\n\nB\n\nxy\n\nC" } });
-  await flush();
-  assert.equal(state().draft?.text, "A\n\nB\n\nxy");
-});
+    second.resolve({ draft: { message_id: "n", text: "Next\n\nC" } });
+    await flush();
+    assert.equal(state().draft?.text, "Next");
+  },
+);
 
 test("an older recovery read cannot undo a newer one that cleared the draft", async () => {
   const { follower, state, set, holdReads } = fixture();
