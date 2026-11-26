@@ -39,7 +39,7 @@ test("a project file reads whole or by line range, within its byte limit", async
   await writeFile(join(project, "folder", "note.txt"), "one\ntwo\nthree\n");
 
   assert.equal(
-    (await readProjectFile(project, "folder/note.txt", 1024)).text,
+    (await readProjectFile(project, "folder/note.txt", 1024)).bytes.toString(),
     "one\ntwo\nthree\n",
   );
 
@@ -49,7 +49,7 @@ test("a project file reads whole or by line range, within its byte limit", async
         start_line: 2,
         end_line: 2,
       })
-    ).text,
+    ).bytes.toString(),
     "two\n",
   );
 

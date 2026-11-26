@@ -8,6 +8,11 @@ import { z } from "zod";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
 import {
+  fileMime,
+  mimeExtension,
+  OCTET_STREAM,
+} from "../../../shared/attachments/file-type.js";
+import {
   ATTACHMENT_LIMITS,
   type AttachmentFormat,
   type AttachmentInput,
@@ -15,10 +20,6 @@ import {
   type TaskAttachment,
   type UploadInput,
 } from "../../../shared/attachments/model.js";
-import {
-  uploadExtension,
-  uploadMime,
-} from "../../../shared/attachments/upload.js";
 import { checkStored } from "../../platform/database/decode.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 import type { Store } from "../tasks/storage/store.js";
@@ -66,20 +67,23 @@ const NOT_TEXT = new Set([
 ]);
 
 /**
- * The stored file's extension, which tells the worker's tools what it holds.
- * Code keeps its path's extension while that names text. A label is never
- * read, so other formats take their own.
+ * The stored file's extension, which tells the worker's tools and the host's
+ * viewer what it holds. Code and unrecognized binaries keep their path's
+ * extension unless it names an image, PDF or notebook the bytes aren't. A
+ * label is never read, so other formats take their own.
  */
 function storedExtension({ format, path, mime_type }: Resolved) {
-  if (mime_type) return uploadExtension(mime_type);
-
   const extension = path === undefined ? "" : extname(path).toLowerCase();
 
-  return format === "code" &&
-    /^\.[a-z0-9_+-]{1,16}$/.test(extension) &&
-    !NOT_TEXT.has(extension)
-    ? extension
-    : formatExtension[format];
+  const kept =
+    /^\.[a-z0-9_+-]{1,16}$/.test(extension) && !NOT_TEXT.has(extension)
+      ? extension
+      : undefined;
+
+  if (mime_type === OCTET_STREAM) return kept ?? "";
+  if (mime_type) return mimeExtension(mime_type);
+
+  return (format === "code" && kept) || formatExtension[format];
 }
 
 const slug = (title: string) =>
@@ -96,22 +100,38 @@ type Resolved = Omit<
   content: string | Buffer;
 };
 
+/**
+ * A whole file's format and content, by its bytes. Images and documents keep
+ * their bytes with their type, as do other binaries, typed octet-stream.
+ */
+function resolveBytes(
+  bytes: Buffer,
+  name: string,
+): Pick<Resolved, "format" | "mime_type" | "bytes" | "content"> {
+  const mime = fileMime(bytes, name);
+
+  if (!mime) {
+    return { format: fileFormat(name), content: decodeText(bytes, name) };
+  }
+
+  return {
+    format: mime.startsWith("image/") ? "image" : "document",
+    mime_type: mime,
+    bytes: bytes.length,
+    content: bytes,
+  };
+}
+
 function resolveUpload(
   input: UploadInput | StagedUploadInput,
   bytes: Buffer,
 ): Resolved {
-  const mime = uploadMime(bytes, input.name);
-  let format: AttachmentFormat = fileFormat(input.name);
-  if (mime) format = mime.startsWith("image/") ? "image" : "document";
-
   return {
     title: input.name,
     path: input.name,
     source: "upload",
     summary: input.summary,
-    format,
-    ...(mime ? { mime_type: mime, bytes: bytes.length } : {}),
-    content: mime ? bytes : decodeText(bytes, input.name),
+    ...resolveBytes(bytes, input.name),
   };
 }
 
@@ -163,21 +183,32 @@ async function resolveAttachment(
     input,
   );
 
-  const ranged = input.start_line !== undefined || input.end_line !== undefined;
-  const start = input.start_line ?? 1;
-  // The copied range, which ends early when the file is shorter than end_line.
-  const end = start + lineCount(file.text) - 1;
-
-  return {
-    title:
-      input.title ??
-      (ranged ? `${basename(file.path)}:${start}-${end}` : basename(file.path)),
+  const reference = {
     summary: input.summary,
-    format: fileFormat(file.path),
     source: "file",
     path: file.path,
-    ...(ranged ? { start_line: start, end_line: end } : {}),
-    content: file.text,
+  } as const;
+
+  if (input.start_line === undefined && input.end_line === undefined) {
+    return {
+      ...reference,
+      title: input.title ?? basename(file.path),
+      ...resolveBytes(file.bytes, file.path),
+    };
+  }
+
+  const text = decodeText(file.bytes, file.path);
+  const start = input.start_line ?? 1;
+  // The copied range, which ends early when the file is shorter than end_line.
+  const end = start + lineCount(text) - 1;
+
+  return {
+    ...reference,
+    title: input.title ?? `${basename(file.path)}:${start}-${end}`,
+    format: fileFormat(file.path),
+    start_line: start,
+    end_line: end,
+    content: text,
   };
 }
 

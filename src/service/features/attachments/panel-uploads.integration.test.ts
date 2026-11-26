@@ -79,7 +79,7 @@ test("only panel tools can supply local file bytes for worker snapshots", async 
   assert.match(image.file, /\.png$/);
   assert.match(document.file, /\.pdf$/);
   assert.ok(recorder.prompts[1]?.includes(join(folder, image.file)));
-  assert.ok(recorder.prompts[1]?.includes("document, 15 bytes"));
+  assert.ok(recorder.prompts[1]?.includes("application/pdf, 15 bytes"));
 
   assert.deepEqual(
     await readFile(join(folder, image.file)),
@@ -163,11 +163,11 @@ test("a rejected upload batch leaves no follow-up or partial snapshot", async ()
       {
         task_id: id,
         message: "Review",
-        attachments: [valid, upload("look.png", "YWJj")],
+        attachments: [valid, upload("bad.bin", "YWJ=")],
       },
       "user",
     ),
-    /image/i,
+    /Invalid base64/,
   );
 
   assert.equal(store.messages.count(id), count);

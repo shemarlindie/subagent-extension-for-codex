@@ -13,7 +13,7 @@ import {
   truncate,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, extname, join } from "node:path";
 
 import { onTestFinished, test } from "vitest";
 
@@ -160,6 +160,8 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   // A sparse file, since the size check reads only its length.
   await truncate(join(repo, "big.txt"), ATTACHMENT_LIMITS.messageBytes + 1);
   await writeFile(join(repo, "image.bin"), Buffer.from([1, 0, 2]));
+  // A PDF whose first line is text.
+  await writeFile(join(repo, "spec.pdf"), "%PDF-1.4\n%%EOF\n");
   await writeFile(join(dir, "outside.txt"), "outside");
   await symlink(join(dir, "outside.txt"), join(repo, "escape.txt"));
   await mkdir(join(repo, "nested", ".GIT"), { recursive: true });
@@ -185,8 +187,26 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
       /attachment limit.*line range/,
     ],
     [
-      { attachments: [{ source: "file", path: "image.bin", summary: "S." }] },
-      /binary/,
+      {
+        attachments: [
+          { source: "file", path: "image.bin", start_line: 1, summary: "S." },
+        ],
+      },
+      /image\.bin is a binary file\. Line ranges are for text files/,
+    ],
+    [
+      {
+        attachments: [
+          { source: "file", path: "spec.pdf", start_line: 1, summary: "S." },
+        ],
+      },
+      /spec\.pdf is a binary file\. Line ranges are for text files/,
+    ],
+    [
+      {
+        attachments: [{ source: "diff", paths: ["spec.pdf"], summary: "S." }],
+      },
+      /spec\.pdf is a binary file/,
     ],
     [
       {
@@ -221,7 +241,7 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   await assert.rejects(
     c.start("alice", {
       ...input(repo),
-      attachments: [{ source: "file", path: "image.bin", summary: "S." }],
+      attachments: [{ source: "file", path: "missing.txt", summary: "S." }],
     }),
     AttachmentError,
   );
@@ -232,6 +252,61 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   );
 
   assert.deepEqual(await taskFolders(root), [t.id]);
+});
+
+// Uploads cover image and document detection, which file references share.
+test("file references keep any file's bytes, typed by their content", async () => {
+  const { c, repo } = await setup();
+  // An empty zip archive.
+  const zip = Buffer.from(`PK\x05\x06${"\0".repeat(18)}`, "latin1");
+
+  const files = {
+    "bundle.zip": zip,
+    "text.png": Buffer.from("not an image\n"),
+    "fake.png": Buffer.from([1, 0, 2]),
+    "spec.pdf": Buffer.from("%PDF-1.4\n%%EOF\n"),
+  };
+
+  for (const [path, bytes] of Object.entries(files)) {
+    await writeFile(join(repo, path), bytes);
+  }
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: Object.keys(files).map((path) => ({
+      source: "file",
+      path,
+      summary: "S.",
+      // A title without the suffix, which the type check must not use.
+      ...(path === "spec.pdf" ? { title: "Spec" } : {}),
+    })),
+  });
+
+  const attachments = c.attachments.list(t.id);
+
+  // Read and the host's viewer choose by extension, so it never contradicts the bytes.
+  assert.deepEqual(
+    attachments.map((a) => [a.format, a.mime_type, extname(a.file)]),
+    [
+      ["document", "application/octet-stream", ".zip"],
+      ["code", undefined, ".txt"],
+      ["document", "application/octet-stream", ""],
+      ["document", "application/pdf", ".pdf"],
+    ],
+  );
+
+  const stored = join(c.attachments.folder(t.id), attachments[0]?.file ?? "");
+  assert.deepEqual(await readFile(stored), zip);
+
+  const page = (await callTool(
+    c,
+    "alice",
+    "app_get_attachment",
+    { task_id: t.id, message_id: "request", position: 4 },
+    "user",
+  )) as AttachmentPage;
+
+  assert.equal(page.state, "present");
 });
 
 test("a diff snapshot holds untracked regular files and unusual names, runs no filters and stays fixed", async () => {
