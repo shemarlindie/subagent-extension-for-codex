@@ -167,7 +167,9 @@ setting.
 
 A provider's own settings form one block under `providers.<id>`, registered in
 `src/shared/providers/settings.ts`. Settings there are user-only. Metadata names
-the block's permission mode by path in `nativePermissions.permissionSetting`.
+the block's permission mode by path in `nativePermissions.permissionSetting`. A
+provider whose org policy changes the settings document also registers there how
+the policy applies to its sections and what Inherit lands on.
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and

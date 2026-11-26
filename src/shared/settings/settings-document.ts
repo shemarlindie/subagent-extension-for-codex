@@ -1,8 +1,4 @@
 import {
-  inheritHelp,
-  withClaudePolicy,
-} from "../providers/claude/settings-policy.js";
-import {
   aboveEffortCap,
   effortCap,
   modelAllowed,
@@ -12,10 +8,12 @@ import {
   resolvedModel,
   runtimeDefault,
   withEffortCap,
+  WORKER_DEFAULTS_HELP,
 } from "../providers/policy.js";
 import {
   providerApprovalRows,
   providerRestrictionSections,
+  providerSettingsPolicies,
 } from "../providers/settings.js";
 import { type ModelChoice, type ProviderPolicy } from "../providers/types.js";
 import { roles } from "../tasks/model.js";
@@ -29,11 +27,11 @@ import type {
   SettingSection,
 } from "./document-contract.js";
 import { modelScopePath, resolveModelDefaults } from "./model-defaults.js";
+import { settingAt } from "./setting-path.js";
 import { settingText } from "./setting-text.js";
 import {
   branchPrefixPattern,
   profileInstructionsMaxLength,
-  settingAt,
   settingSchemaAt,
 } from "./settings-schema.js";
 
@@ -252,12 +250,15 @@ function effortScope(
 export function settingsSections(input: ScopeInput): SettingSection[] {
   const { values, providers } = input;
 
-  const claudePolicy = input.catalogs.find(
-    ({ provider }) => provider === "claude",
-  )?.policy;
-
   const scopeRow = (scope: string, label: string): ModelScope => {
     const info = modelScope(scope, input);
+
+    // A provider's menu lists its own catalog. Profile menus list every
+    // provider's models, so any allowlist shortens them.
+    const modelsLimited = input.catalogs.some(
+      ({ provider, policy }) =>
+        policy?.available_models && (!info.providerScope || provider === scope),
+    );
 
     return {
       id: scope,
@@ -266,8 +267,7 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         path: info.modelPath,
         label: `${label} model`,
         options: info.modelChoices,
-        // Claude is the only provider, so its allowlist shortens every menu.
-        ...(claudePolicy?.available_models ? { footer: MODELS_LIMITED } : {}),
+        ...(modelsLimited ? { footer: MODELS_LIMITED } : {}),
         ...(info.modelExcluded
           ? {
               warning:
@@ -295,15 +295,19 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
   const modelPath = (scope: unknown) =>
     `${modelScopePath(scalarText(scope))}.model`;
 
+  const taskProvider = scalarText(settingAt(values, "task.provider"));
   const profileModel = modelPath(settingAt(values, "task.worker_profile"));
-  const providerModel = modelPath(settingAt(values, "task.provider"));
+  const providerModel = modelPath(taskProvider);
 
-  // Claude is the only provider, so its defaults are what Inherit uses.
-  const claudeModels = input.catalogs.find(
-    ({ provider }) => provider === "claude",
-  )?.models;
+  // New tasks inherit the saved provider's defaults.
+  const taskCatalog = input.catalogs.find(
+    ({ provider }) => provider === taskProvider,
+  );
 
-  const inherit = inheritHelp(claudePolicy, runtimeDefault(claudeModels ?? []));
+  const inherit = providerSettingsPolicies[taskProvider]?.inheritHelp(
+    taskCatalog?.policy,
+    runtimeDefault(taskCatalog?.models ?? []),
+  ) ?? [WORKER_DEFAULTS_HELP];
 
   const defaultsHelp = withHelp(
     [
@@ -433,5 +437,10 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     },
   ];
 
-  return withClaudePolicy(sections, claudePolicy, values);
+  return input.catalogs.reduce(
+    (applied, { provider, policy }) =>
+      providerSettingsPolicies[provider]?.apply(applied, policy, values) ??
+      applied,
+    sections,
+  );
 }

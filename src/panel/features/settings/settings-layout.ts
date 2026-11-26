@@ -1,3 +1,4 @@
+import { settingAt } from "../../../shared/settings/setting-path";
 import type {
   HelpPart,
   ModelScope,
@@ -5,10 +6,7 @@ import type {
   SettingRow,
   SettingSection,
 } from "../../../shared/settings/settings-document";
-import {
-  settingAt,
-  withSetting,
-} from "../../../shared/settings/settings-schema";
+import { withSetting } from "../../../shared/settings/settings-schema";
 import { scalarText } from "../../../shared/text";
 
 /** Form logic for the settings dialog: values in and out, summaries, resets. */
