@@ -174,7 +174,7 @@ export const readScenarios: Scenario[] = [
     change: async ({ controller, transport }) => {
       const [first, ...rest] = changePages();
       transport.changes = [{ ...first, additions: 3 }, ...rest];
-      await act(() => controller.loadCounts());
+      await act(() => controller.changes.loadCounts());
     },
   },
   {
@@ -197,7 +197,7 @@ export const readScenarios: Scenario[] = [
         ...rest,
       ];
 
-      await act(() => controller.loadChanges());
+      await act(() => controller.changes.loadChanges());
     },
   },
   {

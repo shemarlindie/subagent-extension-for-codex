@@ -103,7 +103,7 @@ export function SettingsForm({
   const total = edits.reduce((sum, count) => sum + count, 0);
 
   const [selectedSection, setSelectedSection] = useState(
-    controller.getLastSettingsSection(),
+    controller.dialogs.lastSettingsSection(),
   );
 
   const [discarding, setDiscarding] = useState(false);
@@ -167,7 +167,7 @@ export function SettingsForm({
 
   const selectSection = (section: string) => {
     setSelectedSection(section);
-    controller.saveSettingsSection(section);
+    controller.dialogs.saveSettingsSection(section);
   };
 
   // Opens the section holding a setting and focuses its field.
@@ -401,7 +401,7 @@ export function SettingsForm({
               </p>
               <Button
                 variant="primary"
-                onClick={() => controller.retryDialogLoad()}
+                onClick={() => controller.dialogLoader.retry()}
               >
                 Retry
               </Button>

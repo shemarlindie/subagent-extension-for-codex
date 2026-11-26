@@ -1,10 +1,6 @@
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
-import type {
-  ChangeScope,
-  WorktreeRemoval,
-} from "../../features/changes/types";
 import {
   NewTaskLoader,
   rescopedNewTask,
@@ -62,7 +58,6 @@ import type {
   Filter,
   OpenDialogRequest,
   PanelData,
-  PersistedDialog,
   PersistedDialogDraft,
   PersistedViewState,
   Project,
@@ -109,7 +104,7 @@ export class Controller {
     refresh: () => this.refresh(),
   });
 
-  private detailLoader = new TaskDetailLoader({
+  readonly taskDetails = new TaskDetailLoader({
     ...this.stateContext,
     generation: () => this.generation,
     setTab: (tab) => this.setTab(tab),
@@ -159,7 +154,7 @@ export class Controller {
   private explicitSelection = false;
   private arrivals = new TaskArrivals();
   private restoredView?: PersistedViewState;
-  private dialogs: PersistedDialogs;
+  readonly dialogs: PersistedDialogs;
   private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
   /** When workers were last read, so a CLI that breaks mid-session still shows. */
@@ -187,7 +182,7 @@ export class Controller {
     refresh: () => this.run(() => this.refresh()),
   };
 
-  private dialogLoader = new DialogLoader({
+  readonly dialogLoader = new DialogLoader({
     ...this.formContext,
     seedDraft: (dialog, draft) => this.dialogs.seed(dialog, draft, false),
     explicitSelection: () => this.explicitSelection,
@@ -236,7 +231,12 @@ export class Controller {
     undo: this.undo,
   });
 
-  private changeLoader = new ChangeLoader(this.stateContext);
+  readonly changes = new ChangeLoader({
+    ...this.stateContext,
+    open: (dialog) => this.open(dialog),
+    refresh: () => this.refresh(),
+  });
+
   readonly pendingUpdates = new PendingUpdateTracker(this.stateContext);
 
   constructor(
@@ -318,26 +318,6 @@ export class Controller {
       view: persistView(this.state, this.browsing),
       ...this.dialogs.saved(),
     });
-  }
-
-  getDialogDraft(kind: PersistedDialog["kind"]) {
-    return this.dialogs.draft(kind);
-  }
-
-  getLastSettingsSection() {
-    return this.dialogs.lastSettingsSection();
-  }
-
-  saveSettingsSection(section: string) {
-    this.dialogs.saveSettingsSection(section);
-  }
-
-  saveDialogDraft(kind: PersistedDialog["kind"], draft: PersistedDialogDraft) {
-    this.dialogs.saveDraft(kind, draft);
-  }
-
-  saveDialogField(kind: PersistedDialog["kind"], name: string, value: unknown) {
-    this.dialogs.saveField(kind, name, value);
   }
 
   private closeDialog() {
@@ -705,7 +685,7 @@ export class Controller {
         this.pendingUpdates.show(pending.conversation_id, view.pending.tasks);
       }
 
-      return this.detailLoader.merge(request, view) ? "merged" : "stale";
+      return this.taskDetails.merge(request, view) ? "merged" : "stale";
     });
 
     if (merged === "rejected") return false;
@@ -722,8 +702,8 @@ export class Controller {
     if (merged === "stale") return true;
     // Prefetch the selected task's change totals for the tab count. Do not hold
     // up the task list while Git reads in the background.
-    this.run(() => this.changeLoader.loadCountsIfStale());
-    this.run(() => this.changeLoader.loadChangesIfStale());
+    this.run(() => this.changes.loadCountsIfStale());
+    this.run(() => this.changes.loadChangesIfStale());
 
     return false;
   }
@@ -1025,67 +1005,7 @@ export class Controller {
     if (tab !== this.state.tab) this.tabIntentRevision++;
     this.patch({ tab });
     this.draftFollower.show();
-    this.run(() => this.changeLoader.loadChangesIfStale());
-  }
-
-  /**
-   * Opens Activity at a turn. A turn the latest activity holds scrolls into
-   * view there; otherwise its own events are read and shown until
-   * `showLatestActivity`.
-   */
-  async viewTurnActivity(turn: number) {
-    await this.detailLoader.viewTurn(turn);
-  }
-
-  /** Returns Activity from a turn's own events to the latest activity. */
-  showLatestActivity() {
-    this.detailLoader.showLatest();
-  }
-
-  /** Reads the selected task's change totals, for its tab count and Details. */
-  async loadCounts() {
-    await this.changeLoader.loadCounts();
-  }
-
-  /** Reads the selected task's changes for `scope`, the current one by default. */
-  async loadChanges(scope?: ChangeScope) {
-    await this.changeLoader.loadChanges(scope);
-  }
-
-  /**
-   * Removes a task's worktree and keeps its branch. A worktree with
-   * uncommitted changes is kept; a dialog lists them and asks first.
-   */
-  async removeWorktree(task: Task) {
-    if (this.state.busy || this.state.dialog || this.disposed) return;
-    this.patch({ busy: true });
-    let result: WorktreeRemoval;
-
-    try {
-      result = await this.tool<WorktreeRemoval>("app_remove_worktree", {
-        task_id: task.id,
-      });
-    } finally {
-      this.patch({ busy: false });
-    }
-
-    if (result.status === "uncommitted") {
-      this.open({
-        kind: "worktree",
-        action: "remove",
-        task,
-        files: result.files,
-      });
-    } else {
-      await this.afterWorktreeChange();
-    }
-  }
-
-  /** The Changes tab and the tab count read the removed worktree or branch at once. */
-  async afterWorktreeChange() {
-    await this.loadChanges();
-    await this.loadCounts();
-    await this.refresh();
+    this.run(() => this.changes.loadChangesIfStale());
   }
 
   /** Shares the selected task with the host's model. */
@@ -1361,11 +1281,6 @@ export class Controller {
       repository: task.repository,
       revision: task.revision,
     });
-  }
-
-  /** Retries the open loading dialog's failed reads. */
-  retryDialogLoad() {
-    this.dialogLoader.retry();
   }
 
   open(dialog: OpenDialogRequest) {

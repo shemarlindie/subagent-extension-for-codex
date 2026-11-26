@@ -24,11 +24,11 @@ test("preparing a handoff preserves the preview beneath it and replaces an older
   );
 
   assert.match(
-    String(controller.getDialogDraft("handoff")?.message),
+    String(controller.dialogs.draft("handoff")?.message),
     /Selected file evidence\./,
   );
 
-  controller.saveDialogDraft("handoff", { message: "Old unsent draft." });
+  controller.dialogs.saveDraft("handoff", { message: "Old unsent draft." });
   controller.dismiss();
 
   controller.prepareHandoff(
@@ -38,12 +38,12 @@ test("preparing a handoff preserves the preview beneath it and replaces an older
   );
 
   assert.match(
-    String(controller.getDialogDraft("handoff")?.message),
+    String(controller.dialogs.draft("handoff")?.message),
     /Updated file evidence\./,
   );
 
   assert.doesNotMatch(
-    String(controller.getDialogDraft("handoff")?.message),
+    String(controller.dialogs.draft("handoff")?.message),
     /Old unsent draft/,
   );
 

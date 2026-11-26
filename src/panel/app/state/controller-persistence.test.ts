@@ -88,7 +88,7 @@ test("settings section preference persists separately from dialog drafts", async
   t.onTestFinished(() => controller.dispose());
   await controller.start();
 
-  controller.saveSettingsSection("models");
+  controller.dialogs.saveSettingsSection("models");
 
   assert.equal(saved.at(-1)?.lastSettingsSection, "models");
   assert.equal(saved.at(-1)?.dialogs, undefined);
@@ -103,7 +103,7 @@ test("settings section preference persists separately from dialog drafts", async
   );
 
   t.onTestFinished(() => restored.dispose());
-  assert.equal(restored.getLastSettingsSection(), "models");
+  assert.equal(restored.dialogs.lastSettingsSection(), "models");
 });
 
 test("restores saved dialogs in order and removes each deliberate close", async (t) => {
@@ -138,11 +138,11 @@ test("restores saved dialogs in order and removes each deliberate close", async 
   if (handoff?.kind !== "handoff") throw new Error("Expected targeted handoff");
   assert.deepEqual(handoff.target, { kind: "file", path: "src/auth.ts" });
 
-  assert.deepEqual(controller.getDialogDraft("handoff"), {
+  assert.deepEqual(controller.dialogs.draft("handoff"), {
     message: "continue the migration",
   });
 
-  controller.saveDialogDraft("handoff", { message: "updated draft" });
+  controller.dialogs.saveDraft("handoff", { message: "updated draft" });
 
   assert.deepEqual(saved.at(-1)?.dialogs?.at(-1)?.draft, {
     message: "updated draft",
@@ -201,7 +201,7 @@ test("closing a restored preview immediately skips unavailable and stale dialogs
   controller.dismiss();
 
   assert.equal(controller.getSnapshot().dialog?.kind, "project");
-  assert.deepEqual(controller.getDialogDraft("project"), project.draft);
+  assert.deepEqual(controller.dialogs.draft("project"), project.draft);
   assert.deepEqual(saved.at(-1)?.dialogs, [project]);
 });
 
@@ -240,7 +240,7 @@ for (const kind of ["settings", "delegate"] as const) {
     await flush();
 
     assert.equal(controller.getSnapshot().dialog?.kind, `${kind}-loading`);
-    assert.deepEqual(controller.getDialogDraft(kind), draft);
+    assert.deepEqual(controller.dialogs.draft(kind), draft);
     firstRead.reject(new Error("Settings unavailable"));
     await starting;
     await flush();
@@ -254,15 +254,15 @@ for (const kind of ["settings", "delegate"] as const) {
       assert.equal(failed.statuses.settings, "error");
     }
 
-    controller.saveDialogField(kind, field, "Edited while unavailable");
-    controller.retryDialogLoad();
+    controller.dialogs.saveField(kind, field, "Edited while unavailable");
+    controller.dialogLoader.retry();
     assert.equal(controller.getSnapshot().dialog?.kind, `${kind}-loading`);
     retryRead.resolve({ sections: [], values: defaults });
     await flush();
 
     assert.equal(controller.getSnapshot().dialog?.kind, kind);
 
-    assert.deepEqual(controller.getDialogDraft(kind), {
+    assert.deepEqual(controller.dialogs.draft(kind), {
       ...draft,
       [field]: "Edited while unavailable",
     });

@@ -60,6 +60,10 @@ obsolete. Components use these entry points:
 - `controller.taskActions` runs task mutations.
 - `controller.newTasks` runs the new-task composer.
 - `controller.projects` adds, renames, removes and picks projects.
+- `controller.changes` reads changes and removes worktrees, and
+  `controller.taskDetails` shows a turn's activity.
+- `controller.dialogs` keeps dialog drafts, and `controller.dialogLoader`
+  retries a loading dialog's reads.
 - `controller.submit` submits dialogs.
 - `controller.session` holds session memory.
 - `controller.undo` holds the undo history and the undo toast's notice.

@@ -68,7 +68,7 @@ export function usePersistedDialogForm<T extends FieldValues>(
     ...formOptions,
     defaultValues: restoredValues(
       defaultValues,
-      controller.getDialogDraft(kind),
+      controller.dialogs.draft(kind),
     ),
   });
 
@@ -86,17 +86,17 @@ export function usePersistedDialogForm<T extends FieldValues>(
 
     if (!initialized.current) {
       initialized.current = true;
-      reset(restoredValues(defaultValues, controller.getDialogDraft(kind)));
+      reset(restoredValues(defaultValues, controller.dialogs.draft(kind)));
     }
   }, [controller, defaultValues, kind, ready, reset]);
 
   useEffect(() => {
     if (!ready) return;
 
-    controller.saveDialogDraft(kind, getValues());
+    controller.dialogs.saveDraft(kind, getValues());
 
     const subscription = watch((values) => {
-      controller.saveDialogDraft(kind, values);
+      controller.dialogs.saveDraft(kind, values);
     });
 
     return () => subscription.unsubscribe();
@@ -114,13 +114,13 @@ export function usePersistedDialogField<T>(
   const controller = useController();
 
   const [value, setValue] = useState(() => {
-    const draftValue = controller.getDialogDraft(kind)?.[name];
+    const draftValue = controller.dialogs.draft(kind)?.[name];
 
     return matchesShape(draftValue, initial) ? (draftValue as T) : initial;
   });
 
   useEffect(() => {
-    controller.saveDialogField(kind, name, value);
+    controller.dialogs.saveField(kind, name, value);
   }, [controller, kind, name, value]);
 
   return [value, setValue];

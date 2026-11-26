@@ -91,7 +91,9 @@ export const TurnOutcomeRow = memo(function TurnOutcomeRow({
             underline
             className="chat-outcome-activity"
             onClick={() =>
-              controller.run(() => controller.viewTurnActivity(outcome.turn))
+              controller.run(() =>
+                controller.taskDetails.viewTurn(outcome.turn),
+              )
             }
           >
             View activity

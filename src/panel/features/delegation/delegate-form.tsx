@@ -68,7 +68,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const { loading, statuses, errors, message, defaults } =
     delegateReads(dialog);
 
-  const persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {});
+  const persistedDraft = useRef(controller.dialogs.draft("delegate") ?? {});
   const choices = workerChoices(scope.workers);
 
   const { repository: resolvedRepository, revision: resolvedRevision } =
@@ -230,7 +230,10 @@ function DelegateForm({ dialog }: DelegateFormProps) {
               ? `Task defaults could not be loaded: ${errors.settings}`
               : "Some task options could not be loaded. See the affected field."}
           </span>
-          <Button variant="text" onClick={() => controller.retryDialogLoad()}>
+          <Button
+            variant="text"
+            onClick={() => controller.dialogLoader.retry()}
+          >
             Retry loading
           </Button>
         </div>

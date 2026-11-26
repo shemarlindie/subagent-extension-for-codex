@@ -158,7 +158,7 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
   );
 
   assert.equal(controller.getSnapshot().tab, "changes");
-  const first = controller.loadChanges();
+  const first = controller.changes.loadChanges();
   await controller.select("b");
   controller.setTab("changes");
   await flush();
@@ -186,14 +186,14 @@ test("same-scope refresh retains the last changes while reading and after failur
 
   await controller.start();
   await controller.select("a");
-  await controller.loadChanges();
+  await controller.changes.loadChanges();
   const lastLoaded = controller.getSnapshot().changes?.data;
   const refreshGate = deferred<Changes>();
 
   transport.handler = (name) =>
     name === "get_changes" ? refreshGate.promise : undefined;
 
-  const refresh = controller.loadChanges();
+  const refresh = controller.changes.loadChanges();
 
   assert.equal(controller.getSnapshot().changes?.loading, true);
   assert.equal(controller.getSnapshot().changes?.data, lastLoaded);
@@ -208,7 +208,7 @@ test("same-scope refresh retains the last changes while reading and after failur
   transport.handler = (name) =>
     name === "get_changes" ? scopeGate.promise : undefined;
 
-  const switching = controller.loadChanges("turn");
+  const switching = controller.changes.loadChanges("turn");
 
   assert.equal(controller.getSnapshot().changes?.scope, "turn");
   assert.equal(controller.getSnapshot().changes?.loading, true);
@@ -247,8 +247,8 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
     return undefined;
   };
 
-  const oldRead = controller.loadChanges("task");
-  await controller.loadChanges("turn");
+  const oldRead = controller.changes.loadChanges("task");
+  await controller.changes.loadChanges("turn");
   gate.resolve({ ...turn, scope: "task", additions: 99 });
   await oldRead;
 
