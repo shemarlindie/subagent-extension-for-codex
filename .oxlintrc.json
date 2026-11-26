@@ -314,7 +314,7 @@
         "eslint/max-lines": [
           "error",
           {
-            "max": 1058,
+            "max": 937,
             "skipBlankLines": true,
             "skipComments": true
           }

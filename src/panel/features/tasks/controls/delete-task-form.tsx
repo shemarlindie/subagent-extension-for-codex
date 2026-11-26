@@ -52,7 +52,7 @@ function DeleteTaskForm({ dialog }: DeleteTaskFormProps) {
               });
             },
             false,
-            () => controller.back(),
+            () => controller.selection.back(),
           ),
         ),
       )}

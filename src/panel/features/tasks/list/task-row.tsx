@@ -79,7 +79,7 @@ export const TaskRow = memo(function TaskRow({
 
   const select = (event: MouseEvent<HTMLButtonElement>) => {
     if (!onActivate) {
-      controller.run(() => controller.select(task.id));
+      controller.run(() => controller.selection.select(task.id));
 
       return;
     }

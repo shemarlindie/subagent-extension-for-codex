@@ -84,10 +84,10 @@ test("returning to a task rejects chat and activity from its previous selection"
   };
 
   const timing = vi.spyOn(controller.timing, "observe");
-  const first = controller.select("a");
+  const first = controller.selection.select("a");
   firstSelection = false;
-  await controller.select("b");
-  await controller.select("a");
+  await controller.selection.select("b");
+  await controller.selection.select("a");
 
   activityRead.resolve({
     events: [{ id: 1, task_id: "a", type: "log", timestamp: "", data: {} }],
@@ -120,7 +120,7 @@ for (const transition of [
     t.onTestFinished(() => controller.dispose());
     transport.tasks = [task("a"), task("b")];
     await controller.start();
-    await controller.select("a");
+    await controller.selection.select("a");
 
     const oldRead = deferred<unknown>();
     const newRead = deferred<unknown>();
@@ -137,8 +137,8 @@ for (const transition of [
     const oldTurn = controller.taskDetails.viewTurn(1);
 
     if (transition === "reselecting the same task") {
-      await controller.select("b");
-      await controller.select("a");
+      await controller.selection.select("b");
+      await controller.selection.select("a");
     } else if (transition === "returning from latest activity") {
       controller.taskDetails.showLatest();
     }
@@ -187,7 +187,7 @@ test("the activity view shows the service's window and its tally, and polls for 
       ? windowActivity(events, Number(args.after))
       : undefined;
 
-  await controller.select("a");
+  await controller.selection.select("a");
 
   assert.deepEqual(
     controller.getSnapshot().events.map((item) => item.id),

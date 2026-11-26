@@ -199,7 +199,7 @@ test("saved defaults keep each confirmed profile choice until a read includes it
   assert.ok(loaded);
 
   // Closing before any save starts keeps the loaded defaults.
-  controller.back();
+  controller.selection.back();
   assert.equal(controller.getSnapshot().newTask, undefined);
   assert.deepEqual(controller.newTasks.savedDefaults(), loaded);
 
@@ -245,7 +245,7 @@ test("saved defaults keep each confirmed profile choice until a read includes it
     reading.resolve({ values: loaded });
     await flush();
     assert.equal(model(), value);
-    controller.back();
+    controller.selection.back();
   }
 
   // A read that starts with no save running includes every save.

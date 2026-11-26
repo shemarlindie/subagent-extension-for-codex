@@ -65,7 +65,7 @@ test("browser view state seeds the first render, restores a task, and persists l
     },
   );
 
-  controller.back();
+  controller.selection.back();
 
   assert.deepEqual(saved.at(-1), {
     view: {

@@ -86,7 +86,7 @@ export function updateTask(
 export const showTab =
   (tab: "activity" | "changes") =>
   async ({ controller }: Mounted) => {
-    await act(async () => controller.setTab(tab));
+    await act(async () => controller.selection.setTab(tab));
   };
 
 /** A new task arrives in the second project. */

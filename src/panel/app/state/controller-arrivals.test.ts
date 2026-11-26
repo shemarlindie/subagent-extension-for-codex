@@ -140,7 +140,7 @@ for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
     let action: Promise<unknown> | undefined;
 
     if (guard === "compose") controller.newTasks.open();
-    if (guard === "back") controller.back();
+    if (guard === "back") controller.selection.back();
     if (guard === "dialog") controller.projects.add();
     if (guard === "page") controller.navigate("projects");
 
@@ -163,7 +163,7 @@ for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
     if (guard === "page") controller.backToTasks();
     pending.resolve();
     await action;
-    await controller.select("old");
+    await controller.selection.select("old");
     await controller.refresh();
     expect(controller.getSnapshot().taskArrival).toBeUndefined();
   });
@@ -181,7 +181,7 @@ test("a delayed arrival preserves a selection made after its read started", asyn
 
   const refresh = controller.refresh();
   await flush();
-  await controller.select("other");
+  await controller.selection.select("other");
   transport.tasks = [task("new"), task("old"), task("other")];
   pending.resolve({ tasks: transport.tasks });
   await refresh;

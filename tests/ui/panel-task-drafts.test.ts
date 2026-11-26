@@ -34,8 +34,8 @@ test("thread composers default to collapsed and honor explicit or new-task expan
   expect(screen.queryByRole("textbox", { name: "Message" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Show composer" }));
 
-  await act(() => controller.select("two"));
-  await act(() => controller.select("one"));
+  await act(() => controller.selection.select("two"));
+  await act(() => controller.selection.select("one"));
   expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
 
   await user.click(screen.getByRole("button", { name: "New task" }));

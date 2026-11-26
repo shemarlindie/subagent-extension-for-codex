@@ -147,7 +147,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
     <Tabs.Root
       className="evidence"
       value={tab}
-      onValueChange={(tab) => controller.setTab(tab as Tab)}
+      onValueChange={(tab) => controller.selection.setTab(tab as Tab)}
     >
       <TabList ref={listRef} label="Task views">
         <Tabs.Tab value="chat" id="tab-chat">
