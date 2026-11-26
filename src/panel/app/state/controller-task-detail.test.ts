@@ -345,6 +345,41 @@ test("selecting another running task or opening its Chat moves the held update w
   assert.equal(other.replaces, chat.wait_id);
 });
 
+test("reopening a running task's Chat moves a held update wait that follows no draft to its draft", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  const { held } = followDrafts(transport);
+  const draftRead = transport.handler;
+  const answered = deferred<unknown>();
+
+  transport.handler = (name, args) =>
+    name === "app_wait_for_updates" && args.wait_ms && args.draft
+      ? answered.promise
+      : draftRead?.(name, args);
+
+  await controller.start();
+  await controller.selection.select("a");
+  controller.selection.setTab("chat");
+  await flush();
+  const chat = held().length;
+  assert.equal(held().at(-1)?.draft?.task_id, "a");
+
+  // The wait that follows the draft returns while the list shows.
+  controller.selection.back();
+  transport.revision = "boot:2";
+  answered.resolve({ revision: "boot:2", draft: null, running: true });
+  await vi.waitFor(() => assert.ok(held().length > chat));
+  const list = held().at(-1);
+  assert.equal(list?.draft, undefined);
+
+  await controller.selection.select("a");
+  await flush();
+  const reopened = held().at(-1);
+  assert.equal(reopened?.draft?.task_id, "a");
+  assert.equal(reopened.replaces, list?.wait_id);
+});
+
 test("showing a hidden panel on a running task's Chat moves the held update wait to its draft", async (t) => {
   const { controller, transport, environment } = setup(true);
   t.onTestFinished(() => controller.dispose());

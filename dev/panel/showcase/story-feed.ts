@@ -115,7 +115,10 @@ export class StoryFeed {
     const deadline = performance.now() + (wait.wait_ms ?? 0);
 
     if (wait.replaces !== undefined) {
-      this.replaced.add(wait.replaces);
+      const replaces = wait.replaces;
+      this.replaced.add(replaces);
+      // The service forgets a replaced wait that never arrives after 30 s.
+      setTimeout(() => this.replaced.delete(replaces), 30000);
       this.wake();
     }
 

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { task } from "../../../../app/state/controller-test-harness";
+import {
+  deferred,
+  flush,
+  task,
+} from "../../../../app/state/controller-test-harness";
 import { initialState } from "../../../../app/state/initial-state";
 import type { Snapshot } from "../../../../app/state/types";
 import { DraftFollower } from "./draft-follower";
@@ -18,6 +22,8 @@ function fixture() {
   const reads: string[] = [];
   let refreshes = 0;
   let patches = 0;
+  /** What draft reads return, when a test holds them. */
+  let answer: Promise<unknown> | undefined;
 
   const follower = new DraftFollower({
     snapshot: () => state,
@@ -31,7 +37,7 @@ function fixture() {
     tool: async <T>(name: string, args: Record<string, unknown>) => {
       reads.push(`${name}:${(args.draft as { task_id: string }).task_id}`);
 
-      return { draft: null } as T;
+      return (answer ?? { draft: null }) as T;
     },
     run: (action) => void action(),
     refresh: async () => {
@@ -46,6 +52,9 @@ function fixture() {
     patches: () => patches,
     state: () => state,
     set: (patch: Partial<Snapshot>) => (state = { ...state, ...patch }),
+    holdReads: (held: Promise<unknown>) => {
+      answer = held;
+    },
   };
 }
 
@@ -93,6 +102,18 @@ test("showing reads a draft only for a new target", () => {
   set({ tab: "chat" });
   follower.show();
   assert.equal(reads.length, 2);
+});
+
+test("a draft read that returns after a wait's newer draft keeps the newer one", async () => {
+  const { follower, state, holdReads } = fixture();
+  const read = deferred<unknown>();
+  holdReads(read.promise);
+  follower.show();
+  const draft = { message_id: "m", text: "Hello\n\nWo" };
+  follower.receive({ task_id: "a" }, { draft, running: true });
+  read.resolve({ draft: null });
+  await flush();
+  assert.equal(state().draft?.text, "Hello");
 });
 
 test("a wait's draft is applied, and a cleared draft reads the stored message", () => {
