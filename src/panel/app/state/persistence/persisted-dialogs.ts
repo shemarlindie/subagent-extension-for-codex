@@ -67,7 +67,7 @@ export class PersistedDialogs {
    * starts a new stack.
    */
   shown(previous: DialogState | undefined, dialog: DialogState) {
-    if (dialog.kind === "attachment") {
+    if (dialog.kind === "attachment" || dialog.kind === "draft-attachment") {
       this.dialogs = [];
 
       return;
@@ -91,7 +91,9 @@ export class PersistedDialogs {
 
   /** Opens `dialog` with a seeded draft, above the open dialog when `stack` is set. */
   seed(dialog: DialogState, draft: PersistedDialogDraft, stack: boolean) {
-    if (dialog.kind === "attachment") return;
+    if (dialog.kind === "attachment" || dialog.kind === "draft-attachment") {
+      return;
+    }
 
     this.dialogs = [
       ...(stack ? this.dialogs : []),

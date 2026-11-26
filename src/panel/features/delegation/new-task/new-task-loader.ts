@@ -12,6 +12,7 @@ import type {
   Task,
 } from "../../../app/state/types";
 import { errorMessage } from "../../../shared/utils/error-message";
+import { uploadArguments, type DraftFile } from "../../attachments/draft-file";
 import type { Defaults } from "../../settings/types";
 import {
   applyDelegateRead,
@@ -159,6 +160,7 @@ export class NewTaskLoader {
   async start(
     values: DelegateValues,
     composerHeight?: number,
+    files?: readonly DraftFile[],
   ): Promise<string | undefined> {
     const state = this.context.snapshot();
     const newTask = state.newTask;
@@ -171,15 +173,15 @@ export class NewTaskLoader {
     try {
       await this.context.addChatProjectForTask(values.repository);
 
-      task = await this.context.tool<Task>(
-        "start_task",
-        startTaskArguments(
+      task = await this.context.tool<Task>("start_task", {
+        ...startTaskArguments(
           values,
           state.workers,
           state.conversation,
           projectGit(state, values.repository),
         ),
-      );
+        ...uploadArguments(files),
+      });
     } catch (error) {
       return errorMessage(error);
     } finally {

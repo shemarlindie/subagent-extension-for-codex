@@ -118,11 +118,11 @@ that exists only in the chat, such as decisions or another task's result.
   `paths` can leave it out.
 - File references need a regular UTF-8 text file. Binary files fail. Path checks
   are best-effort and do not provide filesystem isolation.
-- Each reference allows 2 MB, and one message's attachments together allow 10
-  MB. Errors name the attachment and suggest `paths` or a line range.
+- One message's attachments together allow 50 MB. Errors name the attachment and
+  suggest `paths` or a line range.
 
-Task-start and send requests have a 2 MiB HTTP body limit, including requests
-through `/mcp`.
+The panel also accepts [local files](panel-guide.md#chat-tab) with a user
+request or follow-up.
 
 ### Waiting message limit
 
@@ -305,12 +305,20 @@ provider reports usage windows for the signed-in plan, and
 
 `app_get_attachment` reads an attachment by `task_id`, the `message_id` of the
 message it came with (`request` for the task's request) and its `position` in
-that message. It reads in pages of at most 512 KiB that end on whole characters.
-Each page returns the attachment's metadata. Pass `next_cursor` for the next
-page. A cursor fails once the stored file's content changes. `state` is
-`unavailable` when the stored file is missing, larger than any attachment or not
-UTF-8 text. See [Transport](panel-guide.md#transport) for panel refresh
-behavior.
+that message. Text pages hold up to 512 KiB and end on whole characters. Image
+and document content uses base64 and includes its MIME type. Each page returns
+the attachment's metadata. Pass `next_cursor` for the next page. A cursor fails
+once the stored file's content changes. Missing or unreadable snapshots return
+`state: "unavailable"`. See [Transport](panel-guide.md#transport) for panel
+refresh behavior.
+
+For [hosts that open files](host-capabilities.md#opening-files),
+`app_get_attachment_path` returns the absolute path of the same attachment's
+stored file, and fails when the file is missing. `app_stage_file` takes a draft
+file's `name` and base64 `data`, writes a copy and returns `{ id, path }`. A
+panel send can then pass `{ source: "upload", name, summary, staged: id }` in
+place of `data`. A copy not staged again for a day can be removed, and a send
+fails once its copy is gone or changed.
 
 The embedded app uses the authenticated MCP Apps bridge, and the standalone
 console uses HTTP and SSE. See

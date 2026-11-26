@@ -18,6 +18,9 @@ import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../shared/forms/form-field-hint";
+import { AttachFilesButton } from "../../attachments/attach-files-button";
+import { DraftAttachments } from "../../attachments/draft-attachments";
+import { useDraftFiles } from "../../attachments/use-draft-files";
 import {
   DELEGATE_FORM_FIELDS,
   workerChoices,
@@ -66,6 +69,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     () => controller.session.get("newTask", sessionId).draft,
   );
 
+  const attachments = useDraftFiles("newTask", sessionId, busy);
   const initialValues = newTaskInitialValues(newTask, scope);
 
   const form = useForm<DelegateValues>({
@@ -129,9 +133,11 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
     (item) => item.provider === workerChoice(worker).provider,
   )?.readiness;
 
+  const actionBusy = busy || attachments.pending;
+
   const canSubmit =
     readsReady &&
-    !busy &&
+    !actionBusy &&
     hasMessage &&
     Boolean(repository) &&
     workerChoices(scope.workers).includes(worker) &&
@@ -147,6 +153,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         revision: repository === scope.repository ? values.revision : "HEAD",
       },
       box.current?.offsetHeight,
+      attachments.files,
     );
 
     // On success the composer closes and the controller clears its draft.
@@ -189,6 +196,12 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         : {}),
     };
 
+    // The files go with the draft, replacing any an earlier form left.
+    controller.session.update("delegate", sessionId, {
+      files: attachments.files,
+      fileErrors: undefined,
+    });
+
     controller.run(() =>
       controller.delegate(values.worker || undefined, draft),
     );
@@ -211,10 +224,15 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
         onSubmit={handleSubmit}
       >
         <div className="chat-composer-body">
+          <DraftAttachments attachments={attachments} disabled={busy} />
           <div className="chat-composer-input-row">
             {/* Holds the place of Chat's hide-composer caret. */}
             <span className="chat-composer-gutter" aria-hidden="true" />
-            <div ref={box} className="chat-composer-box new-task-box">
+            <div
+              ref={box}
+              className="chat-composer-box new-task-box"
+              {...attachments.dropTarget}
+            >
               <textarea
                 id="new-task-message"
                 aria-label="Task message"
@@ -230,10 +248,14 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
               <div className="new-task-box-footer">
                 <NewTaskOptions newTask={newTask} state={scope} />
                 <div className="chat-composer-actions">
+                  <AttachFilesButton
+                    disabled={busy}
+                    onFiles={attachments.add}
+                  />
                   <Button
                     variant="text"
                     className="new-task-more"
-                    disabled={busy || dialogOpen}
+                    disabled={actionBusy || dialogOpen}
                     onClick={advanced}
                   >
                     More options…

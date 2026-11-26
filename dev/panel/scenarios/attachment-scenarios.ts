@@ -1,5 +1,6 @@
 // A parent-started review whose request carries attachments of every kind,
-// including one whose stored file is missing, and a parent follow-up with two more.
+// including one whose stored file is missing, a parent follow-up with two more,
+// and a user follow-up with an uploaded image and PDF.
 import type { TaskAttachment } from "../../../src/shared/attachments/model";
 import { REQUEST_ID } from "../../../src/shared/tasks/conversation/messages";
 import type { Task } from "../../../src/shared/tasks/model";
@@ -94,9 +95,13 @@ const legacyTest = `test("a legacy task keeps its prompt", () => {
 });
 `;
 
+const USER_FOLLOW_UP = "msg_preview_attachments_2";
+
 type PreviewAttachment = TaskAttachment & {
   /** The stored file's content; absent for a file removed from the data folder. */
   content?: string;
+  /** A file in `attachment-files` to store instead, for uploaded images and documents. */
+  asset?: string;
 };
 
 const lines = (text: string) => text.split("\n").length - 1;
@@ -228,6 +233,37 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       end_line: 20,
       content: legacyTest,
     },
+    // The user's follow-up uploads an image and a PDF.
+    {
+      message_id: USER_FOLLOW_UP,
+      position: 1,
+      title: "rollout-plan.png",
+      summary: "User attached rollout-plan.png.",
+      format: "image",
+      source: "upload",
+      path: "rollout-plan.png",
+      file: `${USER_FOLLOW_UP}-1-rollout-plan-png.png`,
+      mime_type: "image/png",
+      bytes: 119434,
+      chars: 0,
+      lines: 0,
+      asset: "rollout-plan.png",
+    },
+    {
+      message_id: USER_FOLLOW_UP,
+      position: 2,
+      title: "launch-brief.pdf",
+      summary: "User attached launch-brief.pdf.",
+      format: "document",
+      source: "upload",
+      path: "launch-brief.pdf",
+      file: `${USER_FOLLOW_UP}-2-launch-brief-pdf.pdf`,
+      mime_type: "application/pdf",
+      bytes: 587,
+      chars: 0,
+      lines: 0,
+      asset: "launch-brief.pdf",
+    },
   ],
 };
 
@@ -235,13 +271,19 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
 export const chatAttachments = (taskId: string, messageId: string) =>
   previewAttachments[taskId]
     ?.filter((attachment) => attachment.message_id === messageId)
-    .map(({ file: _, content: _content, ...attachment }) => attachment);
+    .map(
+      ({ file: _, content: _content, asset: _asset, ...attachment }) =>
+        attachment,
+    );
 
 const reply =
   "The prompt lists attachments after the workspace note, and a task without them keeps its old prompt. Resumed sessions don't get the list again.";
 
 const followUpReply =
   "The legacy test still expects `context` before the workspace note. The change keeps that order, so the test fails only on the trailing newline it added. Update the expected string.";
+
+const userFollowUpReply =
+  "The chart's error rate and p95 targets match the brief. Each stage holds for at least two weeks, which the brief requires.";
 
 const timeline = new Timeline(ID, at(132), 2700);
 begin(timeline, ["Read", "Bash"]);
@@ -261,6 +303,18 @@ timeline
   .say("Comparing the failing output with the test's expected prompt.")
   .finish(followUpReply, 2, { duration_ms: 51000, total_cost_usd: 0.18 });
 
+timeline
+  .add("task.instruction", {
+    message_id: USER_FOLLOW_UP,
+    message: "Check the rollout chart against the launch brief.",
+    from: "user",
+    delivery: "steer",
+  })
+  .add("task.queued", {}, 100)
+  .add("task.started", { turn: 3 }, 300)
+  .say("Reading the chart, then the brief.")
+  .finish(userFollowUpReply, 3, { duration_ms: 38000, total_cost_usd: 0.12 });
+
 export const attachmentTimeline = timeline;
 
 export const attachmentTask: Task = {
@@ -273,10 +327,10 @@ export const attachmentTask: Task = {
   worker_profile: "reviewer",
   created_by: "parent",
   status: "completed",
-  turn: 2,
-  instructions_sent: 1,
-  runtime_ms: 135000,
-  cost_usd: 0.49,
+  turn: 3,
+  instructions_sent: 2,
+  runtime_ms: 173000,
+  cost_usd: 0.61,
   completed_at: at(134),
   ...timestamps(132, 2),
 };

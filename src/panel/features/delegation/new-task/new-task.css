@@ -45,6 +45,15 @@
 .new-task-composer[aria-busy] {
   opacity: 0.7;
 }
+/* Draft files float above the message box, so they never move the prompt. */
+.new-task-composer .chat-composer-body {
+  position: relative;
+}
+.new-task-composer .draft-attachments {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  inset-inline: 0;
+}
 /* Takes the width of Chat's hide-composer caret. */
 .chat-composer-gutter {
   flex: none;

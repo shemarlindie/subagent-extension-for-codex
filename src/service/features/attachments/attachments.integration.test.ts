@@ -10,6 +10,7 @@ import {
   realpath,
   rm,
   symlink,
+  truncate,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -17,7 +18,10 @@ import { dirname, join } from "node:path";
 import { onTestFinished, test } from "vitest";
 
 import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
-import type { AttachmentPage } from "../../../shared/attachments/model.js";
+import {
+  ATTACHMENT_LIMITS,
+  type AttachmentPage,
+} from "../../../shared/attachments/model.js";
 import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
 import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";
@@ -152,7 +156,9 @@ test("each attachment kind is snapshotted with its generated title, and invalid 
   assert.deepEqual(diff.paths, ["README.md", "notes.md"]);
 
   // Rejected starts leave no task and no folder.
-  await writeFile(join(repo, "big.txt"), "x".repeat(2 * 1024 * 1024 + 1));
+  await writeFile(join(repo, "big.txt"), "");
+  // A sparse file, since the size check reads only its length.
+  await truncate(join(repo, "big.txt"), ATTACHMENT_LIMITS.messageBytes + 1);
   await writeFile(join(repo, "image.bin"), Buffer.from([1, 0, 2]));
   await writeFile(join(dir, "outside.txt"), "outside");
   await symlink(join(dir, "outside.txt"), join(repo, "escape.txt"));

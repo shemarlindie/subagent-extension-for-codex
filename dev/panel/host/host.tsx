@@ -55,7 +55,7 @@ import {
   type Thread,
 } from "./host-helpers";
 import { OrgPolicyField } from "./org-policy-field";
-import { connectPanel } from "./panel-bridge";
+import { connectPanel, inspectToolCall } from "./panel-bridge";
 
 type LogEntry = { id: number; time: string; kind: string; detail: unknown };
 
@@ -454,12 +454,10 @@ export function Host() {
         });
       }
 
-      record(result.isError ? "tool error" : "tool", {
-        name,
-        served,
-        arguments: args,
-        result,
-      });
+      record(
+        result.isError ? "tool error" : "tool",
+        inspectToolCall(name, served, args, result),
+      );
 
       return result;
     };

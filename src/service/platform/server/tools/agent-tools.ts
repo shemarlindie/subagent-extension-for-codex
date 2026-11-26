@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { attachmentsSchema } from "../../../../shared/attachments/model.js";
 import {
   conversation,
   MESSAGE_EVENTS,
@@ -82,6 +83,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         "Start a background task from the user's full request in description. Use attachments for material the worker wouldn't find on its own. If the result has workspace_fallback, tell the user the task runs directly in the project folder without an isolated worktree. To show an existing task, call open_subagent_extension_for_codex(task_id) instead of starting another.",
       schema: startSchema
         .extend({
+          attachments: attachmentsSchema,
           conversation_id: startSchema.shape.conversation_id.nullable(),
           provider: startSchema.shape.provider.unwrap().optional(),
           worker_profile: startSchema.shape.worker_profile.unwrap().optional(),

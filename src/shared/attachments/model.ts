@@ -6,16 +6,20 @@ export const ATTACHMENT_LIMITS = {
   summaryChars: 200,
   titleChars: 60,
   inlineChars: 8_000,
-  referenceBytes: 2 * 1024 * 1024,
-  messageBytes: 10 * 1024 * 1024,
+  messageBytes: 50 * 1024 * 1024,
   paths: 50,
   pathChars: 1024,
 } as const;
 
-export const attachmentFormats = ["diff", "code", "markdown", "text"] as const;
+const textFormats = ["diff", "code", "markdown", "text"] as const;
+export const attachmentFormats = [...textFormats, "image", "document"] as const;
 export type AttachmentFormat = (typeof attachmentFormats)[number];
 
-export const attachmentSources = ["inline", "diff", "file"] as const;
+/** Whether an attachment is stored as bytes: an image or a document. */
+export const isBinaryFormat = (format: AttachmentFormat) =>
+  format === "image" || format === "document";
+
+export const attachmentSources = ["inline", "diff", "file", "upload"] as const;
 
 type AttachmentSource = (typeof attachmentSources)[number];
 
@@ -42,7 +46,7 @@ const inlineAttachment = z.strictObject({
   source: z.literal("inline"),
   summary,
   title,
-  format: z.enum(attachmentFormats),
+  format: z.enum(textFormats),
   text: z
     .string()
     .min(1)
@@ -91,7 +95,54 @@ const attachmentInputSchema = z.discriminatedUnion("source", [
   fileAttachment,
 ]);
 
-export type AttachmentInput = z.infer<typeof attachmentInputSchema>;
+/** A file's own name, which also names its staged copy. */
+const uploadName = z
+  .string()
+  .min(1)
+  .max(255)
+  .regex(/^[^/\\\p{Cc}]+$/u)
+  .refine((name) => name !== "." && name !== "..", "Invalid file name.");
+
+/** A file's base64 content. */
+const uploadData = z
+  .string()
+  .min(4)
+  .max(4 * Math.ceil(ATTACHMENT_LIMITS.messageBytes / 3));
+
+const uploadSchema = z.strictObject({
+  source: z.literal("upload"),
+  name: uploadName,
+  summary,
+  data: uploadData,
+});
+
+/** A file the panel staged for the host to open, sent by its content hash. */
+const stagedUploadSchema = z.strictObject({
+  source: z.literal("upload"),
+  name: uploadName,
+  summary,
+  staged: z.string().regex(/^[0-9a-f]{64}$/),
+});
+
+export type UploadInput = z.infer<typeof uploadSchema>;
+export type StagedUploadInput = z.infer<typeof stagedUploadSchema>;
+
+export type AttachmentInput =
+  z.infer<typeof attachmentInputSchema> | UploadInput | StagedUploadInput;
+
+export const panelAttachmentsSchema = z
+  .array(z.union([attachmentInputSchema, uploadSchema, stagedUploadSchema]))
+  .max(ATTACHMENT_LIMITS.count)
+  .optional();
+
+/** A draft file to stage for the host to open. */
+export const stageFileSchema = z.strictObject({
+  name: uploadName,
+  data: uploadData,
+});
+
+/** A staged copy: its content hash, which a send passes as `staged`, and its absolute path. */
+export type StagedFile = { id: string; path: string };
 
 export const attachmentsSchema = z
   .array(attachmentInputSchema)
@@ -111,10 +162,12 @@ export interface TaskAttachment {
   summary: string;
   format: AttachmentFormat;
   source: AttachmentSource;
-  /** The project-relative path of a reference, or an inline item's label. */
+  /** A reference's project-relative path or the display filename of supplied content. */
   path?: string;
   /** The content's file name in the task's attachment folder. */
   file: string;
+  bytes?: number;
+  mime_type?: string;
   chars: number;
   lines: number;
   /** Diff stats. */
@@ -137,10 +190,12 @@ export const ATTACHMENT_PAGE_BYTES = 512 * 1024;
 /** A page of an attachment's content, as `app_get_attachment` returns it. */
 export interface AttachmentPage {
   attachment: MessageAttachment;
-  /** "unavailable": the stored file is missing, larger than any attachment or not UTF-8 text. */
+  /** "unavailable": the stored file is missing, too large or invalid for its stored format. */
   state: "present" | "unavailable";
-  /** UTF-8 text; this page's part of it. */
+  /** This page of UTF-8 text, or base64 image or document data. */
   content?: string;
+  encoding?: "base64";
+  mime_type?: string;
   /** Pass back to read the next part; absent on the last one. */
   next_cursor?: string;
 }

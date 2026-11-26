@@ -24,6 +24,7 @@ test("handoff sends only after explicit submit and uses the edited message", asy
       canSend: true,
       canShare: false,
       canExpand: false,
+      canOpenFiles: false,
       displayMode: "fullscreen",
     }),
   );

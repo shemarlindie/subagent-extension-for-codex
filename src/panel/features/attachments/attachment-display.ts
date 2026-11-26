@@ -1,17 +1,31 @@
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import {
+  isBinaryFormat,
+  type MessageAttachment,
+} from "../../../shared/attachments/model.js";
 import type { IconName } from "../../shared/components/icons/icons";
+import { formatBytes } from "../../shared/utils/format";
 import type { PreviewFile } from "../file-preview/file-format";
 
 /** The chip and dialog icon for an attachment's kind. */
 export function attachmentIcon(attachment: MessageAttachment): IconName {
+  if (attachment.format === "image") return "eye";
   if (attachment.source === "diff") return "file-diff";
   if (attachment.source === "inline" && !attachment.path) return "note";
 
-  return attachment.format === "markdown" ? "file-text" : "file-code";
+  return attachment.format === "markdown" || attachment.format === "document"
+    ? "file-text"
+    : "file-code";
 }
 
-/** "+12 −3" for a diff, "lines 44–55" for a line range, otherwise its line count. */
+/**
+ * "+12 −3" for a diff, "lines 44–55" for a line range, the size of an image
+ * or document, otherwise its line count.
+ */
 export function attachmentSize(attachment: MessageAttachment) {
+  if (isBinaryFormat(attachment.format)) {
+    return formatBytes(attachment.bytes ?? 0);
+  }
+
   const { start_line: start, end_line: end } = attachment;
 
   if (attachment.source === "diff") {
@@ -53,7 +67,7 @@ export function displayTitle({
     : title;
 }
 
-/** Where an attachment came from, with its size, for the dialog's header. */
+/** Where an attachment the parent agent sent came from, with its size. */
 export function attachmentOrigin(attachment: MessageAttachment) {
   const files = attachment.files ?? 0;
 
@@ -70,6 +84,8 @@ export function attachmentOrigin(attachment: MessageAttachment) {
 }
 
 const extensions = {
+  image: "",
+  document: "",
   diff: ".diff",
   code: ".txt",
   markdown: ".md",
@@ -90,7 +106,8 @@ export function attachmentFile(
     path:
       attachment.path ?? `${attachment.title}${extensions[attachment.format]}`,
     content,
-    format: attachment.format,
+    format: isBinaryFormat(attachment.format) ? undefined : attachment.format,
+    mime_type: attachment.mime_type,
     ...(attachment.start_line ? { start_line: attachment.start_line } : {}),
   };
 }

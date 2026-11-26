@@ -33,6 +33,7 @@ export function initialState(): Snapshot {
       canSend: false,
       canShare: false,
       canExpand: false,
+      canOpenFiles: false,
       displayMode: "inline",
     },
   };

@@ -12,6 +12,11 @@ import {
   type UndoRecorder,
 } from "../../../app/state/undo-history";
 import { errorMessage } from "../../../shared/utils/error-message";
+import {
+  draftFileIds,
+  uploadArguments,
+  type DraftFile,
+} from "../../attachments/draft-file";
 import { ArchiveActions } from "../archive/archive-actions";
 import { UnreadActions } from "../unread/unread-actions";
 import { boundedRequest } from "./bounded-request";
@@ -35,10 +40,14 @@ interface TaskActionContext {
   undo: UndoRecorder;
 }
 
+/**
+ * A send's retry identity. A retry resends the same attachments, even when
+ * opening a file staged it since.
+ */
 type PendingMessageRequest = {
   request_id: string;
   delivery: Delivery;
-};
+} & ReturnType<typeof uploadArguments>;
 
 const UNCONFIRMED_SEND =
   "Delivery could not be confirmed. Your draft is kept. Retry the same message to safely check or complete delivery.";
@@ -141,13 +150,14 @@ export class TaskActions {
     message: string,
     delivery: Delivery,
     delivered?: () => void,
+    files?: DraftFile[],
   ) {
     // Refuse before reserving a request, so a refused send can't pin delivery.
     if (this.context.snapshot().busy || this.context.closed()) {
       return "Wait for the last action.";
     }
 
-    const key = JSON.stringify([task.id, message]);
+    const key = JSON.stringify([task.id, message, draftFileIds(files)]);
 
     // getRandomValues also works in the supported HTTP LAN console.
     // Preserve delivery when a task's status changes before an uncertain retry.
@@ -157,6 +167,7 @@ export class TaskActions {
         (part) => part.toString(16).padStart(8, "0"),
       ).join(""),
       delivery,
+      ...uploadArguments(files),
     };
 
     this.sendRequests.set(key, request);
@@ -172,7 +183,11 @@ export class TaskActions {
 
     return this.run(
       "app_send_message",
-      { task_id: task.id, message, ...request },
+      {
+        task_id: task.id,
+        message,
+        ...request,
+      },
       {
         background: true,
         timeoutMessage: UNCONFIRMED_SEND,

@@ -16,13 +16,10 @@ import { formatBytes } from "../../shared/utils/format";
 import { scrollChildIntoView } from "../../shared/utils/scroll-into-view";
 import { hasClipboardApi } from "../../shared/utils/write-clipboard";
 import { type ParsedDiffFile } from "./diff/diff-format";
-import { FileBadge } from "./file-badge";
 import {
   fileBytes,
   fileFormat,
-  fileName,
   fileViews,
-  formatName,
   isLargeSvg,
   MAX_SVG_IMAGE_BYTES,
   viewLabel,
@@ -30,6 +27,7 @@ import {
   type FileViews,
   type PreviewFile,
 } from "./file-format";
+import { FileToolbar } from "./file-toolbar";
 import { FileViewer } from "./file-viewer";
 import { Progress } from "./progress";
 
@@ -52,6 +50,8 @@ type FilePreviewProps = {
   alwaysShowViews?: boolean;
   /** Wrap source and diff lines; otherwise their viewers scroll horizontally. */
   wrapLines?: boolean;
+  /** Content between the toolbar and the viewer, such as a summary. */
+  before?: ReactNode;
 };
 
 /** A file with a switcher between the views its format offers. */
@@ -66,6 +66,7 @@ export function FilePreview({
   progress,
   alwaysShowViews = false,
   wrapLines = false,
+  before,
 }: FilePreviewProps) {
   const controller = useController();
   const canCopy = !controller.transport.embedded && hasClipboardApi();
@@ -122,13 +123,7 @@ export function FilePreview({
   return (
     // Read-only, so there is no footer: the close button and Escape dismiss it.
     <div className="file-preview" data-wrap-lines={wrapLines}>
-      <div className="file-preview-toolbar">
-        <FileBadge path={file.path} format={format} />
-        <span className="file-meta">
-          <span className="file-name">{fileName(file.path)}</span>
-          <span>{formatName(format)}</span>
-          <span>{formatBytes(size)}</span>
-        </span>
+      <FileToolbar path={file.path} format={format} bytes={size}>
         {renderedSwitcher}
         <span className="toolbar-actions">
           {beforeActions}
@@ -138,12 +133,13 @@ export function FilePreview({
         </span>
         {progress ||
           (rendering && <Progress label={`Showing ${viewLabel(view)}`} />)}
-      </div>
+      </FileToolbar>
       <div
         className="file-preview-body"
         data-view={shown}
         aria-busy={rendering}
       >
+        {before}
         {largeSvg && (
           <p className="help file-preview-note">
             This SVG is over {formatBytes(MAX_SVG_IMAGE_BYTES)}, so it is shown

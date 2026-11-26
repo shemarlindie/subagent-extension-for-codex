@@ -77,6 +77,13 @@ the user to confirm each download in its own dialog and saves to `~/Downloads`.
 A cancelled dialog returns an error, which the panel can't tell apart from a
 refusal.
 
+## Opening files
+
+When the host advertises `capabilities.experimental["openai/files"]`, attachment
+chips open their file in the host's viewer through `openai/files/open`. Other
+hosts use the panel's preview. Verified in the Codex desktop app 26.1120 with
+PDFs, images and text.
+
 ## Project context and registration
 
 Portable MCP Apps host context has presentation fields but no standard

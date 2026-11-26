@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import type { Delivery } from "../../../../../shared/tasks/model";
-import { pendingInputKind } from "../../../../../shared/tasks/model.js";
 import {
   useController,
   useSnapshot,
@@ -24,28 +23,16 @@ import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { FormFieldError } from "../../../../shared/forms/form-field-error";
 import { FormFieldHint } from "../../../../shared/forms/form-field-hint";
 import { descriptionIds } from "../../../../shared/utils/description-ids";
+import { AttachFilesButton } from "../../../attachments/attach-files-button";
+import { DraftAttachments } from "../../../attachments/draft-attachments";
+import { draftFileIds } from "../../../attachments/draft-file";
+import { useDraftFiles } from "../../../attachments/use-draft-files";
 import { providerName } from "../../../providers/provider-name";
-import { composerMode, spentBudget, type SpentBudget } from "../chat-model";
+import { composerMode, spentBudget } from "../chat-model";
 import { CommandMenu } from "./command-menu";
+import { composerLabels, expandLabel } from "./composer-labels";
 import { TaskRunSettings } from "./task-run-settings";
 import { useTaskCommands } from "./use-task-commands";
-
-const QUEUE_KEY = /Mac|iPhone|iPad/.test(navigator.userAgent)
-  ? "⌘ + Enter"
-  : "Ctrl + Enter";
-
-const HINTS = {
-  idle: "Enter to send · Shift + Enter for a new line",
-  busy: `Enter to steer · ${QUEUE_KEY} to queue`,
-  input: "Answer the question above, or Enter to queue",
-};
-
-/** The label on the button that reopens a collapsed composer. */
-function expandLabel(spent: SpentBudget | undefined, hasMessage: boolean) {
-  if (spent) return "Show composer (limit reached)";
-
-  return hasMessage ? "Show composer (draft)" : "Show composer";
-}
 
 type ComposerProps = {
   task?: Task;
@@ -82,17 +69,7 @@ export function Composer({
   const sessionTaskId = task?.id ?? taskId ?? "loading";
   const mode = task ? composerMode(task) : "idle";
 
-  const inputHint =
-    task?.pending_input && pendingInputKind(task.pending_input) === "permission"
-      ? "Enter to queue"
-      : HINTS.input;
-
-  const hint = mode === "input" ? inputHint : HINTS[mode];
-
-  const sendTooltip =
-    mode === "busy" ? "Send into the current turn (Enter)" : "Send (Enter)";
-
-  const continueLabel = mode === "busy" ? "Steer" : "Send";
+  const { hint, sendTooltip, continueLabel } = composerLabels(mode, task);
   const inputRequest = task?.pending_input?.id;
   const [expandedRequest, setExpandedRequest] = useState<string>();
 
@@ -121,7 +98,8 @@ export function Composer({
     (state) => Boolean(state.composerDraft.trim()),
   );
 
-  const canContinue = !spent;
+  const attachments = useDraftFiles("task", sessionTaskId, disabled);
+  const canContinue = !spent && !attachments.pending;
   const commands = useTaskCommands(task?.id, sessionTaskId);
 
   const [error] = useSessionState(
@@ -233,10 +211,11 @@ export function Composer({
   ]);
 
   const send = async (delivery: Delivery) => {
-    const { composerDraft: text, composerSending } = controller.session.get(
-      "task",
-      sessionTaskId,
-    );
+    const {
+      composerDraft: text,
+      composerSending,
+      files,
+    } = controller.session.get("task", sessionTaskId);
 
     const message = text.trim();
 
@@ -272,7 +251,10 @@ export function Composer({
       const session = controller.session.get("task", sessionTaskId);
 
       updateSession({
-        ...(session.composerDraft === text ? { composerDraft: "" } : {}),
+        ...(session.composerDraft === text &&
+        draftFileIds(session.files) === draftFileIds(files)
+          ? { composerDraft: "", files: undefined, fileErrors: undefined }
+          : {}),
         ...(session.composerError === failure
           ? { composerError: undefined }
           : {}),
@@ -285,6 +267,7 @@ export function Composer({
         message,
         delivery,
         delivered,
+        files,
       );
 
       updateSession({ composerError: failure });
@@ -366,7 +349,9 @@ export function Composer({
             onClick={() => toggle(false)}
           >
             <Icon name="chevron-down" size={11} />
-            <span>{expandLabel(spent, hasMessage)}</span>
+            <span>
+              {expandLabel(spent, hasMessage || attachments.files.length > 0)}
+            </span>
           </Button>
           {task && <TaskRunSettings task={task} />}
           {mode !== "idle" && stopButton}
@@ -374,6 +359,7 @@ export function Composer({
         </div>
       ) : (
         <div className="chat-composer-body motion-swap">
+          <DraftAttachments attachments={attachments} disabled={disabled} />
           <div className="chat-composer-input-row">
             <TooltipWrapper label="Hide composer">
               <Button
@@ -388,7 +374,11 @@ export function Composer({
                 <Icon name="chevron-down" size={11} />
               </Button>
             </TooltipWrapper>
-            <div className="chat-composer-box" ref={box}>
+            <div
+              className="chat-composer-box"
+              ref={box}
+              {...attachments.dropTarget}
+            >
               <CommandMenu
                 anchor={box}
                 commands={commands}
@@ -409,6 +399,10 @@ export function Composer({
                 }}
               />
               <div className="chat-composer-actions">
+                <AttachFilesButton
+                  disabled={disabled}
+                  onFiles={attachments.add}
+                />
                 {/* While a turn runs, an empty composer's button stops it. */}
                 {sending ||
                 mode === "idle" ||

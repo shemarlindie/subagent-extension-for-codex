@@ -35,6 +35,7 @@ const message = z.looseObject({
   id: z.string(),
   message: z.string(),
   from: sender,
+  attachment_titles: z.array(z.string()).optional(),
 });
 
 const queuedMessage = message.extend({

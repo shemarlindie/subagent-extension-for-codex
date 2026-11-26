@@ -164,6 +164,14 @@ for (const [name, d] of Object.entries(tools)) {
       args,
       extra: { _meta?: Record<string, unknown> },
     ): Promise<CallToolResult> => {
+      const started = Date.now();
+
+      // Codex records proxy stderr. Messages can hold user content, so log only the outcome.
+      const fail = (outcome: string) =>
+        console.error(
+          `Proxy tool failed: ${name} ${outcome} after ${Date.now() - started} ms`,
+        );
+
       try {
         const hostDirectory = hostDirectoryFromMeta(extra._meta);
 
@@ -179,6 +187,8 @@ for (const [name, d] of Object.entries(tools)) {
         const body = await response.json();
 
         if (!response.ok) {
+          fail(`HTTP ${response.status}`);
+
           return {
             isError: true,
             ...(body.send_rejected === true
@@ -196,6 +206,8 @@ for (const [name, d] of Object.entries(tools)) {
           structuredContent: toolStructuredContent(d, body.result),
         };
       } catch (error) {
+        fail(error instanceof Error ? error.name : "NonError");
+
         return {
           isError: true,
           content: [
@@ -258,7 +270,19 @@ server.registerTool(
   },
 );
 
-await server.connect(new StdioServerTransport());
+// JSON parse errors can quote the message, which can hold user content.
+server.server.onerror = (error) =>
+  console.error(
+    `Proxy transport error: ${error instanceof SyntaxError ? "invalid JSON" : error.message}`,
+  );
+
+// The transport closes and stops reading once a message passes its buffer
+// limit, 10 MiB by default. Accept what the service's 70 MB tool routes take.
+await server.connect(
+  new StdioServerTransport(process.stdin, process.stdout, {
+    maxBufferSize: 70 * 1024 * 1024,
+  }),
+);
 
 // Codex records MCP server stderr, so these lines show how the proxy ended.
 function stdinClosed() {

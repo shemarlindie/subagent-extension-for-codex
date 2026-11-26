@@ -83,24 +83,6 @@ export function application(
     next();
   });
 
-  // A message's inline attachments can reach about 1 MiB as JSON. The service
-  // reads referenced files from disk. MCP calls name their tool in the body,
-  // so all of /mcp gets this limit.
-  app.use(
-    [
-      "/mcp",
-      "/api/tools/start_task",
-      "/api/tools/app_start_task",
-      "/api/user-tools/app_start_task",
-      "/api/tools/send_message",
-      "/api/tools/app_send_message",
-      "/api/user-tools/app_send_message",
-    ],
-    express.json({ limit: "2mb" }),
-  );
-
-  app.use(express.json({ limit: "256kb" }));
-
   app.use((req, res, next) => {
     if (app.locals.stopping && req.path !== "/health") {
       res.status(503).json({ error: "The service is stopping" });
@@ -179,7 +161,7 @@ export function application(
     );
   });
 
-  app.post("/api/login", (req, res) => {
+  app.post("/api/login", express.json({ limit: "256kb" }), (req, res) => {
     const token: unknown = req.body?.token;
 
     if (typeof token !== "string" || !auth.matches(token)) {
@@ -226,7 +208,7 @@ export function application(
   const nodeHandler = toNodeHandler(handler);
   app.locals.closeMcp = () => handler.close();
 
-  app.all("/mcp", async (req, res) => {
+  app.use("/mcp", (req, res, next) => {
     if (!bearer(req)) {
       logAuthRejection(req);
       res.status(401).json({ error: "Authentication required" });
@@ -234,7 +216,7 @@ export function application(
       return;
     }
 
-    await nodeHandler(req, res, req.body);
+    next();
   });
 
   app.use("/api", (req, res, next) => {
@@ -260,6 +242,35 @@ export function application(
     }
 
     next();
+  });
+
+  // Bodies are parsed only after authentication, so unauthenticated clients
+  // can't make the service buffer upload-sized bodies. 50 MiB of uploads
+  // expand to about 67 MiB in base64.
+  app.use(
+    [
+      "/mcp",
+      "/api/tools/app_start_task",
+      "/api/user-tools/app_start_task",
+      "/api/tools/app_send_message",
+      "/api/user-tools/app_send_message",
+      "/api/tools/app_stage_file",
+      "/api/user-tools/app_stage_file",
+    ],
+    express.json({ limit: "70mb" }),
+  );
+
+  // A message's inline attachments can reach about 1 MiB as JSON. The service
+  // reads referenced files from disk.
+  app.use(
+    ["/api/tools/start_task", "/api/tools/send_message"],
+    express.json({ limit: "2mb" }),
+  );
+
+  app.use(express.json({ limit: "256kb" }));
+
+  app.all("/mcp", async (req, res) => {
+    await nodeHandler(req, res, req.body);
   });
 
   // Only an administrator token may hand the service over. Console sessions can't.
@@ -382,7 +393,15 @@ export function application(
         return;
       }
 
-      res.status(500).json({ error: error.message });
+      // Body parsing rejects an oversized or malformed request with a client status.
+      const client =
+        "status" in error &&
+        typeof error.status === "number" &&
+        error.status < 500;
+
+      res
+        .status(client ? Number(error.status) : 500)
+        .json({ error: error.message });
     },
   );
 

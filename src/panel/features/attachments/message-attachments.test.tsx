@@ -33,6 +33,43 @@ function stubLayout() {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(310);
 }
 
+test("a chip opens its stored file in a host that opens files", async () => {
+  onTestFinished(cleanup);
+  const openFile = vi.fn(async (_path: string) => {});
+  const tool = vi.fn(async () => ({ path: "/data/attachments/task/a.pdf" }));
+
+  const controller = new Controller(
+    { embedded: true, dispose() {}, tool, openFile } as unknown as Transport,
+    { hidden: () => false, wide: () => false },
+  );
+
+  onTestFinished(() => controller.dispose());
+
+  (controller as unknown as { patch(patch: object): void }).patch({
+    host: { ...controller.getSnapshot().host, canOpenFiles: true },
+  });
+
+  const view = render(
+    <ControllerContext.Provider value={controller}>
+      <MessageAttachments taskId="task" attachments={[note(2)]} />
+    </ControllerContext.Provider>,
+  );
+
+  await userEvent.setup().click(view.getByRole("button", { name: /^Note 2/ }));
+
+  expect(tool).toHaveBeenCalledWith("app_get_attachment_path", {
+    task_id: "task",
+    message_id: "request",
+    position: 2,
+  });
+
+  await vi.waitFor(() =>
+    expect(openFile).toHaveBeenCalledWith("/data/attachments/task/a.pdf"),
+  );
+
+  expect(controller.getSnapshot().dialog).toBeUndefined();
+});
+
 test("hidden chips fold behind a toggle that keeps focus as the row expands and collapses", async () => {
   onTestFinished(cleanup);
   stubLayout();

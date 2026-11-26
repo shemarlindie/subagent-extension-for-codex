@@ -4,7 +4,7 @@ import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
 import { expect, test, vi } from "vitest";
 
 import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
-import type { TransportEvents } from "../app/state/types";
+import type { HostState, TransportEvents } from "../app/state/types";
 import { ConsoleTransport } from "./console";
 import { HostTransport } from "./host";
 import { filterUnsupportedHostStyleVariables } from "./host-context-compat";
@@ -12,7 +12,7 @@ import { filterUnsupportedHostStyleVariables } from "./host-context-compat";
 function callbacks() {
   const statuses: string[] = [];
   const scopes: unknown[] = [];
-  const hosts: unknown[] = [];
+  const hosts: HostState[] = [];
   const drafts: unknown[] = [];
   const revisions: string[] = [];
   let logins = 0;
@@ -394,6 +394,42 @@ test("host saves a file only when it offers downloads, and reports a refusal", a
   transport.dispose();
 });
 
+test("host opens files only when it advertises openai/files", async () => {
+  const fake = hostApp();
+  const requests: unknown[] = [];
+
+  const app: any = Object.assign(fake.app, {
+    request: async (request: unknown) => {
+      requests.push(request);
+
+      return {};
+    },
+  });
+
+  const transport = new HostTransport(app);
+  const observed = callbacks();
+  await transport.connect(observed.events);
+  assert.equal(observed.hosts.at(-1)?.canOpenFiles, false);
+  await assert.rejects(transport.openFile("/a.pdf"), /can't open files/);
+
+  const capabilities = app.getHostCapabilities();
+
+  app.getHostCapabilities = () => ({
+    ...capabilities,
+    experimental: { "openai/files": {} },
+  });
+
+  app.onhostcontextchanged();
+  assert.equal(observed.hosts.at(-1)?.canOpenFiles, true);
+  await transport.openFile("/a.pdf");
+
+  assert.deepEqual(requests, [
+    { method: "openai/files/open", params: { path: "/a.pdf" } },
+  ]);
+
+  transport.dispose();
+});
+
 test("host opens links through the host and reports a refusal", async () => {
   const fake = hostApp();
   const transport = new HostTransport(fake.app as any);
@@ -421,6 +457,7 @@ test("host returns output schema results as sent and unwraps other tools", async
       canExpand: true,
       canSend: true,
       canShare: true,
+      canOpenFiles: false,
     },
   ]);
 
@@ -482,6 +519,7 @@ test("host forwards locale and time zone on connect and context changes", async 
       canExpand: true,
       canSend: true,
       canShare: true,
+      canOpenFiles: false,
     },
   ]);
 
@@ -494,6 +532,7 @@ test("host forwards locale and time zone on connect and context changes", async 
     canExpand: true,
     canSend: true,
     canShare: true,
+    canOpenFiles: false,
   });
 
   assert.equal(observed.hosts.length, 2);

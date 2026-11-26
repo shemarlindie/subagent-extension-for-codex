@@ -3,6 +3,7 @@ import { useWatch } from "react-hook-form";
 
 import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
 import { useController, useSnapshot } from "../../app/state/controller-context";
+import { useSessionState } from "../../app/state/session/use-session-state";
 import type { Snapshot, Task } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
@@ -10,6 +11,7 @@ import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { FormFieldError } from "../../shared/forms/form-field-error";
 import { FormFooter } from "../../shared/forms/form-footer";
 import { usePersistedDialogForm } from "../../shared/forms/use-persisted-dialog-form";
+import { uploadArguments } from "../attachments/draft-file";
 import { runsInPlace } from "../projects/selectors";
 import {
   DELEGATE_FORM_FIELDS,
@@ -35,6 +37,7 @@ import { RevisionField } from "./fields/revision-field";
 import { WorkerField } from "./fields/worker-field";
 import { WorkspaceField } from "./fields/workspace-field";
 import { WorkspaceNoteView } from "./fields/workspace-note-view";
+import { newTaskSessionId } from "./new-task/new-task-values";
 import { startTaskArguments } from "./start-task";
 import { useAsyncDefaults, useProfileMode } from "./use-async-defaults";
 import { useProjectWorkers } from "./use-project-workers";
@@ -50,6 +53,17 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const scope = useSnapshot(DELEGATE_FORM_FIELDS);
 
   const { busy, conversation } = useSnapshot(["busy", "conversation"]);
+  const filesId = newTaskSessionId(conversation);
+
+  // The files last as long as the form, as its draft does.
+  useEffect(
+    () => () => controller.session.remove("delegate", filesId),
+    [controller, filesId],
+  );
+
+  const [filesPending] = useSessionState("delegate", filesId, (state) =>
+    Boolean(state.files?.some((file) => !file.upload)),
+  );
 
   const { loading, statuses, errors, message, defaults } =
     delegateReads(dialog);
@@ -107,6 +121,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
   const canSubmit =
     requiredReadsReady &&
+    !filesPending &&
     hasWorkers &&
     choices.includes(selectedWorker) &&
     Boolean(selectedWorker) &&
@@ -121,16 +136,17 @@ function DelegateForm({ dialog }: DelegateFormProps) {
     controller.submit(async () => {
       await controller.addChatProjectForTask(values.repository);
 
-      return controller.tool<Task>(
-        "start_task",
-        startTaskArguments(
+      const { files } = controller.session.get("delegate", filesId);
+
+      return controller.tool<Task>("start_task", {
+        ...startTaskArguments(
           values,
           scope.workers,
-          // Submitting checks the dialog's scope, so this is the conversation it opened in.
           conversation,
           projectGit(scope, values.repository),
         ),
-      );
+        ...uploadArguments(files),
+      });
     }, true),
   );
 
@@ -238,7 +254,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
           (project) => project.kind === "parent",
         )}
       />
-      <DescriptionField form={form} />
+      <DescriptionField form={form} disabled={busy} />
       <div className={revisionShown ? "two task-workspace-fields" : undefined}>
         <div>
           <WorkspaceField

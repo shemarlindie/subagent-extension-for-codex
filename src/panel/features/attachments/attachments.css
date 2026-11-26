@@ -1,17 +1,20 @@
-/* A message's attachments in a right-aligned row. Chat sets its width. */
-.message-attachments {
+/* Attachment chips in one row that expands to wrap. Chat sets its width. */
+.attachment-row {
   position: relative;
   min-width: 0;
 }
-.message-attachments-row {
+.attachment-row-items {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
-.message-attachments[data-expanded] .message-attachments-row {
+.attachment-row[data-expanded] .attachment-row-items {
   flex-wrap: wrap;
+}
+/* A message's attachments align with its bubble's end. */
+.message-attachments .attachment-row-items {
+  justify-content: flex-end;
 }
 .attachment-chip {
   flex: none;
@@ -71,7 +74,7 @@
 .attachment-removed {
   color: var(--danger);
 }
-.message-attachments-toggle {
+.attachment-row-toggle {
   flex: none;
   height: 24px;
   padding: 0 4px;
@@ -82,11 +85,11 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.message-attachments-toggle:hover {
+.attachment-row-toggle:hover {
   text-decoration: underline;
 }
 /* Unshown copies the row measures to decide what fits. */
-.message-attachments-measure {
+.attachment-row-measure {
   position: absolute;
   top: 0;
   left: 0;
@@ -96,39 +99,56 @@
   visibility: hidden;
   pointer-events: none;
 }
-.message-attachments-measure > div {
+.attachment-row-measure > div {
   display: flex;
   width: max-content;
 }
 
 /*
- * The heading's attachment steps and file preview options, beside the close
- * button. They move below the title when it would otherwise get too narrow.
+ * An attachment's file toolbar names it, so the toolbar takes the heading's
+ * place beside the close button. The title stays for AT.
  */
-.dialog[data-kind="attachment"] .dialog-heading {
-  flex-wrap: wrap;
-  row-gap: 4px;
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .dialog-heading {
+  z-index: 2;
+  height: 0;
+  padding: 0;
 }
-.dialog[data-kind="attachment"] .dialog-heading > h2 {
-  flex: 1 1 12rem;
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .file-preview-toolbar {
+  top: calc(-1 * var(--dialog-pad));
+  padding-inline-end: calc(44px + var(--attachment-actions-width, 0px));
+}
+/* The name stands in for the title, so it wraps instead of truncating. */
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .file-name {
   overflow-wrap: anywhere;
+  white-space: normal;
 }
+.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
+  .dialog-heading
+  > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A sent attachment's steps and file preview options, beside the close button. */
 .attachment-heading-actions {
+  position: absolute;
+  top: 8px;
+  right: 44px;
   display: flex;
-  flex: none;
   align-items: center;
   gap: 8px;
-  margin-block-start: -4px;
-  margin-inline-start: auto;
 }
 .attachment-options-target {
   display: flex;
 }
-/* The file toolbar pins just under the heading, which grows when it wraps. */
-.dialog[data-kind="attachment"] .file-preview-toolbar {
-  top: calc(var(--attachment-heading-height, 56px) - var(--dialog-pad) - 4px);
-}
-/* The attachment dialog's summary and origin, above the file viewer. */
+/* A parent-sent attachment's summary and origin, above its file viewer. */
 .attachment-header {
   display: flex;
   align-items: flex-start;
@@ -149,4 +169,121 @@
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 12px;
+}
+
+/*
+ * A composer's draft files above its message box. Each chip previews its file,
+ * with an image's thumbnail in place of the icon, and has its own remove
+ * button.
+ */
+.draft-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* A composer box or form field shows where dragged files will land. */
+:is(.chat-composer-box, textarea)[data-dropping] {
+  border-color: var(--accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+/* A form's attach action, sized to line up with the chips beside it. */
+.attach-files-text {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  font-size: 12px;
+}
+.draft-file-chip {
+  gap: 0;
+  padding: 0;
+  cursor: default;
+}
+.attachment-row-items .draft-file-chip {
+  animation: motion-pop var(--motion-base) var(--ease-out);
+}
+.draft-file-open {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.draft-file-open:hover {
+  background: transparent;
+}
+.draft-file-open:is(:disabled, span) {
+  cursor: default;
+}
+/* The thumbnail, icon or loading spinner, in one square slot. */
+.draft-file-lead {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  overflow: hidden;
+  color: var(--muted);
+}
+.draft-file-lead[data-image] {
+  background: var(--hover);
+}
+.draft-file-lead img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: motion-fade var(--motion-base) var(--ease-out);
+}
+.draft-file-lead .loading-spinner {
+  width: 10px;
+  height: 10px;
+}
+.draft-file-remove {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-inline: 1px 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.draft-file-remove:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+/* An image chip's tooltip shows the image larger. */
+.draft-file-preview {
+  display: block;
+  max-width: 200px;
+  max-height: 160px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+.draft-file-errors {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .draft-file-chip,
+  .draft-file-lead img {
+    animation: none;
+  }
 }
