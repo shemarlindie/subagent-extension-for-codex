@@ -2,7 +2,7 @@ import type {
   SettingRow,
   SettingSection,
 } from "../../settings/document-contract.js";
-import { settingAt } from "../../settings/settings-schema.js";
+import { settingAt } from "../../settings/setting-path.js";
 import { titleCase } from "../../text.js";
 import { blockedReason, withBlockedOptions } from "../policy.js";
 import type { ProviderPolicy } from "../types.js";

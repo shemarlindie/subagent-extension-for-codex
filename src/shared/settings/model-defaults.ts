@@ -1,6 +1,6 @@
 import { roles } from "../tasks/model.js";
 import { scalarText } from "../text.js";
-import { settingAt } from "./settings-schema.js";
+import { settingAt } from "./setting-path.js";
 
 /**
  * A model scope's settings path: a provider (`models.providers.<id>`)

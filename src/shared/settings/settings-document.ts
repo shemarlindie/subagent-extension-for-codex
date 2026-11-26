@@ -29,11 +29,11 @@ import type {
   SettingSection,
 } from "./document-contract.js";
 import { modelScopePath, resolveModelDefaults } from "./model-defaults.js";
+import { settingAt } from "./setting-path.js";
 import { settingText } from "./setting-text.js";
 import {
   branchPrefixPattern,
   profileInstructionsMaxLength,
-  settingAt,
   settingSchemaAt,
 } from "./settings-schema.js";
 
