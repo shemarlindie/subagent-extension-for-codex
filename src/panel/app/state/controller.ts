@@ -96,8 +96,7 @@ export class Controller {
     snapshot: () => this.state,
     closed: () => this.disposed,
     patch: (patch: Partial<Snapshot>) => this.patch(patch),
-    tool: <T>(name: string, args?: Record<string, unknown>) =>
-      this.tool<T>(name, args),
+    tool: <T>(...args: Parameters<Transport["tool"]>) => this.tool<T>(...args),
   };
 
   readonly timing: TimingReporter = new TimingReporter(this.stateContext);
@@ -109,6 +108,7 @@ export class Controller {
     streamsDrafts: () => this.transport.streamsDrafts,
     run: (action) => this.run(action),
     refresh: () => this.refresh(),
+    retarget: () => this.updates.retarget(),
   });
 
   readonly taskDetails = new TaskDetailLoader({
@@ -405,6 +405,7 @@ export class Controller {
         // A hidden panel stops reading, and other panels may have shown the
         // tasks created meanwhile, so it announces none of them.
         if (!this.environment.hidden()) this.arrivals.reset();
+        this.updates.retarget();
         this.revisions.resume();
       });
 
@@ -510,11 +511,15 @@ export class Controller {
     this.transport.watch();
   }
 
-  async tool<T>(name: string, args: Record<string, unknown> = {}) {
+  async tool<T>(
+    name: string,
+    args: Record<string, unknown> = {},
+    signal?: AbortSignal,
+  ) {
     if (this.disposed) throw new Error("The console has closed.");
 
     return this.timing.fetch(panelLoadOperation(name), () =>
-      this.transport.tool<T>(name, args),
+      this.transport.tool<T>(name, args, signal),
     );
   }
 

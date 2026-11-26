@@ -57,11 +57,11 @@ test("a chip opens its stored file in a host that opens files", async () => {
 
   await userEvent.setup().click(view.getByRole("button", { name: /^Note 2/ }));
 
-  expect(tool).toHaveBeenCalledWith("app_get_attachment_path", {
-    task_id: "task",
-    message_id: "request",
-    position: 2,
-  });
+  expect(tool).toHaveBeenCalledWith(
+    "app_get_attachment_path",
+    { task_id: "task", message_id: "request", position: 2 },
+    undefined,
+  );
 
   await vi.waitFor(() =>
     expect(openFile).toHaveBeenCalledWith("/data/attachments/task/a.pdf"),

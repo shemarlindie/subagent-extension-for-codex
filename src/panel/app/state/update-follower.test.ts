@@ -8,7 +8,7 @@ import { UpdateFollower } from "./update-follower";
 
 function fixture(
   t: { onTestFinished(fn: () => void): void },
-  answer: (args: Record<string, unknown>) => unknown,
+  answer: (args: Record<string, unknown>, signal: AbortSignal) => unknown,
 ) {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   let closed = false;
@@ -18,7 +18,9 @@ function fixture(
     vi.useRealTimers();
   });
 
+  /** Each wait's arguments, with its `wait_id` in `ids`. */
   const calls: Record<string, unknown>[] = [];
+  const ids: unknown[] = [];
   const statuses: string[] = [];
   /** What the follower passed on, in order. */
   const received: string[] = [];
@@ -28,11 +30,16 @@ function fixture(
 
   const follower = new UpdateFollower({
     closed: () => closed,
-    tool: async <T>(name: string, args: Record<string, unknown>) => {
+    tool: async <T>(
+      name: string,
+      { wait_id, ...args }: Record<string, unknown>,
+      signal: AbortSignal,
+    ) => {
       assert.equal(name, "app_wait_for_updates");
       calls.push(args);
+      ids.push(wait_id);
 
-      return answer(args) as T;
+      return (await answer(args, signal)) as T;
     },
     status: (text) => statuses.push(text),
     viewRequest: () => request,
@@ -52,6 +59,7 @@ function fixture(
   return {
     follower,
     calls,
+    ids,
     statuses,
     received,
     drafts: () => drafts,
@@ -181,4 +189,41 @@ test("a view request goes with each wait, and its view applies before the draft"
   ]);
 
   assert.deepEqual(received, ["view", "draft"]);
+});
+
+test("a held wait moves only to a target naming another task, and its abort isn't a failure", async (t) => {
+  const { follower, calls, ids, statuses, setTarget } = fixture(
+    t,
+    (_, signal) =>
+      new Promise((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(new Error("Aborted"))),
+      ),
+  );
+
+  setTarget({ task_id: "a" });
+  follower.follow("boot:1");
+  await vi.advanceTimersByTimeAsync(0);
+
+  // The same task, or no target, keeps the held wait.
+  setTarget({ task_id: "a", message_id: "m", after_length: 3 });
+  follower.retarget();
+  setTarget(undefined);
+  follower.retarget();
+  await vi.advanceTimersByTimeAsync(0);
+  assert.equal(calls.length, 1);
+
+  // Another task replaces it at once.
+  setTarget({ task_id: "b" });
+  follower.retarget();
+  await vi.advanceTimersByTimeAsync(0);
+
+  assert.deepEqual(calls.at(-1), {
+    after: "boot:1",
+    draft: { task_id: "b" },
+    wait_ms: 20000,
+    replaces: ids[0],
+  });
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(statuses, []);
 });

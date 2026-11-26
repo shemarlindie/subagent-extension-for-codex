@@ -2,12 +2,17 @@ import type {
   DraftRead,
   DraftTarget,
 } from "../../features/tasks/chat/drafts/draft-follower";
+import { randomId } from "../../shared/utils/random-id";
 import { CONNECTION, type ConnectionLabel } from "./connection";
 import type { UpdateRead, ViewRequest } from "./panel-view";
 
 interface UpdateContext {
   closed(): boolean;
-  tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
+  tool<T>(
+    name: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<T>;
   status(text: ConnectionLabel): void;
   /** The view to ask each wait for, or none while the panel can't use one. */
   viewRequest(): ViewRequest | undefined;
@@ -40,7 +45,21 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export class UpdateFollower {
   private following = false;
   private revision?: string;
+  /** The wait in flight, and the draft task it follows. */
+  private held?: { task?: string; abort: AbortController };
   constructor(private context: UpdateContext) {}
+
+  /**
+   * Ends the held wait when the draft target names another task, so the next
+   * wait follows it at once. A target that becomes none keeps the wait.
+   */
+  retarget() {
+    const task = this.context.draftTarget()?.task_id;
+
+    if (this.held && task !== undefined && task !== this.held.task) {
+      this.held.abort.abort();
+    }
+  }
 
   /** Starts following from `revision`, the one the panel last read, if any. */
   follow(revision?: string) {
@@ -52,30 +71,52 @@ export class UpdateFollower {
 
   private async loop() {
     let retryMs = FIRST_RETRY_MS;
+    /** The wait the panel ended, which the service may still hold. */
+    let replaces: string | undefined;
 
     while (!this.context.closed()) {
-      // A target or view chosen while a wait holds is picked up on its next return.
+      // A view chosen while a wait holds is picked up on its next return.
       const target = this.context.draftTarget();
       const request = this.context.viewRequest();
       const started = Date.now();
+      const id = randomId();
+      const abort = new AbortController();
+      this.held = { task: target?.task_id, abort };
       let read: UpdateRead;
 
       try {
-        read = await this.context.tool<UpdateRead>("app_wait_for_updates", {
-          ...(this.revision === undefined ? {} : { after: this.revision }),
-          ...(target ? { draft: target } : {}),
-          ...(request ? { view: request.args } : {}),
-          wait_ms: WAIT_MS,
-        });
+        read = await this.context.tool<UpdateRead>(
+          "app_wait_for_updates",
+          {
+            ...(this.revision === undefined ? {} : { after: this.revision }),
+            ...(target ? { draft: target } : {}),
+            ...(request ? { view: request.args } : {}),
+            wait_ms: WAIT_MS,
+            wait_id: id,
+            ...(replaces === undefined ? {} : { replaces }),
+          },
+          abort.signal,
+        );
       } catch {
         if (this.context.closed()) return;
+
+        // A retarget ended the wait, so the next one follows the new target.
+        if (abort.signal.aborted) {
+          replaces = id;
+          continue;
+        }
+
+        replaces = undefined;
         this.context.status(CONNECTION.reconnecting);
         await sleep(retryMs);
         retryMs = Math.min(retryMs * 2, MAX_RETRY_MS);
         continue;
+      } finally {
+        this.held = undefined;
       }
 
       if (this.context.closed()) return;
+      replaces = undefined;
       retryMs = FIRST_RETRY_MS;
       this.context.status(CONNECTION.connected);
       let changed = read.revision !== this.revision;

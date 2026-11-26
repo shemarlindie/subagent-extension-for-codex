@@ -23,6 +23,7 @@ function fixture() {
     snapshot: () => state,
     hidden: () => false,
     streamsDrafts: () => false,
+    retarget: () => {},
     patch: (patch) => {
       patches++;
       state = { ...state, ...patch };

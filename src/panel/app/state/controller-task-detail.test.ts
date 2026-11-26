@@ -5,7 +5,13 @@ import { expect, test, vi } from "vitest";
 import { decodedEvent } from "../../../shared/events/decode";
 import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
 import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
-import { deferred, flush, setup, task } from "./controller-test-harness";
+import {
+  deferred,
+  flush,
+  setup,
+  task,
+  type FakeTransport,
+} from "./controller-test-harness";
 import type { UpdateRead } from "./panel-view";
 
 test("a default selection shows history loading until its details arrive", async (t) => {
@@ -288,6 +294,75 @@ const storedReply = (id: string, text: string) => ({
     },
   ],
   next_cursor: 3,
+});
+
+type HeldWait = {
+  draft?: { task_id: string };
+  wait_id?: string;
+  replaces?: string;
+};
+
+/** Answers draft reads, and lists the update waits the panel held. */
+function followDrafts(transport: FakeTransport) {
+  transport.handler = (name, args) =>
+    name === "app_wait_for_updates" && !args.wait_ms && args.draft
+      ? { revision: transport.revision, draft: null, running: true }
+      : undefined;
+
+  const held = () =>
+    transport.calls
+      .filter(
+        ({ name, args }) => name === "app_wait_for_updates" && args.wait_ms,
+      )
+      .map(({ args }) => args as HeldWait);
+
+  return { held };
+}
+
+test("selecting another running task or opening its Chat moves the held update wait to its draft at once", async (t) => {
+  const { controller, transport } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a"), task("b")];
+  const { held } = followDrafts(transport);
+  // The panel opens on Activity, so its first wait follows no draft.
+  controller.selection.setTab("activity");
+  await controller.start();
+  await flush();
+  const activity = held().at(-1);
+  assert.equal(controller.getSnapshot().selected, "a");
+  assert.equal(activity?.draft, undefined);
+
+  controller.selection.setTab("chat");
+  await flush();
+  const chat = held().at(-1);
+  assert.equal(chat?.draft?.task_id, "a");
+  assert.equal(chat.replaces, activity?.wait_id);
+
+  await controller.selection.select("b");
+  await flush();
+  const other = held().at(-1);
+  assert.equal(other?.draft?.task_id, "b");
+  assert.equal(other.replaces, chat.wait_id);
+});
+
+test("showing a hidden panel on a running task's Chat moves the held update wait to its draft", async (t) => {
+  const { controller, transport, environment } = setup(true);
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+  const { held } = followDrafts(transport);
+  environment.setHidden(true);
+  await controller.start();
+  await controller.selection.select("a");
+  controller.selection.setTab("chat");
+  await flush();
+  const hidden = held().at(-1);
+  assert.equal(hidden?.draft, undefined);
+
+  environment.setHidden(false);
+  await flush();
+  const shown = held().at(-1);
+  assert.equal(shown?.draft?.task_id, "a");
+  assert.equal(shown.replaces, hidden?.wait_id);
 });
 
 test("a draft cleared while a view is in flight stays until a later view's Chat holds its message", async (t) => {

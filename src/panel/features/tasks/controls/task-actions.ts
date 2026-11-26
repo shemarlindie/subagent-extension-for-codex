@@ -12,6 +12,7 @@ import {
   type UndoRecorder,
 } from "../../../app/state/undo-history";
 import { errorMessage } from "../../../shared/utils/error-message";
+import { randomId } from "../../../shared/utils/random-id";
 import {
   draftFileIds,
   uploadArguments,
@@ -159,13 +160,9 @@ export class TaskActions {
 
     const key = JSON.stringify([task.id, message, draftFileIds(files)]);
 
-    // getRandomValues also works in the supported HTTP LAN console.
     // Preserve delivery when a task's status changes before an uncertain retry.
     const request = this.sendRequests.get(key) ?? {
-      request_id: Array.from(
-        crypto.getRandomValues(new Uint32Array(4)),
-        (part) => part.toString(16).padStart(8, "0"),
-      ).join(""),
+      request_id: randomId(),
       delivery,
       ...uploadArguments(files),
     };

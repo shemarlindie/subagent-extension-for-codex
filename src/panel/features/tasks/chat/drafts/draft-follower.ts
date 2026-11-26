@@ -16,6 +16,8 @@ interface DraftContext {
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
   run(action: () => Promise<unknown>): void;
   refresh(): Promise<void>;
+  /** Moves a held update wait to the current target. */
+  retarget(): void;
 }
 
 /** The draft the panel shows, and how much of it the panel already has. */
@@ -212,6 +214,7 @@ export class DraftFollower {
 
     if (target?.task_id !== this.shown) {
       this.shown = target?.task_id;
+      this.context.retarget();
 
       if (target && target.message_id === undefined) {
         this.context.run(() => this.readDraft());
