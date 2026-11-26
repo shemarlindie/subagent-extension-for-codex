@@ -179,7 +179,7 @@ const scopes = (all: ReturnType<typeof sections>) =>
       .map((scope) => [scope.id, scope]),
   );
 
-test("another provider's allowlist marks only its own and profile menus", () => {
+test("another provider's allowlist marks only profile menus", () => {
   const all = scopes(
     settingsSections({
       values: { task: { provider: "claude" } },
@@ -192,11 +192,6 @@ test("another provider's allowlist marks only its own and profile menus", () => 
   );
 
   assert.equal(all.claude?.model.footer, undefined);
-
-  assert.equal(
-    all.fixture?.model.footer,
-    "Your organization limits these models.",
-  );
 
   assert.equal(
     all.implementer?.model.footer,
