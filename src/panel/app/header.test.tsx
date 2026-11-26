@@ -36,7 +36,7 @@ function setup(overrides: Partial<Snapshot> = {}, railCollapsed = false) {
   vi.spyOn(controller, "getSnapshot").mockReturnValue(state);
 
   const addProject = vi
-    .spyOn(controller, "addProject")
+    .spyOn(controller.projects, "add")
     .mockImplementation(() => {});
 
   const settings = vi.spyOn(controller, "settings").mockResolvedValue();

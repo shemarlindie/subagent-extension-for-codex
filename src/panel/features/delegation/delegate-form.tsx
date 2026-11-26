@@ -134,7 +134,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
   const submit = form.handleSubmit((values) =>
     controller.submit(async () => {
-      await controller.addChatProjectForTask(values.repository);
+      await controller.projects.addChatProjectForTask(values.repository);
 
       const { files } = controller.session.get("delegate", filesId);
 
@@ -187,7 +187,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const browse = useCallback(
     () =>
       controller.run(async () => {
-        const repository = await controller.browseTaskProject();
+        const repository = await controller.projects.browseForTask();
 
         // Keep selection in this draft; changing panel scope would discard it.
         if (repository) {

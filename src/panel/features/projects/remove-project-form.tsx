@@ -62,7 +62,7 @@ function RemoveProjectForm({ dialog }: RemoveProjectFormProps) {
       (!removeTasks || deletion.confirmation)
     ) {
       controller.run(() =>
-        controller.manageProject(project.repository, undefined, {
+        controller.projects.manage(project.repository, undefined, {
           deleteTasks: removeTasks,
           deleteAgentTasks,
           confirmation: deletion.confirmation,

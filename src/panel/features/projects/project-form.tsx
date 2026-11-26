@@ -44,7 +44,7 @@ function ProjectForm({ dialog }: ProjectFormProps) {
     setError("");
 
     try {
-      const result = await controller.browseProject();
+      const result = await controller.projects.browse();
 
       if (generation === request.current && active() && result.repository) {
         setRepository(result.repository);
@@ -60,7 +60,10 @@ function ProjectForm({ dialog }: ProjectFormProps) {
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!browsing) controller.run(() => controller.registerProject(repository));
+
+    if (!browsing) {
+      controller.run(() => controller.projects.register(repository));
+    }
   };
 
   return (

@@ -209,7 +209,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     }
 
     // A registered project never triggers registration.
-    await controller.addChatProjectForTask("/repo/a");
+    await controller.projects.addChatProjectForTask("/repo/a");
 
     transport.handler = (name) => {
       if (name === "list_projects") {
@@ -226,7 +226,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       return undefined;
     };
 
-    await controller.addChatProjectForTask("/repo/chat");
+    await controller.projects.addChatProjectForTask("/repo/chat");
 
     const registrations = transport.calls.filter(
       (call) => call.name === "app_register_project",

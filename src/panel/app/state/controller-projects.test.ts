@@ -28,7 +28,7 @@ test("project management discards a stale registry read and reconciles selected 
 
   const refresh = controller.refresh();
   await flush();
-  await controller.manageProject("/repo/a");
+  await controller.projects.manage("/repo/a");
   gate.resolve([{ repository: "/repo/a", kind: "repository" }]);
   await refresh;
   await flush();
@@ -85,7 +85,9 @@ test("a task-list read predating project removal never publishes its deleted tas
   assert.equal(reads, 1);
 
   assert.equal(
-    await controller.manageProject("/repo/a", undefined, { deleteTasks: true }),
+    await controller.projects.manage("/repo/a", undefined, {
+      deleteTasks: true,
+    }),
     true,
   );
 
@@ -119,7 +121,7 @@ test("other-panel removal clears selected project while renaming preserves scope
     return undefined;
   };
 
-  await controller.manageProject("/repo/a", "Renamed");
+  await controller.projects.manage("/repo/a", "Renamed");
   assert.equal(controller.getSnapshot().scopeVersion, version);
   const [renamed] = controller.getSnapshot().projects;
   assert.ok(renamed);
@@ -143,7 +145,7 @@ test("a project mutation finishing in another scope cannot leave the panel busy 
   transport.handler = (name) =>
     name === "app_remove_project" ? gate.promise : undefined;
 
-  const removing = controller.manageProject("/repo/a");
+  const removing = controller.projects.manage("/repo/a");
   await flush();
 
   controller.applyScope(
@@ -173,7 +175,7 @@ test("switching into a chat exits project management and late writes cannot retu
   controller.manageProjects();
   assert.equal(controller.getSnapshot().page, "tasks");
   assert.equal(controller.getSnapshot().dialog, undefined);
-  assert.equal(await controller.manageProject("/repo/a", "Renamed"), false);
+  assert.equal(await controller.projects.manage("/repo/a", "Renamed"), false);
 });
 
 test("another panel removing a project closes its confirmation and retains the Projects page", async (t) => {
@@ -183,7 +185,7 @@ test("another panel removing a project closes its confirmation and retains the P
   controller.manageProjects();
   const [project] = controller.getSnapshot().projects;
   assert.ok(project);
-  controller.removeProject(project);
+  controller.projects.remove(project);
   assert.equal(controller.getSnapshot().dialog?.kind, "remove-project");
   transport.projects = [];
   await controller.refresh();

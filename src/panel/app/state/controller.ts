@@ -11,15 +11,7 @@ import {
 } from "../../features/delegation/new-task/new-task-loader";
 import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
 import { ProjectWorkerReads } from "../../features/delegation/project-worker-reads";
-import {
-  renamedProject,
-  withoutProject,
-} from "../../features/projects/project-list";
-import {
-  mutateProject,
-  type ProjectRemoval,
-} from "../../features/projects/project-mutation";
-import { projectUndoSteps } from "../../features/projects/project-undo";
+import { ProjectActions } from "../../features/projects/project-actions";
 import { workersStale } from "../../features/providers/worker-freshness";
 import { PanelSettingsSaver } from "../../features/settings/panel-settings-saver";
 import { DraftFollower } from "../../features/tasks/chat/drafts/draft-follower";
@@ -205,7 +197,7 @@ export class Controller {
   readonly newTasks = new NewTaskLoader({
     ...this.formContext,
     addChatProjectForTask: (repository) =>
-      this.addChatProjectForTask(repository),
+      this.projects.addChatProjectForTask(repository),
     leaveSelection: () => this.leaveSelection(false),
     // Shows the started task on its Chat tab.
     created: async (task, arrival) => {
@@ -218,7 +210,20 @@ export class Controller {
 
   /** The user's reversible changes, for undo and redo. */
   readonly undo = new UndoHistory(this.stateContext);
-  private projectUndo = projectUndoSteps(this.stateContext);
+
+  readonly projects = new ProjectActions({
+    ...this.stateContext,
+    refresh: () => this.refresh(),
+    run: (action) => this.run(action),
+    report: (error) => this.report(error),
+    projectWrite: () => ++this.projectGeneration,
+    clearProjectScope: () => this.clearProjectScope(),
+    closeDialog: () => this.closeDialog(),
+    submit: (operation) => this.submit(operation),
+    changeProject: (repository) => this.changeProject(repository),
+    projectAdded: (repository) => this.newTasks.projectAdded(repository),
+    undo: this.undo,
+  });
 
   readonly taskActions = new TaskActions({
     timing: this.timing,
@@ -1279,24 +1284,6 @@ export class Controller {
     await this.share();
   }
 
-  /**
-   * Opened from the new-task composer, the added project becomes the
-   * composer's choice and the task list keeps its scope.
-   */
-  addProject(forNewTask = false) {
-    if (this.state.dialog || this.state.busy || !this.state.connected) return;
-
-    this.patch({
-      dialog: {
-        kind: "project",
-        repository: this.state.projectCandidate,
-        forNewTask,
-        scope: this.state.scopeVersion,
-      },
-      formError: "",
-    });
-  }
-
   navigate(page: PageId) {
     if (!canNavigate(this.state, page)) return;
 
@@ -1315,249 +1302,6 @@ export class Controller {
 
   backToTasks() {
     this.navigate(DEFAULT_PAGE);
-  }
-
-  removeProject(project: Project) {
-    if (
-      this.state.page !== "projects" ||
-      this.state.conversation ||
-      this.state.busy ||
-      this.state.dialog ||
-      !this.state.connected
-    ) {
-      return;
-    }
-
-    this.patch({
-      dialog: {
-        kind: "remove-project",
-        project,
-        scope: this.state.scopeVersion,
-      },
-      formError: "",
-    });
-  }
-
-  clearProjectError() {
-    if (this.state.page === "projects" && !this.state.busy) {
-      this.patch({ formError: "" });
-    }
-  }
-
-  /** Project writes are available globally, including their own removal dialog. */
-  private canManageProject(repository: string, name?: string) {
-    const { dialog, scopeVersion } = this.state;
-
-    const removalDialog =
-      dialog?.kind === "remove-project" &&
-      name === undefined &&
-      dialog.project.repository === repository &&
-      dialog.scope === scopeVersion;
-
-    return (
-      this.state.page === "projects" &&
-      (!dialog || removalDialog) &&
-      !this.state.conversation &&
-      !this.state.busy &&
-      !this.disposed
-    );
-  }
-
-  async manageProject(
-    repository: string,
-    name?: string,
-    removal: ProjectRemoval = { deleteTasks: false },
-  ): Promise<boolean> {
-    const { scopeVersion: scope, dialog } = this.state;
-
-    if (!this.canManageProject(repository, name)) return false;
-
-    const active = () =>
-      !this.disposed &&
-      this.state.page === "projects" &&
-      scope === this.state.scopeVersion &&
-      this.state.dialog === dialog;
-
-    ++this.projectGeneration;
-    this.patch({ busy: true, formError: "" });
-    let succeeded = false;
-    const before = this.state.projects.find((p) => p.repository === repository);
-
-    try {
-      const result = await mutateProject(this, repository, name, removal);
-
-      if (!active()) return false;
-
-      this.patch({
-        projects:
-          name === undefined
-            ? withoutProject(this.state.projects, repository)
-            : renamedProject(
-                this.state.projects,
-                repository,
-                result.name ?? name.trim(),
-              ),
-      });
-
-      succeeded = true;
-      if (dialog) this.closeDialog();
-      const change = this.projectUndo.change(before, name, removal.deleteTasks);
-      if (change) this.undo.record(change);
-
-      if (name === undefined) {
-        this.reconcileProjectRemoval(repository, removal.deleteTasks);
-      }
-    } catch (error) {
-      if (active()) {
-        this.patch({ formError: errorMessage(error) });
-      }
-    } finally {
-      ++this.projectGeneration;
-
-      if (!this.isDisposed()) {
-        this.patch({ busy: false });
-
-        if (scope !== this.state.scopeVersion) {
-          if (dialog && this.state.dialog === dialog) this.closeDialog();
-          this.run(() => this.refresh());
-        }
-      }
-    }
-
-    // Never retry a mutation. Other panels refresh on the change a successful write makes.
-    // Cleanup can fail after deleting some tasks; always reconcile that outcome too.
-    await this.refresh().catch(this.report);
-
-    return succeeded;
-  }
-
-  /** A removed approval or its deleted selected task returns to the global list. */
-  private reconcileProjectRemoval(repository: string, deleteTasks: boolean) {
-    if (
-      this.state.repository === repository ||
-      (deleteTasks && selectedTask(this.state)?.repository === repository)
-    ) {
-      this.patch({ busy: false });
-      this.clearProjectScope();
-    }
-  }
-
-  async browseProject() {
-    return this.tool<{ repository: string | null }>("app_browse_project");
-  }
-
-  async browseTaskProject(): Promise<string | undefined> {
-    const dialog = this.state.dialog;
-
-    if (
-      !dialog ||
-      dialog.kind !== "delegate" ||
-      this.state.busy ||
-      this.disposed ||
-      dialog.scope !== this.state.scopeVersion
-    ) {
-      return;
-    }
-
-    const active = () =>
-      !this.disposed &&
-      this.state.dialog === dialog &&
-      dialog.scope === this.state.scopeVersion;
-
-    this.patch({ busy: true, formError: "" });
-
-    try {
-      const picked = await this.browseProject();
-      // A picker can outlive its chat; only the original draft may register its selection.
-      if (!picked.repository || !active()) return;
-
-      const registered = await this.registerAndList(picked.repository);
-      if (!active()) return;
-      this.patch({ projects: registered.projects, projectsLoaded: true });
-
-      return registered.repository;
-    } catch (error) {
-      if (active()) {
-        this.patch({ formError: errorMessage(error) });
-      }
-    } finally {
-      this.patch({ busy: false });
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Registers a project, then reads the list that includes it. The read is
-   * new rather than shared, since a read already in flight may predate it.
-   */
-  private async registerAndList(repository: string) {
-    const registered = await this.tool<{ repository: string }>(
-      "app_register_project",
-      { repository },
-    );
-
-    const projects = await this.tool<Project[]>("list_projects");
-
-    return { repository: registered.repository, projects };
-  }
-
-  /** Add the chat project the user chose in New task before its task starts. */
-  async addChatProjectForTask(repository: string) {
-    const state = this.state;
-
-    if (
-      !state.projectCandidateAuto ||
-      repository !== state.projectCandidate ||
-      state.projects.some((project) => project.repository === repository)
-    ) {
-      return;
-    }
-
-    const { projects } = await this.registerAndList(repository);
-
-    if (!this.disposed) {
-      this.patch({
-        projects,
-        projectsLoaded: true,
-        projectCandidate: undefined,
-        projectCandidateAuto: false,
-      });
-    }
-  }
-
-  async registerProject(repository: string) {
-    const { scopeVersion: scope, dialog } = this.state;
-    const forNewTask = dialog?.kind === "project" && dialog.forNewTask;
-
-    let registered: string | undefined;
-
-    await this.submit(async () => {
-      const result = await this.registerAndList(repository);
-      registered = result.repository;
-
-      if (!this.disposed && scope === this.state.scopeVersion) {
-        this.patch({ projects: result.projects, projectsLoaded: true });
-      }
-
-      const added = result.projects.find((p) => p.repository === registered);
-      if (added) this.undo.record(this.projectUndo.addition(added));
-    });
-
-    if (
-      registered &&
-      !this.disposed &&
-      scope === this.state.scopeVersion &&
-      !this.state.dialog
-    ) {
-      this.patch({ projectCandidate: undefined, projectCandidateAuto: false });
-
-      if (forNewTask && this.state.newTask) {
-        this.newTasks.projectAdded(registered);
-      } else if (this.state.page === "tasks") {
-        await this.changeProject(registered);
-      }
-    }
   }
 
   async settings() {
