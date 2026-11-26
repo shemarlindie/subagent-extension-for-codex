@@ -62,7 +62,7 @@ export function ProjectChip({
       action={{
         label: "Add project…",
         icon: "plus",
-        onSelect: () => controller.addProject(true),
+        onSelect: () => controller.projects.add(true),
       }}
     />
   );

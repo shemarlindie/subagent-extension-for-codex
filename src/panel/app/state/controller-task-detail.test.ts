@@ -134,16 +134,16 @@ for (const transition of [
       return undefined;
     };
 
-    const oldTurn = controller.viewTurnActivity(1);
+    const oldTurn = controller.taskDetails.viewTurn(1);
 
     if (transition === "reselecting the same task") {
       await controller.select("b");
       await controller.select("a");
     } else if (transition === "returning from latest activity") {
-      controller.showLatestActivity();
+      controller.taskDetails.showLatest();
     }
 
-    const newTurn = controller.viewTurnActivity(2);
+    const newTurn = controller.taskDetails.viewTurn(2);
 
     const events = [
       { id: 2, task_id: "a", type: "log", timestamp: "", data: {} },

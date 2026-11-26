@@ -53,7 +53,8 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             aria-label="Changes to show"
             value={[changes?.scope ?? "task"]}
             onValueChange={(value) =>
-              value[0] && controller.run(() => controller.loadChanges(value[0]))
+              value[0] &&
+              controller.run(() => controller.changes.loadChanges(value[0]))
             }
           >
             {SCOPES.map((scope) => (
@@ -99,7 +100,9 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             className="toolbar-icon-button changes-refresh"
             aria-label="Refresh changes"
             disabled={loading}
-            onClick={() => controller.run(() => controller.loadChanges())}
+            onClick={() =>
+              controller.run(() => controller.changes.loadChanges())
+            }
           >
             <Icon name="refresh" size={14} />
           </Button>

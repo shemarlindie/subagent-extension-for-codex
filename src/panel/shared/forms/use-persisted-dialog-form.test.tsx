@@ -79,7 +79,7 @@ test("shared form hook restores and records values through the controller", (t) 
     fireEvent.change(input, { target: { value: "edited request" } });
   });
 
-  assert.deepEqual(first.getDialogDraft("handoff"), {
+  assert.deepEqual(first.dialogs.draft("handoff"), {
     instruction: "edited request",
   });
 

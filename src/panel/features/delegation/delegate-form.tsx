@@ -68,7 +68,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const { loading, statuses, errors, message, defaults } =
     delegateReads(dialog);
 
-  const persistedDraft = useRef(controller.getDialogDraft("delegate") ?? {});
+  const persistedDraft = useRef(controller.dialogs.draft("delegate") ?? {});
   const choices = workerChoices(scope.workers);
 
   const { repository: resolvedRepository, revision: resolvedRevision } =
@@ -134,7 +134,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
 
   const submit = form.handleSubmit((values) =>
     controller.submit(async () => {
-      await controller.addChatProjectForTask(values.repository);
+      await controller.projects.addChatProjectForTask(values.repository);
 
       const { files } = controller.session.get("delegate", filesId);
 
@@ -187,7 +187,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   const browse = useCallback(
     () =>
       controller.run(async () => {
-        const repository = await controller.browseTaskProject();
+        const repository = await controller.projects.browseForTask();
 
         // Keep selection in this draft; changing panel scope would discard it.
         if (repository) {
@@ -230,7 +230,10 @@ function DelegateForm({ dialog }: DelegateFormProps) {
               ? `Task defaults could not be loaded: ${errors.settings}`
               : "Some task options could not be loaded. See the affected field."}
           </span>
-          <Button variant="text" onClick={() => controller.retryDialogLoad()}>
+          <Button
+            variant="text"
+            onClick={() => controller.dialogLoader.retry()}
+          >
             Retry loading
           </Button>
         </div>

@@ -28,8 +28,8 @@ function WorktreeForm({ dialog }: WorktreeFormProps) {
         await controller.tool("app_delete_branch", { task_id: task.id });
       }
 
-      await controller.loadChanges();
-      await controller.loadCounts();
+      await controller.changes.loadChanges();
+      await controller.changes.loadCounts();
     });
   };
 

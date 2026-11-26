@@ -81,7 +81,7 @@ test("browsing a folder fills the project draft without granting access", async 
   );
 
   act(() => {
-    void controller.addProject();
+    void controller.projects.add();
   });
 
   const dialog = await screen.findByRole("dialog");
@@ -121,7 +121,7 @@ test("project registration errors preserve the draft and do not change the selec
   );
 
   act(() => {
-    void controller.addProject();
+    void controller.projects.add();
   });
 
   const dialog = await screen.findByRole("dialog");
@@ -188,7 +188,7 @@ test("folder picker failure keeps manual entry available", async (t) => {
   );
 
   act(() => {
-    void controller.addProject();
+    void controller.projects.add();
   });
 
   const dialog = await screen.findByRole("dialog");
@@ -235,7 +235,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
   );
 
   act(() => {
-    void controller.addProject();
+    void controller.projects.add();
   });
 
   const firstDialog = await screen.findByRole("dialog");
@@ -253,7 +253,7 @@ test("a delayed native folder selection cannot overwrite a new project dialog af
   await waitFor(() => assertAbsent(screen.queryByRole("dialog")));
 
   act(() => {
-    void controller.addProject();
+    void controller.projects.add();
   });
 
   const dialog = await screen.findByRole("dialog");

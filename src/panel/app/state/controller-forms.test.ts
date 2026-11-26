@@ -24,7 +24,7 @@ test("settings opens before its read and keeps its section across scope changes"
   await controller.settings();
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
 
-  controller.saveSettingsSection("models");
+  controller.dialogs.saveSettingsSection("models");
 
   controller.applyScope(
     { panel_scope: { conversation_id: "another-chat" } },
@@ -37,8 +37,8 @@ test("settings opens before its read and keeps its section across scope changes"
   await flush();
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings");
-  assert.equal(controller.getLastSettingsSection(), "models");
-  assert.equal(controller.getDialogDraft("settings"), undefined);
+  assert.equal(controller.dialogs.lastSettingsSection(), "models");
+  assert.equal(controller.dialogs.draft("settings"), undefined);
 });
 
 test("delegation project lookup discarded when conversation changes", async (t) => {
@@ -53,10 +53,10 @@ test("delegation project lookup discarded when conversation changes", async (t) 
   const opening = controller.delegate();
   await flush();
   assert.equal(controller.getSnapshot().dialog?.kind, "delegate-loading");
-  controller.saveDialogField("delegate", "description", "Keep this draft");
+  controller.dialogs.saveField("delegate", "description", "Keep this draft");
 
   assert.equal(
-    controller.getDialogDraft("delegate")?.description,
+    controller.dialogs.draft("delegate")?.description,
     "Keep this draft",
   );
 
@@ -209,7 +209,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
     }
 
     // A registered project never triggers registration.
-    await controller.addChatProjectForTask("/repo/a");
+    await controller.projects.addChatProjectForTask("/repo/a");
 
     transport.handler = (name) => {
       if (name === "list_projects") {
@@ -226,7 +226,7 @@ test("New task offers the chat project only when auto-add is on and adds it befo
       return undefined;
     };
 
-    await controller.addChatProjectForTask("/repo/chat");
+    await controller.projects.addChatProjectForTask("/repo/chat");
 
     const registrations = transport.calls.filter(
       (call) => call.name === "app_register_project",
@@ -275,7 +275,7 @@ test("revoking the edited delegation repository rejects selection of an in-fligh
   await controller.start();
   await controller.delegate();
   await flush();
-  controller.saveDialogField("delegate", "repository", "/repo/b");
+  controller.dialogs.saveField("delegate", "repository", "/repo/b");
   const gate = deferred<Task>();
   const submitting = controller.submit(() => gate.promise, true);
 

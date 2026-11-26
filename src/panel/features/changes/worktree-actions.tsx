@@ -53,7 +53,9 @@ export function WorktreeActions({ task, changes }: WorktreeActionsProps) {
       ) : (
         <Button
           disabled={disabled}
-          onClick={() => controller.run(() => controller.removeWorktree(task))}
+          onClick={() =>
+            controller.run(() => controller.changes.removeWorktree(task))
+          }
         >
           Remove worktree
         </Button>

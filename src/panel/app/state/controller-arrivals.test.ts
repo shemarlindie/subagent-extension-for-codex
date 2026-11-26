@@ -141,7 +141,7 @@ for (const guard of ["compose", "back", "dialog", "page", "busy"] as const) {
 
     if (guard === "compose") controller.newTasks.open();
     if (guard === "back") controller.back();
-    if (guard === "dialog") controller.addProject();
+    if (guard === "dialog") controller.projects.add();
     if (guard === "page") controller.navigate("projects");
 
     if (guard === "busy") {
@@ -216,7 +216,7 @@ test("View cannot leave a dialog opened after an arrival", async (t) => {
   await controller.start();
   transport.tasks = [task("new"), task("old")];
   await controller.refresh();
-  controller.addProject();
+  controller.projects.add();
   const dialog = controller.getSnapshot().dialog;
   await controller.viewTaskArrival();
   expect(controller.getSnapshot().selected).toBe("old");

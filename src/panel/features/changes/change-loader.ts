@@ -1,5 +1,5 @@
 import { selectedTask } from "../../app/state/selectors";
-import type { Snapshot } from "../../app/state/types";
+import type { OpenDialogRequest, Snapshot, Task } from "../../app/state/types";
 import { errorMessage } from "../../shared/utils/error-message";
 import { changesKey, changesStale, readChanges } from "./read-changes";
 import type {
@@ -8,6 +8,7 @@ import type {
   Changes,
   ChangeScope,
   ChangesState,
+  WorktreeRemoval,
 } from "./types";
 
 interface ChangeLoaderContext {
@@ -15,9 +16,14 @@ interface ChangeLoaderContext {
   closed(): boolean;
   patch(patch: Partial<Snapshot>): void;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
+  open(dialog: OpenDialogRequest): void;
+  refresh(): Promise<void>;
 }
 
-/** Reads the selected task's change totals and changes into the panel state. */
+/**
+ * Reads the selected task's change totals and changes into the panel state,
+ * and removes its worktree.
+ */
 export class ChangeLoader {
   constructor(private context: ChangeLoaderContext) {}
 
@@ -135,5 +141,40 @@ export class ChangeLoader {
       current = { ...changes, loading: false, error: errorMessage(error) };
       this.context.patch({ changes: current });
     }
+  }
+
+  /**
+   * Removes a task's worktree and keeps its branch. A worktree with
+   * uncommitted changes is kept; a dialog lists them and asks first.
+   */
+  async removeWorktree(task: Task) {
+    const state = this.context.snapshot();
+    if (state.busy || state.dialog || this.context.closed()) return;
+    this.context.patch({ busy: true });
+    let result: WorktreeRemoval;
+
+    try {
+      result = await this.context.tool<WorktreeRemoval>("app_remove_worktree", {
+        task_id: task.id,
+      });
+    } finally {
+      this.context.patch({ busy: false });
+    }
+
+    if (result.status === "uncommitted") {
+      this.context.open({
+        kind: "worktree",
+        action: "remove",
+        task,
+        files: result.files,
+      });
+
+      return;
+    }
+
+    // The Changes tab and the tab count read the removed worktree at once.
+    await this.loadChanges();
+    await this.loadCounts();
+    await this.context.refresh();
   }
 }

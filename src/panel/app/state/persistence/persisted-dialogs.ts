@@ -24,6 +24,16 @@ interface PersistedDialogsContext {
   ): void;
 }
 
+/** What forms may change: drafts, not the dialog stack the controller owns. */
+export type DialogDrafts = Pick<
+  PersistedDialogs,
+  | "draft"
+  | "saveDraft"
+  | "saveField"
+  | "lastSettingsSection"
+  | "saveSettingsSection"
+>;
+
 interface SavedDialogs {
   dialogs?: PersistedDialog[];
   lastSettingsSection?: string;

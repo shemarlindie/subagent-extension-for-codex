@@ -97,7 +97,7 @@ export function Header({ taskRail }: HeaderProps) {
               variant="ghost"
               className="toolbar-icon-button toolbar-inline"
               disabled={!connected || !scopeKnown || busy}
-              onClick={() => controller.addProject()}
+              onClick={() => controller.projects.add()}
             >
               <Icon name="plus" size={14} />
             </Button>
@@ -138,7 +138,7 @@ export function Header({ taskRail }: HeaderProps) {
                   <Menu.Item
                     className="menu-item"
                     disabled={!connected || !scopeKnown || busy}
-                    onClick={() => controller.addProject()}
+                    onClick={() => controller.projects.add()}
                   >
                     Allow tasks here
                   </Menu.Item>

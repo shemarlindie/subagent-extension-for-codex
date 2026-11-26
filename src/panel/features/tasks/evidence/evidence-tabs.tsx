@@ -190,7 +190,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
               <TurnActivityBanner
                 turn={focus.turn}
                 loading={range === "loading"}
-                onShowLatest={() => controller.showLatestActivity()}
+                onShowLatest={() => controller.taskDetails.showLatest()}
               />
             )}
             <LoadingSwap

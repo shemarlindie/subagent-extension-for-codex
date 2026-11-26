@@ -71,7 +71,7 @@ export function ProjectsPage() {
           id="project-add"
           variant="primary"
           disabled={disabled}
-          onClick={() => controller.addProject()}
+          onClick={() => controller.projects.add()}
         >
           Add project
         </Button>
@@ -91,9 +91,9 @@ export function ProjectsPage() {
               const name = projectDisplayName(project);
 
               const saveName = async (value: string) => {
-                controller.clearProjectError();
+                controller.projects.clearError();
 
-                const saved = await controller.manageProject(
+                const saved = await controller.projects.manage(
                   project.repository,
                   value,
                 );
@@ -161,7 +161,7 @@ export function ProjectsPage() {
                           disabled={disabled}
                           aria-label={`Remove ${name}`}
                           data-repository={project.repository}
-                          onClick={() => controller.removeProject(project)}
+                          onClick={() => controller.projects.remove(project)}
                         >
                           <Icon name="minus" size={16} />
                         </Button>
