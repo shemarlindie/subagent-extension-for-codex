@@ -42,6 +42,13 @@ describe("change reads", () => {
     const [a2, b2] = changes.changeList(task, "task").files;
     expect(a2?.signature).not.toBe(a?.signature);
     expect(b2?.signature).toBe(b?.signature);
+
+    const turn = changes.changeList(task, "turn");
+    changes.clearTurn(task);
+
+    expect(changes.fileChange(task, "turn", "a.txt", turn.revision)).toEqual({
+      stale: true,
+    });
   });
 
   it("allows previews from the latest turn when the task's net diff cancels out (R5)", async (context) => {

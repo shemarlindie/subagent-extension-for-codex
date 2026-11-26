@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -21,10 +20,7 @@ import {
 import type { Task } from "../../../shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
 import { changePath } from "./paths.js";
-import { ChangeStore, type RecordedChange } from "./store.js";
-
-const hash = (value: string | Uint8Array) =>
-  createHash("sha256").update(value).digest("hex");
+import { ChangeStore, hash, type RecordedChange } from "./store.js";
 
 /** List metadata does not depend on the current workspace. */
 function listedFile(row: RecordedChange) {
@@ -97,8 +93,6 @@ function filePage(
   };
 }
 
-const rowsRevision = (rows: RecordedChange[]) => hash(JSON.stringify(rows));
-
 /** Both tool audiences read the same durable task edits. */
 export class Changes extends ChangeStore {
   changes(
@@ -107,7 +101,7 @@ export class Changes extends ChangeStore {
     cursor?: string,
     pageChars = CHANGES_PAGE_CHARS,
   ): ChangesResult {
-    const rows = this.rows(task, scope);
+    const { rows, revision } = this.revisedRows(task, scope);
 
     const parts = rows
       .filter((row) => row.path && !row.incomplete)
@@ -115,7 +109,6 @@ export class Changes extends ChangeStore {
         formatFileDiff(row.path, row.hunks, row.created, row.deleted),
       );
 
-    const revision = rowsRevision(rows);
     const page = cursor ? decodeCursor(cursor) : undefined;
 
     if (
@@ -147,7 +140,7 @@ export class Changes extends ChangeStore {
 
   /** The panel's list: each file's signature comes from its recorded row, so it needs no diff. */
   changeList(task: Task, scope: ChangeScope): ChangeList {
-    const rows = this.rows(task, scope);
+    const { rows, revision } = this.revisedRows(task, scope);
 
     return {
       scope,
@@ -165,7 +158,7 @@ export class Changes extends ChangeStore {
             ),
           };
         }),
-      revision: rowsRevision(rows),
+      revision,
     };
   }
 
@@ -176,9 +169,8 @@ export class Changes extends ChangeStore {
     path: string,
     revision: string,
   ): FileChange {
-    const rows = this.rows(task, scope);
-    if (rowsRevision(rows) !== revision) return { stale: true };
-    const row = rows.find((row) => row.path && row.path === path);
+    if (this.revision(task, scope) !== revision) return { stale: true };
+    const row = path ? this.row(task, scope, path) : undefined;
     if (!row) throw new Error(`${path} is not among this task's changes.`);
     if (row.incomplete) return { stale: false };
 
