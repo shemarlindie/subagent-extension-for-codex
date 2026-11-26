@@ -40,23 +40,53 @@ export function saveSettings(set: unknown) {
 /** A part of a view, named as the view names it. */
 export type ViewPart = keyof Omit<
   PanelView,
-  "built_at" | "settings" | "plan_usage"
+  "built_at" | "json_bytes" | "plan_usage"
 >;
 
-/**
- * Adds the view an update wait asked for, built from each part's fixture
- * read, as `waitForUpdates` in
- * `src/service/features/tasks/conversation/updates.ts` does. It leaves the
- * view out when only the target draft changed.
- */
-export function withPreviewView(
-  args: Record<string, unknown>,
-  read: WaitRead,
-  readPart: (part: ViewPart, args: Record<string, unknown>) => unknown,
-  planUsage?: PlanUsage,
-) {
-  const view = args.view as ViewParts;
+type PartRead = (part: ViewPart, args: Record<string, unknown>) => unknown;
 
+/**
+ * Builds the view an update wait asked for from each part's own read, as
+ * `waitForUpdates` in `src/service/features/tasks/conversation/updates.ts`
+ * does. Parts the wait didn't ask for are left out.
+ */
+function composeView(view: unknown, read: PartRead): PanelView {
+  const parts = view as ViewParts;
+
+  return {
+    built_at: Date.now(),
+    json_bytes: 0,
+    settings: read("settings", {}),
+    projects: read("projects", {}),
+    list: read("list", parts.list),
+    ...(parts.chat && { chat: read("chat", parts.chat) }),
+    ...(parts.activity && { activity: read("activity", parts.activity) }),
+    ...(parts.pending && { pending: read("pending", parts.pending) }),
+  } as PanelView;
+}
+
+/**
+ * Builds a view from part reads that may resolve later, so tests can hold
+ * or fail one part's read.
+ */
+export async function composeHeldView(view: unknown, read: PartRead) {
+  const parts = Object.entries(composeView(view, read));
+
+  const held = Object.fromEntries(
+    await Promise.all(
+      parts.map(async ([part, value]) => [part, await Promise.resolve(value)]),
+    ),
+  ) as PanelView;
+
+  // Timestamp the completed view, as the service does.
+  return { ...held, built_at: Date.now() };
+}
+
+/**
+ * Whether the wait should return without a view, as the service does when
+ * only the target draft changed since `after`.
+ */
+function draftOnly(args: Record<string, unknown>, read: WaitRead) {
   const target = args.draft as
     { message_id?: string; after_length?: number } | undefined;
 
@@ -67,19 +97,24 @@ export function withPreviewView(
         read.draft.text.length > (target.after_length ?? 0)
       : target.message_id !== undefined);
 
-  if (args.after === read.revision && draftMoved) return read;
+  return args.after === read.revision && Boolean(draftMoved);
+}
+
+/** Adds the view an update wait asked for, built from each part's fixture read. */
+export function withPreviewView(
+  args: Record<string, unknown>,
+  read: WaitRead,
+  readPart: PartRead,
+  planUsage?: PlanUsage,
+) {
+  if (draftOnly(args, read)) return read;
+
+  const view = composeView(args.view, (part, partArgs) =>
+    part === "settings" ? previewPanelSettings : readPart(part, partArgs),
+  );
 
   return {
     ...read,
-    view: {
-      built_at: Date.now(),
-      settings: previewPanelSettings,
-      ...(planUsage && { plan_usage: planUsage }),
-      projects: readPart("projects", {}),
-      list: readPart("list", view.list),
-      ...(view.chat && { chat: readPart("chat", view.chat) }),
-      ...(view.activity && { activity: readPart("activity", view.activity) }),
-      ...(view.pending && { pending: readPart("pending", view.pending) }),
-    },
+    view: { ...view, ...(planUsage && { plan_usage: planUsage }) },
   };
 }

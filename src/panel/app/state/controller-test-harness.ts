@@ -2,13 +2,13 @@
 // build reject production imports of `*-test-harness` modules.
 import assert from "node:assert/strict";
 
+import { composeHeldView } from "../../../../dev/panel/scenarios/view-tools";
 import {
   panelSettingsDefaults,
   settingsDefaults,
 } from "../../../shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
-import { composeView } from "./panel-view-test-harness";
 import type {
   Defaults,
   PanelData,
@@ -123,7 +123,7 @@ export class FakeTransport implements Transport {
 
       // The list and projects come from their tools. Tests hold or replace
       // another part through `view.<part>`.
-      const view = await composeView(args.view, (part, partArgs) =>
+      const view = await composeHeldView(args.view, (part, partArgs) =>
         this.tool(viewReads[part] ?? `view.${part}`, partArgs),
       );
 
