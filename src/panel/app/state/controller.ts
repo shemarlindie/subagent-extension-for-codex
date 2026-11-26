@@ -5,7 +5,6 @@ import {
   NewTaskLoader,
   rescopedNewTask,
 } from "../../features/delegation/new-task/new-task-loader";
-import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
 import { ProjectWorkerReads } from "../../features/delegation/project-worker-reads";
 import { ProjectActions } from "../../features/projects/project-actions";
 import { workersStale } from "../../features/providers/worker-freshness";
@@ -50,11 +49,12 @@ import {
   projectRemovalReset,
   tasksInScope,
 } from "./scope-reconciliation";
-import { defaultSelection, selectionPatch } from "./selection";
-import { availableFilter, selectedTask, showsReadCompleted } from "./selectors";
+import { selectionPatch } from "./selection";
+import { selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
 import { lacksNewSelection, unloadedCounts } from "./task-list-read";
+import { TaskSelection } from "./task-selection";
 import type {
   DialogState,
   Filter,
@@ -64,7 +64,6 @@ import type {
   PersistedViewState,
   Project,
   Snapshot,
-  Tab,
   Task,
   TaskList,
   Transport,
@@ -113,8 +112,8 @@ export class Controller {
 
   readonly taskDetails = new TaskDetailLoader({
     ...this.stateContext,
-    generation: () => this.generation,
-    setTab: (tab) => this.setTab(tab),
+    generation: () => this.selection.generation,
+    setTab: (tab) => this.selection.setTab(tab),
     drafts: this.draftFollower,
     timing: this.timing,
   });
@@ -145,16 +144,11 @@ export class Controller {
 
   private listeners = new Set<() => void>();
   readonly session: SessionStateStore;
+  /** Which task and tab the panel shows. */
+  readonly selection: TaskSelection;
   private disposed = false;
   private started = false;
-  private generation = 0;
   private projectGeneration = 0;
-  /** Protects user task and tab choices from late task-list results. */
-  private tabIntentRevision = 0;
-  private tabIntentRevisionAtSelection = 0;
-  private reconcileShare = false;
-  private browsing = false;
-  private explicitSelection = false;
   private arrivals = new TaskArrivals();
   private restoredView?: PersistedViewState;
   private persistedDialogs: PersistedDialogs;
@@ -191,7 +185,7 @@ export class Controller {
     ...this.formContext,
     seedDraft: (dialog, draft) =>
       this.persistedDialogs.seed(dialog, draft, false),
-    explicitSelection: () => this.explicitSelection,
+    explicitSelection: () => this.selection.explicit,
   });
 
   /** The new-task composer: opening, its reads and starting the task. */
@@ -199,11 +193,11 @@ export class Controller {
     ...this.formContext,
     addChatProjectForTask: (repository) =>
       this.projects.addChatProjectForTask(repository),
-    leaveSelection: () => this.leaveSelection(false),
+    leaveSelection: () => this.selection.leave(false),
     // Shows the started task on its Chat tab.
     created: async (task, arrival) => {
       this.session.update("task", task.id, arrival);
-      this.selectStarted(task);
+      this.selection.selectStarted(task);
       await this.refresh().catch(this.report);
       await this.share().catch(this.report);
     },
@@ -232,8 +226,8 @@ export class Controller {
     refresh: () => this.refresh(),
     report: (error) => this.report(error),
     forgetQuestion: (requestId) => this.session.remove("question", requestId),
-    leaveSelection: () => this.leaveSelection(true),
-    select: (id) => this.select(id),
+    leaveSelection: () => this.selection.leave(true),
+    select: (id) => this.selection.select(id),
     undo: this.undo,
   });
 
@@ -264,6 +258,26 @@ export class Controller {
   ) {
     this.session = new SessionStateStore(viewState?.composerDrafts);
     this.restoredView = viewState?.initial.view ?? {};
+    const browsing = this.restoredView.browsing === true;
+
+    this.selection = new TaskSelection(
+      {
+        ...this.stateContext,
+        run: (action) => this.run(action),
+        refresh: () => this.refresh(),
+        share: () => this.share(),
+        restoredView: () => this.restoredView,
+        forgetRestoredView: () => (this.restoredView = undefined),
+        wide: () => this.environment.wide(),
+        settleUnread: (tasks) => this.taskActions.unread.settle(tasks),
+        tabShown: () => {
+          this.draftFollower.show();
+          this.run(() => this.changes.loadChangesIfStale());
+        },
+        session: this.session,
+      },
+      browsing,
+    );
 
     this.dialogs = this.persistedDialogs = new PersistedDialogs(
       {
@@ -281,11 +295,7 @@ export class Controller {
 
     const initial = initialState();
 
-    this.browsing = this.restoredView.browsing === true;
-
-    const restoredSelection = this.browsing
-      ? undefined
-      : this.restoredView.selected;
+    const restoredSelection = browsing ? undefined : this.restoredView.selected;
 
     // Seed URL-backed controls before the first render, then validate task data on load.
     this.state = {
@@ -333,7 +343,7 @@ export class Controller {
 
   private saveViewState() {
     this.viewState?.save({
-      view: persistView(this.state, this.browsing),
+      view: persistView(this.state, this.selection.browsing),
       ...this.persistedDialogs.saved(),
     });
   }
@@ -342,31 +352,6 @@ export class Controller {
     this.persistedDialogs.pop();
     this.patch({ dialog: undefined, formError: "" });
     this.persistedDialogs.restore(this.state.tasks, this.state.scopeVersion);
-  }
-
-  private defaultSelection = (tasks: Task[]) =>
-    defaultSelection(tasks, this.state, this.browsing, this.environment.wide());
-
-  /** Keeps a selection the list still contains; otherwise falls back to the default task. */
-  private fallbackSelection(tasks: Task[]): Partial<Snapshot> {
-    const current = this.state.selected;
-    if (current && tasks.some((task) => task.id === current)) return {};
-
-    if (current) {
-      this.reconcileShare = true;
-      this.explicitSelection = false;
-      this.generation++;
-    }
-
-    const selected = this.defaultSelection(tasks);
-    if (!current && !selected) return {};
-
-    return {
-      selected,
-      ...(selected ? { tab: this.tabOf(selected) } : {}),
-      chatHistoryLoading: selected,
-      activityHistoryLoading: selected,
-    };
   }
 
   report = (error: unknown) => {
@@ -491,7 +476,7 @@ export class Controller {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
-    ++this.generation;
+    this.selection.invalidate();
     clearTimeout(this.timer);
     this.revisions.dispose();
     this.stopVisibility?.();
@@ -558,8 +543,8 @@ export class Controller {
       draftRead: this.draftFollower.reading(),
       scope: this.state.scopeVersion,
       projects: this.projectGeneration,
-      selection: this.generation,
-      tab: this.tabIntentRevision,
+      selection: this.selection.generation,
+      tab: this.selection.tabIntent,
     };
   }
 
@@ -659,11 +644,7 @@ export class Controller {
 
     if (merged === "rejected") return "done";
 
-    // Share after fallback selection so the host sees the same task as the panel.
-    if (this.reconcileShare) {
-      await this.share();
-      this.reconcileShare = false;
-    }
+    await this.selection.shareIfDue();
 
     this.persistedDialogs.restore(tasks, version);
     if (merged === "stale") return this.stale(version) ? "dropped" : "partial";
@@ -703,7 +684,7 @@ export class Controller {
       this.clearProjectScope();
     } else if (reset === "scope") {
       this.invalidateScope({});
-      this.reconcileShare = true;
+      this.selection.shareAfterRead();
     }
 
     return { removed: removed.length > 0, reset: Boolean(reset) };
@@ -753,19 +734,19 @@ export class Controller {
       !tasks.some((task) => task.id === taskDialog.task.id)
     ) {
       this.invalidateScope({});
-      this.reconcileShare = true;
+      this.selection.shareAfterRead();
 
       return false;
     }
 
     const taskArrival = this.arrivals.update(tasks, this.state, {
-      browsing: this.browsing || Boolean(this.restoredView),
-      changedSelection: intent.selection !== this.generation,
+      browsing: this.selection.browsing || Boolean(this.restoredView),
+      changedSelection: intent.selection !== this.selection.generation,
     });
 
     const previousSelected = this.state.selected;
 
-    const { selected, tab, filter, search } = this.reconcileSelection(
+    const { selected, tab, filter, search } = this.selection.reconcile(
       tasks,
       intent.tab,
     );
@@ -806,110 +787,11 @@ export class Controller {
     return true;
   }
 
-  /**
-   * The selection, tab and list controls after a task-list read: a URL-restored
-   * task or browsing state first, then the current task while the list still
-   * has it, then the default task. A tab the user changed since this selection
-   * or read began is kept.
-   */
-  private reconcileSelection(
-    tasks: Task[],
-    tabIntentRevisionAtReadStart: number,
-  ) {
-    let selected = this.state.selected;
-
-    const preserveCurrentTab =
-      this.tabIntentRevision !== this.tabIntentRevisionAtSelection ||
-      this.tabIntentRevision !== tabIntentRevisionAtReadStart;
-
-    if (selected && !tasks.some((task) => task.id === selected)) {
-      selected = undefined;
-      this.reconcileShare = true;
-      this.explicitSelection = false;
-      this.generation++;
-
-      this.patch({
-        events: [],
-        activityFocus: undefined,
-        chat: undefined,
-        draft: undefined,
-      });
-    }
-
-    let tab = this.state.tab;
-    const restored = this.restoredView;
-    const search = restored?.search ?? this.state.search;
-
-    const filter = restored
-      ? availableFilter(
-          { ...this.state, tasks, search },
-          restored.filter ?? this.state.filter,
-        )
-      : this.state.filter;
-
-    const restoredTask = restored?.selected
-      ? tasks.find((task) => task.id === restored.selected)
-      : undefined;
-
-    if (restoredTask) {
-      selected = restoredTask.id;
-      this.explicitSelection = true;
-      this.browsing = false;
-
-      if (!preserveCurrentTab) {
-        tab = restored?.tab ?? this.tabOf(selected);
-      }
-    } else if (restored?.browsing) {
-      selected = undefined;
-      this.explicitSelection = false;
-      this.browsing = true;
-    }
-
-    if (!selected) {
-      selected = this.defaultSelection(tasks);
-
-      if (selected && !preserveCurrentTab) {
-        tab = this.tabOf(selected);
-      }
-    }
-
-    return { selected, tab, filter, search };
-  }
-
-  async select(id: string) {
-    this.choose();
-    this.restoredView = undefined;
-    this.patch(selectionPatch(id, this.tabOf(id)));
-
-    await this.refresh();
-    await this.share();
-  }
-
-  private tabOf = (id: string) => this.session.get("task", id).tab;
-
   dismissTaskArrival = () => this.patch({ taskArrival: undefined });
 
   async viewTaskArrival() {
     const arrival = taskArrivalTarget(this.state);
-    if (arrival) await this.select(arrival.id);
-  }
-
-  back() {
-    const previousTask = this.state.selected ?? this.state.previousTask;
-
-    this.leaveSelection(true);
-    this.patch({ previousTask });
-  }
-
-  /** Clears the selection; `browsing` keeps the list from choosing one again. */
-  private leaveSelection(browsing: boolean) {
-    this.explicitSelection = false;
-    this.browsing = browsing;
-    ++this.generation;
-    this.tabIntentRevision++;
-
-    this.patch({ ...selectionPatch(undefined), newTask: undefined });
-    this.run(() => this.share());
+    if (arrival) await this.selection.select(arrival.id);
   }
 
   setSearch(search: string) {
@@ -929,28 +811,6 @@ export class Controller {
     }
   }
 
-  /**
-   * Records a task the user or host chose, so late task-list reads keep it.
-   * `newTabIntent` also starts tab tracking afresh for this selection.
-   */
-  private choose(newTabIntent = true) {
-    ++this.generation;
-    this.explicitSelection = true;
-    this.browsing = false;
-    this.tabIntentRevision++;
-
-    if (newTabIntent) {
-      this.tabIntentRevisionAtSelection = this.tabIntentRevision;
-    }
-  }
-
-  setTab(tab: Snapshot["tab"]) {
-    if (tab !== this.state.tab) this.tabIntentRevision++;
-    this.patch({ tab });
-    this.draftFollower.show();
-    this.run(() => this.changes.loadChangesIfStale());
-  }
-
   /** Shares the selected task with the host's model. */
   async share() {
     if (this.disposed || !this.state.host.canShare) return;
@@ -966,9 +826,7 @@ export class Controller {
   }
 
   private invalidateScope(patch: Partial<Snapshot>) {
-    ++this.generation;
-    this.explicitSelection = false;
-    this.browsing = false;
+    this.selection.reset();
     const scopeVersion = this.state.scopeVersion + 1;
     const currentDialog = this.state.dialog;
 
@@ -1007,7 +865,7 @@ export class Controller {
   private clearProjectScope() {
     this.restoredView = undefined;
     this.invalidateScope({ repository: undefined, revision: "HEAD" });
-    this.reconcileShare = true;
+    this.selection.shareAfterRead();
   }
 
   /** Applies host or service scope data; returns false when it carries no valid scope. */
@@ -1036,7 +894,7 @@ export class Controller {
     }
 
     this.applyProjectCandidate(data.panel_project_candidate);
-    this.applyOpeningTasks(data, scope);
+    this.selection.applyOpeningTasks(data, scope);
 
     this.contextRead("ready");
     if (refresh) this.run(() => this.refresh());
@@ -1054,68 +912,6 @@ export class Controller {
           : undefined,
       projectCandidateAuto: candidate?.auto_register === true,
       projectCandidateGit: candidate?.git,
-    });
-  }
-
-  /** Opening data can show tasks before refresh while respecting a restored view. */
-  private applyOpeningTasks(
-    data: PanelData,
-    scope: Pick<Snapshot, "conversation" | "repository">,
-  ) {
-    const restoredTaskView =
-      this.restoredView?.selected || this.restoredView?.browsing;
-
-    const hostTaskId =
-      typeof data.panel_selection?.task_id === "string" && !restoredTaskView
-        ? data.panel_selection.task_id
-        : undefined;
-
-    if (Array.isArray(data.tasks)) {
-      const tasks = tasksInScope(data.tasks, scope);
-
-      // Opening data carries the full list, so select now as the refresh would
-      // rather than showing the empty inspector until that read returns.
-      this.patch({
-        tasks: this.taskActions.unread.settle(tasks),
-        readCompleted: unloadedCounts(data.read_completed),
-        taskListLoading: false,
-        ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
-      });
-    }
-
-    if (hostTaskId) {
-      this.selectFromHost(hostTaskId, data.panel_selection?.tab);
-    }
-  }
-
-  /** Host links respect a tab the user chose after selecting this task. */
-  private selectFromHost(taskId: string, requestedTab?: string) {
-    const preserveCurrentTab =
-      taskId === this.state.selected &&
-      this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
-
-    let tab: Tab;
-
-    if (preserveCurrentTab) {
-      tab = this.state.tab;
-    } else if (
-      requestedTab === "chat" ||
-      requestedTab === "changes" ||
-      requestedTab === "activity" ||
-      requestedTab === "details"
-    ) {
-      tab = requestedTab;
-    } else {
-      tab = this.tabOf(taskId);
-    }
-
-    this.choose(!preserveCurrentTab);
-
-    this.patch({
-      ...selectionPatch(taskId),
-      tab,
-      filter: this.restoredView?.filter ?? null,
-      search: this.restoredView?.search ?? "",
     });
   }
 
@@ -1206,24 +1002,6 @@ export class Controller {
       undefined,
       draft,
     );
-  }
-
-  /** Lists and selects a task this panel just started. */
-  private selectStarted(task: Task) {
-    this.choose();
-    this.restoredView = undefined;
-
-    // Starting a task while composing, here or from Advanced, sends the draft.
-    if (this.state.newTask) {
-      this.session.remove("newTask", newTaskSessionId(this.state.conversation));
-    }
-
-    this.patch({
-      tasks: [task, ...this.state.tasks.filter((item) => item.id !== task.id)],
-      ...selectionPatch(task.id, this.tabOf(task.id)),
-      repository: task.repository,
-      revision: task.revision,
-    });
   }
 
   open(dialog: OpenDialogRequest) {
@@ -1353,7 +1131,7 @@ export class Controller {
         );
       }
 
-      if (task && selectReturned) this.selectStarted(task);
+      if (task && selectReturned) this.selection.selectStarted(task);
 
       afterSuccess?.();
       if (closeOnSuccess) this.closeDialog();

@@ -173,7 +173,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
       if (canSubmit) void submit();
     } else if (event.key === "Escape" && !form.getValues("description")) {
       event.preventDefault();
-      controller.back();
+      controller.selection.back();
     }
   };
 

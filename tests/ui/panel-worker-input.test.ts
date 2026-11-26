@@ -204,13 +204,13 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
   );
 
   const reopen = async () => {
-    act(() => controller.back());
+    act(() => controller.selection.back());
 
     await waitFor(() =>
       assertAbsent(screen.queryByRole("button", { name: "Respond" })),
     );
 
-    await act(() => controller.select("one"));
+    await act(() => controller.selection.select("one"));
     await screen.findByText(/Question \d of 3/);
   };
 

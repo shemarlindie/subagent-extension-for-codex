@@ -83,7 +83,7 @@ function setup(
     .mockResolvedValue(undefined);
 
   const retry = vi.spyOn(controller.newTasks, "retry").mockReturnValue();
-  const back = vi.spyOn(controller, "back").mockReturnValue();
+  const back = vi.spyOn(controller.selection, "back").mockReturnValue();
 
   const saveProfileSetting = vi
     .spyOn(controller.newTasks, "saveProfileSetting")

@@ -171,7 +171,7 @@ test("automatic global history does not prefill delegation, while an intentional
   );
 
   controller.dismiss();
-  await controller.select("history");
+  await controller.selection.select("history");
   await controller.delegate();
   await flush();
   dialog = controller.getSnapshot().dialog;

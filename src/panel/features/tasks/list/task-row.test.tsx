@@ -38,7 +38,7 @@ test("right-clicking an unread row offers Mark read", async () => {
   const unread = { ...task("a"), unread: true as const };
   const { controller, view } = renderRow(unread);
   const toggle = vi.spyOn(controller.taskActions.unread, "toggle");
-  const select = vi.spyOn(controller, "select");
+  const select = vi.spyOn(controller.selection, "select");
 
   await userEvent.click(
     await view.findByRole("menuitem", { name: "Mark read" }),

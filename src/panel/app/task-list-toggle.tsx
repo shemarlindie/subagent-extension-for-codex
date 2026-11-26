@@ -27,7 +27,7 @@ export function TaskListToggle({ rail }: TaskListToggleProps) {
     if (!rail.narrow) return rail.toggle();
 
     if (listHidden) {
-      controller.back();
+      controller.selection.back();
     } else {
       const state = controller.getSnapshot();
       const tasks = visibleTasks(state);
@@ -35,7 +35,7 @@ export function TaskListToggle({ rail }: TaskListToggleProps) {
       const task =
         tasks.find((task) => task.id === state.previousTask) ?? tasks[0];
 
-      if (task) controller.run(() => controller.select(task.id));
+      if (task) controller.run(() => controller.selection.select(task.id));
     }
   }
 

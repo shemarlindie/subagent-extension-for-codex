@@ -52,7 +52,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
 
   await act(() => controller.refresh());
   assert.ok(!header().textContent?.includes("Full worker instructions"));
-  await act(() => controller.select("two"));
+  await act(() => controller.selection.select("two"));
 
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
@@ -64,7 +64,7 @@ test("the inspector omits task descriptions across refresh and task selection", 
   // Activity keeps its hidden panel mounted with the initial request, so scope to Details.
   const details = () => within(screen.getByRole("tabpanel"));
   assert.ok(details().getByText("Second instructions").closest("dd"));
-  await act(() => controller.select("one"));
+  await act(() => controller.selection.select("one"));
   await user.click(screen.getByRole("tab", { name: "Details" }));
 
   const description = details().getByText(literal + " Updated.", {
@@ -86,7 +86,7 @@ test("inline preview expands and collapses while preserving the selected task", 
     { displayMode: "inline" },
   );
 
-  await act(() => controller.select("two"));
+  await act(() => controller.selection.select("two"));
   assert.ok(screen.getByText("Review database"));
   assert.ok(screen.getByText("Working", { exact: true }));
   assertAbsent(screen.queryByRole("button", { name: "New task" }));
@@ -412,7 +412,7 @@ test("refresh preserves the inspector and its scroll, while browsing stays on th
   expect(screen.getByRole("region", { name: "Selected task" })).toBe(detail);
   expect(detail.querySelector(".task-header")).toBe(header);
   assert.equal(detail.scrollTop, 160);
-  act(() => controller.back());
+  act(() => controller.selection.back());
   await act(() => controller.refresh());
   assert.equal(controller.getSnapshot().selected, undefined);
   assertAbsent(detail.querySelector(".task-header"));
@@ -425,7 +425,7 @@ test("narrow scoped panel browsing keeps the task list visible across refresh", 
   });
 
   assert.equal(document.body.dataset.selected, "true");
-  act(() => controller.back());
+  act(() => controller.selection.back());
   assert.equal(document.body.dataset.selected, "false");
   await act(() => controller.refresh());
   assert.equal(document.body.dataset.selected, "false");

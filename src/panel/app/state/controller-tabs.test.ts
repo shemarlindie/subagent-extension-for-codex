@@ -11,20 +11,20 @@ test("each task remembers its tab across switching tasks and closing the inspect
   transport.tasks = [task("a"), task("b"), task("new")];
   await controller.start();
 
-  await controller.select("a");
-  controller.setTab("activity");
-  await controller.select("b");
+  await controller.selection.select("a");
+  controller.selection.setTab("activity");
+  await controller.selection.select("b");
   assert.equal(controller.getSnapshot().tab, "chat");
 
-  await controller.select("a");
+  await controller.selection.select("a");
   assert.equal(controller.getSnapshot().tab, "activity");
-  controller.back();
-  await controller.select("a");
+  controller.selection.back();
+  await controller.selection.select("a");
   assert.equal(controller.getSnapshot().tab, "activity");
 
-  await controller.select("new");
+  await controller.selection.select("new");
   assert.equal(controller.getSnapshot().tab, "chat");
-  await controller.select("b");
+  await controller.selection.select("b");
   assert.equal(controller.getSnapshot().tab, "chat");
 });
 
@@ -33,9 +33,9 @@ test("host selections restore a task's remembered tab unless they explicitly req
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a"), task("b")];
   await controller.start();
-  await controller.select("a");
-  controller.setTab("activity");
-  await controller.select("b");
+  await controller.selection.select("a");
+  controller.selection.setTab("activity");
+  await controller.selection.select("b");
 
   controller.applyScope(
     {
@@ -56,8 +56,8 @@ test("host selections restore a task's remembered tab unless they explicitly req
   );
 
   assert.equal(controller.getSnapshot().tab, "chat");
-  await controller.select("b");
-  await controller.select("a");
+  await controller.selection.select("b");
+  await controller.selection.select("a");
   assert.equal(controller.getSnapshot().tab, "chat");
 });
 
@@ -92,15 +92,15 @@ for (const tab of ["changes", "details"] as const) {
     };
 
     await controller.start();
-    await controller.select("a");
-    controller.setTab(tab);
+    await controller.selection.select("a");
+    controller.selection.setTab(tab);
     await flush();
-    await controller.select("b");
-    controller.setTab(tab);
+    await controller.selection.select("b");
+    controller.selection.setTab(tab);
     await flush();
     transport.calls = [];
 
-    await controller.select("a");
+    await controller.selection.select("a");
     await flush();
 
     assert.equal(controller.getSnapshot().tab, tab);
@@ -159,8 +159,8 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
 
   assert.equal(controller.getSnapshot().tab, "changes");
   const first = controller.changes.loadChanges();
-  await controller.select("b");
-  controller.setTab("changes");
+  await controller.selection.select("b");
+  controller.selection.setTab("changes");
   await flush();
   gate.resolve(changes("a"));
   await first;
@@ -185,7 +185,7 @@ test("same-scope refresh retains the last changes while reading and after failur
   transport.handler = (name) => (name === "get_changes" ? data : undefined);
 
   await controller.start();
-  await controller.select("a");
+  await controller.selection.select("a");
   await controller.changes.loadChanges();
   const lastLoaded = controller.getSnapshot().changes?.data;
   const refreshGate = deferred<Changes>();
@@ -226,7 +226,7 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
   await controller.start();
-  await controller.select("a");
+  await controller.selection.select("a");
   const gate = deferred<Changes>();
 
   const turn: Changes = {

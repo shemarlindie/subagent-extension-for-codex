@@ -104,7 +104,7 @@ test("sharing sends the selected task identity to the host", async (t) => {
   await controller.start();
   transport.events.host({ ...controller.getSnapshot().host, canShare: true });
 
-  await controller.select("a");
+  await controller.selection.select("a");
   await controller.share();
 
   assert.deepEqual(transport.shared.slice(-2), [
@@ -355,7 +355,7 @@ test("a list read that began before a selection can't drop it", async (t) => {
   const refresh = controller.refresh();
   await flush();
   // Undo reopens a task the read in flight still lacks.
-  await controller.select("reopened");
+  await controller.selection.select("reopened");
   transport.handler = undefined;
   transport.tasks = [task("reopened"), task("listed")];
   gate.resolve({ tasks: [task("listed")] });

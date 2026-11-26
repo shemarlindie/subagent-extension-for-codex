@@ -300,7 +300,7 @@ export async function mountBase(t: TestContext, layout: Layout = "wide") {
     ...(layout === "scoped" ? { conversation: "thread-one" } : {}),
   });
 
-  await act(() => mounted.controller.select(SELECTED));
+  await act(() => mounted.controller.selection.select(SELECTED));
   await settle();
 
   return mounted;

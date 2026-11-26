@@ -50,7 +50,7 @@ test("a task-list read predating project removal never publishes its deleted tas
   const survivor = task("survivor", "/repo/b");
   transport.tasks = [task("existing", "/repo/a"), survivor];
   await controller.start();
-  await controller.select(survivor.id);
+  await controller.selection.select(survivor.id);
   controller.manageProjects();
   const tasksRead = deferred<unknown>();
   let reads = 0;

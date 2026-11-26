@@ -79,7 +79,7 @@ export function InlinePreview() {
 
   const openTask = (id: string) =>
     controller.run(async () => {
-      await controller.select(id);
+      await controller.selection.select(id);
       await controller.transport.expand?.();
     });
 

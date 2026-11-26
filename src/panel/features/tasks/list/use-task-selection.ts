@@ -108,7 +108,7 @@ export function useTaskSelection(view: string, tasks: Task[], shown: Task[]) {
     (id: string, action: TaskRowClick) => {
       if (action === "open") {
         lastOpenedRow.current = id;
-        controller.run(() => controller.select(id));
+        controller.run(() => controller.selection.select(id));
 
         return;
       }
