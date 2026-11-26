@@ -156,20 +156,39 @@ export class DraftFollower {
     return true;
   }
 
+  /** Full draft reads started, numbered so a later one can follow an earlier. */
+  private draftReads = 0;
+
+  /** The draft the last applied full read set, and that read's number. */
+  private recovered?: { draft: DraftState; read: number };
+
   /** Reads the selected task's draft in full, after a missed update. */
   private async readDraft() {
     const id = this.context.snapshot().selected;
     if (!id) return;
     const known = this.full;
+    const number = ++this.draftReads;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
       "app_wait_for_updates",
       { draft: { task_id: id }, wait_ms: 0 },
     );
 
-    // A draft set since the read started is newer, so it stays.
-    if (this.context.snapshot().selected === id && this.full === known) {
+    const recovered = this.recovered;
+
+    // A draft set since the read started is newer, so it stays, unless an
+    // earlier full read set it.
+    const earlier =
+      recovered !== undefined &&
+      recovered.draft === this.full &&
+      recovered.read < number;
+
+    if (
+      this.context.snapshot().selected === id &&
+      (this.full === known || earlier)
+    ) {
       this.set(read.draft ? { task: id, ...read.draft } : undefined);
+      this.recovered = this.full && { draft: this.full, read: number };
     }
   }
 
