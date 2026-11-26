@@ -116,8 +116,10 @@ that exists only in the chat, such as decisions or another task's result.
   symlinks are left out. It shows submodule commit changes and skips changes
   inside submodule working trees. Binary changes fail and name the file, so
   `paths` can leave it out.
-- File references need a regular UTF-8 text file. Binary files fail. Path checks
-  are best-effort and do not provide filesystem isolation.
+- File references take any regular file. Images and documents keep their type,
+  other binary files are stored as `application/octet-stream`, and a line range
+  needs a text file. Path checks are best-effort and do not provide filesystem
+  isolation.
 - One message's attachments together allow 50 MB. Errors name the attachment and
   suggest `paths` or a line range.
 
