@@ -51,7 +51,9 @@ Some features have boundaries worth knowing:
 ## State ownership and component patterns
 
 `Controller` (`app/state/controller.ts`) owns scope, selection and async
-coordination, and delegates feature work to loaders and actions.
+coordination, and delegates feature work to loaders and actions. `ViewRefresh`
+(`app/state/view-refresh.ts`) runs view reads one at a time and drops views
+older than the last one, and the controller applies the parts that still fit.
 `TaskDetailLoader` (`features/tasks/task-detail-loader.ts`) merges Chat and
 Activity from the panel's views and reads turn history. The controller retains
 selection generations and scope invalidation, which make outdated detail reads
