@@ -13,8 +13,10 @@ import {
   isBinary,
   type ChangeCounts,
   type ChangedFileContent,
+  type ChangeList,
   type ChangeScope,
   type Changes as ChangesResult,
+  type FileChange,
 } from "../../../shared/changes/changes.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
@@ -95,6 +97,8 @@ function filePage(
   };
 }
 
+const rowsRevision = (rows: RecordedChange[]) => hash(JSON.stringify(rows));
+
 /** Both tool audiences read the same durable task edits. */
 export class Changes extends ChangeStore {
   changes(
@@ -111,7 +115,7 @@ export class Changes extends ChangeStore {
         formatFileDiff(row.path, row.hunks, row.created, row.deleted),
       );
 
-    const revision = hash(JSON.stringify(rows));
+    const revision = rowsRevision(rows);
     const page = cursor ? decodeCursor(cursor) : undefined;
 
     if (
@@ -138,6 +142,49 @@ export class Changes extends ChangeStore {
             ),
           }
         : {}),
+    };
+  }
+
+  /** The panel's list: each file's signature comes from its recorded row, so it needs no diff. */
+  changeList(task: Task, scope: ChangeScope): ChangeList {
+    const rows = this.rows(task, scope);
+
+    return {
+      scope,
+      ...listing(task, rows),
+      files: rows
+        .filter((row) => row.path)
+        .map((row) => {
+          const file = listedFile(row);
+          const { incomplete, source, hunks } = row;
+
+          return {
+            ...file,
+            signature: hash(
+              JSON.stringify([file.status, incomplete, source, hunks]),
+            ),
+          };
+        }),
+      revision: rowsRevision(rows),
+    };
+  }
+
+  /** One listed file's diff, as long as the recorded changes match the list's revision. */
+  fileChange(
+    task: Task,
+    scope: ChangeScope,
+    path: string,
+    revision: string,
+  ): FileChange {
+    const rows = this.rows(task, scope);
+    if (rowsRevision(rows) !== revision) return { stale: true };
+    const row = rows.find((row) => row.path && row.path === path);
+    if (!row) throw new Error(`${path} is not among this task's changes.`);
+    if (row.incomplete) return { stale: false };
+
+    return {
+      stale: false,
+      diff: formatFileDiff(row.path, row.hunks, row.created, row.deleted),
     };
   }
 

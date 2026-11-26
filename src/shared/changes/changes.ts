@@ -30,6 +30,25 @@ export interface Changes {
   next_cursor?: string;
 }
 
+/** A file in the panel's change list. */
+export interface ListedChange extends ChangedFile {
+  /** Identifies the file's recorded changes, so marking it viewed lasts until they change. */
+  signature: string;
+}
+
+/** The panel's change list: every file and the totals, without diffs. */
+export type ChangeList = Omit<Changes, "files" | "diff" | "next_cursor"> & {
+  files: ListedChange[];
+  /** Fingerprints the recorded changes. File reads pass it back. */
+  revision: string;
+};
+
+/**
+ * One file's diff from a change list. Incomplete files have none. Stale once
+ * the recorded changes differ from the list's revision.
+ */
+export type FileChange = { stale: true } | { stale: false; diff?: string };
+
 /**
  * A task's change totals: the file count and line stats, without the file
  * list or diff. Incomplete files count as files but add no lines.

@@ -86,6 +86,8 @@ const fixtureReadTools = new Set([
   "app_get_attachment",
   "app_get_original_response",
   "app_get_change_counts",
+  "app_get_change_list",
+  "app_get_file_change",
   "app_get_turn_activity",
   "app_list_commands",
   "list_projects",

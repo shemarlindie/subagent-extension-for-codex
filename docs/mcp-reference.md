@@ -181,7 +181,10 @@ the task or latest-turn scope. A missing file returns `deleted`, and a removed
 worktree returns `unavailable`. Images return base64 content and other binary
 files return their size.
 
-`app_get_change_counts` reads totals from the same stored diffs.
+`app_get_change_counts` reads totals from the same stored diffs. The panel's
+Changes tab reads the file list with `app_get_change_list` and each file's diff
+with `app_get_file_change` when the file opens. A file read returns
+`stale: true` once the recorded edits no longer match the list's revision.
 
 ### Recording limits
 
