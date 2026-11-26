@@ -9,7 +9,8 @@ import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Task, Transport } from "../../app/state/types";
 import { changedFileDialog, ChangedFilePreview } from "./changed-file-preview";
-import type { ChangedFileContent, Changes } from "./types";
+import { parseFileDiff } from "./changed-files";
+import type { ChangedFileContent, ChangeList, FileDiffsState } from "./types";
 
 const task = { id: "task-1" } as Task;
 
@@ -18,7 +19,7 @@ const diffOf = (path: string, line: string) =>
 
 const paths = ["a.ts", "b.ts", "c.ts"];
 
-const data: Changes = {
+const data: ChangeList = {
   scope: "task",
   files: paths.map((path) => ({
     path,
@@ -27,16 +28,37 @@ const data: Changes = {
     deletions: 1,
     source: "tool",
     incomplete: false,
+    signature: path,
   })),
   additions: 3,
   deletions: 3,
-  diff: paths.map((path) => diffOf(path, `${path} content`)).join(""),
+  revision: "r1",
+};
+
+const gone =
+  "diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone\n";
+
+/** Every file's diff, read. */
+const readDiffs: FileDiffsState = {
+  task: task.id,
+  scope: "task",
+  revision: "r1",
+  files: Object.fromEntries(
+    [
+      ...paths.map((path) => [path, diffOf(path, `${path} content`)]),
+      ["gone.ts", gone],
+    ].map(([path = "", diff]) => [
+      path,
+      { status: "ready", diff: parseFileDiff(diff) },
+    ]),
+  ),
 };
 
 function setup(
   path: string,
-  changes: Changes = data,
+  changes: ChangeList = data,
   openFile?: (path: string) => Promise<void>,
+  changeDiffs = readDiffs,
 ) {
   onTestFinished(cleanup);
 
@@ -60,9 +82,14 @@ function setup(
       loading: false,
       data: changes,
     },
+    changeDiffs,
   };
 
   vi.spyOn(controller, "getSnapshot").mockImplementation(() => snapshot);
+
+  const loadDiff = vi
+    .spyOn(controller.changes, "loadDiff")
+    .mockResolvedValue(undefined);
 
   // Each file reads as its own content; b.ts never finishes, gone.ts is deleted.
   vi.spyOn(controller, "tool").mockImplementation((async (
@@ -119,6 +146,7 @@ function setup(
   return {
     view,
     show,
+    loadDiff,
     async moveTo(path: string) {
       await act(async () => view.rerender(preview(path)));
     },
@@ -171,6 +199,16 @@ test("the preview steps through the changed files in order, wrapping at the ends
 
   fireEvent.click(previous);
   assert.deepEqual(show.mock.lastCall, ["b.ts"]);
+});
+
+test("the preview reads a file's diff it doesn't have yet", async () => {
+  const { loadDiff } = setup("a.ts", data, undefined, {
+    ...readDiffs,
+    files: {},
+  });
+
+  await act(async () => {});
+  expect(loadDiff.mock.calls).toEqual([["a.ts"]]);
 });
 
 test("Open shows a file that still exists, once per click while it opens", async () => {
@@ -246,9 +284,9 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
         deletions: 1,
         source: "tool",
         incomplete: false,
+        signature: "gone",
       },
     ],
-    diff: `${data.diff}diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone\n`,
   });
 
   await act(async () => {});

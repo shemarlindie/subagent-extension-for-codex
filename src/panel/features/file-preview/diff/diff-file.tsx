@@ -43,6 +43,8 @@ type DiffFileProps = {
   tag?: string;
   /** Shown above the rows while the file is open. */
   note?: string;
+  /** Shown in place of the rows while the file is open, such as while they load. */
+  placeholder?: ReactNode;
   /** Buttons in the file's header; using them doesn't toggle the file. */
   actions?: ReactNode;
   /** Called when the reader opens or closes the file. */
@@ -60,6 +62,7 @@ export function DiffFile({
   emptyNote = "No content changes",
   tag,
   note,
+  placeholder,
   actions,
   onOpenChange,
   onContentReady,
@@ -68,7 +71,7 @@ export function DiffFile({
   const [ownOpen, setOpen] = useState(initiallyOpen);
   const open = controlledOpen ?? ownOpen;
   const deferredOpen = useDeferredValue(open);
-  const renderRows = open && deferredOpen;
+  const renderRows = open && deferredOpen && !placeholder;
   const language = pathLanguage(diffPath(file));
 
   const renamed =
@@ -117,17 +120,20 @@ export function DiffFile({
           </span>
         )}
       </summary>
-      {open && !deferredOpen && (
-        <Progress
-          label={`Rendering ${diffPath(file)}`}
-          className="diff-progress"
-        />
-      )}
-      {renderRows && note && <p className="help diff-file-note">{note}</p>}
       {/* A collapsed file unmounts its rows. */}
-      {renderRows && (
-        <DiffRows file={file} language={language} emptyNote={emptyNote} />
-      )}
+      {open &&
+        (placeholder ??
+          (deferredOpen ? (
+            <>
+              {note && <p className="help diff-file-note">{note}</p>}
+              <DiffRows file={file} language={language} emptyNote={emptyNote} />
+            </>
+          ) : (
+            <Progress
+              label={`Rendering ${diffPath(file)}`}
+              className="diff-progress"
+            />
+          )))}
     </details>
   );
 }

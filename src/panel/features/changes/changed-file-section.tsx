@@ -1,16 +1,19 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { DiffFile } from "../file-preview/diff/diff-file";
-import type { ChangedFileEntry } from "./changed-files";
+import { Progress } from "../file-preview/progress";
+import { standIn } from "./changed-files";
 import { FILE_ATTRIBUTE } from "./changes-reading";
-import type { ChangedFile } from "./types";
+import type { FileDiff, ListedChange } from "./types";
 import { ViewedToggle } from "./viewed-toggle";
 
 type ChangedFileSectionProps = {
-  entry: ChangedFileEntry;
+  file: ListedChange;
+  /** The file's diff, once asked for. */
+  diff?: FileDiff;
   /** Opened or closed by the reader earlier, if they did. */
   remembered?: boolean;
   /** Whether the file opens when the reader hasn't chosen. */
@@ -22,26 +25,32 @@ type ChangedFileSectionProps = {
   /** Counts the reader's picks of this file in the file tree; each one opens it. */
   revealed?: number;
   onContentReady?: () => void;
-  onViewedChange: (entry: ChangedFileEntry, viewed: boolean) => void;
+  onViewedChange: (file: ListedChange, viewed: boolean) => void;
   onPreview: (path: string) => void;
+  /** Reads the file's diff, or reads it again after a failure. */
+  onLoadDiff: (path: string) => void;
 };
 
 /** Why a file's diff has no lines to show. */
-function emptyDiffNote(file: ChangedFile, missing?: boolean) {
+function emptyDiffNote(file: ListedChange, diff?: FileDiff) {
   if (file.incomplete) return "An edit to this file wasn't recorded.";
 
-  return missing ? "Diff unavailable" : "No content changes";
+  return diff?.status === "ready" && !diff.diff
+    ? "Diff unavailable"
+    : "No content changes";
 }
 
 /** The short tag keeps narrow file headers readable; the note explains it. */
 const COMMAND_NOTE = "Changed by a command.";
 
 /**
- * One changed file in the Changes list: its diff, Preview and Viewed. It
- * renders only when its own props change, so its callbacks take the file.
+ * One changed file in the Changes list: its diff, Preview and Viewed. Opening
+ * it reads its diff. It renders only when its own props change, so its
+ * callbacks take the file.
  */
 export const ChangedFileSection = memo(function ChangedFileSection({
-  entry,
+  file,
+  diff,
   remembered,
   openByDefault,
   viewed,
@@ -51,9 +60,8 @@ export const ChangedFileSection = memo(function ChangedFileSection({
   onContentReady,
   onViewedChange,
   onPreview,
+  onLoadDiff,
 }: ChangedFileSectionProps) {
-  const { file, diff, missing } = entry;
-
   const [open, setOpen] = useState(
     () => remembered ?? (changedSinceViewed || (openByDefault && !viewed)),
   );
@@ -74,6 +82,29 @@ export const ChangedFileSection = memo(function ChangedFileSection({
     setOpen(true);
   }
 
+  const needsDiff = open && !file.incomplete;
+
+  useEffect(() => {
+    if (needsDiff && !diff) onLoadDiff(file.path);
+  }, [needsDiff, diff, file.path, onLoadDiff]);
+
+  let placeholder;
+
+  if (needsDiff && diff?.status === "error") {
+    placeholder = (
+      <div className="diff-file-note changed-file-diff-error">
+        <p className="form-error" role="alert">
+          {diff.error}
+        </p>
+        <Button onClick={() => onLoadDiff(file.path)}>Retry</Button>
+      </div>
+    );
+  } else if (needsDiff && diff?.status !== "ready") {
+    placeholder = (
+      <Progress label={`Loading ${file.path}`} className="diff-progress" />
+    );
+  }
+
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     onOpenChange(file.path, next);
@@ -84,12 +115,13 @@ export const ChangedFileSection = memo(function ChangedFileSection({
       // Names the file, so the tab can return to it.
       {...{ [FILE_ATTRIBUTE]: file.path }}
       data-viewed={String(viewed)}
-      file={diff}
+      file={(diff?.status === "ready" && diff.diff) || standIn(file)}
       initiallyOpen={open}
       open={open}
       onOpenChange={handleOpenChange}
       onContentReady={onContentReady}
-      emptyNote={emptyDiffNote(file, missing)}
+      emptyNote={emptyDiffNote(file, diff)}
+      placeholder={placeholder}
       {...(file.source === "command"
         ? { tag: "command", note: COMMAND_NOTE }
         : {})}
@@ -107,7 +139,7 @@ export const ChangedFileSection = memo(function ChangedFileSection({
           <ViewedToggle
             path={file.path}
             viewed={viewed}
-            onChange={(value) => onViewedChange(entry, value)}
+            onChange={(value) => onViewedChange(file, value)}
           />
         </>
       }

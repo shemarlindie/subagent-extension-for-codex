@@ -1,7 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 
-import { changeCounts } from "../../../shared/changes/changes";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { CommandLine } from "../../shared/components/command-line/command-line";
@@ -9,7 +8,6 @@ import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
-import { changedFileEntries } from "./changed-files";
 import { changesSummary } from "./read-changes";
 import type { ChangeScope, ChangesState } from "./types";
 import { firstUnviewed, isViewed, useViewedFiles } from "./use-viewed-files";
@@ -34,14 +32,18 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
   const data = changes?.data;
   const removed = task.workspace_removed;
   const loading = changes?.loading ?? (!data && !changes?.error);
-  const summary = data ? changesSummary(changeCounts(data)) : "";
+
+  const summary = data
+    ? changesSummary({ ...data, files: data.files.length })
+    : "";
+
   const branch = task.branch;
   const [viewed] = useViewedFiles(task.id);
-  const entries = data ? changedFileEntries(data) : [];
-  const viewedCount = entries.filter((entry) => isViewed(viewed, entry)).length;
+  const files = data?.files ?? [];
+  const viewedCount = files.filter((file) => isViewed(viewed, file)).length;
   const loadingNote = data ? "Refreshing changes…" : "Reading changes…";
   // Preview all picks up where the reader left off.
-  const resumeAt = firstUnviewed(viewed, entries);
+  const resumeAt = firstUnviewed(viewed, files);
 
   return (
     <div className="changes-header">
@@ -72,9 +74,9 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
           <span className="changes-summary" title={summary}>
             {summary}
           </span>
-          {entries.length > 0 && (
+          {files.length > 0 && (
             <span className="changes-viewed">
-              {viewedCount} of {entries.length} viewed
+              {viewedCount} of {files.length} viewed
             </span>
           )}
           <span className="changes-status" role="status" data-initial={!data}>
@@ -87,7 +89,7 @@ export function ChangesHeader({ task, changes }: ChangesHeaderProps) {
             className="changes-preview-all"
             aria-label="Preview all changes"
             onClick={() =>
-              controller.open({ kind: "file", task, path: resumeAt.file.path })
+              controller.open({ kind: "file", task, path: resumeAt.path })
             }
           >
             <Icon name="eye" size={14} />

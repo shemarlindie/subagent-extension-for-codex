@@ -7,7 +7,7 @@ export type ChangeScope = "task" | "turn";
 
 type ChangeStatus = "added" | "modified" | "deleted";
 
-export interface ChangedFile {
+interface ChangedFile {
   path: string;
   status: ChangeStatus;
   additions: number;
@@ -56,16 +56,6 @@ export type FileChange = { stale: true } | { stale: false; diff?: string };
 export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
   files: number;
 };
-
-/** The totals of a read, for the tab count and Details; any page gives the same ones. */
-export function changeCounts({
-  files,
-  diff: _diff,
-  next_cursor: _next,
-  ...totals
-}: Changes): ChangeCounts {
-  return { ...totals, files: files.length };
-}
 
 /** A changed file's current content, as get_changed_file returns it. */
 export interface ChangedFileContent {

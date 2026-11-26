@@ -1,4 +1,4 @@
-import type { ChangedFileEntry } from "./changed-files";
+import type { ListedChange } from "./types";
 
 /** A directory in the changed-file tree, named by the path segments it joins. */
 type TreeDirectory = {
@@ -12,7 +12,7 @@ type TreeDirectory = {
 type TreeFile = {
   kind: "file";
   name: string;
-  entry: ChangedFileEntry;
+  file: ListedChange;
 };
 
 export type TreeNode = TreeDirectory | TreeFile;
@@ -46,12 +46,12 @@ function build(name: string, path: string, building: Building): TreeDirectory {
  * The changed files as a tree: directories first, then files, each in the
  * list's order. The root's children are returned.
  */
-export function changedFileTree(entries: ChangedFileEntry[]): TreeNode[] {
+export function changedFileTree(files: ListedChange[]): TreeNode[] {
   const root: Building = { files: [], directories: new Map() };
 
-  for (const entry of entries) {
-    const segments = entry.file.path.split("/");
-    const name = segments.pop() ?? entry.file.path;
+  for (const file of files) {
+    const segments = file.path.split("/");
+    const name = segments.pop() ?? file.path;
     let directory = root;
 
     for (const segment of segments) {
@@ -65,7 +65,7 @@ export function changedFileTree(entries: ChangedFileEntry[]): TreeNode[] {
       directory = next;
     }
 
-    directory.files.push({ kind: "file", name, entry });
+    directory.files.push({ kind: "file", name, file });
   }
 
   return build("", "", root).children;

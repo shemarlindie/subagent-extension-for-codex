@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { Changes } from "../../features/changes/types";
+import type { ChangeList } from "../../features/changes/types";
 import { deferred, flush, setup, task } from "./controller-test-harness";
 
 test("each task remembers its tab across switching tasks and closing the inspector", async (t) => {
@@ -61,7 +61,7 @@ test("host selections restore a task's remembered tab unless they explicitly req
   assert.equal(controller.getSnapshot().tab, "chat");
 });
 
-// The Changes tab reads every change; Details reads only the totals.
+// The Changes tab reads the change list. Details reads only the totals.
 for (const tab of ["changes", "details"] as const) {
   test(`returning to a remembered ${tab} tab reads that task's changes`, async (t) => {
     const { controller, transport } = setup();
@@ -69,13 +69,13 @@ for (const tab of ["changes", "details"] as const) {
     transport.tasks = [task("a"), task("b")];
 
     transport.handler = (name, args) => {
-      if (name === "get_changes") {
+      if (name === "app_get_change_list") {
         return {
           scope: "task",
           files: [],
           additions: args.task_id === "a" ? 1 : 2,
           deletions: 0,
-          diff: "",
+          revision: "r1",
         };
       }
 
@@ -119,7 +119,10 @@ for (const tab of ["changes", "details"] as const) {
 
     assert.deepEqual(readsOf("app_get_change_counts"), ["a"]);
 
-    assert.deepEqual(readsOf("get_changes"), tab === "changes" ? ["a"] : []);
+    assert.deepEqual(
+      readsOf("app_get_change_list"),
+      tab === "changes" ? ["a"] : [],
+    );
   });
 }
 
@@ -134,15 +137,15 @@ test("a host link opens the Changes tab, and a read for a replaced task is dropp
     files: [],
     additions: id === "a" ? 1 : 2,
     deletions: 0,
-    diff: "",
+    revision: "r1",
   });
 
   transport.handler = (name, args) => {
-    if (name === "get_changes" && args.task_id === "a") {
+    if (name === "app_get_change_list" && args.task_id === "a") {
       return gate.promise;
     }
 
-    if (name === "get_changes") return changes("b");
+    if (name === "app_get_change_list") return changes("b");
 
     return undefined;
   };
@@ -174,24 +177,25 @@ test("same-scope refresh retains the last changes while reading and after failur
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
 
-  const data: Changes = {
+  const data: ChangeList = {
     scope: "task",
     files: [],
     additions: 3,
     deletions: 0,
-    diff: "",
+    revision: "r1",
   };
 
-  transport.handler = (name) => (name === "get_changes" ? data : undefined);
+  transport.handler = (name) =>
+    name === "app_get_change_list" ? data : undefined;
 
   await controller.start();
   await controller.selection.select("a");
   await controller.changes.loadChanges();
   const lastLoaded = controller.getSnapshot().changes?.data;
-  const refreshGate = deferred<Changes>();
+  const refreshGate = deferred<ChangeList>();
 
   transport.handler = (name) =>
-    name === "get_changes" ? refreshGate.promise : undefined;
+    name === "app_get_change_list" ? refreshGate.promise : undefined;
 
   const refresh = controller.changes.loadChanges();
 
@@ -203,10 +207,10 @@ test("same-scope refresh retains the last changes while reading and after failur
   assert.equal(controller.getSnapshot().changes?.data, lastLoaded);
   assert.equal(controller.getSnapshot().changes?.error, "Git read failed");
 
-  const scopeGate = deferred<Changes>();
+  const scopeGate = deferred<ChangeList>();
 
   transport.handler = (name) =>
-    name === "get_changes" ? scopeGate.promise : undefined;
+    name === "app_get_change_list" ? scopeGate.promise : undefined;
 
   const switching = controller.changes.loadChanges("turn");
 
@@ -227,22 +231,22 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   transport.tasks = [task("a")];
   await controller.start();
   await controller.selection.select("a");
-  const gate = deferred<Changes>();
+  const gate = deferred<ChangeList>();
 
-  const turn: Changes = {
+  const turn: ChangeList = {
     scope: "turn",
     files: [],
     additions: 2,
     deletions: 0,
-    diff: "",
+    revision: "r1",
   };
 
   transport.handler = (name, args) => {
-    if (name === "get_changes" && args.scope === "task") {
+    if (name === "app_get_change_list" && args.scope === "task") {
       return gate.promise;
     }
 
-    if (name === "get_changes") return turn;
+    if (name === "app_get_change_list") return turn;
 
     return undefined;
   };
@@ -254,4 +258,68 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
 
   assert.equal(controller.getSnapshot().changes?.scope, "turn");
   assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
+});
+
+test("diffs read one at a time in the order asked, and a stale read reloads the list and drops the old diffs", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  transport.tasks = [task("a")];
+
+  const file = (path: string, signature: string) => ({
+    path,
+    status: "modified" as const,
+    additions: 1,
+    deletions: 0,
+    source: "tool" as const,
+    incomplete: false,
+    signature,
+  });
+
+  const list = (revision: string): ChangeList => ({
+    scope: "task",
+    files: [file("a.ts", revision), file("b.ts", revision)],
+    additions: 2,
+    deletions: 0,
+    revision,
+  });
+
+  let revision = "r1";
+  const reads: string[] = [];
+  const gate = deferred<unknown>();
+
+  transport.handler = (name, args) => {
+    if (name === "app_get_change_list") return list(revision);
+    if (name !== "app_get_file_change") return undefined;
+    reads.push(`${String(args.path)}@${String(args.revision)}`);
+    if (args.revision !== revision) return { stale: true };
+    const diff = `diff --git a/${String(args.path)} b/${String(args.path)}\n--- a/${String(args.path)}\n+++ b/${String(args.path)}\n@@ -1 +1 @@\n-${revision}\n+${revision} new\n`;
+
+    return args.path === "a.ts" && revision === "r1"
+      ? gate.promise.then(() => ({ stale: false, diff }))
+      : { stale: false, diff };
+  };
+
+  await controller.start();
+  await controller.selection.select("a");
+  await controller.changes.loadChanges();
+  const first = controller.changes.loadDiff("a.ts");
+  const second = controller.changes.loadDiff("b.ts");
+  await flush();
+  // b.ts waits for a.ts.
+  assert.deepEqual(reads, ["a.ts@r1"]);
+  // A turn records new edits while a.ts is read, so b.ts reads as stale.
+  revision = "r2";
+  gate.resolve(undefined);
+  await first;
+  const diffs = () => controller.getSnapshot().changeDiffs;
+  await second;
+  assert.deepEqual(reads, ["a.ts@r1", "b.ts@r1"]);
+  assert.equal(controller.getSnapshot().changes?.data?.revision, "r2");
+  assert.equal(diffs()?.revision, "r2");
+  assert.deepEqual(diffs()?.files, {});
+
+  await controller.changes.loadDiff("b.ts");
+  const read = diffs()?.files["b.ts"];
+  assert.equal(read?.status === "ready" && read.diff?.additions, 1);
+  assert.deepEqual(reads.at(-1), "b.ts@r2");
 });

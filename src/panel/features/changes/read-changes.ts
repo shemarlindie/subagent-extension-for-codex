@@ -1,38 +1,5 @@
 import type { Task } from "../tasks/types";
-import type {
-  ChangeCounts,
-  ChangedFileContent,
-  Changes,
-  ChangeScope,
-} from "./types";
-
-type ReadPage = (args: Record<string, unknown>) => Promise<Changes>;
-
-/**
- * Reads every page of a task's changes and merges them: pages share the file
- * list and each carries the next whole files of the diff. Stops early, with
- * undefined, once `live` reports the read is no longer wanted.
- */
-export async function readChanges(
-  taskId: string,
-  scope: ChangeScope,
-  read: ReadPage,
-  live: () => boolean,
-) {
-  let page = await read({ task_id: taskId, scope });
-  let diff = page.diff;
-
-  while (page.next_cursor) {
-    if (!live()) return undefined;
-    page = await read({ task_id: taskId, scope, cursor: page.next_cursor });
-    diff += page.diff;
-  }
-
-  if (!live()) return undefined;
-  const { next_cursor: _, ...last } = page;
-
-  return { ...last, diff };
-}
+import type { ChangeCounts, ChangedFileContent } from "./types";
 
 /** What a task's changes depend on: a new status or turn reloads them. */
 export const changesKey = (task: Task) => `${task.status}:${task.turn}`;

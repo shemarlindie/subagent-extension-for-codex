@@ -79,7 +79,6 @@ const fixtureReadDelayMs = 1200;
 // Keep mutations out of this list so the inspection toggle never delays writes.
 const fixtureReadTools = new Set([
   "get_changed_file",
-  "get_changes",
   "get_panel_context",
   "get_settings",
   "app_get_about",

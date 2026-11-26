@@ -6,10 +6,10 @@ import { Chevron } from "../../shared/components/chevron";
 import { Icon } from "../../shared/components/icons/icons";
 import { scrollContainer } from "../../shared/utils/scroll-container";
 import { ChangedFileTree } from "./changed-file-tree";
-import type { ChangedFileEntry } from "./changed-files";
+import type { ListedChange } from "./types";
 
 type ChangedFileNavigatorProps = {
-  entries: ChangedFileEntry[];
+  files: ListedChange[];
   viewed: ReadonlyMap<string, string>;
   activePath: string;
   onSelect: (path: string) => void;
@@ -17,7 +17,7 @@ type ChangedFileNavigatorProps = {
 
 /** A file navigator that stays available while the reader scrolls the diffs. */
 export function ChangedFileNavigator({
-  entries,
+  files,
   viewed,
   activePath,
   onSelect,
@@ -45,7 +45,7 @@ export function ChangedFileNavigator({
           })}
           aria-label="Files"
         >
-          <span>Files · {entries.length}</span>
+          <span>Files · {files.length}</span>
           <Chevron size={10} />
         </Popover.Trigger>
         <Popover.Portal>
@@ -83,7 +83,7 @@ export function ChangedFileNavigator({
               </div>
               {open && (
                 <ChangedFileTree
-                  entries={entries}
+                  files={files}
                   viewed={viewed}
                   activePath={activePath}
                   onSelect={onSelect}

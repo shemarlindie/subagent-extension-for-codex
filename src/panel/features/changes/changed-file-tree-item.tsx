@@ -37,7 +37,7 @@ export function ChangedFileTreeItem({
                 key={
                   child.kind === "directory"
                     ? `${child.path}/`
-                    : child.entry.file.path
+                    : child.file.path
                 }
                 node={child}
                 viewed={viewed}
@@ -51,8 +51,8 @@ export function ChangedFileTreeItem({
     );
   }
 
-  const { path, status } = node.entry.file;
-  const read = isViewed(viewed, node.entry);
+  const { path, status } = node.file;
+  const read = isViewed(viewed, node.file);
 
   return (
     <li>

@@ -5,24 +5,22 @@ import {
   type ChangedFileTreeItemProps,
 } from "./changed-file-tree-item";
 import { changedFileTree } from "./changed-file-tree-nodes";
-import type { ChangedFileEntry } from "./changed-files";
+import type { ListedChange } from "./types";
 
 type ChangedFileTreeProps = Omit<ChangedFileTreeItemProps, "node"> & {
-  entries: ChangedFileEntry[];
+  files: ListedChange[];
 };
 
 /** Only mounted while the navigator is open. Closed folders unmount their rows. */
-export function ChangedFileTree({ entries, ...props }: ChangedFileTreeProps) {
-  const nodes = useMemo(() => changedFileTree(entries), [entries]);
+export function ChangedFileTree({ files, ...props }: ChangedFileTreeProps) {
+  const nodes = useMemo(() => changedFileTree(files), [files]);
 
   return (
     <nav className="changed-file-tree" aria-label="Changed files by folder">
       <ul className="changed-file-tree-items">
         {nodes.map((node) => (
           <ChangedFileTreeItem
-            key={
-              node.kind === "directory" ? `${node.path}/` : node.entry.file.path
-            }
+            key={node.kind === "directory" ? `${node.path}/` : node.file.path}
             node={node}
             {...props}
           />

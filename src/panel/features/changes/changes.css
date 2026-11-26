@@ -581,3 +581,13 @@ body[data-expanded-panel="true"]
 .changed-file-tree-file[aria-current="location"] {
   background: var(--hover);
 }
+/* A file whose diff read failed: the error, then Retry. */
+.changed-file-diff-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.changed-file-diff-error .form-error {
+  margin: 0;
+}

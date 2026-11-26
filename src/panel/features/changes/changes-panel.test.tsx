@@ -17,8 +17,15 @@ import type { Task, Transport } from "../../app/state/types";
 import { LOADING_SKELETON_CONFIG } from "../../shared/components/loading-skeleton/loading-skeleton-config";
 import { MOTION } from "../../shared/components/motion/motion-utils";
 import { getElement } from "../../shared/utils/dom-test-harness";
+import { parseFileDiff } from "./changed-files";
 import { ChangesPanel } from "./changes-panel";
-import type { Changes, ChangesState } from "./types";
+import type {
+  ChangeList,
+  ChangesState,
+  FileDiff,
+  FileDiffsState,
+  ListedChange,
+} from "./types";
 
 const task: Task = {
   id: "task-1",
@@ -44,22 +51,48 @@ const task: Task = {
   runtime_ms: 0,
 };
 
-const changedFile: Changes["files"][number] = {
+const changedFile: ListedChange = {
   path: "src/a.ts",
   status: "modified",
   additions: 1,
   deletions: 1,
   source: "tool",
   incomplete: false,
+  signature: "a1",
 };
 
-const data: Changes = {
+const data: ChangeList = {
   scope: "task",
   files: [changedFile],
   additions: 1,
   deletions: 1,
-  diff: "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old\n+new\n",
+  revision: "r1",
 };
+
+const modified = (path: string, line = "new") =>
+  `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+${line}\n`;
+
+/** The diffs read for a list, each ready unless given as a read state. */
+function diffs(
+  list: ChangeList,
+  files: Record<string, string | FileDiff>,
+): FileDiffsState {
+  return {
+    task: task.id,
+    scope: list.scope,
+    revision: list.revision,
+    files: Object.fromEntries(
+      Object.entries(files).map(([path, diff]) => [
+        path,
+        typeof diff === "string"
+          ? { status: "ready", diff: parseFileDiff(diff) }
+          : diff,
+      ]),
+    ),
+  };
+}
+
+const readDiffs = diffs(data, { "src/a.ts": modified("src/a.ts") });
 
 const loaded: ChangesState = {
   task: task.id,
@@ -69,7 +102,7 @@ const loaded: ChangesState = {
   data,
 };
 
-function setup(initial?: ChangesState) {
+function setup(initial?: ChangesState, changeDiffs = readDiffs) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
@@ -79,9 +112,13 @@ function setup(initial?: ChangesState) {
 
   onTestFinished(() => controller.dispose());
 
-  let snapshot = { ...controller.getSnapshot(), changes: initial };
+  let snapshot = { ...controller.getSnapshot(), changes: initial, changeDiffs };
 
   vi.spyOn(controller, "getSnapshot").mockImplementation(() => snapshot);
+
+  const loadDiff = vi
+    .spyOn(controller.changes, "loadDiff")
+    .mockResolvedValue(undefined);
 
   const panel = () => (
     <ControllerContext.Provider value={controller}>
@@ -95,8 +132,9 @@ function setup(initial?: ChangesState) {
 
   return {
     view,
-    update(changes: ChangesState) {
-      snapshot = { ...snapshot, changes };
+    loadDiff,
+    update(changes: ChangesState, changeDiffs = snapshot.changeDiffs) {
+      snapshot = { ...snapshot, changes, changeDiffs };
       view.rerender(panel());
     },
   };
@@ -268,7 +306,7 @@ test("switching scopes hides old results and a failed initial read stops loading
   assert.equal(view.getByRole("status").textContent, "");
 });
 
-const twoFiles: Changes = {
+const twoFiles: ChangeList = {
   ...data,
   files: [
     ...data.files,
@@ -279,15 +317,22 @@ const twoFiles: Changes = {
       deletions: 0,
       source: "tool",
       incomplete: false,
+      signature: "b1",
     },
   ],
-  diff:
-    data.diff +
-    "diff --git a/src/b.ts b/src/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/b.ts\n@@ -0,0 +1 @@\n+added\n",
 };
 
-test("viewed files stay collapsed across refresh and remount until their changes change", async () => {
-  const { view, update } = setup({ ...loaded, data: twoFiles });
+const twoDiffs = diffs(twoFiles, {
+  "src/a.ts": modified("src/a.ts"),
+  "src/b.ts":
+    "diff --git a/src/b.ts b/src/b.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/b.ts\n@@ -0,0 +1 @@\n+added\n",
+});
+
+test("viewed files stay collapsed and unread across refresh and remount until their changes change", async () => {
+  const { view, update, loadDiff } = setup(
+    { ...loaded, data: twoFiles },
+    twoDiffs,
+  );
 
   const [file] =
     view.container.querySelectorAll<HTMLDetailsElement>(".diff-file");
@@ -315,57 +360,128 @@ test("viewed files stay collapsed across refresh and remount until their changes
       '[data-changed-file="src/a.ts"]',
     );
 
-  // Showing the tab again keeps a viewed file collapsed.
+  // Showing the tab again keeps a viewed file collapsed, without reading it.
   view.rerender(<></>);
-  update({ ...loaded, data: { ...twoFiles } });
+  loadDiff.mockClear();
+  const unread = diffs(twoFiles, {});
+  update({ ...loaded, data: { ...twoFiles } }, unread);
   assert.equal(shownFile()?.open, false);
+  expect(loadDiff.mock.calls).toEqual([["src/b.ts"]]);
 
   // Changed since, the file needs reading again, here and after a remount.
-  const changed = {
-    ...loaded,
-    data: { ...twoFiles, diff: twoFiles.diff.replace("+new", "+newer") },
+  const changedList = {
+    ...twoFiles,
+    revision: "r2",
+    files: twoFiles.files.map((file) =>
+      file.path === "src/a.ts" ? { ...file, signature: "a2" } : file,
+    ),
   };
 
-  update(changed);
+  const changed = { ...loaded, data: changedList };
+  const changedDiffs = diffs(changedList, {});
+
+  update(changed, changedDiffs);
   assert.equal(shownFile()?.dataset.viewed, "false");
   assert.equal(shownFile()?.open, true);
+  expect(loadDiff).toHaveBeenLastCalledWith("src/a.ts");
 
   view.rerender(<></>);
-  update(changed);
+  update(changed, changedDiffs);
   assert.equal(shownFile()?.open, true);
 });
 
-test("a file missing from the diff still has a section to read and mark", () => {
-  // The diff has no part for src/b.ts.
-  const { view } = setup({ ...loaded, data: { ...twoFiles, diff: data.diff } });
+test("a long list shows every file at once and reads a diff only when its file opens", async () => {
+  const paths = Array.from({ length: 9 }, (_, index) => `src/file-${index}.ts`);
 
-  const sections = view.container.querySelectorAll(".diff-file");
+  const list: ChangeList = {
+    ...data,
+    files: paths.map((path) => ({ ...changedFile, path })),
+  };
+
+  const { view, update, loadDiff } = setup(
+    { ...loaded, data: list },
+    diffs(list, {}),
+  );
+
+  const section = (path: string) =>
+    getElement<HTMLDetailsElement>(
+      view.container,
+      `[data-changed-file="${path}"]`,
+    );
+
+  expect(view.container.querySelectorAll(".diff-file")).toHaveLength(9);
+  expect(loadDiff.mock.calls).toEqual([["src/file-0.ts"]]);
+
+  update(
+    { ...loaded, data: list },
+    diffs(list, { "src/file-0.ts": { status: "loading" } }),
+  );
+
+  expect(
+    view.getByRole("progressbar", { name: "Loading src/file-0.ts" }),
+  ).toBeTruthy();
+
+  update(
+    { ...loaded, data: list },
+    diffs(list, {
+      "src/file-0.ts": { status: "error", error: "Read failed" },
+    }),
+  );
+
+  assert.equal(view.getByRole("alert").textContent, "Read failed");
+  fireEvent.click(view.getByRole("button", { name: "Retry" }));
+  expect(loadDiff).toHaveBeenLastCalledWith("src/file-0.ts");
+
+  const third = section("src/file-3.ts");
+
+  await act(async () => {
+    third.open = true;
+    fireEvent(third, new Event("toggle"));
+  });
+
+  expect(loadDiff).toHaveBeenLastCalledWith("src/file-3.ts");
+
+  update(
+    { ...loaded, data: list },
+    diffs(list, { "src/file-3.ts": modified("src/file-3.ts") }),
+  );
+
+  await waitFor(() =>
+    expect(third.querySelector(".diff-row.add")?.textContent).toContain("new"),
+  );
+});
+
+test("a diff that can't be parsed still has a section to read and mark", () => {
+  const { view } = setup(
+    { ...loaded, data: twoFiles },
+    diffs(twoFiles, {
+      "src/a.ts": modified("src/a.ts"),
+      "src/b.ts": { status: "ready" },
+    }),
+  );
 
   const missing = view.container.querySelector<HTMLDetailsElement>(
     '[data-changed-file="src/b.ts"]',
   );
 
-  assert.equal(sections.length, 2);
-
+  assert.equal(view.container.querySelectorAll(".diff-file").length, 2);
   assert.match(missing?.textContent ?? "", /Diff unavailable/);
   assert.ok(view.getByRole("checkbox", { name: "Viewed src/b.ts" }));
 });
 
-test("picking the last collapsed file finishes its jump after diff rows render", async () => {
+test("picking the last collapsed file finishes its jump after its diff is read and its rows render", async () => {
   const paths = Array.from({ length: 9 }, (_, index) => `src/file-${index}.ts`);
 
-  const changes: Changes = {
+  const changes: ChangeList = {
     ...data,
     files: paths.map((path) => ({ ...changedFile, path })),
-    diff: paths
-      .map(
-        (path) =>
-          `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n-old\n+new\n`,
-      )
-      .join(""),
   };
 
-  const { view } = setup({ ...loaded, data: changes });
+  const { view, update, loadDiff } = setup(
+    { ...loaded, data: changes },
+    diffs(changes, {}),
+  );
+
   const scroller = getElement<HTMLElement>(view.container, ".changes");
 
   const last = getElement<HTMLDetailsElement>(
@@ -408,6 +524,18 @@ test("picking the last collapsed file finishes its jump after diff rows render",
   fireEvent.click(view.getByRole("button", { name: "Files" }));
 
   fireEvent.click(view.getByRole("button", { name: "src/file-8.ts" }));
+
+  await waitFor(() =>
+    expect(loadDiff).toHaveBeenLastCalledWith("src/file-8.ts"),
+  );
+
+  expect(last.querySelector(".diff-table")).toBeNull();
+  expect(scroller.scrollTop).toBe(0);
+
+  update(
+    { ...loaded, data: changes },
+    diffs(changes, { "src/file-8.ts": modified("src/file-8.ts") }),
+  );
 
   await waitFor(() => expect(last.querySelector(".diff-table")).not.toBeNull());
   expect(last.open).toBe(true);
