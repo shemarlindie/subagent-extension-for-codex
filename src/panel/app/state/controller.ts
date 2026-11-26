@@ -5,6 +5,7 @@ import {
   NewTaskLoader,
   rescopedNewTask,
 } from "../../features/delegation/new-task/new-task-loader";
+import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
 import { ProjectWorkerReads } from "../../features/delegation/project-worker-reads";
 import { ProjectActions } from "../../features/projects/project-actions";
 import { workersStale } from "../../features/providers/worker-freshness";
@@ -50,7 +51,7 @@ import {
   tasksInScope,
 } from "./scope-reconciliation";
 import { selectionPatch } from "./selection";
-import { selectedTask, showsReadCompleted } from "./selectors";
+import { availableFilter, selectedTask, showsReadCompleted } from "./selectors";
 import { SessionStateStore } from "./session/session-state";
 import { TaskArrivals, taskArrivalTarget } from "./task-arrivals";
 import { lacksNewSelection, unloadedCounts } from "./task-list-read";
@@ -197,7 +198,7 @@ export class Controller {
     // Shows the started task on its Chat tab.
     created: async (task, arrival) => {
       this.session.update("task", task.id, arrival);
-      this.selection.selectStarted(task);
+      this.selectStarted(task);
       await this.refresh().catch(this.report);
       await this.share().catch(this.report);
     },
@@ -266,10 +267,8 @@ export class Controller {
         run: (action) => this.run(action),
         refresh: () => this.refresh(),
         share: () => this.share(),
-        restoredView: () => this.restoredView,
         forgetRestoredView: () => (this.restoredView = undefined),
         wide: () => this.environment.wide(),
-        settleUnread: (tasks) => this.taskActions.unread.settle(tasks),
         tabShown: () => {
           this.draftFollower.show();
           this.run(() => this.changes.loadChangesIfStale());
@@ -683,8 +682,7 @@ export class Controller {
     if (reset === "repository") {
       this.clearProjectScope();
     } else if (reset === "scope") {
-      this.invalidateScope({});
-      this.selection.shareAfterRead();
+      this.invalidateScope({}, true);
     }
 
     return { removed: removed.length > 0, reset: Boolean(reset) };
@@ -733,8 +731,7 @@ export class Controller {
       "task" in taskDialog &&
       !tasks.some((task) => task.id === taskDialog.task.id)
     ) {
-      this.invalidateScope({});
-      this.selection.shareAfterRead();
+      this.invalidateScope({}, true);
 
       return false;
     }
@@ -746,13 +743,26 @@ export class Controller {
 
     const previousSelected = this.state.selected;
 
-    const { selected, tab, filter, search } = this.selection.reconcile(
+    const restored = this.restoredView;
+
+    const { selected, tab } = this.selection.reconcile(
       tasks,
       intent.tab,
+      restored,
     );
 
+    // The list controls come from the restored view while it resolves.
+    const search = restored?.search ?? this.state.search;
+
+    const filter = restored
+      ? availableFilter(
+          { ...this.state, tasks, search },
+          restored.filter ?? this.state.filter,
+        )
+      : this.state.filter;
+
     // Don't persist defaults until the restored project and task resolve.
-    const composing = this.restoredView?.composing;
+    const composing = restored?.composing;
     this.restoredView = undefined;
     this.viewStateReady = Boolean(this.viewState);
 
@@ -825,8 +835,12 @@ export class Controller {
     });
   }
 
-  private invalidateScope(patch: Partial<Snapshot>) {
-    this.selection.reset();
+  /**
+   * Moves to a new scope and clears its tasks. `share` shares the selection
+   * once the new scope's list settles it.
+   */
+  private invalidateScope(patch: Partial<Snapshot>, share = false) {
+    this.selection.reset(share);
     const scopeVersion = this.state.scopeVersion + 1;
     const currentDialog = this.state.dialog;
 
@@ -864,8 +878,7 @@ export class Controller {
   /** Forgets a removed project in the current and reload-restored view. */
   private clearProjectScope() {
     this.restoredView = undefined;
-    this.invalidateScope({ repository: undefined, revision: "HEAD" });
-    this.selection.shareAfterRead();
+    this.invalidateScope({ repository: undefined, revision: "HEAD" }, true);
   }
 
   /** Applies host or service scope data; returns false when it carries no valid scope. */
@@ -894,12 +907,63 @@ export class Controller {
     }
 
     this.applyProjectCandidate(data.panel_project_candidate);
-    this.selection.applyOpeningTasks(data, scope);
+    this.applyOpeningTasks(data, scope);
 
     this.contextRead("ready");
     if (refresh) this.run(() => this.refresh());
 
     return true;
+  }
+
+  /** Opening data can show tasks before refresh while respecting a restored view. */
+  private applyOpeningTasks(
+    data: PanelData,
+    scope: Pick<Snapshot, "conversation" | "repository">,
+  ) {
+    const restored = this.restoredView;
+    const restoredTaskView = restored?.selected || restored?.browsing;
+
+    const hostTaskId =
+      typeof data.panel_selection?.task_id === "string" && !restoredTaskView
+        ? data.panel_selection.task_id
+        : undefined;
+
+    if (Array.isArray(data.tasks)) {
+      const tasks = tasksInScope(data.tasks, scope);
+
+      // Opening data carries the full list, so select now as the refresh would
+      // rather than showing the empty inspector until that read returns.
+      this.patch({
+        tasks: this.taskActions.unread.settle(tasks),
+        readCompleted: unloadedCounts(data.read_completed),
+        taskListLoading: false,
+        ...(hostTaskId ? {} : this.selection.fallback(tasks)),
+      });
+    }
+
+    if (hostTaskId) {
+      // A host link shows its task under the restored view's list controls.
+      this.patch({
+        ...this.selection.chooseFromHost(hostTaskId, data.panel_selection?.tab),
+        filter: restored?.filter ?? null,
+        search: restored?.search ?? "",
+      });
+    }
+  }
+
+  /** Lists and selects a task this panel just started. */
+  private selectStarted(task: Task) {
+    // Starting a task while composing, here or from Advanced, sends the draft.
+    if (this.state.newTask) {
+      this.session.remove("newTask", newTaskSessionId(this.state.conversation));
+    }
+
+    this.patch({
+      tasks: [task, ...this.state.tasks.filter((item) => item.id !== task.id)],
+      ...this.selection.chooseTask(task.id),
+      repository: task.repository,
+      revision: task.revision,
+    });
   }
 
   private applyProjectCandidate(
@@ -1131,7 +1195,7 @@ export class Controller {
         );
       }
 
-      if (task && selectReturned) this.selection.selectStarted(task);
+      if (task && selectReturned) this.selectStarted(task);
 
       afterSuccess?.();
       if (closeOnSuccess) this.closeDialog();

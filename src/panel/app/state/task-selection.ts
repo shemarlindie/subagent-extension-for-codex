@@ -1,16 +1,6 @@
-import { newTaskSessionId } from "../../features/delegation/new-task/new-task-values";
-import { tasksInScope } from "./scope-reconciliation";
 import { defaultSelection, selectionPatch } from "./selection";
-import { availableFilter } from "./selectors";
 import type { SessionStateStore } from "./session/session-state";
-import { unloadedCounts } from "./task-list-read";
-import type {
-  PanelData,
-  PersistedViewState,
-  Snapshot,
-  Tab,
-  Task,
-} from "./types";
+import type { PersistedViewState, Snapshot, Tab, Task } from "./types";
 
 interface TaskSelectionContext {
   snapshot(): Snapshot;
@@ -19,13 +9,10 @@ interface TaskSelectionContext {
   refresh(): Promise<void>;
   /** Shares the selected task with the host's model. */
   share(): Promise<void>;
-  /** The view restored from the URL, until the first task list resolves it. */
-  restoredView(): PersistedViewState | undefined;
+  /** Drops the view restored from the URL once the user or host chooses a task. */
   forgetRestoredView(): void;
   /** Whether the panel is wide enough to open a task by default. */
   wide(): boolean;
-  /** Keeps tasks the user just read from showing as unread. */
-  settleUnread(tasks: Task[]): Task[];
   /** Follows a tab change, such as by reading the new tab's data. */
   tabShown(): void;
   session: SessionStateStore;
@@ -74,12 +61,18 @@ export class TaskSelection {
   }
 
   async select(id: string) {
-    this.choose();
-    this.context.forgetRestoredView();
-    this.context.patch(selectionPatch(id, this.tabOf(id)));
+    this.context.patch(this.chooseTask(id));
 
     await this.context.refresh();
     await this.context.share();
+  }
+
+  /** Records a task the user or panel chose, returning the patch that shows it on its last tab. */
+  chooseTask(id: string) {
+    this.choose();
+    this.context.forgetRestoredView();
+
+    return selectionPatch(id, this.tabOf(id));
   }
 
   back() {
@@ -112,16 +105,15 @@ export class TaskSelection {
     ++this.selectionGeneration;
   }
 
-  /** Forgets the selection's flags when the scope changes. */
-  reset() {
+  /**
+   * Forgets the selection's flags when the scope changes. `share` shares the
+   * selection once the next task-list read settles it.
+   */
+  reset(share = false) {
     this.invalidate();
     this.explicitSelection = false;
     this.browsingList = false;
-  }
-
-  /** Shares the selection after the next task-list read settles it. */
-  shareAfterRead() {
-    this.reconcileShare = true;
+    if (share) this.reconcileShare = true;
   }
 
   /** Shares a selection a task-list read changed, so the host sees the same task as the panel. */
@@ -131,35 +123,17 @@ export class TaskSelection {
     this.reconcileShare = false;
   }
 
-  /** Lists and selects a task this panel just started. */
-  selectStarted(task: Task) {
-    this.choose();
-    this.context.forgetRestoredView();
-    const state = this.state();
-
-    // Starting a task while composing, here or from Advanced, sends the draft.
-    if (state.newTask) {
-      this.context.session.remove(
-        "newTask",
-        newTaskSessionId(state.conversation),
-      );
-    }
-
-    this.context.patch({
-      tasks: [task, ...state.tasks.filter((item) => item.id !== task.id)],
-      ...selectionPatch(task.id, this.tabOf(task.id)),
-      repository: task.repository,
-      revision: task.revision,
-    });
-  }
-
   /**
-   * The selection, tab and list controls after a task-list read: a URL-restored
-   * task or browsing state first, then the current task while the list still
-   * has it, then the default task. A tab the user changed since this selection
-   * or read began is kept.
+   * The selection and tab after a task-list read: a URL-restored task or
+   * browsing state first, then the current task while the list still has it,
+   * then the default task. A tab the user changed since this selection or read
+   * began is kept.
    */
-  reconcile(tasks: Task[], tabIntentRevisionAtReadStart: number) {
+  reconcile(
+    tasks: Task[],
+    tabIntentRevisionAtReadStart: number,
+    restored: PersistedViewState | undefined,
+  ) {
     let selected = this.state().selected;
 
     const preserveCurrentTab =
@@ -180,17 +154,7 @@ export class TaskSelection {
       });
     }
 
-    const state = this.state();
-    let tab = state.tab;
-    const restored = this.context.restoredView();
-    const search = restored?.search ?? state.search;
-
-    const filter = restored
-      ? availableFilter(
-          { ...state, tasks, search },
-          restored.filter ?? state.filter,
-        )
-      : state.filter;
+    let tab = this.state().tab;
 
     const restoredTask = restored?.selected
       ? tasks.find((task) => task.id === restored.selected)
@@ -218,38 +182,60 @@ export class TaskSelection {
       }
     }
 
-    return { selected, tab, filter, search };
+    return { selected, tab };
   }
 
-  /** Opening data can show tasks before refresh while respecting a restored view. */
-  applyOpeningTasks(
-    data: PanelData,
-    scope: Pick<Snapshot, "conversation" | "repository">,
-  ) {
-    const restored = this.context.restoredView();
-    const restoredTaskView = restored?.selected || restored?.browsing;
+  /** Keeps a selection the list still contains; otherwise falls back to the default task. */
+  fallback(tasks: Task[]): Partial<Snapshot> {
+    const current = this.state().selected;
+    if (current && tasks.some((task) => task.id === current)) return {};
 
-    const hostTaskId =
-      typeof data.panel_selection?.task_id === "string" && !restoredTaskView
-        ? data.panel_selection.task_id
-        : undefined;
-
-    if (Array.isArray(data.tasks)) {
-      const tasks = tasksInScope(data.tasks, scope);
-
-      // Opening data carries the full list, so select now as the refresh would
-      // rather than showing the empty inspector until that read returns.
-      this.context.patch({
-        tasks: this.context.settleUnread(tasks),
-        readCompleted: unloadedCounts(data.read_completed),
-        taskListLoading: false,
-        ...(hostTaskId ? {} : this.fallbackSelection(tasks)),
-      });
+    if (current) {
+      this.reconcileShare = true;
+      this.explicitSelection = false;
+      this.selectionGeneration++;
     }
 
-    if (hostTaskId) {
-      this.selectFromHost(hostTaskId, data.panel_selection?.tab);
+    const selected = this.defaultSelection(tasks);
+    if (!current && !selected) return {};
+
+    return {
+      selected,
+      ...(selected ? { tab: this.tabOf(selected) } : {}),
+      chatHistoryLoading: selected,
+      activityHistoryLoading: selected,
+    };
+  }
+
+  /**
+   * Records a task a host link chose, returning the patch that shows it. Host
+   * links respect a tab the user chose after selecting this task.
+   */
+  chooseFromHost(taskId: string, requestedTab?: string) {
+    const state = this.state();
+
+    const preserveCurrentTab =
+      taskId === state.selected &&
+      this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
+
+    let tab: Tab;
+
+    if (preserveCurrentTab) {
+      tab = state.tab;
+    } else if (
+      requestedTab === "chat" ||
+      requestedTab === "changes" ||
+      requestedTab === "activity" ||
+      requestedTab === "details"
+    ) {
+      tab = requestedTab;
+    } else {
+      tab = this.tabOf(taskId);
     }
+
+    this.choose(!preserveCurrentTab);
+
+    return { ...selectionPatch(taskId), tab };
   }
 
   /**
@@ -278,61 +264,5 @@ export class TaskSelection {
       this.browsingList,
       this.context.wide(),
     );
-  }
-
-  /** Keeps a selection the list still contains; otherwise falls back to the default task. */
-  private fallbackSelection(tasks: Task[]): Partial<Snapshot> {
-    const current = this.state().selected;
-    if (current && tasks.some((task) => task.id === current)) return {};
-
-    if (current) {
-      this.reconcileShare = true;
-      this.explicitSelection = false;
-      this.selectionGeneration++;
-    }
-
-    const selected = this.defaultSelection(tasks);
-    if (!current && !selected) return {};
-
-    return {
-      selected,
-      ...(selected ? { tab: this.tabOf(selected) } : {}),
-      chatHistoryLoading: selected,
-      activityHistoryLoading: selected,
-    };
-  }
-
-  /** Host links respect a tab the user chose after selecting this task. */
-  private selectFromHost(taskId: string, requestedTab?: string) {
-    const state = this.state();
-
-    const preserveCurrentTab =
-      taskId === state.selected &&
-      this.tabIntentRevision !== this.tabIntentRevisionAtSelection;
-
-    let tab: Tab;
-
-    if (preserveCurrentTab) {
-      tab = state.tab;
-    } else if (
-      requestedTab === "chat" ||
-      requestedTab === "changes" ||
-      requestedTab === "activity" ||
-      requestedTab === "details"
-    ) {
-      tab = requestedTab;
-    } else {
-      tab = this.tabOf(taskId);
-    }
-
-    this.choose(!preserveCurrentTab);
-    const restored = this.context.restoredView();
-
-    this.context.patch({
-      ...selectionPatch(taskId),
-      tab,
-      filter: restored?.filter ?? null,
-      search: restored?.search ?? "",
-    });
   }
 }
