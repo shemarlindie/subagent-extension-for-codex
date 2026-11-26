@@ -17,6 +17,8 @@ type WaitArgs = {
   after?: string;
   draft?: { message_id?: string; after_length?: number };
   wait_ms?: number;
+  wait_id?: string;
+  replaces?: string;
 };
 
 type WaitRead = { revision: string; draft?: Draft | null };
@@ -68,6 +70,8 @@ function answers(args: WaitArgs, read: WaitRead) {
 /** The story as the panel sees it, at the moment the showcase last set. */
 export class StoryFeed {
   private waiters = new Set<() => void>();
+  /** Waits a later wait replaced, which end as the service ends them. */
+  private replaced = new Set<string>();
   constructor(private moment: StoryMoment) {}
 
   /** Moves the story on, waking the waits it may answer. */
@@ -80,6 +84,10 @@ export class StoryFeed {
     }
 
     this.moment = moment;
+    this.wake();
+  }
+
+  private wake() {
     for (const wake of this.waiters) wake();
     this.waiters.clear();
   }
@@ -106,13 +114,22 @@ export class StoryFeed {
     const wait = args as WaitArgs;
     const deadline = performance.now() + (wait.wait_ms ?? 0);
 
+    if (wait.replaces !== undefined) {
+      this.replaced.add(wait.replaces);
+      this.wake();
+    }
+
     for (;;) {
       const result = storyTool(this.moment, name, args);
       const read = (result.structuredContent as { result: WaitRead }).result;
       const left = deadline - performance.now();
-      if (left <= 0 || answers(wait, read)) return result;
+      if (left <= 0 || answers(wait, read) || this.ends(wait)) return result;
       await this.next(left);
     }
+  }
+
+  private ends({ wait_id }: WaitArgs) {
+    return wait_id !== undefined && this.replaced.delete(wait_id);
   }
 
   /** Resolves when the story moves on, or after `ms`. */
