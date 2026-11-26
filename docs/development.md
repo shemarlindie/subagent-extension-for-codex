@@ -91,7 +91,8 @@ contents of `<data-directory>/admin-token`. On macOS, with the example `.env`,
 `pbcopy < .subagent-extension-for-codex/live/admin-token` copies it without
 printing it. Use the configured origin. `localhost` and `127.0.0.1` are
 different browser origins, and the service's origin checks can reject the
-substitute.
+substitute. The console needs Chrome or Edge 136, Firefox 134 or Safari 18.4 or
+later.
 
 ### Reset service data
 
