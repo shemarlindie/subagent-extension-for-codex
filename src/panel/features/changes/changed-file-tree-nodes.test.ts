@@ -12,6 +12,8 @@ const files = (paths: string[]): ListedChange[] =>
     source: "tool",
     incomplete: false,
     signature: path,
+    hunks: 1,
+    lines: 2,
   }));
 
 /** The tree as indented names, which reads more plainly than nested objects. */

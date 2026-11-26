@@ -121,13 +121,11 @@ export function DiffFile({
         )}
       </summary>
       {/* A collapsed file unmounts its rows. */}
+      {open && note && <p className="help diff-file-note">{note}</p>}
       {open &&
         (placeholder ??
           (deferredOpen ? (
-            <>
-              {note && <p className="help diff-file-note">{note}</p>}
-              <DiffRows file={file} language={language} emptyNote={emptyNote} />
-            </>
+            <DiffRows file={file} language={language} emptyNote={emptyNote} />
           ) : (
             <Progress
               label={`Rendering ${diffPath(file)}`}

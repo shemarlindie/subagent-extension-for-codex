@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
+import { Presence } from "../../shared/components/motion/presence";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { formatBytes } from "../../shared/utils/format";
 import { scrollContainer } from "../../shared/utils/scroll-container";
@@ -192,11 +193,21 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     />
   );
 
-  const diffError = diffRead?.status === "error" && (
-    <DiffReadError
-      error={diffRead.error}
-      onRetry={() => controller.run(() => controller.changes.loadDiff(shown))}
-    />
+  const failure = diffRead?.status !== "ready" ? diffRead?.error : undefined;
+
+  // Collapses once Retry reads the diff, so the file slides up.
+  const diffError = (
+    <Presence show={failure !== undefined}>
+      {failure !== undefined && (
+        <DiffReadError
+          error={failure}
+          retrying={diffRead?.status === "loading"}
+          onRetry={() =>
+            controller.run(() => controller.changes.loadDiff(shown))
+          }
+        />
+      )}
+    </Presence>
   );
 
   const firstRead = loading && !read;

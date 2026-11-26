@@ -34,6 +34,9 @@ export interface Changes {
 export interface ListedChange extends ChangedFile {
   /** Identifies the file's recorded changes, so marking it viewed lasts until they change. */
   signature: string;
+  /** The diff's hunks and lines, so a file can hold its height while its diff loads. */
+  hunks: number;
+  lines: number;
 }
 
 /** The panel's change list: every file and the totals, without diffs. */

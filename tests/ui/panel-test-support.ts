@@ -749,6 +749,8 @@ export function testChanges(binary = "logo.png"): TestChanges {
           source: "tool",
           incomplete: false,
           signature: "a1",
+          hunks: 1,
+          lines: 2,
         },
         {
           path: binary,
@@ -758,6 +760,8 @@ export function testChanges(binary = "logo.png"): TestChanges {
           source: "command",
           incomplete: true,
           signature: "b1",
+          hunks: 0,
+          lines: 0,
         },
       ],
       additions: 1,

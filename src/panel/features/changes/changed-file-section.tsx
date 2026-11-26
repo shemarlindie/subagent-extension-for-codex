@@ -1,4 +1,10 @@
-import { memo, useEffect, useLayoutEffect, useState } from "react";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -84,7 +90,7 @@ export const ChangedFileSection = memo(function ChangedFileSection({
   }
 
   const needsDiff = open && !file.incomplete;
-  const error = needsDiff && diff?.status === "error" ? diff.error : undefined;
+  const error = needsDiff && diff?.status !== "ready" ? diff?.error : undefined;
   const failed = error !== undefined;
 
   useEffect(() => {
@@ -97,17 +103,36 @@ export const ChangedFileSection = memo(function ChangedFileSection({
     if (failed) onContentReady?.();
   }, [failed, onContentReady]);
 
-  let placeholder;
+  let pending;
 
   if (failed) {
-    placeholder = (
-      <DiffReadError error={error} onRetry={() => onLoadDiff(file.path)} />
+    pending = (
+      <DiffReadError
+        error={error}
+        retrying={diff?.status === "loading"}
+        onRetry={() => onLoadDiff(file.path)}
+      />
     );
   } else if (needsDiff && diff?.status !== "ready") {
-    placeholder = (
+    pending = (
       <Progress label={`Loading ${file.path}`} className="diff-progress" />
     );
   }
+
+  // Holds the diff's height, so files below stay put when it arrives.
+  const placeholder = pending && (
+    <div
+      className="diff-placeholder"
+      style={
+        {
+          "--diff-hunks": file.hunks,
+          "--diff-lines": file.lines,
+        } as CSSProperties
+      }
+    >
+      {pending}
+    </div>
+  );
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);

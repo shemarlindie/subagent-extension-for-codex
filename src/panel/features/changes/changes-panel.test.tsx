@@ -59,6 +59,8 @@ const changedFile: ListedChange = {
   source: "tool",
   incomplete: false,
   signature: "a1",
+  hunks: 1,
+  lines: 2,
 };
 
 const data: ChangeList = {
@@ -318,6 +320,8 @@ const twoFiles: ChangeList = {
       source: "tool",
       incomplete: false,
       signature: "b1",
+      hunks: 1,
+      lines: 2,
     },
   ],
 };
@@ -431,6 +435,21 @@ test("a long list shows every file at once and reads a diff only when its file o
   assert.equal(view.getByRole("alert").textContent, "Read failed");
   fireEvent.click(view.getByRole("button", { name: "Retry" }));
   expect(loadDiff).toHaveBeenLastCalledWith("src/file-0.ts");
+
+  // The error and a busy Retry stay while it reads again.
+  update(
+    { ...loaded, data: list },
+    diffs(list, {
+      "src/file-0.ts": { status: "loading", error: "Read failed" },
+    }),
+  );
+
+  assert.equal(view.getByRole("alert").textContent, "Read failed");
+
+  assert.equal(
+    view.getByRole("button", { name: "Retry" }).getAttribute("aria-busy"),
+    "true",
+  );
 
   const third = section("src/file-3.ts");
 

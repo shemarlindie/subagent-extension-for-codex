@@ -29,6 +29,8 @@ const data: ChangeList = {
     source: "tool",
     incomplete: false,
     signature: path,
+    hunks: 1,
+    lines: 2,
   })),
   additions: 3,
   deletions: 3,
@@ -285,6 +287,8 @@ test("moving on from Viewed keeps focus on Viewed, unless the user moved it", as
         source: "tool",
         incomplete: false,
         signature: "gone",
+        hunks: 1,
+        lines: 2,
       },
     ],
   });

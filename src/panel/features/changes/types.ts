@@ -38,7 +38,8 @@ export type ChangesState = {
  * incomplete, or its diff couldn't be parsed.
  */
 export type FileDiff =
-  | { status: "loading" }
+  /** A retry keeps the failed read's error, so Retry stays put while it runs. */
+  | { status: "loading"; error?: string }
   | { status: "ready"; diff?: ParsedDiffFile }
   | { status: "error"; error: string };
 

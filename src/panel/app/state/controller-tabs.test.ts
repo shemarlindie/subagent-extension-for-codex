@@ -273,6 +273,8 @@ test("diffs read one at a time in the order asked, and a stale read reloads the 
     source: "tool" as const,
     incomplete: false,
     signature,
+    hunks: 1,
+    lines: 2,
   });
 
   const list = (revision: string): ChangeList => ({

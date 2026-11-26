@@ -13,6 +13,8 @@ const file = (path: string): ListedChange => ({
   source: "tool",
   incomplete: false,
   signature: `${path}:1`,
+  hunks: 1,
+  lines: 2,
 });
 
 test("the next unread file follows the current one, wrapping to the start", () => {

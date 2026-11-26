@@ -170,9 +170,9 @@ export class ChangeLoader {
    */
   loadDiff(path: string) {
     const diffs = this.context.snapshot().changeDiffs;
-    const status = diffs?.files.get(path)?.status;
-    if (!diffs || (status && status !== "error")) return Promise.resolve();
-    this.setDiff(diffs, path, { status: "loading" });
+    const diff = diffs?.files.get(path);
+    if (!diffs || (diff && diff.status !== "error")) return Promise.resolve();
+    this.setDiff(diffs, path, { status: "loading", error: diff?.error });
     this.diffReads = this.diffReads.then(() => this.readDiff(diffs, path));
 
     return this.diffReads;

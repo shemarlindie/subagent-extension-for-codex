@@ -55,6 +55,10 @@ function signedFile(row: RecordedChange) {
   return {
     ...file,
     signature: hash(JSON.stringify([file.status, incomplete, source, hunks])),
+    hunks: incomplete ? 0 : hunks.length,
+    lines: incomplete
+      ? 0
+      : hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0),
   };
 }
 
