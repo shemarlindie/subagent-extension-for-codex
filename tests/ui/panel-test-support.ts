@@ -13,11 +13,11 @@ import userEvent from "@testing-library/user-event";
 import { createElement, Fragment } from "react";
 import { describe, expect, test, vi, type TestContext } from "vitest";
 
+import { composeHeldView } from "../../dev/panel/scenarios/view-tools";
 import { AppShell } from "../../src/panel/app/app-shell";
 import { Controller } from "../../src/panel/app/state/controller";
 import { ControllerContext } from "../../src/panel/app/state/controller-context";
 import { defaults } from "../../src/panel/app/state/controller-test-harness";
-import { composeView } from "../../src/panel/app/state/panel-view-test-harness";
 import type {
   HostState,
   Project,
@@ -231,7 +231,7 @@ export class FakeTransport implements Transport {
         return new Promise<T>(() => {});
       }
 
-      const view = await composeView(args.view, (part, partArgs) => {
+      const view = await composeHeldView(args.view, (part, partArgs) => {
         if (part === "settings") return this.panelSettings;
         if (part === "projects") return this.tool("list_projects");
         if (part === "list") return this.tool("app_list_tasks", partArgs);
