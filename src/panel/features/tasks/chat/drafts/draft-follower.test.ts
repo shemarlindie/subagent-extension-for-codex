@@ -149,6 +149,23 @@ test("overlapping recovery reads after a gap each apply in turn", async () => {
   assert.equal(state().draft?.text, "A\n\nB\n\nxy");
 });
 
+test("an older recovery read cannot undo a newer one that cleared the draft", async () => {
+  const { follower, state, set, holdReads } = fixture();
+  const older = deferred<unknown>();
+  holdReads(older.promise);
+  follower.show();
+  set({ tab: "activity" });
+  follower.show();
+  set({ tab: "chat" });
+  holdReads(Promise.resolve({ draft: null }));
+  follower.show();
+  await flush();
+
+  older.resolve({ draft: { message_id: "m", text: "A\n\nB" } });
+  await flush();
+  assert.equal(state().draft, undefined);
+});
+
 test("a wait's draft is applied, and a cleared draft reads the stored message", () => {
   const { follower, state, refreshes } = fixture();
   follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hel" });
