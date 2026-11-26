@@ -49,9 +49,6 @@ export class DraftFollower {
   /** The shown draft the service cleared, and the reads started by then. */
   private completed?: { message_id: string; reads: number };
 
-  /** Drafts set so far, so a draft read can tell a newer one arrived. */
-  private sets = 0;
-
   /** Applies a streamed draft update for the selected task. */
   apply(update: DraftUpdate) {
     if (update.task_id !== this.context.snapshot().selected) return;
@@ -109,7 +106,6 @@ export class DraftFollower {
 
   /** Keeps `draft` in full, and patches it when its shown part changes. */
   private set(draft: DraftState | undefined) {
-    this.sets++;
     this.full = draft;
     const shown = this.context.snapshot().draft;
     const next = draft && visible(draft);
@@ -164,7 +160,7 @@ export class DraftFollower {
   private async readDraft() {
     const id = this.context.snapshot().selected;
     if (!id) return;
-    const sets = this.sets;
+    const known = this.full;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
       "app_wait_for_updates",
@@ -172,7 +168,7 @@ export class DraftFollower {
     );
 
     // A draft set since the read started is newer, so it stays.
-    if (this.context.snapshot().selected === id && this.sets === sets) {
+    if (this.context.snapshot().selected === id && this.full === known) {
       this.set(read.draft ? { task: id, ...read.draft } : undefined);
     }
   }
@@ -229,9 +225,22 @@ export class DraftFollower {
     }
   }
 
-  /** Applies a wait's draft for `target`; returns whether it changed. */
+  /**
+   * Applies a wait's draft for `target`. Returns whether it changed, or the
+   * draft changed since the wait started, so the next wait follows at once.
+   */
   receive(target: DraftTarget, read: DraftRead) {
     if (this.context.snapshot().selected !== target.task_id) return false;
+    const current = this.current();
+    const known = current?.task === target.task_id ? current : undefined;
+
+    // A draft set during the wait is newer, so it stays.
+    if (
+      known?.message_id !== target.message_id ||
+      known?.text.length !== target.after_length
+    ) {
+      return true;
+    }
 
     const draft = read.draft
       ? { task: target.task_id, ...read.draft }

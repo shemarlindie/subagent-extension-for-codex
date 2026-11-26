@@ -116,8 +116,37 @@ test("a draft read that returns after a wait's newer draft keeps the newer one",
   assert.equal(state().draft?.text, "Hello");
 });
 
+test("a wait that returns after a newer draft read keeps the newer one", async () => {
+  const { follower, state, holdReads } = fixture();
+
+  holdReads(
+    Promise.resolve({ draft: { message_id: "m", text: "A\n\nB\n\n" } }),
+  );
+
+  follower.show();
+  await flush();
+  const older = { draft: { message_id: "m", text: "A\n\n" }, running: true };
+  follower.receive({ task_id: "a" }, older);
+  assert.equal(state().draft?.text, "A\n\nB");
+});
+
+test("a streamed update after a gap leaves the recovery read valid", async () => {
+  const { follower, state, holdReads } = fixture();
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "A" });
+  const read = deferred<unknown>();
+  holdReads(read.promise);
+  follower.apply({ task_id: "a", message_id: "m", offset: 5, text: "x" });
+  // A later delta's read is still pending when the first one returns.
+  holdReads(deferred<unknown>().promise);
+  follower.apply({ task_id: "a", message_id: "m", offset: 6, text: "y" });
+  read.resolve({ draft: { message_id: "m", text: "A\n\nB\n\nxy" } });
+  await flush();
+  assert.equal(state().draft?.text, "A\n\nB");
+});
+
 test("a wait's draft is applied, and a cleared draft reads the stored message", () => {
   const { follower, state, refreshes } = fixture();
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hel" });
   const target = { task_id: "a", message_id: "m", after_length: 3 };
   const draft = { message_id: "m", text: "Hello\n\nWo" };
   const shown = { task: "a", message_id: "m", text: "Hello" };
