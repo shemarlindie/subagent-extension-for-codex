@@ -47,9 +47,24 @@ function listedFile(row: RecordedChange) {
   };
 }
 
-/** The file list and totals shared by full reads and counts. */
-function listing(task: Task, rows: RecordedChange[]) {
-  const files = rows.filter((row) => row.path).map(listedFile);
+/** The panel's file entry: its signature comes from the recorded row, so it needs no diff. */
+function signedFile(row: RecordedChange) {
+  const file = listedFile(row);
+  const { incomplete, source, hunks } = row;
+
+  return {
+    ...file,
+    signature: hash(JSON.stringify([file.status, incomplete, source, hunks])),
+  };
+}
+
+/** The file list and totals shared by full reads, the panel's list and counts. */
+function listing<F extends ReturnType<typeof listedFile>>(
+  task: Task,
+  rows: RecordedChange[],
+  toFile: (row: RecordedChange) => F,
+) {
+  const files = rows.filter((row) => row.path).map(toFile);
 
   return {
     files,
@@ -124,7 +139,7 @@ export class Changes extends ChangeStore {
 
     return {
       scope,
-      ...listing(task, rows),
+      ...listing(task, rows, listedFile),
       diff,
       ...(end < parts.length
         ? {
@@ -138,28 +153,10 @@ export class Changes extends ChangeStore {
     };
   }
 
-  /** The panel's list: each file's signature comes from its recorded row, so it needs no diff. */
   changeList(task: Task, scope: ChangeScope): ChangeList {
     const { rows, revision } = this.revisedRows(task, scope);
 
-    return {
-      scope,
-      ...listing(task, rows),
-      files: rows
-        .filter((row) => row.path)
-        .map((row) => {
-          const file = listedFile(row);
-          const { incomplete, source, hunks } = row;
-
-          return {
-            ...file,
-            signature: hash(
-              JSON.stringify([file.status, incomplete, source, hunks]),
-            ),
-          };
-        }),
-      revision,
-    };
+    return { scope, ...listing(task, rows, signedFile), revision };
   }
 
   /** One listed file's diff, as long as the recorded changes match the list's revision. */
@@ -181,7 +178,11 @@ export class Changes extends ChangeStore {
   }
 
   counts(task: Task): ChangeCounts {
-    const { files, ...totals } = listing(task, this.rows(task, "task"));
+    const { files, ...totals } = listing(
+      task,
+      this.rows(task, "task"),
+      listedFile,
+    );
 
     return { scope: "task", ...totals, files: files.length };
   }
