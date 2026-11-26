@@ -104,6 +104,7 @@ const defaults: Settings = {
   canSend: true,
   canShare: true,
   canDownload: true,
+  canOpenFiles: true,
   showInspector: false,
   // The fixtures give most of their tasks to this thread.
   threadId: PREVIEW_THREAD,
@@ -272,6 +273,7 @@ export function Host() {
     canSend,
     canShare,
     canDownload,
+    canOpenFiles,
     threadId,
     cwd,
     autoRegister,
@@ -290,6 +292,7 @@ export function Host() {
     canSend,
     canShare,
     canDownload,
+    canOpenFiles,
     threadId,
     cwd,
     autoRegister,
@@ -313,6 +316,7 @@ export function Host() {
       ...(canSend ? { message: { text: {} } } : {}),
       ...(canShare ? { updateModelContext: { structuredContent: {} } } : {}),
       ...(canDownload ? { downloadFile: {} } : {}),
+      ...(canOpenFiles ? { experimental: { "openai/files": {} } } : {}),
     };
 
     let client: Promise<Client> | undefined;
@@ -613,6 +617,14 @@ export function Host() {
             onChange={(e) => update({ canDownload: e.target.checked })}
           />
           File downloads
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={canOpenFiles}
+            onChange={(e) => update({ canOpenFiles: e.target.checked })}
+          />
+          Open files
         </label>
         {source === "fixtures" && (
           <label

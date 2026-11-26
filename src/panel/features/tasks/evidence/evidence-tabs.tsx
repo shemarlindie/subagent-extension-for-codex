@@ -11,12 +11,14 @@ import { LoadingSwap } from "../../../shared/components/loading-skeleton/loading
 import { TabList } from "../../../shared/components/tabs/tab-list";
 import { useActiveTabInView } from "../../../shared/components/tabs/use-active-tab-in-view";
 import { ChangesPanel } from "../../changes/changes-panel";
+import { FileLinkContext } from "../../file-preview/markdown/file-link-context";
 import { ActivitySkeleton } from "../activity/activity-skeleton";
 import { turnStart } from "../activity/event-history";
 import { EventList } from "../activity/event-list";
 import { TurnActivityBanner } from "../activity/turn-activity-banner";
 import { ChatPanel } from "../chat/chat-panel";
 import { TaskDetails } from "../inspector/task-details";
+import { useTaskFileOpener } from "../shared/use-task-file-opener";
 import { TabLabel } from "./tab-label";
 
 type EvidenceTabsProps = { task?: Task; taskId: string };
@@ -24,6 +26,8 @@ type EvidenceTabsProps = { task?: Task; taskId: string };
 /** Keeps one tab shell mounted while only its header or content changes with data. */
 export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
   const controller = useController();
+  // Worker messages link files in the task workspace.
+  const openFile = useTaskFileOpener(taskId);
 
   const {
     tab,
@@ -166,7 +170,9 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         keepMounted
         aria-busy={!task || chatHistoryLoading === task.id || undefined}
       >
-        <ChatPanel task={task} taskId={taskId} />
+        <FileLinkContext value={openFile}>
+          <ChatPanel task={task} taskId={taskId} />
+        </FileLinkContext>
       </Tabs.Panel>
       <Tabs.Panel value="changes">
         <ChangesPanel task={task} taskId={taskId} />
@@ -178,24 +184,26 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         keepMounted
         aria-busy={activityBusy || undefined}
       >
-        <div className="activity-content">
-          {task && focus && range && (
-            <TurnActivityBanner
-              turn={focus.turn}
-              loading={range === "loading"}
-              onShowLatest={() => controller.showLatestActivity()}
-            />
-          )}
-          <LoadingSwap
-            loading={activityBusy}
-            busy={false}
-            skeleton={
-              <ActivitySkeleton announce={!(focus && range === "loading")} />
-            }
-          >
-            {renderActivityEvents()}
-          </LoadingSwap>
-        </div>
+        <FileLinkContext value={openFile}>
+          <div className="activity-content">
+            {task && focus && range && (
+              <TurnActivityBanner
+                turn={focus.turn}
+                loading={range === "loading"}
+                onShowLatest={() => controller.showLatestActivity()}
+              />
+            )}
+            <LoadingSwap
+              loading={activityBusy}
+              busy={false}
+              skeleton={
+                <ActivitySkeleton announce={!(focus && range === "loading")} />
+              }
+            >
+              {renderActivityEvents()}
+            </LoadingSwap>
+          </div>
+        </FileLinkContext>
       </Tabs.Panel>
       <Tabs.Panel
         value="details"

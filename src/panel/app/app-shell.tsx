@@ -3,11 +3,12 @@ import { useEffect, useLayoutEffect } from "react";
 import { LoginForm } from "../features/auth/login-form";
 import { InlinePreview } from "../features/tasks/list/inline-preview";
 import { useUnreadTitle } from "../features/tasks/unread/use-unread-title";
-import { Button } from "../shared/components/button/button";
+import { ActionFailureBanner } from "../shared/components/action-failure/action-failure-banner";
 import { Presence } from "../shared/components/motion/presence";
 import { DialogHost } from "../shared/dialogs/dialog-host";
 import { trackIdleScrollbars } from "../shared/utils/idle-scrollbars";
 import { PageOutlet } from "./navigation/page-outlet";
+import { isSettingsPageDialog } from "./navigation/pages";
 import { useController, useSnapshot } from "./state/controller-context";
 import type { Snapshot } from "./state/types";
 import { TaskArrivalToast } from "./task-arrival-toast";
@@ -37,15 +38,17 @@ export function AppShell() {
   const controller = useController();
   const { embedded } = controller.transport;
 
-  const { selected, newTask, host, error, actionFailure } = useSnapshot([
+  const { selected, newTask, host, error, dialog } = useSnapshot([
     "selected",
     "newTask",
     "host",
     "error",
-    "actionFailure",
+    "dialog",
   ]);
 
   const compact = isCompact({ host }, embedded);
+  // The open dialog shows action failures in its place.
+  const modal = Boolean(dialog) && !isSettingsPageDialog(dialog);
   useEffect(() => trackIdleScrollbars(document), []);
   useUnreadTitle();
   useUndoShortcuts();
@@ -69,20 +72,7 @@ export function AppShell() {
               </div>
             )}
           </Presence>
-          <Presence show={Boolean(actionFailure)}>
-            {actionFailure && (
-              <div className="context-error action-failure">
-                <span role="alert">{actionFailure}</span>
-                <Button
-                  variant="text"
-                  aria-label="Dismiss action failure"
-                  onClick={controller.dismissActionFailure}
-                >
-                  Dismiss
-                </Button>
-              </div>
-            )}
-          </Presence>
+          {!modal && <ActionFailureBanner />}
           {/* Toasts share one stack at the top: a new task, then undo. */}
           <div className="toast-stack">
             <TaskArrivalToast />

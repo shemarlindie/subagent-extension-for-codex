@@ -20,6 +20,7 @@ import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
 import { ChangedFileNav } from "./changed-file-nav";
 import { changedFileDiff, changedFileEntries } from "./changed-files";
+import { OpenFileButton } from "./open-file-button";
 import { readChangedFile } from "./read-changes";
 import type { ChangedFileContent } from "./types";
 import { isViewed, nextUnviewed, useViewedFiles } from "./use-viewed-files";
@@ -154,6 +155,12 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     <ChangedFileViewed task={task} path={shown} onViewed={handleViewed} />
   );
 
+  // The file as it is now, which a deleted file or removed workspace lacks.
+  const openButton = (file?.state === "present" ||
+    file?.state === "binary") && (
+    <OpenFileButton taskId={task.id} path={shown} disabled={loading} />
+  );
+
   const askButton = (
     <AskFileButton
       task={task}
@@ -245,7 +252,12 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             mime_type: file.mime_type,
           }}
           viewSwitcherTarget={viewSwitcherTarget}
-          beforeActions={askButton}
+          beforeActions={
+            <>
+              {openButton}
+              {askButton}
+            </>
+          }
           actions={viewedToggle}
           diff={diff}
           view={view}
@@ -271,6 +283,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
               <span className="file-name">{fileName(shown)}</span>
             </span>
             <span className="toolbar-actions">
+              {openButton}
               {askButton}
               {viewedToggle}
             </span>

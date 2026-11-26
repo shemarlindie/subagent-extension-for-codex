@@ -424,12 +424,11 @@ body[data-expanded-panel="true"]
   }
   .changed-file-preview .file-preview-toolbar > .toolbar-actions {
     justify-self: stretch;
-    justify-content: space-between;
     min-width: 0;
     max-width: 100%;
   }
-  /* Ask Codex is hidden in global mode; keep a lone checkbox at the row's end. */
-  .changed-file-preview .toolbar-actions > .viewed-toggle:only-child {
+  /* File actions sit together at the start, and Viewed at the row's end. */
+  .changed-file-preview .toolbar-actions > .viewed-toggle {
     margin-inline-start: auto;
   }
   .changed-file-preview .toolbar-actions > .file-action {

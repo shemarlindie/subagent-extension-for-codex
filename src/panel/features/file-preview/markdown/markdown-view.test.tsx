@@ -6,6 +6,7 @@ import { afterEach, expect, onTestFinished, test, vi } from "vitest";
 
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
+import { FileLinkContext } from "./file-link-context";
 import { linkKind } from "./markdown-urls";
 import { MarkdownView } from "./markdown-view";
 
@@ -33,6 +34,32 @@ test("relative and unsafe links render as text, not broken links", () => {
   expect(screen.getByText("bad").tagName).toBe("SPAN");
   expect(container.querySelectorAll("a")).toHaveLength(1);
   expect(screen.getByText("web").getAttribute("target")).toBe("_blank");
+});
+
+test("file links open their path without a line suffix where a view opens files", async () => {
+  const openFile = vi.fn(async (_path: string) => {});
+
+  render(
+    <FileLinkContext value={openFile}>
+      <MarkdownView content="[a](src/a.ts:42-50) [b](/w/my%20b.ts#L3) [c](README.md:12:3) [d](docs/d.md) [e](Makefile:12)" />
+    </FileLinkContext>,
+  );
+
+  const names = ["a", "b", "c", "d", "e"];
+  for (const name of names) fireEvent.click(screen.getByText(name));
+
+  // Each link is idle again once its open settles.
+  await vi.waitFor(() =>
+    expect(document.querySelector("[aria-busy]")).toBeNull(),
+  );
+
+  expect(openFile.mock.calls.map(([path]) => path)).toEqual([
+    "src/a.ts",
+    "/w/my b.ts",
+    "README.md",
+    "docs/d.md",
+    "Makefile",
+  ]);
 });
 
 function renderWithController(content: string) {

@@ -8,6 +8,8 @@ import {
   type McpUiHostContext,
 } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OPENAI_FILE_OPEN_METHOD } from "@openai/mcp-extensions/app";
+import { z } from "zod";
 
 export type PanelBridgeOptions = {
   name: string;
@@ -139,6 +141,19 @@ export function connectPanel(
 
     return {};
   };
+
+  // Codex shows the file in its viewer. A browser can't, so the open is logged.
+  bridge.setRequestHandler(
+    z.object({
+      method: z.literal(OPENAI_FILE_OPEN_METHOD),
+      params: z.object({ path: z.string() }),
+    }),
+    async ({ params }) => {
+      record("open file", params.path);
+
+      return {};
+    },
+  );
 
   bridge.addEventListener("loggingmessage", (params) => record("log", params));
 

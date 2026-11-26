@@ -110,7 +110,11 @@ begin(refactor, ["Read", "Edit", "Bash", "Task"]);
 rateLimit(refactor);
 refactor.sdk({ type: "system", subtype: "status", status: "requesting" });
 refactor.think("Planning the module split before touching files.");
-refactor.say("Splitting billing into invoices and payments.");
+
+// File links open in hosts that open files, and the missing one shows why not.
+refactor.say(
+  "Splitting [index.ts](billing/index.ts:1) into [invoices.ts](billing/invoices.ts) and [payments.ts](billing/payments.ts#L3). The old [currency.ts](billing/currency.ts) helper goes away.",
+);
 
 refactor.add("agent.input_required", {
   request: {

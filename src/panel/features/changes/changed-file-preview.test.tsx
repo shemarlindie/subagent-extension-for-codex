@@ -33,11 +33,15 @@ const data: Changes = {
   diff: paths.map((path) => diffOf(path, `${path} content`)).join(""),
 };
 
-function setup(path: string, changes: Changes = data) {
+function setup(
+  path: string,
+  changes: Changes = data,
+  openFile?: (path: string) => Promise<void>,
+) {
   onTestFinished(cleanup);
 
   const controller = new Controller(
-    { embedded: true, dispose() {} } as unknown as Transport,
+    { embedded: true, dispose() {}, openFile } as unknown as Transport,
     { hidden: () => false, wide: () => false },
   );
 
@@ -47,6 +51,7 @@ function setup(path: string, changes: Changes = data) {
 
   const snapshot = {
     ...initial,
+    host: { ...initial.host, canOpenFiles: Boolean(openFile) },
     conversation: "thread-one",
     changes: {
       task: task.id,
@@ -61,9 +66,10 @@ function setup(path: string, changes: Changes = data) {
 
   // Each file reads as its own content; b.ts never finishes, gone.ts is deleted.
   vi.spyOn(controller, "tool").mockImplementation((async (
-    _name: string,
+    name: string,
     args: { path: string },
   ) => {
+    if (name === "app_get_task_file_path") return { path: `/w/${args.path}` };
     if (args.path === "b.ts") return new Promise(() => {});
 
     if (args.path === "gone.ts") {
@@ -165,6 +171,41 @@ test("the preview steps through the changed files in order, wrapping at the ends
 
   fireEvent.click(previous);
   assert.deepEqual(show.mock.lastCall, ["b.ts"]);
+});
+
+test("Open shows a file that still exists, once per click while it opens", async () => {
+  let finish = () => {};
+
+  const openFile = vi.fn(
+    (_path: string) =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+
+  const { view } = setup("a.ts", data, openFile);
+  await act(async () => {});
+  const open = view.getByRole("button", { name: "Open in Codex" });
+
+  fireEvent.click(open);
+  fireEvent.click(open);
+  await vi.waitFor(() => expect(openFile).toHaveBeenCalledOnce());
+  expect(open.getAttribute("aria-busy")).toBe("true");
+
+  await act(async () => finish());
+  expect(open.getAttribute("aria-busy")).toBeNull();
+  expect(openFile.mock.calls).toEqual([["/w/a.ts"]]);
+
+  fireEvent.click(open);
+  await vi.waitFor(() => expect(openFile).toHaveBeenCalledTimes(2));
+
+  cleanup();
+  const deleted = setup("gone.ts", data, openFile);
+  await act(async () => {});
+
+  expect(
+    deleted.view.queryByRole("button", { name: "Open in Codex" }),
+  ).toBeNull();
 });
 
 test("marking a file viewed moves on to the next unread one", async () => {

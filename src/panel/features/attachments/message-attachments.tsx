@@ -1,6 +1,7 @@
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { useController } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
+import { errorMessage } from "../../shared/utils/error-message";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
 import { AttachmentRow } from "./attachment-row";
 
@@ -54,7 +55,11 @@ export function MessageAttachments({
         <AttachmentChip
           attachment={attachment}
           maxWidth={maxWidth}
-          onOpen={() => controller.run(() => open(attachment))}
+          onOpen={() =>
+            open(attachment).catch((error: unknown) =>
+              controller.reportActionFailure(errorMessage(error)),
+            )
+          }
         />
       )}
       copy={(attachment) => (

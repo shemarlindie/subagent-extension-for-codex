@@ -79,10 +79,19 @@ refusal.
 
 ## Opening files
 
-When the host advertises `capabilities.experimental["openai/files"]`, attachment
-chips open their file in the host's viewer through `openai/files/open`. Other
-hosts use the panel's preview. Verified in the Codex desktop app 26.1120 with
-PDFs, images and text.
+When the host advertises `capabilities.experimental["openai/files"]`, the panel
+opens files in the host's viewer through `openai/files/open`:
+
+- attachment chips open their stored file
+- worker file links in Chat and Activity open the task workspace file
+- the Changes preview's **Open** action opens the changed file
+
+Other hosts use the panel's preview for attachments, show file links as text and
+leave out **Open**.
+
+Verified in the Codex desktop app 26.1120 with PDFs, images and text. There the
+thread panel gets `openai/files`, but the **Delegated Work** sidebar panel
+doesn't.
 
 ## Project context and registration
 

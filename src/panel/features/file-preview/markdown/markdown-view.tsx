@@ -7,6 +7,7 @@ import { MarkdownCode } from "./markdown-code";
 import { MarkdownImage } from "./markdown-image";
 import { MarkdownLink } from "./markdown-link";
 import { MarkdownPre } from "./markdown-pre";
+import { markdownUrl } from "./markdown-urls";
 
 type MarkdownViewProps = {
   /**
@@ -75,6 +76,7 @@ const MarkdownPart = memo(function MarkdownPart({
       rehypePlugins={rehypePlugins}
       remarkRehypeOptions={{ clobberPrefix: prefix }}
       components={COMPONENTS}
+      urlTransform={markdownUrl}
     >
       {content}
     </Markdown>
