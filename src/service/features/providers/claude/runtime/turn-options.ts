@@ -61,6 +61,7 @@ function systemPromptAppend(c: RunContext) {
       ? "Work only in the provided task workspace, apart from reading the attachments that messages list, which are read-only."
       : "Work only in the provided task workspace.",
     "End each turn with a plain reply that says what you did, what you found and what is left.",
+    "When you mention a workspace file, link it in Markdown with its workspace-relative path and an optional :line suffix, such as [queue.ts](src/queue.ts:42).",
     "Follow the configured native permission mode for tool execution.",
     workspaceRule(c.task),
   ];
