@@ -192,6 +192,13 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     />
   );
 
+  const diffError = diffRead?.status === "error" && (
+    <DiffReadError
+      error={diffRead.error}
+      onRetry={() => controller.run(() => controller.changes.loadDiff(shown))}
+    />
+  );
+
   const firstRead = loading && !read;
 
   // Each file starts at its top.
@@ -274,6 +281,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           }
           actions={viewedToggle}
           diff={diff}
+          before={diffError}
           view={view}
           onViewChange={setView}
           progress={progress}
@@ -323,14 +331,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
                     <DiffFile file={diff} initiallyOpen />
                   </div>
                 )}
-                {diffRead?.status === "error" && (
-                  <DiffReadError
-                    error={diffRead.error}
-                    onRetry={() =>
-                      controller.run(() => controller.changes.loadDiff(shown))
-                    }
-                  />
-                )}
+                {diffError}
               </>
             )}
             {file?.state === "binary" && (
