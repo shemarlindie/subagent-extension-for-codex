@@ -19,7 +19,11 @@ export function DiffReadError({
         {error}
       </p>
       {/* Stays enabled so it keeps focus. A click while busy reads nothing new. */}
-      <Button aria-busy={retrying || undefined} onClick={onRetry}>
+      <Button
+        variant="text"
+        aria-busy={retrying || undefined}
+        onClick={onRetry}
+      >
         Retry
       </Button>
     </div>
