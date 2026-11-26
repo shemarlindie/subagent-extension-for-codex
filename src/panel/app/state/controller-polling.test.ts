@@ -69,6 +69,36 @@ test.for(["loads", "fails"] as const)(
   },
 );
 
+test("a startup view dropped for a scope change doesn't set the first wait's revision", async (t) => {
+  const { controller, transport } = setup();
+  t.onTestFinished(() => controller.dispose());
+  const first = deferred<{ tasks: Task[] }>();
+  let lists = 0;
+
+  transport.handler = (name) => {
+    if (name !== "app_list_tasks") return undefined;
+    lists += 1;
+    if (lists === 1) return first.promise;
+    if (lists === 2) return Promise.reject(new Error("List unavailable"));
+
+    return undefined;
+  };
+
+  const starting = controller.start();
+  await flush();
+  transport.events.scope({ panel_scope: { conversation_id: "chat-b" } });
+  first.resolve({ tasks: [task("a")] });
+  await starting;
+
+  const wait = transport.calls.find(
+    (call) => call.name === "app_wait_for_updates" && call.args.wait_ms,
+  );
+
+  // Without a revision the service answers at once, so the new scope loads.
+  assert.ok(wait);
+  assert.equal(wait.args.after, undefined);
+});
+
 for (const phase of ["connect", "read", "poll"] as const) {
   test(`host teardown during ${phase} stops further reads and refreshes`, async (t) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });

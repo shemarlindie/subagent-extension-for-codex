@@ -47,7 +47,7 @@ export class ViewRefresh {
 
   constructor(private context: ViewRefreshContext) {}
 
-  /** The revision of the last view that passed ordering. */
+  /** The revision of the last view the panel didn't drop. */
   get revision() {
     return this.latest;
   }
@@ -117,12 +117,14 @@ export class ViewRefresh {
       return false;
     }
 
-    this.latest = read.revision;
     const result = await this.context.apply(read);
 
     if (result === "dropped" || result === "partial") this.countDrop();
-    // The update wait has moved past the change a dropped view carried.
+
+    // Following updates from a dropped view's revision would skip the change
+    // it carried, so a dropped view is read again instead.
     if (result === "dropped") this.rerun = true;
+    else this.latest = read.revision;
 
     return result === "again" || result === "partial";
   }
