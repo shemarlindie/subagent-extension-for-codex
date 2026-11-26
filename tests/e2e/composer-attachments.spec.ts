@@ -26,6 +26,9 @@ test("choose and drop request files, then paste and preview a follow-up image", 
   await request.evaluate((field) => {
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(new File(["Dropped from disk"], "details.txt"));
+    // An empty zip archive, a type the panel can't preview.
+    const zip = Uint8Array.from([80, 75, 5, 6, ...Array<number>(18).fill(0)]);
+    dataTransfer.items.add(new File([zip], "archive.zip"));
     dataTransfer.items.add(new File(["Exclude from request"], "extra.txt"));
     field.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer }));
   });
@@ -39,6 +42,7 @@ test("choose and drop request files, then paste and preview a follow-up image", 
   await expect(attachments.getByRole("button")).toHaveText([
     /notes\.txt/,
     /details\.txt/,
+    /archive\.zip/,
   ]);
 
   const followUp = page.getByRole("textbox", { name: "Message", exact: true });

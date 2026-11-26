@@ -74,6 +74,7 @@ const ICON_NAMES = [
   "reply",
   "paper-plane",
   "stop-solid",
+  "file",
   "file-diff",
   "file-code",
   "file-text",

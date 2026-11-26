@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { OCTET_STREAM } from "../../../shared/attachments/file-type";
 import { useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
@@ -28,7 +29,11 @@ export function DraftFileChipContent({
   } else if (thumbnail) {
     lead = copy ? null : <img src={thumbnail} alt="" />;
   } else {
-    lead = <Icon name="file-text" size={11} />;
+    // An image only lacks a thumbnail when the browser can't decode it.
+    const generic =
+      file.mime === OCTET_STREAM || file.mime?.startsWith("image/");
+
+    lead = <Icon name={generic ? "file" : "file-text"} size={11} />;
   }
 
   return (
