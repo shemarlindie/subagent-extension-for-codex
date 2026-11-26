@@ -72,11 +72,14 @@ function composeView(view: unknown, read: PartRead): PanelView {
 export async function composeHeldView(view: unknown, read: PartRead) {
   const parts = Object.entries(composeView(view, read));
 
-  return Object.fromEntries(
+  const held = Object.fromEntries(
     await Promise.all(
       parts.map(async ([part, value]) => [part, await Promise.resolve(value)]),
     ),
   ) as PanelView;
+
+  // Timestamp the completed view, as the service does.
+  return { ...held, built_at: Date.now() };
 }
 
 /**
