@@ -3,6 +3,41 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.11.0
+
+### Workers
+
+- Claude workers can end a turn with a wrap-up: a short recap and, when the next
+  move waits on someone, one question with reply buttons. A worker that can't go
+  on marks the task **Needs input**, and an idle task row shows the open
+  question. Codex reads the wrap-up through `list_tasks` and answers questions
+  on turns it sent (#184).
+- Workers keep a shorter, more current plan of at most 12 steps, and plan
+  read-only research turns too (#182).
+- Workers link the workspace files they mention. In Codex, those links in Chat
+  and Activity open the file (#186).
+
+### Visuals
+
+- Download a visual as an HTML page, or as a PNG when it's one sized SVG, or
+  copy its code from the menu in its corner. Each visual sits in a card that
+  fits its content (#180).
+- A `visual_guide` tool gives workers style rules, so charts, diagrams and
+  mockups match the panel in light and dark themes. Visual text now matches
+  Chat's size (#181).
+
+### Chat and composer
+
+- Choose, drop or paste local files into new tasks, Advanced task and
+  follow-ups: text, images, PDFs and Office or OpenDocument files, up to 50 MiB
+  per message. In Codex, a file chip opens the file in Codex's side panel
+  (#185).
+
+### Panel
+
+- The Changes file preview has an **Open** action that opens the file in Codex
+  (#186).
+
 ## 0.10.0
 
 ### Workers
