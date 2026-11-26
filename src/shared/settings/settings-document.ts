@@ -250,14 +250,15 @@ function effortScope(
 export function settingsSections(input: ScopeInput): SettingSection[] {
   const { values, providers } = input;
 
-  // Profile and role menus list every provider's models, so any allowlist
-  // shortens them.
-  const modelsLimited = input.catalogs.some(
-    ({ policy }) => policy?.available_models,
-  );
-
   const scopeRow = (scope: string, label: string): ModelScope => {
     const info = modelScope(scope, input);
+
+    // A provider's menu lists its own catalog. Profile menus list every
+    // provider's models, so any allowlist shortens them.
+    const modelsLimited = input.catalogs.some(
+      ({ provider, policy }) =>
+        policy?.available_models && (!info.providerScope || provider === scope),
+    );
 
     return {
       id: scope,
