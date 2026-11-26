@@ -4,7 +4,11 @@ import type {
 } from "../../settings/document-contract.js";
 import { settingAt } from "../../settings/setting-path.js";
 import { titleCase } from "../../text.js";
-import { blockedReason, withBlockedOptions } from "../policy.js";
+import {
+  blockedReason,
+  withBlockedOptions,
+  WORKER_DEFAULTS_HELP,
+} from "../policy.js";
 import type { ProviderPolicy } from "../types.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
@@ -62,7 +66,7 @@ export function inheritHelp(
   const effort = orgEffort ?? runtime.effort;
 
   if (!model && !effort) {
-    return ["the worker's own default. This applies to model and reasoning."];
+    return [WORKER_DEFAULTS_HELP];
   }
 
   // A default model without reasoning levels doesn't run the reasoning.
