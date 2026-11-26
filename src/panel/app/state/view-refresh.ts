@@ -9,6 +9,13 @@ import {
 /** How a load ended: applied, overtaken by a newer scope or read, or failed. */
 export type RefreshOutcome = "applied" | "stale" | { error: unknown };
 
+/**
+ * How applying one view ended: `done`, `again` to read again at once,
+ * `dropped` to read again after this load, or `partial` when some parts were
+ * too old and are read again at once.
+ */
+export type ApplyResult = "done" | "again" | "dropped" | "partial";
+
 interface ViewRefreshContext {
   timing: Pick<TimingReporter, "fetch" | "deliver" | "observe">;
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
@@ -18,18 +25,12 @@ interface ViewRefreshContext {
   scope(): number;
   /** Whether the panel closed or `version` is no longer the scope. */
   stale(version: number): boolean;
-  /**
-   * Reads the panel scope when it isn't known yet, resolving to false when
-   * the scope changed meanwhile. Returns nothing when the scope is known.
-   */
-  ensureScope(): Promise<boolean> | undefined;
+  /** Reads the panel scope when it isn't known yet, resolving to false when the scope changed meanwhile. */
+  ensureScope(): Promise<boolean>;
   /** The view arguments for the panel now, with the counters that guard them. */
   request(): ViewRequest;
-  /**
-   * Applies each part of a view that still fits the panel. Resolves to true
-   * when parts are still to read.
-   */
-  apply(read: ViewRead): Promise<boolean>;
+  /** Applies each part of a view that still fits the panel. */
+  apply(read: ViewRead): Promise<ApplyResult>;
   /** Reports how a load ended, before any rerun it left due. */
   settled(outcome: RefreshOutcome): void;
 }
@@ -66,12 +67,8 @@ export class ViewRefresh {
     let outcome: RefreshOutcome = "stale";
 
     try {
-      const scoped = held ? undefined : this.context.ensureScope();
-
-      if (scoped) {
-        if (!(await scoped)) return;
-        version = this.context.scope();
-      }
+      if (!held && !(await this.context.ensureScope())) return;
+      version = this.context.scope();
 
       let read = held ?? (await this.read());
 
@@ -95,15 +92,6 @@ export class ViewRefresh {
     }
   }
 
-  /**
-   * Counts a dropped view. `reread` asks for one in its place, since the
-   * update wait has moved past the change the dropped view carried.
-   */
-  drop(reread = false) {
-    this.context.timing.observe("view", "merge", 0, { stale_count: 1 });
-    if (reread) this.rerun = true;
-  }
-
   private async read(): Promise<ViewRead> {
     const request = this.context.request();
 
@@ -118,19 +106,29 @@ export class ViewRefresh {
     return { revision, view, request };
   }
 
+  /** Applies a view, resolving to true when parts are to be read again at once. */
   private async apply(read: ViewRead) {
     this.context.timing.deliver(read.view);
 
     // A held wait and an immediate read can return out of order.
     if (olderRevision(read.revision, this.latest)) {
-      this.drop();
+      this.countDrop();
 
       return false;
     }
 
     this.latest = read.revision;
+    const result = await this.context.apply(read);
 
-    return this.context.apply(read);
+    if (result === "dropped" || result === "partial") this.countDrop();
+    // The update wait has moved past the change a dropped view carried.
+    if (result === "dropped") this.rerun = true;
+
+    return result === "again" || result === "partial";
+  }
+
+  private countDrop() {
+    this.context.timing.observe("view", "merge", 0, { stale_count: 1 });
   }
 
   /** Every load outcome is reported, then runs the refresh it left due. */

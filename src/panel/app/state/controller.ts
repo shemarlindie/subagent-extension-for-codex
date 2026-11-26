@@ -73,7 +73,11 @@ import type {
 } from "./types";
 import { UndoHistory } from "./undo-history";
 import { UpdateFollower } from "./update-follower";
-import { ViewRefresh, type RefreshOutcome } from "./view-refresh";
+import {
+  ViewRefresh,
+  type ApplyResult,
+  type RefreshOutcome,
+} from "./view-refresh";
 
 /** How long a quiet panel waits before refreshing anyway, for writes the service can't announce. */
 const FALLBACK_REFRESH_MS = 30_000;
@@ -560,21 +564,21 @@ export class Controller {
   }
 
   /** Reads the panel scope when it isn't known yet; false when the scope changed meanwhile. */
-  private ensureScope() {
-    if (this.state.scopeKnown) return undefined;
+  private async ensureScope() {
+    if (this.state.scopeKnown) return true;
     const version = this.state.scopeVersion;
 
-    return this.tool<PanelData>("get_panel_context", {
+    const context = await this.tool<PanelData>("get_panel_context", {
       conversation_id: null,
-    }).then((context) => {
-      if (this.stale(version)) return false;
-
-      if (!this.applyScope(context, false)) {
-        throw new Error("The service returned no panel scope.");
-      }
-
-      return true;
     });
+
+    if (this.stale(version)) return false;
+
+    if (!this.applyScope(context, false)) {
+      throw new Error("The service returned no panel scope.");
+    }
+
+    return true;
   }
 
   /** Shows how a load ended, then restarts the fallback wait. */
@@ -596,17 +600,12 @@ export class Controller {
   }
 
   /**
-   * Applies each part of a view that still fits the panel. Returns true when
-   * parts are still to read: the list after a project change moved the
-   * scope, or the selected task's details. A list that no longer fits leaves
-   * a rerun due instead.
+   * Applies each part of a view that still fits the panel. Parts still to
+   * read are the list after a project change moved the scope, or the
+   * selected task's details. A list that no longer fits drops the view.
    */
-  private async applyView({ view, request }: ViewRead) {
-    if (this.staleListRead(request.scope, request.projects)) {
-      this.views.drop(true);
-
-      return false;
-    }
+  private async applyView({ view, request }: ViewRead): Promise<ApplyResult> {
+    if (this.staleListRead(request.scope, request.projects)) return "dropped";
 
     const { updating = false, settings, plan_usage } = view;
     this.patch({ updating, panelSettings: settings, planUsage: plan_usage });
@@ -620,7 +619,7 @@ export class Controller {
         conversation_id: this.state.conversation,
       });
 
-      if (this.stale(scope)) return false;
+      if (this.stale(scope)) return "done";
 
       this.applyProjectCandidate(context.panel_project_candidate);
     }
@@ -629,7 +628,7 @@ export class Controller {
     const version = this.state.scopeVersion;
     const stale = workersStale(this.state.workers, this.workersReadAt);
     if (stale) this.run(() => this.refreshWorkers(version));
-    if (version !== request.scope) return true;
+    if (version !== request.scope) return "again";
 
     const lacking = lacksNewSelection(
       request.args.list,
@@ -638,9 +637,7 @@ export class Controller {
     );
 
     if (this.staleListRead(version, request.projects, lacking)) {
-      this.views.drop(true);
-
-      return false;
+      return "dropped";
     }
 
     const { conversation, repository } = this.state;
@@ -660,8 +657,7 @@ export class Controller {
       return this.taskDetails.merge(request, view) ? "merged" : "stale";
     });
 
-    if (merged === "rejected") return false;
-    if (merged === "stale") this.views.drop();
+    if (merged === "rejected") return "done";
 
     // Share after fallback selection so the host sees the same task as the panel.
     if (this.reconcileShare) {
@@ -670,14 +666,14 @@ export class Controller {
     }
 
     this.persistedDialogs.restore(tasks, version);
-    if (this.stale(version)) return false;
-    if (merged === "stale") return true;
+    if (merged === "stale") return this.stale(version) ? "dropped" : "partial";
+    if (this.stale(version)) return "done";
     // Prefetch the selected task's change totals for the tab count. Do not hold
     // up the task list while Git reads in the background.
     this.run(() => this.changes.loadCountsIfStale());
     this.run(() => this.changes.loadChangesIfStale());
 
-    return false;
+    return "done";
   }
 
   /** Project writes, and a newer selection a read lacks, make list reads stale. */
