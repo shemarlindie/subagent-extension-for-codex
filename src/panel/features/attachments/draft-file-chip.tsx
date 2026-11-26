@@ -5,6 +5,7 @@ import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { formatBytes } from "../../shared/utils/format";
+import { useSingleFlight } from "../../shared/utils/use-single-flight";
 import { AttachmentChipTitle, titleTruncated } from "./attachment-chip";
 import { draftPreviewable, type DraftFile } from "./draft-file";
 
@@ -51,7 +52,7 @@ type DraftFileChipProps = {
   previewable: boolean;
   /** A narrow row truncates the first chip to this width. */
   maxWidth?: number;
-  onOpen: () => void;
+  onOpen: () => Promise<void>;
   onRemove: () => void;
 };
 
@@ -72,6 +73,7 @@ export function DraftFileChip({
   const chip = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [truncated, setTruncated] = useState(false);
+  const [opening, run] = useSingleFlight();
   const { thumbnail } = file;
   const label = `${file.name}, ${formatBytes(file.size)}`;
   const opens = hostOpens || (previewable && draftPreviewable(file));
@@ -105,7 +107,8 @@ export function DraftFileChip({
             type="button"
             className="draft-file-open"
             disabled={disabled || !file.upload}
-            onClick={onOpen}
+            aria-busy={opening || undefined}
+            onClick={() => run(onOpen)}
           >
             <DraftFileChipContent file={file} />
           </button>

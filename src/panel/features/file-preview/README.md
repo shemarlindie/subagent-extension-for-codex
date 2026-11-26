@@ -40,8 +40,10 @@ SVG content is markup.
 - **Links.** `http`, `https` and `mailto` links open outside the panel. Embedded
   hosts open them through the host bridge. `#` links to footnotes and headings
   scroll within the same view. Headings and footnotes use unique ids so each
-  link resolves within its own message. Other targets, such as relative file
-  paths, cannot resolve from the panel. They appear as dotted text with the
+  link resolves within its own message. In Chat and Activity, links to files in
+  the task workspace, with or without a `:42` or `#L42` line suffix, open in
+  [hosts that open files](../../../../docs/host-capabilities.md#opening-files).
+  Other targets, including file links elsewhere, appear as dotted text with the
   target in a tooltip.
 - **Images.** Markdown images never load. Each shows its alt text with the
   source in a tooltip. A worker could otherwise send data out through a remote

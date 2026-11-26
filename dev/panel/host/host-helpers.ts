@@ -20,6 +20,8 @@ export type Settings = {
   canSend: boolean;
   canShare: boolean;
   canDownload: boolean;
+  /** Advertises `openai/files`. The host logs each open instead of showing it. */
+  canOpenFiles: boolean;
   showInspector: boolean;
   threadId: string;
   cwd: string;
@@ -210,6 +212,9 @@ export const FIXTURE_SERVICE_TOOLS: string[] = [
   "app_remove_worktree",
   "app_delete_branch",
   "app_get_attachment",
+  "app_get_attachment_path",
+  "app_stage_file",
+  "app_get_task_file_path",
 ];
 
 const FIXTURE_SERVICE_PATH = "/fixture-service/tools/";

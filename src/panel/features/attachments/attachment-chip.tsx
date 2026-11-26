@@ -3,6 +3,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
 import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
+import { useSingleFlight } from "../../shared/utils/use-single-flight";
 import {
   attachmentIcon,
   attachmentRange,
@@ -72,7 +73,7 @@ type AttachmentChipProps = {
   attachment: MessageAttachment;
   /** A narrow row truncates the first chip's title to this width. */
   maxWidth?: number;
-  onOpen: () => void;
+  onOpen: () => Promise<void>;
 };
 
 /**
@@ -87,6 +88,7 @@ export function AttachmentChip({
   const chip = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [truncated, setTruncated] = useState(false);
+  const [opening, run] = useSingleFlight();
 
   const style: CSSProperties | undefined =
     maxWidth === undefined ? undefined : { maxWidth };
@@ -118,7 +120,8 @@ export function AttachmentChip({
         type="button"
         className="attachment-chip"
         style={style}
-        onClick={onOpen}
+        aria-busy={opening || undefined}
+        onClick={() => run(onOpen)}
       >
         <AttachmentChipContent attachment={attachment} />
       </button>

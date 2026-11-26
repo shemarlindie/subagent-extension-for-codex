@@ -3,6 +3,7 @@ import { useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 import type { StagedFile } from "../../../shared/attachments/model";
 import { useController } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
+import { errorMessage } from "../../shared/utils/error-message";
 import {
   draftPreview,
   fileLimit,
@@ -123,7 +124,10 @@ export function useDraftFiles(
     errors,
     pending: files.some((item) => !item.upload),
     add,
-    open: (file: DraftFile) => controller.run(() => open(file)),
+    open: (file: DraftFile) =>
+      open(file).catch((error: unknown) =>
+        controller.reportActionFailure(errorMessage(error)),
+      ),
     remove: (fileId: number) =>
       update({
         files: current().filter((file) => file.id !== fileId),

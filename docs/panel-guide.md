@@ -348,9 +348,12 @@ The inspector offers Chat, Activity, Changes and Details. Chat shows requests,
 follow-ups, worker messages, replies and turn outcomes. Reports the worker sends
 to Codex appear in Activity only. Worker and parent-agent text renders as
 [Markdown](../src/panel/features/file-preview/README.md#markdown), and your text
-shows as typed. Draft replies stream a paragraph at a time, and the stored
-message replaces them, adding the last paragraph. Code blocks in Chat and
-Activity have a copy action in their header.
+shows as typed. Workers link the workspace files they mention, and a link opens
+the file in Codex's viewer where
+[the host can open files](host-capabilities.md#opening-files). Draft replies
+stream a paragraph at a time, and the stored message replaces them, adding the
+last paragraph. Code blocks in Chat and Activity have a copy action in their
+header.
 
 [Attachments](mcp-reference.md#attachments) on the request or a follow-up show
 as chips under it, with a summary on hover or focus. Chips that don't fit fold
@@ -534,8 +537,10 @@ and scrolls it to the top, adding space after the last file when needed. The
 navigator stays open between picks. Collapse it with its close button, **Files**
 or Escape. It starts collapsed when you open Changes.
 
-**File preview options → Wrap lines** wraps source and diff lines. **Ask Codex
-about this file** opens the [handoff flow](#handoff-and-deletion).
+**File preview options → Wrap lines** wraps source and diff lines. **Open**
+shows the file in Codex's viewer, where
+[the host can open files](host-capabilities.md#opening-files). **Ask Codex about
+this file** opens the [handoff flow](#handoff-and-deletion).
 
 ### Worktree actions
 

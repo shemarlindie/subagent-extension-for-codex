@@ -1,7 +1,9 @@
 import { useContext, type ComponentProps, type MouseEvent } from "react";
 
 import { ControllerContext } from "../../../app/state/controller-context";
-import { linkKind } from "./markdown-urls";
+import { FileLink } from "./file-link";
+import { FileLinkContext } from "./file-link-context";
+import { linkedFilePath, linkKind } from "./markdown-urls";
 
 type MarkdownLinkProps = ComponentProps<"a"> & { node?: unknown };
 
@@ -43,9 +45,19 @@ export function MarkdownLink({
   ...rest
 }: MarkdownLinkProps) {
   const controller = useContext(ControllerContext);
+  const openFile = useContext(FileLinkContext);
   const kind = linkKind(href);
+  const filePath = kind === "file" && href ? linkedFilePath(href) : undefined;
 
-  if (!href || kind === "text") {
+  if (filePath && openFile) {
+    return (
+      <FileLink path={filePath} openFile={openFile}>
+        {children}
+      </FileLink>
+    );
+  }
+
+  if (!href || kind === "text" || kind === "file") {
     return (
       <span className="markdown-link-text" title={href || undefined}>
         {children}

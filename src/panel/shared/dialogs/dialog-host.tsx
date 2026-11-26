@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import { isSettingsPageDialog } from "../../app/navigation/pages";
 import { useController, useSnapshot } from "../../app/state/controller-context";
+import { ActionFailureBanner } from "../components/action-failure/action-failure-banner";
 import { buttonClass } from "../components/button/button";
 import { Icon } from "../components/icons/icons";
 import { useAnimatedHeight } from "../components/motion/use-animated-height";
@@ -141,6 +142,7 @@ export function DialogHost({ suspended = false }: { suspended?: boolean }) {
             </Dialog.Close>
           </div>
           {shownDialog && <DialogSubtitle dialog={shownDialog} />}
+          {activeDialog && <ActionFailureBanner />}
           {shownDialog && <DialogContent dialog={shownDialog} />}
         </Dialog.Popup>
       </Dialog.Portal>

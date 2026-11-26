@@ -304,6 +304,16 @@
 .markdown-body a {
   color: var(--accent);
 }
+/* A file link opens through the panel, so it's a button that looks like a link. */
+.markdown-body .markdown-file-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline;
+}
 .markdown-body blockquote {
   margin: 0;
   padding: 0 1em;
