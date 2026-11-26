@@ -40,7 +40,10 @@ import {
   type ViewRequest,
 } from "./panel-view";
 import { patchState } from "./patch-state";
-import { PersistedDialogs } from "./persistence/persisted-dialogs";
+import {
+  PersistedDialogs,
+  type DialogDrafts,
+} from "./persistence/persisted-dialogs";
 import { persistView } from "./persistence/persisted-view";
 import { RevisionTrigger } from "./revision-trigger";
 import {
@@ -154,7 +157,9 @@ export class Controller {
   private explicitSelection = false;
   private arrivals = new TaskArrivals();
   private restoredView?: PersistedViewState;
-  readonly dialogs: PersistedDialogs;
+  private persistedDialogs: PersistedDialogs;
+  /** Dialog drafts and the last settings section, for forms. */
+  readonly dialogs: DialogDrafts;
   private viewStateReady = false;
   private timer?: ReturnType<typeof setTimeout>;
   /** When workers were last read, so a CLI that breaks mid-session still shows. */
@@ -184,7 +189,8 @@ export class Controller {
 
   readonly dialogLoader = new DialogLoader({
     ...this.formContext,
-    seedDraft: (dialog, draft) => this.dialogs.seed(dialog, draft, false),
+    seedDraft: (dialog, draft) =>
+      this.persistedDialogs.seed(dialog, draft, false),
     explicitSelection: () => this.explicitSelection,
   });
 
@@ -247,7 +253,7 @@ export class Controller {
     this.session = new SessionStateStore(viewState?.composerDrafts);
     this.restoredView = viewState?.initial.view ?? {};
 
-    this.dialogs = new PersistedDialogs(
+    this.dialogs = this.persistedDialogs = new PersistedDialogs(
       {
         ...this.stateContext,
         changed: () => {
@@ -273,7 +279,7 @@ export class Controller {
     this.state = {
       ...initial,
       page:
-        this.dialogs.latest()?.kind === "settings"
+        this.persistedDialogs.latest()?.kind === "settings"
           ? "settings"
           : (this.restoredView.page ?? initial.page),
       filter: this.restoredView.filter ?? initial.filter,
@@ -296,7 +302,7 @@ export class Controller {
     if (this.disposed) return;
 
     if (patch.dialog && patch.dialog !== this.state.dialog) {
-      this.dialogs.shown(this.state.dialog, patch.dialog);
+      this.persistedDialogs.shown(this.state.dialog, patch.dialog);
     }
 
     const previous = this.state;
@@ -316,14 +322,14 @@ export class Controller {
   private saveViewState() {
     this.viewState?.save({
       view: persistView(this.state, this.browsing),
-      ...this.dialogs.saved(),
+      ...this.persistedDialogs.saved(),
     });
   }
 
   private closeDialog() {
-    this.dialogs.pop();
+    this.persistedDialogs.pop();
     this.patch({ dialog: undefined, formError: "" });
-    this.dialogs.restore(this.state.tasks, this.state.scopeVersion);
+    this.persistedDialogs.restore(this.state.tasks, this.state.scopeVersion);
   }
 
   private defaultSelection = (tasks: Task[]) =>
@@ -407,7 +413,7 @@ export class Controller {
       });
 
       this.patch({ connected: true, loginRequired: false });
-      const savedDialog = this.dialogs.latest();
+      const savedDialog = this.persistedDialogs.latest();
 
       if (!this.state.dialog && savedDialog?.kind === "settings") {
         this.dialogLoader.openSettings();
@@ -697,7 +703,7 @@ export class Controller {
       this.reconcileShare = false;
     }
 
-    this.dialogs.restore(tasks, version);
+    this.persistedDialogs.restore(tasks, version);
     if (this.stale(version)) return false;
     if (merged === "stale") return true;
     // Prefetch the selected task's change totals for the tab count. Do not hold
@@ -753,7 +759,7 @@ export class Controller {
       this.state,
       projects,
       removed,
-      this.dialogs.draft("delegate")?.repository,
+      this.persistedDialogs.draft("delegate")?.repository,
     );
 
     if (reset === "repository") {
@@ -1037,7 +1043,7 @@ export class Controller {
         ? { ...currentDialog, scope: scopeVersion }
         : undefined;
 
-    if (!this.restoredView && !scopeSafeDialog) this.dialogs.clear();
+    if (!this.restoredView && !scopeSafeDialog) this.persistedDialogs.clear();
 
     const restoredSelection = this.restoredView?.browsing
       ? undefined
@@ -1316,7 +1322,7 @@ export class Controller {
     };
 
     // Seed the form before publishing it and keep its file preview underneath.
-    this.dialogs.seed(
+    this.persistedDialogs.seed(
       dialog,
       { message: handoffMessage(task, target, contextText) },
       Boolean(previous),
