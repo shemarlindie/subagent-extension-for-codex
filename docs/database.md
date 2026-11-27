@@ -51,7 +51,9 @@ scheduling paths indexed, so their cost grows with the rows a request needs.
 4. Write any data change, such as a backfill, in one custom migration from
    `npx drizzle-kit generate --custom --name <change>`. Keeping it out of the
    generated SQL shows reviewers which SQL is hand-written. It runs after the
-   generated migration, in the same transaction.
+   generated migration, in the same transaction. When a backfill reads a table
+   the change removes, generate the removal as its own migration after the
+   backfill.
 5. Run the focused database tests and the affected feature tests.
 
 Commit the new folders under `migrations/` with the change. Never edit a

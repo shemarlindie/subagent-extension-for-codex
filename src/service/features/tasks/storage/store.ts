@@ -35,6 +35,7 @@ import {
 } from "./event-records.js";
 import { EventStorageMetrics } from "./event-storage-metrics.js";
 import { MessageStore } from "./message-store.js";
+import { clearEndedRequests } from "./pending-update-store.js";
 import { publishListeners } from "./publish-listeners.js";
 import { ReadMetrics } from "./read-metrics.js";
 import { events, taskRead, tasks } from "./schema.js";
@@ -102,11 +103,12 @@ export class Store {
     }
 
     const saved: [Task, string][] = [];
-    this.saved = saved;
-    this.changed = new Set();
 
     try {
       return this.database.transaction(() => {
+        this.saved = saved;
+        this.changed = new Set();
+
         try {
           return fn();
         } finally {
@@ -121,7 +123,14 @@ export class Store {
     }
   }
 
-  save(t: Task) {
+  /**
+   * Writes a task's state. Every task state change goes through here, so it
+   * also clears the task's pending requests other than `pending_input`.
+   */
+  save(t: Task): void {
+    // The task and its request cleanup commit together.
+    if (!this.saved) return this.transaction(() => this.save(t));
+
     const updated = t.updated_at;
     t.updated_at = now();
     const body = JSON.stringify(t);
@@ -132,12 +141,14 @@ export class Store {
         .values({ id: t.id, owner: t.owner, body })
         .onConflictDoUpdate({ target: tasks.id, set: { body } })
         .run();
+
+      clearEndedRequests(this.orm, t);
     } catch (error) {
       t.updated_at = updated;
       throw error;
     }
 
-    this.saved?.push([t, updated]);
+    this.saved.push([t, updated]);
     this.markChanged(t.owner);
   }
 
@@ -287,18 +298,16 @@ export class Store {
     type: string,
     data: Record<string, unknown>,
   ): Event {
-    const event = insertEvent(
-      this.database,
-      this.eventStorage,
-      t.id,
-      type,
-      data,
-    );
+    // An event and the rows `insertEvent` adds for it commit together.
+    if (!this.saved) {
+      return this.transaction(() => this.writeEvent(t, type, data));
+    }
 
-    this.database.afterCommit(() => this.publish("event", event, t.owner));
+    const e = insertEvent(this.database, this.eventStorage, t.id, type, data);
+    this.database.afterCommit(() => this.publish("event", e, t.owner));
     this.markChanged(t.owner);
 
-    return event;
+    return e;
   }
 
   /** Isolate listener failures after commit so consumers can still catch up. */

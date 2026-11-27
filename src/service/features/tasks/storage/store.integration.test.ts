@@ -9,7 +9,7 @@ import { type Event } from "../../../../shared/events/types.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
 import { useIncrementalVacuum } from "../../../platform/database/database.js";
 import * as logging from "../../../platform/logging/logger.js";
-import { ParentSeenStore } from "./parent-seen-store.js";
+import { PendingUpdateStore } from "./pending-update-store.js";
 import { Store } from "./store.js";
 
 function deletionFixture() {
@@ -260,6 +260,78 @@ test("transactions reject nesting and asynchronous callbacks", (t) => {
   // The store is usable again after both.
   store.transaction(() => store.event(task, "task.started"));
   assert.deepEqual(heard, ["task.started"]);
+});
+
+test("parent updates stay pending until their request ends", (t) => {
+  const { store, task } = transactionFixture(t);
+
+  const pending = () =>
+    store.database.client
+      .prepare("SELECT event_id, request_id FROM task_pending_updates")
+      .all()
+      .map((row) => ({ ...row }));
+
+  const request = {
+    id: "q",
+    tool: "AskUserQuestion",
+    kind: "question" as const,
+    input: {},
+  };
+
+  const reply = store.event(task, "agent.reply", { text: "Done", turn: 1 });
+  store.event(task, "task.started");
+
+  const asked = store.transaction(() => {
+    task.pending_input = request;
+    store.save(task);
+
+    return store.event(task, "agent.input_required", { request });
+  });
+
+  const rows = [
+    { event_id: reply.id, request_id: null },
+    { event_id: asked.id, request_id: "q" },
+  ];
+
+  assert.deepEqual(pending(), rows);
+
+  // A save that keeps the request keeps its row, and one without it clears it.
+  store.save(task);
+  assert.deepEqual(pending(), rows);
+  delete task.pending_input;
+  store.save(task);
+  assert.deepEqual(pending(), rows.slice(0, 1));
+});
+
+test("a failed write outside a transaction commits nothing and leaves the store usable", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+  const { client } = store.database;
+
+  // A save whose request cleanup fails keeps its old state.
+  client.exec(`CREATE TRIGGER fail BEFORE DELETE ON task_pending_updates
+    BEGIN SELECT RAISE(ABORT, 'cleanup failed'); END`);
+
+  store.transaction(() => {
+    task.pending_input = { id: "q", tool: "Ask", kind: "question", input: {} };
+    store.save(task);
+    store.event(task, "agent.input_required", { request: task.pending_input });
+  });
+
+  const asked = task.updated_at;
+  delete task.pending_input;
+  assert.throws(() => store.save(task), /cleanup failed/);
+  assert.equal(task.updated_at, asked);
+  assert.equal(store.get(task.id, task.owner).pending_input?.id, "q");
+  client.exec("DROP TRIGGER fail");
+
+  // An event whose transaction can't start leaves later transactions working.
+  vi.spyOn(client, "exec").mockImplementationOnce(() => {
+    throw new Error("database is locked");
+  });
+
+  assert.throws(() => store.event(task, "task.started"), /locked/);
+  store.transaction(() => store.event(task, "task.started"));
+  assert.deepEqual(heard, ["agent.input_required", "task.started"]);
 });
 
 test("a failing listener neither undoes the commit nor stops other listeners", (t) => {
@@ -632,7 +704,7 @@ test("original responses resolve across pages by indexed task-authorized lookup"
 
 test("task and typed event reads search indexes instead of scanning tasks or events", (t) => {
   const { store, task } = transactionFixture(t);
-  const parentSeen = new ParentSeenStore(store);
+  const pendingUpdates = new PendingUpdateStore(store);
   const client = store.database.client;
   const prepare = client.prepare.bind(client);
 
@@ -672,9 +744,9 @@ test("task and typed event reads search indexes instead of scanning tasks or eve
       [/events_task_type/],
     ],
     [
-      "unseen",
-      () => parentSeen.unseen(task.owner, "chat"),
-      [/tasks_owner_conversation/, /events_task_type/],
+      "pending",
+      () => pendingUpdates.pending(task.owner, "chat"),
+      [/tasks_owner_conversation/, /task_pending_updates_request/],
     ],
     ["list", () => store.list(task.owner, {}), [/tasks_owner_created/]],
     [

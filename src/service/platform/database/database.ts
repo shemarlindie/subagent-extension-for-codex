@@ -111,10 +111,10 @@ function transactions(client: DatabaseSync) {
         );
       }
 
+      client.exec("BEGIN IMMEDIATE");
       const notifications: (() => void)[] = [];
       queued = notifications;
       let result: T;
-      client.exec("BEGIN IMMEDIATE");
 
       try {
         result = fn();

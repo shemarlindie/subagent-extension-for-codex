@@ -238,8 +238,13 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
           a.wait_seconds,
         );
 
-        // The parent has now seen the updates this read covered.
-        c.parentSeen.markRange(owner, a.task_id, a.after, result.next_cursor);
+        // The parent has now picked up the updates this read covered.
+        c.pendingUpdates.clearRange(
+          owner,
+          a.task_id,
+          a.after,
+          result.next_cursor,
+        );
 
         return result;
       },
@@ -260,7 +265,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         if (!message) throw new Error("Message not found");
 
         if (message.kind === "reply") {
-          c.parentSeen.markEvents(owner, [message.event_id]);
+          c.pendingUpdates.clear(owner, [message.event_id]);
         }
 
         return { message };

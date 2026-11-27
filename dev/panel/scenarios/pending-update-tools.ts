@@ -1,5 +1,5 @@
 import {
-  PARENT_UPDATE_EVENTS,
+  isParentUpdateEvent,
   parentUpdate,
   type PendingTaskUpdates,
 } from "../../../src/shared/tasks/conversation/parent-updates";
@@ -34,10 +34,7 @@ export function previewPendingUpdates(
   const byTask = new Map<string, PendingTaskUpdates>();
 
   const updates = previewEvents
-    .filter(
-      (event) =>
-        PARENT_UPDATE_EVENTS.includes(event.type) && !seen.has(event.id),
-    )
+    .filter((event) => isParentUpdateEvent(event.type) && !seen.has(event.id))
     .sort((a, b) => b.id - a.id);
 
   for (const event of updates) {

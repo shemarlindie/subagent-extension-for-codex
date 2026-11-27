@@ -60,7 +60,7 @@ test("a fresh database gets every active table and the connection settings", (t)
     "task_archive",
     "task_attachments",
     "task_messages",
-    "task_parent_seen",
+    "task_pending_updates",
     "task_read",
     "task_send_receipts",
     "tasks",
