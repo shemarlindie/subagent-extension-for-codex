@@ -303,6 +303,37 @@ test("parent updates stay pending until their request ends", (t) => {
   assert.deepEqual(pending(), rows.slice(0, 1));
 });
 
+test("a failed write outside a transaction commits nothing and leaves the store usable", (t) => {
+  const { store, task, heard } = transactionFixture(t);
+  const { client } = store.database;
+
+  // A save whose request cleanup fails keeps its old state.
+  client.exec(`CREATE TRIGGER fail BEFORE DELETE ON task_pending_updates
+    BEGIN SELECT RAISE(ABORT, 'cleanup failed'); END`);
+
+  store.transaction(() => {
+    task.pending_input = { id: "q", tool: "Ask", kind: "question", input: {} };
+    store.save(task);
+    store.event(task, "agent.input_required", { request: task.pending_input });
+  });
+
+  const asked = task.updated_at;
+  delete task.pending_input;
+  assert.throws(() => store.save(task), /cleanup failed/);
+  assert.equal(task.updated_at, asked);
+  assert.equal(store.get(task.id, task.owner).pending_input?.id, "q");
+  client.exec("DROP TRIGGER fail");
+
+  // An event whose transaction can't start leaves later transactions working.
+  vi.spyOn(client, "exec").mockImplementationOnce(() => {
+    throw new Error("database is locked");
+  });
+
+  assert.throws(() => store.event(task, "task.started"), /locked/);
+  store.transaction(() => store.event(task, "task.started"));
+  assert.deepEqual(heard, ["agent.input_required", "task.started"]);
+});
+
 test("a failing listener neither undoes the commit nor stops other listeners", (t) => {
   const { store, task, heard } = transactionFixture(t);
 

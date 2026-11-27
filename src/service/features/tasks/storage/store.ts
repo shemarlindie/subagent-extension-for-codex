@@ -103,11 +103,12 @@ export class Store {
     }
 
     const saved: [Task, string][] = [];
-    this.saved = saved;
-    this.changed = new Set();
 
     try {
       return this.database.transaction(() => {
+        this.saved = saved;
+        this.changed = new Set();
+
         try {
           return fn();
         } finally {
@@ -127,6 +128,9 @@ export class Store {
    * also clears the task's pending requests other than `pending_input`.
    */
   save(t: Task) {
+    // The task and its request cleanup commit together.
+    if (!this.saved) return this.transaction(() => this.save(t));
+
     const updated = t.updated_at;
     t.updated_at = now();
     const body = JSON.stringify(t);
@@ -137,13 +141,14 @@ export class Store {
         .values({ id: t.id, owner: t.owner, body })
         .onConflictDoUpdate({ target: tasks.id, set: { body } })
         .run();
+
+      clearEndedRequests(this.orm, t);
     } catch (error) {
       t.updated_at = updated;
       throw error;
     }
 
-    clearEndedRequests(this.orm, t);
-    this.saved?.push([t, updated]);
+    this.saved.push([t, updated]);
     this.markChanged(t.owner);
   }
 
