@@ -22,6 +22,7 @@ import type {
   HostState,
   Project,
   SaveResult,
+  SettingsDocument,
   Task,
   Transport,
   TransportEvents,
@@ -39,9 +40,7 @@ import { TaskList } from "../../src/panel/features/tasks/list/task-list";
 import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
 import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
-import { settingsSections } from "../../src/shared/settings/settings-document.js";
 import {
-  mergeSettings,
   panelSettingsDefaults,
   withSetting,
   type PanelSettings,
@@ -642,19 +641,16 @@ export function configureModelDefaults(
   };
 }
 
-// Serves the settings document the service builds for Claude without a model
-// catalog, so models are typed. Values and defaults override the settings
-// defaults. Records updates without applying them.
+// Serves a settings document and records updates without applying them.
+// Values and defaults hold only the settings the sections show.
 export function serveSettings(
   transport: FakeTransport,
-  overrides: {
+  document: Pick<SettingsDocument, "sections"> & {
     values?: Record<string, unknown>;
     defaults?: Record<string, unknown>;
-  } = {},
+  },
 ) {
   const original = transport.tool.bind(transport);
-  const section_input = { providers: ["claude"], catalogs: [] };
-  const values = mergeSettings(defaults, overrides.values ?? {});
 
   transport.tool = async <T>(name: string, args = {}) => {
     if (name === "update_settings") {
@@ -666,16 +662,47 @@ export function serveSettings(
     if (name === "get_settings") {
       return {
         schema: { type: "object", properties: {} },
-        values,
-        defaults: mergeSettings(defaults, overrides.defaults ?? {}),
-        sections: settingsSections({ ...section_input, values }),
-        section_input,
+        values: {},
+        defaults: {},
+        ...document,
       } as T;
     }
 
     return original<T>(name, args);
   };
 }
+
+const effortOptions = [
+  { value: "default", label: "Inherit" },
+  { value: "high", label: "high" },
+];
+
+// A model scope row at a settings path such as `models.providers.claude`. Without
+// `options`, the model is typed.
+export const scope = (
+  path: string,
+  label: string,
+  options?: { value: string; label: string; description?: string }[],
+) => ({
+  id: path.split(".").at(-1) ?? path,
+  label,
+  model: { path: `${path}.model`, label: `${label} model`, options },
+  effort: {
+    path: `${path}.reasoning_effort`,
+    label: `${label} effort`,
+    options: effortOptions,
+    unsupported: false,
+  },
+});
+
+export const budgetRow = {
+  kind: "budget" as const,
+  path: "task.budget.max_cost_usd",
+  label: "Cost limit",
+  unit: "USD",
+  min: 0.01,
+  max: 100,
+};
 
 export {
   act,

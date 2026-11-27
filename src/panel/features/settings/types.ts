@@ -25,5 +25,6 @@ export type SettingsDocument = {
   values: Defaults;
   defaults: Defaults;
   sections: SettingSection[];
-  section_input: Omit<ScopeInput, "values">;
+  /** Older services leave it out, so their sections show as saved. */
+  section_input?: Omit<ScopeInput, "values">;
 };

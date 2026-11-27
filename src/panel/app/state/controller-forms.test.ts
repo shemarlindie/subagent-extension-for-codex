@@ -9,14 +9,14 @@ import {
   setup,
   task,
 } from "./controller-test-harness";
-import type { Defaults, SettingsDocument, Task } from "./types";
+import type { Defaults, Task } from "./types";
 
 test("settings opens before its read and keeps its section across scope changes", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   await controller.start();
 
-  const settingsRead = deferred<Partial<SettingsDocument>>();
+  const settingsRead = deferred<{ sections: never[]; values: Defaults }>();
 
   transport.handler = (name) =>
     name === "get_settings" ? settingsRead.promise : undefined;
@@ -33,12 +33,7 @@ test("settings opens before its read and keeps its section across scope changes"
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings-loading");
 
-  settingsRead.resolve({
-    sections: [],
-    section_input: { providers: [], catalogs: [] },
-    values: defaults,
-  });
-
+  settingsRead.resolve({ sections: [], values: defaults });
   await flush();
 
   assert.equal(controller.getSnapshot().dialog?.kind, "settings");

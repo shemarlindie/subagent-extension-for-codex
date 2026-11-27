@@ -257,13 +257,7 @@ for (const kind of ["settings", "delegate"] as const) {
     controller.dialogs.saveField(kind, field, "Edited while unavailable");
     controller.dialogLoader.retry();
     assert.equal(controller.getSnapshot().dialog?.kind, `${kind}-loading`);
-
-    retryRead.resolve({
-      sections: [],
-      section_input: { providers: [], catalogs: [] },
-      values: defaults,
-    });
-
+    retryRead.resolve({ sections: [], values: defaults });
     await flush();
 
     assert.equal(controller.getSnapshot().dialog?.kind, kind);

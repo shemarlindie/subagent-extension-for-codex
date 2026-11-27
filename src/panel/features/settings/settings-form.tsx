@@ -99,7 +99,7 @@ export function SettingsForm({
   const form = { ...initial, ...useWatch({ control }) } as Values;
 
   // Rebuilt from unsaved edits, so inherited choices and warnings follow them.
-  const shownSections = settings
+  const shownSections = settings?.section_input
     ? settingsSections({
         ...settings.section_input,
         values: editedValues(settings.values, sections, form, initial),
