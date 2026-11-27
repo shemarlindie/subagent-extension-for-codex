@@ -1,7 +1,12 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
-import type { ReactElement, ReactNode, RefObject } from "react";
+import {
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
-import type { useTaskSelection } from "./use-task-selection";
+import type { SelectionAction, useTaskSelection } from "./use-task-selection";
 
 type TaskSelectionMenuProps = {
   selection: ReturnType<typeof useTaskSelection>;
@@ -38,6 +43,22 @@ export function TaskSelectionMenu({
 
   const allShownSelected = shown > 0 && shownCount === shown;
 
+  // An action can take rows off the list, such as reading under Unread, so
+  // focus moves to the count. The action may finish before the menu closes.
+  const acted = useRef(false);
+
+  const act = (action: SelectionAction) => {
+    acted.current = true;
+    void apply(action);
+  };
+
+  const finalFocus = () => {
+    const target = acted.current ? count.current : true;
+    acted.current = false;
+
+    return target;
+  };
+
   const joinRow = (
     open: boolean,
     details: ContextMenu.Root.ChangeEventDetails,
@@ -59,29 +80,25 @@ export function TaskSelectionMenu({
       <ContextMenu.Trigger render={render}>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Positioner className="menu-positioner">
-          <ContextMenu.Popup
-            className="menu-popup"
-            // An action can take rows off the list, such as reading under Unread.
-            finalFocus={blocked ? count : undefined}
-          >
+          <ContextMenu.Popup className="menu-popup" finalFocus={finalFocus}>
             <ContextMenu.Item
               className="menu-item"
               disabled={!archiveCount}
-              onClick={() => void apply("archive")}
+              onClick={() => act("archive")}
             >
               Archive{archiveCount ? ` (${archiveCount})` : ""}
             </ContextMenu.Item>
             <ContextMenu.Item
               className="menu-item"
               disabled={!readCount}
-              onClick={() => void apply("read")}
+              onClick={() => act("read")}
             >
               Mark read{readCount ? ` (${readCount})` : ""}
             </ContextMenu.Item>
             <ContextMenu.Item
               className="menu-item"
               disabled={!unreadCount}
-              onClick={() => void apply("unread")}
+              onClick={() => act("unread")}
             >
               Mark unread{unreadCount ? ` (${unreadCount})` : ""}
             </ContextMenu.Item>
