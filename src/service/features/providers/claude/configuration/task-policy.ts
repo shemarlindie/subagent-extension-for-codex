@@ -90,6 +90,7 @@ const supportedCommands = new Set([
   "artifact-capabilities",
   "artifact-diagramming",
   "claude-api",
+  "claude-approvals",
   "code-review",
   "compact",
   "context",
