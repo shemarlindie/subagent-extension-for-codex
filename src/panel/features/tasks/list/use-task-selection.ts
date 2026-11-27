@@ -15,7 +15,7 @@ import { listedTask, visibleTasks } from "./selectors";
 
 export type TaskRowClick = "open" | "toggle" | "range";
 
-type SelectionAction = "archive" | "read" | "unread";
+export type SelectionAction = "archive" | "read" | "unread";
 
 type Selection = {
   ids: ReadonlySet<string>;
