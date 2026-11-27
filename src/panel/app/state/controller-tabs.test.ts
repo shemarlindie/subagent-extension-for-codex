@@ -260,7 +260,7 @@ test("a delayed changes refresh cannot replace a newer scope read", async (t) =>
   assert.equal(controller.getSnapshot().changes?.data?.additions, 2);
 });
 
-test("diffs read one at a time in the order asked, and a stale read reloads the list and drops the old diffs", async (t) => {
+test("diffs read at once, and reads that find their list stale reload it once and drop the old diffs", async (t) => {
   const { controller, transport } = setup();
   t.onTestFinished(() => controller.dispose());
   transport.tasks = [task("a")];
@@ -286,18 +286,24 @@ test("diffs read one at a time in the order asked, and a stale read reloads the 
   });
 
   let revision = "r1";
+  let lists = 0;
   const reads: string[] = [];
   const gate = deferred<unknown>();
 
   transport.handler = (name, args) => {
-    if (name === "app_get_change_list") return list(revision);
+    if (name === "app_get_change_list") {
+      lists += 1;
+
+      return list(revision);
+    }
+
     if (name !== "app_get_file_change") return undefined;
     reads.push(`${String(args.path)}@${String(args.revision)}`);
-    if (args.revision !== revision) return { stale: true };
     const diff = `diff --git a/${String(args.path)} b/${String(args.path)}\n--- a/${String(args.path)}\n+++ b/${String(args.path)}\n@@ -1 +1 @@\n-${revision}\n+${revision} new\n`;
 
-    return args.path === "a.ts" && revision === "r1"
-      ? gate.promise.then(() => ({ stale: false, diff }))
+    // Reads of r1 settle after a turn records new edits.
+    return args.revision === "r1"
+      ? gate.promise.then(() => ({ stale: true }))
       : { stale: false, diff };
   };
 
@@ -307,15 +313,12 @@ test("diffs read one at a time in the order asked, and a stale read reloads the 
   const first = controller.changes.loadDiff("a.ts");
   const second = controller.changes.loadDiff("b.ts");
   await flush();
-  // b.ts waits for a.ts.
-  assert.deepEqual(reads, ["a.ts@r1"]);
-  // A turn records new edits while a.ts is read, so b.ts reads as stale.
+  assert.deepEqual(reads, ["a.ts@r1", "b.ts@r1"]);
   revision = "r2";
   gate.resolve(undefined);
-  await first;
+  await Promise.all([first, second]);
   const diffs = () => controller.getSnapshot().changeDiffs;
-  await second;
-  assert.deepEqual(reads, ["a.ts@r1", "b.ts@r1"]);
+  assert.equal(lists, 2);
   assert.equal(controller.getSnapshot().changes?.data?.revision, "r2");
   assert.equal(diffs()?.revision, "r2");
   assert.equal(diffs()?.files.size, 0);

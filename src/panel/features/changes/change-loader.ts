@@ -31,8 +31,8 @@ interface ChangeLoaderContext {
 export class ChangeLoader {
   constructor(private context: ChangeLoaderContext) {}
 
-  /** Diff reads run one at a time, in the order files asked for them. */
-  private diffReads = Promise.resolve();
+  /** The list reload shared by diff reads that find their list stale together. */
+  private staleReload?: Promise<void>;
 
   /** Reads the selected task's change totals when its status or turn has moved on. */
   async loadCountsIfStale() {
@@ -168,14 +168,12 @@ export class ChangeLoader {
    * Reads a listed file's diff unless it is read or being read. A failed read
    * reads again. A read the list has moved past reloads the list.
    */
-  loadDiff(path: string) {
+  async loadDiff(path: string) {
     const diffs = this.context.snapshot().changeDiffs;
     const diff = diffs?.files.get(path);
-    if (!diffs || (diff && diff.status !== "error")) return Promise.resolve();
+    if (!diffs || (diff && diff.status !== "error")) return;
     this.setDiff(diffs, path, { status: "loading", error: diff?.error });
-    this.diffReads = this.diffReads.then(() => this.readDiff(diffs, path));
-
-    return this.diffReads;
+    await this.readDiff(diffs, path);
   }
 
   /** The current diffs, while they still belong to `diffs`' list. */
@@ -197,8 +195,6 @@ export class ChangeLoader {
   }
 
   private async readDiff(diffs: FileDiffsState, path: string) {
-    // A newer list replaced this one while the read waited its turn.
-    if (!this.currentDiffs(diffs)) return;
     let diff: FileDiff;
 
     try {
@@ -219,7 +215,11 @@ export class ChangeLoader {
           this.currentDiffs(diffs) &&
           selectedTask(this.context.snapshot())?.id === diffs.task
         ) {
-          await this.loadChanges();
+          this.staleReload ??= this.loadChanges().finally(() => {
+            this.staleReload = undefined;
+          });
+
+          await this.staleReload;
         }
 
         diff = {
