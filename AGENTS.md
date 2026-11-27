@@ -83,6 +83,8 @@ check it.
 - Keep large collapsed sections lightweight. Unmount expensive child rows while
   closed, and show a loader when asynchronous or deferred rendering needs
   feedback.
+- Keep content from jumping as states change, per
+  [Layout stability](docs/panel-architecture.md#layout-stability).
 - Follow the repository's Oxlint rules.
 - Put repository skills in `.agents/skills`, which Codex reads. Add a stub with
   the same frontmatter in `.claude/skills` that links to the shared skill.
