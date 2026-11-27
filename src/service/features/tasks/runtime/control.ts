@@ -33,7 +33,7 @@ import { UpdateWaits } from "../conversation/updates.js";
 import { PendingInput } from "../input/pending-input.js";
 import { ActivityPages } from "../storage/activity-pages.js";
 import { ArchiveStore } from "../storage/archive-store.js";
-import { ParentSeenStore } from "../storage/parent-seen-store.js";
+import { PendingUpdateStore } from "../storage/pending-update-store.js";
 import { Store } from "../storage/store.js";
 import { taskExists } from "../storage/task-rows.js";
 import {
@@ -111,8 +111,8 @@ export class Control {
   changes: Changes;
   /** Which tasks the user archived from the panel's lists. */
   archive: ArchiveStore;
-  /** Which worker updates the parent agent has seen. */
-  parentSeen: ParentSeenStore;
+  /** Worker updates the parent agent still has to pick up. */
+  pendingUpdates: PendingUpdateStore;
   active = new Map<string, Active>();
   private deleting = new Set<string>();
   worktreeChanges = new WorktreeChanges();
@@ -145,7 +145,7 @@ export class Control {
   ) {
     this.changes = new Changes(store);
     this.archive = new ArchiveStore(store);
-    this.parentSeen = new ParentSeenStore(store);
+    this.pendingUpdates = new PendingUpdateStore(store);
     this.sendRequests = new SendRequests(store);
 
     this.settings = new Settings(

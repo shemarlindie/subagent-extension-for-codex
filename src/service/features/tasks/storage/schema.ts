@@ -77,15 +77,27 @@ export const taskRead = sqliteTable("task_read", {
 });
 
 /**
- * Worker updates the parent agent has seen, by event: those a message read
- * returned to it and those the user marked seen. An update without a row is
- * pending.
+ * Worker updates the parent agent still has to pick up, by event. A message
+ * read that returns an update, the user's dismissal or the end of its request
+ * clears it by deleting its row.
  */
-export const parentSeen = sqliteTable("task_parent_seen", {
-  event_id: integer()
-    .primaryKey()
-    .references(() => events.id, { onDelete: "cascade" }),
-});
+export const parentPending = sqliteTable(
+  "task_parent_pending",
+  {
+    event_id: integer()
+      .primaryKey()
+      .references(() => events.id, { onDelete: "cascade" }),
+    task_id: text()
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    /**
+     * The request of an `agent.input_required` update. `Store.save` deletes
+     * the row once the task's `pending_input` is another request or none.
+     */
+    request_id: text(),
+  },
+  (t) => [index("task_parent_pending_request").on(t.task_id, t.request_id)],
+);
 
 /**
  * Tasks the user archived to keep them out of the panel's task lists, and

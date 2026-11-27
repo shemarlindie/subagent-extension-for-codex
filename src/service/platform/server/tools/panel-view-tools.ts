@@ -101,7 +101,7 @@ export function panelViewTools(c: Control, owner: string) {
             pending: {
               tasks: pendingUpdates(
                 c.store,
-                c.parentSeen,
+                c.pendingUpdates,
                 (t) =>
                   c.providers.get(t.provider)?.taskPolicy.parentMayApprove(t) ??
                   false,

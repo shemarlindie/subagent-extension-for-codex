@@ -1,11 +1,13 @@
 import { and, eq } from "drizzle-orm";
 
 import { decodedEvent } from "../../../../shared/events/decode.js";
+import { eventPayload } from "../../../../shared/events/payload.js";
 import { isChatEvent } from "../../../../shared/tasks/conversation/chat.js";
+import { isParentUpdateEvent } from "../../../../shared/tasks/conversation/parent-updates.js";
 import { now } from "../../../../shared/time.js";
 import type { Database } from "../../../platform/database/database.js";
 import type { EventStorageMetrics } from "./event-storage-metrics.js";
-import { events } from "./schema.js";
+import { events, parentPending } from "./schema.js";
 
 export const eventColumns = {
   id: events.id,
@@ -75,11 +77,24 @@ export function insertEvent(
 
   metrics.committed(database, taskId, stored.serialized, stored.response?.body);
 
-  return decodedEvent({
+  const event = decodedEvent({
     id,
     task_id: taskId,
     type,
     timestamp,
     data: stored.data,
   });
+
+  if (isParentUpdateEvent(type)) {
+    database.orm
+      .insert(parentPending)
+      .values({
+        event_id: id,
+        task_id: taskId,
+        request_id: eventPayload(event, "agent.input_required")?.request?.id,
+      })
+      .run();
+  }
+
+  return event;
 }

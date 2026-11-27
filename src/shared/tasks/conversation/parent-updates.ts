@@ -5,17 +5,23 @@ import type { Task } from "../model.js";
 import { blockedOnUser } from "../wrap-up.js";
 import { replyExcerpt } from "./reply.js";
 
-/** Events that can give the parent agent a worker update to see. */
-export const PARENT_UPDATE_EVENTS = [
+/**
+ * Events that can give the parent agent a worker update. Stored events of
+ * these types get a pending row, so changing them needs a migration.
+ */
+const PARENT_UPDATE_EVENTS = [
   "agent.reply",
   "task.failed",
   "agent.input_required",
 ];
 
+export const isParentUpdateEvent = (type: string) =>
+  PARENT_UPDATE_EVENTS.includes(type);
+
 /** The longest update snippet. The panel shows one line of it. */
 const SNIPPET_CHARS = 200;
 
-/** A worker update the parent agent hasn't seen. */
+/** A worker update pending for the parent agent. */
 export type ParentUpdate = {
   event_id: number;
   kind: "reply" | "failed" | "budget" | "request";

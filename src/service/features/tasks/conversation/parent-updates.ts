@@ -3,27 +3,26 @@ import {
   type PendingTaskUpdates,
 } from "../../../../shared/tasks/conversation/parent-updates.js";
 import type { Task } from "../../../../shared/tasks/model.js";
-import type { ParentSeenStore } from "../storage/parent-seen-store.js";
+import type { PendingUpdateStore } from "../storage/pending-update-store.js";
 import type { Store } from "../storage/store.js";
 
 /**
- * Worker updates the parent agent hasn't seen in a conversation, grouped by
+ * Worker updates pending for the parent agent in a conversation, grouped by
  * task. Tasks and their updates are newest first. `parentDecides` says
  * whether the parent may decide a task's permissions.
  */
 export function pendingUpdates(
   store: Store,
-  seen: ParentSeenStore,
+  pending: PendingUpdateStore,
   parentDecides: (t: Task) => boolean,
   owner: string,
   conversation: string,
 ): PendingTaskUpdates[] {
   const byTask = new Map<string, PendingTaskUpdates>();
-  // Answered requests stay unseen, so a task can have many events to skip.
   const tasks = new Map<string, { t: Task; decides: boolean }>();
 
   // Newest first, so tasks enter the map in order of their newest update.
-  for (const e of seen.unseen(owner, conversation).reverse()) {
+  for (const e of pending.pending(owner, conversation).reverse()) {
     let task = tasks.get(e.task_id);
 
     if (!task) {

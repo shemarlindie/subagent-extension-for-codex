@@ -69,7 +69,7 @@ async function setup() {
   return { store, save, parent, user, pending, ids };
 }
 
-test("message reads record the updates they return as seen", async () => {
+test("message reads clear the updates they return", async () => {
   const { store, save, parent, ids } = await setup();
   const t = save("one");
   const first = store.event(t, "agent.reply", { text: "First", turn: 1 });
@@ -84,7 +84,7 @@ test("message reads record the updates they return as seen", async () => {
 
   expect(await ids()).toEqual([second.id]);
 
-  // A read after the newest update returns and records nothing.
+  // A read after the newest update returns and clears nothing.
   await parent("list_messages", { task_id: t.id, after: second.id });
   expect(await ids()).toEqual([second.id]);
 
@@ -136,8 +136,9 @@ test("pending updates cover replies, failures, budget stops and routed requests"
   store.event(parentDecides, "agent.input_required", { request: permission });
 
   // An answered request, an interrupted turn and another conversation don't count.
-  const answered = save("answered");
+  const answered = save("answered", { pending_input: question });
   store.event(answered, "agent.input_required", { request: question });
+  save("answered");
   store.event(answered, "task.interrupted", {});
 
   store.event(save("elsewhere", { conversation_id: "other" }), "agent.reply", {
@@ -176,7 +177,7 @@ test("pending updates cover replies, failures, budget stops and routed requests"
   ]);
 });
 
-test("mark seen records only the chosen updates of the owner", async () => {
+test("the user clears only the chosen updates of the owner", async () => {
   const { store, save, user, ids } = await setup();
   const t = save("one");
   const first = store.event(t, "agent.reply", { text: "First", turn: 1 });
@@ -194,7 +195,7 @@ test("mark seen records only the chosen updates of the owner", async () => {
 
   expect(
     store.database.client
-      .prepare("SELECT event_id FROM task_parent_seen")
+      .prepare("SELECT event_id FROM task_parent_pending ORDER BY event_id")
       .all(),
-  ).toEqual([{ event_id: first.id }]);
+  ).toEqual([{ event_id: second.id }, { event_id: foreign.id }]);
 });
