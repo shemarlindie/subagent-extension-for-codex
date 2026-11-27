@@ -89,10 +89,7 @@ export type SettingRow =
   | BudgetSettingRow
   | ModelsSettingRow;
 
-/**
- * A settings dialog section. The dialog builds sections with the same builder
- * from the service's inputs and its unsaved values.
- */
+/** A settings dialog section. */
 export interface SettingSection {
   id: string;
   title: string;

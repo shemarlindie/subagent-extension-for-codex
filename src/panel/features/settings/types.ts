@@ -18,9 +18,8 @@ export type Defaults = Omit<SettingsValues, "models"> & {
 
 /**
  * `get_settings` as the dialog reads it: current values, the defaults a
- * reset restores, the sections and rows to show, and what it rebuilds them
- * from as values change. The JSON `schema` is for agents; the dialog ignores
- * it.
+ * reset restores, the sections and rows, and their builder's inputs. The JSON
+ * `schema` is for agents; the dialog ignores it.
  */
 export type SettingsDocument = {
   values: Defaults;
