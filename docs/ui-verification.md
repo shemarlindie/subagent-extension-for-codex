@@ -143,8 +143,10 @@ await withComparison({
     fixtures run from page load on their own clock, so the sides can drift
     apart.
 
-  When none fits, use another approach that isolates the change, such as
-  screenshots before and after an edit for a still comparison.
+  For a style-only change, the scenario can make it on one side instead, such as
+  by appending a style tag through `panel.locator("head")` before `play`. When
+  none fits, use another approach that isolates the change, such as screenshots
+  before and after an edit for a still comparison.
 
 - `clock` holds the live fixtures at `startMs` until `play`, then runs them at
   `speed` (default 1) for `playMs`. Start just before the event under test, and
