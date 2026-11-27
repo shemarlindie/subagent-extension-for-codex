@@ -62,15 +62,20 @@ interface EventListProps {
 
 type ActivityRowFocus = { eventId: number; request: number };
 
-/** The attachments of the messages a row shows. */
+/**
+ * The attachments of each message a row shows. Messages with the same text
+ * share a row, and each keeps its own list, since positions count within one
+ * message.
+ */
 function groupAttachments(
   group: ActivityGroup,
   attachments: ReadonlyMap<string, MessageAttachment[]> | undefined,
 ) {
   const attached = group.events.flatMap((event) => {
     const id = eventPayload(event, "task.instruction")?.message_id;
+    const list = id && attachments?.get(id);
 
-    return (id && attachments?.get(id)) || [];
+    return list ? [list] : [];
   });
 
   return attached.length ? attached : undefined;

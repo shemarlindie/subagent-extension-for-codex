@@ -58,8 +58,8 @@ interface ActivityGroupCardProps {
   first: boolean;
   last: boolean;
   span?: { start: number; end: number | null };
-  /** The attachments of the messages the row shows. */
-  attachments?: MessageAttachment[];
+  /** The attachments of each message the row shows. */
+  attachments?: MessageAttachment[][];
   /** The row's thinking is still going, so it shows a running clock. */
   thinking: boolean;
   /** The task's runtime, given only to the row that reports its completion. */
@@ -312,12 +312,13 @@ function GroupCard({
             {group.summary}
           </p>
         ))}
-      {attachments && (
+      {attachments?.map((list) => (
         <ActivityAttachments
+          key={list[0]?.message_id}
           taskId={group.events[0].task_id}
-          attachments={attachments}
+          attachments={list}
         />
-      )}
+      ))}
       {plan && plan.steps.length > 0 && (
         <PlanSteps steps={plan.steps} only={plan.changed} />
       )}
