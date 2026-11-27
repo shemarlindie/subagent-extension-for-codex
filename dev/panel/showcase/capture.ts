@@ -8,7 +8,7 @@ import { parseArgs } from "node:util";
 
 import type { Browser, Page } from "@playwright/test";
 
-import { devServer, launchBrowser } from "../capture/capture-browser";
+import { devServer, withBrowser } from "../capture/capture-browser";
 import { withCleanup } from "../capture/capture-cleanup";
 import { checkCaptureFrames, describeFrameCheck } from "../capture/frame-check";
 import { capturePngFrames } from "../capture/screencast";
@@ -190,27 +190,16 @@ async function captureFrames(browser: Browser) {
   }
 }
 
-await withCleanup(
-  async () => {
-    await mkdir(out, { recursive: true });
-    const browser = await launchBrowser();
+await withBrowser(server, async (browser) => {
+  await mkdir(out, { recursive: true });
 
-    await withCleanup(
-      async () => {
-        if (values.frames) {
-          await warmUp(browser);
-          await captureFrames(browser);
-        } else if (values.video) {
-          await warmUp(browser);
-          await captureVideo(browser);
-        } else {
-          await captureSteps(browser);
-        }
-      },
-      () => browser.close(),
-    );
-  },
-  async () => {
-    await server.close?.();
-  },
-);
+  if (values.frames) {
+    await warmUp(browser);
+    await captureFrames(browser);
+  } else if (values.video) {
+    await warmUp(browser);
+    await captureVideo(browser);
+  } else {
+    await captureSteps(browser);
+  }
+});

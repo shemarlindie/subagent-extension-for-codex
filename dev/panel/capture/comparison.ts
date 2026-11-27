@@ -6,11 +6,7 @@ import { join } from "node:path";
 
 import type { FrameLocator, Page } from "@playwright/test";
 
-import {
-  devServer,
-  launchBrowser,
-  type CaptureServer,
-} from "./capture-browser";
+import { devServer, withBrowser, type CaptureServer } from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
 import { composeComparison, type Recorded } from "./comparison-compose";
 import {
@@ -100,14 +96,13 @@ const TAIL_MS = 800;
 type Overlay = Awaited<ReturnType<typeof readOverlay>>;
 
 async function recordSide(
-  options: ComparisonOptions & { size: Size },
+  options: ComparisonOptions & { size: Size; playMs: number },
   side: ComparisonSide,
   overlay: Overlay | undefined,
   dir: string,
   report: SideReport,
 ) {
-  const { clock, size } = options;
-  const playMs = options.playMs ?? 0;
+  const { clock, size, playMs } = options;
   const { source } = side;
   const speed = clock.speed ?? 1;
   const loaded = new Set<string>();
@@ -224,24 +219,10 @@ async function recordSide(
     }
   };
 
-  await withCleanup(
-    async () => {
-      const browser = await launchBrowser();
-
-      await withCleanup(
-        async () =>
-          session(
-            await browser.newPage({
-              viewport: size,
-              reducedMotion: "no-preference",
-            }),
-          ),
-        () => browser.close(),
-      );
-    },
-    async () => {
-      await server.close?.();
-    },
+  await withBrowser(server, async (browser) =>
+    session(
+      await browser.newPage({ viewport: size, reducedMotion: "no-preference" }),
+    ),
   );
 }
 
@@ -305,7 +286,14 @@ export async function withComparison(options: ComparisonOptions) {
           report.sides.push(entry);
           const dir = join(recordings, String(recorded.length));
           await mkdir(dir);
-          await recordSide({ ...options, size }, side, overlay, dir, entry);
+
+          await recordSide(
+            { ...options, size, playMs },
+            side,
+            overlay,
+            dir,
+            entry,
+          );
 
           recorded.push({
             dir,

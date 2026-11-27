@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { chromium } from "@playwright/test";
+import { chromium, type Browser } from "@playwright/test";
 import { createServer, type PluginOption } from "vite";
 
 import {
@@ -8,6 +8,7 @@ import {
   DEV_HOST_CHECKOUT_HEADER,
   devHostCheckout,
 } from "../dev-host";
+import { withCleanup } from "./capture-cleanup";
 
 export type CaptureServer = { origin: string; close?: () => Promise<void> };
 
@@ -67,10 +68,26 @@ export async function devServer(
   }
 }
 
-// Metal GPU rendering on macOS. Headless Chromium otherwise renders on the
-// CPU, which drops frames at 2x.
-export function launchBrowser() {
-  return chromium.launch({
-    args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
-  });
+/** Runs `capture` with a browser, then closes the browser and `server`. */
+export async function withBrowser<T>(
+  server: CaptureServer,
+  capture: (browser: Browser) => Promise<T>,
+) {
+  return withCleanup(
+    async () => {
+      // Metal GPU rendering on macOS. Headless Chromium otherwise renders on
+      // the CPU, which drops frames at 2x.
+      const browser = await chromium.launch({
+        args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
+      });
+
+      return withCleanup(
+        () => capture(browser),
+        () => browser.close(),
+      );
+    },
+    async () => {
+      await server.close?.();
+    },
+  );
 }
