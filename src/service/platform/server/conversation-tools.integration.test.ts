@@ -850,7 +850,7 @@ test("an update wait returns the panel view as of its revision, except for draft
     });
 
     await user("app_update_settings", {
-      set: { panel: { row_icons: false } },
+      set: { panel: { row_icons: true } },
     });
 
     const saved = await saving;
@@ -858,7 +858,7 @@ test("an update wait returns the panel view as of its revision, except for draft
 
     assert.deepEqual(saved.view?.settings, {
       ...panelSettingsDefaults,
-      row_icons: false,
+      row_icons: true,
     });
 
     // A missing selected task leaves its details out and the rest in.
