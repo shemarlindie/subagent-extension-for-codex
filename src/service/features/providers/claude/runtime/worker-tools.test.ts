@@ -16,10 +16,10 @@ import {
 } from "./claude-test-harness.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
-const TOOL = "mcp__delegated_work__update_plan";
-const VISUAL_TOOL = "mcp__delegated_work__show_visual";
-const GUIDE_TOOL = "mcp__delegated_work__visual_guide";
-const WRAP_UP_TOOL = "mcp__delegated_work__wrap_up";
+const TOOL = "mcp__subx__update_plan";
+const VISUAL_TOOL = "mcp__subx__show_visual";
+const GUIDE_TOOL = "mcp__subx__visual_guide";
+const WRAP_UP_TOOL = "mcp__subx__wrap_up";
 
 async function launch(c: RunContext) {
   let options: Options | undefined;
@@ -37,7 +37,7 @@ async function launch(c: RunContext) {
 
 /** A client connected to the turn's worker tool server. */
 async function workerTools(options: Options) {
-  const server = options.mcpServers?.delegated_work;
+  const server = options.mcpServers?.subx;
   assert.ok(server?.type === "sdk" && "instance" in server);
   const [client, transport] = InMemoryTransport.createLinkedPair();
   await server.instance.connect(transport);
@@ -227,7 +227,7 @@ test("an open plan returns to the worker after compaction, and subagents can't c
     "Your plan for this task, as the user's panel shows it:",
     "1. [completed] Read",
     "2. [in_progress] Report",
-    "Keep it current with update_plan: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.",
+    "Keep it current with `mcp__subx__update_plan`: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.",
   ].join("\n");
 
   assert.equal(await reminder("compact"), expected);
