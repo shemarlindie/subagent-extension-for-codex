@@ -470,6 +470,8 @@ cancelled work never appears successful.
 
 - Worker and parent-agent text renders as Markdown, as in Chat. Your messages
   and tool output show as written.
+- Attachments on a request or follow-up fold into a count that expands to their
+  details.
 - Thinking shows elapsed time.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.

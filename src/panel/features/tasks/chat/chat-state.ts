@@ -1,3 +1,4 @@
+import type { MessageAttachment } from "../../../../shared/attachments/model.js";
 import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
 
 /** The selected task's Chat as read so far. */
@@ -30,4 +31,18 @@ export function mergeChat(
   }
 
   return { task, items, cursor: read.next_cursor };
+}
+
+/** A task's message attachments by message id, from its Chat as read so far. */
+export function messageAttachments(chat: ChatState | undefined, task: string) {
+  const attached = new Map<string, MessageAttachment[]>();
+  if (chat?.task !== task) return attached;
+
+  for (const item of chat.items) {
+    if (item.kind === "message" && item.message.attachments?.length) {
+      attached.set(item.message.id, item.message.attachments);
+    }
+  }
+
+  return attached;
 }

@@ -17,6 +17,7 @@ import { turnStart } from "../activity/event-history";
 import { EventList } from "../activity/event-list";
 import { TurnActivityBanner } from "../activity/turn-activity-banner";
 import { ChatPanel } from "../chat/chat-panel";
+import { messageAttachments } from "../chat/chat-state";
 import { TaskDetails } from "../inspector/task-details";
 import { useTaskFileOpener } from "../shared/use-task-file-opener";
 import { TabLabel } from "./tab-label";
@@ -37,6 +38,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
     droppedEvents,
     activityHistoryLoading,
     chatHistoryLoading,
+    chat,
     host,
   } = useSnapshot([
     "tab",
@@ -46,8 +48,15 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
     "droppedEvents",
     "activityHistoryLoading",
     "chatHistoryLoading",
+    "chat",
     "host",
   ]);
+
+  // Chat reads messages with their attachments, which Activity lists too.
+  const attachments = useMemo(
+    () => messageAttachments(chat, taskId),
+    [chat, taskId],
+  );
 
   const [reading] = useSessionState(
     "task",
@@ -106,6 +115,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
           events={events}
           runtimeMs={task.runtime_ms}
           dropped={droppedEvents}
+          attachments={attachments}
           preferences={host}
           active={tab === "activity"}
           running={task.status === "running" && !task.pending_input}
@@ -122,6 +132,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
           events={events}
           runtimeMs={task.runtime_ms}
           dropped={droppedEvents}
+          attachments={attachments}
           preferences={host}
           active={false}
         />
@@ -135,6 +146,7 @@ export function EvidenceTabs({ task, taskId }: EvidenceTabsProps) {
         turn={focus.turn}
         events={range.events}
         dropped={range.dropped}
+        attachments={attachments}
         runtimeMs={task.runtime_ms}
         preferences={host}
         active={tab === "activity"}

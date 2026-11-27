@@ -1,9 +1,7 @@
 import type { MessageAttachment } from "../../../shared/attachments/model.js";
-import { useController } from "../../app/state/controller-context";
-import { findTask } from "../../app/state/selectors";
-import { errorMessage } from "../../shared/utils/error-message";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
 import { AttachmentRow } from "./attachment-row";
+import { useOpenAttachment } from "./use-open-attachment";
 
 type MessageAttachmentsProps = {
   taskId: string;
@@ -18,33 +16,7 @@ export function MessageAttachments({
   taskId,
   attachments,
 }: MessageAttachmentsProps) {
-  const controller = useController();
-
-  const open = async (attachment: MessageAttachment) => {
-    const state = controller.getSnapshot();
-    const { transport } = controller;
-
-    if (state.host.canOpenFiles && transport.openFile) {
-      const { path } = await controller.tool<{ path: string }>(
-        "app_get_attachment_path",
-        {
-          task_id: taskId,
-          message_id: attachment.message_id,
-          position: attachment.position,
-        },
-      );
-
-      await transport.openFile(path);
-
-      return;
-    }
-
-    const task = findTask(state, taskId);
-
-    if (task) {
-      controller.open({ kind: "attachment", task, attachment, attachments });
-    }
-  };
+  const open = useOpenAttachment(taskId, attachments);
 
   return (
     <AttachmentRow
@@ -55,11 +27,7 @@ export function MessageAttachments({
         <AttachmentChip
           attachment={attachment}
           maxWidth={maxWidth}
-          onOpen={() =>
-            open(attachment).catch((error: unknown) =>
-              controller.reportActionFailure(errorMessage(error)),
-            )
-          }
+          onOpen={() => open(attachment)}
         />
       )}
       copy={(attachment) => (

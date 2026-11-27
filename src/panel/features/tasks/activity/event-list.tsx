@@ -1,10 +1,16 @@
 import { memo, useContext } from "react";
 
-import { lastEvent } from "../../../../shared/tasks/activity/activity-events";
+import type { MessageAttachment } from "../../../../shared/attachments/model.js";
+import { eventPayload } from "../../../../shared/events/payload";
+import {
+  lastEvent,
+  type ActivityGroup,
+} from "../../../../shared/tasks/activity/activity-events";
 import {
   groupActivity,
   thinkingSpan,
 } from "../../../../shared/tasks/activity/activity-timeline";
+import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Event, Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";
@@ -42,6 +48,8 @@ interface EventListProps {
   runtimeMs?: number;
   /** What fell off the front of `events`, tallied by the event reader. */
   dropped?: DroppedSummary;
+  /** The task's message attachments by message id. */
+  attachments?: ReadonlyMap<string, MessageAttachment[]>;
   /** The worker is mid-turn, so a thinking row with nothing after it is still going. */
   running?: boolean;
   /** The host's locale and time zone, which Chat's timestamps follow too. */
@@ -54,6 +62,25 @@ interface EventListProps {
 
 type ActivityRowFocus = { eventId: number; request: number };
 
+/**
+ * The attachments of each message a row shows. Messages with the same text
+ * share a row, and each keeps its own list, since positions count within one
+ * message.
+ */
+function groupAttachments(
+  group: ActivityGroup,
+  attachments: ReadonlyMap<string, MessageAttachment[]> | undefined,
+) {
+  const attached = group.events.flatMap((event) => {
+    const id = eventPayload(event, "task.instruction")?.message_id;
+    const list = id && attachments?.get(id);
+
+    return list ? [list] : [];
+  });
+
+  return attached.length ? attached : undefined;
+}
+
 // Polls keep the same events array when nothing changed, so a hidden tab skips work.
 export const EventList = memo(function EventList({
   task,
@@ -63,6 +90,7 @@ export const EventList = memo(function EventList({
   running = false,
   runtimeMs,
   dropped,
+  attachments,
   preferences,
   turn,
   focus,
@@ -138,6 +166,7 @@ export const EventList = memo(function EventList({
             {showRequest && task && (
               <TaskRequestActivity
                 task={task}
+                attachments={attachments?.get(REQUEST_ID)}
                 last={groups.length === 0}
                 preferences={preferences}
               />
@@ -154,6 +183,7 @@ export const EventList = memo(function EventList({
                   first={index === 0 && !showRequest}
                   last={index === groups.length - 1}
                   span={span}
+                  attachments={groupAttachments(group, attachments)}
                   thinking={running && span?.end === null}
                   runtimeMs={
                     group.events.some(
