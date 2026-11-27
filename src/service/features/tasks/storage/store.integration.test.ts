@@ -9,7 +9,6 @@ import { type Event } from "../../../../shared/events/types.js";
 import { startSchema, type Task } from "../../../../shared/tasks/model.js";
 import { useIncrementalVacuum } from "../../../platform/database/database.js";
 import * as logging from "../../../platform/logging/logger.js";
-import { PendingUpdateStore } from "./pending-update-store.js";
 import { Store } from "./store.js";
 
 function deletionFixture() {
@@ -582,7 +581,7 @@ test("a failed storage summary cannot change settlement or leave its counters ac
   });
 });
 
-test("original responses resolve across pages by indexed task-authorized lookup", async (t) => {
+test("original responses resolve across pages by task-authorized lookup", async (t) => {
   const { claudeMessageNormalizer } =
     await import("../../providers/claude/events/normalize.js");
 
@@ -692,114 +691,4 @@ test("original responses resolve across pages by indexed task-authorized lookup"
 
   assert.equal(captures.length, 2);
   assert.notEqual(captures[0]?.response_ref, captures[1]?.response_ref);
-
-  const plan = store.database.client
-    .prepare(
-      "EXPLAIN QUERY PLAN SELECT original_response FROM events WHERE response_ref=? AND task_id=?",
-    )
-    .all(responseRef, task.id);
-
-  assert.match(String(plan[0]?.detail), /USING INDEX events_response/);
-});
-
-test("task and typed event reads search indexes instead of scanning tasks or events", (t) => {
-  const { store, task } = transactionFixture(t);
-  const pendingUpdates = new PendingUpdateStore(store);
-  const client = store.database.client;
-  const prepare = client.prepare.bind(client);
-
-  const plan = (read: () => unknown) => {
-    const statements: string[] = [];
-
-    const spy = vi.spyOn(client, "prepare").mockImplementation((sql) => {
-      statements.push(sql);
-
-      return prepare(sql);
-    });
-
-    try {
-      read();
-    } finally {
-      spy.mockRestore();
-    }
-
-    return statements.flatMap((sql) =>
-      prepare(`EXPLAIN QUERY PLAN ${sql}`)
-        .all()
-        .map((row) => String(row.detail)),
-    );
-  };
-
-  const reads: [string, () => unknown, RegExp[]][] = [
-    ["readState", () => store.readState(task.id), [/events_task_type/]],
-    [
-      "latestEvent",
-      () => store.latestEvent(task.id, "agent.reply"),
-      [/events_task_type/],
-    ],
-    ["turnEnded", () => store.turnEnded(task.id, 1), [/events_task_type/]],
-    [
-      "nextEventOfType",
-      () => store.nextEventOfType(task.id, 0, ["task.turn_ended"]),
-      [/events_task_type/],
-    ],
-    [
-      "pending",
-      () => pendingUpdates.pending(task.owner, "chat"),
-      [/tasks_owner_conversation/, /task_pending_updates_request/],
-    ],
-    ["list", () => store.list(task.owner, {}), [/tasks_owner_created/]],
-    [
-      "list without archived tasks",
-      () => store.list(task.owner, { archived: "exclude", include: [task.id] }),
-      [/tasks_owner_created/, /task_archive/],
-    ],
-    [
-      "list in a conversation",
-      () => store.list(task.owner, { conversation: "chat", repository: "/r" }),
-      [/tasks_owner_conversation/],
-    ],
-    [
-      "readCompletedFlags",
-      () => store.readCompletedFlags(task.owner, { archived: "exclude" }),
-      [/tasks_owner_created/, /events_task_type/, /task_read/],
-    ],
-    [
-      "latestInConversation",
-      () => store.latestInConversation(task.owner, "chat"),
-      [/tasks_owner_conversation/],
-    ],
-    [
-      "withStatus",
-      () => store.withStatus(["queued", "waiting"]),
-      [/tasks_status/],
-    ],
-    ["chatEvents", () => store.chatEvents(task.id), [/events_task_chat/]],
-    [
-      "readStates",
-      () => store.readStates(task.owner, {}),
-      [/tasks_owner_/, /events_task_type/],
-    ],
-    [
-      "latestEvents",
-      () =>
-        store.latestEvents(task.owner, "agent.reply", { conversation: "c" }),
-      [/tasks_owner_conversation/, /events_task_type/],
-    ],
-  ];
-
-  for (const [name, read, indexes] of reads) {
-    const details = plan(read);
-
-    for (const detail of details) {
-      assert.doesNotMatch(detail, /^SCAN (events|tasks)\b/, name);
-    }
-
-    for (const index of indexes) {
-      assert.ok(
-        details.some((detail) => /^SEARCH/.test(detail) && index.test(detail)),
-        `${name}: ${details.join("; ")}`,
-      );
-    }
-  }
 });

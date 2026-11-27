@@ -610,6 +610,13 @@ owns the same behavior, including tests written to check work in progress. Trim
 cases and assertions individually, preserving unique rules and edge cases. Name
 retained tests for the behavior they protect.
 
+Check facts that are settled once a change lands while writing the change, and
+leave those checks out of the suite. These include a committed migration's data
+changes and query plans. Keep such a test only when a plausible later change
+would silently produce wrong results, which a lost index does not.
+[Change a schema](database.md#change-a-schema) describes how to check a
+migration.
+
 Test behavior and documented contracts. Skip assertions that only copy constant
 tables, property projections, CSS declarations, SVG artwork or placeholder
 markup. Skip tests for code too simple to fail in a meaningful way, such as
