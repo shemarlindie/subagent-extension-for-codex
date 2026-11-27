@@ -4,16 +4,21 @@
  */
 export const WORKER_SERVER = "subx";
 
-/** A worker tool's name as Claude Code exposes and calls it. */
-export const workerTool = (name: string) => `mcp__${WORKER_SERVER}__${name}`;
-
-/** The tool names Claude Code calls, for the settings allow rule. */
-export const workerToolNames = [
+const toolNames = [
   "update_plan",
   "show_visual",
   "visual_guide",
   "wrap_up",
-].map(workerTool);
+] as const;
+
+type WorkerToolName = (typeof toolNames)[number];
+
+/** A worker tool's name as Claude Code exposes and calls it, or `*` for all. */
+export const workerTool = (name: WorkerToolName | "*") =>
+  `mcp__${WORKER_SERVER}__${name}`;
+
+/** The tool names Claude Code calls, for the settings allow rule. */
+export const workerToolNames = toolNames.map(workerTool);
 
 /**
  * Calls to these show no tool rows. Kept apart from the server, so the event
