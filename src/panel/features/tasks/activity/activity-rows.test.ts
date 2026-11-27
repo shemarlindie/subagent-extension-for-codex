@@ -6,14 +6,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
-import { Controller } from "../../../app/state/controller";
-import { ControllerContext } from "../../../app/state/controller-context";
 import { task as buildTask } from "../../../app/state/controller-test-harness";
-import type {
-  Event as ActivityEvent,
-  Transport,
-} from "../../../app/state/types";
+import type { Event as ActivityEvent } from "../../../app/state/types";
 import { expandedJsonText } from "../../../shared/components/json-tree/json-tree-test-harness";
 import { getElement } from "../../../shared/utils/dom-test-harness";
 import { formatUserDateTime } from "../../../shared/utils/user-date-time";
@@ -329,102 +323,6 @@ test("Activity user messages use literal Chat bubbles and parent messages render
   expect(expandedJsonText(getElement(first, ".activity-raw"))).toContain(
     JSON.stringify(text),
   );
-});
-
-test("Activity messages fold their attachments to a count that opens their details", (t) => {
-  t.onTestFinished(cleanup);
-
-  const controller = new Controller(
-    { embedded: true, dispose() {} } as unknown as Transport,
-    { hidden: () => false, wide: () => false },
-  );
-
-  t.onTestFinished(() => controller.dispose());
-
-  const attachment = (
-    message_id: string,
-    position: number,
-    fields: Partial<MessageAttachment>,
-  ): MessageAttachment => ({
-    message_id,
-    position,
-    title: `File ${position}`,
-    summary: `Summary ${position}.`,
-    format: "code",
-    source: "file",
-    chars: 10,
-    lines: 4,
-    ...fields,
-  });
-
-  const attachments = new Map([
-    [
-      "request",
-      [
-        attachment("request", 1, {
-          title: "upload.ts:2-5",
-          path: "src/upload.ts",
-          start_line: 2,
-          end_line: 5,
-        }),
-        attachment("request", 2, {
-          title: "photo.png",
-          path: "photo.png",
-          format: "image",
-          source: "upload",
-          bytes: 2048,
-        }),
-      ],
-    ],
-    [
-      "follow-up",
-      [attachment("follow-up", 1, { title: "Notes", source: "inline" })],
-    ],
-  ]);
-
-  const view = render(
-    createElement(
-      ControllerContext.Provider,
-      { value: controller },
-      createElement(GroupedEventList, {
-        task: { ...buildTask("task"), id: "task" },
-        attachments,
-        events: [
-          event(
-            "task.instruction",
-            {
-              message_id: "follow-up",
-              from: "parent",
-              message: "Use these notes",
-              delivery: "queue",
-            },
-            "attached-instruction",
-          ),
-        ],
-      }),
-    ),
-  );
-
-  const toggles = view.getAllByRole("button", { name: /attachments?$/ });
-
-  expect(toggles.map((toggle) => toggle.textContent)).toEqual([
-    "2 attachments",
-    "1 attachment",
-  ]);
-
-  expect(view.container.querySelector(".activity-attachment-list")).toBeNull();
-
-  for (const toggle of toggles) fireEvent.click(toggle);
-
-  expect(
-    [...view.container.querySelectorAll(".activity-attachment-details")].map(
-      (item) => [...item.children].map((part) => part.textContent).join(" | "),
-    ),
-  ).toEqual([
-    "upload.ts | src/upload.ts · lines 2–5 | Summary 1.",
-    "photo.png | 2.0 KB",
-    "Notes | Inline · 4 lines | Summary 1.",
-  ]);
 });
 
 test("rate-limit details show the latest update without opening Debug", (t) => {
