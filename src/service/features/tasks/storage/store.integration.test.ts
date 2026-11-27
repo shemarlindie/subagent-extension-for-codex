@@ -267,7 +267,7 @@ test("parent updates stay pending until their request ends", (t) => {
 
   const pending = () =>
     store.database.client
-      .prepare("SELECT event_id, request_id FROM task_parent_pending")
+      .prepare("SELECT event_id, request_id FROM task_pending_updates")
       .all()
       .map((row) => ({ ...row }));
 
@@ -715,7 +715,7 @@ test("task and typed event reads search indexes instead of scanning tasks or eve
     [
       "pending",
       () => pendingUpdates.pending(task.owner, "chat"),
-      [/tasks_owner_conversation/, /task_parent_pending_request/],
+      [/tasks_owner_conversation/, /task_pending_updates_request/],
     ],
     ["list", () => store.list(task.owner, {}), [/tasks_owner_created/]],
     [

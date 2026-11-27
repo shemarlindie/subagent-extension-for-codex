@@ -195,7 +195,7 @@ test("the user clears only the chosen updates of the owner", async () => {
 
   expect(
     store.database.client
-      .prepare("SELECT event_id FROM task_parent_pending ORDER BY event_id")
+      .prepare("SELECT event_id FROM task_pending_updates ORDER BY event_id")
       .all(),
   ).toEqual([{ event_id: second.id }, { event_id: foreign.id }]);
 });

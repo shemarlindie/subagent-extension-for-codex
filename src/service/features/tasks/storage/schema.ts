@@ -81,8 +81,8 @@ export const taskRead = sqliteTable("task_read", {
  * read that returns an update, the user's dismissal or the end of its request
  * clears it by deleting its row.
  */
-export const parentPending = sqliteTable(
-  "task_parent_pending",
+export const pendingUpdates = sqliteTable(
+  "task_pending_updates",
   {
     event_id: integer()
       .primaryKey()
@@ -96,7 +96,7 @@ export const parentPending = sqliteTable(
      */
     request_id: text(),
   },
-  (t) => [index("task_parent_pending_request").on(t.task_id, t.request_id)],
+  (t) => [index("task_pending_updates_request").on(t.task_id, t.request_id)],
 );
 
 /**

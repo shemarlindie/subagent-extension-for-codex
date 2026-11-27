@@ -1,6 +1,6 @@
 -- Updates the parent hasn't seen stay pending, and a request only while it is
 -- its task's current one.
-INSERT INTO `task_parent_pending` (`event_id`, `task_id`, `request_id`)
+INSERT INTO `task_pending_updates` (`event_id`, `task_id`, `request_id`)
 SELECT
 	e.`id`,
 	e.`task_id`,

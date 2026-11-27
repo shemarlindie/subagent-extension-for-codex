@@ -27,7 +27,7 @@
       "entityType": "tables"
     },
     {
-      "name": "task_parent_pending",
+      "name": "task_pending_updates",
       "entityType": "tables"
     },
     {
@@ -455,7 +455,7 @@
       "entityType": "columns"
     },
     {
-      "table": "task_parent_pending",
+      "table": "task_pending_updates",
       "name": "event_id",
       "type": "integer",
       "notNull": false,
@@ -465,7 +465,7 @@
       "entityType": "columns"
     },
     {
-      "table": "task_parent_pending",
+      "table": "task_pending_updates",
       "name": "task_id",
       "type": "text",
       "notNull": true,
@@ -475,7 +475,7 @@
       "entityType": "columns"
     },
     {
-      "table": "task_parent_pending",
+      "table": "task_pending_updates",
       "name": "request_id",
       "type": "text",
       "notNull": false,
@@ -810,8 +810,8 @@
       "entityType": "indexes"
     },
     {
-      "table": "task_parent_pending",
-      "name": "task_parent_pending_request",
+      "table": "task_pending_updates",
+      "name": "task_pending_updates_request",
       "columns": [
         {
           "value": "task_id",
@@ -927,8 +927,8 @@
       "entityType": "fks"
     },
     {
-      "table": "task_parent_pending",
-      "name": "fk_task_parent_pending_event_id_events_id_fk",
+      "table": "task_pending_updates",
+      "name": "fk_task_pending_updates_event_id_events_id_fk",
       "columns": [
         "event_id"
       ],
@@ -942,8 +942,8 @@
       "entityType": "fks"
     },
     {
-      "table": "task_parent_pending",
-      "name": "fk_task_parent_pending_task_id_tasks_id_fk",
+      "table": "task_pending_updates",
+      "name": "fk_task_pending_updates_task_id_tasks_id_fk",
       "columns": [
         "task_id"
       ],
@@ -1103,8 +1103,8 @@
       "entityType": "pks"
     },
     {
-      "table": "task_parent_pending",
-      "name": "task_parent_pending_pk",
+      "table": "task_pending_updates",
+      "name": "task_pending_updates_pk",
       "columns": [
         "event_id"
       ],

@@ -7,7 +7,7 @@ import { isParentUpdateEvent } from "../../../../shared/tasks/conversation/paren
 import { now } from "../../../../shared/time.js";
 import type { Database } from "../../../platform/database/database.js";
 import type { EventStorageMetrics } from "./event-storage-metrics.js";
-import { events, parentPending } from "./schema.js";
+import { events, pendingUpdates } from "./schema.js";
 
 export const eventColumns = {
   id: events.id,
@@ -87,7 +87,7 @@ export function insertEvent(
 
   if (isParentUpdateEvent(type)) {
     database.orm
-      .insert(parentPending)
+      .insert(pendingUpdates)
       .values({
         event_id: id,
         task_id: taskId,
