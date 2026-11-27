@@ -152,8 +152,9 @@ await withComparison({
 
 - `scenario` runs once per side. It waits for readiness, then calls `play` with
   any actions to record the video, `still(name)` to save a labeled image, or
-  both. Every side must do the same. It can probe the side's `origin`
-  afterwards.
+  both. Every side must do the same. A side that finishes its actions sooner
+  holds its last frame until the slowest side ends. Afterwards, the scenario can
+  probe the side's `origin`.
 - `clock` holds the live fixtures at `startMs` until `play`, then runs them at
   `speed` (default 1) for `playMs` (default 0, for interactions only). Start
   just before the event under test, and slow the clock to stretch streaming.
