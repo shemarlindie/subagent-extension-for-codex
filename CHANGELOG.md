@@ -3,6 +3,46 @@
 Each release's notes come from its section here. The release workflow fails
 without one. Write for users: what changed, and anything to do by hand.
 
+## 0.12.0
+
+### Attachments
+
+- Attach any file type, by project reference or panel upload. Files that aren't
+  images or documents reach the worker as binary files for it to open with its
+  own tools, and their chips open in Codex's viewer (#188).
+- Activity lists the attachments sent with the request and each follow-up, with
+  their origin, size and summary. A title opens the attachment like its Chat
+  chip (#205).
+
+### Workers
+
+- Tasks can run Claude Code's `/claude-approvals` command, which needs Claude
+  Code 2.1.332 or later (#208).
+
+### Panel
+
+- Task list rows hide worker icons by default. Turn them on with **Worker icons
+  in task list** under Settings > Appearance. Saved settings keep their current
+  choice (#209).
+- The Changes file preview puts the file name, step buttons and close button on
+  one row, with the view tabs and file actions below (#203).
+
+### Performance
+
+- Changes shows the file list at once and reads each file's diff only when it
+  opens. A failed read shows its error with **Retry** (#196).
+- Checking for pending task updates stays fast in long conversations (#201).
+
+### Fixes
+
+- A reply draft in Chat grows right away after you switch tasks, switch from
+  Activity to Chat or show a hidden panel. Before, it could stay frozen for up
+  to 20 seconds (#197).
+- Worker profiles' **Inherit** choices show the new default model and reasoning
+  as soon as you change it, before saving (#204).
+- Focus returns to the task count after a bulk action that finishes quickly
+  (#206).
+
 ## 0.11.0
 
 ### Workers
