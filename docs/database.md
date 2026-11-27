@@ -34,9 +34,8 @@ scheduling paths indexed, so their cost grows with the rows a request needs.
   `status`, `created_at` and `conversation_id`. SQLite computes these columns
   from the body, so writes need no change. A body that isn't valid JSON then
   fails to write.
-- Check a new query's plan with `EXPLAIN QUERY PLAN`.
-  `store.integration.test.ts` asserts the plans of the task store's list and
-  typed event reads.
+- Check a new or changed query's plan with `EXPLAIN QUERY PLAN` while writing
+  it.
 - `PRAGMA optimize` runs at each open so the planner has statistics for new
   indexes.
 
@@ -54,7 +53,12 @@ scheduling paths indexed, so their cost grows with the rows a request needs.
    generated migration, in the same transaction. When a backfill reads a table
    the change removes, generate the removal as its own migration after the
    backfill.
-5. Run the focused database tests and the affected feature tests.
+5. Check a data change once against rows stored before it. For example, write a
+   temporary test that copies the earlier migration folders, passes that folder
+   to `openDatabase`, inserts rows, and then opens the database with every
+   migration. State the result in the pull request and leave the test
+   uncommitted.
+6. Run the focused database tests and the affected feature tests.
 
 Commit the new folders under `migrations/` with the change. Never edit a
 committed migration.
