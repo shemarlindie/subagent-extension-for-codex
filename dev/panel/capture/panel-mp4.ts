@@ -123,10 +123,20 @@ export async function encodePanelMp4(
   await mkdir(dirname(out), { recursive: true });
 
   await promisify(execFile)("ffmpeg", [
-    ...["-y", "-v", "error", "-safe", "0", "-f", "concat"],
-    ...["-i", join(frames, "frames.ffconcat")],
+    ...["-y", "-v", "error", ...concatInput(frames)],
     ...["-vf", filters.join(",")],
-    ...["-c:v", "libx264", "-preset", "slow", "-tune", "animation"],
-    ...["-crf", "12", "-movflags", "+faststart", "-an", out],
+    ...ENCODING,
+    out,
   ]);
 }
+
+export const concatInput = (frames: string) => [
+  ...["-safe", "0", "-f", "concat"],
+  ...["-i", join(frames, "frames.ffconcat")],
+];
+
+/** The showcase's H.264 settings, before the output file. */
+export const ENCODING = [
+  ...["-c:v", "libx264", "-preset", "slow", "-tune", "animation"],
+  ...["-crf", "12", "-movflags", "+faststart", "-an"],
+];
