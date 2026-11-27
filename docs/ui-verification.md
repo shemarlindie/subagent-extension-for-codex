@@ -111,13 +111,10 @@ await withComparison({
       label: "Distance from latest",
       unit: "px",
       value: (panel) => {
-        const history = panel.document.querySelector(
+        const chat = panel.document.querySelector(
           '[aria-label="Chat history"]',
-        );
-
-        return history
-          ? history.scrollHeight - history.clientHeight - history.scrollTop
-          : 0;
+        )!;
+        return chat.scrollHeight - chat.clientHeight - chat.scrollTop;
       },
     },
   ],
@@ -129,8 +126,8 @@ await withComparison({
 ```
 
 - A side's `source` sets the code it shows. Without one, it serves the working
-  tree. Pick the source that isolates the change best, and say in the PR which
-  you used:
+  tree. Pick the source, or another approach, that isolates the change best, and
+  say in the PR which you used:
   - **Swapped files**, `{ ref, paths }` or `{ folder, paths }`, put those files
     at a Git ref or from a folder into today's panel and fixtures. This suits a
     change in a few files whose imports still match. The run fails if the
@@ -147,8 +144,7 @@ await withComparison({
     apart.
 
   For a style-only change, the scenario can make it on one side instead, such as
-  by appending a style tag through `panel.locator("head")` before `play`. When
-  none fits, use another approach that isolates the change.
+  by appending a style tag through `panel.locator("head")` before `play`.
 
 - `scenario` runs once per side. It waits for readiness, then calls `play` with
   any actions to record the video, `still(name)` to save a labeled image, or
@@ -160,9 +156,10 @@ await withComparison({
   just before the event under test, and slow the clock to stretch streaming.
   `animationSpeed` separately slows CSS animations and transitions, such as 0.25
   to show a collapse at a quarter speed.
-- Each readout's `value` returns a number or text every animation frame. Numbers
-  show rounded with `unit`, or through `format`. Both functions run in the page,
-  so they can't use the script's variables.
+- Each readout's `value` returns a number or text every animation frame, and a
+  frame where it throws is skipped. Numbers show rounded with `unit`, or through
+  `format`. Both functions run in the page, so they can't use the script's
+  variables.
 - Sides are 640 × 900 by default. Set `size` to fit more, such as 480 wide for
   four sides.
 - `out` gets `comparison.mp4`, `<name>.png` for each still, and `report.json`,
