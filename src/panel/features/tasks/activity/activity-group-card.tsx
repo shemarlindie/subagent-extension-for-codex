@@ -8,6 +8,7 @@ import {
   type TransitionEvent,
 } from "react";
 
+import type { MessageAttachment } from "../../../../shared/attachments/model.js";
 import { eventPayload } from "../../../../shared/events/payload";
 import {
   compactionSummary,
@@ -25,6 +26,7 @@ import type { UserDateTimePreferences } from "../../../shared/utils/user-date-ti
 import { formatDuration } from "../list/duration";
 import { PlanSteps } from "../plan/plan-steps";
 import { MessageText } from "../shared/message-text";
+import { ActivityAttachments } from "./activity-attachments";
 import { ActivityContent } from "./activity-content";
 import { ActivityTime } from "./activity-time";
 import {
@@ -56,6 +58,8 @@ interface ActivityGroupCardProps {
   first: boolean;
   last: boolean;
   span?: { start: number; end: number | null };
+  /** The attachments of the messages the row shows. */
+  attachments?: MessageAttachment[];
   /** The row's thinking is still going, so it shows a running clock. */
   thinking: boolean;
   /** The task's runtime, given only to the row that reports its completion. */
@@ -68,6 +72,7 @@ function GroupCard({
   first,
   last,
   span,
+  attachments,
   thinking,
   runtimeMs,
   preferences,
@@ -307,6 +312,12 @@ function GroupCard({
             {group.summary}
           </p>
         ))}
+      {attachments && (
+        <ActivityAttachments
+          taskId={group.events[0].task_id}
+          attachments={attachments}
+        />
+      )}
       {plan && plan.steps.length > 0 && (
         <PlanSteps steps={plan.steps} only={plan.changed} />
       )}

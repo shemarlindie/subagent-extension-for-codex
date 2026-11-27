@@ -330,6 +330,69 @@
 .activity-body .activity-group-secondary {
   margin: 5px 0 0;
 }
+.activity-attachments {
+  margin-top: 5px;
+  font-size: 11px;
+}
+.activity-attachments-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.activity-attachments-toggle .chevron {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.activity-attachments-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.activity-attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+}
+/* The icon keeps its own column, so wrapped details line up under the title. */
+.activity-attachment-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px;
+}
+.activity-attachment-list li > svg {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.activity-attachment-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+/* A title reads as the row's subject, above the text button's muted color. */
+.activity-attachment-list .activity-attachment-title {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-attachment-title:hover {
+  text-decoration: underline;
+}
+.activity-attachment-origin,
+.activity-attachment-summary {
+  min-width: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.activity-attachment-summary {
+  flex-basis: 100%;
+  margin: 0;
+}
 .activity-group-title {
   min-width: 0;
 }

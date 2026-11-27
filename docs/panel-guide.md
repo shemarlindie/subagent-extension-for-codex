@@ -470,6 +470,9 @@ cancelled work never appears successful.
 
 - Worker and parent-agent text renders as Markdown, as in Chat. Your messages
   and tool output show as written.
+- A request or follow-up with attachments shows a count such as **3
+  attachments**. Expand it to list each attachment's title, origin, size and
+  summary. A title opens the attachment as its Chat chip does.
 - Thinking shows elapsed time.
 - Rate-limit groups show the latest utilization and reset time for each window.
 - Turn outcomes show duration, token usage and cumulative session cost.
