@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { StructuredPatchHunk as Hunk } from "diff";
 import { and, asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
@@ -25,6 +27,18 @@ const hunksSchema = z.array(
 const rowSchema = createSelectSchema(fileChanges);
 
 type StoredChange = typeof fileChanges.$inferSelect;
+
+export const hash = (value: string | Uint8Array) =>
+  createHash("sha256").update(value).digest("hex");
+
+const scopeKey = (task: Task, scope: ChangeScope) => `${task.id}/${scope}`;
+
+const rowWhere = (task: Task, scope: ChangeScope, path: string) =>
+  and(
+    eq(fileChanges.task_id, task.id),
+    eq(fileChanges.scope, scope),
+    eq(fileChanges.path, path),
+  );
 
 export type RecordedChange = Omit<StoredChange, "hunks"> & { hunks: Hunk[] };
 
@@ -77,6 +91,9 @@ function mergeRow(
 export class ChangeStore {
   constructor(private store: Store) {}
 
+  /** Each scope's revision until a write to it, so reading one file needn't rescan the scope. */
+  private revisions = new Map<string, string>();
+
   rows(task: Task, scope: ChangeScope) {
     return this.store.database.orm
       .select()
@@ -89,7 +106,36 @@ export class ChangeStore {
       .map(decodeRow);
   }
 
+  /** A scope's rows and the revision that fingerprints them. */
+  revisedRows(task: Task, scope: ChangeScope) {
+    const rows = this.rows(task, scope);
+    const revision = hash(JSON.stringify(rows));
+    this.revisions.set(scopeKey(task, scope), revision);
+
+    return { rows, revision };
+  }
+
+  /** A scope's current revision, scanning its rows only after a write. */
+  revision(task: Task, scope: ChangeScope) {
+    return (
+      this.revisions.get(scopeKey(task, scope)) ??
+      this.revisedRows(task, scope).revision
+    );
+  }
+
+  row(task: Task, scope: ChangeScope, path: string) {
+    const row = this.store.database.orm
+      .select()
+      .from(fileChanges)
+      .where(rowWhere(task, scope, path))
+      .get();
+
+    return row && decodeRow(row);
+  }
+
   clearTurn(task: Task) {
+    this.revisions.delete(scopeKey(task, "turn"));
+
     this.store.database.orm
       .delete(fileChanges)
       .where(
@@ -127,19 +173,9 @@ export class ChangeStore {
   ) {
     this.store.transaction(() => {
       for (const scope of ["task", "turn"] as const) {
-        const where = and(
-          eq(fileChanges.task_id, task.id),
-          eq(fileChanges.scope, scope),
-          eq(fileChanges.path, path),
-        );
-
-        const stored = this.store.database.orm
-          .select()
-          .from(fileChanges)
-          .where(where)
-          .get();
-
-        const merged = mergeRow(stored && decodeRow(stored), edit, source);
+        this.revisions.delete(scopeKey(task, scope));
+        const where = rowWhere(task, scope, path);
+        const merged = mergeRow(this.row(task, scope, path), edit, source);
 
         if (
           !merged.incomplete &&

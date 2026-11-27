@@ -29,7 +29,7 @@ import type {
 } from "../../src/panel/app/state/types";
 import type {
   ChangedFileContent,
-  Changes,
+  ChangeList,
 } from "../../src/panel/features/changes/types";
 import { ProjectsPage } from "../../src/panel/features/projects/projects-page";
 import { SettingsPage } from "../../src/panel/features/settings/settings-page";
@@ -39,7 +39,6 @@ import { TaskFilters } from "../../src/panel/features/tasks/list/task-filters";
 import { TaskList } from "../../src/panel/features/tasks/list/task-list";
 import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
-import { changeCounts } from "../../src/shared/changes/changes.js";
 import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
 import {
   panelSettingsDefaults,
@@ -174,12 +173,19 @@ export class FakeTransport implements Transport {
   projects: Project[] = [{ repository: "/repo/a", kind: "repository" }];
   calls: { name: string; args: Record<string, unknown> }[] = [];
   /**
-   * get_changes pages; a cursor is the next page's index. The
-   * first page also answers app_get_change_counts, so one is required.
+   * The change list, which also answers app_get_change_counts, and each
+   * file's diff. A file read with another revision is stale.
    */
-  changes: [Changes, ...Changes[]] = [
-    { scope: "task", files: [], additions: 0, deletions: 0, diff: "" },
-  ];
+  changes: TestChanges = {
+    list: {
+      scope: "task",
+      files: [],
+      additions: 0,
+      deletions: 0,
+      revision: "r1",
+    },
+    diffs: {},
+  };
 
   /** get_changed_file results by path. */
   changedFiles: Record<string, ChangedFileContent> = {};
@@ -274,8 +280,9 @@ export class FakeTransport implements Transport {
         },
       ],
       app_list_tasks: { tasks: this.tasks },
-      app_get_change_counts: changeCounts(this.changes[0]),
-      get_changes: this.changes[Number(args.cursor ?? 0)],
+      app_get_change_counts: changeCounts(this.changes.list),
+      app_get_change_list: this.changes.list,
+      app_get_file_change: fileChange(this.changes, args),
       get_changed_file: this.changedFiles[String(args.path)],
       get_settings: { values: defaults },
       start_task: this.tasks[0],
@@ -711,39 +718,59 @@ export {
 
 // Two pages of one file each, as the service pages a large diff. The second
 // file is binary.
-const changePages = (binary = "logo.png"): [Changes, ...Changes[]] => {
-  const files: Changes["files"] = [
-    {
-      path: "src/a.ts",
-      status: "modified",
+/** A change list and its files' diffs, as the service gives them. */
+export type TestChanges = { list: ChangeList; diffs: Record<string, string> };
+
+function changeCounts({ files, revision: _, ...totals }: ChangeList) {
+  return { ...totals, files: files.length };
+}
+
+function fileChange(
+  { list, diffs }: TestChanges,
+  args: Record<string, unknown>,
+) {
+  if (args.revision !== list.revision) return { stale: true };
+  const diff = diffs[String(args.path)];
+
+  return { stale: false, ...(diff === undefined ? {} : { diff }) };
+}
+
+/** A modified file with a diff, and an incomplete binary file without one. */
+export function testChanges(binary = "logo.png"): TestChanges {
+  return {
+    list: {
+      scope: "task",
+      files: [
+        {
+          path: "src/a.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          source: "tool",
+          incomplete: false,
+          signature: "a1",
+          hunks: 1,
+          lines: 2,
+        },
+        {
+          path: binary,
+          status: "added",
+          additions: 0,
+          deletions: 0,
+          source: "command",
+          incomplete: true,
+          signature: "b1",
+          hunks: 0,
+          lines: 0,
+        },
+      ],
       additions: 1,
       deletions: 1,
-      source: "tool",
-      incomplete: false,
+      revision: "r1",
     },
-    {
-      path: binary,
-      status: "added",
-      additions: 0,
-      deletions: 0,
-      source: "command",
-      incomplete: true,
+    diffs: {
+      "src/a.ts":
+        "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old line\n+new line\n",
     },
-  ];
-
-  const page = { scope: "task" as const, files, additions: 1, deletions: 1 };
-
-  return [
-    {
-      ...page,
-      diff: "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old line\n+new line\n",
-      next_cursor: "1",
-    },
-    {
-      ...page,
-      diff: `diff --git a/${binary} b/${binary}\nnew file mode 100644\nBinary files /dev/null and b/${binary} differ\n`,
-    },
-  ];
-};
-
-export { changePages };
+  };
+}

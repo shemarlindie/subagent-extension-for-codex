@@ -206,8 +206,9 @@ export function fixtureLaunchArgs(
  * repositories built from dev/panel/scenarios/change-fixtures.ts.
  */
 export const FIXTURE_SERVICE_TOOLS: string[] = [
-  "get_changes",
   "app_get_change_counts",
+  "app_get_change_list",
+  "app_get_file_change",
   "get_changed_file",
   "app_remove_worktree",
   "app_delete_branch",

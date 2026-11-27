@@ -581,3 +581,20 @@ body[data-expanded-panel="true"]
 .changed-file-tree-file[aria-current="location"] {
   background: var(--hover);
 }
+/* Stands in for a diff's rows, as tall as .diff-table's lines and padded hunks. */
+.diff-placeholder {
+  min-height: calc(
+    (var(--diff-hunks) + var(--diff-lines)) * 11px * 1.6 + var(--diff-hunks) *
+      6px
+  );
+}
+/* A file whose diff read failed: the error, then Retry. */
+.changed-file-diff-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.changed-file-diff-error .form-error {
+  margin: 0;
+}

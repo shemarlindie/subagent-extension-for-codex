@@ -5,19 +5,19 @@ import {
   act,
   assert,
   assertAbsent,
-  changePages,
   pasteText,
   screen,
   setup,
   setupInspector,
   task,
   test,
+  testChanges,
   waitFor,
   within,
 } from "./panel-test-support";
 
-test("the Changes tab reads every page and shows the worktree branch and its commands", async (t) => {
-  const { user } = await setupInspector(t, (transport) => {
+test("the Changes tab reads the list, then each open file's diff, and shows the worktree branch and its commands", async (t) => {
+  const { transport, user } = await setupInspector(t, (transport) => {
     transport.tasks = [
       {
         ...task(),
@@ -27,7 +27,7 @@ test("the Changes tab reads every page and shows the worktree branch and its com
       },
     ];
 
-    transport.changes = changePages();
+    transport.changes = testChanges();
   });
 
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
@@ -40,6 +40,15 @@ test("the Changes tab reads every page and shows the worktree branch and its com
   );
 
   assert.ok(screen.getByText("+1 −1, 2 files"));
+
+  // The incomplete file has no diff to read.
+  assert.deepEqual(
+    transport.calls
+      .filter((call) => call.name === "app_get_file_change")
+      .map((call) => call.args.path),
+    ["src/a.ts"],
+  );
+
   assert.ok(screen.getByText(/^Edits recorded from this task/));
 
   assert.ok(
@@ -68,7 +77,12 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   await user.click(screen.getByRole("tab", { name: /^Changes/ }));
   // Empty states say no edits were recorded for the scope.
   await screen.findByText("No recorded edits.");
-  transport.changes = [{ ...transport.changes[0], scope: "turn" }];
+
+  transport.changes = {
+    ...transport.changes,
+    list: { ...transport.changes.list, scope: "turn" },
+  };
+
   await user.click(screen.getByRole("button", { name: "This turn" }));
   await screen.findByText("No recorded edits from this turn.");
   assert.equal(transport.calls.at(-1)?.args.scope, "turn");
@@ -87,7 +101,7 @@ test("the Changes tab offers This turn after a second turn and explains empty st
   const tool = transport.tool.bind(transport);
 
   transport.tool = async <T>(name: string, args?: Record<string, unknown>) => {
-    if (name === "get_changes") {
+    if (name === "app_get_change_list") {
       throw new Error("This task has no change snapshot.");
     }
 
@@ -181,7 +195,7 @@ test("Ask Codex about a previewed file prepares its context and restores the pre
     (transport) => {
       transport.host.canSend = true;
       transport.host.canShare = false;
-      transport.changes = changePages("data.bin");
+      transport.changes = testChanges("data.bin");
 
       transport.changedFiles = {
         "src/a.ts": {

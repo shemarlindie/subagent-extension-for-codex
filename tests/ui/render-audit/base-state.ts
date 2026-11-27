@@ -9,9 +9,9 @@ import {
   isChatEvent,
 } from "../../../src/shared/tasks/conversation/chat.js";
 import {
-  changePages,
   setup,
   task,
+  testChanges,
   type FakeTransport,
 } from "../panel-test-support";
 import { commits } from "./render-recorder";
@@ -164,7 +164,7 @@ function configureBase(transport: FakeTransport) {
 
   storeChat(transport);
   serveActions(transport);
-  transport.changes = changePages();
+  transport.changes = testChanges();
 
   transport.pendingUpdates = [
     {

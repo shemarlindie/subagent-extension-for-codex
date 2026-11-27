@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -13,16 +12,15 @@ import {
   isBinary,
   type ChangeCounts,
   type ChangedFileContent,
+  type ChangeList,
   type ChangeScope,
   type Changes as ChangesResult,
+  type FileChange,
 } from "../../../shared/changes/changes.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
 import { changePath } from "./paths.js";
-import { ChangeStore, type RecordedChange } from "./store.js";
-
-const hash = (value: string | Uint8Array) =>
-  createHash("sha256").update(value).digest("hex");
+import { ChangeStore, hash, type RecordedChange } from "./store.js";
 
 /** List metadata does not depend on the current workspace. */
 function listedFile(row: RecordedChange) {
@@ -49,9 +47,28 @@ function listedFile(row: RecordedChange) {
   };
 }
 
-/** The file list and totals shared by full reads and counts. */
-function listing(task: Task, rows: RecordedChange[]) {
-  const files = rows.filter((row) => row.path).map(listedFile);
+/** The panel's file entry: its signature comes from the recorded row, so it needs no diff. */
+function signedFile(row: RecordedChange) {
+  const file = listedFile(row);
+  const { incomplete, source, hunks } = row;
+
+  return {
+    ...file,
+    signature: hash(JSON.stringify([file.status, incomplete, source, hunks])),
+    hunks: incomplete ? 0 : hunks.length,
+    lines: incomplete
+      ? 0
+      : hunks.reduce((sum, hunk) => sum + hunk.lines.length, 0),
+  };
+}
+
+/** The file list and totals shared by full reads, the panel's list and counts. */
+function listing<F extends ReturnType<typeof listedFile>>(
+  task: Task,
+  rows: RecordedChange[],
+  toFile: (row: RecordedChange) => F,
+) {
+  const files = rows.filter((row) => row.path).map(toFile);
 
   return {
     files,
@@ -103,7 +120,7 @@ export class Changes extends ChangeStore {
     cursor?: string,
     pageChars = CHANGES_PAGE_CHARS,
   ): ChangesResult {
-    const rows = this.rows(task, scope);
+    const { rows, revision } = this.revisedRows(task, scope);
 
     const parts = rows
       .filter((row) => row.path && !row.incomplete)
@@ -111,7 +128,6 @@ export class Changes extends ChangeStore {
         formatFileDiff(row.path, row.hunks, row.created, row.deleted),
       );
 
-    const revision = hash(JSON.stringify(rows));
     const page = cursor ? decodeCursor(cursor) : undefined;
 
     if (
@@ -127,7 +143,7 @@ export class Changes extends ChangeStore {
 
     return {
       scope,
-      ...listing(task, rows),
+      ...listing(task, rows, listedFile),
       diff,
       ...(end < parts.length
         ? {
@@ -141,8 +157,36 @@ export class Changes extends ChangeStore {
     };
   }
 
+  changeList(task: Task, scope: ChangeScope): ChangeList {
+    const { rows, revision } = this.revisedRows(task, scope);
+
+    return { scope, ...listing(task, rows, signedFile), revision };
+  }
+
+  /** One listed file's diff, as long as the recorded changes match the list's revision. */
+  fileChange(
+    task: Task,
+    scope: ChangeScope,
+    path: string,
+    revision: string,
+  ): FileChange {
+    if (this.revision(task, scope) !== revision) return { stale: true };
+    const row = path ? this.row(task, scope, path) : undefined;
+    if (!row) throw new Error(`${path} is not among this task's changes.`);
+    if (row.incomplete) return { stale: false };
+
+    return {
+      stale: false,
+      diff: formatFileDiff(row.path, row.hunks, row.created, row.deleted),
+    };
+  }
+
   counts(task: Task): ChangeCounts {
-    const { files, ...totals } = listing(task, this.rows(task, "task"));
+    const { files, ...totals } = listing(
+      task,
+      this.rows(task, "task"),
+      listedFile,
+    );
 
     return { scope: "task", ...totals, files: files.length };
   }

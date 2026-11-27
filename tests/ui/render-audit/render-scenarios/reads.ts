@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
 
-import { changePages } from "../../panel-test-support";
+import { testChanges } from "../../panel-test-support";
 import { event, SELECTED, storeChat, type Mounted } from "../base-state";
 import {
   addTask,
@@ -172,8 +172,13 @@ export const readScenarios: Scenario[] = [
     label: "Change counts change",
     group: "Reads",
     change: async ({ controller, transport }) => {
-      const [first, ...rest] = changePages();
-      transport.changes = [{ ...first, additions: 3 }, ...rest];
+      const changes = testChanges();
+
+      transport.changes = {
+        ...changes,
+        list: { ...changes.list, additions: 3 },
+      };
+
       await act(() => controller.changes.loadCounts());
     },
   },
@@ -183,19 +188,23 @@ export const readScenarios: Scenario[] = [
     prepare: showTab("changes"),
     // A refresh reads changes again once they're stale, as this does.
     change: async ({ controller, transport }) => {
-      const [first, ...rest] = changePages();
+      const { list, diffs } = testChanges();
 
-      transport.changes = [
-        {
-          ...first,
-          files: first.files.map((file) =>
-            file.path === "src/a.ts" ? { ...file, additions: 2 } : file,
+      transport.changes = {
+        list: {
+          ...list,
+          files: list.files.map((file) =>
+            file.path === "src/a.ts"
+              ? { ...file, additions: 2, signature: "a2" }
+              : file,
           ),
           additions: 2,
-          diff: `${first.diff}@@ -5 +5 @@\n-old tail\n+new tail\n`,
+          revision: "r2",
         },
-        ...rest,
-      ];
+        diffs: {
+          "src/a.ts": `${diffs["src/a.ts"]}@@ -5 +5 @@\n-old tail\n+new tail\n`,
+        },
+      };
 
       await act(() => controller.changes.loadChanges());
     },

@@ -2,12 +2,14 @@ import {
   useDeferredValue,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type SyntheticEvent,
 } from "react";
 
 import { LazyBlock } from "../../../shared/components/lazy-block/lazy-block";
+import { useAnimatedHeight } from "../../../shared/components/motion/use-animated-height";
 import { chunks } from "../../../shared/utils/chunks";
 import { pathLanguage } from "../file-format";
 import { highlightLine } from "../highlight";
@@ -43,6 +45,8 @@ type DiffFileProps = {
   tag?: string;
   /** Shown above the rows while the file is open. */
   note?: string;
+  /** Shown in place of the rows while the file is open, such as while they load. */
+  placeholder?: ReactNode;
   /** Buttons in the file's header; using them doesn't toggle the file. */
   actions?: ReactNode;
   /** Called when the reader opens or closes the file. */
@@ -60,6 +64,7 @@ export function DiffFile({
   emptyNote = "No content changes",
   tag,
   note,
+  placeholder,
   actions,
   onOpenChange,
   onContentReady,
@@ -68,8 +73,13 @@ export function DiffFile({
   const [ownOpen, setOpen] = useState(initiallyOpen);
   const open = controlledOpen ?? ownOpen;
   const deferredOpen = useDeferredValue(open);
-  const renderRows = open && deferredOpen;
+  const renderRows = open && deferredOpen && !placeholder;
   const language = pathLanguage(diffPath(file));
+  const body = useRef<HTMLDivElement>(null);
+
+  // The rows can be taller than the placeholder or progress before them, as
+  // when lines wrap, so files below ease to the new height instead of jumping.
+  useAnimatedHeight(body, renderRows);
 
   const renamed =
     file.from && file.to && file.from !== file.to && !file.new && !file.deleted;
@@ -117,16 +127,20 @@ export function DiffFile({
           </span>
         )}
       </summary>
-      {open && !deferredOpen && (
-        <Progress
-          label={`Rendering ${diffPath(file)}`}
-          className="diff-progress"
-        />
-      )}
-      {renderRows && note && <p className="help diff-file-note">{note}</p>}
       {/* A collapsed file unmounts its rows. */}
-      {renderRows && (
-        <DiffRows file={file} language={language} emptyNote={emptyNote} />
+      {open && (
+        <div ref={body}>
+          {note && <p className="help diff-file-note">{note}</p>}
+          {placeholder ??
+            (deferredOpen ? (
+              <DiffRows file={file} language={language} emptyNote={emptyNote} />
+            ) : (
+              <Progress
+                label={`Rendering ${diffPath(file)}`}
+                className="diff-progress"
+              />
+            ))}
+        </div>
       )}
     </details>
   );

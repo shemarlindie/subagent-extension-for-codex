@@ -7,6 +7,7 @@ import type { GitState } from "../../../shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
+  FileDiffsState,
 } from "../../features/changes/types.js";
 import type { PreviewFile } from "../../features/file-preview/file-format";
 import type { Project } from "../../features/projects/types.js";
@@ -327,6 +328,8 @@ export type Snapshot = {
   changeCounts?: ChangeCountsState;
   /** The selected task's changes, read while the Changes tab is open. */
   changes?: ChangesState;
+  /** Diffs read for the selected task's change list, by path. */
+  changeDiffs?: FileDiffsState;
   connected: boolean;
   scopeKnown: boolean;
   busy: boolean;

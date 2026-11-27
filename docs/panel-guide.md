@@ -519,8 +519,9 @@ The service records Claude's edit tools and Bash commands. See
 ### Diffs and file previews
 
 Expand a file to read its diff, or open **Preview** for format-specific views.
+Changes reads a file's diff when the file opens. A failed read offers **Retry**.
 Previews show the file as it is now, including later edits by others. Deleted
-files show removed lines. Files without a matching diff show **Diff
+files show removed lines. A diff the panel can't parse shows **Diff
 unavailable**. Long lists open only the first file and remember your choices.
 See [file previews](../src/panel/features/file-preview/README.md#large-content)
 for supported formats and size limits.

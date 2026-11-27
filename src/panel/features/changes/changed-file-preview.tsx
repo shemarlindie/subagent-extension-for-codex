@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
+import { Presence } from "../../shared/components/motion/presence";
 import { defineDialog } from "../../shared/dialogs/dialog-definition";
 import { formatBytes } from "../../shared/utils/format";
 import { scrollContainer } from "../../shared/utils/scroll-container";
@@ -19,7 +20,8 @@ import { Progress } from "../file-preview/progress";
 import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
 import { ChangedFileNav } from "./changed-file-nav";
-import { changedFileDiff, changedFileEntries } from "./changed-files";
+import { listedDiffs } from "./changed-files";
+import { DiffReadError } from "./diff-read-error";
 import { OpenFileButton } from "./open-file-button";
 import { readChangedFile } from "./read-changes";
 import type { ChangedFileContent } from "./types";
@@ -64,11 +66,29 @@ function useChangedFile(task: Task, path: string) {
   return read?.taskId === task.id ? read : undefined;
 }
 
-/** The task's changes, as the Changes tab last read them. */
-function useChanges(task: Task) {
+/** The task's changed files, as the Changes tab last listed them. */
+function useChangedFiles(task: Task) {
   const changes = useSnapshot((state) => state.changes);
 
-  return changes?.task === task.id ? changes.data : undefined;
+  return (changes?.task === task.id && changes.data?.files) || [];
+}
+
+/** A listed file's diff read, which starts once the preview shows the file. */
+function useFileDiff(task: Task, path: string) {
+  const controller = useController();
+  const file = useChangedFiles(task).find((file) => file.path === path);
+
+  const diff = useSnapshot((state) => listedDiffs(state, task.id)?.get(path));
+
+  const needsDiff = Boolean(file && !file.incomplete);
+
+  useEffect(() => {
+    if (needsDiff && !diff) {
+      controller.run(() => controller.changes.loadDiff(path));
+    }
+  }, [controller, needsDiff, diff, path]);
+
+  return diff;
 }
 
 type ChangedFileViewedProps = {
@@ -80,22 +100,21 @@ type ChangedFileViewedProps = {
 
 /** The shown file's Viewed checkbox, when it is a changed file. */
 function ChangedFileViewed({ task, path, onViewed }: ChangedFileViewedProps) {
-  const data = useChanges(task);
-  const entries = data ? changedFileEntries(data) : [];
+  const files = useChangedFiles(task);
   const [viewed, setViewed] = useViewedFiles(task.id);
-  const entry = entries.find((entry) => entry.file.path === path);
+  const file = files.find((file) => file.path === path);
 
-  if (!entry) return null;
+  if (!file) return null;
 
   const handleChange = (value: boolean) => {
-    setViewed(entry, value);
-    if (value) onViewed(nextUnviewed(viewed, entries, entry)?.file.path);
+    setViewed(file, value);
+    if (value) onViewed(nextUnviewed(viewed, files, file)?.path);
   };
 
   return (
     <ViewedToggle
       path={path}
-      viewed={isViewed(viewed, entry)}
+      viewed={isViewed(viewed, file)}
       onChange={handleChange}
     />
   );
@@ -117,12 +136,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
   // The file showing: the one asked for once read, until then the last one.
   const shown = read?.path ?? path;
   const loading = read?.path !== path;
-  const data = useChanges(task);
-
-  const diff = useMemo(
-    () => data && changedFileDiff(data, shown),
-    [data, shown],
-  );
+  const diffRead = useFileDiff(task, shown);
+  const diff = diffRead?.status === "ready" ? diffRead.diff : undefined;
 
   const file = read?.status === "ready" ? read.file : undefined;
 
@@ -176,6 +191,23 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           .join("\n")
       }
     />
+  );
+
+  const failure = diffRead?.status !== "ready" ? diffRead?.error : undefined;
+
+  // Collapses once Retry reads the diff, so the file slides up.
+  const diffError = (
+    <Presence show={failure !== undefined}>
+      {failure !== undefined && (
+        <DiffReadError
+          error={failure}
+          retrying={diffRead?.status === "loading"}
+          onRetry={() =>
+            controller.run(() => controller.changes.loadDiff(shown))
+          }
+        />
+      )}
+    </Presence>
   );
 
   const firstRead = loading && !read;
@@ -260,6 +292,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           }
           actions={viewedToggle}
           diff={diff}
+          before={diffError}
           view={view}
           onViewChange={setView}
           progress={progress}
@@ -309,6 +342,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
                     <DiffFile file={diff} initiallyOpen />
                   </div>
                 )}
+                {diffError}
               </>
             )}
             {file?.state === "binary" && (

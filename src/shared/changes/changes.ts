@@ -7,7 +7,7 @@ export type ChangeScope = "task" | "turn";
 
 type ChangeStatus = "added" | "modified" | "deleted";
 
-export interface ChangedFile {
+interface ChangedFile {
   path: string;
   status: ChangeStatus;
   additions: number;
@@ -30,6 +30,28 @@ export interface Changes {
   next_cursor?: string;
 }
 
+/** A file in the panel's change list. */
+export interface ListedChange extends ChangedFile {
+  /** Identifies the file's recorded changes, so marking it viewed lasts until they change. */
+  signature: string;
+  /** The diff's hunks and lines, so a file can hold its height while its diff loads. */
+  hunks: number;
+  lines: number;
+}
+
+/** The panel's change list: every file and the totals, without diffs. */
+export type ChangeList = Omit<Changes, "files" | "diff" | "next_cursor"> & {
+  files: ListedChange[];
+  /** Fingerprints the recorded changes. File reads pass it back. */
+  revision: string;
+};
+
+/**
+ * One file's diff from a change list. Incomplete files have none. Stale once
+ * the recorded changes differ from the list's revision.
+ */
+export type FileChange = { stale: true } | { stale: false; diff?: string };
+
 /**
  * A task's change totals: the file count and line stats, without the file
  * list or diff. Incomplete files count as files but add no lines.
@@ -37,16 +59,6 @@ export interface Changes {
 export type ChangeCounts = Omit<Changes, "files" | "diff" | "next_cursor"> & {
   files: number;
 };
-
-/** The totals of a read, for the tab count and Details; any page gives the same ones. */
-export function changeCounts({
-  files,
-  diff: _diff,
-  next_cursor: _next,
-  ...totals
-}: Changes): ChangeCounts {
-  return { ...totals, files: files.length };
-}
 
 /** A changed file's current content, as get_changed_file returns it. */
 export interface ChangedFileContent {

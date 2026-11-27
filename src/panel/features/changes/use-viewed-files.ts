@@ -7,34 +7,34 @@ import type {
 } from "../../app/state/session/session-state";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import { quote, taskView } from "../../app/state/undo-history";
-import type { ChangedFileEntry } from "./changed-files";
+import type { ListedChange } from "./types";
 
 const selectViewed = (state: TaskSessionState) => state.viewedChanges;
 
 /** Whether the file was marked viewed and hasn't changed since. */
 export function isViewed(
   viewed: ReadonlyMap<string, string>,
-  entry: ChangedFileEntry,
+  file: ListedChange,
 ) {
-  return viewed.get(entry.file.path) === entry.signature;
+  return viewed.get(file.path) === file.signature;
 }
 
 /** Whether the file was marked viewed but has changed since. */
 export function changedSinceViewed(
   viewed: ReadonlyMap<string, string>,
-  entry: ChangedFileEntry,
+  file: ListedChange,
 ) {
-  const signature = viewed.get(entry.file.path);
+  const signature = viewed.get(file.path);
 
-  return signature !== undefined && signature !== entry.signature;
+  return signature !== undefined && signature !== file.signature;
 }
 
 /** The first file not yet viewed, or the first file once all are. */
 export function firstUnviewed(
   viewed: ReadonlyMap<string, string>,
-  entries: ChangedFileEntry[],
+  files: ListedChange[],
 ) {
-  return entries.find((entry) => !isViewed(viewed, entry)) ?? entries.at(0);
+  return files.find((file) => !isViewed(viewed, file)) ?? files.at(0);
 }
 
 /**
@@ -43,13 +43,13 @@ export function firstUnviewed(
  */
 export function nextUnviewed(
   viewed: ReadonlyMap<string, string>,
-  entries: ChangedFileEntry[],
-  from: ChangedFileEntry,
+  files: ListedChange[],
+  from: ListedChange,
 ) {
-  const index = entries.indexOf(from);
-  const rest = [...entries.slice(index + 1), ...entries.slice(0, index)];
+  const index = files.indexOf(from);
+  const rest = [...files.slice(index + 1), ...files.slice(0, index)];
 
-  return rest.find((entry) => !isViewed(viewed, entry));
+  return rest.find((file) => !isViewed(viewed, file));
 }
 
 /** A file's viewed signature and whether it was opened, as Changes keeps them. */
@@ -84,9 +84,9 @@ export function useViewedFiles(task: string) {
   const [viewed] = useSessionState("task", task, selectViewed);
 
   const setViewed = useCallback(
-    (entry: ChangedFileEntry, value: boolean) => {
+    (file: ListedChange, value: boolean) => {
       const state = session.get("task", task);
-      const { path } = entry.file;
+      const { path } = file;
       const name = path.split("/").at(-1) ?? path;
 
       const before: FileMark = {
@@ -96,7 +96,7 @@ export function useViewedFiles(task: string) {
 
       // Collapsed while viewed. If it changes later, it opens as unread.
       const after: FileMark = value
-        ? { signature: entry.signature }
+        ? { signature: file.signature }
         : { open: true };
 
       setMark(session, task, path, after);

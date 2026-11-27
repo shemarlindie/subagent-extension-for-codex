@@ -8,7 +8,8 @@ import { fixtureServicePlugin } from "../../../dev/panel/fixture-service/plugin.
 import { largeFiles } from "../../../dev/panel/scenarios/large-files.js";
 import type {
   ChangedFileContent,
-  Changes,
+  ChangeList,
+  FileChange,
 } from "../../../src/shared/changes/changes.js";
 
 const projectRoot = resolve(import.meta.dirname, "../../..");
@@ -79,21 +80,33 @@ async function result<T>(name: string, args: Record<string, unknown>) {
   return body.result as T;
 }
 
+/** A listed file's diff, which must be current and recorded. */
+async function fileDiff(task_id: string, path: string, list: ChangeList) {
+  const change = await result<FileChange>("app_get_file_change", {
+    task_id,
+    scope: list.scope,
+    path,
+    revision: list.revision,
+  });
+
+  assert.ok(!change.stale && change.diff !== undefined);
+
+  return change.diff;
+}
+
 test("fixture changes come from recorded edits built per task", async () => {
   await fixtureServer();
 
   const changes = (task_id: string, scope = "task") =>
-    result<Changes>("get_changes", { task_id, scope });
+    result<ChangeList>("app_get_change_list", { task_id, scope });
 
-  const paths = (result: Changes) => result.files.map((file) => file.path);
+  const paths = (result: ChangeList) => result.files.map((file) => file.path);
 
   // A rename is recorded as a deletion and an addition.
   const build = await changes("preview-build");
   assert.equal(build.files.length, 61);
-  assert.equal(build.next_cursor, undefined);
   assert.ok(build.files.some((file) => file.status === "added"));
   assert.ok(build.files.some((file) => file.status === "deleted"));
-  assert.equal(build.diff.match(/^diff --git /gm)?.length, 61);
 
   // Commits preserve whole-task and latest-turn records.
   // Simultaneous first reads share the initialized repository and edit records.
@@ -138,8 +151,14 @@ test("fixture changes come from recorded edits built per task", async () => {
     "test/upload.test.ts",
   ]);
 
-  assert.match(conversation.diff, /maxUploadBytes: 10/);
-  assert.doesNotMatch(conversation.diff, /maxUploadBytes: 25/);
+  const limits = await fileDiff(
+    "preview-conversation",
+    "src/limits.ts",
+    conversation,
+  );
+
+  assert.match(limits, /maxUploadBytes: 10/);
+  assert.doesNotMatch(limits, /maxUploadBytes: 25/);
 
   assert.equal(
     conversation.additions,
@@ -151,40 +170,29 @@ test("fixture changes come from recorded edits built per task", async () => {
   // Removing a workspace leaves its recorded edits readable.
   const removed = await changes("preview-failed");
   assert.deepEqual(paths(removed), ["test/retry.test.ts"]);
-  assert.match(removed.diff, /\+test\('retries'/);
+
+  assert.match(
+    await fileDiff("preview-failed", "test/retry.test.ts", removed),
+    /\+test\('retries'/,
+  );
 });
 
-test("the large-file fixture's changes come in pages and its files read whole", async () => {
+test("the large-file fixture's diffs and files read whole", async () => {
   await fixtureServer();
 
-  // Several megabytes of new files cross in pages of whole files.
-  let page = await result<Changes>("get_changes", {
+  // The 20,000-row table, over a megabyte, has one diff and arrives whole
+  // across its parts.
+  const path = "reports/module-sizes.csv";
+
+  const list = await result<ChangeList>("app_get_change_list", {
     task_id: "preview-profile",
+    scope: "task",
   });
 
-  const pages = [page];
+  const diff = await fileDiff("preview-profile", path, list);
+  assert.equal(diff.match(/^diff --git /gm)?.length, 1);
+  assert.ok(diff.length > 1_000_000);
 
-  while (page.next_cursor) {
-    page = await result<Changes>("get_changes", {
-      task_id: "preview-profile",
-      cursor: page.next_cursor,
-    });
-
-    pages.push(page);
-  }
-
-  assert.ok(pages.length > 1, "the diff should need more than one page");
-
-  assert.equal(
-    pages
-      .map((part) => part.diff)
-      .join("")
-      .match(/^diff --git /gm)?.length,
-    page.files.length,
-  );
-
-  // The 20,000-row table, over a megabyte, arrives whole across its parts.
-  const path = "reports/module-sizes.csv";
   let part: ChangedFileContent | undefined;
   let content = "";
 
@@ -243,9 +251,10 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
     { status: "removed" },
   );
 
-  const afterRemoval = (
-    await call("get_changes", { task_id: "preview-interrupted" })
-  ).body.result as Changes;
+  const list = { task_id: "preview-interrupted", scope: "task" };
+
+  const afterRemoval = (await call("app_get_change_list", list)).body
+    .result as ChangeList;
 
   assert.equal(afterRemoval.files.length, 3);
 
@@ -263,7 +272,7 @@ test("fixture worktrees can be removed and their branches deleted with real Git"
   );
 
   assert.deepEqual(
-    (await call("get_changes", { task_id: "preview-interrupted" })).body.result,
+    (await call("app_get_change_list", list)).body.result,
     afterRemoval,
   );
 

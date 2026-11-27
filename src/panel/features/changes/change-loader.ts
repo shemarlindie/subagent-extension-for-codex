@@ -1,13 +1,17 @@
 import { selectedTask } from "../../app/state/selectors";
 import type { OpenDialogRequest, Snapshot, Task } from "../../app/state/types";
 import { errorMessage } from "../../shared/utils/error-message";
-import { changesKey, changesStale, readChanges } from "./read-changes";
+import { parseFileDiff } from "./changed-files";
+import { changesKey, changesStale } from "./read-changes";
 import type {
   ChangeCounts,
   ChangeCountsState,
-  Changes,
+  ChangeList,
   ChangeScope,
   ChangesState,
+  FileChange,
+  FileDiff,
+  FileDiffsState,
   WorktreeRemoval,
 } from "./types";
 
@@ -21,11 +25,14 @@ interface ChangeLoaderContext {
 }
 
 /**
- * Reads the selected task's change totals and changes into the panel state,
- * and removes its worktree.
+ * Reads the selected task's change totals, change list and file diffs into
+ * the panel state, and removes its worktree.
  */
 export class ChangeLoader {
   constructor(private context: ChangeLoaderContext) {}
+
+  /** The list reload shared by diff reads that find their list stale together. */
+  private staleReload?: Promise<void>;
 
   /** Reads the selected task's change totals when its status or turn has moved on. */
   async loadCountsIfStale() {
@@ -94,9 +101,10 @@ export class ChangeLoader {
   }
 
   /**
-   * Reads the selected task's changes, every page, for `scope` (the current
-   * one by default). A same-scope reload keeps the last result during the
-   * read and after failure; changing scope clears it.
+   * Reads the selected task's change list for `scope` (the current one by
+   * default). A same-scope reload keeps the last list during the read and
+   * after failure. Changing scope clears it. Diffs stay while the list's
+   * revision does.
    */
   async loadChanges(scope?: ChangeScope) {
     const state = this.context.snapshot();
@@ -125,22 +133,108 @@ export class ChangeLoader {
       !this.context.closed() && this.context.snapshot().changes === current;
 
     try {
-      const data = await readChanges(
-        task.id,
-        changes.scope,
-        (args) => this.context.tool<Changes>("get_changes", args),
-        live,
-      );
+      const data = await this.context.tool<ChangeList>("app_get_change_list", {
+        task_id: task.id,
+        scope: next,
+      });
 
-      if (data && live()) {
-        current = { ...changes, loading: false, data };
-        this.context.patch({ changes: current });
-      }
+      if (!live()) return;
+      const diffs = this.context.snapshot().changeDiffs;
+      current = { ...changes, loading: false, data };
+
+      this.context.patch({
+        changes: current,
+        ...(diffs?.task === task.id &&
+        diffs.scope === next &&
+        diffs.revision === data.revision
+          ? {}
+          : {
+              changeDiffs: {
+                task: task.id,
+                scope: next,
+                revision: data.revision,
+                files: new Map(),
+              },
+            }),
+      });
     } catch (error) {
       if (!live()) return;
       current = { ...changes, loading: false, error: errorMessage(error) };
       this.context.patch({ changes: current });
     }
+  }
+
+  /**
+   * Reads a listed file's diff unless it is read or being read. A failed read
+   * reads again. A read the list has moved past reloads the list.
+   */
+  async loadDiff(path: string) {
+    const diffs = this.context.snapshot().changeDiffs;
+    const diff = diffs?.files.get(path);
+    if (!diffs || (diff && diff.status !== "error")) return;
+    this.setDiff(diffs, path, { status: "loading", error: diff?.error });
+    await this.readDiff(diffs, path);
+  }
+
+  /** The current diffs, while they still belong to `diffs`' list. */
+  private currentDiffs({ task, scope, revision }: FileDiffsState) {
+    const diffs = this.context.snapshot().changeDiffs;
+
+    return !this.context.closed() &&
+      diffs?.task === task &&
+      diffs.scope === scope &&
+      diffs.revision === revision
+      ? diffs
+      : undefined;
+  }
+
+  private setDiff(diffs: FileDiffsState, path: string, diff: FileDiff) {
+    this.context.patch({
+      changeDiffs: { ...diffs, files: new Map(diffs.files).set(path, diff) },
+    });
+  }
+
+  private async readDiff(diffs: FileDiffsState, path: string) {
+    let diff: FileDiff;
+
+    try {
+      const result = await this.context.tool<FileChange>(
+        "app_get_file_change",
+        {
+          task_id: diffs.task,
+          scope: diffs.scope,
+          path,
+          revision: diffs.revision,
+        },
+      );
+
+      if (result.stale) {
+        // The new list replaces these diffs. Should its read fail, the file
+        // offers another try.
+        if (
+          this.currentDiffs(diffs) &&
+          selectedTask(this.context.snapshot())?.id === diffs.task
+        ) {
+          this.staleReload ??= this.loadChanges().finally(() => {
+            this.staleReload = undefined;
+          });
+
+          await this.staleReload;
+        }
+
+        diff = {
+          status: "error",
+          error: "The changes were updated while reading this file.",
+        };
+      } else {
+        diff = { status: "ready", diff: parseFileDiff(result.diff) };
+      }
+    } catch (error) {
+      diff = { status: "error", error: errorMessage(error) };
+    }
+
+    const current = this.currentDiffs(diffs);
+    if (current) this.setDiff(current, path, diff);
   }
 
   /**

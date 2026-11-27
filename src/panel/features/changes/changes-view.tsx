@@ -1,18 +1,18 @@
 import { useCallback, useRef, useState } from "react";
 
-import { useController } from "../../app/state/controller-context";
+import { useController, useSnapshot } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
 import { scrollContainer } from "../../shared/utils/scroll-container";
 import type { Task } from "../tasks/types";
 import { ChangedFileNavigator } from "./changed-file-navigator";
 import { ChangedFileSection } from "./changed-file-section";
-import { changedFileEntries, opensByDefault } from "./changed-files";
+import { listedDiffs, opensByDefault } from "./changed-files";
 import {
   FILE_ATTRIBUTE,
   measurePosition,
   type ChangesReading,
 } from "./changes-reading";
-import type { Changes } from "./types";
+import type { ChangeList } from "./types";
 import {
   changedSinceViewed,
   isViewed,
@@ -21,7 +21,7 @@ import {
 
 type ChangesViewProps = {
   task: Task;
-  changes: Changes;
+  changes: ChangeList;
   /** Remembers which files the reader opened or closed. */
   reading: ChangesReading;
   activePath?: string;
@@ -30,7 +30,7 @@ type ChangesViewProps = {
 /** A file the reader picked in the file tree, counted so picking it again reveals it again. */
 type Reveal = { path: string; count: number };
 
-/** Every changed file's diff, in Git's order, each collapsible. */
+/** Every changed file, in Git's order, each collapsible and read when opened. */
 export function ChangesView({
   task,
   changes,
@@ -39,7 +39,9 @@ export function ChangesView({
 }: ChangesViewProps) {
   const controller = useController();
   const [viewed, setViewed] = useViewedFiles(task.id);
-  const entries = changedFileEntries(changes);
+  const { files } = changes;
+  const fileDiffs = useSnapshot((state) => listedDiffs(state, task.id));
+
   const listRef = useRef<HTMLDivElement>(null);
   const diffsRef = useRef<HTMLDivElement>(null);
   const positionedReveal = useRef<Reveal>(undefined);
@@ -51,6 +53,11 @@ export function ChangesView({
   const openChange = useCallback(
     (path: string, open: boolean) => reading.open.set(path, open),
     [reading],
+  );
+
+  const loadDiff = useCallback(
+    (path: string) => controller.run(() => controller.changes.loadDiff(path)),
+    [controller],
   );
 
   const preview = useCallback(
@@ -106,33 +113,33 @@ export function ChangesView({
     }
   }, [reading, reveal]);
 
-  const [first] = entries;
+  const [first] = files;
 
   return (
     <div className="changes-files" ref={listRef}>
-      {first && entries.length > 1 && (
+      {first && files.length > 1 && (
         <ChangedFileNavigator
-          entries={entries}
+          files={files}
           viewed={viewed}
           activePath={
-            entries.find((entry) => entry.file.path === activePath)?.file
-              .path ?? first.file.path
+            files.find((file) => file.path === activePath)?.path ?? first.path
           }
           onSelect={revealFile}
         />
       )}
       <div className="diff-view" ref={diffsRef}>
-        {entries.map((entry, index) => {
-          const { path } = entry.file;
+        {files.map((file, index) => {
+          const { path } = file;
 
           return (
             <ChangedFileSection
               key={path}
-              entry={entry}
+              file={file}
+              diff={fileDiffs?.get(path)}
               remembered={reading.open.get(path)}
-              openByDefault={opensByDefault(entries, index)}
-              viewed={isViewed(viewed, entry)}
-              changedSinceViewed={changedSinceViewed(viewed, entry)}
+              openByDefault={opensByDefault(files.length, index)}
+              viewed={isViewed(viewed, file)}
+              changedSinceViewed={changedSinceViewed(viewed, file)}
               onOpenChange={openChange}
               revealed={reveal?.path === path ? reveal.count : undefined}
               onContentReady={
@@ -140,6 +147,7 @@ export function ChangesView({
               }
               onViewedChange={setViewed}
               onPreview={preview}
+              onLoadDiff={loadDiff}
             />
           );
         })}
