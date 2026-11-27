@@ -451,10 +451,55 @@
   > .dialog-heading {
   flex: none;
 }
+/*
+ * A preview's file row names the file, so it takes the heading's place, level
+ * with the close button. The title stays for AT.
+ */
+.dialog:is(
+    [data-kind="file"],
+    [data-kind="attachment"],
+    [data-kind="draft-attachment"]
+  )
+  > .dialog-heading {
+  z-index: 2;
+  height: 0;
+  padding: 0;
+}
+.dialog:is(
+    [data-kind="file"],
+    [data-kind="attachment"],
+    [data-kind="draft-attachment"]
+  )
+  > .dialog-heading
+  > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* A preview's steps and options, beside the close button. */
+.file-preview-heading-actions {
+  position: absolute;
+  top: 8px;
+  right: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.file-preview-options-target {
+  display: flex;
+}
+@media (max-width: 640px) {
+  .file-preview-heading-actions .step-nav-position {
+    min-width: 6ch;
+  }
+}
 .file-preview-toolbar {
   position: sticky;
-  /* Sits under the sticky dialog heading. */
-  top: 28px;
+  /* The heading has no height, so the row sticks at the dialog's top. */
+  top: calc(-1 * var(--dialog-pad));
   z-index: 1;
   display: flex;
   flex-wrap: wrap;

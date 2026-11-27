@@ -17,6 +17,7 @@ import {
 import { FilePreview } from "../file-preview/file-preview";
 import { FilePreviewOptions } from "../file-preview/file-preview-options";
 import { Progress } from "../file-preview/progress";
+import { usePreviewHeading } from "../file-preview/use-preview-heading";
 import type { Task } from "../tasks/types";
 import { AskFileButton } from "./ask-file-button";
 import { ChangedFileNav } from "./changed-file-nav";
@@ -151,12 +152,8 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
     (state) => state.panelSettings.changes_wrap_lines,
   );
 
-  const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
-
-  const [viewSwitcherTarget, setViewSwitcherTarget] =
-    useState<HTMLElement | null>(null);
-
   const root = useRef<HTMLDivElement>(null);
+  const optionsTarget = usePreviewHeading(root);
   // Viewed was used to move on, so the next file's Viewed takes focus.
   const refocusViewed = useRef(false);
 
@@ -214,22 +211,7 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
 
   // Each file starts at its top.
   useLayoutEffect(() => {
-    if (root.current) {
-      scrollContainer(root.current).scrollTop = 0;
-      // A preview portals its tabs only into its own dialog's title row.
-      const dialog = root.current.closest(".dialog");
-
-      setViewSwitcherTarget(
-        dialog?.querySelector<HTMLElement>(
-          "[data-file-preview-view-switcher]",
-        ) ?? null,
-      );
-
-      setOptionsTarget(
-        dialog?.querySelector<HTMLElement>("[data-file-preview-options]") ??
-          null,
-      );
-    }
+    if (root.current) scrollContainer(root.current).scrollTop = 0;
 
     // A file of another kind remounts the toolbar, which drops focus. Only
     // dropped focus moves, not focus the user took elsewhere meanwhile.
@@ -266,7 +248,6 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
           />,
           optionsTarget,
         )}
-      <p className="help file-preview-note">File as it is now</p>
       {firstRead && (
         <div
           className="file-preview-loading"
@@ -283,7 +264,6 @@ export function ChangedFilePreview({ task, path }: ChangedFilePreviewProps) {
             content: file.content ?? "",
             mime_type: file.mime_type,
           }}
-          viewSwitcherTarget={viewSwitcherTarget}
           beforeActions={
             <>
               {openButton}
@@ -362,13 +342,9 @@ export const changedFileDialog = defineDialog<"file">({
   render: ({ task, path }) => <ChangedFilePreview task={task} path={path} />,
   // Keep navigation mounted across files.
   headingActions: ({ task, path }) => (
-    <div className="changed-file-heading-actions">
-      <span
-        className="changed-file-view-switcher-target"
-        data-file-preview-view-switcher
-      />
+    <div className="file-preview-heading-actions">
       <ChangedFileNav task={task} path={path} />
-      <span className="changed-file-options-target" data-file-preview-options />
+      <span className="file-preview-options-target" data-file-preview-options />
     </div>
   ),
 });

@@ -313,66 +313,6 @@ body[data-expanded-panel="true"]
   color: var(--muted);
 }
 
-/* The view switcher takes the visible title's place; keep a dialog name for AT. */
-.dialog[data-kind="file"] .dialog-heading > h2 {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-/* View selection and file steps replace the visible title. */
-.changed-file-heading-actions {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-}
-.changed-file-view-switcher-target {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-.changed-file-view-switcher-target > .view-switch {
-  min-width: 0;
-  max-width: 100%;
-}
-.changed-file-heading-actions > .step-nav {
-  margin-left: auto;
-}
-.changed-file-options-target {
-  display: flex;
-  flex: none;
-}
-@media (max-width: 640px) {
-  .dialog[data-kind="file"] .dialog-heading {
-    flex-wrap: nowrap;
-    gap: 8px;
-    padding-right: 44px;
-  }
-  .changed-file-heading-actions {
-    min-width: 0;
-    max-width: 100%;
-    /* Keep the sticky toolbar aligned even without sharing or step buttons. */
-    min-height: 28px;
-  }
-  .changed-file-view-switcher-target > .view-switch {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .changed-file-view-switcher-target .view-option {
-    flex: none;
-    padding-right: 6px;
-    padding-left: 6px;
-    white-space: nowrap;
-  }
-  .changed-file-heading-actions .step-nav-position {
-    min-width: 6ch;
-  }
-}
 /* The last file shows until the next is read; dim it if that takes a moment. */
 .changed-file-preview[data-stale="true"] .file-preview-body {
   opacity: 0.6;
@@ -380,8 +320,9 @@ body[data-expanded-panel="true"]
 }
 
 /*
- * The view tabs replace the visible title. The preview toolbar keeps file
- * details and actions together below it.
+ * The file row sits level with the heading's steps and close button. The view
+ * tabs and file actions share the row below, so every file has the same
+ * two rows.
  */
 .changed-file-preview {
   container-type: inline-size;
@@ -389,10 +330,11 @@ body[data-expanded-panel="true"]
 }
 .changed-file-preview .file-preview-toolbar {
   display: grid;
-  /* Match the heading's occupied height, so sticking adds no initial shift. */
-  top: 32px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "badge meta actions";
+  /* The views keep their width, and the actions take what is left. */
+  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "badge meta meta"
+    "views views actions";
 }
 .changed-file-preview .file-preview-toolbar > .file-badge {
   grid-area: badge;
@@ -400,43 +342,55 @@ body[data-expanded-panel="true"]
 .changed-file-preview .file-preview-toolbar > .file-meta {
   grid-area: meta;
   flex-wrap: nowrap;
+  /* Room for the heading's controls, which overlay this row. */
+  margin-inline-end: calc(
+    var(--heading-actions-width, 0px) + 52px - var(--dialog-pad)
+  );
   overflow: hidden;
   white-space: nowrap;
 }
 .changed-file-preview .file-preview-toolbar > .file-meta > :not(.file-name) {
   flex: none;
 }
+.changed-file-preview .file-preview-toolbar > .view-switch {
+  grid-area: views;
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+}
 .changed-file-preview .file-preview-toolbar > .toolbar-actions {
   grid-area: actions;
-  justify-self: end;
+  /* Fills its column, so long labels can shrink before they overflow. */
+  justify-content: flex-end;
   align-items: center;
+  min-width: 0;
 }
 .changed-file-preview[data-initial-loading] {
   display: grid;
   flex: 1;
 }
 @container (max-width: 640px) {
-  .changed-file-preview .file-preview-toolbar {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "badge meta"
-      "actions actions";
+  /* The name needs the room more than the format. */
+  .changed-file-preview .file-meta > .file-name + span {
+    display: none;
   }
-  .changed-file-preview .file-preview-toolbar > .toolbar-actions {
-    justify-self: stretch;
-    min-width: 0;
-    max-width: 100%;
+  /* Long view lists scroll, and long action labels truncate. */
+  .changed-file-preview .file-preview-toolbar > .view-switch {
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  /* File actions sit together at the start, and Viewed at the row's end. */
-  .changed-file-preview .toolbar-actions > .viewed-toggle {
-    margin-inline-start: auto;
+  .changed-file-preview .view-option {
+    flex: none;
+    padding-right: 6px;
+    padding-left: 6px;
+    white-space: nowrap;
   }
-  .changed-file-preview .toolbar-actions > .file-action {
+  /* Only Ask truncates, since its tooltip shows the whole label. */
+  .changed-file-preview .toolbar-actions > .ask-file-action {
     flex: 0 1 auto;
     min-width: 0;
-    max-width: 100%;
   }
-  .changed-file-preview .toolbar-actions .file-action-label {
+  .changed-file-preview .ask-file-action .file-action-label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

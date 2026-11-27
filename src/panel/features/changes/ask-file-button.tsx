@@ -26,7 +26,7 @@ export function AskFileButton({
   return (
     <TooltipWrapper label={label}>
       <Button
-        className="file-action"
+        className="file-action ask-file-action"
         disabled={disabled}
         onClick={() =>
           controller.prepareHandoff(task, { kind: "file", path }, contextText)

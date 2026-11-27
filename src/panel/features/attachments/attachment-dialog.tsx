@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -15,6 +15,7 @@ import { fileFormat } from "../file-preview/file-format";
 import { FilePreview } from "../file-preview/file-preview";
 import { FilePreviewOptions } from "../file-preview/file-preview-options";
 import { FileToolbar } from "../file-preview/file-toolbar";
+import { usePreviewHeading } from "../file-preview/use-preview-heading";
 import type { Task } from "../tasks/types";
 import {
   attachmentFile,
@@ -134,38 +135,8 @@ function AttachmentPreview({ task, attachment }: AttachmentPreviewProps) {
     (state) => state.panelSettings.attachment_wrap_lines,
   );
 
-  const [optionsTarget, setOptionsTarget] = useState<HTMLElement | null>(null);
   const root = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const dialog = root.current?.closest<HTMLElement>(".dialog");
-
-    const actions = dialog?.querySelector<HTMLElement>(
-      ".attachment-heading-actions",
-    );
-
-    // The options sit in the dialog's heading, where Changes previews keep them.
-    setOptionsTarget(
-      dialog?.querySelector<HTMLElement>("[data-file-preview-options]") ?? null,
-    );
-
-    if (!dialog || !actions || typeof ResizeObserver === "undefined") return;
-
-    // The heading's controls overlay the file row, which keeps room for them.
-    const observer = new ResizeObserver(() =>
-      dialog.style.setProperty(
-        "--attachment-actions-width",
-        `${actions.offsetWidth}px`,
-      ),
-    );
-
-    observer.observe(actions);
-
-    return () => {
-      observer.disconnect();
-      dialog.style.removeProperty("--attachment-actions-width");
-    };
-  }, []);
+  const optionsTarget = usePreviewHeading(root);
 
   return (
     <div className="attachment-preview" ref={root} aria-busy={!read}>
@@ -251,12 +222,12 @@ export const attachmentDialog = defineDialog<"attachment">({
       <AttachmentPreview task={task} attachment={attachment} />
     ),
   headingActions: ({ attachment, attachments }) => (
-    <div className="attachment-heading-actions">
+    <div className="file-preview-heading-actions">
       {/* A lone attachment has nowhere to step to. */}
       {attachments.length > 1 && (
         <AttachmentNav attachment={attachment} attachments={attachments} />
       )}
-      <span className="attachment-options-target" data-file-preview-options />
+      <span className="file-preview-options-target" data-file-preview-options />
     </div>
   ),
 });
