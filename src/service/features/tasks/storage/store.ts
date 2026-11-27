@@ -127,7 +127,7 @@ export class Store {
    * Writes a task's state. Every task state change goes through here, so it
    * also clears the task's pending requests other than `pending_input`.
    */
-  save(t: Task) {
+  save(t: Task): void {
     // The task and its request cleanup commit together.
     if (!this.saved) return this.transaction(() => this.save(t));
 
