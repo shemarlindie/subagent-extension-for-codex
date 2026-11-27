@@ -43,4 +43,4 @@ Ask the user whether to start the **Release** workflow, and start it only when
 they agree. Watch the run in the background, handle failures as the guide
 describes, and report when it finishes or needs input. After the merge and
 `main` CI pass, switch the local checkout to `main`, pull and delete the local
-release branch. The workflow already deletes the remote one.
+release branch.
