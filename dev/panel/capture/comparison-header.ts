@@ -64,9 +64,16 @@ function installHeader(
     return node;
   };
 
+  // The title sits on the left and the readouts on the right, wrapping below
+  // it when the side is too narrow.
   const header = element(
     "div",
-    "position: fixed; inset: 0 0 auto; display: flex; flex-direction: column; box-sizing: border-box; padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #dce2ea; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #17202f; z-index: 10000; overflow: hidden;",
+    "position: fixed; inset: 0 0 auto; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; box-sizing: border-box; padding: 12px 20px; background: #f8fafc; border-bottom: 1px solid #dce2ea; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #17202f; z-index: 10000; overflow: hidden;",
+  );
+
+  const title = element(
+    "div",
+    "flex: 1 1 200px; align-self: stretch; display: flex; flex-direction: column; min-width: 0;",
   );
 
   const label = element(
@@ -74,30 +81,26 @@ function installHeader(
     `font-size: 26px; font-weight: 750; letter-spacing: -0.5px; color: ${settings.color};`,
   );
 
-  const note = element(
-    "div",
-    "font-size: 14px; margin-top: 4px; color: #58677a;",
-  );
+  const note = element("div", "font-size: 14px; color: #58677a;");
+  title.append(label, note);
+  header.append(title);
 
-  // The caption and readouts sit at the bottom, level on every side.
-  const footer = element("div", "margin-top: auto;");
-  header.append(label, note, footer);
-
+  // The caption sits at the bottom, level on every side.
   if (settings.caption) {
-    footer.append(
+    title.append(
       element(
         "div",
-        "font-size: 14px; margin-top: 9px; color: #58677a;",
+        "font-size: 14px; margin-top: auto; padding-top: 6px; color: #58677a;",
         settings.caption,
       ),
     );
   }
 
-  // Readouts sit in fixed grid cells, so changing values never move the layout.
+  // Readouts have fixed widths, so changing values never move the layout.
   const values = readouts.map((readout) => {
     const block = element(
       "div",
-      "min-width: 0; font-size: 12px; color: #58677a; font-variant-numeric: tabular-nums; white-space: nowrap;",
+      "width: 130px; font-size: 12px; color: #58677a; font-variant-numeric: tabular-nums; white-space: nowrap;",
       readout.label.toUpperCase(),
     );
 
@@ -112,33 +115,33 @@ function installHeader(
   });
 
   if (values.length > 0) {
-    const grid = element(
+    const list = element(
       "div",
-      "display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px 16px; margin-top: 12px;",
+      "display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px;",
     );
 
-    grid.append(...values.map(({ block }) => block));
-    footer.append(grid);
+    list.append(...values.map(({ block }) => block));
+    header.append(list);
   }
 
   document.body.append(header);
 
-  // Every side gets the tallest header, so the panels line up in the video.
+  // Every side's title gets the tallest one's height, so the captions,
+  // readouts and panels line up in the video.
   const show = ({ label: text, note: detail }: Title) => {
     label.textContent = text;
     note.textContent = detail ?? "";
     note.style.display = detail ? "" : "none";
 
-    return header.offsetHeight;
+    return title.getBoundingClientRect().height;
   };
 
-  const height = Math.max(...settings.titles.map(show));
+  title.style.minHeight = `${Math.max(...settings.titles.map(show))}px`;
   show(settings);
-  header.style.height = `${height}px`;
 
   document.documentElement.style.setProperty(
     "--comparison-header",
-    `${height}px`,
+    `${header.getBoundingClientRect().height}px`,
   );
 
   const display = (readout: Readout, result: Reading) => {
