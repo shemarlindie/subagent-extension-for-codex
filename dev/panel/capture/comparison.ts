@@ -235,9 +235,6 @@ export async function withComparison(options: ComparisonOptions) {
   const { sides, out, path, clock, animationSpeed } = options;
   const playMs = options.playMs ?? 0;
   const size = options.size ?? { width: 640, height: 900 };
-  validateOutputCanvas(size);
-
-  if (sides.length < 2) throw new Error("A comparison needs two sides");
 
   const report = {
     path,
@@ -245,7 +242,8 @@ export async function withComparison(options: ComparisonOptions) {
     playMs,
     animationSpeed,
     size,
-    ...(await checkoutState(".")),
+    commit: undefined as string | undefined,
+    dirty: undefined as boolean | undefined,
     sides: [] as SideReport[],
     error: undefined as string | undefined,
   };
@@ -253,6 +251,10 @@ export async function withComparison(options: ComparisonOptions) {
   await mkdir(out, { recursive: true });
 
   try {
+    validateOutputCanvas(size);
+    if (sides.length < 2) throw new Error("A comparison needs two sides");
+    Object.assign(report, await checkoutState("."));
+
     // Overlays fail here, before anything records.
     const runs: { side: ComparisonSide; overlay?: Overlay }[] = [];
 
