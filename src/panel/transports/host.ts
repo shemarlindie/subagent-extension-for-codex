@@ -117,7 +117,11 @@ export class HostTransport implements Transport {
     });
   }
 
-  async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+  async tool<T>(
+    name: string,
+    args: Record<string, unknown> = {},
+    signal?: AbortSignal,
+  ): Promise<T> {
     if (this.disposed) throw new Error("The console has closed.");
 
     const userTools: Record<string, string> = {
@@ -128,12 +132,14 @@ export class HostTransport implements Transport {
       update_settings: "app_update_settings",
     };
 
+    const options = toolRequestOptions(name, args);
+
     const result = await this.app.callServerTool(
       {
         name: userTools[name] ?? name,
         arguments: args,
       },
-      toolRequestOptions(name, args),
+      signal ? { ...options, signal } : options,
     );
 
     if (result.isError) {

@@ -10,6 +10,7 @@ import {
   providerModelSettingScopes,
 } from "../../../shared/providers/settings.js";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js";
+import { settingAt } from "../../../shared/settings/setting-path.js";
 import { settingText } from "../../../shared/settings/setting-text.js";
 import {
   modelScope,
@@ -19,7 +20,6 @@ import {
 } from "../../../shared/settings/settings-document.js";
 import {
   mergeSettings,
-  settingAt,
   settingPaths,
   settingSchemaAt,
   settingsDefaults,

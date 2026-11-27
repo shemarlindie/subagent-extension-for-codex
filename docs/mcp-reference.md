@@ -291,21 +291,22 @@ the task lists. A restore that would pass the
 messages.
 
 `app_wait_for_updates` returns when the owner's revision or a targeted reply
-draft changes, or after at most 25 seconds. A revision is `bootId:count`. The
-boot ID changes after a service restart, and the count only grows within a boot,
-so compare counts only between revisions of the same boot. Given `view`, the
-wait also returns the panel's settings, projects, task list, selected task's
-Chat and Activity, and pending updates as of the returned revision, unless only
-the draft changed. The settings are `values.panel` from `get_settings`, and
-saving settings changes the revision. The list takes `app_list_tasks` arguments
-and returns its shape, and the projects match `list_projects`. Chat and Activity
-take the selected `task_id` and an `after` cursor, and pending updates take a
-`conversation_id`. Only the first Chat read (cursor 0) includes the request.
-Messages include their `attachments`, without where the service stores them. The
-view has `plan_usage` when the `plan_usage_meter` panel setting is on and the
-provider reports usage windows for the signed-in plan, and
-`app_refresh_plan_usage` reads it again, at most every 10 seconds. The view has
-`updating: true` while the service
+draft changes, or after at most 25 seconds. A later wait whose `replaces` names
+an earlier wait's `wait_id` ends that wait at once, or as soon as it arrives
+within 30 seconds. A revision is `bootId:count`. The boot ID changes after a
+service restart, and the count only grows within a boot, so compare counts only
+between revisions of the same boot. Given `view`, the wait also returns the
+panel's settings, projects, task list, selected task's Chat and Activity, and
+pending updates as of the returned revision, unless only the draft changed. The
+settings are `values.panel` from `get_settings`, and saving settings changes the
+revision. The list takes `app_list_tasks` arguments and returns its shape, and
+the projects match `list_projects`. Chat and Activity take the selected
+`task_id` and an `after` cursor, and pending updates take a `conversation_id`.
+Only the first Chat read (cursor 0) includes the request. Messages include their
+`attachments`, without where the service stores them. The view has `plan_usage`
+when the `plan_usage_meter` panel setting is on and the provider reports usage
+windows for the signed-in plan, and `app_refresh_plan_usage` reads it again, at
+most every 10 seconds. The view has `updating: true` while the service
 [drains for an update](task-continuation.md#updates-and-service-handoff).
 
 `app_get_attachment` reads an attachment by `task_id`, the `message_id` of the

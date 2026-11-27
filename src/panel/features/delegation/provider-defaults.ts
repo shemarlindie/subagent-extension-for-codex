@@ -2,7 +2,7 @@ import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
 import { providerMetadata } from "../../../shared/providers/metadata.js";
 import { allowedPermissionMode } from "../../../shared/providers/policy.js";
 import type { ProviderPolicy } from "../../../shared/providers/types.js";
-import { settingAt } from "../../../shared/settings/settings-schema.js";
+import { settingAt } from "../../../shared/settings/setting-path.js";
 import { scalarText } from "../../../shared/text.js";
 
 export function providerOptionDefaults(

@@ -179,6 +179,26 @@ const scopes = (all: ReturnType<typeof sections>) =>
       .map((scope) => [scope.id, scope]),
   );
 
+test("another provider's allowlist marks only profile menus", () => {
+  const all = scopes(
+    settingsSections({
+      values: { task: { provider: "claude" } },
+      providers: ["claude", "fixture"],
+      catalogs: [
+        { provider: "claude", models },
+        { provider: "fixture", models, policy },
+      ],
+    }),
+  );
+
+  assert.equal(all.claude?.model.footer, undefined);
+
+  assert.equal(
+    all.implementer?.model.footer,
+    "Your organization limits these models.",
+  );
+});
+
 /** The catalog as discovery reports it, with Default naming what it runs. */
 const runtimeCatalog = (model: string, effort: string): ModelChoice[] => [
   {
