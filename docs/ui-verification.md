@@ -81,9 +81,9 @@ await withPanel(
 ### Comparison recordings
 
 `withComparison` records one fixture scenario on several versions of the panel
-and joins them side by side, each under a header with its label, an optional
-note, a shared caption and live readouts. For example, compare a variant of one
-file with the working tree:
+and joins them side by side into a video, stills or both. Each side shows a
+header with its label, an optional note, a shared caption and live readouts. For
+example, compare a variant of one file with the working tree:
 
 ```ts
 import { withComparison } from "<checkout>/dev/panel/capture/comparison";
@@ -148,28 +148,31 @@ await withComparison({
 
   For a style-only change, the scenario can make it on one side instead, such as
   by appending a style tag through `panel.locator("head")` before `play`. When
-  none fits, use another approach that isolates the change, such as screenshots
-  before and after an edit for a still comparison.
+  none fits, use another approach that isolates the change.
 
+- `scenario` runs once per side. It waits for readiness, then calls `play` with
+  any actions to record the video, `still(name)` to save a labeled image, or
+  both. Every side must do the same. It can probe the side's `origin`
+  afterwards.
 - `clock` holds the live fixtures at `startMs` until `play`, then runs them at
-  `speed` (default 1) for `playMs`. Start just before the event under test, and
-  slow the clock to stretch streaming while CSS animations keep their speed.
-- `scenario` runs once per side. It waits for readiness, calls `play` with any
-  actions, and can probe the side's `origin` afterwards.
+  `speed` (default 1) for `playMs` (default 0, for interactions only). Start
+  just before the event under test, and slow the clock to stretch streaming.
+  `animationSpeed` separately slows CSS animations and transitions, such as 0.25
+  to show a collapse at a quarter speed.
 - Each readout's `value` returns a number or text every animation frame. Numbers
   show rounded with `unit`, or through `format`. Both functions run in the page,
   so they can't use the script's variables.
 - Sides are 640 × 900 by default. Set `size` to fit more, such as 480 wide for
   four sides.
-- `out` gets `comparison.mp4` and `report.json`, with each side's source and
-  commit, readout samples, frame check and page errors. A failed run still
-  writes the report.
+- `out` gets `comparison.mp4`, `<name>.png` for each still, and `report.json`,
+  with each side's source and commit, readout samples, frame check and page
+  errors. A failed run still writes the report.
 
 Record in your own worktree, since another session can switch a shared
-checkout's branch. Take screenshots before or after `play`, and avoid other
-heavy CPU or GPU work while recording. Init scripts you add run in both the host
-page and the panel frame, so check `location.pathname` first. Before sharing a
-video, extract a frame from the middle with
+checkout's branch. Take stills before or after `play`, and avoid other heavy CPU
+or GPU work while recording. Init scripts you add run in both the host page and
+the panel frame, so check `location.pathname` first. Before sharing a video,
+extract a frame from the middle with
 `ffmpeg -ss <seconds> -i comparison.mp4 -frames:v 1 frame.png` and check that
 each side shows the expected behavior.
 

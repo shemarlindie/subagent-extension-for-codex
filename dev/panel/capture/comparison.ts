@@ -1,10 +1,8 @@
 // Records one fixture scenario on several versions of the panel and joins them
 // side by side. See docs/ui-verification.md#comparison-recordings.
-import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 
 import type { FrameLocator, Page } from "@playwright/test";
 
@@ -14,6 +12,7 @@ import {
   type CaptureServer,
 } from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
+import { composeComparison, type Recorded } from "./comparison-compose";
 import {
   addHeader,
   headerSamples,
@@ -30,7 +29,7 @@ import {
   type ComparisonSource,
   type FixtureClock,
 } from "./comparison-sources";
-import { concatInput, ENCODING, validateOutputCanvas } from "./panel-mp4";
+import { validateOutputCanvas } from "./panel-mp4";
 import { capturePngFrames } from "./screencast";
 
 type Size = { width: number; height: number };
@@ -51,10 +50,15 @@ type ComparisonSession = {
   page: Page;
   panel: FrameLocator;
   /**
-   * Records this side, once: a short lead-in, the fixture clock playing while
-   * `actions` run, and a hold on the last frame.
+   * Records this side for `comparison.mp4`, once: a short lead-in, the fixture
+   * clock playing while `actions` run, and a hold on the last frame.
    */
   play: (actions?: () => Promise<unknown>) => Promise<void>;
+  /**
+   * Screenshots this side for `<name>.png`, `comparison.png` by default. Every
+   * side takes the same stills.
+   */
+  still: (name?: string) => Promise<void>;
 };
 
 type ComparisonOptions = {
@@ -62,16 +66,21 @@ type ComparisonOptions = {
   /** A dev host path that sets the data, theme and panel view. */
   path: string;
   clock: FixtureClock;
-  /** Fixture milliseconds to play. */
-  playMs: number;
-  /** Folder for `comparison.mp4` and `report.json`. */
+  /** Fixture milliseconds to play. The default is 0, for interactions only. */
+  playMs?: number;
+  /** CSS animation and transition speed, such as 0.25 for slow motion. */
+  animationSpeed?: number;
+  /** Folder for the video, stills and `report.json`. */
   out: string;
   /** A line under every side's label and note. */
   caption?: string;
   readouts?: Readout[];
   /** Each side's size in CSS pixels, header included. The default is 640 × 900. */
   size?: Size;
-  /** Waits for readiness, calls `play`, and returns anything for the report. */
+  /**
+   * Waits for readiness, calls `play` or `still`, and returns anything for the
+   * report.
+   */
   scenario: (session: ComparisonSession) => Promise<unknown>;
 };
 
@@ -79,6 +88,7 @@ type SideReport = {
   label: string;
   source?: ComparisonSource & { commit?: string; dirty?: boolean };
   frames?: string;
+  stills: string[];
   samples?: Sample[];
   errors: string[];
   result?: unknown;
@@ -86,7 +96,6 @@ type SideReport = {
 
 const LEAD_MS = 500;
 const TAIL_MS = 800;
-const DIVIDER = "0xdce2ea";
 
 type Overlay = Awaited<ReturnType<typeof readOverlay>>;
 
@@ -94,10 +103,11 @@ async function recordSide(
   options: ComparisonOptions & { size: Size },
   side: ComparisonSide,
   overlay: Overlay | undefined,
-  frames: string,
+  dir: string,
   report: SideReport,
 ) {
-  const { clock, playMs, size } = options;
+  const { clock, size } = options;
+  const playMs = options.playMs ?? 0;
   const { source } = side;
   const speed = clock.speed ?? 1;
   const loaded = new Set<string>();
@@ -122,6 +132,15 @@ async function recordSide(
     await page.goto(`${server.origin}${options.path}`);
     await panel.locator("body *").first().waitFor();
 
+    if (options.animationSpeed !== undefined) {
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Animation.enable");
+
+      await cdp.send("Animation.setPlaybackRate", {
+        playbackRate: options.animationSpeed,
+      });
+    }
+
     await addHeader(
       page,
       {
@@ -145,7 +164,7 @@ async function recordSide(
 
       report.frames = await capturePngFrames(
         page,
-        frames,
+        join(dir, "frames"),
         async () => {
           await page.waitForTimeout(LEAD_MS);
           await startFixtureClock(page);
@@ -161,16 +180,39 @@ async function recordSide(
       console.log(`${side.label}: ${report.frames}`);
     };
 
+    const still = async (name = "comparison") => {
+      if (report.stills.includes(name)) {
+        throw new Error(`${side.label} took ${name} twice`);
+      }
+
+      // Lets transitions settle, such as a tab indicator sliding into place.
+      await panel.locator("body").evaluate(() =>
+        Promise.allSettled(
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.effect?.getComputedTiming().endTime !== Infinity,
+            )
+            .map((animation) => animation.finished),
+        ),
+      );
+
+      await page.screenshot({ path: join(dir, `${name}.png`) });
+      report.stills.push(name);
+    };
+
     report.result = await options.scenario({
       side,
       origin: server.origin,
       page,
       panel,
       play,
+      still,
     });
 
-    if (report.frames === undefined) {
-      throw new Error(`The scenario never played ${side.label}`);
+    if (report.frames === undefined && report.stills.length === 0) {
+      throw new Error(`The scenario never recorded ${side.label}`);
     }
 
     const unused = [...(overlay?.files.keys() ?? [])].filter(
@@ -203,36 +245,14 @@ async function recordSide(
   );
 }
 
-async function compose(frames: string[], width: number, file: string) {
-  const streams = frames.map(
-    (_, index) => `[${index}:v]fps=60,setpts=PTS-STARTPTS[v${index}]`,
-  );
-
-  const dividers = frames
-    .slice(1)
-    .map(
-      (_, index) =>
-        `drawbox=x=${(index + 1) * width - 1}:y=0:w=2:h=ih:color=${DIVIDER}:t=fill`,
-    );
-
-  const joined = `${frames.map((_, index) => `[v${index}]`).join("")}hstack=inputs=${frames.length}:shortest=1`;
-
-  await promisify(execFile)("ffmpeg", [
-    ...["-y", "-v", "error", ...frames.flatMap(concatInput)],
-    "-filter_complex",
-    [...streams, [joined, ...dividers, "format=yuv420p"].join(",")].join(";"),
-    ...ENCODING,
-    file,
-  ]);
-}
-
 /**
  * Records `scenario` on each side in turn, each on its own dev host, then
- * writes `comparison.mp4` and `report.json` to `out`. The report is written
- * on failure too, with the error.
+ * writes `comparison.mp4`, the stills and `report.json` to `out`. The report
+ * is written on failure too, with the error.
  */
 export async function withComparison(options: ComparisonOptions) {
-  const { sides, out, path, clock, playMs } = options;
+  const { sides, out, path, clock, animationSpeed } = options;
+  const playMs = options.playMs ?? 0;
   const size = options.size ?? { width: 640, height: 900 };
   validateOutputCanvas(size);
 
@@ -242,6 +262,7 @@ export async function withComparison(options: ComparisonOptions) {
     path,
     clock,
     playMs,
+    animationSpeed,
     size,
     ...(await checkoutState(".")),
     sides: [] as SideReport[],
@@ -262,8 +283,8 @@ export async function withComparison(options: ComparisonOptions) {
   }
 
   await mkdir(out, { recursive: true });
-  const frames = await mkdtemp(join(tmpdir(), "panel-comparison-"));
-  const recorded: string[] = [];
+  const recordings = await mkdtemp(join(tmpdir(), "panel-comparison-"));
+  const recorded: Recorded[] = [];
 
   await withCleanup(
     async () => {
@@ -277,16 +298,23 @@ export async function withComparison(options: ComparisonOptions) {
           const entry: SideReport = {
             label: side.label,
             source: side.source && { ...side.source, ...state },
+            stills: [],
             errors: [],
           };
 
           report.sides.push(entry);
-          const dir = join(frames, String(recorded.length));
+          const dir = join(recordings, String(recorded.length));
+          await mkdir(dir);
           await recordSide({ ...options, size }, side, overlay, dir, entry);
-          recorded.push(dir);
+
+          recorded.push({
+            dir,
+            played: entry.frames !== undefined,
+            stills: entry.stills,
+          });
         }
 
-        await compose(recorded, size.width, join(out, "comparison.mp4"));
+        await composeComparison(recorded, size.width, out);
       } catch (error) {
         report.error = error instanceof Error ? error.message : String(error);
         throw error;
@@ -297,10 +325,10 @@ export async function withComparison(options: ComparisonOptions) {
         );
       }
     },
-    () => rm(frames, { recursive: true, force: true }),
+    () => rm(recordings, { recursive: true, force: true }),
   );
 
-  console.log(join(out, "comparison.mp4"));
+  console.log(out);
 
   return report;
 }
