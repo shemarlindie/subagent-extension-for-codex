@@ -109,16 +109,16 @@ export const differs = (entries: Values, form: Values) =>
   Object.entries(entries).some(([key, value]) => form[key] !== value);
 
 /**
- * The nested update for edited settings only. A blank budget amount keeps the
- * saved one, so turning a limit off or on never loses it.
+ * `values` with the form's entries that differ from `initial` written in. A
+ * blank budget amount keeps the saved one, so turning a limit off or on never
+ * loses it.
  */
-export function changes(
+export function editedValues(
+  values: Record<string, unknown>,
   sections: SettingSection[],
   form: Values,
   initial: Values,
 ) {
-  let set: Record<string, unknown> = {};
-
   for (const row of sections.flatMap((section) => section.rows)) {
     for (const path of rowPaths(row)) {
       const name = fieldName(path);
@@ -128,13 +128,13 @@ export function changes(
 
       if (row.kind === "budget") {
         if (path.endsWith(".amount")) {
-          if (value !== "") set = withSetting(set, path, Number(value));
+          if (value !== "") values = withSetting(values, path, Number(value));
         } else {
-          set = withSetting(set, path, value === "true");
+          values = withSetting(values, path, value === "true");
         }
       } else {
-        set = withSetting(
-          set,
+        values = withSetting(
+          values,
           path,
           row.kind === "switch" ? value === "true" : value,
         );
@@ -142,8 +142,15 @@ export function changes(
     }
   }
 
-  return set;
+  return values;
 }
+
+/** The nested update for edited settings only. */
+export const changes = (
+  sections: SettingSection[],
+  form: Values,
+  initial: Values,
+) => editedValues({}, sections, form, initial);
 
 /** How many of a section's rows or model scopes have unsaved edits. */
 export function editCount(

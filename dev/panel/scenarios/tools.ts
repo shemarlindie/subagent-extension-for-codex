@@ -544,17 +544,19 @@ export function previewTool(
         ? withSetting(base, "providers.claude.permission_mode", "auto")
         : base;
 
+      const sectionInput = {
+        providers: ["claude"],
+        catalogs: [
+          { provider: "claude", ...previewCatalog(options.orgPolicy) },
+        ],
+      };
+
       return {
         schema: { type: "object", properties: {} },
         values,
         defaults: previewSettingsDefaults,
-        sections: settingsSections({
-          values,
-          providers: ["claude"],
-          catalogs: [
-            { provider: "claude", ...previewCatalog(options.orgPolicy) },
-          ],
-        }),
+        sections: settingsSections({ ...sectionInput, values }),
+        section_input: sectionInput,
       };
     })(),
     app_export_settings: { document: JSON.stringify(previewSettingsDefaults) },

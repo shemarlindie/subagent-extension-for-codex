@@ -3,9 +3,7 @@ import { expect } from "vitest";
 
 import {
   assert,
-  budgetRow,
   pasteText,
-  scope,
   screen,
   serveSettings,
   setupSettings,
@@ -29,20 +27,6 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
         providers: { claude: { subagents: true } },
         task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
       },
-      sections: [
-        {
-          id: "task",
-          title: "Task",
-          rows: [
-            {
-              kind: "switch",
-              path: "providers.claude.subagents",
-              label: "Allow subagents",
-            },
-            budgetRow,
-          ],
-        },
-      ],
     }),
   );
 
@@ -64,10 +48,16 @@ test("settings edits made during a save remain as unsaved changes", async (t) =>
   };
 
   await screen.findByRole("heading", { name: "Settings" });
+
+  await user.click(
+    screen.getByRole("tab", { name: "Claude session restrictions" }),
+  );
+
   await user.click(screen.getByRole("switch", { name: "Allow subagents" }));
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
   await screen.findByRole("button", { name: "Working…" });
 
+  await user.click(screen.getByRole("tab", { name: "Task defaults" }));
   await user.click(screen.getByRole("switch", { name: "Cost limit" }));
   releaseUpdate();
 
@@ -91,19 +81,6 @@ test("settings reveals an invalid budget in another section and saves typed mode
       values: {
         task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
       },
-      sections: [
-        { id: "budgets", title: "Budgets", rows: [budgetRow] },
-        {
-          id: "models",
-          title: "Models",
-          rows: [
-            {
-              kind: "models",
-              scopes: [scope("models.profiles.researcher", "Researcher")],
-            },
-          ],
-        },
-      ],
     }),
   );
 
@@ -130,8 +107,8 @@ test("settings reveals an invalid budget in another section and saves typed mode
 
   await user.clear(amount);
 
-  const budgetsTab = screen.getByRole("tab", { name: /^Budgets/ });
-  await user.click(screen.getByRole("tab", { name: /^Models/ }));
+  const budgetsTab = screen.getByRole("tab", { name: /^Task defaults/ });
+  await user.click(screen.getByRole("tab", { name: /^Worker profiles/ }));
   assert.equal(budgetsTab.getAttribute("aria-selected"), "false");
 
   // A model without discovered choices is typed.
@@ -173,7 +150,6 @@ test("settings explains invalid disabled budgets and lets the user restore editi
       values: {
         task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
       },
-      sections: [{ id: "task", title: "Task", rows: [budgetRow] }],
     }),
   );
 
@@ -183,10 +159,10 @@ test("settings explains invalid disabled budgets and lets the user restore editi
   const toggle = screen.getByRole("switch", { name: "Cost limit" });
 
   await user.clear(amount);
-  await pasteText(user, amount, "500");
+  await pasteText(user, amount, "0");
   await user.click(toggle);
   await user.click(screen.getByRole("button", { name: "Save 1 change" }));
-  await screen.findByText("Enter an amount from 0.01 to 100 USD.");
+  await screen.findByText("Enter an amount of at least 0.01 USD.");
   assert.equal(amount.getAttribute("aria-invalid"), "true");
   await waitFor(() => expect(document.activeElement).toBe(toggle));
 
@@ -216,8 +192,10 @@ test("settings resets preserve another section's draft and saved override", asyn
   const { user } = await setupSettings(t, (transport) =>
     serveSettings(transport, {
       values: {
-        providers: { claude: { subagents: false } },
-        task: { budget: { max_cost_usd: { enabled: false, amount: 5 } } },
+        task: {
+          workspace_strategy: "worktree",
+          budget: { max_cost_usd: { enabled: false, amount: 5 } },
+        },
         models: {
           providers: {
             claude: { model: "saved-model", reasoning_effort: "high" },
@@ -225,52 +203,32 @@ test("settings resets preserve another section's draft and saved override", asyn
         },
       },
       defaults: {
-        providers: { claude: { subagents: true } },
-        task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
+        task: {
+          workspace_strategy: "current_repo",
+          budget: { max_cost_usd: { enabled: true, amount: 5 } },
+        },
         models: {
           providers: { claude: { model: "", reasoning_effort: "default" } },
         },
       },
-      sections: [
-        {
-          id: "task",
-          title: "Task",
-          rows: [
-            {
-              kind: "switch",
-              path: "providers.claude.subagents",
-              label: "Allow subagents",
-            },
-            budgetRow,
-          ],
-        },
-        {
-          id: "models",
-          title: "Models",
-          rows: [
-            {
-              kind: "models",
-              scopes: [scope("models.providers.claude", "Claude")],
-            },
-          ],
-        },
-      ],
     }),
   );
 
   await screen.findByRole("heading", { name: "Settings" });
-  const subagents = screen.getByRole("switch", { name: "Allow subagents" });
 
   // Resetting Task must preserve another section's saved override and draft.
-  await user.click(screen.getByRole("tab", { name: "Models" }));
+  await user.click(screen.getByRole("tab", { name: "Model defaults" }));
   const model = screen.getByRole("textbox", { name: "Claude model" });
   await user.clear(model);
   await pasteText(user, model, "draft-model");
 
-  await user.click(screen.getByRole("tab", { name: "Task" }));
+  await user.click(screen.getByRole("tab", { name: "Task defaults" }));
   await user.click(screen.getByRole("button", { name: "Reset to defaults" }));
 
-  assert.equal(subagents.getAttribute("aria-checked"), "true");
+  assert.equal(
+    screen.getByRole("combobox", { name: "Workspace" }).textContent,
+    "Project folder",
+  );
 
   assert.equal(
     screen
@@ -281,19 +239,19 @@ test("settings resets preserve another section's draft and saved override", asyn
 
   assert.equal(screen.queryAllByRole("button", { name: /^Reset/ }).length, 0);
 
-  await user.click(screen.getByRole("tab", { name: /^Models/ }));
+  await user.click(screen.getByRole("tab", { name: /^Model defaults/ }));
   assert.equal((model as HTMLInputElement).value, "draft-model");
   assert.equal(screen.getAllByRole("button", { name: /^Reset/ }).length, 1);
 
   assert.equal(
-    screen.getByRole("combobox", { name: "Claude effort" }).textContent,
+    screen.getByRole("combobox", { name: "Claude reasoning" }).textContent,
     "high",
   );
 });
 
 test("the service saves an export only when the host or browser can't, and never after a refusal", async (t) => {
   const { transport, user } = await setupSettings(t, (transport) => {
-    serveSettings(transport, { sections: [] });
+    serveSettings(transport);
     const original = transport.tool.bind(transport);
 
     transport.tool = async <T>(name: string, args = {}) => {

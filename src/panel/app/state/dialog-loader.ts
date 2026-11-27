@@ -155,7 +155,7 @@ export class DialogLoader {
 
       if (!this.settingsRequest(dialog.request)) return;
 
-      if (!Array.isArray(settings.sections)) {
+      if (!Array.isArray(settings.sections) || !("section_input" in settings)) {
         throw new Error(
           "Settings are unavailable in this preview or service version.",
         );

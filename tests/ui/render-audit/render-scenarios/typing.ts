@@ -1,6 +1,6 @@
 import { act, screen } from "@testing-library/react";
 
-import { budgetRow, serveSettings } from "../../panel-test-support";
+import { serveSettings } from "../../panel-test-support";
 import type { Mounted } from "../base-state";
 import type { Scenario } from "./scenario";
 
@@ -55,11 +55,13 @@ export const typingScenarios: Scenario[] = [
         values: {
           task: { budget: { max_cost_usd: { enabled: true, amount: 5 } } },
         },
-        sections: [{ id: "task", title: "Task", rows: [budgetRow] }],
       });
 
       await act(() => controller.settings());
-      await user.click(await screen.findByRole("spinbutton"));
+
+      await user.click(
+        await screen.findByRole("spinbutton", { name: "Cost limit (USD)" }),
+      );
     },
     change: ({ user }) => user.keyboard("1"),
   },

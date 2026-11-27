@@ -153,9 +153,9 @@ export class Settings {
     const providers = this.providers();
     const modelProviders = this.modelProviders();
 
-    catalogs = catalogs.filter((catalog) =>
-      providers.includes(catalog.provider),
-    );
+    catalogs = catalogs
+      .filter((catalog) => providers.includes(catalog.provider))
+      .map(({ provider, models, policy }) => ({ provider, models, policy }));
 
     // Agents update through this schema, so it lists what an update accepts.
     const schema = z.toJSONSchema(settingsPatchSchema) as JsonSchema;
@@ -208,6 +208,7 @@ export class Settings {
       values,
       defaults: this.shown(this.defaults()),
       sections,
+      section_input: { providers, modelProviders, catalogs },
     });
   }
 
