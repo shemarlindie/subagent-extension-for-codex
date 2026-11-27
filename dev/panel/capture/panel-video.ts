@@ -10,7 +10,7 @@ import {
   rectangleBounds,
   watchBounds,
 } from "./capture-bounds";
-import { devServer, launchBrowser } from "./capture-browser";
+import { devServer, withBrowser } from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
 import { applyPanelLayout, panelLayout, type PanelSetup } from "./panel-layout";
 import {
@@ -118,47 +118,35 @@ export async function withPanel(
   const layout = panelLayout(setup);
   const server = await devServer("/");
 
-  await withCleanup(
-    async () => {
-      const browser = await launchBrowser();
+  await withBrowser(server, async (browser) => {
+    const page = await browser.newPage({ viewport: layout.viewport });
 
-      await withCleanup(
-        async () => {
-          const page = await browser.newPage({ viewport: layout.viewport });
+    const iframe = page.locator(".frame iframe");
+    const panel = page.frameLocator(".frame iframe");
+    await page.goto(`${server.origin}${path}`);
+    await applyPanelLayout(page, layout);
 
-          const iframe = page.locator(".frame iframe");
-          const panel = page.frameLocator(".frame iframe");
-          await page.goto(`${server.origin}${path}`);
-          await applyPanelLayout(page, layout);
+    await panel.locator("body *").first().waitFor();
+    await page.waitForTimeout(1000);
 
-          await panel.locator("body *").first().waitFor();
-          await page.waitForTimeout(1000);
+    await script({
+      page,
+      panel,
+      center: async (element) => {
+        const box = await iframe.boundingBox();
+        if (!box) throw new Error("The panel iframe has no layout box");
 
-          await script({
-            page,
-            panel,
-            center: async (element) => {
-              const box = await iframe.boundingBox();
-              if (!box) throw new Error("The panel iframe has no layout box");
+        const rect = await element.evaluate((node) =>
+          node.getBoundingClientRect().toJSON(),
+        );
 
-              const rect = await element.evaluate((node) =>
-                node.getBoundingClientRect().toJSON(),
-              );
-
-              return {
-                x: box.x + (rect.x + rect.width / 2) * layout.scale,
-                y: box.y + (rect.y + rect.height / 2) * layout.scale,
-              };
-            },
-            record: (out, actions, options = {}) =>
-              recordPanel(page, iframe, out, actions, options),
-          });
-        },
-        () => browser.close(),
-      );
-    },
-    async () => {
-      await server.close?.();
-    },
-  );
+        return {
+          x: box.x + (rect.x + rect.width / 2) * layout.scale,
+          y: box.y + (rect.y + rect.height / 2) * layout.scale,
+        };
+      },
+      record: (out, actions, options = {}) =>
+        recordPanel(page, iframe, out, actions, options),
+    });
+  });
 }

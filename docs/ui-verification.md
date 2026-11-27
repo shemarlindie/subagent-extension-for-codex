@@ -78,6 +78,102 @@ await withPanel(
   Chromium instance. Feed its `frames.ffconcat` into FFmpeg with
   `-safe 0 -f concat -i <dir>/frames.ffconcat`.
 
+### Comparison recordings
+
+`withComparison` records one fixture scenario on several versions of the panel
+and joins them side by side into a video, stills or both. Each side shows a
+header with its label, an optional note, a shared caption and live readouts. For
+example, compare a variant of one file with the working tree:
+
+```ts
+import { withComparison } from "<checkout>/dev/panel/capture/comparison";
+
+await withComparison({
+  sides: [
+    {
+      label: "Before",
+      note: "Native smooth scroll",
+      color: "#b74331",
+      source: {
+        folder: "<scratch>/variants/before",
+        paths: ["src/panel/features/tasks/evidence/end-follower.ts"],
+      },
+    },
+    { label: "After", color: "#16825e" },
+  ],
+  path: "/?data=fixtures&display=fullscreen&dw_task=preview-live-fast-streaming&dw_tab=chat",
+  clock: { startMs: 2000 },
+  playMs: 7500,
+  out: "video-captures/chat-scroll",
+  caption: "Same reply · 1,500 characters per second",
+  readouts: [
+    {
+      label: "Distance from latest",
+      unit: "px",
+      value: (panel) => {
+        const chat = panel.document.querySelector(
+          '[aria-label="Chat history"]',
+        )!;
+        return chat.scrollHeight - chat.clientHeight - chat.scrollTop;
+      },
+    },
+  ],
+  scenario: async ({ panel, play }) => {
+    await panel.locator('[data-streaming="true"]').waitFor();
+    await play();
+  },
+});
+```
+
+- A side's `source` sets the code it shows. Without one, it serves the working
+  tree. Pick the source, or another approach, that isolates the change best, and
+  say in the PR which you used:
+  - **Swapped files**, `{ ref, paths }` or `{ folder, paths }`, put those files
+    at a Git ref or from a folder into today's panel and fixtures. This suits a
+    change in a few files whose imports still match. The run fails if the
+    swapped files fail type checks or never load. The side is not a true old
+    version of the app, so don't present it as one.
+  - **Another checkout**, `{ checkout }`, serves a whole tree, such as one from
+    `git worktree add --detach <scratch>/before <ref>` with `node_modules`
+    linked from this checkout. This suits larger changes. The checkout needs the
+    scenario's fixture and the fixture clock line in
+    `dev/panel/scenarios/live-preview.ts`. Remove it afterwards with
+    `git worktree remove`.
+  - **A running dev host**, `{ origin }`, records any server you start. Its live
+    fixtures run from page load on their own clock, so the sides can drift
+    apart.
+
+  For a style-only change, the scenario can make it on one side instead, such as
+  by appending a style tag through `panel.locator("head")` before `play`.
+
+- `scenario` runs once per side. It waits for readiness, then calls `play` with
+  any actions to record the video, `still(name)` to save a labeled image, or
+  both. Every side must do the same. A side that finishes its actions sooner
+  holds its last frame until the slowest side ends. Afterwards, the scenario can
+  probe the side's `origin`.
+- `clock` holds the live fixtures at `startMs` until `play`, then runs them at
+  `speed` (default 1) for `playMs` (default 0, for interactions only). Start
+  just before the event under test, and slow the clock to stretch streaming.
+  `animationSpeed` separately slows CSS animations and transitions, such as 0.25
+  to show a collapse at a quarter speed.
+- Each readout's `value` returns a number or text every animation frame, and a
+  frame where it throws is skipped. Numbers show rounded with `unit`, or through
+  `format`. Both functions run in the page, so they can't use the script's
+  variables.
+- Sides are 640 × 900 by default. Set `size` to fit more, such as 480 wide for
+  four sides.
+- `out` gets `comparison.mp4`, `<name>.png` for each still, and `report.json`,
+  with each side's source and commit, readout samples, frame check and page
+  errors. A failed run still writes the report.
+
+Record in your own worktree, since another session can switch a shared
+checkout's branch. Take stills before or after `play`, and avoid other heavy CPU
+or GPU work while recording. Init scripts you add run in both the host page and
+the panel frame, so check `location.pathname` first. Before sharing a video,
+extract a frame from the middle with
+`ffmpeg -ss <seconds> -i comparison.mp4 -frames:v 1 frame.png` and check that
+each side shows the expected behavior.
+
 ## Design review
 
 Check the rendered panel against these points during the workflow above:

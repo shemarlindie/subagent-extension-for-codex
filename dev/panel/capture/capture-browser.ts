@@ -1,37 +1,50 @@
 import { resolve } from "node:path";
 
-import { chromium } from "@playwright/test";
-import { createServer } from "vite";
+import { chromium, type Browser } from "@playwright/test";
+import { createServer, type PluginOption } from "vite";
 
 import {
   DEV_HOST,
   DEV_HOST_CHECKOUT_HEADER,
   devHostCheckout,
 } from "../dev-host";
+import { withCleanup } from "./capture-cleanup";
 
-type CaptureServer = { origin: string; close?: () => Promise<void> };
+export type CaptureServer = { origin: string; close?: () => Promise<void> };
 
-/** Reuses this checkout's dev host, or starts one on a free port. */
-export async function devServer(path: string): Promise<CaptureServer> {
+/**
+ * Reuses this checkout's dev host, or starts one on a free port. Extra
+ * `plugins` always start a new one. `root` serves another checkout.
+ */
+export async function devServer(
+  path: string,
+  plugins: PluginOption[] = [],
+  root = ".",
+): Promise<CaptureServer> {
   const origin = `http://${DEV_HOST.host}:${DEV_HOST.port}`;
-  const checkout = devHostCheckout(process.cwd());
+  const checkout = devHostCheckout(resolve(root));
 
-  const reusable = await fetch(`${origin}${path}`, {
-    method: "HEAD",
-    redirect: "error",
-    signal: AbortSignal.timeout(2000),
-  }).then(
-    (response) =>
-      response.ok &&
-      response.headers.get(DEV_HOST_CHECKOUT_HEADER) === checkout,
-    () => false,
-  );
+  const reusable =
+    plugins.length === 0 &&
+    (await fetch(`${origin}${path}`, {
+      method: "HEAD",
+      redirect: "error",
+      signal: AbortSignal.timeout(2000),
+    }).then(
+      (response) =>
+        response.ok &&
+        response.headers.get(DEV_HOST_CHECKOUT_HEADER) === checkout,
+      () => false,
+    ));
 
   if (reusable) return { origin };
 
   const server = await createServer({
-    configFile: resolve("vite.config.ts"),
+    configFile: resolve(root, "vite.config.ts"),
+    // Vite resolves the config's relative root against the working directory.
+    root: resolve(root, "dev/panel/host"),
     server: { port: 0 },
+    plugins,
   });
 
   try {
@@ -55,10 +68,26 @@ export async function devServer(path: string): Promise<CaptureServer> {
   }
 }
 
-// Metal GPU rendering on macOS. Headless Chromium otherwise renders on the
-// CPU, which drops frames at 2x.
-export function launchBrowser() {
-  return chromium.launch({
-    args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
-  });
+/** Runs `capture` with a browser, then closes the browser and `server`. */
+export async function withBrowser<T>(
+  server: CaptureServer,
+  capture: (browser: Browser) => Promise<T>,
+) {
+  return withCleanup(
+    async () => {
+      // Metal GPU rendering on macOS. Headless Chromium otherwise renders on
+      // the CPU, which drops frames at 2x.
+      const browser = await chromium.launch({
+        args: ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"],
+      });
+
+      return withCleanup(
+        () => capture(browser),
+        () => browser.close(),
+      );
+    },
+    async () => {
+      await server.close?.();
+    },
+  );
 }

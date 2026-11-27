@@ -139,6 +139,10 @@ Report a checklist:
 List what you couldn't check and why, including any
 [live-only checks](#live-only-checks) the feature touches.
 
+For before-and-after evidence, record a
+[comparison](../../../docs/ui-verification.md#comparison-recordings) video or
+stills.
+
 ## 5. Decide on coverage
 
 Follow [Choosing test coverage](../../../docs/development.md#choosing-test-coverage).
