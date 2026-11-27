@@ -550,7 +550,7 @@ test("worker tool calls and their results leave no tool rows", () => {
       {
         type: "tool_use",
         id: "plan",
-        name: "mcp__delegated_work__update_plan",
+        name: "mcp__subx__update_plan",
         input: { advance: true },
       },
       { type: "tool_use", id: "read", name: "Read", input: { file_path: "a" } },
@@ -578,7 +578,7 @@ test("full events keep the originals of worker tool messages as quiet activity",
     {
       type: "tool_use",
       id: "plan",
-      name: "mcp__delegated_work__update_plan",
+      name: "mcp__subx__update_plan",
       input: { advance: true },
     },
   ]);

@@ -25,11 +25,17 @@ import {
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { visualGuide, visualKinds } from "./visual-guide.js";
-import { WORKER_SERVER } from "./worker-tool-names.js";
+import { WORKER_SERVER, workerTool } from "./worker-tool-names.js";
 
-/** The system prompt paragraph about the worker tools. */
-export const workerToolsPrompt =
-  "Use update_plan to show your plan as a checklist in the user's panel. The user follows your progress there while you work, so keeping it is part of the task. For any request that edits files or runs more than one command, send the whole plan with your very first tool call, even one that only reads a file. As each step finishes, advance in the same message as the call that starts the next. Don't restate the plan as a list in your reply.\n\nWhen the work is done, call wrap_up, then write your final reply in full. Its box under your reply tells the user where things stand and asks them anything the next move waits on.\n\nThe panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to show_visual.";
+/**
+ * The system prompt paragraph about the worker tools. It names each tool in
+ * full on first mention, since a bare name is a tool the worker doesn't have.
+ */
+export const workerToolsPrompt = `Your \`${workerTool("*")}\` tools show your work in the user's panel. Use \`${workerTool("update_plan")}\` to show your plan as a checklist there. The user follows your progress in the panel while you work, so keeping it is part of the task. For any request that edits files or runs more than one command, send the whole plan with your very first tool call, even one that only reads a file. As each step finishes, advance in the same message as the call that starts the next. Don't restate the plan as a list in your reply.
+
+When the work is done, call \`${workerTool("wrap_up")}\`, then write your final reply in full. Its box under your reply tells the user where things stand and asks them anything the next move waits on.
+
+The panel renders your replies as Markdown, and shows charts, diagrams and other visuals you pass to \`${workerTool("show_visual")}\`.`;
 
 /**
  * A SessionStart hook that hands an open plan back to the worker after a
@@ -58,7 +64,7 @@ export function planReminder(c: RunContext): HookCallback {
         additionalContext: [
           "Your plan for this task, as the user's panel shows it:",
           ...steps,
-          "Keep it current with update_plan: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.",
+          `Keep it current with \`${workerTool("update_plan")}\`: advance as steps finish, use done and start if you're past the step in progress, or send a new list if the work changed.`,
         ].join("\n"),
       },
     };

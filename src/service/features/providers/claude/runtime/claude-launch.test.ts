@@ -76,7 +76,7 @@ test("Claude SDK query uses native harness, resume, a plain reply, remaining bud
 
   assert.deepEqual(options.settingSources, ["user", "project", "local"]);
   assert.equal(options.strictMcpConfig, undefined);
-  assert.deepEqual(Object.keys(options.mcpServers ?? {}), ["delegated_work"]);
+  assert.deepEqual(Object.keys(options.mcpServers ?? {}), ["subx"]);
 
   assert.equal(options.allowedTools, undefined);
 
