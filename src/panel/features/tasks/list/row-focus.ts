@@ -35,8 +35,11 @@ export async function keepRowFocus(
 
     observer.disconnect();
 
-    const next = neighbours.find((other) => rowFor(list, other));
-    moved = next === undefined ? fallback : rowFor(list, next);
+    moved =
+      neighbours
+        .values()
+        .map((other) => rowFor(list, other))
+        .find(Boolean) ?? fallback;
 
     moved?.focus();
   });

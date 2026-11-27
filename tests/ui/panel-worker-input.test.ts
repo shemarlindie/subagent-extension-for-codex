@@ -195,6 +195,8 @@ test("unsent question answers survive switching tasks and clear once sent", asyn
 
   await user.click(screen.getByRole("checkbox", { name: "Tests" }));
   await user.click(screen.getByRole("button", { name: "Next" }));
+  // Next submits the form, so the next card appears asynchronously.
+  await screen.findByText("Question 2 of 3");
   await user.click(screen.getByRole("button", { name: "Skip this question" }));
 
   await pasteText(

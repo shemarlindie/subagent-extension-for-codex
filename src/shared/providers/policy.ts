@@ -14,6 +14,10 @@ export const flexibleModel = (value: string | undefined) => {
 /** Under a model menu when the org's allowlist shortens it. */
 export const MODELS_LIMITED = "Your organization limits these models.";
 
+/** Inherit help when nothing sets a default model or reasoning. */
+export const WORKER_DEFAULTS_HELP =
+  "the worker's own default. This applies to model and reasoning.";
+
 /** Whether an ID is a dated or fast form of another. */
 export const isModelVariant = (model: string, base: string) =>
   model.startsWith(base) && /^(-\d{8}|-fast)+$/.test(model.slice(base.length));

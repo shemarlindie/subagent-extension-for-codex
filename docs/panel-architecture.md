@@ -130,9 +130,28 @@ The project chip's **Add project…** opens the Add project dialog marked
 `controller.newTasks.projectAdded`, and the chip selects it, so the task list
 keeps its scope.
 
+## Layout stability
+
+Content stays where the reader left it when something loads, fails, retries,
+arrives or leaves. Use the first approach that fits:
+
+1. **Keep the element.** Render one element across loading, ready and error
+   states, as `LoadingSwap` and the plan card's header row do.
+2. **Reserve the space.** Size a placeholder like the content it stands in for,
+   with a matching skeleton or a size the data already gives, such as a row
+   count. Keep room for content that comes and goes, as the chat's working line
+   and hover actions do.
+3. **Overlay pending feedback.** Show progress and spinners within existing
+   space, as `AsyncControl` and the file preview's progress bar do. Keep a
+   control in place while its action runs, marked busy.
+4. **Animate the rest.** When a size must change, use the [Motion](#motion)
+   primitives so neighbors slide. `Presence` collapses content that arrives or
+   leaves, and `useAnimatedHeight` eases a box that grows or shrinks.
+
 ## Motion
 
-Motion shows what changed and eases layout shifts. Reuse the primitives in
+Motion shows what changed and eases the size changes that
+[Layout stability](#layout-stability) can't avoid. Reuse the primitives in
 `shared/components/motion/` for presence, keyed lists, height changes and
 changing text. Keep the JavaScript `MOTION` values and their matching CSS tokens
 in sync. Loading timing has its own configuration.

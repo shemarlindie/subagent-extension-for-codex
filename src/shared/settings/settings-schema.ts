@@ -17,6 +17,7 @@ import {
   roles,
 } from "../tasks/model.js";
 import { titleCase } from "../text.js";
+import { settingAt } from "./setting-path.js";
 import { settingMeta, unwrapped } from "./setting-text.js";
 
 /** Characters a branch prefix may use; Git checks the whole branch name. */
@@ -242,19 +243,6 @@ export const panelSettingsDefaults: PanelSettings =
 /** A new user's settings, with the given default provider. */
 export const settingsDefaults = (provider: string): SettingsValues =>
   settingsSchema.parse({ task: { provider } });
-
-/** A dotted path's value in nested settings, or undefined. */
-export function settingAt(values: unknown, path: string): unknown {
-  return path
-    .split(".")
-    .reduce<unknown>(
-      (value, key) =>
-        value !== null && typeof value === "object"
-          ? (value as Record<string, unknown>)[key]
-          : undefined,
-      values,
-    );
-}
 
 /** The schema at a dotted path, or undefined when the path isn't a setting. */
 export function settingSchemaAt(path: string): z.ZodType | undefined {

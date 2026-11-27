@@ -1,7 +1,7 @@
 import { z } from "zod";
 
+import { settingAt } from "../../../shared/settings/setting-path.js";
 import {
-  settingAt,
   settingPaths,
   settingSchemaAt,
   withSetting,

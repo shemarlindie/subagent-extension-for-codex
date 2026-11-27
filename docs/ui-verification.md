@@ -85,6 +85,10 @@ Check the rendered panel against these points during the workflow above:
 - The next step is obvious, and each state the workflow checks has a designed
   view, per
   [Loading and pending UI](panel-architecture.md#loading-and-pending-ui).
+- Content doesn't jump as states change, per
+  [Layout stability](panel-architecture.md#layout-stability). Fast shifts are
+  easy to miss, so check with **Slow async reads** or a recording with delayed
+  reads.
 - Hierarchy, spacing, alignment and typography match nearby UI.
 - Controls reuse [Shared controls](panel-architecture.md#shared-controls),
   icon-only controls have accessible names, and focus order and touch targets
