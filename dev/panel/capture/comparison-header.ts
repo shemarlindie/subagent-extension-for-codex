@@ -1,6 +1,8 @@
 // The labeled header above each comparison side's panel, with its readouts.
 import type { Page } from "@playwright/test";
 
+import { CLOCK_START } from "./comparison-sources";
+
 const LAYOUT = `
   .toolbar, .inspector { display: none !important; }
   html, body, #root, .host {
@@ -36,13 +38,11 @@ export type Readout = {
 
 type Title = { label: string; note?: string };
 
-export type HeaderSettings = Title & {
+type HeaderSettings = Title & {
   color: string;
   caption?: string;
   /** Every side's title, so all headers share the tallest one's height. */
   titles: Title[];
-  /** The global that holds the fixture clock's start. */
-  clockStart: string;
   startMs: number;
   speed: number;
   playMs: number;
@@ -52,7 +52,10 @@ export type HeaderSettings = Title & {
 export type Sample = { ms: number; values: Record<string, Reading> };
 
 // Runs in the dev host page. Samples the readouts while the clock plays.
-function installHeader(settings: HeaderSettings, readouts: Readout[]) {
+function installHeader(
+  settings: HeaderSettings & { clockStart: string },
+  readouts: Readout[],
+) {
   const element = (tag: string, style: string, text = "") => {
     const node = document.createElement(tag);
     node.style.cssText = style;
@@ -196,9 +199,11 @@ export async function addHeader(
       `{ label: ${JSON.stringify(readout.label)}, unit: ${JSON.stringify(readout.unit)}, value: ${source(readout.value)}, format: ${source(readout.format)} }`,
   );
 
+  const args = JSON.stringify({ ...settings, clockStart: CLOCK_START });
+
   // tsx names functions with a `__name` helper, which the page lacks.
   await page.evaluate(
-    `((__name) => (${installHeader.toString()})(${JSON.stringify(settings)}, [${list.join(", ")}]))((f) => f)`,
+    `((__name) => (${installHeader.toString()})(${args}, [${list.join(", ")}]))((f) => f)`,
   );
 }
 

@@ -158,8 +158,7 @@ await withComparison({
   actions, and can probe the side's `origin` afterwards.
 - Each readout's `value` returns a number or text every animation frame. Numbers
   show rounded with `unit`, or through `format`. Both functions run in the page,
-  so they can't use the script's variables. Headers grow to fit and share the
-  tallest side's height.
+  so they can't use the script's variables.
 - Sides are 640 × 900 by default. Set `size` to fit more, such as 480 wide for
   four sides.
 - `out` gets `comparison.mp4` and `report.json`, with each side's source and

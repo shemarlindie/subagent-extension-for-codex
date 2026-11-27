@@ -9,7 +9,7 @@ import {
   devHostCheckout,
 } from "../dev-host";
 
-type CaptureServer = { origin: string; close?: () => Promise<void> };
+export type CaptureServer = { origin: string; close?: () => Promise<void> };
 
 /**
  * Reuses this checkout's dev host, or starts one on a free port. Extra

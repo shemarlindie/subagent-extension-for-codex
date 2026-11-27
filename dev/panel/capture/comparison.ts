@@ -8,7 +8,11 @@ import { promisify } from "node:util";
 
 import type { FrameLocator, Page } from "@playwright/test";
 
-import { devServer, launchBrowser } from "./capture-browser";
+import {
+  devServer,
+  launchBrowser,
+  type CaptureServer,
+} from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
 import {
   addHeader,
@@ -18,10 +22,10 @@ import {
 } from "./comparison-header";
 import {
   checkoutState,
-  CLOCK_START,
   fixtureClockPlugin,
   overlayPlugin,
   readOverlay,
+  startFixtureClock,
   typeCheckOverlay,
   type ComparisonSource,
   type FixtureClock,
@@ -100,9 +104,9 @@ async function recordSide(
   const root = source && "checkout" in source ? source.checkout : ".";
 
   // A running dev host keeps its own clock.
-  const server =
+  const server: CaptureServer =
     source && "origin" in source
-      ? { origin: source.origin, close: undefined }
+      ? { origin: source.origin }
       : await devServer(
           "/",
           [
@@ -126,7 +130,6 @@ async function recordSide(
         color: side.color,
         caption: options.caption,
         titles: options.sides.map(({ label, note }) => ({ label, note })),
-        clockStart: CLOCK_START,
         startMs: clock.startMs,
         speed,
         playMs,
@@ -145,11 +148,7 @@ async function recordSide(
         frames,
         async () => {
           await page.waitForTimeout(LEAD_MS);
-
-          await page.evaluate((name) => {
-            Object.assign(globalThis, { [name]: performance.now() });
-          }, CLOCK_START);
-
+          await startFixtureClock(page);
           await Promise.all([actions?.(), page.waitForTimeout(playMs / speed)]);
 
           await page.waitForTimeout(TAIL_MS);

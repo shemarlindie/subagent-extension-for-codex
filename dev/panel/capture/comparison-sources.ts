@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
+import type { Page } from "@playwright/test";
 import type { Plugin } from "vite";
 
 import { withCleanup } from "./capture-cleanup";
@@ -30,7 +31,7 @@ export type ComparisonSource =
   | { checkout: string }
   | { origin: string };
 
-export type FileSource = Extract<ComparisonSource, { paths: string[] }>;
+type FileSource = Extract<ComparisonSource, { paths: string[] }>;
 
 export type FixtureClock = {
   /** Fixture time in milliseconds while the page loads and before playback. */
@@ -98,7 +99,7 @@ export async function typeCheckOverlay(files: Map<string, string>) {
       await run("npm", ["run", "-s", "typecheck:source"], {
         cwd: copy,
       }).catch((error: { stdout?: string }) => {
-        throw new Error(`The overlay fails type checks:\n${error.stdout}`);
+        throw new Error(`The swapped files fail type checks:\n${error.stdout}`);
       });
     },
     () => rm(copy, { recursive: true, force: true }),
@@ -125,6 +126,12 @@ export function overlayPlugin(files: Map<string, string>, loaded: Set<string>) {
 
 export const CLOCK_START = "__comparisonClockStart";
 const ELAPSED = "Date.now() - startedAt";
+
+/** Starts playing the fixture clock in the dev host page. */
+export const startFixtureClock = (page: Page) =>
+  page.evaluate((name) => {
+    Object.assign(globalThis, { [name]: performance.now() });
+  }, CLOCK_START);
 
 /**
  * Holds the live fixtures at `startMs` until the page sets the clock start,
