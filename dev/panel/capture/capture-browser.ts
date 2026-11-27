@@ -13,14 +13,15 @@ type CaptureServer = { origin: string; close?: () => Promise<void> };
 
 /**
  * Reuses this checkout's dev host, or starts one on a free port. Extra
- * `plugins` always start a new one.
+ * `plugins` always start a new one. `root` serves another checkout.
  */
 export async function devServer(
   path: string,
   plugins: PluginOption[] = [],
+  root = ".",
 ): Promise<CaptureServer> {
   const origin = `http://${DEV_HOST.host}:${DEV_HOST.port}`;
-  const checkout = devHostCheckout(process.cwd());
+  const checkout = devHostCheckout(resolve(root));
 
   const reusable =
     plugins.length === 0 &&
@@ -38,7 +39,9 @@ export async function devServer(
   if (reusable) return { origin };
 
   const server = await createServer({
-    configFile: resolve("vite.config.ts"),
+    configFile: resolve(root, "vite.config.ts"),
+    // Vite resolves the config's relative root against the working directory.
+    root: resolve(root, "dev/panel/host"),
     server: { port: 0 },
     plugins,
   });

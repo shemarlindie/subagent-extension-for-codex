@@ -17,12 +17,20 @@ import type { Plugin } from "vite";
 import { withCleanup } from "./capture-cleanup";
 
 /**
- * Replaces repository `paths` with their content at a Git `ref`, or with the
- * files at the same relative paths under `folder`. Without one, a side serves
- * the working tree.
+ * What a side records. Without one, a side serves the working tree.
+ *
+ * - `ref` or `folder` with `paths` replaces those repository files with their
+ *   content at the Git ref, or with the files at the same paths in the folder.
+ * - `checkout` serves another checkout of the repository, such as a worktree.
+ * - `origin` records a panel dev host that is already running.
  */
 export type ComparisonSource =
-  { ref: string; paths: string[] } | { folder: string; paths: string[] };
+  | { ref: string; paths: string[] }
+  | { folder: string; paths: string[] }
+  | { checkout: string }
+  | { origin: string };
+
+export type FileSource = Extract<ComparisonSource, { paths: string[] }>;
 
 export type FixtureClock = {
   /** Fixture time in milliseconds while the page loads and before playback. */
@@ -33,11 +41,18 @@ export type FixtureClock = {
 
 const run = promisify(execFile);
 
-export const git = async (...args: string[]) =>
-  (await run("git", args)).stdout.trim();
+const git = async (...args: string[]) => (await run("git", args)).stdout.trim();
+
+// A worktree's linked node_modules is a file, which `node_modules/` doesn't ignore.
+export const checkoutState = async (dir: string) => ({
+  commit: await git("-C", dir, "rev-parse", "HEAD"),
+  dirty:
+    (await git("-C", dir, "status", "--porcelain", "--", ":!node_modules")) !==
+    "",
+});
 
 /** Reads a source's files, keyed by repository path. */
-export async function readOverlay(source: ComparisonSource) {
+export async function readOverlay(source: FileSource) {
   const commit =
     "ref" in source
       ? await git("rev-parse", "--verify", `${source.ref}^{commit}`)
@@ -109,27 +124,29 @@ export function overlayPlugin(files: Map<string, string>, loaded: Set<string>) {
 }
 
 export const CLOCK_START = "__comparisonClockStart";
-const LIVE_PREVIEW = resolve("dev/panel/scenarios/live-preview.ts");
 const ELAPSED = "Date.now() - startedAt";
 
 /**
  * Holds the live fixtures at `startMs` until the page sets the clock start,
- * then plays them at `speed` for `playMs` and holds the last frame.
+ * then plays them at `speed` for `playMs` and holds the last frame. `root` is
+ * the checkout the dev host serves.
  */
 export function fixtureClockPlugin(
   { startMs, speed = 1 }: FixtureClock,
   playMs: number,
+  root = ".",
 ) {
+  const livePreview = resolve(root, "dev/panel/scenarios/live-preview.ts");
   const played = `Math.min(${playMs}, (performance.now() - globalThis.${CLOCK_START}) * ${speed})`;
 
   return {
     name: "comparison-fixture-clock",
     enforce: "pre",
     transform(code, id) {
-      if (id.split("?")[0] !== LIVE_PREVIEW) return;
+      if (id.split("?")[0] !== livePreview) return;
 
       if (!code.includes(ELAPSED)) {
-        throw new Error(`live-preview.ts no longer reads ${ELAPSED}`);
+        throw new Error(`${livePreview} doesn't read ${ELAPSED}`);
       }
 
       return {

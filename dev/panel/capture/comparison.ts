@@ -12,9 +12,9 @@ import { devServer, launchBrowser } from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
 import { addHeader, headerSamples, type Sample } from "./comparison-header";
 import {
+  checkoutState,
   CLOCK_START,
   fixtureClockPlugin,
-  git,
   overlayPlugin,
   readOverlay,
   typeCheckOverlay,
@@ -75,7 +75,7 @@ type ComparisonOptions = {
 
 type SideReport = {
   label: string;
-  source?: ComparisonSource & { commit?: string };
+  source?: ComparisonSource & { commit?: string; dirty?: boolean };
   frames?: string;
   samples?: Sample[];
   errors: string[];
@@ -96,13 +96,23 @@ async function recordSide(
   report: SideReport,
 ) {
   const { clock, playMs, readout, size } = options;
+  const { source } = side;
   const speed = clock.speed ?? 1;
   const loaded = new Set<string>();
+  const root = source && "checkout" in source ? source.checkout : ".";
 
-  const server = await devServer("/", [
-    fixtureClockPlugin(clock, playMs),
-    ...(overlay ? [overlayPlugin(overlay.files, loaded)] : []),
-  ]);
+  // A running dev host keeps its own clock.
+  const server =
+    source && "origin" in source
+      ? { origin: source.origin, close: undefined }
+      : await devServer(
+          "/",
+          [
+            fixtureClockPlugin(clock, playMs, root),
+            ...(overlay ? [overlayPlugin(overlay.files, loaded)] : []),
+          ],
+          root,
+        );
 
   const session = async (page: Page) => {
     page.on("pageerror", (error) => report.errors.push(error.message));
@@ -235,8 +245,7 @@ export async function withComparison(options: ComparisonOptions) {
     clock,
     playMs,
     size,
-    head: await git("rev-parse", "HEAD"),
-    dirty: (await git("status", "--porcelain")) !== "",
+    ...(await checkoutState(".")),
     sides: [] as SideReport[],
     error: undefined as string | undefined,
   };
@@ -245,7 +254,11 @@ export async function withComparison(options: ComparisonOptions) {
   const runs: { side: ComparisonSide; overlay?: Overlay }[] = [];
 
   for (const side of sides) {
-    const overlay = side.source && (await readOverlay(side.source));
+    const overlay =
+      side.source && "paths" in side.source
+        ? await readOverlay(side.source)
+        : undefined;
+
     if (overlay) await typeCheckOverlay(overlay.files);
     runs.push({ side, overlay });
   }
@@ -258,9 +271,14 @@ export async function withComparison(options: ComparisonOptions) {
     async () => {
       try {
         for (const { side, overlay } of runs) {
+          const state =
+            side.source && "checkout" in side.source
+              ? await checkoutState(side.source.checkout)
+              : { commit: overlay?.commit };
+
           const entry: SideReport = {
             label: side.label,
-            source: side.source && { ...side.source, commit: overlay?.commit },
+            source: side.source && { ...side.source, ...state },
             errors: [],
           };
 

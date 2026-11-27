@@ -125,10 +125,27 @@ await withComparison({
 });
 ```
 
-- A side's `source` replaces repository files with their content at a Git `ref`,
-  or with the files at the same paths under `folder`. Without one, it serves the
-  working tree. The run fails if an overlay fails type checks or a side never
-  loads one of its files.
+- A side's `source` sets the code it shows. Without one, it serves the working
+  tree. Pick the source that isolates the change best, and say in the PR which
+  you used:
+  - **Swapped files**, `{ ref, paths }` or `{ folder, paths }`, put those files
+    at a Git ref or from a folder into today's panel and fixtures. This suits a
+    change in a few files whose imports still match. The run fails if the
+    swapped files fail type checks or never load. The side is not a true old
+    version of the app, so don't present it as one.
+  - **Another checkout**, `{ checkout }`, serves a whole tree, such as one from
+    `git worktree add --detach <scratch>/before <ref>` with `node_modules`
+    linked from this checkout. This suits larger changes. The checkout needs the
+    scenario's fixture and the fixture clock line in
+    `dev/panel/scenarios/live-preview.ts`. Remove it afterwards with
+    `git worktree remove`.
+  - **A running dev host**, `{ origin }`, records any server you start. Its live
+    fixtures run from page load on their own clock, so the sides can drift
+    apart.
+
+  When none fits, use another approach that isolates the change, such as
+  screenshots before and after an edit for a still comparison.
+
 - `clock` holds the live fixtures at `startMs` until `play`, then runs them at
   `speed` (default 1) for `playMs`. Start just before the event under test, and
   slow the clock to stretch streaming while CSS animations keep their speed.
@@ -139,8 +156,7 @@ await withComparison({
   four sides.
 - `out` gets `comparison.mp4` and `report.json`, with each side's source and
   commit, readout samples, frame check and page errors. A failed run still
-  writes the report. A side shows its files inside today's panel and fixtures,
-  so never present it as an old version of the app.
+  writes the report.
 
 Record in your own worktree, since another session can switch a shared
 checkout's branch. Take screenshots before or after `play`, and avoid other
