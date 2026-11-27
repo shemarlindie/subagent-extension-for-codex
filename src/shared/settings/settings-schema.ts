@@ -200,7 +200,7 @@ export const settingsSchema = z.strictObject({
           description: "Show each task's worker profile icon before its title.",
           keywords: ["profile", "researcher", "reviewer", "implementer", "row"],
         })
-        .default(true),
+        .default(false),
       plan_usage_meter: z
         .boolean()
         .meta({

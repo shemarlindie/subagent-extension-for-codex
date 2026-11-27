@@ -126,12 +126,12 @@ project and search filters. Press `/` to search and Escape to clear it.
 Under **All projects**, tasks group by project, ordered by each group's newest
 task. Project headers stay visible as their rows scroll.
 
-Each row shows the worker icon, the title, [plan](#chat-tab) progress such as
-`3/7`, and at most one dot: yellow when the task needs input or waits for a rate
-limit, gray while it is queued, pulsing gray while it works, and the accent
-color when it is unread. An idle task shows its worker's open question under the
-title. Hover a long title to see the rest. **Details** shows the task's total
-runtime. **Settings > Appearance** can hide worker icons.
+Each row shows the title, [plan](#chat-tab) progress such as `3/7`, and at most
+one dot: yellow when the task needs input or waits for a rate limit, gray while
+it is queued, pulsing gray while it works, and the accent color when it is
+unread. An idle task shows its worker's open question under the title. Hover a
+long title to see the rest. **Details** shows the task's total runtime.
+**Settings > Appearance** can show each task's worker icon before its title.
 
 - Click a project header to collapse its group. The panel remembers collapsed
   groups across reloads where browser storage is available.
