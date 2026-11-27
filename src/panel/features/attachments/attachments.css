@@ -104,49 +104,16 @@
   width: max-content;
 }
 
-/*
- * An attachment's file toolbar names it, so the toolbar takes the heading's
- * place beside the close button. The title stays for AT.
- */
-.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
-  .dialog-heading {
-  z-index: 2;
-  height: 0;
-  padding: 0;
-}
+/* The toolbar's views and Copy can sit beside the name, under the controls. */
 .dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
   .file-preview-toolbar {
-  top: calc(-1 * var(--dialog-pad));
-  padding-inline-end: calc(44px + var(--attachment-actions-width, 0px));
+  padding-inline-end: calc(44px + var(--heading-actions-width, 0px));
 }
 /* The name stands in for the title, so it wraps instead of truncating. */
 .dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
   .file-name {
   overflow-wrap: anywhere;
   white-space: normal;
-}
-.dialog:is([data-kind="draft-attachment"], [data-kind="attachment"])
-  .dialog-heading
-  > h2 {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* A sent attachment's steps and file preview options, beside the close button. */
-.attachment-heading-actions {
-  position: absolute;
-  top: 8px;
-  right: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.attachment-options-target {
-  display: flex;
 }
 /* A parent-sent attachment's summary and origin, above its file viewer. */
 .attachment-header {

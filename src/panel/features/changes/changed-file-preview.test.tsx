@@ -129,7 +129,7 @@ function setup(
             <h2>
               {changedFileDialog.title({ kind: "file", task, path, scope: 0 })}
             </h2>
-            {/* Mirror DialogHost: views and navigation share the title row. */}
+            {/* Mirror DialogHost: navigation and options join the heading. */}
             {changedFileDialog.headingActions?.({
               kind: "file",
               task,

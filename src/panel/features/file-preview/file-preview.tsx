@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
 import { useController } from "../../app/state/controller-context";
 import { CopyButton } from "../../shared/components/copy-button/copy-button";
@@ -33,8 +32,6 @@ import { Progress } from "./progress";
 
 type FilePreviewProps = {
   file: PreviewFile;
-  /** Where to render the view tabs instead of keeping them in the toolbar. */
-  viewSwitcherTarget?: HTMLElement | null;
   /** Extra toolbar buttons, before Copy. */
   beforeActions?: ReactNode;
   /** Extra toolbar buttons, after Copy. */
@@ -57,7 +54,6 @@ type FilePreviewProps = {
 /** A file with a switcher between the views its format offers. */
 export function FilePreview({
   file,
-  viewSwitcherTarget,
   beforeActions,
   actions,
   diff,
@@ -108,23 +104,19 @@ export function FilePreview({
       </ToggleGroup>
     ) : null;
 
-  const renderedSwitcher = viewSwitcherTarget
-    ? switcher && createPortal(switcher, viewSwitcherTarget)
-    : switcher;
-
-  // Narrow headings scroll the view choices; file changes can move the selection.
+  // Narrow toolbars scroll the view choices; file changes can move the selection.
   useEffect(() => {
     const list = switcherRef.current;
     const selected = list?.querySelector<HTMLElement>("[data-pressed]");
 
     if (list && selected) scrollChildIntoView(list, selected, 2);
-  }, [view, views, viewSwitcherTarget]);
+  }, [view, views]);
 
   return (
     // Read-only, so there is no footer: the close button and Escape dismiss it.
     <div className="file-preview" data-wrap-lines={wrapLines}>
       <FileToolbar path={file.path} format={format} bytes={size}>
-        {renderedSwitcher}
+        {switcher}
         <span className="toolbar-actions">
           {beforeActions}
           {/* Only show Copy where the browser exposes clipboard access. */}
