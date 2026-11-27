@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { task } from "../../../../app/state/controller-test-harness";
+import {
+  deferred,
+  flush,
+  task,
+} from "../../../../app/state/controller-test-harness";
 import { initialState } from "../../../../app/state/initial-state";
 import type { Snapshot } from "../../../../app/state/types";
 import { DraftFollower } from "./draft-follower";
@@ -18,11 +22,14 @@ function fixture() {
   const reads: string[] = [];
   let refreshes = 0;
   let patches = 0;
+  /** What draft reads return, when a test holds them. */
+  let answer: Promise<unknown> | undefined;
 
   const follower = new DraftFollower({
     snapshot: () => state,
     hidden: () => false,
     streamsDrafts: () => false,
+    retarget: () => {},
     patch: (patch) => {
       patches++;
       state = { ...state, ...patch };
@@ -30,7 +37,7 @@ function fixture() {
     tool: async <T>(name: string, args: Record<string, unknown>) => {
       reads.push(`${name}:${(args.draft as { task_id: string }).task_id}`);
 
-      return { draft: null } as T;
+      return (answer ?? { draft: null }) as T;
     },
     run: (action) => void action(),
     refresh: async () => {
@@ -45,6 +52,9 @@ function fixture() {
     patches: () => patches,
     state: () => state,
     set: (patch: Partial<Snapshot>) => (state = { ...state, ...patch }),
+    holdReads: (held: Promise<unknown>) => {
+      answer = held;
+    },
   };
 }
 
@@ -94,8 +104,81 @@ test("showing reads a draft only for a new target", () => {
   assert.equal(reads.length, 2);
 });
 
+test("a draft read that returns after a wait's newer draft keeps the newer one", async () => {
+  const { follower, state, holdReads } = fixture();
+  const read = deferred<unknown>();
+  holdReads(read.promise);
+  follower.show();
+  const draft = { message_id: "m", text: "Hello\n\nWo" };
+  follower.receive({ task_id: "a" }, { draft, running: true });
+  read.resolve({ draft: null });
+  await flush();
+  assert.equal(state().draft?.text, "Hello");
+});
+
+test("a wait that returns after a newer draft read keeps the newer one", async () => {
+  const { follower, state, holdReads } = fixture();
+
+  holdReads(
+    Promise.resolve({ draft: { message_id: "m", text: "A\n\nB\n\n" } }),
+  );
+
+  follower.show();
+  await flush();
+  const older = { draft: { message_id: "m", text: "A\n\n" }, running: true };
+  follower.receive({ task_id: "a" }, older);
+  assert.equal(state().draft?.text, "A\n\nB");
+});
+
+test.each([
+  {
+    finds: "a draft",
+    draft: { message_id: "m", text: "A\n\nB\n\nxy" },
+    shown: "A\n\nB",
+  },
+  { finds: "none", draft: null, shown: undefined },
+])(
+  "overlapping recovery reads after a gap each apply in turn when the first finds $finds",
+  async ({ draft, shown }) => {
+    const { follower, state, holdReads } = fixture();
+    follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "A" });
+    const first = deferred<unknown>();
+    holdReads(first.promise);
+    follower.apply({ task_id: "a", message_id: "m", offset: 5, text: "x" });
+    const second = deferred<unknown>();
+    holdReads(second.promise);
+    follower.apply({ task_id: "a", message_id: "m", offset: 6, text: "y" });
+
+    first.resolve({ draft });
+    await flush();
+    assert.equal(state().draft?.text, shown);
+
+    second.resolve({ draft: { message_id: "n", text: "Next\n\nC" } });
+    await flush();
+    assert.equal(state().draft?.text, "Next");
+  },
+);
+
+test("an older recovery read cannot undo a newer one that cleared the draft", async () => {
+  const { follower, state, set, holdReads } = fixture();
+  const older = deferred<unknown>();
+  holdReads(older.promise);
+  follower.show();
+  set({ tab: "activity" });
+  follower.show();
+  set({ tab: "chat" });
+  holdReads(Promise.resolve({ draft: null }));
+  follower.show();
+  await flush();
+
+  older.resolve({ draft: { message_id: "m", text: "A\n\nB" } });
+  await flush();
+  assert.equal(state().draft, undefined);
+});
+
 test("a wait's draft is applied, and a cleared draft reads the stored message", () => {
   const { follower, state, refreshes } = fixture();
+  follower.apply({ task_id: "a", message_id: "m", offset: 0, text: "Hel" });
   const target = { task_id: "a", message_id: "m", after_length: 3 };
   const draft = { message_id: "m", text: "Hello\n\nWo" };
   const shown = { task: "a", message_id: "m", text: "Hello" };

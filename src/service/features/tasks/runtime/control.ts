@@ -29,6 +29,7 @@ import { Workspaces } from "../../workspaces/workspace.js";
 import { checkCommand, taskCommands } from "../conversation/command-policy.js";
 import { Drafts } from "../conversation/drafts.js";
 import { SessionPrompts } from "../conversation/session-prompts.js";
+import { UpdateWaits } from "../conversation/updates.js";
 import { PendingInput } from "../input/pending-input.js";
 import { ActivityPages } from "../storage/activity-pages.js";
 import { ArchiveStore } from "../storage/archive-store.js";
@@ -129,6 +130,8 @@ export class Control {
   settings: Settings;
   /** Running tasks' unfinished messages, kept in memory. */
   drafts: Drafts;
+  /** The panels' update waits in flight. */
+  updateWaits = new UpdateWaits();
   /** The panel's activity pages, with each task's tally of older events. */
   activity: ActivityPages;
   projects?: Projects;

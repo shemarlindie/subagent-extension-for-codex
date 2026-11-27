@@ -40,7 +40,12 @@ export interface Transport {
   /** Drafts arrive as they're written; otherwise the panel reads them. */
   streamsDrafts?: boolean;
   connect(events: TransportEvents): Promise<void>;
-  tool<T>(name: string, args?: Record<string, unknown>): Promise<T>;
+  /** `signal` ends the call here. The service may still run it. */
+  tool<T>(
+    name: string,
+    args?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<T>;
   watch(): void;
   dispose(): void;
   /** Sends a user message to the host chat, which may queue it during an active turn. */

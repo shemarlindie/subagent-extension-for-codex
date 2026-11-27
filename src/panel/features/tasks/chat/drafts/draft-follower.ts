@@ -16,6 +16,8 @@ interface DraftContext {
   tool<T>(name: string, args: Record<string, unknown>): Promise<T>;
   run(action: () => Promise<unknown>): void;
   refresh(): Promise<void>;
+  /** Moves a held update wait to the current target. */
+  retarget(): void;
 }
 
 /** The draft the panel shows, and how much of it the panel already has. */
@@ -40,6 +42,9 @@ export class DraftFollower {
    * so a delta inside a paragraph patches nothing.
    */
   private full?: DraftState;
+
+  /** Changes to `full`, counted so a full read knows whether it is newer. */
+  private changes = 0;
 
   /** Chat reads started, numbered so `show` knows which began after a clear. */
   private reads = 0;
@@ -93,6 +98,7 @@ export class DraftFollower {
     };
 
     this.full = { task: task.id, ...previous.draft };
+    this.changes++;
 
     return visible(this.full);
   }
@@ -104,6 +110,7 @@ export class DraftFollower {
 
   /** Keeps `draft` in full, and patches it when its shown part changes. */
   private set(draft: DraftState | undefined) {
+    if (draft !== this.full) this.changes++;
     this.full = draft;
     const shown = this.context.snapshot().draft;
     const next = draft && visible(draft);
@@ -154,18 +161,36 @@ export class DraftFollower {
     return true;
   }
 
+  /** Full draft reads started, numbered so a later one can follow an earlier. */
+  private draftReads = 0;
+
+  /** The last applied full read's number, and the change it made. */
+  private recovered?: { read: number; changes: number };
+
   /** Reads the selected task's draft in full, after a missed update. */
   private async readDraft() {
     const id = this.context.snapshot().selected;
     if (!id) return;
+    const started = this.changes;
+    const number = ++this.draftReads;
 
     const read = await this.context.tool<{ draft: Draft | null }>(
       "app_wait_for_updates",
       { draft: { task_id: id }, wait_ms: 0 },
     );
 
-    if (this.context.snapshot().selected === id) {
+    const recovered = this.recovered;
+    // A later full read already applied, so this one is older.
+    if (recovered && recovered.read > number) return;
+
+    // A draft set or cleared since the read started is newer, so it stays,
+    // unless an earlier full read made the last change.
+    const current =
+      this.changes === started || this.changes === recovered?.changes;
+
+    if (this.context.snapshot().selected === id && current) {
       this.set(read.draft ? { task: id, ...read.draft } : undefined);
+      this.recovered = { read: number, changes: this.changes };
     }
   }
 
@@ -208,6 +233,8 @@ export class DraftFollower {
    */
   show(read?: number) {
     this.release(read);
+    // The held wait may follow no draft, even when the target is unchanged.
+    this.context.retarget();
     const target = this.target();
 
     if (target?.task_id !== this.shown) {
@@ -219,9 +246,22 @@ export class DraftFollower {
     }
   }
 
-  /** Applies a wait's draft for `target`; returns whether it changed. */
+  /**
+   * Applies a wait's draft for `target`. Returns whether it changed, or the
+   * draft changed since the wait started, so the next wait follows at once.
+   */
   receive(target: DraftTarget, read: DraftRead) {
     if (this.context.snapshot().selected !== target.task_id) return false;
+    const current = this.current();
+    const known = current?.task === target.task_id ? current : undefined;
+
+    // A draft set during the wait is newer, so it stays.
+    if (
+      known?.message_id !== target.message_id ||
+      known?.text.length !== target.after_length
+    ) {
+      return true;
+    }
 
     const draft = read.draft
       ? { task: target.task_id, ...read.draft }

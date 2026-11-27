@@ -107,7 +107,11 @@ export class FakeTransport implements Transport {
     return "unsupported" as const;
   }
 
-  async tool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+  async tool<T>(
+    name: string,
+    args: Record<string, unknown> = {},
+    signal?: AbortSignal,
+  ): Promise<T> {
     this.calls.push({ name, args });
     const answer = this.handler?.(name, args);
 
@@ -116,9 +120,12 @@ export class FakeTransport implements Transport {
     }
 
     if (name === "app_wait_for_updates") {
-      // A read at once returns the view. One that waits holds as if nothing changes.
+      // A read at once returns the view. One that waits holds as if nothing
+      // changes, until the panel aborts it.
       if (!args.view || (args.after !== undefined && args.wait_ms)) {
-        return new Promise<T>(() => {});
+        return new Promise<T>((_, reject) =>
+          signal?.addEventListener("abort", () => reject(new Error("Aborted"))),
+        );
       }
 
       // The list and projects come from their tools. Tests hold or replace
