@@ -94,7 +94,8 @@ The workflow (`.github/workflows/release.yml`):
    GitHub release with an attested zip, marked as a prerelease when the version
    has a suffix.
 4. Installs `<owner>/<repo>@v<version>` with Codex on Linux, macOS and Windows,
-   2 minutes after the publish, which gives npm's CDN time to serve it.
+   2 minutes after npm lists the version, which gives npm's CDN time to serve
+   its tarball. The job waits up to 20 minutes for the listing.
 5. For a final release, re-runs the pull request's **Listed version published**
    check, marks the pull request ready, merges it with a merge commit, deletes
    the release branch and starts CI on `main`. GitHub doesn't start CI for

@@ -193,8 +193,19 @@ jobs:
       - run: npm ci
       - run: npm install --global @openai/codex@0.162.1
 
-      # npm's CDN can 404 a new version's tarball for a few minutes after the
-      # publish.
+      # npm can take several minutes to process a publish before it lists the
+      # version. The check reads only metadata, because requesting the tarball
+      # early gets a 404 that npm's CDN caches.
+      - name: Wait for npm to list the version
+        run: |
+          for attempt in {1..40}; do
+            npm view "subagent-extension-for-codex@${VERSION}" version && exit 0
+            sleep 30
+          done
+          echo "npm didn't list ${VERSION} in time"
+          exit 1
+
+      # The CDN can still 404 the tarball for a few minutes after that.
       - name: Wait for npm's CDN
         run: sleep 120
 
