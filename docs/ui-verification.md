@@ -125,10 +125,10 @@ await withComparison({
 });
 ```
 
-- A side's `source` replaces files in `src/panel` or `src/shared` with their
-  content at a Git `ref`, or with the files at the same paths under `folder`.
-  Without one, it serves the working tree. The run fails if an overlay fails
-  type checks or a side never loads one of its files.
+- A side's `source` replaces repository files with their content at a Git `ref`,
+  or with the files at the same paths under `folder`. Without one, it serves the
+  working tree. The run fails if an overlay fails type checks or a side never
+  loads one of its files.
 - `clock` holds the live fixtures at `startMs` until `play`, then runs them at
   `speed` (default 1) for `playMs`. Start just before the event under test, and
   slow the clock to stretch streaming while CSS animations keep their speed.

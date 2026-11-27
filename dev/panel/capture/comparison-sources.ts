@@ -1,7 +1,6 @@
 // What each side of a comparison serves: overlaid files and the fixture clock.
 import { execFile } from "node:child_process";
 import {
-  copyFile,
   cp,
   mkdtemp,
   readFile,
@@ -37,21 +36,8 @@ const run = promisify(execFile);
 export const git = async (...args: string[]) =>
   (await run("git", args)).stdout.trim();
 
-// The panel project type-checks overlays. Other code is beyond its reach.
-const OVERLAY_ROOTS = ["src/panel/", "src/shared/"];
-
 /** Reads a source's files, keyed by repository path. */
 export async function readOverlay(source: ComparisonSource) {
-  const outside = source.paths.filter(
-    (path) => !OVERLAY_ROOTS.some((root) => path.startsWith(root)),
-  );
-
-  if (outside.length > 0) {
-    throw new Error(
-      `Overlays cover files in ${OVERLAY_ROOTS.join(" and ")}: ${outside.join(", ")}`,
-    );
-  }
-
   const commit =
     "ref" in source
       ? await git("rev-parse", "--verify", `${source.ref}^{commit}`)
@@ -72,30 +58,31 @@ export async function readOverlay(source: ComparisonSource) {
 }
 
 /**
- * Type-checks the panel with `files` in place, in a copy of `src`. Vite skips
- * type checks, so a stale overlay would only fail in the browser.
+ * Type-checks the project with `files` in place, in a copy of the working
+ * tree. Vite skips type checks, so a stale overlay would only fail in the
+ * browser.
  */
 export async function typeCheckOverlay(files: Map<string, string>) {
   const copy = await mkdtemp(join(tmpdir(), "comparison-types-"));
 
   await withCleanup(
     async () => {
-      await cp("src", join(copy, "src"), { recursive: true });
-      await copyFile("tsconfig.panel.json", join(copy, "tsconfig.panel.json"));
-      await copyFile("package.json", join(copy, "package.json"));
+      const deleted = new Set((await git("ls-files", "-d")).split("\n"));
+      const tree = await git("ls-files", "-co", "--exclude-standard");
+
+      for (const path of tree.split("\n")) {
+        if (!deleted.has(path)) await cp(path, join(copy, path));
+      }
+
       await symlink(resolve("node_modules"), join(copy, "node_modules"));
 
       for (const [path, code] of files) {
         await writeFile(join(copy, path), code);
       }
 
-      await run(
-        resolve("node_modules/.bin/tsc"),
-        ["-p", "tsconfig.panel.json"],
-        {
-          cwd: copy,
-        },
-      ).catch((error: { stdout?: string }) => {
+      await run("npm", ["run", "-s", "typecheck:source"], {
+        cwd: copy,
+      }).catch((error: { stdout?: string }) => {
         throw new Error(`The overlay fails type checks:\n${error.stdout}`);
       });
     },
