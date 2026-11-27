@@ -81,9 +81,9 @@ await withPanel(
 ### Comparison recordings
 
 `withComparison` records one fixture scenario on several versions of the panel
-and joins them side by side, each under a header with its label, a shared
-caption and an optional live readout. For example, compare a variant of one file
-with the working tree:
+and joins them side by side, each under a header with its label, an optional
+note, a shared caption and live readouts. For example, compare a variant of one
+file with the working tree:
 
 ```ts
 import { withComparison } from "<checkout>/dev/panel/capture/comparison";
@@ -92,6 +92,7 @@ await withComparison({
   sides: [
     {
       label: "Before",
+      note: "Native smooth scroll",
       color: "#b74331",
       source: {
         folder: "<scratch>/variants/before",
@@ -105,19 +106,21 @@ await withComparison({
   playMs: 7500,
   out: "video-captures/chat-scroll",
   caption: "Same reply · 1,500 characters per second",
-  readout: {
-    label: "Distance from latest",
-    unit: "px",
-    value: (panel) => {
-      const history = panel.document.querySelector(
-        '[aria-label="Chat history"]',
-      );
+  readouts: [
+    {
+      label: "Distance from latest",
+      unit: "px",
+      value: (panel) => {
+        const history = panel.document.querySelector(
+          '[aria-label="Chat history"]',
+        );
 
-      return history
-        ? history.scrollHeight - history.clientHeight - history.scrollTop
-        : 0;
+        return history
+          ? history.scrollHeight - history.clientHeight - history.scrollTop
+          : 0;
+      },
     },
-  },
+  ],
   scenario: async ({ panel, play }) => {
     await panel.locator('[data-streaming="true"]').waitFor();
     await play();
@@ -152,8 +155,11 @@ await withComparison({
   `speed` (default 1) for `playMs`. Start just before the event under test, and
   slow the clock to stretch streaming while CSS animations keep their speed.
 - `scenario` runs once per side. It waits for readiness, calls `play` with any
-  actions, and can probe the side's `origin` afterwards. `readout.value` runs in
-  the page every animation frame, so it can't use the script's variables.
+  actions, and can probe the side's `origin` afterwards.
+- Each readout's `value` returns a number or text every animation frame. Numbers
+  show rounded with `unit`, or through `format`. Both functions run in the page,
+  so they can't use the script's variables. Headers grow to fit and share the
+  tallest side's height.
 - Sides are 640 × 900 by default. Set `size` to fit more, such as 480 wide for
   four sides.
 - `out` gets `comparison.mp4` and `report.json`, with each side's source and

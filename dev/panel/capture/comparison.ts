@@ -10,7 +10,12 @@ import type { FrameLocator, Page } from "@playwright/test";
 
 import { devServer, launchBrowser } from "./capture-browser";
 import { withCleanup } from "./capture-cleanup";
-import { addHeader, headerSamples, type Sample } from "./comparison-header";
+import {
+  addHeader,
+  headerSamples,
+  type Readout,
+  type Sample,
+} from "./comparison-header";
 import {
   checkoutState,
   CLOCK_START,
@@ -30,17 +35,9 @@ type ComparisonSide = {
   label: string;
   /** A CSS color for the label. */
   color: string;
+  /** A line under the label. */
+  note?: string;
   source?: ComparisonSource;
-};
-
-type Readout = {
-  label: string;
-  unit?: string;
-  /**
-   * Reads the running panel every animation frame. It runs in the dev host
-   * page, so it can't use anything from the script's scope.
-   */
-  value: (panel: Window) => number;
 };
 
 type ComparisonSession = {
@@ -65,8 +62,9 @@ type ComparisonOptions = {
   playMs: number;
   /** Folder for `comparison.mp4` and `report.json`. */
   out: string;
+  /** A line under every side's label and note. */
   caption?: string;
-  readout?: Readout;
+  readouts?: Readout[];
   /** Each side's size in CSS pixels, header included. The default is 640 × 900. */
   size?: Size;
   /** Waits for readiness, calls `play`, and returns anything for the report. */
@@ -95,7 +93,7 @@ async function recordSide(
   frames: string,
   report: SideReport,
 ) {
-  const { clock, playMs, readout, size } = options;
+  const { clock, playMs, size } = options;
   const { source } = side;
   const speed = clock.speed ?? 1;
   const loaded = new Set<string>();
@@ -124,15 +122,16 @@ async function recordSide(
       page,
       {
         label: side.label,
+        note: side.note,
         color: side.color,
         caption: options.caption,
-        readout: readout && { label: readout.label, unit: readout.unit },
+        titles: options.sides.map(({ label, note }) => ({ label, note })),
         clockStart: CLOCK_START,
         startMs: clock.startMs,
         speed,
         playMs,
       },
-      readout?.value,
+      options.readouts ?? [],
     );
 
     let played = false;
