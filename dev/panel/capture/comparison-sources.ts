@@ -40,15 +40,20 @@ export type FixtureClock = {
   speed?: number;
 };
 
-const run = promisify(execFile);
+// Unbounded, since overlaid files such as recorded fixtures exceed the 1 MiB
+// default.
+const run = (file: string, args: string[], options: { cwd?: string } = {}) =>
+  promisify(execFile)(file, args, { ...options, maxBuffer: Infinity });
 
 const git = async (...args: string[]) => (await run("git", args)).stdout.trim();
 
 // A worktree's linked node_modules is a file, which `node_modules/` doesn't ignore.
+const NOT_DEPENDENCIES = ":!node_modules";
+
 export const checkoutState = async (dir: string) => ({
   commit: await git("-C", dir, "rev-parse", "HEAD"),
   dirty:
-    (await git("-C", dir, "status", "--porcelain", "--", ":!node_modules")) !==
+    (await git("-C", dir, "status", "--porcelain", "--", NOT_DEPENDENCIES)) !==
     "",
 });
 
@@ -84,7 +89,14 @@ export async function typeCheckOverlay(files: Map<string, string>) {
   await withCleanup(
     async () => {
       const deleted = new Set((await git("ls-files", "-d")).split("\n"));
-      const tree = await git("ls-files", "-co", "--exclude-standard");
+
+      const tree = await git(
+        "ls-files",
+        "-co",
+        "--exclude-standard",
+        "--",
+        NOT_DEPENDENCIES,
+      );
 
       for (const path of tree.split("\n")) {
         if (!deleted.has(path)) await cp(path, join(copy, path));

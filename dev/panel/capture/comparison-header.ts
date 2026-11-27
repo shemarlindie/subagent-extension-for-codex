@@ -183,8 +183,22 @@ function installHeader(
   update();
 }
 
-const source = (fn: ((...args: never[]) => unknown) | undefined) =>
-  fn ? fn.toString() : "undefined";
+// Method shorthand such as `value(panel) {…}` only becomes an expression with a
+// `function` keyword, as in Playwright's own function serialization.
+function source(fn: ((...args: never[]) => unknown) | undefined) {
+  if (!fn) return "undefined";
+  const code = fn.toString();
+
+  try {
+    new Function(`(${code})`);
+
+    return code;
+  } catch {
+    return code.startsWith("async ")
+      ? `async function ${code.slice("async ".length)}`
+      : `function ${code}`;
+  }
+}
 
 /** Moves the panel below a header with `settings` and live `readouts`. */
 export async function addHeader(

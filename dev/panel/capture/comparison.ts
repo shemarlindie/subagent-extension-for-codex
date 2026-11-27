@@ -250,26 +250,27 @@ export async function withComparison(options: ComparisonOptions) {
     error: undefined as string | undefined,
   };
 
-  // Overlays fail here, before anything records.
-  const runs: { side: ComparisonSide; overlay?: Overlay }[] = [];
-
-  for (const side of sides) {
-    const overlay =
-      side.source && "paths" in side.source
-        ? await readOverlay(side.source)
-        : undefined;
-
-    if (overlay) await typeCheckOverlay(overlay.files);
-    runs.push({ side, overlay });
-  }
-
   await mkdir(out, { recursive: true });
-  const recordings = await mkdtemp(join(tmpdir(), "panel-comparison-"));
-  const recorded: Recorded[] = [];
 
-  await withCleanup(
-    async () => {
-      try {
+  try {
+    // Overlays fail here, before anything records.
+    const runs: { side: ComparisonSide; overlay?: Overlay }[] = [];
+
+    for (const side of sides) {
+      const overlay =
+        side.source && "paths" in side.source
+          ? await readOverlay(side.source)
+          : undefined;
+
+      if (overlay) await typeCheckOverlay(overlay.files);
+      runs.push({ side, overlay });
+    }
+
+    const recordings = await mkdtemp(join(tmpdir(), "panel-comparison-"));
+    const recorded: Recorded[] = [];
+
+    await withCleanup(
+      async () => {
         for (const { side, overlay } of runs) {
           const state =
             side.source && "checkout" in side.source
@@ -303,18 +304,15 @@ export async function withComparison(options: ComparisonOptions) {
         }
 
         await composeComparison(recorded, size.width, out);
-      } catch (error) {
-        report.error = error instanceof Error ? error.message : String(error);
-        throw error;
-      } finally {
-        await writeFile(
-          join(out, "report.json"),
-          JSON.stringify(report, null, 2),
-        );
-      }
-    },
-    () => rm(recordings, { recursive: true, force: true }),
-  );
+      },
+      () => rm(recordings, { recursive: true, force: true }),
+    );
+  } catch (error) {
+    report.error = error instanceof Error ? error.message : String(error);
+    throw error;
+  } finally {
+    await writeFile(join(out, "report.json"), JSON.stringify(report, null, 2));
+  }
 
   console.log(out);
 

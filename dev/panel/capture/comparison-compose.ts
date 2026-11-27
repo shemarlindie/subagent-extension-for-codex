@@ -32,8 +32,9 @@ async function composeRow(
         `drawbox=x=${(index + 1) * width - 1}:y=0:w=2:h=ih:color=${DIVIDER}:t=fill`,
     );
 
+  // A side that finishes first holds its last frame until the longest ends.
   const row = [
-    `${inputs.map((_, index) => `[v${index}]`).join("")}hstack=inputs=${inputs.length}:shortest=1`,
+    `${inputs.map((_, index) => `[v${index}]`).join("")}hstack=inputs=${inputs.length}`,
     ...dividers,
     ...(video ? ["format=yuv420p"] : []),
   ];
