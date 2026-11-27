@@ -1,4 +1,7 @@
-import type { SettingSection } from "../../../shared/settings/settings-document.js";
+import type {
+  ScopeInput,
+  SettingSection,
+} from "../../../shared/settings/settings-document.js";
 import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
 
 type ModelScopeValues = SettingsValues["models"]["providers"]["claude"];
@@ -15,11 +18,13 @@ export type Defaults = Omit<SettingsValues, "models"> & {
 
 /**
  * `get_settings` as the dialog reads it: current values, the defaults a
- * reset restores, and the sections and rows to show. The JSON `schema` is for
- * agents; the dialog ignores it.
+ * reset restores, the sections and rows, and their builder's inputs. The JSON
+ * `schema` is for agents; the dialog ignores it.
  */
 export type SettingsDocument = {
   values: Defaults;
   defaults: Defaults;
   sections: SettingSection[];
+  /** Older services leave it out, so their sections show as saved. */
+  section_input?: Omit<ScopeInput, "values">;
 };

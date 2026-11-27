@@ -172,6 +172,24 @@ test("settings reject invalid values, reset sections and confirm discarding edit
   await expect(workspace).toHaveText("Project folder");
 });
 
+test("worker profiles inherit unsaved provider model defaults", async ({
+  consolePage: page,
+}) => {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Model defaults", exact: true }).click();
+
+  await page
+    .getByRole("combobox", { name: "Fixture model", exact: true })
+    .click();
+
+  await page.getByRole("option", { name: "Fixture Fast" }).click();
+  await page.getByRole("tab", { name: /^Worker profiles/ }).click();
+
+  await expect(
+    page.getByRole("combobox", { name: "Researcher model", exact: true }),
+  ).toHaveText("Inherit (Fixture Fast)");
+});
+
 test("advanced task options set the task's model and permission policy", async ({
   consolePage: page,
 }) => {

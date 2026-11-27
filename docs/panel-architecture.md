@@ -368,12 +368,12 @@ retries.
   read that started later finds none, so a finished reply never disappears in
   between. A view's list and Chat come from one service snapshot, so the Chat in
   the view whose list ends a draft already counts as later.
-- **Settings:** the service supplies typed sections and rows. Save only changed
-  fields, preserve disabled budget amounts, and keep section drafts during
-  navigation and validation. Search and browsing share mounted controls to
-  retain drafts and field identity. Search matches metadata independently of
-  draft values, so editing a result keeps it in place. Synonyms come from each
-  setting schema's `keywords` metadata.
+- **Settings:** the form builds typed sections and rows from the service's
+  inputs and unsaved values. Save only changed fields, preserve disabled budget
+  amounts, and keep section drafts during navigation and validation. Search and
+  browsing share mounted controls to retain drafts and field identity. Search
+  matches metadata independently of draft values, so editing a result keeps it
+  in place. Synonyms come from each setting schema's `keywords` metadata.
 - **Activity:** grouping keeps the original events for debug inspection. Render
   event data only when its inspector opens. Original responses load from the
   service while that inspector is open and are released when it closes.

@@ -24,6 +24,12 @@ export const settingsReadOutputSchema = z.object({
   defaults: valuesSchema,
   // What the settings dialog shows, section by section.
   sections: z.array(sectionSchema),
+  // What the dialog rebuilds sections from as the user edits values.
+  section_input: z.object({
+    providers: z.array(z.string()),
+    modelProviders: z.array(z.string()),
+    catalogs: z.array(z.looseObject({ provider: z.string() })),
+  }),
 });
 
 export const settingsUpdateOutputSchema = z.object({ values: valuesSchema });

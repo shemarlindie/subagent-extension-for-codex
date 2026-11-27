@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useWatch, type FieldErrors } from "react-hook-form";
 
+import { settingsSections } from "../../../shared/settings/settings-document";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { SettingsPageDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
@@ -22,6 +23,7 @@ import {
   changes,
   differs,
   editCount,
+  editedValues,
   fieldName,
   rowForm,
   sectionPaths,
@@ -95,6 +97,14 @@ export function SettingsForm({
   }
 
   const form = { ...initial, ...useWatch({ control }) } as Values;
+
+  // Rebuilt from unsaved edits, so inherited choices and warnings follow them.
+  const shownSections = settings?.section_input
+    ? settingsSections({
+        ...settings.section_input,
+        values: editedValues(settings.values, sections, form, initial),
+      })
+    : sections;
 
   const edits = sections.map((section) =>
     editCount(section, form, baseline.current),
@@ -213,7 +223,7 @@ export function SettingsForm({
   };
 
   const sectionViews: SettingsSectionView[] = settings
-    ? sections.map((section, index) => {
+    ? shownSections.map((section, index) => {
         const matches = search.sectionMatches(section);
         const paths = sectionPaths(section);
 
