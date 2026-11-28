@@ -2,6 +2,7 @@ import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { maxPathLength } from "../../../shared/filesystem/path-limit.js";
 import type { GitState } from "../../../shared/tasks/model.js";
 import { assertPlainFolderAllowed } from "../../features/projects/projects.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
@@ -52,7 +53,7 @@ export async function hostProjectCandidate(
   c: Control,
   directory?: string,
 ): Promise<{ repository: string; git?: GitState } | undefined> {
-  if (!directory || directory.length > 4096) return undefined;
+  if (!directory || directory.length > maxPathLength) return undefined;
 
   try {
     const cwd = fileURLToPath(directory);

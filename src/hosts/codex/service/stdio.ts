@@ -26,6 +26,7 @@ import {
   holdPresence,
   serviceClient,
 } from "../../../core/service/platform/service/service-client.js";
+import { maxPathLength } from "../../../core/shared/filesystem/path-limit.js";
 import { registerProviders } from "../../../core/shared/providers/registry.js";
 import { claudeDefinition } from "../../../providers/claude/shared/definition.js";
 import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
@@ -117,7 +118,7 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
  * both names until the API version changes.
  */
 function hostDirectoryHeader(directory?: string) {
-  return directory && directory.length <= 4096
+  return directory && directory.length <= maxPathLength
     ? encodeURIComponent(directory)
     : undefined;
 }

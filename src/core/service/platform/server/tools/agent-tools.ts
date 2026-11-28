@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { attachmentsSchema } from "../../../../shared/attachments/model.js";
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import {
   conversation,
   MESSAGE_EVENTS,
@@ -292,7 +293,7 @@ export function agentTools({
       description:
         "Read a changed file's current content on disk, including later edits by anyone. path must appear in the task or latest-turn changes. state is deleted for a missing file, unavailable for a removed workspace, or binary with its size for other binary files. Images are base64. Pass next_cursor for more content.",
       schema: taskId.extend({
-        path: z.string().min(1).max(4096),
+        path: z.string().min(1).max(maxPathLength),
         cursor: z.string().max(300).optional(),
       }),
       run: (a) =>

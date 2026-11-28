@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { maxPathLength } from "../../../shared/filesystem/path-limit.js";
 import type { PanelOutput } from "../../../shared/panel/panel-contract.js";
 import type { Task } from "../../../shared/tasks/model.js";
 import { panelTask } from "../../../shared/tasks/task-list.js";
@@ -18,7 +19,7 @@ export const panelContextInput = z.object({
   task_id: z.string().optional(),
   host_directory: z
     .string()
-    .max(4096)
+    .max(maxPathLength)
     .optional()
     .describe(
       "Optional local file URI directory hint. Validated against registered Git roots; never an access grant.",

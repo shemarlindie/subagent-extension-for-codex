@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 
+import { maxPathLength } from "../../../core/shared/filesystem/path-limit";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { ProjectDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";
@@ -81,7 +82,7 @@ function ProjectForm({ dialog }: ProjectFormProps) {
             onChange={(event) => setRepository(event.target.value)}
             placeholder="/absolute/path/to/folder"
             required
-            maxLength={4096}
+            maxLength={maxPathLength}
             disabled={busy || browsing}
           />
           <Button disabled={busy || browsing} onClick={() => void browse()}>

@@ -1,3 +1,4 @@
+import { maxPathLength } from "../../../shared/filesystem/path-limit.js";
 import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import type { HostAdapter, HostHints } from "../host/host-adapter.js";
@@ -23,7 +24,7 @@ export function withConversation(
     args.task_id === undefined &&
     args.host_directory === undefined &&
     host.directory !== undefined &&
-    host.directory.length <= 4096
+    host.directory.length <= maxPathLength
   ) {
     args = { ...args, host_directory: host.directory };
   }
