@@ -30,7 +30,9 @@ export function WorkerReadinessNotice() {
           ))}
         </div>
       )}
-      <SignInExpiryNotice />
+      {workers.map((worker) => (
+        <SignInExpiryNotice key={worker.provider} worker={worker} />
+      ))}
     </>
   );
 }

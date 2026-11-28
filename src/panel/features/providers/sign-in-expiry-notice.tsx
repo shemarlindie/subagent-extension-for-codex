@@ -8,6 +8,7 @@ import {
   type UserDateTimePreferences,
 } from "../../shared/utils/user-date-time";
 import { signInExpiry, type SignInExpiry } from "./sign-in-expiry";
+import type { Worker } from "./types";
 import { useSignInExpiryDismissal } from "./use-sign-in-expiry-dismissal";
 
 const dateOnly = {
@@ -23,29 +24,23 @@ type ExpiringSignIn = { name: string; command: string; expiry: SignInExpiry };
  * Says when a ready worker's stored sign-in ends and how to sign in again,
  * from 10 days before. Dismissing hides it for a day.
  */
-export function SignInExpiryNotice() {
-  const workers = useSnapshot((state) => state.workers);
+export function SignInExpiryNotice({ worker }: { worker: Worker }) {
   const host = useSnapshot((state) => state.host);
+  const { hidden, dismiss } = useSignInExpiryDismissal(worker.provider);
+  const metadata = providerMetadata(worker.provider, worker.metadata);
 
-  const { hidden, dismiss } = useSignInExpiryDismissal();
+  const expiry = worker.readiness?.ready
+    ? signInExpiry(worker.readiness.credential_expires_at)
+    : undefined;
 
-  const signIn = workers.flatMap<ExpiringSignIn>((worker) => {
-    const metadata = providerMetadata(worker.provider, worker.metadata);
-
-    const expiry = worker.readiness?.ready
-      ? signInExpiry(worker.readiness.credential_expires_at)
+  const signIn =
+    metadata?.signInCommand && expiry
+      ? {
+          name: metadata.displayName,
+          command: metadata.signInCommand,
+          expiry,
+        }
       : undefined;
-
-    return metadata?.signInCommand && expiry
-      ? [
-          {
-            name: metadata.displayName,
-            command: metadata.signInCommand,
-            expiry,
-          },
-        ]
-      : [];
-  })[0];
 
   return (
     <Presence show={Boolean(signIn) && !hidden}>
