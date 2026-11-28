@@ -6,7 +6,7 @@ import {
 
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
-import type { HostAdapter } from "../host/host-adapter.js";
+import { readHints, type HostAdapter } from "../host/host-adapter.js";
 import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";
 import { delegationPanel } from "../panel/panel.js";
 import { packageVersion } from "../service/runtime.js";
@@ -54,7 +54,7 @@ export function mcp(
       toolRegistration(name, d, host),
       async (args, ctx: ServerContext): Promise<CallToolResult> => {
         try {
-          const hints = host.hints(ctx.mcpReq._meta);
+          const hints = readHints(host, ctx.mcpReq._meta);
 
           const current: Record<string, AnyTool> = definitions(
             c,
@@ -107,7 +107,7 @@ export function mcp(
     async (args, ctx): Promise<CallToolResult> => {
       try {
         return await panel.open(
-          withConversation("panel", args, host.hints(ctx.mcpReq._meta)),
+          withConversation("panel", args, readHints(host, ctx.mcpReq._meta)),
         );
       } catch (error) {
         return {

@@ -27,9 +27,11 @@ export function delegationPanel(
 ) {
   preloadPanelHtml(htmlPath);
 
+  // Host metadata comes first in each `_meta`, so it can't replace the core
+  // `ui` entry.
   const resourceMeta = {
-    ui: { csp: { connectDomains: [], resourceDomains: [] } },
     ...host.resourceMeta,
+    ui: { csp: { connectDomains: [], resourceDomains: [] } },
   };
 
   const panel = {
@@ -43,7 +45,7 @@ export function delegationPanel(
       inputSchema: panelContextInput,
       outputSchema: panelOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: false },
-      _meta: { ui: { resourceUri: host.uri }, ...host.toolMeta },
+      _meta: { ...host.toolMeta, ui: { resourceUri: host.uri } },
     },
     open: async (args: PanelContextInput) => {
       const resolved = context
@@ -107,8 +109,8 @@ export function delegationPanel(
           "Open Delegated Work across all projects and conversations.",
         inputSchema: z.strictObject({}),
         _meta: {
-          ui: { resourceUri: host.uri, visibility: ["app"] },
           ...host.globalToolMeta,
+          ui: { resourceUri: host.uri, visibility: ["app"] },
         },
       },
       open: () => panel.open({ conversation_id: null }),

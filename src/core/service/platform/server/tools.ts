@@ -1,4 +1,3 @@
-import { maxPathLength } from "../../../shared/filesystem/path-limit.js";
 import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import type { HostAdapter, HostHints } from "../host/host-adapter.js";
@@ -23,8 +22,7 @@ export function withConversation(
     args.conversation_id !== null &&
     args.task_id === undefined &&
     args.host_directory === undefined &&
-    host.directory !== undefined &&
-    host.directory.length <= maxPathLength
+    host.directory !== undefined
   ) {
     args = { ...args, host_directory: host.directory };
   }
@@ -95,14 +93,15 @@ export function toolRegistration(name: string, d: AnyTool, host: HostAdapter) {
       destructiveHint: d.destructive === true,
       openWorldHint: d.openWorld === true,
     },
+    // Host metadata comes first, so it can't replace the core `ui` entry.
     _meta: {
+      ...(d.panel ? host.panel.taskToolMeta : {}),
       ui: {
         visibility: isUserTool(name, host)
           ? (["app"] as const)
           : (["model", "app"] as const),
         ...(d.panel ? { resourceUri: host.panel.uri } : {}),
       },
-      ...(d.panel ? host.panel.taskToolMeta : {}),
     },
   };
 }

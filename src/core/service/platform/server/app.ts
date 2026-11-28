@@ -5,7 +5,7 @@ import express from "express";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
-import type { HostAdapter } from "../host/host-adapter.js";
+import { boundedDirectory, type HostAdapter } from "../host/host-adapter.js";
 import { logError, logEvent } from "../logging/logger.js";
 import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";
 import {
@@ -31,7 +31,7 @@ function hostDirectory(headers: express.Request["headers"]) {
   if (typeof header !== "string") return undefined;
 
   try {
-    return decodeURIComponent(header);
+    return boundedDirectory(decodeURIComponent(header));
   } catch {
     return undefined;
   }

@@ -184,7 +184,7 @@ test("opted-in trusted host directories register the canonical Git root and gran
   );
 });
 
-test("invalid or absent host metadata never grants access despite opt-in", async (t) => {
+test("invalid or absent host directories never grant access despite opt-in", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("project");
   const plainDirectory = join(f.dir, "plain-directory");

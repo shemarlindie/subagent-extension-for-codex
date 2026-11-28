@@ -307,7 +307,6 @@ test("sandbox directory hints resolve approved Git roots without granting access
     a,
     "relative/path",
     "file:///nonexistent",
-    "x".repeat(4097),
   ]) {
     const args = { host_directory: directory };
     assert.deepEqual(await withHostRepository(f.c, args), args, directory);

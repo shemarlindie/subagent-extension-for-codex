@@ -123,8 +123,8 @@ through a `HostAdapter`, defined in
 
 - MCP server capabilities and instructions.
 - Hints from each request's metadata: the chat's directory and conversation.
-  Each MCP call reads them once. They correlate and suggest, and never grant
-  access.
+  Each MCP call reads them once through `readHints`, which drops a directory
+  over the path limit. They correlate and suggest, and never grant access.
 - The panel's tool names and resource URI, and the metadata for the panel tools,
   the panel resource and task tools that open the panel.
 - Its own tools for the tool API, and their registration on the service's `/mcp`

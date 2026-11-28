@@ -3,6 +3,7 @@ import type {
   ServerCapabilities,
 } from "@modelcontextprotocol/server";
 
+import { maxPathLength } from "../../../shared/filesystem/path-limit.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import type { AnyTool, ToolContext } from "../server/tools/definition.js";
 
@@ -11,7 +12,10 @@ import type { AnyTool, ToolContext } from "../server/tools/definition.js";
  * and never grant access.
  */
 export interface HostHints {
-  /** The chat's working directory as a local `file:` URI. */
+  /**
+   * The chat's working directory as a local `file:` URI. Within the path limit
+   * once read through `readHints` or `boundedDirectory`.
+   */
   directory?: string;
   /** The host's chat or session identifier. */
   conversation?: string;
@@ -37,11 +41,33 @@ export interface HostAdapter {
   /** MCP server capabilities beyond tools. */
   capabilities: Pick<ServerCapabilities, "experimental">;
   instructions: string;
-  /** Reads the hints from a request's metadata. */
+  /** Reads the hints from a request's metadata. Callers use `readHints`. */
   hints(meta: Record<string, unknown> | undefined): HostHints;
   panel: HostPanel;
   /** App-only tools the host adds to the tool API. */
   tools(context: ToolContext): Record<string, AnyTool>;
   /** Registers the host's own tools and resources on the service's MCP server. */
   register(server: McpServer, c: Control): void;
+}
+
+/**
+ * A directory hint, or nothing when it is longer than the path limit. Every
+ * entry point passes the hint through this, so later code can trust its
+ * length.
+ */
+export function boundedDirectory(directory?: string) {
+  return directory !== undefined && directory.length <= maxPathLength
+    ? directory
+    : undefined;
+}
+
+/** Reads a request's hints from the host, dropping an over-long directory. */
+export function readHints(
+  host: HostAdapter,
+  meta: Record<string, unknown> | undefined,
+): HostHints {
+  const { directory, ...hints } = host.hints(meta);
+  const bounded = boundedDirectory(directory);
+
+  return bounded === undefined ? hints : { ...hints, directory: bounded };
 }

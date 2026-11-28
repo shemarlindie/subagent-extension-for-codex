@@ -6,6 +6,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { type Control } from "../../../core/service/features/tasks/runtime/control.js";
+import { readHints } from "../../../core/service/platform/host/host-adapter.js";
 import { delegationPanel } from "../../../core/service/platform/panel/panel.js";
 import { productGlyphIcons } from "../../../core/service/platform/server/product-glyph.js";
 import {
@@ -26,7 +27,6 @@ import {
   holdPresence,
   serviceClient,
 } from "../../../core/service/platform/service/service-client.js";
-import { maxPathLength } from "../../../core/shared/filesystem/path-limit.js";
 import { registerProviders } from "../../../core/shared/providers/registry.js";
 import { claudeDefinition } from "../../../providers/claude/shared/definition.js";
 import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
@@ -112,15 +112,16 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
 }
 
 /**
- * The encoded directory hint, or nothing for a path too long for a header.
- * An older service with the same API version can still serve the proxy while
- * it drains, and it reads only `X-Codex-Host-Directory`, so the proxy sends
- * both names until the API version changes.
+ * Forwards the directory hint. An older service with the same API version can
+ * still serve the proxy while it drains, and it reads only
+ * `X-Codex-Host-Directory`, so the proxy sends both names until the API
+ * version changes.
  */
-function hostDirectoryHeader(directory?: string) {
-  return directory && directory.length <= maxPathLength
-    ? encodeURIComponent(directory)
-    : undefined;
+function hostDirectoryHeaders(directory?: string): Record<string, string> {
+  if (!directory) return {};
+  const value = encodeURIComponent(directory);
+
+  return { "X-Host-Directory": value, "X-Codex-Host-Directory": value };
 }
 
 async function serviceTool(name: string, args: Record<string, unknown>) {
@@ -182,19 +183,13 @@ for (const [name, d] of Object.entries(tools)) {
         );
 
       try {
-        const hints = codexHost.hints(extra._meta);
-        const directory = hostDirectoryHeader(hints.directory);
+        const hints = readHints(codexHost, extra._meta);
 
         const response = await postService(
           name,
           withConversation(d.conversation, args, hints),
           serviceTimeout(name, args),
-          directory
-            ? {
-                "X-Host-Directory": directory,
-                "X-Codex-Host-Directory": directory,
-              }
-            : {},
+          hostDirectoryHeaders(hints.directory),
         );
 
         const body = await response.json();
@@ -258,7 +253,7 @@ server.registerTool(
   async (args, extra): Promise<CallToolResult> => {
     try {
       return await panel.open(
-        withConversation("panel", args, codexHost.hints(extra._meta)),
+        withConversation("panel", args, readHints(codexHost, extra._meta)),
       );
     } catch (error) {
       return {
