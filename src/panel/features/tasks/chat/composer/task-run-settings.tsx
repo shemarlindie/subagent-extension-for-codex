@@ -1,11 +1,11 @@
-import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
 import {
   flexibleModel,
   modelName,
-} from "../../../../../shared/providers/policy";
-import { providerTaskFacts } from "../../../../../shared/providers/presentation";
-import type { ModelChoice } from "../../../../../shared/providers/types";
-import { titleCase } from "../../../../../shared/text";
+} from "../../../../../core/shared/providers/policy";
+import { providerTaskFacts } from "../../../../../core/shared/providers/presentation";
+import type { ModelChoice } from "../../../../../core/shared/providers/types";
+import { titleCase } from "../../../../../core/shared/text";
+import { shortPermissionLabel } from "../../../../../providers/claude/shared/permissions";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";

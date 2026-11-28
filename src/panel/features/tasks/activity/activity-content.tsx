@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { scalarText } from "../../../../shared/text";
+import { scalarText } from "../../../../core/shared/text";
 import { CodeBlock } from "../../file-preview/code-block";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";

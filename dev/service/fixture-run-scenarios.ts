@@ -4,8 +4,8 @@ import { setTimeout } from "node:timers/promises";
 
 import { structuredPatch } from "diff";
 
-import type { RunContext } from "../../src/service/features/providers/types.js";
-import { applyPlanUpdate } from "../../src/shared/tasks/plan.js";
+import type { RunContext } from "../../src/core/service/features/providers/types.js";
+import { applyPlanUpdate } from "../../src/core/shared/tasks/plan.js";
 import type { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import type { FixtureRunEvents } from "./fixture-run-events.js";
 import { fixtureToolInput } from "./fixture-run-events.js";

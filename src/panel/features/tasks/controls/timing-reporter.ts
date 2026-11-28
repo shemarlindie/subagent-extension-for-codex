@@ -4,11 +4,11 @@ import type {
   PanelLoadPhase,
   PanelLoadTimingRecord,
   PanelTimingWork,
-} from "../../../../shared/tasks/panel-timing";
+} from "../../../../core/shared/tasks/panel-timing";
 import {
   PANEL_TIMING_MAX_COUNT,
   PANEL_TIMING_MAX_DURATION_MS,
-} from "../../../../shared/tasks/panel-timing";
+} from "../../../../core/shared/tasks/panel-timing";
 
 interface TimingReporterContext {
   closed(): boolean;

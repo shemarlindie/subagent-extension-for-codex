@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { taskDeletionPreviewSchema } from "../../../../shared/tasks/deletion-contract.generated.js";
-import type { TaskDeletionPreview } from "../../../../shared/tasks/deletion-contract.js";
+import { taskDeletionPreviewSchema } from "../../../../core/shared/tasks/deletion-contract.generated.js";
+import type { TaskDeletionPreview } from "../../../../core/shared/tasks/deletion-contract.js";
 import { useController } from "../../../app/state/controller-context";
 
 type DeletionRead = {

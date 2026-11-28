@@ -4,11 +4,11 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ClaudeCli } from "../src/service/features/providers/claude/configuration/executable.ts";
-import { ClaudeAgentProvider } from "../src/service/features/providers/claude/runtime/provider.ts";
-import { Control } from "../src/service/features/tasks/runtime/control.ts";
-import { Store } from "../src/service/features/tasks/storage/store.ts";
-import { Workspaces } from "../src/service/features/workspaces/workspace.ts";
+import { Control } from "../src/core/service/features/tasks/runtime/control.ts";
+import { Store } from "../src/core/service/features/tasks/storage/store.ts";
+import { Workspaces } from "../src/core/service/features/workspaces/workspace.ts";
+import { ClaudeCli } from "../src/providers/claude/service/configuration/executable.ts";
+import { ClaudeAgentProvider } from "../src/providers/claude/service/runtime/provider.ts";
 import {
   observedEditsProvider,
   prepareEditsFixture,
@@ -377,8 +377,10 @@ if (scenario === "token") {
     else if (!control.stopped) await control.close();
   }
 } else if (scenario === "mcp") {
-  const { application } = await import("../src/service/platform/server/app.ts");
-  const { Auth } = await import("../src/service/platform/server/auth.ts");
+  const { application } =
+    await import("../src/core/service/platform/server/app.ts");
+
+  const { Auth } = await import("../src/core/service/platform/server/auth.ts");
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");

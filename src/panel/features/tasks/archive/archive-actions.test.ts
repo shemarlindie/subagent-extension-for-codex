@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test, vi } from "vitest";
 
-import type { ArchiveResult } from "../../../../shared/tasks/archive.js";
+import type { ArchiveResult } from "../../../../core/shared/tasks/archive.js";
 import { task as taskFixture } from "../../../app/state/controller-test-harness";
 import type { Snapshot, Task } from "../../../app/state/types";
 import { undoRecorder } from "../../../app/state/undo-test-harness";

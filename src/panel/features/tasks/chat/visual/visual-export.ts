@@ -1,4 +1,4 @@
-import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatVisual } from "../../../../../core/shared/tasks/conversation/chat.js";
 import { savedVisualDocument, visualThemeCss } from "./visual-document";
 import { pngSize, type Size } from "./visual-image";
 

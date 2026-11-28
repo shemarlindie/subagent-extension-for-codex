@@ -1,7 +1,7 @@
 // Public registry for synthetic and recorded panel preview scenarios.
-import { decodedEvent } from "../../../src/shared/events/decode";
-import type { Event } from "../../../src/shared/events/types";
-import type { Task } from "../../../src/shared/tasks/model";
+import { decodedEvent } from "../../../src/core/shared/events/decode";
+import type { Event } from "../../../src/core/shared/events/types";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import recordedCompact from "../recorded/compact.json";
 import recordedDevPlugin from "../recorded/dev-plugin.json";
 import recordedMcp from "../recorded/mcp.json";

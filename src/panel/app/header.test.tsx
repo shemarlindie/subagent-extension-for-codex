@@ -6,7 +6,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import { panelSettingsDefaults } from "../../shared/settings/settings-schema";
+import { panelSettingsDefaults } from "../../core/shared/settings/settings-schema";
 import { Header } from "./header";
 import { CONNECTION } from "./state/connection";
 import { Controller } from "./state/controller";

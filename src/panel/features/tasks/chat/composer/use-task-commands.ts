@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ProviderCommand } from "../../../../../shared/providers/types";
+import type { ProviderCommand } from "../../../../../core/shared/providers/types";
 import { useController } from "../../../../app/state/controller-context";
 import { useSessionState } from "../../../../app/state/session/use-session-state";
 

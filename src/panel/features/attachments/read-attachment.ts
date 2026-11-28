@@ -1,7 +1,7 @@
 import type {
   AttachmentPage,
   MessageAttachment,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 
 type ReadPage = (args: Record<string, unknown>) => Promise<AttachmentPage>;
 

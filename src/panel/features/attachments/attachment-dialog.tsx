@@ -5,7 +5,7 @@ import {
   isBinaryFormat,
   type AttachmentPage,
   type MessageAttachment,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";

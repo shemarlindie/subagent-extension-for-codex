@@ -2,11 +2,11 @@ import {
   claudeMetadata,
   fixtureMetadata,
   type ProviderMetadata,
-} from "../../src/shared/providers/metadata.js";
+} from "../../src/core/shared/providers/metadata.js";
 import type {
   ModelChoice,
   ProviderCommand,
-} from "../../src/shared/providers/types.js";
+} from "../../src/core/shared/providers/types.js";
 
 export const fixtureModels: ModelChoice[] = [
   {

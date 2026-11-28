@@ -1,13 +1,13 @@
 import { useState } from "react";
 
-import { eventPayload } from "../../../../shared/events/payload";
-import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import { eventPayload } from "../../../../core/shared/events/payload";
+import { activityPresentation } from "../../../../core/shared/providers/activity/presentation";
 import {
   activityFailed,
   compactionSummary,
   replyText,
-} from "../../../../shared/tasks/activity/activity-events";
-import { scalarText } from "../../../../shared/text";
+} from "../../../../core/shared/tasks/activity/activity-events";
+import { scalarText } from "../../../../core/shared/text";
 import type { Event } from "../../../app/state/types";
 import { Button } from "../../../shared/components/button/button";
 import { JsonTree } from "../../../shared/components/json-tree/json-tree";

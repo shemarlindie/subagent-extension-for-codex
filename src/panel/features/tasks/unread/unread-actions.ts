@@ -1,4 +1,4 @@
-import type { ReadState } from "../../../../shared/tasks/conversation/unread.js";
+import type { ReadState } from "../../../../core/shared/tasks/conversation/unread.js";
 import type { NewMark, Snapshot, Task } from "../../../app/state/types";
 import {
   quote,

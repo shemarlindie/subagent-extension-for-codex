@@ -8,7 +8,7 @@ import { join } from "node:path";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import { claudeEnvironment } from "../src/service/features/providers/claude/configuration/execution-environment.ts";
+import { claudeEnvironment } from "../src/providers/claude/service/configuration/execution-environment.ts";
 
 const executable =
   process.env.SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH || "claude";

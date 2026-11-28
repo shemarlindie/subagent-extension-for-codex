@@ -1,4 +1,4 @@
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat.js";
 import { responseOutcome } from "../chat/chat-model";
 
 /** The row id of Chat's "New" divider, which Chat opens at. */

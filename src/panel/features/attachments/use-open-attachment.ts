@@ -1,4 +1,4 @@
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
 import { useController } from "../../app/state/controller-context";
 import { findTask } from "../../app/state/selectors";
 import { errorMessage } from "../../shared/utils/error-message";

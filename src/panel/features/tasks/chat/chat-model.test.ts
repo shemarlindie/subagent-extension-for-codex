@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { startSchema, type Task } from "../../../../shared/tasks/model";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model";
 import { draftRow, spentBudget } from "./chat-model";
 
 function failedBudgetTask(patch: Partial<Task> = {}): Task {

@@ -18,11 +18,11 @@ import { dirname, join } from "node:path";
 
 import { structuredPatch } from "diff";
 
-import { Control } from "../../../src/service/features/tasks/runtime/control";
-import { Store } from "../../../src/service/features/tasks/storage/store";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace";
-import { callTool } from "../../../src/service/platform/server/tools";
-import type { Task } from "../../../src/shared/tasks/model";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control";
+import { Store } from "../../../src/core/service/features/tasks/storage/store";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace";
+import { callTool } from "../../../src/core/service/platform/server/tools";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { FIXTURE_SERVICE_TOOLS } from "../host/host-helpers";
 import { previewAttachments } from "../scenarios/attachment-scenarios";
 import {

@@ -1,7 +1,7 @@
 import {
   VISUAL_SERIES_COUNT,
   type VisualToken,
-} from "../../../../../shared/tasks/visual";
+} from "../../../../../core/shared/tasks/visual";
 
 /**
  * What a visual's frame tells the panel. `width` is a lone element's width

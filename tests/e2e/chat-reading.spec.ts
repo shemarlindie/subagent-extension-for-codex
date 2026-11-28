@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 
 import type { Locator, Page } from "@playwright/test";
 
-import type { Task } from "../../src/shared/tasks/model";
+import type { Task } from "../../src/core/shared/tasks/model";
 import { scrollChatUp, send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 import { streamingTest } from "./streaming-fixtures";

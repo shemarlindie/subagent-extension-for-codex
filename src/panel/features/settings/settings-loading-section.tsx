@@ -1,4 +1,4 @@
-import { settingsSections as buildSettingsSections } from "../../../shared/settings/settings-document";
+import { settingsSections as buildSettingsSections } from "../../../core/shared/settings/settings-document";
 import {
   Help,
   SettingRowView,

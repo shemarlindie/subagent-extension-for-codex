@@ -1,4 +1,4 @@
-import { providerMetadata } from "../../../shared/providers/metadata";
+import { providerMetadata } from "../../../core/shared/providers/metadata";
 import { useSnapshot } from "../../app/state/controller-context";
 import { Notice } from "../../shared/components/notice/notice";
 import { SignInExpiryNotice } from "./sign-in-expiry-notice";

@@ -1,5 +1,5 @@
-import { archivable } from "../../../src/shared/tasks/archive";
-import type { Task } from "../../../src/shared/tasks/model";
+import { archivable } from "../../../src/core/shared/tasks/archive";
+import type { Task } from "../../../src/core/shared/tasks/model";
 
 /** Archive tools the browser fixtures answer by archiving tasks in memory. */
 export const PREVIEW_ARCHIVE_TOOLS = ["app_set_tasks_archived"];

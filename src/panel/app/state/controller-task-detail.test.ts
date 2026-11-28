@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 
 import { expect, test, vi } from "vitest";
 
-import { decodedEvent } from "../../../shared/events/decode";
-import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
-import { windowActivity } from "../../../shared/tasks/activity/activity-tail";
+import { decodedEvent } from "../../../core/shared/events/decode";
+import { panelSettingsDefaults } from "../../../core/shared/settings/settings-schema";
+import { windowActivity } from "../../../core/shared/tasks/activity/activity-tail";
 import {
   deferred,
   flush,

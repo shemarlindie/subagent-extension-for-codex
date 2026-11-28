@@ -1,4 +1,4 @@
-import { providerMetadata } from "../../../shared/providers/metadata.js";
+import { providerMetadata } from "../../../core/shared/providers/metadata.js";
 import type { Worker } from "./types";
 
 /** The provider's display name, or its id before its worker reports one. */

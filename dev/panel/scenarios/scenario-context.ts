@@ -1,7 +1,7 @@
 import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
-} from "../../../src/shared/providers/claude/permissions";
+} from "../../../src/providers/claude/shared/permissions";
 
 const demoProject = {
   repository: "/demo/project",

@@ -1,5 +1,5 @@
-import type { DraftUpdate } from "../../shared/tasks/conversation/drafts.js";
-import type { ObservePanelTiming } from "../../shared/tasks/panel-timing.js";
+import type { DraftUpdate } from "../../core/shared/tasks/conversation/drafts.js";
+import type { ObservePanelTiming } from "../../core/shared/tasks/panel-timing.js";
 import type { ConnectionLabel } from "../app/state/connection.js";
 import type { PanelData } from "../app/state/types.js";
 

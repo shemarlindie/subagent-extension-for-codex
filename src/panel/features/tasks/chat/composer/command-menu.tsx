@@ -10,7 +10,7 @@ import {
   type SyntheticEvent,
 } from "react";
 
-import type { ProviderCommand } from "../../../../../shared/providers/types";
+import type { ProviderCommand } from "../../../../../core/shared/providers/types";
 import { useSessionState } from "../../../../app/state/session/use-session-state";
 import { CommandHighlight, draftCommand } from "./command-highlight";
 

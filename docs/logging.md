@@ -308,16 +308,16 @@ reliably match a later draft to a steer or queued message. Use
 
 ## Add diagnostics
 
-Service-wide logging helpers live in `src/service/platform/logging`. Feature
-code chooses its event names and metadata. Browser code must respect the runtime
-boundaries in [Architecture](architecture.md#code-ownership).
+Service-wide logging helpers live in `src/core/service/platform/logging`.
+Feature code chooses its event names and metadata. Browser code must respect the
+runtime boundaries in [Architecture](architecture.md#code-ownership).
 
-| Helper                                | Use for                                                         |
-| ------------------------------------- | --------------------------------------------------------------- |
-| `logEvent(level, event, fields)`      | Stable event names with curated scalar metadata.                |
-| `logError(event, error, fields)`      | Failures.                                                       |
-| `withLogContext`                      | Bounded asynchronous correlation.                               |
-| `measureTaskWait`, `recordTaskTiming` | Task timing, in `src/service/features/tasks/runtime/timing.ts`. |
+| Helper                                | Use for                                                              |
+| ------------------------------------- | -------------------------------------------------------------------- |
+| `logEvent(level, event, fields)`      | Stable event names with curated scalar metadata.                     |
+| `logError(event, error, fields)`      | Failures.                                                            |
+| `withLogContext`                      | Bounded asynchronous correlation.                                    |
+| `measureTaskWait`, `recordTaskTiming` | Task timing, in `src/core/service/features/tasks/runtime/timing.ts`. |
 
 - Start background task execution with `{ inherit: false }` so it drops the
   caller's request context.

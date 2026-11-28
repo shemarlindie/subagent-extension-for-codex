@@ -1,6 +1,6 @@
-import { settingAt } from "../../../../shared/settings/setting-path";
-import { withSetting } from "../../../../shared/settings/settings-schema";
-import { titleCase } from "../../../../shared/text";
+import { settingAt } from "../../../../core/shared/settings/setting-path";
+import { withSetting } from "../../../../core/shared/settings/settings-schema";
+import { titleCase } from "../../../../core/shared/text";
 import type { TaskSessionState } from "../../../app/state/session/session-state";
 import type {
   DelegateDialogRead,

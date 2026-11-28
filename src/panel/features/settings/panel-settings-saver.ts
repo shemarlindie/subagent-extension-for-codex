@@ -1,4 +1,4 @@
-import type { PanelSettings } from "../../../shared/settings/settings-schema";
+import type { PanelSettings } from "../../../core/shared/settings/settings-schema";
 import type { Snapshot } from "../../app/state/types";
 import { errorMessage } from "../../shared/utils/error-message";
 

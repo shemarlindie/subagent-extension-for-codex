@@ -1,10 +1,10 @@
-import { eventPayload } from "../../../../shared/events/payload";
-import { activityPresentation } from "../../../../shared/providers/activity/presentation";
+import { eventPayload } from "../../../../core/shared/events/payload";
+import { activityPresentation } from "../../../../core/shared/providers/activity/presentation";
 import type {
   ActivityContent,
   ActivityContentBlock,
   ActivityRateLimitWindow,
-} from "../../../../shared/providers/activity/types";
+} from "../../../../core/shared/providers/activity/types";
 import type { Event } from "../../../app/state/types";
 import {
   formatUserDateTime,

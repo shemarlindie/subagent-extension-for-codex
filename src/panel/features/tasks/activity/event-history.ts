@@ -3,14 +3,14 @@ import {
   turnCloseIndex,
   type ActivityPage,
   type DroppedSummary,
-} from "../../../../shared/tasks/activity/activity-tail";
+} from "../../../../core/shared/tasks/activity/activity-tail";
 import type { Event } from "../../../app/state/types";
 import { formatDuration } from "../list/duration";
 
 export {
   type DroppedSummary,
   EVENT_TAIL_SIZE,
-} from "../../../../shared/tasks/activity/activity-tail";
+} from "../../../../core/shared/tasks/activity/activity-tail";
 
 /** The events and dropped tally the Activity tab shows for a task. */
 export type ActivityView = { events: Event[]; dropped?: DroppedSummary };

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { BudgetRaise } from "../../../../shared/tasks/model";
+import type { BudgetRaise } from "../../../../core/shared/tasks/model";
 import { useSnapshot } from "../../../app/state/controller-context";
 import { Button } from "../../../shared/components/button/button";
 import { FormFieldError } from "../../../shared/forms/form-field-error";

@@ -1,6 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../../core/shared/attachments/model.js";
 import { Button, buttonClass } from "../../../shared/components/button/button";
 import { Chevron } from "../../../shared/components/chevron";
 import { Icon } from "../../../shared/components/icons/icons";

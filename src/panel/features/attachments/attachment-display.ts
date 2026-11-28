@@ -1,8 +1,8 @@
-import { OCTET_STREAM } from "../../../shared/attachments/file-type.js";
+import { OCTET_STREAM } from "../../../core/shared/attachments/file-type.js";
 import {
   isBinaryFormat,
   type MessageAttachment,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import type { IconName } from "../../shared/components/icons/icons";
 import { formatBytes } from "../../shared/utils/format";
 import type { PreviewFile } from "../file-preview/file-format";

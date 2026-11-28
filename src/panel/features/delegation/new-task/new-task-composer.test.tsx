@@ -6,8 +6,8 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import { withSetting } from "../../../../shared/settings/settings-schema";
-import { roles } from "../../../../shared/tasks/model";
+import { withSetting } from "../../../../core/shared/settings/settings-schema";
+import { roles } from "../../../../core/shared/tasks/model";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import { defaults } from "../../../app/state/controller-test-harness";

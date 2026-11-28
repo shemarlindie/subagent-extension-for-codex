@@ -1,7 +1,10 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useLayoutEffect, useRef } from "react";
 
-import { planProgress, type TaskPlan } from "../../../../shared/tasks/plan";
+import {
+  planProgress,
+  type TaskPlan,
+} from "../../../../core/shared/tasks/plan";
 import { useSessionState } from "../../../app/state/session/use-session-state";
 import { Chevron } from "../../../shared/components/chevron";
 import { useAnimatedHeight } from "../../../shared/components/motion/use-animated-height";

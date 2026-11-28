@@ -1,4 +1,4 @@
-import type { GitState } from "../../../shared/tasks/model";
+import type { GitState } from "../../../core/shared/tasks/model";
 
 export type Project = {
   repository: string;

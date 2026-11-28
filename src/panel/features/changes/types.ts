@@ -5,7 +5,7 @@ import type {
   ChangeScope,
   FileChange,
   ListedChange,
-} from "../../../shared/changes/changes.js";
+} from "../../../core/shared/changes/changes.js";
 import type { ParsedDiffFile } from "../file-preview/diff/diff-format";
 
 export type {

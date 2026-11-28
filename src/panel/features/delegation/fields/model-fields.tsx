@@ -1,8 +1,8 @@
 import { memo } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
-import { withEffortCap } from "../../../../shared/providers/policy";
-import { reasoningLevels } from "../../../../shared/tasks/reasoning";
+import { withEffortCap } from "../../../../core/shared/providers/policy";
+import { reasoningLevels } from "../../../../core/shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../../app/state/types";
 import { AsyncControl } from "../../../shared/forms/async-control";
 import { Field } from "../../../shared/forms/fields";

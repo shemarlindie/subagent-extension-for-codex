@@ -1,5 +1,5 @@
-import type { ActivityRateLimitWindow } from "../../../shared/providers/activity/types";
-import type { PlanUsage } from "../../../shared/providers/plan-usage";
+import type { ActivityRateLimitWindow } from "../../../core/shared/providers/activity/types";
+import type { PlanUsage } from "../../../core/shared/providers/plan-usage";
 import {
   formatUserDateTime,
   type UserDateTimePreferences,

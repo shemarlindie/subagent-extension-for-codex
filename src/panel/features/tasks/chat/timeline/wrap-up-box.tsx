@@ -1,4 +1,4 @@
-import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
+import type { ConversationMessage } from "../../../../../core/shared/tasks/conversation/messages.js";
 import {
   useController,
   useSnapshot,

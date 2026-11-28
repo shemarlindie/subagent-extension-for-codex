@@ -1,6 +1,6 @@
-import type { Event } from "../../../src/shared/events/types";
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Event } from "../../../src/core/shared/events/types";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { settingOptions, taskBase } from "./scenario-context";
 import { Timeline } from "./timeline";
 
@@ -201,7 +201,7 @@ function conversationTurn(cycle: number) {
   at(12_000, () => {
     tool = timeline.toolStart("Bash", {
       command:
-        "npm test -- --runInBand src/service/features/tasks/continuation/recovery.integration.test.ts",
+        "npm test -- --runInBand src/core/service/features/tasks/continuation/recovery.integration.test.ts",
       description: "Check conversation layout",
     });
 

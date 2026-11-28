@@ -1,7 +1,7 @@
 import { memo } from "react";
 
-import { pendingInputKind } from "../../../../../shared/tasks/model.js";
-import { scalarText } from "../../../../../shared/text.js";
+import { pendingInputKind } from "../../../../../core/shared/tasks/model.js";
+import { scalarText } from "../../../../../core/shared/text.js";
 import {
   useController,
   useSnapshot,

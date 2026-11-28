@@ -1,5 +1,5 @@
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
-import { conversation } from "../../../../shared/tasks/conversation/messages";
+import type { MessageAttachment } from "../../../../core/shared/attachments/model.js";
+import { conversation } from "../../../../core/shared/tasks/conversation/messages";
 import type { Task } from "../../../app/state/types";
 import type { UserDateTimePreferences } from "../../../shared/utils/user-date-time";
 import { ChatMessageView } from "../chat/timeline/chat-message-view";

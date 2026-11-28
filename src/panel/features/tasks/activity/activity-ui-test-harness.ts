@@ -5,11 +5,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, vi, type TestContext } from "vitest";
 
+import { decodedEvent } from "../../../../core/shared/events/decode";
 import {
   claudeActivityPresentation,
   decodeClaudeActivityContent,
-} from "../../../../service/features/providers/claude/events/activity";
-import { decodedEvent } from "../../../../shared/events/decode";
+} from "../../../../providers/claude/service/events/activity";
 import type { Event as ActivityEvent } from "../../../app/state/types";
 import { EventDetails as EventList } from "./event-list";
 

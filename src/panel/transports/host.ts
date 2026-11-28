@@ -6,7 +6,7 @@ import {
 import { OpenAIExtensions } from "@openai/mcp-extensions/app";
 
 import { version } from "../../../package.json";
-import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
+import { SendRejectedError } from "../../core/shared/tasks/conversation/send-errors";
 import type {
   PanelData,
   SaveResult,

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { act, fireEvent, waitFor } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat";
 import type { Task } from "../../../app/state/types";
 import { noteItems, scrollIntoHistory, setup } from "./chat-panel-test-harness";
 

@@ -11,7 +11,7 @@ shared connection enables WAL and foreign keys and applies pending migrations
 before any feature reads it.
 
 - Each feature declares its tables with Drizzle in its own `schema.ts`.
-  `src/service/platform/database/schema.ts` collects them for drizzle-kit.
+  `src/core/service/platform/database/schema.ts` collects them for drizzle-kit.
 - Each feature queries only its own tables through the shared `Database`. Read
   another feature's data through its service or store. Use Drizzle for queries,
   and raw SQL where it is clearer.
@@ -42,7 +42,7 @@ scheduling paths indexed, so their cost grows with the rows a request needs.
 ## Change a schema
 
 1. Edit the owning feature's Drizzle schema, or add one and collect it in
-   `src/service/platform/database/schema.ts`.
+   `src/core/service/platform/database/schema.ts`.
 2. Run `npm run db:generate -- --name <change>` and review the SQL. SQLite
    rebuilds a table for many column changes.
 3. Keep all of a change's schema edits in this one generated migration, whether
@@ -65,8 +65,8 @@ committed migration.
 
 ## Migration application
 
-- `src/service/platform/database/migrate.ts` applies pending migrations in one
-  `BEGIN IMMEDIATE` transaction and records them in Drizzle's
+- `src/core/service/platform/database/migrate.ts` applies pending migrations in
+  one `BEGIN IMMEDIATE` transaction and records them in Drizzle's
   `__drizzle_migrations` ledger. A service and a CLI starting together migrate
   once.
 - Startup rejects databases created before versioned migrations, and histories
@@ -75,7 +75,7 @@ committed migration.
 - The package ships `migrations/`, so source checkouts and installed packages
   use the same files.
 - Before migrating a database that already has migrations,
-  `src/service/platform/database/backup.ts` copies it with `VACUUM INTO` to
+  `src/core/service/platform/database/backup.ts` copies it with `VACUUM INTO` to
   `<data>/backups/service-<last-applied-migration>-<timestamp>.sqlite`. It keeps
   the newest three. Plugin updates arrive automatically, so these backups are
   the way back from a bad migration.

@@ -1,7 +1,7 @@
-import type { PlanUsage } from "../../../shared/providers/plan-usage";
-import type { PanelSettings } from "../../../shared/settings/settings-schema";
-import type { ActivityPage } from "../../../shared/tasks/activity/activity-tail";
-import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates";
+import type { PlanUsage } from "../../../core/shared/providers/plan-usage";
+import type { PanelSettings } from "../../../core/shared/settings/settings-schema";
+import type { ActivityPage } from "../../../core/shared/tasks/activity/activity-tail";
+import type { PendingTaskUpdates } from "../../../core/shared/tasks/conversation/parent-updates";
 import type { ChatRead } from "../../features/tasks/chat/chat-state";
 import type { DraftRead } from "../../features/tasks/chat/drafts/draft-follower";
 import { detailReads } from "../../features/tasks/task-detail-loader";

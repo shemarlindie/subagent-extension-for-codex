@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useContext, useState, type ReactNode } from "react";
 
-import { unsupportedEffortWarning } from "../../../shared/settings/settings-document";
+import { unsupportedEffortWarning } from "../../../core/shared/settings/settings-document";
 import { buttonClass } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
 import { SkeletonShape } from "../../shared/components/loading-skeleton/loading-skeleton";

@@ -1,4 +1,4 @@
-import { pendingInputKind } from "../../../../../shared/tasks/model.js";
+import { pendingInputKind } from "../../../../../core/shared/tasks/model.js";
 import type { Task } from "../../../../app/state/types";
 import type { ComposerMode, SpentBudget } from "../chat-model";
 

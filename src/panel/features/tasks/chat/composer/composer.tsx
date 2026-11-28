@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import type { Delivery } from "../../../../../shared/tasks/model";
+import type { Delivery } from "../../../../../core/shared/tasks/model";
 import {
   useController,
   useSnapshot,

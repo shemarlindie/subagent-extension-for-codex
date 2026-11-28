@@ -8,8 +8,9 @@ provider owns and how it behaves across a task's lifecycle.
 - [Claude execution verification](claude-verification.md) covers live execution
   checks.
 
-Implement the `Provider` interface in `src/service/features/providers/types.ts`
-and register the provider in `src/service/features/providers/config.ts`.
+Implement the `Provider` interface in
+`src/core/service/features/providers/types.ts` and register the provider in
+`src/core/service/features/providers/config.ts`.
 
 | Owner                | Responsibilities                                                                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -144,7 +145,7 @@ whole-execution approval. Presentation metadata never selects policy.
 A provider may validate local session state before resuming. If it rejects the
 state, or a different service worker owns the session, the task starts a fresh
 session that carries the earlier conversation in its prompt. See
-`ProviderTaskPolicy` in `src/service/features/providers/task-policy.ts`.
+`ProviderTaskPolicy` in `src/core/service/features/providers/task-policy.ts`.
 
 A provider with the `slash_commands` capability runs a message that starts with
 `/name` as a command, which needs a turn's whole prompt. The control plane sends
@@ -166,10 +167,11 @@ and its task policy defaults the task's decider to the `approvals.decider`
 setting.
 
 A provider's own settings form one block under `providers.<id>`, registered in
-`src/shared/providers/settings.ts`. Settings there are user-only. Metadata names
-the block's permission mode by path in `nativePermissions.permissionSetting`. A
-provider whose org policy changes the settings document also registers there how
-the policy applies to its sections and what Inherit lands on.
+`src/core/shared/providers/settings.ts`. Settings there are user-only. Metadata
+names the block's permission mode by path in
+`nativePermissions.permissionSetting`. A provider whose org policy changes the
+settings document also registers there how the policy applies to its sections
+and what Inherit lands on.
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and

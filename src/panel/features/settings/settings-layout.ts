@@ -1,13 +1,13 @@
-import { settingAt } from "../../../shared/settings/setting-path";
+import { settingAt } from "../../../core/shared/settings/setting-path";
 import type {
   HelpPart,
   ModelScope,
   ProseSetting,
   SettingRow,
   SettingSection,
-} from "../../../shared/settings/settings-document";
-import { withSetting } from "../../../shared/settings/settings-schema";
-import { scalarText } from "../../../shared/text";
+} from "../../../core/shared/settings/settings-document";
+import { withSetting } from "../../../core/shared/settings/settings-schema";
+import { scalarText } from "../../../core/shared/text";
 
 /** Form logic for the settings dialog: values in and out, summaries, resets. */
 

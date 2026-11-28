@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { build } from "esbuild";
 
-import { collectBuildInfo } from "../src/service/platform/service/build-info.ts";
+import { collectBuildInfo } from "../src/core/service/platform/service/build-info.ts";
 import { testModule } from "./lint/source-boundaries.mjs";
 import { writeThirdPartyNotices } from "./third-party-notices.mjs";
 
@@ -21,9 +21,9 @@ if (plugin.version !== packageManifest.version) {
 }
 
 const entries = {
-  main: "src/service/main.ts",
-  stdio: "src/service/stdio.ts",
-  "projects-cli": "src/service/projects-cli.ts",
+  main: "src/main.ts",
+  stdio: "src/hosts/codex/service/stdio.ts",
+  "projects-cli": "src/core/service/projects-cli.ts",
 };
 
 const result = await build({
@@ -107,7 +107,7 @@ if (!minimumNode) {
 for (const name of Object.keys(entries)) {
   await build({
     stdin: {
-      contents: `import { nodeVersionError } from "./src/service/platform/service/node-version.ts";
+      contents: `import { nodeVersionError } from "./src/core/service/platform/service/node-version.ts";
 const error = nodeVersionError(process.versions.node, process.execPath, ${minimumNode});
 if (error) {
   console.error(error);

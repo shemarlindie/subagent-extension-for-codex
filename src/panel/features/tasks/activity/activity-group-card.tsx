@@ -8,13 +8,13 @@ import {
   type TransitionEvent,
 } from "react";
 
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
-import { eventPayload } from "../../../../shared/events/payload";
+import type { MessageAttachment } from "../../../../core/shared/attachments/model.js";
+import { eventPayload } from "../../../../core/shared/events/payload";
 import {
   compactionSummary,
   replyText,
   type ActivityGroup,
-} from "../../../../shared/tasks/activity/activity-events";
+} from "../../../../core/shared/tasks/activity/activity-events";
 import { Icon } from "../../../shared/components/icons/icons";
 import { MotionContent } from "../../../shared/components/motion/motion-content";
 import { reducedMotion } from "../../../shared/components/motion/motion-utils";

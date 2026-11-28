@@ -1,5 +1,5 @@
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
+import type { MessageAttachment } from "../../../../core/shared/attachments/model.js";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat.js";
 
 /** The selected task's Chat as read so far. */
 export type ChatState = {

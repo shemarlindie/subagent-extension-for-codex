@@ -1,6 +1,6 @@
 import { memo, useRef } from "react";
 
-import type { ChatAnswers } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatAnswers } from "../../../../../core/shared/tasks/conversation/chat.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { SKIPPED_ANSWER } from "../../controls/question-answers";
 

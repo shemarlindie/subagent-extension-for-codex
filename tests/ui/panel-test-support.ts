@@ -14,6 +14,17 @@ import { createElement, Fragment } from "react";
 import { describe, expect, test, vi, type TestContext } from "vitest";
 
 import { composeHeldView } from "../../dev/panel/scenarios/view-tools";
+import { decodeEventEnvelope } from "../../src/core/shared/events/decode.js";
+import {
+  panelSettingsDefaults,
+  withSetting,
+  type PanelSettings,
+} from "../../src/core/shared/settings/settings-schema.js";
+import {
+  windowActivity,
+  windowTurnActivity,
+} from "../../src/core/shared/tasks/activity/activity-tail.js";
+import type { PendingTaskUpdates } from "../../src/core/shared/tasks/conversation/parent-updates.js";
 import { AppShell } from "../../src/panel/app/app-shell";
 import { Controller } from "../../src/panel/app/state/controller";
 import { ControllerContext } from "../../src/panel/app/state/controller-context";
@@ -39,17 +50,6 @@ import { TaskFilters } from "../../src/panel/features/tasks/list/task-filters";
 import { TaskList } from "../../src/panel/features/tasks/list/task-list";
 import { DialogHost } from "../../src/panel/shared/dialogs/dialog-host";
 import { decodePanelToolResult } from "../../src/panel/transports/event-decoding.js";
-import { decodeEventEnvelope } from "../../src/shared/events/decode.js";
-import {
-  panelSettingsDefaults,
-  withSetting,
-  type PanelSettings,
-} from "../../src/shared/settings/settings-schema.js";
-import {
-  windowActivity,
-  windowTurnActivity,
-} from "../../src/shared/tasks/activity/activity-tail.js";
-import type { PendingTaskUpdates } from "../../src/shared/tasks/conversation/parent-updates.js";
 
 // UI primitives read browser capabilities at module initialization.
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {

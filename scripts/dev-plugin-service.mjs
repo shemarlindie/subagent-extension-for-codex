@@ -8,7 +8,7 @@ import {
   challengeHeader,
   newChallenge,
   provesToken,
-} from "../src/service/platform/service/health-proof.ts";
+} from "../src/core/service/platform/service/health-proof.ts";
 
 // Match the plugin's shell environment, ignoring the checkout's .env.
 const data = resolve(

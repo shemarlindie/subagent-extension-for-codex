@@ -8,17 +8,17 @@ import { structuredPatch } from "diff";
 import { expect, test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
-import type { RunContext } from "../../../src/service/features/providers/types.js";
-import { pendingInput } from "../../../src/service/features/tasks/runtime/control-test-harness.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { callTool } from "../../../src/service/platform/server/tools.js";
+import type { RunContext } from "../../../src/core/service/features/providers/types.js";
+import { pendingInput } from "../../../src/core/service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
+import { callTool } from "../../../src/core/service/platform/server/tools.js";
 import type {
   ChangeCounts,
   ChangedFileContent,
   Changes,
-} from "../../../src/shared/changes/changes.js";
+} from "../../../src/core/shared/changes/changes.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";
 

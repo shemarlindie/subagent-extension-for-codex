@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
-import { providerTaskFacts } from "../../../../shared/providers/presentation";
+import { providerTaskFacts } from "../../../../core/shared/providers/presentation";
 import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 import { SkeletonShape } from "../../../shared/components/loading-skeleton/loading-skeleton";

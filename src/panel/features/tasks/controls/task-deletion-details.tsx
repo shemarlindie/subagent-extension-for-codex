@@ -1,4 +1,4 @@
-import type { TaskDeletionPreview } from "../../../../shared/tasks/deletion-contract.js";
+import type { TaskDeletionPreview } from "../../../../core/shared/tasks/deletion-contract.js";
 import { TaskDeletionSummary } from "./task-deletion-summary";
 import { TaskDeletionTargetItem } from "./task-deletion-target";
 

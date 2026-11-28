@@ -1,6 +1,6 @@
-import { providerMetadata } from "../../../shared/providers/metadata";
-import { allowedPermissionMode } from "../../../shared/providers/policy";
-import type { GitState } from "../../../shared/tasks/model";
+import { providerMetadata } from "../../../core/shared/providers/metadata";
+import { allowedPermissionMode } from "../../../core/shared/providers/policy";
+import type { GitState } from "../../../core/shared/tasks/model";
 import type { Worker } from "../../app/state/types";
 import { runsInPlace } from "../projects/selectors";
 import type { DelegateValues } from "./delegate-values";

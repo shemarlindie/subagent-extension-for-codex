@@ -1,6 +1,6 @@
 import { assert, expect, onTestFinished, test, vi } from "vitest";
 
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
+import { SendRejectedError } from "../../../../core/shared/tasks/conversation/send-errors";
 import {
   deferred,
   flush,

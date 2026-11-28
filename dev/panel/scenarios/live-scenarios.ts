@@ -1,4 +1,4 @@
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { settingOptions, taskBase, timestamps } from "./scenario-context";
 import { begin, rateLimit, Timeline } from "./timeline";
 
@@ -10,7 +10,7 @@ const liveStart = Date.now() - 40000;
 const liveClock = () => new Date(liveStart).toISOString();
 
 const liveToolCommand =
-  "npm test -- --runInBand src/service/features/tasks/continuation/recovery.integration.test.ts";
+  "npm test -- --runInBand src/core/service/features/tasks/continuation/recovery.integration.test.ts";
 
 const liveTimeline = (name: string, firstId: number) => {
   const timeline = new Timeline(`preview-live-${name}`, liveClock(), firstId);

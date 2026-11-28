@@ -2,7 +2,7 @@ import {
   isParentUpdateEvent,
   parentUpdate,
   type PendingTaskUpdates,
-} from "../../../src/shared/tasks/conversation/parent-updates";
+} from "../../../src/core/shared/tasks/conversation/parent-updates";
 import { previewArchivedAt } from "./archive-tools";
 import { previewEvents, previewTasks } from "./fixtures";
 

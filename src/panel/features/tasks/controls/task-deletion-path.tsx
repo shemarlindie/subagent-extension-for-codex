@@ -1,4 +1,4 @@
-import type { PathSymlink } from "../../../../shared/filesystem/path-contract.js";
+import type { PathSymlink } from "../../../../core/shared/filesystem/path-contract.js";
 import { Icon } from "../../../shared/components/icons/icons";
 import { Infotip } from "../../../shared/components/infotip";
 

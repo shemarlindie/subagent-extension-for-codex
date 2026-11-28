@@ -21,11 +21,11 @@ import { test, type TestContext } from "vitest";
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 
 const contracts = [
-  "src/shared/settings/document-contract",
-  "src/shared/panel/panel-contract",
+  "src/core/shared/settings/document-contract",
+  "src/core/shared/panel/panel-contract",
 ];
 
-const panelContract = "src/shared/panel/panel-contract.ts";
+const panelContract = "src/core/shared/panel/panel-contract.ts";
 
 function fixture(t: TestContext) {
   const directory = mkdtempSync(join(tmpdir(), "schema-generation-"));
@@ -123,7 +123,7 @@ test.concurrent(
 
     // An importer keeps a helper schema public.
     writeFileSync(
-      join(directory, "src/shared/settings/row-consumer.ts"),
+      join(directory, "src/core/shared/settings/row-consumer.ts"),
       'import { settingRowSchema } from "./document-contract.generated.js";\n',
     );
 
@@ -240,7 +240,12 @@ test.concurrent(
   "discovers nested feature contracts and reports missing outputs without writing in check mode",
   async (t) => {
     const directory = fixture(t);
-    const feature = join(directory, "src/service/features/new-feature/nested");
+
+    const feature = join(
+      directory,
+      "src/core/service/features/new-feature/nested",
+    );
+
     const output = join(feature, "message-contract.generated.ts");
     await generate(directory);
 

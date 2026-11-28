@@ -1,7 +1,7 @@
 import {
   archivable,
   type ArchiveResult,
-} from "../../../../shared/tasks/archive.js";
+} from "../../../../core/shared/tasks/archive.js";
 import { tasksInScope } from "../../../app/state/scope-reconciliation";
 import type { Snapshot, Task } from "../../../app/state/types";
 import {

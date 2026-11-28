@@ -16,7 +16,7 @@ CLI release is accepted without being verified. See
 [Qualifying Claude Code versions](claude-verification.md#qualifying-claude-code-versions).
 
 The version policy lives in
-`src/service/features/providers/claude/configuration/executable.ts`.
+`src/providers/claude/service/configuration/executable.ts`.
 
 ## Which `claude` runs
 

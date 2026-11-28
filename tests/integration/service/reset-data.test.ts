@@ -13,7 +13,7 @@ import { join, resolve } from "node:path";
 
 import { expect, test, type TestContext } from "vitest";
 
-import { isProcessRunning } from "../../../src/service/platform/service/process-info.js";
+import { isProcessRunning } from "../../../src/core/service/platform/service/process-info.js";
 import { freePort, serviceEnv, stopService } from "../../support/service.js";
 
 function state(t: TestContext) {

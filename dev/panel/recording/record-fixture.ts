@@ -17,8 +17,8 @@ import { parseArgs } from "node:util";
 
 import { format, resolveConfig } from "prettier";
 
-import type { EventEnvelope } from "../../../src/shared/events/event-contract";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { EventEnvelope } from "../../../src/core/shared/events/event-contract";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { leftovers, recordFixture } from "./recording";
 
 const { values } = parseArgs({

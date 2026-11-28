@@ -7,8 +7,8 @@ import { basename, join } from "node:path";
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import { ClaudeAgentProvider } from "../src/service/features/providers/claude/runtime/provider.ts";
-import { callTool } from "../src/service/platform/server/tools.ts";
+import { callTool } from "../src/core/service/platform/server/tools.ts";
+import { ClaudeAgentProvider } from "../src/providers/claude/service/runtime/provider.ts";
 
 const editTools = new Set(["Write", "Edit", "NotebookEdit", "Bash"]);
 const largeLine = `line 3 ${"x".repeat(40)}`;

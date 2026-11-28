@@ -1,18 +1,18 @@
 import { setTimeout } from "node:timers/promises";
 
-import type { ProviderTaskPolicy } from "../../src/service/features/providers/task-policy.js";
+import type { ProviderTaskPolicy } from "../../src/core/service/features/providers/task-policy.js";
 import type {
   Provider,
   RunContext,
   TurnOutput,
-} from "../../src/service/features/providers/types.js";
-import type { ProviderMetadata } from "../../src/shared/providers/metadata.js";
+} from "../../src/core/service/features/providers/types.js";
+import type { ProviderMetadata } from "../../src/core/shared/providers/metadata.js";
 import type {
   ModelChoice,
   ProviderReadiness,
   SessionDeletionStatus,
-} from "../../src/shared/providers/types.js";
-import type { Task } from "../../src/shared/tasks/model.js";
+} from "../../src/core/shared/providers/types.js";
+import type { Task } from "../../src/core/shared/tasks/model.js";
 import {
   cloneFixtureModel,
   createFixtureProviderMetadata,

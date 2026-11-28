@@ -1,8 +1,8 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { memo, useRef } from "react";
 
-import type { ChatPlan } from "../../../../shared/tasks/conversation/chat.js";
-import { planProgress } from "../../../../shared/tasks/plan.js";
+import type { ChatPlan } from "../../../../core/shared/tasks/conversation/chat.js";
+import { planProgress } from "../../../../core/shared/tasks/plan.js";
 import { Chevron } from "../../../shared/components/chevron";
 import { useAnimatedHeight } from "../../../shared/components/motion/use-animated-height";
 import { PlanStepIcon } from "./plan-step-icon";

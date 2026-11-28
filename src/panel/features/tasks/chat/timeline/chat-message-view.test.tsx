@@ -2,7 +2,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 
-import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
+import type { ConversationMessage } from "../../../../../core/shared/tasks/conversation/messages.js";
 import { ChatMessageView } from "./chat-message-view";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {

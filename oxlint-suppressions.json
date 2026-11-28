@@ -9,6 +9,31 @@
       "count": 1
     }
   },
+  "src/core/service/platform/panel/panel-context.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/core/service/platform/service/launcher.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/core/service/platform/service/serve.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/core/shared/tasks/activity/activity-status.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/core/shared/tasks/activity/activity-timeline.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
   "src/panel/features/changes/changed-file-preview.tsx": {
     "complexity": {
       "count": 1
@@ -99,37 +124,12 @@
       "count": 1
     }
   },
-  "src/service/features/providers/claude/events/activity.ts": {
+  "src/providers/claude/service/events/activity.ts": {
     "complexity": {
       "count": 2
     }
   },
-  "src/service/features/providers/claude/runtime/provider.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/service/platform/panel/panel-context.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/service/platform/service/launcher.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/service/platform/service/serve.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/shared/tasks/activity/activity-status.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "src/shared/tasks/activity/activity-timeline.ts": {
+  "src/providers/claude/service/runtime/provider.ts": {
     "complexity": {
       "count": 1
     }

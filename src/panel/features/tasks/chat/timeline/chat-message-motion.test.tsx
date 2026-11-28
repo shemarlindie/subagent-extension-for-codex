@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { cleanup, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages";
+import type { ConversationMessage } from "../../../../../core/shared/tasks/conversation/messages";
 import { ChatMessageView } from "./chat-message-view";
 
 function streamingMotion() {

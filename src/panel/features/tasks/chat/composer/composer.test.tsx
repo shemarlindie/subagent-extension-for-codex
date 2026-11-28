@@ -3,7 +3,7 @@ import { Tooltip } from "@base-ui/react/tooltip";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import { SendRejectedError } from "../../../../../shared/tasks/conversation/send-errors";
+import { SendRejectedError } from "../../../../../core/shared/tasks/conversation/send-errors";
 import { ControllerContext } from "../../../../app/state/controller-context";
 import {
   deferred,

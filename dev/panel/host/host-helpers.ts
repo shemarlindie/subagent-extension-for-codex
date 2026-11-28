@@ -3,9 +3,9 @@
 import type { McpUiDisplayMode } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import type { ProviderPolicy } from "../../../src/shared/providers/types";
-import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { ProviderPolicy } from "../../../src/core/shared/providers/types";
+import { SendRejectedError } from "../../../src/core/shared/tasks/conversation/send-errors";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import type { PreviewPlanUsageState } from "../scenarios/plan-usage";
 import { previewOrgPolicy } from "../scenarios/preview-models";
 import { previewTool, type PreviewOptions } from "../scenarios/tools";

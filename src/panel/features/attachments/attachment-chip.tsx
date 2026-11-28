@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties } from "react";
 
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
 import { Icon } from "../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 import { useSingleFlight } from "../../shared/utils/use-single-flight";

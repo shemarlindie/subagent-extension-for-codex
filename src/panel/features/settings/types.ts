@@ -1,8 +1,8 @@
 import type {
   ScopeInput,
   SettingSection,
-} from "../../../shared/settings/settings-document.js";
-import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
+} from "../../../core/shared/settings/settings-document.js";
+import type { SettingsValues } from "../../../core/shared/settings/settings-schema.js";
 
 type ModelScopeValues = SettingsValues["models"]["providers"]["claude"];
 

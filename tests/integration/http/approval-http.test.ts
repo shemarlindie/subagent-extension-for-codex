@@ -11,16 +11,16 @@ import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
 import {
   type RunContext,
   type TurnOutput,
-} from "../../../src/service/features/providers/types.js";
+} from "../../../src/core/service/features/providers/types.js";
 import {
   latestReply,
   pendingInput,
-} from "../../../src/service/features/tasks/runtime/control-test-harness.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { application } from "../../../src/service/platform/server/app.js";
-import { Auth } from "../../../src/service/platform/server/auth.js";
+} from "../../../src/core/service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
+import { application } from "../../../src/core/service/platform/server/app.js";
+import { Auth } from "../../../src/core/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";

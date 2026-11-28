@@ -4,7 +4,7 @@ import {
   type PathValue,
 } from "react-hook-form";
 
-import { titleCase } from "../../../../../shared/text";
+import { titleCase } from "../../../../../core/shared/text";
 import { useController } from "../../../../app/state/controller-context";
 import { quote } from "../../../../app/state/undo-history";
 import type { DelegateValues } from "../../delegate-values";

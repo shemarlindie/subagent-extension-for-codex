@@ -1,4 +1,4 @@
-import type { TaskPlan } from "../../../../shared/tasks/plan";
+import type { TaskPlan } from "../../../../core/shared/tasks/plan";
 
 /** The user's choice to collapse or expand one plan, which the panel keeps per task. */
 export type PlanCollapse = { key: string; collapsed: boolean };

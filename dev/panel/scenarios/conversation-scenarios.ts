@@ -2,7 +2,7 @@ import type {
   QueuedMessage,
   Task,
   TaskMessage,
-} from "../../../src/shared/tasks/model";
+} from "../../../src/core/shared/tasks/model";
 import { at, taskBase, timestamps, WEBSITE } from "./scenario-context";
 import { begin, resultUsage, SESSION, Timeline } from "./timeline";
 

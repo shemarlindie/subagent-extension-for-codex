@@ -72,11 +72,14 @@ async function inlineImports(file) {
   const forbiddenRoots = [
     resolve("dev"),
     resolve("tests"),
-    resolve("src/service"),
+    resolve("src/core/service"),
+    resolve("src/providers/claude/service"),
+    resolve("src/hosts/codex/service"),
   ];
 
   const leaked = chunks[0].moduleIds.filter(
     (id) =>
+      id === resolve("src/main.ts") ||
       forbiddenRoots.some((root) => id.startsWith(`${root}/`)) ||
       testModule.test(id),
   );

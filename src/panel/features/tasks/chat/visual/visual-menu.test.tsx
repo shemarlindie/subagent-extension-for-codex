@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatVisual } from "../../../../../core/shared/tasks/conversation/chat.js";
 import type { Controller } from "../../../../app/state/controller";
 import { ControllerContext } from "../../../../app/state/controller-context";
 import type { SaveResult } from "../../../../app/state/types";

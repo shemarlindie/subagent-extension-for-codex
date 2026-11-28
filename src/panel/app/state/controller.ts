@@ -1,5 +1,5 @@
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
-import { panelLoadOperation } from "../../../shared/tasks/panel-timing";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
+import { panelLoadOperation } from "../../../core/shared/tasks/panel-timing";
 import { ChangeLoader } from "../../features/changes/change-loader";
 import {
   NewTaskLoader,

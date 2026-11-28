@@ -1,6 +1,6 @@
 import { useRef, useState, type ClipboardEvent, type DragEvent } from "react";
 
-import type { StagedFile } from "../../../shared/attachments/model";
+import type { StagedFile } from "../../../core/shared/attachments/model";
 import { useController } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import { errorMessage } from "../../shared/utils/error-message";

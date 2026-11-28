@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { providerMetadata } from "../../../../../shared/providers/metadata";
+import { providerMetadata } from "../../../../../core/shared/providers/metadata";
 import {
   aboveEffortCap,
   allowedPermissionMode,
   modelAllowed,
   MODELS_LIMITED,
   withBlockedOptions,
-} from "../../../../../shared/providers/policy";
-import type { ModelChoice } from "../../../../../shared/providers/types";
+} from "../../../../../core/shared/providers/policy";
+import type { ModelChoice } from "../../../../../core/shared/providers/types";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type {
   NewTaskState,

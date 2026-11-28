@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { OCTET_STREAM } from "../../../shared/attachments/file-type";
+import { OCTET_STREAM } from "../../../core/shared/attachments/file-type";
 import { useSnapshot } from "../../app/state/controller-context";
 import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";

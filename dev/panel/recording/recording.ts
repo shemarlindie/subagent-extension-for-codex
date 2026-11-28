@@ -1,5 +1,8 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
+import type { RunContext } from "../../../src/core/service/features/providers/types";
+import type { EventEnvelope } from "../../../src/core/shared/events/event-contract";
+import type { Task } from "../../../src/core/shared/tasks/model";
 // Turns a task recorded from a real run into a preview fixture: its task
 // record and events, with everything specific to the machine and account it
 // ran on replaced, so the file can be committed. See
@@ -8,11 +11,8 @@ import {
   claudeMessageNormalizer,
   keptMeasurements,
   type ClaudeMeasurements,
-} from "../../../src/service/features/providers/claude/events/normalize";
-import type { RunContext } from "../../../src/service/features/providers/types";
-import type { EventEnvelope } from "../../../src/shared/events/event-contract";
-import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
-import type { Task } from "../../../src/shared/tasks/model";
+} from "../../../src/providers/claude/service/events/normalize";
+import { originalResponseLookup } from "../../../src/providers/claude/shared/responses";
 
 /** A recorded run, as `dev/panel/recorded/*.json` stores it. */
 export type RecordedFixture = { task: Task; events: EventEnvelope[] };

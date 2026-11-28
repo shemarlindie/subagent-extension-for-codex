@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
-import { archivable } from "../../../../shared/tasks/archive.js";
+import { archivable } from "../../../../core/shared/tasks/archive.js";
 import {
   useController,
   useSnapshot,

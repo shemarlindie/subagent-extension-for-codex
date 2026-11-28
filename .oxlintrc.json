@@ -322,7 +322,7 @@
       }
     },
     {
-      "files": ["src/service/features/tasks/runtime/control.ts"],
+      "files": ["src/core/service/features/tasks/runtime/control.ts"],
       "rules": {
         "eslint/max-lines": [
           "error",

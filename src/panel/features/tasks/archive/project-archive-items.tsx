@@ -1,6 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
 
-import { archivable } from "../../../../shared/tasks/archive.js";
+import { archivable } from "../../../../core/shared/tasks/archive.js";
 import {
   useController,
   useSnapshot,

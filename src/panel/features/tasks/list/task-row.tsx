@@ -1,8 +1,11 @@
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { memo, type MouseEvent, type SyntheticEvent } from "react";
 
-import { archivable } from "../../../../shared/tasks/archive.js";
-import { pinnedPlan, planProgress } from "../../../../shared/tasks/plan.js";
+import { archivable } from "../../../../core/shared/tasks/archive.js";
+import {
+  pinnedPlan,
+  planProgress,
+} from "../../../../core/shared/tasks/plan.js";
 import { useController } from "../../../app/state/controller-context";
 import { profileLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";

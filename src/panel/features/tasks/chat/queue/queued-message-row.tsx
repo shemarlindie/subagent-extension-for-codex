@@ -1,7 +1,7 @@
 import { useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 
-import { slashCommand } from "../../../../../shared/tasks/conversation/commands";
-import type { QueuedMessage } from "../../../../../shared/tasks/model";
+import { slashCommand } from "../../../../../core/shared/tasks/conversation/commands";
+import type { QueuedMessage } from "../../../../../core/shared/tasks/model";
 import {
   useController,
   useSnapshot,

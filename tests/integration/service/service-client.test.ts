@@ -6,7 +6,7 @@ import { test, vi, type TestContext } from "vitest";
 import {
   serviceClient,
   type ServiceConnection,
-} from "../../../src/service/platform/service/service-client.js";
+} from "../../../src/core/service/platform/service/service-client.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort } from "../../support/service.js";
 

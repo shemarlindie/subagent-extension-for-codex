@@ -1,5 +1,5 @@
-import { claudeTaskOptionsSchema } from "../../../../../shared/providers/claude/task-options";
-import { optionsForProvider } from "../../../../../shared/providers/options";
+import { optionsForProvider } from "../../../../../core/shared/providers/options";
+import { claudeTaskOptionsSchema } from "../../../../../providers/claude/shared/task-options";
 import type { Task } from "../../../../app/state/types";
 import { ProgressRing } from "../../../../shared/components/progress-ring/progress-ring";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";

@@ -7,19 +7,18 @@ readiness, see [Claude Code CLI](claude-cli.md).
 
 ## Qualifying Claude Code versions
 
-`claudeCliSupport` in
-`src/service/features/providers/claude/configuration/executable.ts` pairs the
-minimum CLI version with the bundled Agent SDK version. Newer CLI releases are
-accepted without an upper limit. A test fails when the installed SDK no longer
-matches the recorded version, so every SDK update needs these checks. Run them
-when you update the SDK or change the minimum:
+`claudeCliSupport` in `src/providers/claude/service/configuration/executable.ts`
+pairs the minimum CLI version with the bundled Agent SDK version. Newer CLI
+releases are accepted without an upper limit. A test fails when the installed
+SDK no longer matches the recorded version, so every SDK update needs these
+checks. Run them when you update the SDK or change the minimum:
 
 1. Run `npm test`, which includes type checks. Recorded fixtures cover the SDK
    message mapping. The packed-artifact suite checks model discovery when a
    supported CLI is installed and skips that check otherwise. Typecheck fails
    when the SDK adds a message type, system subtype or assistant error. Check
-   how `src/service/features/providers/claude/events/activity.ts` presents it,
-   then list it in `sdk-message-coverage.ts` beside that file.
+   how `src/providers/claude/service/events/activity.ts` presents it, then list
+   it in `sdk-message-coverage.ts` beside that file.
 2. Select the version through `PATH` or
    `SUBAGENT_EXTENSION_FOR_CODEX_CLAUDE_PATH` and run the
    [live Claude checks](#live-claude-checks).
@@ -27,8 +26,8 @@ when you update the SDK or change the minimum:
    `/compact`. Tasks rely on how Claude Code parses commands, and on the output
    `/compact` prints in place of a result. Compare the built-in commands the
    SDK's `supportedCommands()` lists with `supportedCommands` in
-   `src/service/features/providers/claude/configuration/task-policy.ts`, and add
-   new ones that work in a task. Tasks refuse the rest.
+   `src/providers/claude/service/configuration/task-policy.ts`, and add new ones
+   that work in a task. Tasks refuse the rest.
 4. Run `npm run check:claude-policy`. It makes no model calls and needs no org.
    The org policy checks rely on `getSettings`, which the SDK doesn't declare,
    and on the settings keys that turn modes off. If it fails, the panel stops

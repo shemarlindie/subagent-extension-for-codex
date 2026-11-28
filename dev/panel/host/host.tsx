@@ -20,6 +20,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import type { Task } from "../../../src/core/shared/tasks/model";
 import type { UiStatePersistence } from "../../../src/panel/app/state/types";
 import { browserUiState } from "../../../src/panel/app/view-state";
 import {
@@ -27,7 +28,6 @@ import {
   ICONS,
   type IconName,
 } from "../../../src/panel/shared/components/icons/icons";
-import type { Task } from "../../../src/shared/tasks/model";
 import { PREVIEW_THREAD } from "../scenarios/fixtures";
 import {
   previewPlanUsageStates,

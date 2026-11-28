@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { McpUiHostStylesSchema } from "@modelcontextprotocol/ext-apps";
 import { expect, test, vi } from "vitest";
 
-import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
+import { SendRejectedError } from "../../core/shared/tasks/conversation/send-errors";
 import type { HostState, TransportEvents } from "../app/state/types";
 import { ConsoleTransport } from "./console";
 import { HostTransport } from "./host";

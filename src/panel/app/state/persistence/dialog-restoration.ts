@@ -1,4 +1,4 @@
-import { pendingInputKind } from "../../../../shared/tasks/model";
+import { pendingInputKind } from "../../../../core/shared/tasks/model";
 import type { DialogState, PersistedDialog, Snapshot, Task } from "../types";
 
 // Settings and delegation restore through their loaders, which own async reads.

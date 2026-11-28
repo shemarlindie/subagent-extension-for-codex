@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat";
 import { setup } from "./chat-panel-test-harness";
 
 function message(id: string, eventId: number): ChatItem {

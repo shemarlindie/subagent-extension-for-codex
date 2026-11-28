@@ -3,7 +3,7 @@
 // holds them, so a playing panel sees each change as it happens.
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
 import { fixtureCall } from "../host/host-helpers";
 import type { PreviewData } from "../scenarios/live-preview";
 import {
@@ -50,7 +50,7 @@ function storyTool(
 
 /**
  * Whether a wait returns now. Mirrors `waitForUpdates` in
- * `src/service/features/tasks/conversation/updates.ts`: at once without
+ * `src/core/service/features/tasks/conversation/updates.ts`: at once without
  * `after` or `wait_ms`, otherwise when the revision changes or the target
  * draft grows, becomes another message or clears.
  */

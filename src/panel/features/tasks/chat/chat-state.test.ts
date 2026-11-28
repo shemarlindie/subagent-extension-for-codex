@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat.js";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat.js";
 import { mergeChat } from "./chat-state";
 
 const note = (id: string, event_id: number, text = id): ChatItem => ({

@@ -1,4 +1,4 @@
-import type { PlanUsage } from "../../../src/shared/providers/plan-usage";
+import type { PlanUsage } from "../../../src/core/shared/providers/plan-usage";
 
 /** The plan usage states the dev host offers. */
 export const previewPlanUsageStates = {

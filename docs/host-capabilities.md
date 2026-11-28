@@ -156,7 +156,7 @@ chosen path for registration. Other platforms use the path field.
 
 Composer mentions are temporarily disabled. The flow in Codex is unverified. To
 test, set `composerMentionsEnabled` to `true` in
-`src/service/platform/server/mentions.ts`.
+`src/hosts/codex/service/mentions.ts`.
 
 ## Plugin startup and hooks
 

@@ -1,8 +1,8 @@
-import { modelAllowed } from "../../../src/shared/providers/policy";
+import { modelAllowed } from "../../../src/core/shared/providers/policy";
 import type {
   ModelChoice,
   ProviderPolicy,
-} from "../../../src/shared/providers/types";
+} from "../../../src/core/shared/providers/types";
 
 const previewModels: [ModelChoice, ...ModelChoice[]] = [
   {

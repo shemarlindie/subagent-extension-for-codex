@@ -2,8 +2,8 @@
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
-import type { WrapUp } from "../../../../shared/tasks/wrap-up-contract";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat";
+import type { WrapUp } from "../../../../core/shared/tasks/wrap-up-contract";
 import { getElement } from "../../../shared/utils/dom-test-harness";
 import { base, sent, setup } from "./chat-panel-test-harness";
 

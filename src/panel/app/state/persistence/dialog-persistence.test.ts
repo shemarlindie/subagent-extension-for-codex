@@ -59,7 +59,7 @@ test("parses only valid dialog descriptors and keeps the newest eight", () => {
     parsePersistedDialogs([
       ...entries,
       { kind: "control", action: "delete", taskId: "task-1" },
-      { kind: "file", taskId: "", path: "src/service/main.ts" },
+      { kind: "file", taskId: "", path: "src/main.ts" },
     ]),
     entries.slice(-8),
   );

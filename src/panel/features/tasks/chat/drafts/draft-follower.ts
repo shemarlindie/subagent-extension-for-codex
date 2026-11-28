@@ -1,7 +1,7 @@
 import type {
   Draft,
   DraftUpdate,
-} from "../../../../../shared/tasks/conversation/drafts";
+} from "../../../../../core/shared/tasks/conversation/drafts";
 import { selectedTask } from "../../../../app/state/selectors";
 import type { Snapshot, Task } from "../../../../app/state/types";
 import { composerMode } from "../chat-model";

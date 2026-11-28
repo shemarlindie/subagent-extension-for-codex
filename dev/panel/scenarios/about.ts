@@ -1,5 +1,5 @@
-import type { AboutInfo } from "../../../src/shared/about/types";
-import type { ProviderReadiness } from "../../../src/shared/providers/types";
+import type { AboutInfo } from "../../../src/core/shared/about/types";
+import type { ProviderReadiness } from "../../../src/core/shared/providers/types";
 
 export const previewAbout = (
   claude: ProviderReadiness,

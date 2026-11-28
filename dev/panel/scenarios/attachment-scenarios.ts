@@ -1,17 +1,17 @@
 // A parent-started review whose request carries attachments of every kind,
 // including one whose stored file is missing, a parent follow-up with two more,
 // and a user follow-up with an uploaded image and PDF.
-import type { TaskAttachment } from "../../../src/shared/attachments/model";
-import { REQUEST_ID } from "../../../src/shared/tasks/conversation/messages";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { TaskAttachment } from "../../../src/core/shared/attachments/model";
+import { REQUEST_ID } from "../../../src/core/shared/tasks/conversation/messages";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 
 const ID = "preview-attachments";
 
-const diff = `diff --git a/src/service/features/tasks/conversation/session-prompts.ts b/src/service/features/tasks/conversation/session-prompts.ts
---- a/src/service/features/tasks/conversation/session-prompts.ts
-+++ b/src/service/features/tasks/conversation/session-prompts.ts
+const diff = `diff --git a/src/core/service/features/tasks/conversation/session-prompts.ts b/src/core/service/features/tasks/conversation/session-prompts.ts
+--- a/src/core/service/features/tasks/conversation/session-prompts.ts
++++ b/src/core/service/features/tasks/conversation/session-prompts.ts
 @@ -46,8 +46,10 @@ export class SessionPrompts {
      const workspaceContext = this.workspaceContext(t);
 +    const attachments = this.attachmentList(t);
@@ -24,9 +24,9 @@ const diff = `diff --git a/src/service/features/tasks/conversation/session-promp
 +      ...(t.context ?? []),
 +      ...(attachments ? [attachments] : []),
        ...(transcript ? [transcript] : []),
-diff --git a/src/service/features/tasks/storage/stored.ts b/src/service/features/tasks/storage/stored.ts
---- a/src/service/features/tasks/storage/stored.ts
-+++ b/src/service/features/tasks/storage/stored.ts
+diff --git a/src/core/service/features/tasks/storage/stored.ts b/src/core/service/features/tasks/storage/stored.ts
+--- a/src/core/service/features/tasks/storage/stored.ts
++++ b/src/core/service/features/tasks/storage/stored.ts
 @@ -51,5 +51,5 @@ const storedTaskSchema = z.looseObject({
    workspace_strategy: z.enum(["worktree", "current_repo"]),
    no_git: z.literal(true).optional(),
@@ -132,7 +132,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The prompt builder as committed, for comparing section order.",
       format: "code",
       source: "file",
-      path: "src/service/features/tasks/conversation/session-prompts.ts",
+      path: "src/core/service/features/tasks/conversation/session-prompts.ts",
       file: "request-2-session-prompts-ts-44-55.ts",
       chars: code.length,
       lines: lines(code),
@@ -187,7 +187,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The attachment count limit, as proposed in the chat.",
       format: "code",
       source: "inline",
-      path: "src/shared/attachments/attachment-count-limits-proposed-in-the-chat.ts",
+      path: "src/core/shared/attachments/attachment-count-limits-proposed-in-the-chat.ts",
       file: "request-6-attachment-count-limits-proposed-in-the-chat.ts",
       chars: snippet.length,
       lines: lines(snippet),
@@ -225,7 +225,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The legacy prompt test that now fails.",
       format: "code",
       source: "file",
-      path: "src/service/features/tasks/conversation/session-prompts.test.ts",
+      path: "src/core/service/features/tasks/conversation/session-prompts.test.ts",
       file: `${FOLLOW_UP}-2-session-prompts-test-ts-12-20.ts`,
       chars: legacyTest.length,
       lines: lines(legacyTest),

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -78,18 +78,18 @@ const importForms = [
 test("production boundaries reject each forbidden dependency target", async () => {
   for (const [filePath, targets] of [
     [
-      "src/service/features/tasks/runtime/example.ts",
+      "src/core/service/features/tasks/runtime/example.ts",
       [
-        "../../../../panel/app/app.js",
-        "../../../../../dev/service/fixture-provider.js",
-        "../../../../../tests/support/helpers.js",
+        "../../../../../panel/app/app.js",
+        "../../../../../../dev/service/fixture-provider.js",
+        "../../../../../../tests/support/helpers.js",
         "./control.test.js",
       ],
     ],
     [
       "src/panel/features/tasks/chat/example.ts",
       [
-        "../../../../service/platform/panel/panel.js",
+        "../../../../core/service/platform/panel/panel.js",
         "../../../../../dev/panel/scenarios/fixtures.js",
         "../../../../../tests/support/helpers.js",
         "../../../app/state/controller-test-harness",
@@ -98,12 +98,12 @@ test("production boundaries reject each forbidden dependency target", async () =
       ],
     ],
     [
-      "src/shared/tasks/example.ts",
+      "src/core/shared/tasks/example.ts",
       [
         "../../service/features/tasks/runtime/control.js",
-        "../../panel/app/state/controller.js",
-        "../../../dev/panel/scenarios/fixtures.js",
-        "../../../tests/support/helpers.js",
+        "../../../panel/app/state/controller.js",
+        "../../../../dev/panel/scenarios/fixtures.js",
+        "../../../../tests/support/helpers.js",
         "node:path",
         "path",
         "@anthropic-ai/claude-agent-sdk",
@@ -123,14 +123,14 @@ test("production boundaries reject each forbidden dependency target", async () =
 // Syntax dispatch and dependency ownership are independent. Exercise each
 // visitor with an allowed and forbidden target instead of their full product.
 test("every supported import syntax enforces the same ownership boundary", async () => {
-  const file = "src/service/features/tasks/runtime/example.ts";
+  const file = "src/core/service/features/tasks/runtime/example.ts";
 
   for (const form of importForms) {
     assert.equal(
-      (await boundaryMessages(file, form("../../../../panel/app/app.js")))
+      (await boundaryMessages(file, form("../../../../../panel/app/app.js")))
         .length,
       1,
-      `Must reject ${form("../../../../panel/app/app.js")}`,
+      `Must reject ${form("../../../../../panel/app/app.js")}`,
     );
 
     assert.deepEqual(await boundaryMessages(file, form("./control.js")), []);
@@ -139,7 +139,7 @@ test("every supported import syntax enforces the same ownership boundary", async
 
 test("only the Claude-owned shared contract can import SDK types, and never SDK values", async () => {
   const sdk = "@anthropic-ai/claude-agent-sdk";
-  const contract = "src/shared/providers/claude/events.ts";
+  const contract = "src/providers/claude/shared/events.ts";
 
   for (const source of [
     `import type { Thing } from "${sdk}";`,
@@ -150,7 +150,8 @@ test("only the Claude-owned shared contract can import SDK types, and never SDK 
     assert.deepEqual(await boundaryMessages(contract, source), []);
 
     assert.equal(
-      (await boundaryMessages("src/shared/events/types.ts", source)).length,
+      (await boundaryMessages("src/core/shared/events/types.ts", source))
+        .length,
       1,
     );
   }
@@ -160,4 +161,50 @@ test("only the Claude-owned shared contract can import SDK types, and never SDK 
       .length,
     1,
   );
+});
+
+test("production imports follow owner and runtime boundaries", async () => {
+  const core = "src/core/service/example.ts";
+  const shared = "src/core/shared/example.ts";
+  const provider = "src/providers/example/service/example.ts";
+  const other = "src/providers/other/shared/example.ts";
+  const host = "src/hosts/example/service/example.ts";
+  const panel = "src/panel/example.ts";
+  const main = "src/main.ts";
+
+  for (const [file, allowed, forbidden] of [
+    [core, [shared], [provider, host, main]],
+    [provider, [core], [host, other, main]],
+    [host, [core, provider], ["src/hosts/other/service/example.ts", main]],
+    [panel, [shared], [core, other, main]],
+    [main, [core, provider, host], [panel]],
+  ] as const) {
+    for (const target of [...allowed, ...forbidden]) {
+      const messages = await boundaryMessages(
+        file,
+        `import "./${posix.relative(posix.dirname(file), target)}";`,
+      );
+
+      assert.equal(
+        messages.length,
+        forbidden.some((path) => path === target) ? 1 : 0,
+        `${file} imports ${target}`,
+      );
+    }
+  }
+});
+
+test("an exception covers its named owner and expires when unused", async () => {
+  const file = "src/core/shared/providers/settings.ts";
+  const permitted = 'import "../../../providers/claude/shared/settings.js";';
+  assert.deepEqual(await boundaryMessages(file, permitted), []);
+
+  const wrongOwner = await boundaryMessages(
+    file,
+    permitted + 'import "../../../providers/other/shared/settings.js";',
+  );
+
+  assert.equal(wrongOwner.length, 1);
+  const stale = await boundaryMessages(file, 'import "./types.js";');
+  assert.match(stale[0]?.message ?? "", /unused dependency exception/);
 });

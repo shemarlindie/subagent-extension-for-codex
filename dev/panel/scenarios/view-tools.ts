@@ -1,10 +1,10 @@
-import type { PanelView } from "../../../src/panel/app/state/panel-view";
-import type { PlanUsage } from "../../../src/shared/providers/plan-usage";
+import type { PlanUsage } from "../../../src/core/shared/providers/plan-usage";
 import {
   panelSettingsDefaults,
   type PanelSettings,
-} from "../../../src/shared/settings/settings-schema";
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
+} from "../../../src/core/shared/settings/settings-schema";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
+import type { PanelView } from "../../../src/panel/app/state/panel-view";
 
 type WaitRead = { revision: string; draft?: Draft | null };
 
@@ -47,7 +47,7 @@ type PartRead = (part: ViewPart, args: Record<string, unknown>) => unknown;
 
 /**
  * Builds the view an update wait asked for from each part's own read, as
- * `waitForUpdates` in `src/service/features/tasks/conversation/updates.ts`
+ * `waitForUpdates` in `src/core/service/features/tasks/conversation/updates.ts`
  * does. Parts the wait didn't ask for are left out.
  */
 function composeView(view: unknown, read: PartRead): PanelView {

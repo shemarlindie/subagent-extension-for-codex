@@ -6,7 +6,7 @@ import { composeHeldView } from "../../../../dev/panel/scenarios/view-tools";
 import {
   panelSettingsDefaults,
   settingsDefaults,
-} from "../../../shared/settings/settings-schema";
+} from "../../../core/shared/settings/settings-schema";
 import { decodePanelToolResult } from "../../transports/event-decoding";
 import { Controller } from "./controller";
 import type {
