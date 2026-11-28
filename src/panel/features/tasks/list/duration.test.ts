@@ -7,6 +7,7 @@ import { runtimeLive, taskRuntimeMs } from "./duration";
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({
+    provider: "claude",
     repository: "/repo",
     title: "t",
     description: "t",

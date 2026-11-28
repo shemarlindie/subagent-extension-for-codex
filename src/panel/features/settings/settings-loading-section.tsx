@@ -60,9 +60,12 @@ export function LoadingSettingsSection({
 
 // Use the shared settings definitions for all structure that is known before
 // the settings read. Dynamic provider scopes are added after the read returns.
-export const loadingSections = buildSettingsSections({
-  values: {},
-  providers: [],
-  catalogs: [],
-  modelProviders: [],
-});
+let placeholders: SettingSection[] | undefined;
+
+export const loadingSections = () =>
+  (placeholders ??= buildSettingsSections({
+    values: {},
+    providers: [],
+    catalogs: [],
+    modelProviders: [],
+  }));

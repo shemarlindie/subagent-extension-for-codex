@@ -1,3 +1,5 @@
+import "../../dev/register-providers.js";
+
 // The built console and real HTTP/task/storage layers, with no model calls.
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { createServer } from "node:http";

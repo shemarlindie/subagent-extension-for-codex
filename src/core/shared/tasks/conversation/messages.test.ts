@@ -8,6 +8,7 @@ import { conversation } from "./messages.js";
 
 const task: Task = {
   ...startSchema.parse({
+    provider: "claude",
     repository: "/repo",
     description: "Review the parser",
   }),

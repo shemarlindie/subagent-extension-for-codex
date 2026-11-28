@@ -177,6 +177,7 @@ test("production imports follow owner and runtime boundaries", async () => {
     [provider, [core], [host, other, main]],
     [host, [core, provider], ["src/hosts/other/service/example.ts", main]],
     [panel, [shared], [core, other, main]],
+    ["src/panel/app/app.ts", [shared, other], [provider, host, main]],
     [main, [core, provider, host], [panel]],
   ] as const) {
     for (const target of [...allowed, ...forbidden]) {
@@ -195,13 +196,13 @@ test("production imports follow owner and runtime boundaries", async () => {
 });
 
 test("an exception covers its named owner and expires when unused", async () => {
-  const file = "src/core/shared/providers/settings.ts";
-  const permitted = 'import "../../../providers/claude/shared/settings.js";';
+  const file = "src/core/service/platform/server/mcp.ts";
+  const permitted = 'import "../../../../hosts/codex/service/instructions.js";';
   assert.deepEqual(await boundaryMessages(file, permitted), []);
 
   const wrongOwner = await boundaryMessages(
     file,
-    permitted + 'import "../../../providers/other/shared/settings.js";',
+    permitted + 'import "../../../../hosts/other/service/instructions.js";',
   );
 
   assert.equal(wrongOwner.length, 1);

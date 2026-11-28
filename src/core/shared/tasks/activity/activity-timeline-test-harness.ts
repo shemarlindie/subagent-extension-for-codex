@@ -40,6 +40,7 @@ export function sdk(
 export function task(status: Task["status"]): Task {
   return {
     ...startSchema.parse({
+      provider: "claude",
       repository: "/repo",
       description: "Review",
       worker_profile: "reviewer",

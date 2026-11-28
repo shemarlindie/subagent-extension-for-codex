@@ -828,7 +828,9 @@ test("Claude session restrictions are scalar user-only settings with stored defa
   const before = f.settings.values("alice");
 
   assert.deepEqual(
-    Object.fromEntries(keys.map((key) => [key, before.providers.claude[key]])),
+    Object.fromEntries(
+      keys.map((key) => [key, before.providers.claude?.[key]]),
+    ),
     claudeOverrideDefaults,
   );
 
@@ -867,10 +869,10 @@ test("Claude session restrictions are scalar user-only settings with stored defa
 
   f.reopen();
   const after = f.settings.values("alice");
-  assert.equal(after.providers.claude.sandbox, true);
-  assert.equal(after.providers.claude.subagents, true);
-  assert.equal(after.providers.claude.settings_files, false);
-  assert.equal(after.providers.claude.user_mcp, false);
+  assert.equal(after.providers.claude?.sandbox, true);
+  assert.equal(after.providers.claude?.subagents, true);
+  assert.equal(after.providers.claude?.settings_files, false);
+  assert.equal(after.providers.claude?.user_mcp, false);
   assert.equal(after.task.budget.max_runtime_minutes.enabled, false);
 
   assert.throws(() =>
@@ -927,7 +929,7 @@ test("execution approval defaults do not change native Claude settings", async (
   });
 
   const values = f.settings.values("alice");
-  assert.equal(values.providers.claude.permission_mode, "plan");
+  assert.equal(values.providers.claude?.permission_mode, "plan");
   assert.equal(values.approvals.decider, "parent_agent");
   assert.equal(values.approvals.execution_mode, "auto_approve");
 

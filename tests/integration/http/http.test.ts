@@ -795,7 +795,11 @@ async function changeService(prefix: string) {
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
   const task = (id: string, owner: string) => ({
-    ...startSchema.parse({ repository, description: "test" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository,
+      description: "test",
+    }),
     id,
     title: "test",
     owner,

@@ -15,7 +15,11 @@ test("Chat cursors return the same items as a full read and list attachments wit
   const attachments = new Attachments(store, "/unused/attachments");
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Move them" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Move them",
+    }),
     id: "task",
     title: "Move them",
     owner: "alice",

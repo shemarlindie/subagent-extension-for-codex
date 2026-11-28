@@ -271,7 +271,7 @@ export function SettingsForm({
           ),
         };
       })
-    : loadingSections.map((section) => ({
+    : loadingSections().map((section) => ({
         id: section.id,
         title: section.title,
         content:
@@ -292,7 +292,7 @@ export function SettingsForm({
       edited: total > 0,
       onImportingChange: setImporting,
     }),
-    aboutSection(search, selectedSection),
+    aboutSection(search, selectedSection, settings?.section_input?.providers),
   );
 
   const activeSectionId = activeSection(selectedSection, sectionViews);

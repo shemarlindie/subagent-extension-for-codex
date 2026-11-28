@@ -7,6 +7,9 @@ import { reasoningLevels } from "./reasoning.js";
 
 export const roles = ["researcher", "reviewer", "implementer"] as const;
 
+export const readOnlyRole = (role: string) =>
+  role === "researcher" || role === "reviewer";
+
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
 
@@ -60,7 +63,6 @@ export const startSchema = z.object({
   provider: z
     .string()
     .regex(/^[a-z][a-z0-9_-]{0,39}$/)
-    .default("claude")
     .describe(
       "Worker provider id from list_workers; only enabled providers can run.",
     ),
@@ -68,7 +70,7 @@ export const startSchema = z.object({
     .enum(roles)
     .default("implementer")
     .describe(
-      "reviewer and researcher start in plan mode, which asks before editing, unless provider_options.claude.permission_mode names another mode. implementer can edit its workspace.",
+      "Reviewer and researcher start read-only unless the provider permission option selects another mode. Implementer can edit its workspace.",
     ),
   model: modelNameSchema
     .optional()

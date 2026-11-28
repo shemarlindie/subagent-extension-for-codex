@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { readOnlyRole } from "../../../core/shared/tasks/model.js";
 import { titleCase } from "../../../core/shared/text.js";
 
 export const claudePermissionModes = [
@@ -67,7 +68,7 @@ export const permissionModeName = (mode: string) =>
  * A permission mode's label shortened for a chip: "Plan — read only" reads
  * "Plan", and the default mode reads by what it does, "Ask for approval".
  */
-export function shortPermissionLabel(label: string) {
+function shortPermissionLabel(label: string) {
   // Keeps the mode it names, as in "Extension setting (Auto)".
   if (label.startsWith("Use extension setting")) {
     return label.replace("Use extension setting", "Extension setting");
@@ -87,9 +88,6 @@ const permissionRank: Partial<Record<ClaudePermissionMode, number>> = {
   bypassPermissions: 5,
 };
 
-export const readOnlyProfile = (role: string) =>
-  ["researcher", "reviewer"].includes(role);
-
 /**
  * A task's mode: the one it asks for, else `plan` for a read-only profile,
  * else the saved setting.
@@ -103,7 +101,7 @@ export function resolveClaudePermission(
     return { mode: input.permission_mode, source: "task" as const };
   }
 
-  if (readOnlyProfile(workerProfile)) {
+  if (readOnlyRole(workerProfile)) {
     return { mode: "plan" as const, source: "profile" as const };
   }
 

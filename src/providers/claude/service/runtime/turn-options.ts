@@ -1,11 +1,9 @@
 import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
 
 import type { RunContext } from "../../../../core/service/features/providers/types.js";
+import { readOnlyRole } from "../../../../core/shared/tasks/model.js";
 import type { Task } from "../../../../core/shared/tasks/model.js";
-import {
-  readOnlyProfile,
-  type ClaudePolicy,
-} from "../../shared/permissions.js";
+import { type ClaudePolicy } from "../../shared/permissions.js";
 import { readClaudeTaskOptions } from "../../shared/task-options.js";
 import {
   adminTokenRule,
@@ -172,7 +170,7 @@ export async function claudeTurnOptions(
       // It publishes to the signed-in claude.ai account, outside the task.
       "Artifact",
       ...(policy.subagents ? [] : ["Agent", "Task"]),
-      ...(readOnlyProfile(c.task.worker_profile) ? ["ExitPlanMode"] : []),
+      ...(readOnlyRole(c.task.worker_profile) ? ["ExitPlanMode"] : []),
     ],
     ...(c.task.budget.max_cost_usd === null
       ? {}

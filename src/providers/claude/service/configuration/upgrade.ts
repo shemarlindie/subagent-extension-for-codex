@@ -3,7 +3,7 @@ import { access, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import type { ClaudeUpgradeInfo } from "../../../../core/shared/about/types.js";
+import type { ProviderUpgradeInfo } from "../../../../core/shared/about/types.js";
 import { locateClaudeCli, type ClaudeCliEnvironment } from "./executable.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
@@ -26,7 +26,7 @@ export async function claudeUpgradeInfo(
     platform: process.platform,
   },
   home = homedir(),
-): Promise<ClaudeUpgradeInfo> {
+): Promise<ProviderUpgradeInfo> {
   const unknown = {
     installation: "Unidentified",
     note: "Use the installer or package manager that provided this executable. The service cannot determine a command that targets this installation.",

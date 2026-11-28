@@ -7,7 +7,7 @@ import {
 } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../../providers/claude/shared/permissions";
+import { readOnlyRole } from "../../../../core/shared/tasks/model.js";
 import {
   useController,
   useSnapshot,
@@ -81,7 +81,13 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
   const [error, setError] = useState<string>();
 
   useAsyncDefaults(form, initialValues, savedAtMount);
-  useProfileMode(form, initialValues.permission_mode, savedAtMount);
+
+  useProfileMode(
+    form,
+    initialValues.permission_mode,
+    scope.workers,
+    savedAtMount,
+  );
 
   // Keep the message and changed options in session memory until sent.
   useEffect(() => {
@@ -283,7 +289,7 @@ export function NewTaskComposer({ newTask }: NewTaskComposerProps) {
               note={workspaceNote({
                 git: projectGit(scope, repository),
                 savedStrategy: newTask.defaults?.task.workspace_strategy,
-                readOnly: readOnlyProfile(workerChoice(worker).profile ?? ""),
+                readOnly: readOnlyRole(workerChoice(worker).profile ?? ""),
               })}
             />
           </div>

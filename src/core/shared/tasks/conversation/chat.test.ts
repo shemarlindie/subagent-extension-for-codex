@@ -10,6 +10,7 @@ import { READ_EVENTS } from "./unread.js";
 
 const task: Task = {
   ...startSchema.parse({
+    provider: "claude",
     repository: "/repo",
     description: "Move the helpers",
   }),

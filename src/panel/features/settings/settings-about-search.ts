@@ -12,12 +12,6 @@ const ABOUT_ROW_KEYWORDS: Record<string, Record<string, string[]>> = {
     Commit: ["git", "build"],
     "Working tree snapshot": ["git", "dirty", "uncommitted"],
   },
-  Claude: {
-    "Claude Code CLI": ["version", "update", "upgrade", "recheck"],
-    "CLI status": ["ready", "readiness"],
-    Installation: ["Homebrew", "native", "npm", "update", "upgrade"],
-    Executable: ["path", "binary"],
-  },
   SDKs: {
     "Claude Agent SDK": ["version"],
     "MCP SDK": ["version"],
@@ -33,10 +27,23 @@ const ABOUT_ROW_KEYWORDS: Record<string, Record<string, string[]>> = {
 
 const DIAGNOSTICS_KEYWORDS = "diagnostics copy bug report";
 
-const rowText = (group: string, label: string) =>
-  ["About", group, label, ...(ABOUT_ROW_KEYWORDS[group]?.[label] ?? [])].join(
-    " ",
-  );
+const CLI_KEYWORDS: Record<string, string[]> = {
+  "CLI status": ["ready", "readiness"],
+  Installation: ["Homebrew", "native", "npm", "update", "upgrade"],
+  Executable: ["path", "binary"],
+};
+
+function rowText(group: string, label: string) {
+  const keywords = ABOUT_ROW_KEYWORDS[group];
+
+  const cliTerms = label.endsWith(" CLI")
+    ? ["version", "update", "upgrade", "recheck"]
+    : CLI_KEYWORDS[label];
+
+  const terms = keywords ? keywords[label] : cliTerms;
+
+  return ["About", group, label, ...(terms ?? [])].join(" ");
+}
 
 // An empty search matches everything.
 export const aboutRowMatches = (
@@ -49,11 +56,23 @@ export const aboutDiagnosticsMatch = (search: SettingsSearch) =>
   search.matches(`About ${DIAGNOSTICS_KEYWORDS}`);
 
 /** Counts matching rows, including ones only some installations show. */
-export function aboutSearchMatches(search: SettingsSearch) {
-  const rows = Object.entries(ABOUT_ROW_KEYWORDS).flatMap(([group, labels]) =>
-    Object.keys(labels).filter((label) =>
-      aboutRowMatches(search, group, label),
+export function aboutSearchMatches(
+  search: SettingsSearch,
+  providers: { displayName: string; cliName: string }[],
+) {
+  const rows = [
+    ...Object.entries(ABOUT_ROW_KEYWORDS).map(
+      ([group, labels]) => [group, Object.keys(labels)] as const,
     ),
+    ...providers.map(
+      ({ displayName, cliName }) =>
+        [
+          displayName,
+          [`${cliName} CLI`, ...Object.keys(CLI_KEYWORDS)],
+        ] as const,
+    ),
+  ].flatMap(([group, labels]) =>
+    labels.filter((label) => aboutRowMatches(search, group, label)),
   );
 
   return rows.length + (aboutDiagnosticsMatch(search) ? 1 : 0);

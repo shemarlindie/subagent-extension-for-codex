@@ -1,12 +1,16 @@
 import { useController as useFieldController } from "react-hook-form";
 
-import { shortPermissionLabel } from "../../../../../providers/claude/shared/permissions";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
 
 type PermissionChipProps = {
   /** The provider's native permission modes, absent when it has none. */
-  options?: { value: string; label: string; disabled?: boolean }[];
+  options?: {
+    value: string;
+    label: string;
+    shortLabel?: string;
+    disabled?: boolean;
+  }[];
   loading: boolean;
   disabled: boolean;
 };
@@ -28,7 +32,7 @@ export function permissionChipLabel(
 ) {
   const option = options?.find((candidate) => candidate.value === value);
 
-  return option && shortPermissionLabel(option.label);
+  return option?.shortLabel ?? option?.label;
 }
 
 /** Chooses the provider's native permission mode for the task. */
@@ -53,7 +57,7 @@ export function PermissionChip({
       disabled={disabled}
       options={(options ?? []).map((option) => ({
         ...option,
-        chipLabel: chipText(shortPermissionLabel(option.label)),
+        chipLabel: chipText(option.shortLabel ?? option.label),
       }))}
     />
   );

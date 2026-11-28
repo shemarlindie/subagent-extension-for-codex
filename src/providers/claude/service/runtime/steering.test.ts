@@ -55,7 +55,11 @@ async function context() {
   let sink: ((steer: Steer) => boolean) | undefined;
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Review" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Review",
+    }),
     repository: workspace,
     workspace,
     id: "task-steering",

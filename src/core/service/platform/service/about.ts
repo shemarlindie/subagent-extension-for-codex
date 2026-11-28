@@ -1,16 +1,11 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 
-import compareVersions from "semver/functions/compare.js";
-
-import { claudeCliSupport } from "../../../../providers/claude/service/configuration/executable.js";
-import { claudeUpgradeInfo } from "../../../../providers/claude/service/configuration/upgrade.js";
 import type {
   AboutInfo,
   ExtensionBuildInfo,
 } from "../../../shared/about/types.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
-import { logEvent } from "../logging/logger.js";
 import { collectBuildInfo } from "./build-info.js";
 import { serviceIdentity } from "./identity.js";
 import { dataDirectory, installRoot, packagePath } from "./runtime.js";
@@ -27,26 +22,17 @@ export async function aboutInfo(
   c: Control,
   refresh = false,
 ): Promise<AboutInfo> {
-  const claude = await c.providers.get("claude")?.readiness?.({ refresh });
-  const version = claude?.details.version;
-
-  const upgrade = claude
-    ? await claudeUpgradeInfo(version ? claude.details.executable : undefined)
-    : undefined;
-
-  if (refresh) {
-    logEvent("info", "about.claude_rechecked", {
-      ready: claude?.ready,
-      problem: claude?.details.problem,
-      version,
-      executable: claude?.details.executable,
-      installation: upgrade?.installation,
-    });
-  }
+  const providers = await Promise.all(
+    [...c.providers.values()].flatMap((provider) =>
+      provider.about
+        ? [provider.about(refresh).then((info) => [provider.id, info] as const)]
+        : [],
+    ),
+  );
 
   return {
     build,
-    installation: existsSync(packagePath("src", "service", "main.ts"))
+    installation: existsSync(packagePath("src", "main.ts"))
       ? "checkout"
       : "package",
     runtime: {
@@ -56,14 +42,7 @@ export async function aboutInfo(
       launcher: serviceIdentity().launcher,
       data_directory: dataDirectory(),
     },
-    claude,
-    claude_recommended: version
-      ? {
-          version: claudeCliSupport.paired,
-          behind: compareVersions(version, claudeCliSupport.paired) < 0,
-        }
-      : undefined,
-    claude_upgrade: upgrade,
+    providers: Object.fromEntries(providers),
   };
 }
 

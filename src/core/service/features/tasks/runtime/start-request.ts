@@ -1,9 +1,9 @@
-import { readOnlyProfile } from "../../../../../providers/claude/shared/permissions.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import type {
-  InputAuthority,
-  Start,
-  Task,
+import {
+  readOnlyRole,
+  type InputAuthority,
+  type Start,
+  type Task,
 } from "../../../../shared/tasks/model.js";
 import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";
@@ -115,7 +115,7 @@ export async function resolveProjectWorkspace(
 
   return {
     workspace_strategy: "current_repo",
-    ...(!readOnlyProfile(req.worker_profile)
+    ...(!readOnlyRole(req.worker_profile)
       ? { workspace_fallback: state === "none" ? "no_git" : "no_commits" }
       : {}),
   };

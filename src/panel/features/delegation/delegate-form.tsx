@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type SubmitEvent } from "react";
 import { useWatch } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../providers/claude/shared/permissions";
+import { readOnlyRole } from "../../../core/shared/tasks/model.js";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import type { Snapshot, Task } from "../../app/state/types";
@@ -86,7 +86,13 @@ function DelegateForm({ dialog }: DelegateFormProps) {
   );
 
   useAsyncDefaults(form, initialValues, persistedDraft.current);
-  useProfileMode(form, initialValues.permission_mode, persistedDraft.current);
+
+  useProfileMode(
+    form,
+    initialValues.permission_mode,
+    scope.workers,
+    persistedDraft.current,
+  );
 
   const [repository, selectedWorker] = useWatch({
     control: form.control,
@@ -286,7 +292,7 @@ function DelegateForm({ dialog }: DelegateFormProps) {
         note={workspaceNote({
           git,
           savedStrategy,
-          readOnly: readOnlyProfile(workerChoice(selectedWorker).profile ?? ""),
+          readOnly: readOnlyRole(workerChoice(selectedWorker).profile ?? ""),
         })}
       />
       <WorkerField

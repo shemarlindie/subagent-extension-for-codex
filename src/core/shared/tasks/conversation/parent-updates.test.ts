@@ -7,7 +7,11 @@ import { startSchema, type Task } from "../model.js";
 import { parentUpdate } from "./parent-updates.js";
 
 const task: Task = {
-  ...startSchema.parse({ repository: "/repo", description: "Cache prices" }),
+  ...startSchema.parse({
+    provider: "claude",
+    repository: "/repo",
+    description: "Cache prices",
+  }),
   id: "task",
   title: "Cache prices",
   owner: "alice",

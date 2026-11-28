@@ -68,7 +68,11 @@ test("a view and its revision include a write that lands while the view waits fo
   t.onTestFinished(() => store.close());
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Move them" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Move them",
+    }),
     id: "task",
     title: "Move them",
     owner: "alice",

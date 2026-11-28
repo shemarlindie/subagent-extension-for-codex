@@ -1,3 +1,4 @@
+import { providerMetadata } from "../../../core/shared/providers/metadata";
 import { useSnapshot } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Presence } from "../../shared/components/motion/presence";
@@ -7,6 +8,7 @@ import {
   type UserDateTimePreferences,
 } from "../../shared/utils/user-date-time";
 import { signInExpiry, type SignInExpiry } from "./sign-in-expiry";
+import type { Worker } from "./types";
 import { useSignInExpiryDismissal } from "./use-sign-in-expiry-dismissal";
 
 const dateOnly = {
@@ -16,29 +18,36 @@ const dateOnly = {
   timeZoneName: undefined,
 } satisfies Intl.DateTimeFormatOptions;
 
-const signIn = <code>claude auth login</code>;
+type ExpiringSignIn = { name: string; command: string; expiry: SignInExpiry };
 
 /**
- * Says when Claude's stored claude.ai sign-in ends and how to sign in again,
+ * Says when a ready worker's stored sign-in ends and how to sign in again,
  * from 10 days before. Dismissing hides it for a day.
  */
-export function SignInExpiryNotice() {
-  const workers = useSnapshot((state) => state.workers);
+export function SignInExpiryNotice({ worker }: { worker: Worker }) {
   const host = useSnapshot((state) => state.host);
-  const claude = workers.find(({ provider }) => provider === "claude");
+  const { hidden, dismiss } = useSignInExpiryDismissal(worker.provider);
+  const metadata = providerMetadata(worker.provider, worker.metadata);
 
-  const { hidden, dismiss } = useSignInExpiryDismissal();
-
-  const expiry = claude?.readiness?.ready
-    ? signInExpiry(claude.readiness.credential_expires_at)
+  const expiry = worker.readiness?.ready
+    ? signInExpiry(worker.readiness.credential_expires_at)
     : undefined;
 
+  const signIn =
+    metadata?.signInCommand && expiry
+      ? {
+          name: metadata.displayName,
+          command: metadata.signInCommand,
+          expiry,
+        }
+      : undefined;
+
   return (
-    <Presence show={Boolean(expiry) && !hidden}>
-      {expiry && (
+    <Presence show={Boolean(signIn) && !hidden}>
+      {signIn && (
         <div className="worker-readiness" role="status">
           <Notice className="sign-in-expiry">
-            <p>{expiryText(expiry, host)}</p>
+            <p>{expiryText(signIn, host)}</p>
             <Button variant="text" onClick={dismiss}>
               Dismiss
             </Button>
@@ -50,17 +59,21 @@ export function SignInExpiryNotice() {
 }
 
 /** The notice text, with the date in the host's zone. */
-function expiryText(expiry: SignInExpiry, host: UserDateTimePreferences) {
+function expiryText(
+  { name, command, expiry }: ExpiringSignIn,
+  host: UserDateTimePreferences,
+) {
   const date = formatUserDateTime(expiry.endsAt, host, dateOnly);
+  const signIn = <code>{command}</code>;
 
   return expiry.ended ? (
     <>
-      Claude sign-in may have ended. If tasks are refused, run {signIn} in a
+      {name} sign-in may have ended. If tasks are refused, run {signIn} in a
       terminal to sign in again.
     </>
   ) : (
     <>
-      Claude sign-in ends by {date}. Run {signIn} in a terminal to sign in
+      {name} sign-in ends by {date}. Run {signIn} in a terminal to sign in
       again.
     </>
   );

@@ -20,6 +20,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 
 const task = (patch: Partial<Task>): Task => ({
   ...startSchema.parse({
+    provider: "claude",
     repository: "/repo",
     title: "t",
     description: "t",

@@ -107,6 +107,7 @@ function registerPanelComponents(): Plugin {
 export default defineConfig({
   plugins: [react(), registerPanelComponents()],
   test: {
+    setupFiles: ["./dev/register-providers.ts"],
     include: ["tests/ui/render-audit/render-report.report.ts"],
     environment: "jsdom",
     environmentOptions: {

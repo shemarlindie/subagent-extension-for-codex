@@ -24,11 +24,18 @@ export const previewAbout = (
     launcher: "stdio",
     data_directory: "/Users/avery/.local/share/subagent-extension-for-codex",
   },
-  claude,
-  claude_recommended: { version: "2.1.328", behind },
-  claude_upgrade: {
-    installation: "Homebrew (stable)",
-    command: "'/opt/homebrew/bin/brew' upgrade --cask claude-code",
-    note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel.",
+  providers: {
+    claude: {
+      displayName: "Claude",
+      cliName: "Claude Code",
+      readiness: claude,
+      updateUrl: "https://code.claude.com/docs/en/setup#update-claude-code",
+      recommended: { version: "2.1.328", behind },
+      upgrade: {
+        installation: "Homebrew (stable)",
+        command: "'/opt/homebrew/bin/brew' upgrade --cask claude-code",
+        note: "Run in a terminal after delegated turns finish. This keeps the installed cask and release channel.",
+      },
+    },
   },
 });

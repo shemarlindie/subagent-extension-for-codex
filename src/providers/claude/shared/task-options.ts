@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { optionsForProvider } from "../../../core/shared/providers/options.js";
 import {
+  contextUsageSchema,
+  promptCacheSchema,
+} from "../../../core/shared/providers/session-reports.js";
+import {
   approvalDeciderSchema,
   type Task,
 } from "../../../core/shared/tasks/model.js";
@@ -33,36 +37,6 @@ export type ClaudeEffectiveSettings = z.infer<
   typeof claudeEffectiveSettingsSchema
 >;
 
-/**
- * When the session's latest main request started and how long its prompt
- * cache lives.
- */
-const claudePromptCacheSchema = z.strictObject({
-  requested_at: z.iso.datetime(),
-  ttl: z.enum(["5m", "1h"]),
-});
-
-export type ClaudePromptCache = z.infer<typeof claudePromptCacheSchema>;
-
-/**
- * How full the session's context window was after its latest main response,
- * as Claude Code's `/context` reports it. `auto_compact_tokens` is absent when
- * auto-compact is off.
- */
-const claudeContextUsageSchema = z.strictObject({
-  total_tokens: z.number().nonnegative(),
-  window_tokens: z.number().positive(),
-  auto_compact_tokens: z.number().positive().optional(),
-  categories: z.array(
-    z.strictObject({
-      name: z.string(),
-      tokens: z.number().positive(),
-    }),
-  ),
-});
-
-export type ClaudeContextUsage = z.infer<typeof claudeContextUsageSchema>;
-
 /** Options stored on a task, with the permission mode resolved. */
 export const claudeTaskOptionsSchema = z.strictObject({
   permission_mode: claudePermissionModeSchema,
@@ -70,8 +44,8 @@ export const claudeTaskOptionsSchema = z.strictObject({
   permission_source: z.enum(["task", "profile", "setting"]),
   claude_policy: claudePolicySchema,
   effective: claudeEffectiveSettingsSchema.optional(),
-  prompt_cache: claudePromptCacheSchema.optional(),
-  context_usage: claudeContextUsageSchema.optional(),
+  prompt_cache: promptCacheSchema.optional(),
+  context_usage: contextUsageSchema.optional(),
 });
 
 export function readClaudeTaskOptions(task: Pick<Task, "provider_options">) {

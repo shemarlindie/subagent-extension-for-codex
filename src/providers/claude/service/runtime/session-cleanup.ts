@@ -12,6 +12,31 @@ import type { Task } from "../../../../core/shared/tasks/model.js";
 
 type SessionLocation = Pick<Task, "session_id" | "session_state_ref">;
 
+/** Claude Code's folder of project transcripts, before resolving links. */
+const projectsRoot = () =>
+  resolve(
+    (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
+      "NFC",
+    ),
+    "projects",
+  );
+
+/** The real path of each project folder's transcript with this session ID. */
+export async function sessionPaths(id: string) {
+  const root = projectsRoot();
+  const paths: string[] = [];
+
+  try {
+    for (const d of await readdir(root)) {
+      try {
+        paths.push(await realpath(join(root, d, `${id}.jsonl`)));
+      } catch {}
+    }
+  } catch {}
+
+  return paths;
+}
+
 export async function claudeSessionDeletionStatus(
   task: SessionLocation,
 ): Promise<SessionDeletionStatus> {
@@ -108,12 +133,7 @@ async function sessionProject(task: SessionLocation) {
     throw new Error("The Claude session location was not recorded.");
   }
 
-  const configuredRoot = resolve(
-    (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
-      "NFC",
-    ),
-    "projects",
-  );
+  const configuredRoot = projectsRoot();
 
   let root = configuredRoot;
 

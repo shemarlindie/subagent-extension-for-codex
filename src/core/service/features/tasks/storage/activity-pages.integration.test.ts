@@ -17,7 +17,11 @@ function fixture(t: TestContext) {
   t.onTestFinished(() => store.close());
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Activity" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Activity",
+    }),
     title: "Activity",
     id: "activity",
     owner: "alice",

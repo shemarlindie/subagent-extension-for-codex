@@ -28,6 +28,9 @@ import {
   holdPresence,
   serviceClient,
 } from "../../../core/service/platform/service/service-client.js";
+import { registerProviders } from "../../../core/shared/providers/registry.js";
+import { claudeDefinition } from "../../../providers/claude/shared/definition.js";
+import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import {
   claudeMentionResource,
@@ -40,6 +43,8 @@ import {
   resolveMentionSearchEnv,
   searchAgentMentions,
 } from "./mentions.js";
+
+registerProviders([claudeDefinition, fixtureDefinition]);
 
 const service = serviceClient(async () => {
   const connection = await connectService();

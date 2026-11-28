@@ -15,7 +15,11 @@ const repository = `${root}/repo`;
 const workspace = `${root}/wt/task_123`;
 
 const task = {
-  ...startSchema.parse({ description: "Review", repository }),
+  ...startSchema.parse({
+    provider: "claude",
+    description: "Review",
+    repository,
+  }),
   id: "task_123",
   title: "Review",
   owner: "verification",

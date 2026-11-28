@@ -23,6 +23,7 @@ test("Claude preparation checks native permission, approval decider, and effort 
     );
 
     const input = startSchema.parse({
+      provider: "claude",
       repository: "/repo",
       description: "Review",
     });

@@ -93,12 +93,19 @@ Oxlint checks production imports by owner and runtime.
 
 - Core imports other core modules. A provider imports core and its own modules.
   A host can also import providers.
-- The panel imports its own modules and browser-safe core contracts.
+- The panel imports its own modules and browser-safe core contracts. Its entry
+  point in `src/panel/app/app.ts` can also import provider definitions.
 - The service entrypoint in `src/main.ts` can import core, providers and hosts.
   Other production modules cannot import the entrypoint.
 
-The rule lists existing exceptions by source file and target owner for core and
-panel imports of Claude and Codex modules. An unused exception fails lint.
+The service entrypoint, panel entrypoint and Codex stdio proxy register the
+browser-safe provider definitions before reading settings or tool schemas.
+Claude comes first and supplies the default worker. The fixture definition keeps
+its model settings available. Each service entrypoint chooses which workers to
+construct through its runtime registrations.
+
+Core still has two explicit import exceptions for Codex host integration. An
+unused exception fails lint.
 
 Service code runs in Node. Panel and shared modules cannot import service code
 or Node built-ins. Shared modules cannot import database or Claude SDK runtime
