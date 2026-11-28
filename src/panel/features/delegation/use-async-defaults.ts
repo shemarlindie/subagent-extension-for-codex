@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../providers/claude/shared/permissions";
+import { providerMetadata } from "../../../core/shared/providers/metadata";
+import { readOnlyRole } from "../../../core/shared/tasks/model.js";
+import type { Worker } from "../../app/state/types";
 import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 
@@ -39,14 +41,19 @@ export function useAsyncDefaults(
 export function useProfileMode(
   form: UseFormReturn<DelegateValues>,
   savedMode: string,
+  workers: Worker[],
   saved: Partial<DelegateValues>,
 ) {
   const worker = useWatch({ control: form.control, name: "worker" });
   const previousWorker = useRef(worker);
 
-  const mode = readOnlyProfile(workerChoice(worker).profile ?? "")
-    ? "plan"
-    : savedMode;
+  const { provider, profile } = workerChoice(worker);
+  const metadata = workers.find((info) => info.provider === provider)?.metadata;
+
+  const readOnlyMode = providerMetadata(provider, metadata)?.nativePermissions
+    ?.readOnlyMode;
+
+  const mode = (readOnlyRole(profile ?? "") && readOnlyMode) || savedMode;
 
   useEffect(() => {
     // A blank worker is a placeholder until settings load, not a profile.

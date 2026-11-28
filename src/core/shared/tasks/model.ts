@@ -7,6 +7,9 @@ import { reasoningLevels } from "./reasoning.js";
 
 export const roles = ["researcher", "reviewer", "implementer"] as const;
 
+export const readOnlyRole = (role: string) =>
+  role === "researcher" || role === "reviewer";
+
 export const modelNameSchema = z.string().trim().max(200);
 export const reasoningSchema = z.enum(["default", ...reasoningLevels]);
 

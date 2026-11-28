@@ -1,6 +1,6 @@
-import { optionsForProvider } from "../../../core/shared/providers/options.js";
-import type { TaskView } from "../../../core/shared/tasks/model.js";
-import { claudeTaskOptionsSchema } from "./task-options.js";
+import type { TaskView } from "../tasks/model.js";
+import { optionsForProvider } from "./options.js";
+import { promptCacheSchema } from "./session-reports.js";
 
 const MINUTE_MS = 60_000;
 const TTL_MS = { "5m": 5 * MINUTE_MS, "1h": 60 * MINUTE_MS };
@@ -10,13 +10,15 @@ export type PromptCacheLeft =
   { state: "warm"; ms: number; ttl: "5m" | "1h" } | { state: "expired" };
 
 /** When the task's prompt cache expires, or nothing without a record. */
-export function promptCacheEnd(task: Pick<TaskView, "provider_options">) {
+export function promptCacheEnd(
+  task: Pick<TaskView, "provider_options" | "provider">,
+) {
   return promptCacheRecord(task)?.end;
 }
 
 /** The task's prompt cache at `now`, or nothing when it has no record. */
 export function promptCacheLeft(
-  task: Pick<TaskView, "provider_options">,
+  task: Pick<TaskView, "provider_options" | "provider">,
   now: number,
 ): PromptCacheLeft | undefined {
   const record = promptCacheRecord(task);
@@ -27,12 +29,14 @@ export function promptCacheLeft(
   return ms > 0 ? { state: "warm", ms, ttl: record.ttl } : { state: "expired" };
 }
 
-function promptCacheRecord(task: Pick<TaskView, "provider_options">) {
-  const parsed = claudeTaskOptionsSchema.safeParse(
-    optionsForProvider(task.provider_options, "claude"),
+function promptCacheRecord(
+  task: Pick<TaskView, "provider_options" | "provider">,
+) {
+  const parsed = promptCacheSchema.safeParse(
+    optionsForProvider(task.provider_options, task.provider).prompt_cache,
   );
 
-  const record = parsed.success ? parsed.data.prompt_cache : undefined;
+  const record = parsed.success ? parsed.data : undefined;
 
   return (
     record && {

@@ -1,13 +1,12 @@
+import { providerMetadata } from "../../../../../core/shared/providers/metadata";
 import {
   flexibleModel,
   modelName,
 } from "../../../../../core/shared/providers/policy";
 import { providerTaskFacts } from "../../../../../core/shared/providers/presentation";
-import type { ModelChoice } from "../../../../../core/shared/providers/types";
 import { titleCase } from "../../../../../core/shared/text";
-import { shortPermissionLabel } from "../../../../../providers/claude/shared/permissions";
 import { useSnapshot } from "../../../../app/state/controller-context";
-import type { Task } from "../../../../app/state/types";
+import type { Task, Worker } from "../../../../app/state/types";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
 import { compactPermissionLabel } from "../../../delegation/permission-label";
 import { compactReasoningLabel } from "../../../delegation/setting-labels";
@@ -24,17 +23,23 @@ type TaskRunSettingsProps = { task: Task };
 type RunSetting = { name: string; label: string; compact?: string };
 
 /** The settings shown after the profile, in order. */
-function runSettings(task: Task, models: readonly ModelChoice[]): RunSetting[] {
+function runSettings(task: Task, worker: Worker | undefined): RunSetting[] {
   const facts = providerTaskFacts(task);
   const native = facts["Permission mode"];
-  const permission = native && shortPermissionLabel(native);
+
+  const permission =
+    providerMetadata(
+      task.provider,
+      worker?.metadata,
+    )?.nativePermissions?.options.find(({ label }) => label === native)
+      ?.shortLabel ?? native;
 
   const reasoning =
     facts["Effective reasoning"] ?? (task.reasoning_effort || "default");
 
   // Named as the composer names it, when the provider still lists the model.
   const ran = facts["Effective model"] ?? task.model;
-  const model = ran ? modelName(models, ran) : "Default model";
+  const model = ran ? modelName(worker?.models ?? [], ran) : "Default model";
 
   return [
     { name: "Model", label: model, compact: model },
@@ -87,11 +92,10 @@ function requestedSettings(task: Task) {
 export function TaskRunSettings({ task }: TaskRunSettingsProps) {
   const workers = useSnapshot((state) => state.workers);
 
-  const models =
-    workers.find((worker) => worker.provider === task.provider)?.models ?? [];
+  const worker = workers.find((item) => item.provider === task.provider);
 
   const profile = titleCase(task.worker_profile);
-  const settings = runSettings(task, models);
+  const settings = runSettings(task, worker);
 
   const started = [profile, ...settings.map((setting) => setting.label)].join(
     " · ",

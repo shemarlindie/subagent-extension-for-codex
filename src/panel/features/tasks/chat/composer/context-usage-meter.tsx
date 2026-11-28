@@ -1,5 +1,5 @@
 import { optionsForProvider } from "../../../../../core/shared/providers/options";
-import { claudeTaskOptionsSchema } from "../../../../../providers/claude/shared/task-options";
+import { contextUsageSchema } from "../../../../../core/shared/providers/session-reports";
 import type { Task } from "../../../../app/state/types";
 import { ProgressRing } from "../../../../shared/components/progress-ring/progress-ring";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";
@@ -20,9 +20,9 @@ const percent = (tokens: number, window: number) =>
  * percentage.
  */
 export function ContextUsageMeter({ task }: ContextUsageMeterProps) {
-  const usage = claudeTaskOptionsSchema.safeParse(
-    optionsForProvider(task.provider_options, "claude"),
-  ).data?.context_usage;
+  const usage = contextUsageSchema.safeParse(
+    optionsForProvider(task.provider_options, task.provider).context_usage,
+  ).data;
 
   if (!usage) return null;
 

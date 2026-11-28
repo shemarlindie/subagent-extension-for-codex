@@ -8,14 +8,14 @@ import {
   logError,
   logEvent,
 } from "../../../../core/service/platform/logging/logger.js";
-import type { ClaudeContextUsage } from "../../shared/task-options.js";
+import type { ContextUsage } from "../../../../core/shared/providers/session-reports.js";
 
 /** How long a turn waits for a measurement still running. */
 const SETTLE_MS = 2_000;
 
 function contextUsageRecord(
   usage: SDKControlGetContextUsageResponse,
-): ClaudeContextUsage {
+): ContextUsage {
   return {
     total_tokens: usage.totalTokens,
     window_tokens: usage.rawMaxTokens,
@@ -45,7 +45,7 @@ export function contextUsageRecorder(
   let stored = 0;
   // Measurements up to this one store nothing more: they were given up on.
   let dropped = 0;
-  let running: Promise<ClaudeContextUsage | undefined> | undefined;
+  let running: Promise<ContextUsage | undefined> | undefined;
 
   /** Starts a measurement, which resolves with the record it stores. */
   const measure = () => {

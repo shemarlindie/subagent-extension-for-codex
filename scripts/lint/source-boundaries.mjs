@@ -10,36 +10,9 @@ export const testModule = /(?:\.test|-test-harness)(?:\.[cm]?[jt]sx?)?$/;
 
 // Remove each exception when its owner stops importing the adapter.
 const exceptions = new Map([
-  [
-    "src/core/service/features/tasks/runtime/start-request.ts",
-    "providers/claude",
-  ],
   ["src/core/service/platform/server/mcp.ts", "hosts/codex"],
   ["src/core/service/platform/server/tools/user-tools.ts", "hosts/codex"],
   ["src/core/service/platform/service/about.ts", "providers/claude"],
-  ["src/panel/features/delegation/delegate-form.tsx", "providers/claude"],
-  ["src/panel/features/delegation/inherited-permission.ts", "providers/claude"],
-  [
-    "src/panel/features/delegation/new-task/new-task-composer.tsx",
-    "providers/claude",
-  ],
-  [
-    "src/panel/features/delegation/new-task/options/permission-chip.tsx",
-    "providers/claude",
-  ],
-  ["src/panel/features/delegation/use-async-defaults.ts", "providers/claude"],
-  [
-    "src/panel/features/tasks/chat/composer/context-usage-meter.tsx",
-    "providers/claude",
-  ],
-  [
-    "src/panel/features/tasks/chat/composer/prompt-cache-timer.tsx",
-    "providers/claude",
-  ],
-  [
-    "src/panel/features/tasks/chat/composer/task-run-settings.tsx",
-    "providers/claude",
-  ],
 ]);
 
 function sourceLocation(path) {

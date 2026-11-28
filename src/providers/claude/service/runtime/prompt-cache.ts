@@ -2,10 +2,8 @@ import type { SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk"
 
 import type { RunContext } from "../../../../core/service/features/providers/types.js";
 import { logEvent } from "../../../../core/service/platform/logging/logger.js";
-import {
-  readClaudeTaskOptions,
-  type ClaudePromptCache,
-} from "../../shared/task-options.js";
+import type { PromptCache } from "../../../../core/shared/providers/session-reports.js";
+import { readClaudeTaskOptions } from "../../shared/task-options.js";
 
 type MessageStart = Extract<
   SDKPartialAssistantMessage["event"],
@@ -60,5 +58,5 @@ export function recordPromptCache(
   c.sessionOption("prompt_cache", {
     requested_at: new Date().toISOString(),
     ttl,
-  } satisfies ClaudePromptCache);
+  } satisfies PromptCache);
 }
