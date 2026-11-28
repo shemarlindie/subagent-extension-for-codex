@@ -3,20 +3,20 @@ import {
   SkeletonShape,
 } from "../../shared/components/loading-skeleton/loading-skeleton";
 
-const GROUPS = [
-  { title: "Extension", rows: 3 },
-  { title: "Claude", rows: 4 },
-  { title: "SDKs", rows: 3 },
-  { title: "Service runtime", rows: 3 },
-];
+export function SettingsAboutSkeleton({ providers }: { providers: string[] }) {
+  const groups = [
+    { title: "Extension", rows: 3 },
+    ...providers.map((title) => ({ title, rows: 4 })),
+    { title: "SDKs", rows: 3 },
+    { title: "Service runtime", rows: 3 },
+  ];
 
-export function SettingsAboutSkeleton() {
   return (
     <LoadingSkeleton
       label="Loading version details"
       className="settings-about-body"
     >
-      {GROUPS.map(({ title, rows }) => (
+      {groups.map(({ title, rows }) => (
         <div className="settings-about-group" key={title}>
           <h3>{title}</h3>
           <dl>

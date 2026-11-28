@@ -7,7 +7,7 @@ import { installRoot, packageVersion } from "./runtime.js";
  * proxy of the previous release, so the launcher won't forward to a service
  * it can't talk to.
  */
-const serviceApiVersion = 2;
+const serviceApiVersion = 3;
 
 /** Set by the stdio launcher on the services it starts. */
 export const launcherEnv = "SUBAGENT_EXTENSION_FOR_CODEX_LAUNCHER";

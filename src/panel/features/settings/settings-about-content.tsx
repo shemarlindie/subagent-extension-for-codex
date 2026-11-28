@@ -10,8 +10,8 @@ import {
   aboutDiagnosticsMatch,
   aboutRowMatches,
 } from "./settings-about-search";
-import { SettingsClaudeVersion } from "./settings-claude-version";
 import { SettingsDataDirectory } from "./settings-data-directory";
+import { SettingsProviderVersion } from "./settings-provider-version";
 
 function workingTree(dirty?: boolean) {
   if (dirty === undefined) return "Unknown";
@@ -35,14 +35,17 @@ type AboutRow = {
 
 type AboutSection = { title: string; rows: AboutRow[] };
 
-function aboutDiagnostics(sections: AboutSection[], readinessMessage?: string) {
+function aboutDiagnostics(
+  sections: AboutSection[],
+  readinessMessages: string[],
+) {
   return [
     "Subagent Extension for Codex",
     ...sections.map(
       ({ title, rows }) =>
         `\n${title}\n${rows.map(({ label, value, copy }) => `${label}: ${copy ?? value}`).join("\n")}`,
     ),
-    ...(readinessMessage ? [`\nClaude readiness: ${readinessMessage}`] : []),
+    ...readinessMessages,
   ].join("\n");
 }
 
@@ -62,10 +65,8 @@ export function SettingsAboutContent({
 }: SettingsAboutContentProps) {
   const host = useSnapshot((state) => state.host);
   const search = useContext(SettingsSearchContext);
-  const { build, claude, runtime } = info;
+  const { build, runtime } = info;
   const checkout = info.installation === "checkout";
-  const cliStatus = claude && (claude.ready ? "Ready" : "Needs attention");
-  const cliVersion = claude?.details.version ?? "Unavailable";
 
   const sections: AboutSection[] = [
     {
@@ -99,43 +100,61 @@ export function SettingsAboutContent({
           : []),
       ],
     },
-    {
-      title: "Claude",
-      rows: [
-        {
-          label: "Claude Code CLI",
-          value: cliVersion,
-          element: (
-            <SettingsClaudeVersion
-              version={cliVersion}
-              readiness={claude}
-              recommended={info.claude_recommended}
-              upgrade={info.claude_upgrade}
-              pending={pending}
-              error={error}
-              onRecheck={onRecheck}
-            />
-          ),
-        },
-        { label: "CLI status", value: cliStatus ?? "Provider disabled" },
-        ...(info.claude_upgrade
-          ? [
-              {
-                label: "Installation",
-                value: info.claude_upgrade.installation,
-              },
-            ]
-          : []),
-        ...(claude?.details.executable
-          ? [
-              {
-                label: "Executable",
-                value: claude.details.executable,
-              },
-            ]
-          : []),
-      ],
-    },
+    ...Object.values(info.providers).map(
+      ({
+        displayName,
+        cliName,
+        readiness,
+        recommended,
+        upgrade,
+        updateUrl,
+      }) => {
+        const cliVersion = readiness.details.version ?? "Unavailable";
+
+        return {
+          title: displayName,
+          rows: [
+            {
+              label: `${cliName} CLI`,
+              value: cliVersion,
+              element: (
+                <SettingsProviderVersion
+                  version={cliVersion}
+                  readiness={readiness}
+                  cliName={cliName}
+                  updateUrl={updateUrl}
+                  recommended={recommended}
+                  upgrade={upgrade}
+                  pending={pending}
+                  error={error}
+                  onRecheck={onRecheck}
+                />
+              ),
+            },
+            {
+              label: "CLI status",
+              value: readiness.ready ? "Ready" : "Needs attention",
+            },
+            ...(upgrade
+              ? [
+                  {
+                    label: "Installation",
+                    value: upgrade.installation,
+                  },
+                ]
+              : []),
+            ...(readiness.details.executable
+              ? [
+                  {
+                    label: "Executable",
+                    value: readiness.details.executable,
+                  },
+                ]
+              : []),
+          ],
+        };
+      },
+    ),
     {
       title: "SDKs",
       rows: build.sdks.map(({ name, version }) => ({
@@ -170,7 +189,14 @@ export function SettingsAboutContent({
   ];
 
   // Diagnostics always copy every row, whatever search shows.
-  const diagnostics = aboutDiagnostics(sections, claude?.message);
+  const diagnostics = aboutDiagnostics(
+    sections,
+    Object.values(info.providers).flatMap(({ displayName, readiness }) =>
+      readiness.message
+        ? [`\n${displayName} readiness: ${readiness.message}`]
+        : [],
+    ),
+  );
 
   const visibleSections = sections
     .map(({ title, rows }) => ({

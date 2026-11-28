@@ -13,7 +13,11 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
 
   const save = (id: string, patch: Partial<Task> = {}) => {
     const task: Task = {
-      ...startSchema.parse({ repository: "/repo", description: "Review" }),
+      ...startSchema.parse({
+        provider: "claude",
+        repository: "/repo",
+        description: "Review",
+      }),
       title: "Review",
       id,
       owner: "alice",

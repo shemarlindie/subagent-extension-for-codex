@@ -15,7 +15,11 @@ function deletionFixture() {
   const store = new Store(":memory:");
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Delete" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Delete",
+    }),
     title: "Delete",
     id: "delete",
     owner: "alice",
@@ -113,6 +117,7 @@ test("recent events return only the task's latest 200 in chronological order aft
 
   const task: Task = {
     ...startSchema.parse({
+      provider: "claude",
       repository: "/repo",
       description: "Review",
       worker_profile: "reviewer",
@@ -174,7 +179,11 @@ function transactionFixture(t: { onTestFinished(fn: () => void): void }) {
   t.onTestFinished(() => store.close());
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Transact" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Transact",
+    }),
     title: "Transact",
     id: "transact",
     owner: "alice",

@@ -772,6 +772,7 @@ test("run emits result accounting exactly once for success and failure", async (
 
     context.task = {
       ...startSchema.parse({
+        provider: "claude",
         repository: "/repo",
         description: "Review",
         worker_profile: "reviewer",

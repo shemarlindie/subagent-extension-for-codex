@@ -104,6 +104,14 @@ export class FixtureProvider implements Provider {
     };
   }
 
+  async about() {
+    return {
+      displayName: this.metadata.displayName,
+      cliName: "Fixture",
+      readiness: await this.readiness(),
+    };
+  }
+
   async readiness(): Promise<ProviderReadiness> {
     if (this.readinessDelayMs) await setTimeout(this.readinessDelayMs);
 

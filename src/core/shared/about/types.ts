@@ -1,6 +1,6 @@
 import type { ProviderReadiness } from "../providers/types.js";
 
-export interface ClaudeUpgradeInfo {
+export interface ProviderUpgradeInfo {
   installation: string;
   /** Only provided when the command targets the detected installation. POSIX shell syntax. */
   command?: string;
@@ -26,8 +26,14 @@ export interface AboutInfo {
     launcher: string;
     data_directory: string;
   };
-  claude?: ProviderReadiness;
-  /** The CLI release the bundled SDK pairs with. Only set when the CLI version is known. */
-  claude_recommended?: { version: string; behind: boolean };
-  claude_upgrade?: ClaudeUpgradeInfo;
+  providers: Record<string, ProviderAbout>;
+}
+
+export interface ProviderAbout {
+  displayName: string;
+  cliName: string;
+  readiness: ProviderReadiness;
+  recommended?: { version: string; behind: boolean };
+  upgrade?: ProviderUpgradeInfo;
+  updateUrl?: string;
 }

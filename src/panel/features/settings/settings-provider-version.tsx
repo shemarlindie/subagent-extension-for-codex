@@ -2,8 +2,8 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import type { MouseEvent } from "react";
 
 import type {
-  AboutInfo,
-  ClaudeUpgradeInfo,
+  ProviderAbout,
+  ProviderUpgradeInfo,
 } from "../../../core/shared/about/types";
 import type { ProviderReadiness } from "../../../core/shared/providers/types";
 import { useController } from "../../app/state/controller-context";
@@ -13,28 +13,31 @@ import { Icon } from "../../shared/components/icons/icons";
 import { LoadingSpinner } from "../../shared/components/loading-spinner/loading-spinner";
 import { TooltipWrapper } from "../../shared/components/tooltip";
 
-type SettingsClaudeVersionProps = {
+type SettingsProviderVersionProps = {
+  cliName: string;
+  updateUrl?: string;
   version: string;
   readiness?: ProviderReadiness;
-  recommended?: AboutInfo["claude_recommended"];
-  upgrade?: ClaudeUpgradeInfo;
+  recommended?: ProviderAbout["recommended"];
+  upgrade?: ProviderUpgradeInfo;
   pending: boolean;
   error?: string;
   onRecheck: () => void;
 };
 
 function upgradeTooltip(
+  cliName: string,
   tooOld: boolean,
-  recommended: SettingsClaudeVersionProps["recommended"],
+  recommended: SettingsProviderVersionProps["recommended"],
   current: boolean,
 ) {
-  if (tooOld) return "Claude Code is too old. Show upgrade instructions";
+  if (tooOld) return `${cliName} is too old. Show upgrade instructions`;
 
   if (recommended?.behind) {
-    return `Claude Code ${recommended.version} or later is recommended. Show upgrade instructions`;
+    return `${cliName} ${recommended.version} or later is recommended. Show upgrade instructions`;
   }
 
-  if (current) return "Recommended Claude Code version installed";
+  if (current) return `Recommended ${cliName} version installed`;
 
   return "Show upgrade instructions";
 }
@@ -45,7 +48,9 @@ function upgradeIcon(tooOld: boolean, current: boolean) {
   return current ? "check-circle" : "arrow-up-circle";
 }
 
-export function SettingsClaudeVersion({
+export function SettingsProviderVersion({
+  cliName,
+  updateUrl,
   version,
   readiness,
   recommended,
@@ -53,7 +58,7 @@ export function SettingsClaudeVersion({
   pending,
   error,
   onRecheck,
-}: SettingsClaudeVersionProps) {
+}: SettingsProviderVersionProps) {
   const controller = useController();
   const tooOld = readiness?.details.problem === "too_old";
 
@@ -73,12 +78,12 @@ export function SettingsClaudeVersion({
 
   return (
     <Collapsible.Root className="settings-about-action-row">
-      <dt>Claude Code CLI</dt>
+      <dt>{cliName} CLI</dt>
       <dd className="settings-about-action-value">
         <span>{version}</span>
         {pending && <LoadingSpinner />}
         <TooltipWrapper
-          label={upgradeTooltip(tooOld, recommended, current)}
+          label={upgradeTooltip(cliName, tooOld, recommended, current)}
           triggerLabel={
             tooOld ? "CLI upgrade required" : "CLI upgrade instructions"
           }
@@ -109,16 +114,21 @@ export function SettingsClaudeVersion({
                 <CommandLine label="Upgrade" command={upgrade.command} />
               )}
               <p>
-                {upgrade.note} See the{" "}
-                <a
-                  href="https://code.claude.com/docs/en/setup#update-claude-code"
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={openInstructions}
-                >
-                  Claude Code update instructions
-                </a>
-                .
+                {upgrade.note}{" "}
+                {updateUrl && (
+                  <>
+                    See the{" "}
+                    <a
+                      href={updateUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={openInstructions}
+                    >
+                      {cliName} update instructions
+                    </a>
+                    .
+                  </>
+                )}
               </p>
             </>
           )}

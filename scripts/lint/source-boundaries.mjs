@@ -12,7 +12,6 @@ export const testModule = /(?:\.test|-test-harness)(?:\.[cm]?[jt]sx?)?$/;
 const exceptions = new Map([
   ["src/core/service/platform/server/mcp.ts", "hosts/codex"],
   ["src/core/service/platform/server/tools/user-tools.ts", "hosts/codex"],
-  ["src/core/service/platform/service/about.ts", "providers/claude"],
 ]);
 
 function sourceLocation(path) {

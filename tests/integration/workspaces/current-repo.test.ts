@@ -191,8 +191,11 @@ test("current repository settings persist, are owner-scoped, and allow task over
     );
 
     assert.equal(
-      startSchema.parse({ repository: "/repo", description: "Review" })
-        .workspace_strategy,
+      startSchema.parse({
+        provider: "claude",
+        repository: "/repo",
+        description: "Review",
+      }).workspace_strategy,
       "current_repo",
     );
 

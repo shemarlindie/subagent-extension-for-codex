@@ -74,6 +74,7 @@ export async function httpFixture(t: TestContext) {
   ) => {
     c.store.save({
       ...startSchema.parse({
+        provider: "claude",
         description: "Panel task",
         conversation_id,
         repository,

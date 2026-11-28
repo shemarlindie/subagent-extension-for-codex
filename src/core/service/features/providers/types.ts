@@ -1,5 +1,6 @@
 import type { StructuredPatchHunk as Hunk } from "diff";
 
+import type { ProviderAbout } from "../../../shared/about/types.js";
 import type {
   EventEmitter,
   OpaqueEventEmitter,
@@ -127,6 +128,7 @@ export interface Provider {
   id: string;
   capabilities: Capabilities;
   metadata?: ProviderMetadata;
+  about?(refresh: boolean): Promise<ProviderAbout>;
   taskPolicy: ProviderTaskPolicy;
   /** Checks the local runtime the provider launches; auth and network failures surface later. */
   readiness?(options?: { refresh?: boolean }): Promise<ProviderReadiness>;

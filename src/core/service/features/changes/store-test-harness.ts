@@ -23,6 +23,7 @@ export async function createChangesFixture<T>(
 
   const task: Task = {
     ...startSchema.parse({
+      provider: "claude",
       repository: workspace,
       description: "Record edits",
     }),

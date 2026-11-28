@@ -11,7 +11,11 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
   const message = { id: "original", message: "Review", from: "user" as const };
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Review" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Review",
+    }),
     title: "Review",
     id: "send",
     owner: "alice",

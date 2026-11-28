@@ -71,6 +71,7 @@ export async function context() {
 
   const task: Task = {
     ...startSchema.parse({
+      provider: "claude",
       repository: "/repo",
       description: "Review",
       worker_profile: "reviewer",

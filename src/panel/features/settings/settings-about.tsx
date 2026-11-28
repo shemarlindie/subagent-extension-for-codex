@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 
 import type { AboutInfo } from "../../../core/shared/about/types";
+import { providerDefinitions } from "../../../core/shared/providers/registry";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";
@@ -16,8 +17,16 @@ import type { SettingsSectionView } from "./settings-sections";
 export function aboutSection(
   search: ReturnType<typeof settingsSearch>,
   selected: string | undefined,
+  enabled: string[] | undefined,
 ): SettingsSectionView {
-  const matches = aboutSearchMatches(search);
+  const providers = providerDefinitions().flatMap(
+    ({ id, metadata: { displayName, cliName } }) =>
+      cliName && (!enabled || enabled.includes(id))
+        ? [{ displayName, cliName }]
+        : [],
+  );
+
+  const matches = aboutSearchMatches(search, providers);
 
   return {
     id: "about",
@@ -27,13 +36,15 @@ export function aboutSection(
     score: 3,
     content:
       selected === "about" || (search.active && matches) ? (
-        <SettingsAbout />
+        <SettingsAbout
+          providers={providers.map(({ displayName }) => displayName)}
+        />
       ) : null,
   };
 }
 
 /** Read only diagnostics, loaded only while the About section is visible. */
-function SettingsAbout() {
+function SettingsAbout({ providers }: { providers: string[] }) {
   const controller = useController();
   const [info, setInfo] = useState<AboutInfo>();
   const [error, setError] = useState<string>();
@@ -91,7 +102,10 @@ function SettingsAbout() {
           <Button onClick={retry}>Retry</Button>
         </div>
       ) : (
-        <LoadingSwap loading={!info} skeleton={<SettingsAboutSkeleton />}>
+        <LoadingSwap
+          loading={!info}
+          skeleton={<SettingsAboutSkeleton providers={providers} />}
+        >
           {info && (
             <SettingsAboutContent
               info={info}

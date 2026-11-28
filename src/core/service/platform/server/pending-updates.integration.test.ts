@@ -27,8 +27,11 @@ async function setup() {
 
   const save = (id: string, patch: Partial<Task> = {}) => {
     const task: Task = {
-      ...startSchema.parse({ repository: "/repo", description: "Review" }),
-      provider: "fixture",
+      ...startSchema.parse({
+        provider: "fixture",
+        repository: "/repo",
+        description: "Review",
+      }),
       title: `Task ${id}`,
       id,
       owner: "alice",

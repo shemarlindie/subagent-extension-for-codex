@@ -10,7 +10,11 @@ function fixture(t: { onTestFinished(fn: () => void): void }) {
   t.onTestFinished(() => store.close());
 
   const task: Task = {
-    ...startSchema.parse({ repository: "/repo", description: "Review" }),
+    ...startSchema.parse({
+      provider: "claude",
+      repository: "/repo",
+      description: "Review",
+    }),
     title: "Review",
     id: "read",
     owner: "alice",

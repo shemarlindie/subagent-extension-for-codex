@@ -60,6 +60,7 @@ async function fixture(t: TestContext) {
   ) => {
     const task: Task = {
       ...startSchema.parse({
+        provider: "claude",
         description: "Review",
         repository,
       }),
