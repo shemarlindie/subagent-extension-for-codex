@@ -67,7 +67,8 @@ features and limits.
 | ---------------------------------------- | ---------------------------------------------------------------------------- |
 | `src/main.ts`                            | Service entrypoint                                                           |
 | `src/providers/claude`                   | Claude SDK integration and browser-safe Claude contracts                     |
-| `src/hosts/codex/service`                | Codex stdio proxy, tool instructions and mentions                            |
+| `src/hosts/codex/service`                | Codex host adapter, stdio proxy, tool instructions and mentions              |
+| `src/core/service/platform/host`         | The host adapter contract                                                    |
 | `src/core/service/features/tasks`        | Task lifecycle, scheduling, draft delivery, input and storage                |
 | `src/core/service/features/providers`    | Provider contracts, settings, task policy and registration                   |
 | `src/core/service/features/projects`     | Approved roots, registration and host-project policy                         |
@@ -104,9 +105,6 @@ Claude comes first and supplies the default worker. The fixture definition keeps
 its model settings available. Each service entrypoint chooses which workers to
 construct through its runtime registrations.
 
-Core still has two explicit import exceptions for Codex host integration. An
-unused exception fails lint.
-
 Service code runs in Node. Panel and shared modules cannot import service code
 or Node built-ins. Shared modules cannot import database or Claude SDK runtime
 packages. The Claude event contract may import SDK types. Production code cannot
@@ -116,6 +114,29 @@ See [Checks](development.md#checks) and
 [Provider contract](provider-contract.md).
 [Choosing test coverage](development.md#choosing-test-coverage) covers test
 placement.
+
+### Host adapters
+
+Core reads no host-specific metadata, headers or names. A host supplies them
+through a `HostAdapter`, defined in
+`src/core/service/platform/host/host-adapter.ts`:
+
+- MCP server capabilities and instructions.
+- Hints from each request's metadata: the chat's directory and conversation.
+  Each MCP call reads them once. They correlate and suggest, and never grant
+  access.
+- The panel's tool names and resource URI, and the metadata for the panel tools,
+  the panel resource and task tools that open the panel.
+- Its own tools for the tool API, and their registration on the service's `/mcp`
+  server.
+
+`src/main.ts` passes the Codex adapter from `src/hosts/codex/service/host.ts` to
+the service, and the stdio proxy uses the same adapter. The service serves one
+host.
+
+The proxy forwards the directory hint to the tool API in `X-Host-Directory`. The
+tool API also accepts `X-Codex-Host-Directory` from a proxy of the previous
+release, until the API version changes.
 
 ### Event payloads
 

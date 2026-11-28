@@ -103,13 +103,14 @@ grant access.
 
 ### Codex directory hint
 
-The optional Codex adapter advertises
-`capabilities.experimental["codex/sandbox-state-meta"]`. It reads `sandboxCwd`
-as a local `file:` URI and resolves its canonical Git root. Without one, it uses
-the nearest registered folder, then the directory itself. It checks the result
-against approved projects. An unsupported, malformed, unavailable or unapproved
-hint falls back to explicit project selection or same-chat task history. The
-adapter reads directory context only and inherits no host permission profile.
+The Codex [host adapter](architecture.md#host-adapters) advertises
+`capabilities.experimental["codex/sandbox-state-meta"]` and reads `sandboxCwd`
+as the directory hint. The service treats it as a local `file:` URI and resolves
+its canonical Git root. Without one, it uses the nearest registered folder, then
+the directory itself. It checks the result against approved projects. An
+unsupported, malformed, unavailable or unapproved hint falls back to explicit
+project selection or same-chat task history. The adapter reads directory context
+only and inherits no host permission profile.
 
 The adapter follows public Codex source at
 [`c5d242fa`](https://github.com/openai/codex/commit/c5d242fa7907bff1b7a7e26e95febc548c0a6963)
