@@ -12,7 +12,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 /**
@@ -41,6 +41,14 @@ for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"]) {
 /** What every package ships beside its plugin folder. */
 const shared = ["dist", "migrations", "assets", "README.md", "LICENSE"];
 
+// npm leaves these out of packages, and so does the release.
+const junk = /^(\.DS_Store|\._.*|.*\.orig|\..*\.swp)$/;
+
+const copy = {
+  recursive: true,
+  filter: (path) => !junk.test(basename(path)),
+};
+
 const hosts = values.host
   ? [values.host]
   : readdirSync("plugins", { withFileTypes: true })
@@ -48,7 +56,6 @@ const hosts = values.host
       .map((entry) => entry.name);
 
 // The root package.json is the version source and holds the shared metadata.
-// The plugin folder's package.json names the package.
 const rootManifest = JSON.parse(readFileSync("package.json", "utf8"));
 
 for (const host of hosts) {
@@ -56,16 +63,18 @@ for (const host of hosts) {
   const out = resolve(values.out, host);
 
   rmSync(out, { recursive: true, force: true });
-  cpSync(source, out, { recursive: true });
+  cpSync(source, out, copy);
 
   for (const path of shared) {
-    cpSync(path, join(out, path), { recursive: true });
+    cpSync(path, join(out, path), copy);
   }
 
-  const manifest = {
-    ...rootManifest,
-    ...JSON.parse(readFileSync(join(source, "package.json"), "utf8")),
-  };
+  // The plugin folder's package.json names and describes the package.
+  const { name, description, keywords } = JSON.parse(
+    readFileSync(join(source, "package.json"), "utf8"),
+  );
+
+  const manifest = { ...rootManifest, name, description, keywords };
 
   // Nothing installs dependencies or runs scripts from the release. The
   // manifest only marks the package root and carries its metadata.

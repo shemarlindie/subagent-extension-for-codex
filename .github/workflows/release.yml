@@ -4,8 +4,8 @@ name: Release
 # plugins/codex/plugin.json and .agents/plugins/marketplace.json and holds its
 # CHANGELOG.md section. The workflow publishes the branch's head to npm, tags
 # it v<version> and merges the branch's pull request with a merge commit, which
-# releases the version to users. A prerelease such as 1.2.0-beta.1 publishes under the npm
-# next tag, and its pull request is closed without merging.
+# releases the version to users. A prerelease such as 1.2.0-beta.1 publishes
+# under the npm next tag, and its pull request is closed without merging.
 on:
   workflow_dispatch:
 
