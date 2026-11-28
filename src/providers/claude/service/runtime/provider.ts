@@ -1,7 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { readdir, realpath } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
 import {
   archiveSession,
@@ -28,6 +25,7 @@ import { slashCommand } from "../../../../core/shared/tasks/conversation/command
 import { type Task } from "../../../../core/shared/tasks/model.js";
 import { claudeMetadata } from "../../shared/metadata.js";
 import { claudeSettingsSchema } from "../../shared/settings.js";
+import { claudeAbout } from "../configuration/about.js";
 import { ClaudeCli } from "../configuration/executable.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
@@ -45,6 +43,7 @@ import { recordPromptCache } from "./prompt-cache.js";
 import {
   claudeSessionDeletionStatus,
   deleteClaudeSession,
+  sessionPaths,
 } from "./session-cleanup.js";
 import { claudeTurnOptions } from "./turn-options.js";
 
@@ -104,6 +103,10 @@ export class ClaudeAgentProvider implements Provider {
   ) {
     this.commandLists = new ClaudeCommands(launch, cli);
     this.planUsage = new ClaudePlanUsage(launch, cli);
+  }
+
+  async about(refresh: boolean) {
+    return claudeAbout(await this.readiness({ refresh }), refresh);
   }
 
   async readiness(options?: { refresh?: boolean }): Promise<ProviderReadiness> {
@@ -523,26 +526,4 @@ export class ClaudeAgentProvider implements Provider {
   async sessionPath(id: string) {
     return (await sessionPaths(id))[0];
   }
-}
-
-/** The real path of each project folder's transcript with this session ID. */
-async function sessionPaths(id: string) {
-  const root = join(
-    (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude")).normalize(
-      "NFC",
-    ),
-    "projects",
-  );
-
-  const paths: string[] = [];
-
-  try {
-    for (const d of await readdir(root)) {
-      try {
-        paths.push(await realpath(join(root, d, `${id}.jsonl`)));
-      } catch {}
-    }
-  } catch {}
-
-  return paths;
 }
