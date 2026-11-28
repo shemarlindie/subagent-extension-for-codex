@@ -40,7 +40,7 @@ can't exceed the host's MCP startup timeout.
   service a client remains. The proxy exits when Codex closes its stdin.
 - When a call finds the service gone, the proxy starts a new one. It sends the
   call again when the service can't have received it, or when the call is
-  read-only. See `src/service/platform/service/service-client.ts`.
+  read-only. See `src/core/service/platform/service/service-client.ts`.
 - A new service that loses the lease to one still stopping starts again once the
   lease is free.
 - The proxy can choose a free port and discovers the service through
@@ -65,36 +65,45 @@ features and limits.
 
 | Area                                     | Responsibility                                                               |
 | ---------------------------------------- | ---------------------------------------------------------------------------- |
-| `src/service/features/tasks`             | Task lifecycle, scheduling, draft delivery, input and storage                |
-| `src/service/features/providers`         | Provider contracts, settings, task policy and Claude integration             |
-| `src/service/features/projects`          | Approved roots, registration and host-project policy                         |
-| `src/service/features/workspaces`        | Git worktree lifecycle and hardened service Git commands                     |
-| `src/service/features/changes`           | Recorded edits, running task and turn diffs, and change inspection           |
-| `src/service/features/settings`          | User defaults and settings document                                          |
-| `src/service/platform/server`            | HTTP and MCP authentication, transport and tool dispatch                     |
-| `src/service/platform/panel`             | Embedded resource, launch scope and optional host context                    |
-| `src/service/platform/service`           | Local runtime paths, launcher, lease and startup                             |
-| `src/service/platform/database`          | SQLite connection, migrations and transactions                               |
-| `src/service/platform/logging`           | Structured logs, crash logs and runtime metrics                              |
+| `src/main.ts`                            | Service entrypoint                                                           |
+| `src/providers/claude`                   | Claude SDK integration and browser-safe Claude contracts                     |
+| `src/hosts/codex/service`                | Codex stdio proxy, tool instructions and mentions                            |
+| `src/core/service/features/tasks`        | Task lifecycle, scheduling, draft delivery, input and storage                |
+| `src/core/service/features/providers`    | Provider contracts, settings, task policy and registration                   |
+| `src/core/service/features/projects`     | Approved roots, registration and host-project policy                         |
+| `src/core/service/features/workspaces`   | Git worktree lifecycle and hardened service Git commands                     |
+| `src/core/service/features/changes`      | Recorded edits, running task and turn diffs, and change inspection           |
+| `src/core/service/features/settings`     | User defaults and settings document                                          |
+| `src/core/service/platform/server`       | HTTP and MCP authentication, transport and tool dispatch                     |
+| `src/core/service/platform/panel`        | Embedded resource, launch scope and optional host context                    |
+| `src/core/service/platform/service`      | Local runtime paths, launcher, lease and startup                             |
+| `src/core/service/platform/database`     | SQLite connection, migrations and transactions                               |
+| `src/core/service/platform/logging`      | Structured logs, crash logs and runtime metrics                              |
 | `src/panel/app`                          | Panel composition, navigation and application state                          |
 | `src/panel/features`, `src/panel/shared` | Feature UI and reusable panel components and integrations                    |
 | `src/panel/transports`                   | Host bridge and standalone console transports                                |
-| `src/shared/<feature>`                   | Browser-safe contracts and pure domain functions shared by service and panel |
+| `src/core/shared/<feature>`              | Browser-safe contracts and pure domain functions shared by service and panel |
 | `dev/`                                   | Development tooling, the panel dev host and fixtures                         |
 
 [Panel architecture](panel-architecture.md) covers the panel's internal layout.
 
 ### Import rules
 
-Oxlint and production builds enforce these boundaries. Test harnesses may cross
-them for verification.
+Oxlint checks production imports by owner and runtime.
 
-- The service and panel are separate runtimes. Neither imports the other's
-  implementation or development and test code.
-- Panel code can't import Node built-ins.
-- Shared feature modules have no Node, database or provider execution
-  dependencies. The Claude event contract may use SDK types, but runtime SDK
-  imports stay in the service.
+- Core imports other core modules. A provider imports core and its own modules.
+  A host can also import providers.
+- The panel imports its own modules and browser-safe core contracts.
+- The service entrypoint in `src/main.ts` can import core, providers and hosts.
+  Other production modules cannot import the entrypoint.
+
+The rule lists existing exceptions by source file and target owner for core and
+panel imports of Claude and Codex modules. An unused exception fails lint.
+
+Service code runs in Node. Panel and shared modules cannot import service code
+or Node built-ins. Shared modules cannot import database or Claude SDK runtime
+packages. The Claude event contract may import SDK types. Production code cannot
+import development modules, tests or test harnesses.
 
 See [Checks](development.md#checks) and
 [Provider contract](provider-contract.md).

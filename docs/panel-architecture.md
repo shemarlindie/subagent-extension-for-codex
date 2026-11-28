@@ -30,7 +30,7 @@ or `dev/`.
 | `dev/panel/`  | Fixtures and the mock host, excluded from production.              |
 
 The panel imports browser-safe contracts and domain functions from
-`src/shared/<feature>/`, never service modules.
+`src/core/shared/<feature>/`, never service modules.
 
 Keep helpers, focused tests and styles beside the feature or component they
 serve. Global tokens and resets live in `styles/`, and application layouts in
@@ -361,8 +361,8 @@ retries.
 ## Feature integration points
 
 - **Chat:** browser-safe conversation functions in
-  `src/shared/tasks/conversation/` serve both the service and the preview. Task
-  actions own send, queue and interrupt. Transports deliver streamed drafts
+  `src/core/shared/tasks/conversation/` serve both the service and the preview.
+  Task actions own send, queue and interrupt. Transports deliver streamed drafts
   separately from stored messages. `DraftFollower` keeps completed streamed and
   task-list drafts shown until Chat holds the stored message, or until a Chat
   read that started later finds none, so a finished reply never disappears in

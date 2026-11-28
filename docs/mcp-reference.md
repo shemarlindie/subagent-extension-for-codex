@@ -334,8 +334,8 @@ console uses HTTP and SSE. See
 
 ## Parent delegation protocol
 
-`src/service/platform/server/instructions.ts` defines the server instructions,
-and `src/shared/tasks/conversation/parent-protocol.ts` defines the parent
+`src/hosts/codex/service/instructions.ts` defines the server instructions, and
+`src/core/shared/tasks/conversation/parent-protocol.ts` defines the parent
 protocol. Each rule appears once in what the model sees:
 
 | Constant                      | Content                 | Delivered in                                 |

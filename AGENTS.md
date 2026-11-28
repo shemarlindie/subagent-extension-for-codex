@@ -69,8 +69,9 @@ check it.
     `src/panel/app/state`. Limit panel shared code to stable cross-feature
     concepts and platform integrations.
   - Browser-safe contracts and domain functions used by both runtimes go in
-    feature-scoped `src/shared` modules, which must not import service execution
-    or panel rendering.
+    feature-scoped `src/core/shared` modules, which must not import service
+    execution or panel rendering. See
+    [Import rules](docs/architecture.md#import-rules).
 - Keep components and utilities small and focused. Components render, and
   reusable helpers live in their owning modules. Split files by responsibility
   without needless fragmentation, normally one React component per file, with

@@ -37,7 +37,7 @@ These areas need setup the tables don't describe:
   second console tab or with an agent `start_task` call.
 - **User-only settings.** An agent `update_settings` call that sets
   `approvals`, `projects`, `profiles` or `providers.<id>` must fail and name
-  the setting. `src/service/features/settings/settings.integration.test.ts`
+  the setting. `src/core/service/features/settings/settings.integration.test.ts`
   covers this.
 - **[Port recovery](../../../docs/configuration.md#service-address).**
   `tests/integration/service/launcher.test.ts` covers it. To check it by hand,

@@ -60,10 +60,10 @@ with the fixture worker.
 
 Build before starting either mode, including when testing in Codex:
 
-| Use           | Command                        | Backend behavior                                                                                     |
-| ------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Development   | `npm run build && npm run dev` | Runs `src/service/main.ts` through `tsx` in Node's watch mode. Restarts when backend sources change. |
-| Built service | `npm run build && npm start`   | Runs `dist/main.js`. Rebuild and restart to apply backend changes.                                   |
+| Use           | Command                        | Backend behavior                                                                             |
+| ------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| Development   | `npm run build && npm run dev` | Runs `src/main.ts` through `tsx` in Node's watch mode. Restarts when backend sources change. |
+| Built service | `npm run build && npm start`   | Runs `dist/main.js`. Rebuild and restart to apply backend changes.                           |
 
 Both modes run in the foreground at `http://127.0.0.1:17317` and serve the
 embedded panel and standalone console from `dist/app.html`. `npm run dev` does
@@ -349,8 +349,8 @@ curl -s http://127.0.0.1:17317/api/tools/get_settings \
 | ------------------------------------ | ----------------------------------------------------------------------- |
 | `src/panel/` in the dev host         | Nothing. Fast Refresh applies it                                        |
 | `src/panel/` in Codex or the console | `npm run build`, then reopen the panel or reload the page               |
-| `src/service/`                       | `npm run dev` restarts automatically. Restart `npm start` after a build |
-| `src/shared/`                        | Refresh the panel as above. `npm run dev` restarts automatically        |
+| Service modules and `src/main.ts`    | `npm run dev` restarts automatically. Restart `npm start` after a build |
+| Shared modules                       | Refresh the panel as above. `npm run dev` restarts automatically        |
 | Tool metadata or panel resource URI  | Restart the service, then reload the MCP connection in Codex            |
 | `.env` or `vite.config.ts`           | Restart the affected processes                                          |
 
@@ -381,7 +381,7 @@ input property optional even when the output requires it.
 To add a contract:
 
 1. Put exported types in a feature-owned file such as
-   `src/service/features/<feature>/message-contract.ts`:
+   `src/core/service/features/<feature>/message-contract.ts`:
 
    ```ts
    /** @strict */
@@ -412,7 +412,7 @@ Commit the source, generated file and tests together.
 A contract can import types only from other contracts. A type from anywhere else
 would generate a permissive `z.any()`, so the generator rejects it. Data built
 from handwritten schemas belongs in handwritten Zod, as Claude task options do
-in `src/shared/providers/claude/task-options.ts`. Do not feed Drizzle inferred
+in `src/providers/claude/shared/task-options.ts`. Do not feed Drizzle inferred
 types into this generator.
 
 ## Build
