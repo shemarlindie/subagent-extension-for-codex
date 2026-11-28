@@ -16,8 +16,8 @@ import { test } from "vitest";
 import {
   challengeHeader,
   healthProof,
-} from "../../../src/service/platform/service/health-proof.js";
-import { serviceIdentity } from "../../../src/service/platform/service/identity.js";
+} from "../../../src/core/service/platform/service/health-proof.js";
+import { serviceIdentity } from "../../../src/core/service/platform/service/identity.js";
 import { waitForListening } from "../../support/helpers.js";
 import {
   freePort,

@@ -1,9 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "src/service/stdio.ts",
-    "src/service/projects-cli.ts",
-    "src/service/platform/service/node-version.ts",
+    "src/hosts/codex/service/stdio.ts",
+    "src/core/service/projects-cli.ts",
+    "src/core/service/platform/service/node-version.ts",
     "src/panel/app/app.ts",
     "src/**/*-contract.ts",
     "dev/panel/host/panel.ts",
@@ -13,7 +13,7 @@
     "dev/panel/capture/comparison.ts",
     "dev/panel/fixture-service/service.ts",
     "dev/service/demo-service.ts",
-    "src/service/features/providers/claude/events/sdk-message-coverage.ts",
+    "src/providers/claude/service/events/sdk-message-coverage.ts",
     "scripts/*.mjs"
   ],
   "ignoreBinaries": ["where"],

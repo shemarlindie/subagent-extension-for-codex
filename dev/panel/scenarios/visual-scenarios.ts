@@ -2,7 +2,7 @@
 // version, and a small interactive page with a link in a wrapper with a max
 // width, as the show_visual description asks.
 import type { Task } from "../../../src/core/shared/tasks/model";
-import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
+import { workerToolNames } from "../../../src/providers/claude/service/runtime/worker-tool-names";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 

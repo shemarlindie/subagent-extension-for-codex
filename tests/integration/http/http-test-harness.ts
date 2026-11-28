@@ -10,13 +10,13 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { TestContext } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
+import { application } from "../../../src/core/service/platform/server/app.js";
+import { Auth } from "../../../src/core/service/platform/server/auth.js";
 import { startSchema } from "../../../src/core/shared/tasks/model.js";
 import { now } from "../../../src/core/shared/time.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { application } from "../../../src/service/platform/server/app.js";
-import { Auth } from "../../../src/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 

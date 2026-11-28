@@ -12,7 +12,7 @@ import {
   inspectProcess,
   isExtensionService,
   type ProcessIdentity,
-} from "../../../src/service/platform/service/process-info.js";
+} from "../../../src/core/service/platform/service/process-info.js";
 
 async function data(t: import("vitest").TestContext) {
   const directory = await mkdtemp(join(tmpdir(), "service-owner-"));
@@ -38,7 +38,7 @@ test("matches service-recorded identity to a later process inspection", async (t
   const resultFile = join(directory, "identity.json");
 
   const moduleUrl = pathToFileURL(
-    resolve("src/service/platform/service/process-info.ts"),
+    resolve("src/core/service/platform/service/process-info.ts"),
   ).href;
 
   const childScript = [

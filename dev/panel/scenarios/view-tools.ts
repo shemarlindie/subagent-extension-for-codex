@@ -47,7 +47,7 @@ type PartRead = (part: ViewPart, args: Record<string, unknown>) => unknown;
 
 /**
  * Builds the view an update wait asked for from each part's own read, as
- * `waitForUpdates` in `src/service/features/tasks/conversation/updates.ts`
+ * `waitForUpdates` in `src/core/service/features/tasks/conversation/updates.ts`
  * does. Parts the wait didn't ask for are left out.
  */
 function composeView(view: unknown, read: PartRead): PanelView {

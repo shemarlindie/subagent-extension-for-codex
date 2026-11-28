@@ -154,7 +154,7 @@ const registeredProject = (
       )?.repository;
 
 /**
- * Mirrors resolvePanelContext in src/service/platform/panel/panel-context.ts: an explicit or
+ * Mirrors resolvePanelContext in src/core/service/platform/panel/panel-context.ts: an explicit or
  * host-directory project wins, then the thread's latest task. Fixtures cannot
  * run git, so an unregistered directory is offered as the candidate as is.
  */

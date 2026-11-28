@@ -5,7 +5,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 
 import type { ActivityPresentation } from "../../src/core/shared/providers/activity/types.js";
-import { claudeActivityPresentation } from "../../src/service/features/providers/claude/events/activity.js";
+import { claudeActivityPresentation } from "../../src/providers/claude/service/events/activity.js";
 import type { FixtureStreamFrame } from "./fixture-scenarios.js";
 
 type SdkSystemActivity = Exclude<

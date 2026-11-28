@@ -3,16 +3,16 @@ import { dirname, join } from "node:path";
 
 import { applyPatch } from "diff";
 
-import type { Event } from "../../../src/core/shared/events/types";
-import type { Task } from "../../../src/core/shared/tasks/model";
-import { originalResponseLookup } from "../../../src/providers/claude/shared/responses";
-import { changePath } from "../../../src/service/features/changes/paths";
-import { recordClaudeFileEdits } from "../../../src/service/features/providers/claude/runtime/file-edits";
+import { changePath } from "../../../src/core/service/features/changes/paths";
 import type {
   FileEdit,
   RunContext,
-} from "../../../src/service/features/providers/types";
-import type { Control } from "../../../src/service/features/tasks/runtime/control";
+} from "../../../src/core/service/features/providers/types";
+import type { Control } from "../../../src/core/service/features/tasks/runtime/control";
+import type { Event } from "../../../src/core/shared/events/types";
+import type { Task } from "../../../src/core/shared/tasks/model";
+import { recordClaudeFileEdits } from "../../../src/providers/claude/service/runtime/file-edits";
+import { originalResponseLookup } from "../../../src/providers/claude/shared/responses";
 
 /** Populate previews only when a recorded response supplies a complete preimage. */
 function materialize(root: string, edit: FileEdit, original: unknown) {

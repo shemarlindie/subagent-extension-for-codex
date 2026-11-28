@@ -18,9 +18,9 @@ import { test, vi } from "vitest";
 import {
   challengeHeader,
   healthProof,
-} from "../../../src/service/platform/service/health-proof.js";
-import { serviceIdentity } from "../../../src/service/platform/service/identity.js";
-import { connectService } from "../../../src/service/platform/service/launcher.js";
+} from "../../../src/core/service/platform/service/health-proof.js";
+import { serviceIdentity } from "../../../src/core/service/platform/service/identity.js";
+import { connectService } from "../../../src/core/service/platform/service/launcher.js";
 import { waitForListening } from "../../support/helpers.js";
 import { freePort, stopService } from "../../support/service.js";
 
@@ -28,7 +28,7 @@ const exec = promisify(execFile);
 
 // The source launcher runs through tsx; it still starts the built dist/main.js.
 const launcher = new URL(
-  "../../../src/service/platform/service/launcher.ts",
+  "../../../src/core/service/platform/service/launcher.ts",
   import.meta.url,
 ).href;
 

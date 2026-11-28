@@ -9,7 +9,7 @@ import {
   type TaskPlan,
 } from "../../../src/core/shared/tasks/plan";
 import type { PlanStep } from "../../../src/core/shared/tasks/plan-contract";
-import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
+import { workerToolNames } from "../../../src/providers/claude/service/runtime/worker-tool-names";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 

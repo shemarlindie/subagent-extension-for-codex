@@ -21,7 +21,7 @@ import { describe, test, type TestContext } from "vitest";
 import {
   challengeHeader,
   healthProof,
-} from "../../../src/service/platform/service/health-proof.js";
+} from "../../../src/core/service/platform/service/health-proof.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);
@@ -50,7 +50,7 @@ async function fixture(t: TestContext) {
     "scripts/assemble-release.mjs",
     ".agents/plugins/marketplace.json",
     "plugin.json",
-    "src/service/platform/service/health-proof.ts",
+    "src/core/service/platform/service/health-proof.ts",
   ]) {
     const target = join(checkout, file);
     await mkdir(dirname(target), { recursive: true });

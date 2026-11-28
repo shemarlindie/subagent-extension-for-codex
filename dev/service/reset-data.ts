@@ -4,19 +4,19 @@ import { join, parse, sep } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { setTimeout } from "node:timers/promises";
 
-import { connectService } from "../../src/service/platform/service/launcher.js";
-import { lease } from "../../src/service/platform/service/lease.js";
+import { connectService } from "../../src/core/service/platform/service/launcher.js";
+import { lease } from "../../src/core/service/platform/service/lease.js";
 import {
   inspectProcess,
   isExtensionService,
   isProcessRunning,
   isSameProcess,
-} from "../../src/service/platform/service/process-info.js";
+} from "../../src/core/service/platform/service/process-info.js";
 import {
   dataDirectory,
   installRoot,
   packagePath,
-} from "../../src/service/platform/service/runtime.js";
+} from "../../src/core/service/platform/service/runtime.js";
 
 try {
   const data = fs.realpathSync(dataDirectory());

@@ -9,9 +9,9 @@ import { begin, Timeline } from "./timeline";
 
 const ID = "preview-attachments";
 
-const diff = `diff --git a/src/service/features/tasks/conversation/session-prompts.ts b/src/service/features/tasks/conversation/session-prompts.ts
---- a/src/service/features/tasks/conversation/session-prompts.ts
-+++ b/src/service/features/tasks/conversation/session-prompts.ts
+const diff = `diff --git a/src/core/service/features/tasks/conversation/session-prompts.ts b/src/core/service/features/tasks/conversation/session-prompts.ts
+--- a/src/core/service/features/tasks/conversation/session-prompts.ts
++++ b/src/core/service/features/tasks/conversation/session-prompts.ts
 @@ -46,8 +46,10 @@ export class SessionPrompts {
      const workspaceContext = this.workspaceContext(t);
 +    const attachments = this.attachmentList(t);
@@ -24,9 +24,9 @@ const diff = `diff --git a/src/service/features/tasks/conversation/session-promp
 +      ...(t.context ?? []),
 +      ...(attachments ? [attachments] : []),
        ...(transcript ? [transcript] : []),
-diff --git a/src/service/features/tasks/storage/stored.ts b/src/service/features/tasks/storage/stored.ts
---- a/src/service/features/tasks/storage/stored.ts
-+++ b/src/service/features/tasks/storage/stored.ts
+diff --git a/src/core/service/features/tasks/storage/stored.ts b/src/core/service/features/tasks/storage/stored.ts
+--- a/src/core/service/features/tasks/storage/stored.ts
++++ b/src/core/service/features/tasks/storage/stored.ts
 @@ -51,5 +51,5 @@ const storedTaskSchema = z.looseObject({
    workspace_strategy: z.enum(["worktree", "current_repo"]),
    no_git: z.literal(true).optional(),
@@ -132,7 +132,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The prompt builder as committed, for comparing section order.",
       format: "code",
       source: "file",
-      path: "src/service/features/tasks/conversation/session-prompts.ts",
+      path: "src/core/service/features/tasks/conversation/session-prompts.ts",
       file: "request-2-session-prompts-ts-44-55.ts",
       chars: code.length,
       lines: lines(code),
@@ -225,7 +225,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The legacy prompt test that now fails.",
       format: "code",
       source: "file",
-      path: "src/service/features/tasks/conversation/session-prompts.test.ts",
+      path: "src/core/service/features/tasks/conversation/session-prompts.test.ts",
       file: `${FOLLOW_UP}-2-session-prompts-test-ts-12-20.ts`,
       chars: legacyTest.length,
       lines: lines(legacyTest),

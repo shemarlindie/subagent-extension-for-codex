@@ -50,7 +50,7 @@ function storyTool(
 
 /**
  * Whether a wait returns now. Mirrors `waitForUpdates` in
- * `src/service/features/tasks/conversation/updates.ts`: at once without
+ * `src/core/service/features/tasks/conversation/updates.ts`: at once without
  * `after` or `wait_ms`, otherwise when the revision changes or the target
  * draft grows, becomes another message or clears.
  */

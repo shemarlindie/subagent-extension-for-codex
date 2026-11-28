@@ -1,0 +1,270 @@
+import type { HookJSONOutput, Options } from "@anthropic-ai/claude-agent-sdk";
+
+import type { RunContext } from "../../../../core/service/features/providers/types.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import {
+  readOnlyProfile,
+  type ClaudePolicy,
+} from "../../shared/permissions.js";
+import { readClaudeTaskOptions } from "../../shared/task-options.js";
+import {
+  adminTokenRule,
+  claudeAdminToken,
+  touchesAdminToken,
+} from "../configuration/admin-token.js";
+import {
+  attachmentRules,
+  editsAttachment,
+} from "../configuration/attachment-access.js";
+import { claudeEnvironment } from "../configuration/execution-environment.js";
+import { recordClaudeFileEdits } from "./file-edits.js";
+import { isWorkerTool, workerToolNames } from "./worker-tool-names.js";
+import {
+  planReminder,
+  workerMcpServers,
+  workerToolsPrompt,
+} from "./worker-tools.js";
+
+/** The reason shown when a permission prompt is denied without a message. */
+function defaultDenialMessage(tool: string) {
+  if (tool === "Bash") return "Command denied";
+
+  return ["Edit", "Write"].includes(tool) ? "Edit denied" : "Tool call denied";
+}
+
+/** Which Claude Code settings a session loads, and whether their MCP servers join the extension's. */
+function settingsOptions(policy: ClaudePolicy): Partial<Options> {
+  return {
+    settingSources: policy.settings_files ? ["user", "project", "local"] : [],
+    // Strict MCP config also ignores servers outside settings files, such as
+    // `.mcp.json`, user-scope servers and plugins.
+    ...(policy.settings_files && policy.user_mcp
+      ? {}
+      : { strictMcpConfig: true }),
+  };
+}
+
+function workspaceRule(task: Task) {
+  if (task.workspace_strategy !== "current_repo") {
+    return "Never modify the primary checkout.";
+  }
+
+  return task.no_git || !task.base_commit
+    ? "This is the user's project folder, with no Git history to undo edits. Preserve unrelated files. Write profiles edit it directly."
+    : "This is the current repository. Preserve unrelated uncommitted changes. Write profiles edit the user checkout directly.";
+}
+
+/** The task's role and workspace rules, then the user's custom instructions. */
+function systemPromptAppend(c: RunContext) {
+  const rules = [
+    c.attachments
+      ? "Work only in the provided task workspace, apart from reading the attachments that messages list, which are read-only."
+      : "Work only in the provided task workspace.",
+    "End each turn with a plain reply that says what you did, what you found and what is left.",
+    "When you mention a workspace file, link it in Markdown with its workspace-relative path and an optional :line suffix, such as [queue.ts](src/queue.ts:42).",
+    "Follow the configured native permission mode for tool execution.",
+    workspaceRule(c.task),
+  ];
+
+  const environment = `You are a delegated worker running inside Subagent Extension for Codex. Codex is the parent agent, and the user communicates through its chat and the extension panel. Task ID: ${c.task.id}. Parent conversation: ${c.task.conversation_id ?? "unavailable"}. Workspace: ${c.task.workspace}. Your replies appear in the task conversation, where Codex reads them. Use AskUserQuestion for questions and the normal permission flow for approvals.`;
+
+  const parts = [
+    environment,
+    `You are an independent ${c.task.worker_profile}. ${rules.join(" ")}`,
+    workerToolsPrompt,
+  ];
+
+  if (c.task.profile_instructions) {
+    parts.push(
+      `The user's custom instructions for the ${c.task.worker_profile} profile:\n${c.task.profile_instructions}`,
+    );
+  }
+
+  return parts.join("\n\n");
+}
+
+/** A PreToolUse denial with its reason. */
+const denied = (reason: string): HookJSONOutput => ({
+  hookSpecificOutput: {
+    hookEventName: "PreToolUse",
+    permissionDecision: "deny",
+    permissionDecisionReason: reason,
+  },
+});
+
+/**
+ * The SDK options for one turn of a task: its workspace, session, model and
+ * budget, and the task's settings. The admin token is denied twice: a
+ * settings rule, which the sandbox applies to every program, and a PreToolUse
+ * hook for file tools, since an org can drop the rule.
+ *
+ * The attachment folder is a working directory, so the worker reads it
+ * without prompts. Deny rules, the sandbox's own write list and the hook
+ * keep it fixed, since each covers a case the others can miss.
+ */
+export async function claudeTurnOptions(
+  c: RunContext,
+  executable: string,
+  /** Stops the process: only when an interrupt doesn't end the turn. */
+  abortController: AbortController,
+): Promise<Options> {
+  const taskOptions = readClaudeTaskOptions(c.task);
+  const policy = taskOptions.claude_policy;
+  const nativeMode = taskOptions.permission_mode;
+
+  const { workspace } = c.task;
+  if (!workspace) throw new Error("The task has no workspace.");
+  const adminToken = await claudeAdminToken();
+  const attachments = c.attachments;
+
+  return {
+    pathToClaudeCodeExecutable: executable,
+    cwd: workspace,
+    // Default is what Claude Code runs without a model, which may be the org's.
+    ...(c.task.model && c.task.model !== "default"
+      ? { model: c.task.model }
+      : {}),
+    ...(c.task.reasoning_effort && c.task.reasoning_effort !== "default"
+      ? { effort: c.task.reasoning_effort as Options["effort"] }
+      : {}),
+    env: claudeEnvironment(process.env),
+    // Settings and org policy decide the rest of the sandbox.
+    ...(policy.sandbox
+      ? {
+          sandbox: {
+            enabled: true,
+            failIfUnavailable: true,
+            // Org policy can drop the deny rules, which the sandbox also applies.
+            ...(attachments
+              ? { filesystem: { denyWrite: [attachments] } }
+              : {}),
+          },
+        }
+      : {}),
+    ...(attachments ? { additionalDirectories: [attachments] } : {}),
+    abortController,
+    persistSession: true,
+    resume: c.task.session_id,
+    // Stream frames carry the reply as it's written, and show when the
+    // final message ends, the last moment a steer the turn won't take can
+    // be withdrawn.
+    includePartialMessages: true,
+    settings: {
+      bashEditDiffEnabled: true,
+      permissions: {
+        // The worker tools change nothing in the workspace.
+        allow: workerToolNames,
+        // Inside the sandbox, Claude Code applies it to every program.
+        deny: [
+          adminTokenRule(adminToken),
+          ...(attachments ? attachmentRules(attachments) : []),
+        ],
+      },
+    },
+    ...settingsOptions(policy),
+    mcpServers: workerMcpServers(c),
+    permissionMode: nativeMode,
+    ...(nativeMode === "bypassPermissions"
+      ? { allowDangerouslySkipPermissions: true }
+      : {}),
+    tools: { type: "preset", preset: "claude_code" },
+    disallowedTools: [
+      // It publishes to the signed-in claude.ai account, outside the task.
+      "Artifact",
+      ...(policy.subagents ? [] : ["Agent", "Task"]),
+      ...(readOnlyProfile(c.task.worker_profile) ? ["ExitPlanMode"] : []),
+    ],
+    ...(c.task.budget.max_cost_usd === null
+      ? {}
+      : {
+          maxBudgetUsd: c.task.budget.max_cost_usd - (c.task.cost_usd ?? 0),
+        }),
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      append: systemPromptAppend(c),
+    },
+    hooks: {
+      SessionStart: [{ hooks: [planReminder(c)] }],
+      PostToolUse: [
+        {
+          hooks: [
+            async (input) => {
+              if (input.hook_event_name === "PostToolUse") {
+                recordClaudeFileEdits(
+                  c,
+                  input.tool_name,
+                  input.tool_response,
+                  c.task.no_git,
+                );
+              }
+
+              return {};
+            },
+          ],
+        },
+      ],
+      PreToolUse: [
+        {
+          // A guard that throws blocks the call instead of letting it run.
+          onFailure: "block",
+          hooks: [
+            async (input): Promise<HookJSONOutput> => {
+              if (input.hook_event_name !== "PreToolUse") return {};
+
+              // Subagents share the worker's tools, but the panel shows the worker's own plan and visuals.
+              if (input.agent_id && isWorkerTool(input.tool_name)) {
+                return denied("Only the main worker uses the panel tools");
+              }
+
+              const toolInput = input.tool_input as Record<string, unknown>;
+
+              if (
+                await touchesAdminToken(
+                  adminToken,
+                  input.tool_name,
+                  toolInput,
+                  workspace,
+                )
+              ) {
+                return denied("The admin token is off limits");
+              }
+
+              return attachments &&
+                (await editsAttachment(
+                  attachments,
+                  input.tool_name,
+                  toolInput,
+                  workspace,
+                ))
+                ? denied("Task attachments are read-only")
+                : {};
+            },
+          ],
+        },
+      ],
+    },
+    canUseTool: async (tool, input, { signal }) => {
+      // A policy that keeps only managed rules drops the allow rule.
+      if (isWorkerTool(tool)) return { behavior: "allow", updatedInput: input };
+
+      if (tool === "AskUserQuestion") {
+        const answer = await c.input(tool, input, signal);
+
+        return answer.approved
+          ? { behavior: "allow", updatedInput: { ...input, ...answer.input } }
+          : { behavior: "deny", message: answer.message ?? "User declined" };
+      }
+
+      // Calls not already approved by settings or the permission mode ask the task's approver.
+      const answer = await c.input(tool, input, signal);
+
+      return answer.approved
+        ? { behavior: "allow", updatedInput: input }
+        : {
+            behavior: "deny",
+            message: answer.message ?? defaultDenialMessage(tool),
+          };
+    },
+  };
+}

@@ -10,21 +10,21 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { beforeEach, describe, test } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
-import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/core/shared/tasks/conversation/parent-protocol.js";
-import { startSchema } from "../../../src/core/shared/tasks/model.js";
-import { now } from "../../../src/core/shared/time.js";
-import { Projects } from "../../../src/service/features/projects/projects.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { application } from "../../../src/service/platform/server/app.js";
-import { Auth } from "../../../src/service/platform/server/auth.js";
-import { SERVER_INSTRUCTIONS } from "../../../src/service/platform/server/instructions.js";
+import { Projects } from "../../../src/core/service/features/projects/projects.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
+import { application } from "../../../src/core/service/platform/server/app.js";
+import { Auth } from "../../../src/core/service/platform/server/auth.js";
 import {
   challengeHeader,
   healthProof,
   provesToken,
-} from "../../../src/service/platform/service/health-proof.js";
+} from "../../../src/core/service/platform/service/health-proof.js";
+import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/core/shared/tasks/conversation/parent-protocol.js";
+import { startSchema } from "../../../src/core/shared/tasks/model.js";
+import { now } from "../../../src/core/shared/time.js";
+import { SERVER_INSTRUCTIONS } from "../../../src/hosts/codex/service/instructions.js";
 import { waitForListening } from "../../support/helpers.js";
 import { until } from "../../support/until.js";
 import {

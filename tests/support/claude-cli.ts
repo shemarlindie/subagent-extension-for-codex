@@ -1,4 +1,4 @@
-import type { ClaudeCli } from "../../src/service/features/providers/claude/configuration/executable.js";
+import type { ClaudeCli } from "../../src/providers/claude/service/configuration/executable.js";
 
 /** The fake Claude Code path tests pass to the SDK; nothing runs it. */
 export const fakeClaudePath = "/test/bin/claude";

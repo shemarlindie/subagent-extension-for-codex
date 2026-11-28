@@ -44,7 +44,7 @@
     "db:generate": "drizzle-kit generate",
     "demo": "npm run build && node scripts/demo.mjs",
     "predev": "npm run schemas:generate",
-    "dev": "node --watch --import tsx --env-file-if-exists=.env src/service/main.ts",
+    "dev": "node --watch --import tsx --env-file-if-exists=.env src/main.ts",
     "dev:plugin": "node scripts/dev-plugin.mjs",
     "dev:reset": "node --import tsx --env-file-if-exists=.env dev/service/reset-data.ts",
     "dev:ui": "vite",

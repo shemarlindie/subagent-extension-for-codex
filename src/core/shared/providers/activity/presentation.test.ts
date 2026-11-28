@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { claudeMessageNormalizer } from "../../../../service/features/providers/claude/events/normalize.js";
-import type { RunContext } from "../../../../service/features/providers/types.js";
+import { claudeMessageNormalizer } from "../../../../providers/claude/service/events/normalize.js";
+import type { RunContext } from "../../../service/features/providers/types.js";
 import { decodedEvent } from "../../events/decode.js";
 import type { Event } from "../../events/types.js";
 import { currentActivityStatus } from "../../tasks/activity/activity-status.js";

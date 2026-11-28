@@ -14,7 +14,14 @@
     "rootDir": "src",
     "esModuleInterop": true
   },
-  "include": ["src/service", "src/core/shared", "src/providers/claude/shared"],
+  "include": [
+    "src/main.ts",
+    "src/core/service",
+    "src/providers/claude/service",
+    "src/hosts/codex/service",
+    "src/core/shared",
+    "src/providers/claude/shared"
+  ],
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

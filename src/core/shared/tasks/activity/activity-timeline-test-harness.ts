@@ -1,6 +1,6 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { claudeActivityPresentation } from "../../../../service/features/providers/claude/events/activity.js";
+import { claudeActivityPresentation } from "../../../../providers/claude/service/events/activity.js";
 import { decodedEvent } from "../../events/decode.js";
 import { type Event } from "../../events/types.js";
 import { startSchema, type Task } from "../model.js";

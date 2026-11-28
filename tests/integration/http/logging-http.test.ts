@@ -6,7 +6,7 @@ import { expect, test, vi } from "vitest";
 import {
   configureLogging,
   flushLogs,
-} from "../../../src/service/platform/logging/logger.js";
+} from "../../../src/core/service/platform/logging/logger.js";
 import { httpFixture, sessionCookie } from "./http-test-harness.js";
 
 interface RejectedAttempt {

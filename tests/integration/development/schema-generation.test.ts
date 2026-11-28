@@ -240,7 +240,12 @@ test.concurrent(
   "discovers nested feature contracts and reports missing outputs without writing in check mode",
   async (t) => {
     const directory = fixture(t);
-    const feature = join(directory, "src/service/features/new-feature/nested");
+
+    const feature = join(
+      directory,
+      "src/core/service/features/new-feature/nested",
+    );
+
     const output = join(feature, "message-contract.generated.ts");
     await generate(directory);
 

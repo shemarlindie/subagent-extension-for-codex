@@ -10,14 +10,14 @@ import { promisify } from "node:util";
 import { test } from "vitest";
 
 import { FixtureProvider } from "../../../dev/service/fixture-provider.js";
+import { Projects } from "../../../src/core/service/features/projects/projects.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
 import {
   startSchema,
   type Task,
 } from "../../../src/core/shared/tasks/model.js";
-import { Projects } from "../../../src/service/features/projects/projects.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { waitForListening } from "../../support/helpers.js";
 
 const exec = promisify(execFile);

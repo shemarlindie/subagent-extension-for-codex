@@ -1,0 +1,115 @@
+import { createSelectSchema } from "drizzle-orm/zod";
+import { z } from "zod";
+
+import { decodedEvent } from "../../../../shared/events/decode.js";
+import type { EventEnvelope } from "../../../../shared/events/event-contract.js";
+import {
+  approvalModeSchema,
+  deliveries,
+  providerOptionsSchema,
+  roles,
+  statuses,
+  type Task,
+} from "../../../../shared/tasks/model.js";
+import {
+  checkStored,
+  decodeStored,
+} from "../../../platform/database/decode.js";
+import { events } from "./schema.js";
+
+const eventRowSchema = createSelectSchema(events).omit({
+  response_ref: true,
+  original_response: true,
+  chat: true,
+});
+
+const eventDataSchema = z.record(z.string(), z.unknown());
+
+// Stored records are checked for the fields that ownership, scheduling and
+// the queue depend on. Other fields, such as provider state, pass through
+// unchanged, and nothing is defaulted.
+
+const sender = z.enum(["user", "parent"]);
+
+const message = z.looseObject({
+  id: z.string(),
+  message: z.string(),
+  from: sender,
+  attachment_titles: z.array(z.string()).optional(),
+});
+
+const queuedMessage = message.extend({
+  delivery: z.enum(deliveries),
+  recorded: z.boolean().optional(),
+});
+
+const storedTaskSchema = z.looseObject({
+  id: z.string().min(1),
+  owner: z.string().min(1),
+  title: z.string(),
+  description: z.string(),
+  provider: z.string(),
+  provider_options: providerOptionsSchema.optional(),
+  approval_mode: approvalModeSchema.optional(),
+  worker_profile: z.enum(roles),
+  repository: z.string(),
+  revision: z.string(),
+  workspace_strategy: z.enum(["worktree", "current_repo"]),
+  no_git: z.literal(true).optional(),
+  workspace_fallback: z.enum(["no_git", "no_commits"]).optional(),
+  context: z.array(z.string()).optional(),
+  budget: z.looseObject({
+    max_runtime_minutes: z.number().nullable(),
+    max_cost_usd: z.number().nullable(),
+    max_tokens: z.number().optional(),
+  }),
+  budget_raised_for_turn: z
+    .looseObject({
+      turn: z.number().int().nonnegative(),
+      cost: z.literal(true).optional(),
+      runtime: z.literal(true).optional(),
+    })
+    .optional(),
+  created_by: sender,
+  status: z.enum(statuses),
+  error_code: z.string().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  pending_input: z
+    .looseObject({
+      id: z.string(),
+      tool: z.string(),
+      kind: z.enum(["question", "permission"]),
+      input: z.record(z.string(), z.unknown()),
+    })
+    .optional(),
+  profile_instructions: z.string().optional(),
+  instructions_sent: z.number().int().nonnegative(),
+  pending_steers: z.array(message),
+  queue: z.array(queuedMessage),
+  removed_queue: z.array(queuedMessage).optional(),
+  turn: z.number().int().nonnegative(),
+  runtime_ms: z.number().nonnegative(),
+});
+
+/** A stored task body, named by its row's id when malformed. */
+export function decodeTask(id: string, body: string): Task {
+  return decodeStored(storedTaskSchema, body, `task ${id}`);
+}
+
+/** A stored event row with a validated view of the fields this build knows. */
+export function decodeEvent(
+  row: Pick<
+    typeof events.$inferSelect,
+    "id" | "task_id" | "type" | "timestamp" | "data"
+  >,
+) {
+  const stored = checkStored(eventRowSchema, row, `event ${row.id}`);
+
+  const event = {
+    ...stored,
+    data: decodeStored(eventDataSchema, stored.data, `event ${stored.id}`),
+  } satisfies EventEnvelope;
+
+  return decodedEvent(event);
+}

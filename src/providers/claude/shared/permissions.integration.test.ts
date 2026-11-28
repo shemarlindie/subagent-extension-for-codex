@@ -8,22 +8,22 @@ import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { until } from "../../../../tests/support/until.js";
-import { claudeMetadata } from "../../../core/shared/providers/metadata.js";
-import { settingPaths } from "../../../core/shared/settings/settings-schema.js";
-import type { Task } from "../../../core/shared/tasks/model.js";
-import { claudeTaskPolicy } from "../../../service/features/providers/claude/configuration/task-policy.js";
 import {
   type RunContext,
   type TurnOutput,
-} from "../../../service/features/providers/types.js";
-import { Settings } from "../../../service/features/settings/settings.js";
+} from "../../../core/service/features/providers/types.js";
+import { Settings } from "../../../core/service/features/settings/settings.js";
 import {
   latestReply,
   pendingInput,
-} from "../../../service/features/tasks/runtime/control-test-harness.js";
-import { Control } from "../../../service/features/tasks/runtime/control.js";
-import { Store } from "../../../service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../service/features/workspaces/workspace.js";
+} from "../../../core/service/features/tasks/runtime/control-test-harness.js";
+import { Control } from "../../../core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../core/service/features/workspaces/workspace.js";
+import { claudeMetadata } from "../../../core/shared/providers/metadata.js";
+import { settingPaths } from "../../../core/shared/settings/settings-schema.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
+import { claudeTaskPolicy } from "../service/configuration/task-policy.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,

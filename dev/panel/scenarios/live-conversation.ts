@@ -201,7 +201,7 @@ function conversationTurn(cycle: number) {
   at(12_000, () => {
     tool = timeline.toolStart("Bash", {
       command:
-        "npm test -- --runInBand src/service/features/tasks/continuation/recovery.integration.test.ts",
+        "npm test -- --runInBand src/core/service/features/tasks/continuation/recovery.integration.test.ts",
       description: "Check conversation layout",
     });
 

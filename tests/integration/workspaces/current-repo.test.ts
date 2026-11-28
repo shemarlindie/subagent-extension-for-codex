@@ -8,13 +8,13 @@ import { structuredPatch } from "diff";
 import { test } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
 import {
   startSchema,
   type Task,
 } from "../../../src/core/shared/tasks/model.js";
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";
 
@@ -238,7 +238,7 @@ test("current repository settings persist, are owner-scoped, and allow task over
     assert.equal(overridden.workspace_strategy, "current_repo");
 
     const { Settings } =
-      await import("../../../src/service/features/settings/settings.js");
+      await import("../../../src/core/service/features/settings/settings.js");
 
     assert.equal(
       new Settings(s.c.store.database, () => ["fixture"]).values("alice").task

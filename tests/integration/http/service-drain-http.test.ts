@@ -5,11 +5,11 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
-import { Control } from "../../../src/service/features/tasks/runtime/control.js";
-import { Store } from "../../../src/service/features/tasks/storage/store.js";
-import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { application } from "../../../src/service/platform/server/app.js";
-import { Auth } from "../../../src/service/platform/server/auth.js";
+import { Control } from "../../../src/core/service/features/tasks/runtime/control.js";
+import { Store } from "../../../src/core/service/features/tasks/storage/store.js";
+import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
+import { application } from "../../../src/core/service/platform/server/app.js";
+import { Auth } from "../../../src/core/service/platform/server/auth.js";
 import { waitForListening } from "../../support/helpers.js";
 import { sessionCookie } from "./http-test-harness.js";
 

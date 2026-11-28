@@ -2,7 +2,7 @@ import { builtinModules } from "node:module";
 import { isAbsolute, relative, resolve } from "node:path";
 
 const runtimePath =
-  /^src\/(?:core\/|providers\/claude\/)?(service|panel|shared)\//;
+  /^src\/(?:core\/|providers\/claude\/|hosts\/codex\/)?(service|panel|shared)\//;
 
 const builtins = new Set(
   builtinModules.map((name) => name.replace(/^node:/, "")),
@@ -25,7 +25,11 @@ export const sourceBoundaries = {
     const root = context.cwd;
     const filename = context.filename;
     const localFile = relative(root, filename).replaceAll("\\", "/");
-    const owner = localFile.match(runtimePath)?.[1];
+
+    const owner =
+      localFile === "src/main.ts"
+        ? "service"
+        : localFile.match(runtimePath)?.[1];
 
     if (!owner || testModule.test(localFile)) return {};
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { Store } from "../../../../service/features/tasks/storage/store.js";
+import { Store } from "../../../service/features/tasks/storage/store.js";
 import { decodedEvent } from "../../events/decode.js";
 import { startSchema, type Task } from "../model.js";
 import { CHAT_EVENTS, chatItems } from "./chat.js";

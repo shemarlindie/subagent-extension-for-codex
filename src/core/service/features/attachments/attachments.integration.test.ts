@@ -1,0 +1,799 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  access,
+  chmod,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, extname, join } from "node:path";
+
+import { onTestFinished, test } from "vitest";
+
+import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import {
+  ATTACHMENT_LIMITS,
+  type AttachmentPage,
+} from "../../../shared/attachments/model.js";
+import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
+import { callTool } from "../../platform/server/tools.js";
+import { Projects } from "../projects/projects.js";
+import type { RunContext } from "../providers/types.js";
+import { SessionPrompts } from "../tasks/conversation/session-prompts.js";
+import {
+  input,
+  PromptRecorder,
+  setup,
+  until,
+} from "../tasks/runtime/control-test-harness.js";
+import { uncommittedDiff } from "./diff.js";
+
+const git = (repo: string, ...args: string[]) =>
+  execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" });
+
+const commit = (repo: string) =>
+  git(
+    repo,
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@example.invalid",
+    "commit",
+    "-qam",
+    "change",
+  );
+
+/** Writes service logs under dir for the test, and reads back the records with an event prefix. */
+function captureLogs(dir: string) {
+  const path = join(dir, "service.jsonl");
+  configureLogging(path);
+
+  onTestFinished(async () => {
+    await flushLogs();
+    configureLogging(undefined);
+  });
+
+  return async (prefix: string) => {
+    await flushLogs();
+
+    return (await readFile(path, "utf8"))
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .filter((record) => String(record.event).startsWith(prefix));
+  };
+}
+
+/** The task folders under the attachments root. */
+async function taskFolders(root: string) {
+  try {
+    return (await readdir(root)).filter((name) => name.startsWith("task_"));
+  } catch {
+    return [];
+  }
+}
+
+test("each attachment kind is snapshotted with its generated title, and invalid ones save nothing", async () => {
+  const { c, store, repo, dir } = await setup();
+  const root = join(dir, "attachments");
+  await writeFile(join(repo, "notes.md"), "one\ntwo\nthree\n");
+  await writeFile(join(repo, "README.md"), "changed\n");
+  await symlink("notes.md", join(repo, "alias.md"));
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [
+      {
+        source: "inline",
+        summary: "A decision.",
+        format: "markdown",
+        text: "Use X.",
+      },
+      {
+        source: "diff",
+        summary: "The changes.",
+        paths: ["README.md", "notes.md"],
+      },
+      { source: "file", path: "notes.md", summary: "Notes." },
+      {
+        source: "file",
+        path: "notes.md",
+        start_line: 2,
+        end_line: 9,
+        summary: "Tail.",
+      },
+      { source: "file", path: "notes.md", summary: "Mine.", title: "Custom" },
+      {
+        source: "inline",
+        summary: "A label.",
+        format: "code",
+        text: "x",
+        path: "example.png",
+      },
+      { source: "file", path: "alias.md", summary: "Linked notes." },
+    ],
+  });
+
+  const attachments = c.attachments.list(t.id);
+
+  assert.deepEqual(
+    attachments.map((a) => [a.title, a.source, a.format]),
+    [
+      ["Note", "inline", "markdown"],
+      ["Uncommitted changes", "diff", "diff"],
+      ["notes.md", "file", "markdown"],
+      ["notes.md:2-3", "file", "markdown"],
+      ["Custom", "file", "markdown"],
+      ["example.png", "inline", "code"],
+      ["notes.md", "file", "markdown"],
+    ],
+  );
+
+  const [, diff, , range, , code, link] = attachments;
+  assert.ok(diff && range && code && link);
+
+  // A link inside the project reads through its resolved path.
+  assert.equal(link.path, "notes.md");
+
+  // Claude must open this code as text even when its label names an image.
+  assert.match(code.file, /\.txt$/);
+  assert.deepEqual([diff.files, diff.additions], [2, 4]);
+
+  const tail = join(c.attachments.folder(t.id), range.file);
+  assert.equal(await readFile(tail, "utf8"), "two\nthree\n");
+  assert.equal(range.lines, 2);
+
+  // The saved range is what was copied, ending at the file's last line.
+  assert.deepEqual([range.start_line, range.end_line], [2, 3]);
+
+  assert.deepEqual(diff.paths, ["README.md", "notes.md"]);
+
+  // Rejected starts leave no task and no folder.
+  await writeFile(join(repo, "big.txt"), "");
+  // A sparse file, since the size check reads only its length.
+  await truncate(join(repo, "big.txt"), ATTACHMENT_LIMITS.messageBytes + 1);
+  await writeFile(join(repo, "image.bin"), Buffer.from([1, 0, 2]));
+  // A PDF whose first line is text.
+  await writeFile(join(repo, "spec.pdf"), "%PDF-1.4\n%%EOF\n");
+  await writeFile(join(dir, "outside.txt"), "outside");
+  await symlink(join(dir, "outside.txt"), join(repo, "escape.txt"));
+  await mkdir(join(repo, "nested", ".GIT"), { recursive: true });
+  await writeFile(join(repo, "nested", ".GIT", "config"), "[core]\n");
+
+  const note = {
+    source: "inline",
+    summary: "Note.",
+    format: "text",
+    text: "x",
+  };
+
+  const rejected: [object, RegExp][] = [
+    [{ attachments: ["text"] }, /Invalid input/],
+    [{ context: ["excerpt"] }, /replaced by attachments/],
+    [{ attachments: [{ ...note, source: undefined }] }, /source/],
+    [{ attachments: [{ ...note, summary: undefined }] }, /summary/],
+    [{ attachments: [{ ...note, summary: "s".repeat(201) }] }, /one sentence/],
+    [{ attachments: [{ ...note, title: "t".repeat(61) }] }, /title/],
+    [{ attachments: [{ ...note, text: "x".repeat(8001) }] }, /by reference/],
+    [
+      { attachments: [{ source: "file", path: "big.txt", summary: "S." }] },
+      /attachment limit.*line range/,
+    ],
+    [
+      {
+        attachments: [
+          { source: "file", path: "image.bin", start_line: 1, summary: "S." },
+        ],
+      },
+      /image\.bin is a binary file\. Line ranges are for text files/,
+    ],
+    [
+      {
+        attachments: [
+          { source: "file", path: "spec.pdf", start_line: 1, summary: "S." },
+        ],
+      },
+      /spec\.pdf is a binary file\. Line ranges are for text files/,
+    ],
+    [
+      {
+        attachments: [{ source: "diff", paths: ["spec.pdf"], summary: "S." }],
+      },
+      /spec\.pdf is a binary file/,
+    ],
+    [
+      {
+        attachments: [
+          { source: "file", path: "../outside.txt", summary: "S." },
+        ],
+      },
+      /outside the project/,
+    ],
+    [
+      {
+        attachments: [{ source: "file", path: "escape.txt", summary: "S." }],
+      },
+      /outside the project/,
+    ],
+    // Git opens this folder as `.git` on a case-insensitive file system.
+    [
+      {
+        attachments: [
+          { source: "file", path: "nested/.GIT/config", summary: "S." },
+        ],
+      },
+      /Git metadata/,
+    ],
+  ];
+
+  for (const [extra, error] of rejected) {
+    await assert.rejects(c.start("alice", { ...input(repo), ...extra }), error);
+  }
+
+  // The wrapper keeps the class, so tool logs record a rejection.
+  await assert.rejects(
+    c.start("alice", {
+      ...input(repo),
+      attachments: [{ source: "file", path: "missing.txt", summary: "S." }],
+    }),
+    AttachmentError,
+  );
+
+  assert.deepEqual(
+    store.all().map((task) => task.id),
+    [t.id],
+  );
+
+  assert.deepEqual(await taskFolders(root), [t.id]);
+});
+
+// Uploads cover image and document detection, which file references share.
+test("file references keep any file's bytes, typed by their content", async () => {
+  const { c, repo } = await setup();
+  // An empty zip archive.
+  const zip = Buffer.from(`PK\x05\x06${"\0".repeat(18)}`, "latin1");
+
+  const files = {
+    "bundle.zip": zip,
+    "text.png": Buffer.from("not an image\n"),
+    "fake.png": Buffer.from([1, 0, 2]),
+    "spec.pdf": Buffer.from("%PDF-1.4\n%%EOF\n"),
+  };
+
+  for (const [path, bytes] of Object.entries(files)) {
+    await writeFile(join(repo, path), bytes);
+  }
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: Object.keys(files).map((path) => ({
+      source: "file",
+      path,
+      summary: "S.",
+      // A title without the suffix, which the type check must not use.
+      ...(path === "spec.pdf" ? { title: "Spec" } : {}),
+    })),
+  });
+
+  const attachments = c.attachments.list(t.id);
+
+  // Read and the host's viewer choose by extension, so it never contradicts the bytes.
+  assert.deepEqual(
+    attachments.map((a) => [a.format, a.mime_type, extname(a.file)]),
+    [
+      ["document", "application/octet-stream", ".zip"],
+      ["code", undefined, ".txt"],
+      ["document", "application/octet-stream", ""],
+      ["document", "application/pdf", ".pdf"],
+    ],
+  );
+
+  const stored = join(c.attachments.folder(t.id), attachments[0]?.file ?? "");
+  assert.deepEqual(await readFile(stored), zip);
+
+  const page = (await callTool(
+    c,
+    "alice",
+    "app_get_attachment",
+    { task_id: t.id, message_id: "request", position: 4 },
+    "user",
+  )) as AttachmentPage;
+
+  assert.equal(page.state, "present");
+});
+
+test("a diff snapshot holds untracked regular files and unusual names, runs no filters and stays fixed", async () => {
+  const { c, dir, ...given } = await setup();
+  // Direct reads take the canonical path a task's approved project has.
+  const repo = await realpath(given.repo);
+  const marker = join(dir, "filter-ran");
+  await writeFile(join(repo, "with\ttab.txt"), "old\n");
+  git(repo, "add", ".");
+  commit(repo);
+  await writeFile(join(repo, "with\ttab.txt"), "new\n");
+  await writeFile(join(repo, "with\nnewline.txt"), "fresh\n");
+  await symlink("README.md", join(repo, "untracked-link"));
+  await writeFile(join(repo, ".gitattributes"), "*.txt filter=probe\n");
+  git(repo, "config", "filter.probe.clean", `touch '${marker}'; cat`);
+  git(repo, "config", "diff.noprefix", "true");
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [{ source: "diff", summary: "The changes." }],
+  });
+
+  const [diff] = c.attachments.list(t.id);
+  assert.ok(diff);
+  assert.equal(diff.files, 3);
+
+  assert.deepEqual(
+    (await uncommittedDiff(repo, ["with\ttab.txt"], 1024)).files,
+    ["with\ttab.txt"],
+  );
+
+  const snapshot = join(c.attachments.folder(t.id), diff.file);
+  const text = await readFile(snapshot, "utf8");
+  assert.ok(!text.includes("untracked-link"));
+
+  await assert.rejects(access(marker));
+  // Git applies the patch as its own, with the filter out of the way.
+  git(repo, "config", "--unset", "filter.probe.clean");
+  git(repo, "apply", "--check", "-R", snapshot);
+
+  await writeFile(join(repo, "README.md"), "later\n");
+  assert.equal(await readFile(snapshot, "utf8"), text);
+
+  const empty = join(dir, "empty");
+  await mkdir(empty);
+  git(empty, "init", "-q");
+
+  await assert.rejects(
+    uncommittedDiff(empty, undefined, 1024),
+    /at least one commit/,
+  );
+});
+
+test("diff snapshots show submodule commit changes without running their clean filters", async () => {
+  const { repo, dir } = await setup();
+  const source = join(dir, "submodule-source");
+  await mkdir(source);
+  git(source, "init", "-q");
+  await writeFile(join(source, ".gitattributes"), "*.txt filter=probe\n");
+  await writeFile(join(source, "tracked.txt"), "before\n");
+  git(source, "add", ".");
+  commit(source);
+
+  git(
+    repo,
+    "-c",
+    "protocol.file.allow=always",
+    "submodule",
+    "--quiet",
+    "add",
+    source,
+    "sub",
+  );
+
+  commit(repo);
+
+  const submodule = join(repo, "sub");
+  const tracked = join(submodule, "tracked.txt");
+  await writeFile(tracked, "second\n");
+  commit(submodule);
+  const tip = git(submodule, "rev-parse", "HEAD").trim();
+  const marker = join(dir, "submodule-filter-ran");
+  git(submodule, "config", "filter.probe.clean", `touch '${marker}'; cat`);
+  await writeFile(tracked, "change\n");
+
+  const snapshot = await uncommittedDiff(repo, undefined, 1024);
+  assert.deepEqual(snapshot.files, ["sub"]);
+  assert.ok(snapshot.text.includes(`+Subproject commit ${tip}\n`));
+  await assert.rejects(access(marker), { code: "ENOENT" });
+});
+
+test("attachments stay out of the task body, go with the task, and legacy context still loads and prompts", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [
+      {
+        source: "inline",
+        summary: "A decision.",
+        format: "text",
+        text: "Use X.",
+      },
+    ],
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  const body = (id: string) =>
+    String(
+      store.database.client
+        .prepare("SELECT body FROM tasks WHERE id = ?")
+        .get(id)?.body,
+    );
+
+  assert.doesNotMatch(body(t.id), /"attachments"|"context"/);
+  const folder = c.attachments.folder(t.id);
+  const [file] = await readdir(folder);
+  assert.ok(file);
+
+  assert.equal(
+    recorder.prompts[0],
+    `Investigate\n\nAttachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, file)}`,
+  );
+
+  await c.delete("alice", t.id);
+  assert.deepEqual(await taskFolders(dirname(folder)), []);
+
+  assert.equal(
+    store.database.client
+      .prepare("SELECT count(*) AS rows FROM task_attachments")
+      .get()?.rows,
+    0,
+  );
+
+  // A task stored before attachments keeps its context and exact prompt.
+  const legacy = await c.start("alice", input(repo));
+  await until(() => store.get(legacy.id, "alice").status === "completed");
+
+  store.save({
+    ...store.get(legacy.id, "alice"),
+    context: ["first excerpt", "second excerpt"],
+  });
+
+  const stored = store.get(legacy.id, "alice");
+
+  assert.equal(
+    new SessionPrompts(store, c.attachments).sessionPrompt(stored),
+    "Investigate\n\nfirst excerpt\n\nsecond excerpt",
+  );
+});
+
+test("failed starts and overlapping project removal leave no folder, and the sweep removes only orphans", async () => {
+  const { c, store, repo, dir } = await setup();
+  const root = join(dir, "attachments");
+  c.workspaces.allowedRoots = [];
+  c.projects = new Projects(store.database, c.workspaces);
+  // A parent approval stays after the project's removal.
+  await c.projects.register(dirname(repo), "parent");
+  const { repository } = await c.projects.register(repo);
+
+  const attachments = [
+    { source: "inline", summary: "Note.", format: "text", text: "x" },
+  ];
+
+  store.database.client.exec(
+    "CREATE TRIGGER reject_queued BEFORE INSERT ON events WHEN NEW.type='task.queued' BEGIN SELECT RAISE(ABORT, 'event write failed'); END",
+  );
+
+  await assert.rejects(
+    c.start("alice", { ...input(repo), attachments }),
+    /event write failed/,
+  );
+
+  assert.deepEqual(store.all(), []);
+  assert.deepEqual(await taskFolders(root), []);
+  store.database.client.exec("DROP TRIGGER reject_queued");
+
+  // A removal that starts and finishes while the snapshot is written.
+  const prepare = c.attachments.prepare.bind(c.attachments);
+  let release = () => {};
+  let written = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  const prepared = new Promise<void>((resolve) => (written = resolve));
+
+  c.attachments.prepare = async (...args) => {
+    const rows = await prepare(...args);
+    written();
+    await held;
+
+    return rows;
+  };
+
+  const start = c.start("alice", { ...input(repo), attachments });
+  await prepared;
+  assert.equal((await taskFolders(root)).length, 1);
+  await c.removeProject("alice", repository, true);
+  release();
+  await assert.rejects(start, /being deleted/);
+  assert.deepEqual(store.all(), []);
+  assert.deepEqual(await taskFolders(root), []);
+
+  const orphan = `task_${randomUUID()}`;
+  await mkdir(join(root, orphan));
+  await mkdir(join(root, "keep"));
+  await mkdir(join(dir, "elsewhere"));
+  await symlink(join(dir, "elsewhere"), join(root, `task_${randomUUID()}`));
+  await c.recover();
+
+  assert.deepEqual(
+    (await readdir(root)).filter((name) => !name.startsWith("task_")),
+    ["keep"],
+  );
+
+  assert.ok(!(await readdir(root)).includes(orphan));
+  assert.equal((await taskFolders(root)).length, 1);
+});
+
+test("attachment pages keep characters whole, stay with one version and report a missing file", async () => {
+  const { c, repo } = await setup();
+  // Two-byte characters from byte 1, so the page cap splits one.
+  const text = `a${"é".repeat(300_000)}\n`;
+  await writeFile(join(repo, "long.txt"), text);
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [{ source: "file", path: "long.txt", summary: "Long." }],
+  });
+
+  const read = (owner: string, cursor?: string) =>
+    callTool(
+      c,
+      owner,
+      "app_get_attachment",
+      {
+        task_id: t.id,
+        message_id: "request",
+        position: 1,
+        ...(cursor ? { cursor } : {}),
+      },
+      "user",
+    ) as Promise<AttachmentPage>;
+
+  await assert.rejects(read("bob"), /Task not found/);
+  const first = await read("alice");
+  assert.equal(first.attachment.title, "long.txt");
+  assert.ok(!("file" in first.attachment));
+  assert.ok(first.next_cursor);
+  const second = await read("alice", first.next_cursor);
+  assert.equal(`${first.content}${second.content}`, text);
+  assert.equal(second.next_cursor, undefined);
+
+  const [stored] = c.attachments.list(t.id);
+  assert.ok(stored);
+  const file = join(c.attachments.folder(t.id), stored.file);
+  await writeFile(file, `b${text.slice(1)}`);
+  await assert.rejects(read("alice", first.next_cursor), /changed/);
+
+  await rm(file);
+  assert.equal((await read("alice")).state, "unavailable");
+});
+
+test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
+  "the sweep logs a folder it can't remove and goes on to the next",
+  async () => {
+    const { c, dir } = await setup();
+    const logs = captureLogs(dir);
+    const root = join(dir, "attachments");
+    const stuck = `task_${randomUUID()}`;
+    const orphan = `task_${randomUUID()}`;
+    await mkdir(join(root, stuck, "locked"), { recursive: true });
+    await writeFile(join(root, stuck, "locked", "file"), "x");
+    await mkdir(join(root, orphan));
+    await chmod(join(root, stuck, "locked"), 0o500);
+    onTestFinished(() => chmod(join(root, stuck, "locked"), 0o700));
+
+    await c.recover();
+
+    assert.deepEqual(await taskFolders(root), [stuck]);
+
+    assert.deepEqual(
+      (await logs("attachments.")).map((r) => [r.event, r.task_id]).sort(),
+      [
+        ["attachments.orphan_removed", orphan],
+        ["attachments.remove_failed", stuck],
+      ],
+    );
+  },
+);
+
+test("follow-up attachments number within their message, come from the project folder and reach the worker", async () => {
+  const recorder = new PromptRecorder();
+  const { c, store, repo } = await setup(recorder);
+  // Only in the project folder, so the worktree task can't read it itself.
+  await writeFile(join(repo, "notes.md"), "one\ntwo\nthree\n");
+
+  const t = await c.start("alice", {
+    ...input(repo),
+    attachments: [
+      { source: "inline", summary: "A decision.", format: "text", text: "X" },
+    ],
+  });
+
+  await until(() => store.get(t.id, "alice").status === "completed");
+
+  const sent = (await callTool(c, "alice", "send_message", {
+    task_id: t.id,
+    message: "Check this",
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  })) as { message_id: string };
+
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const folder = c.attachments.folder(t.id);
+  const [request] = c.attachments.list(t.id, "request");
+  const [followUp] = c.attachments.list(t.id, sent.message_id);
+  assert.ok(request && followUp);
+  // Each message numbers its own attachments.
+  assert.equal(followUp.position, 1);
+
+  const requestList = `Attachments, read them as needed:\n- Note (1 line): A decision.\n  ${join(folder, request.file)}`;
+  const followUpList = `Attachments, read them as needed:\n- notes.md (3 lines): Notes.\n  ${join(folder, followUp.file)}`;
+  assert.equal(recorder.prompts[1], `Check this\n\n${followUpList}`);
+
+  // A new session lists each attachment with the message it came with.
+  const prompt = new SessionPrompts(store, c.attachments).sessionPrompt(
+    store.get(t.id, "alice"),
+  );
+
+  assert.ok(prompt.startsWith(`Investigate\n\n${requestList}\n\n`));
+  assert.ok(prompt.includes(`Parent agent:\nCheck this\n\n${followUpList}`));
+});
+
+test("steers and queued messages need an approved project and carry their snapshots into a task that started without attachments", async () => {
+  const provider = new PromptRecorder();
+  const run = provider.run.bind(provider);
+  let context: RunContext | undefined;
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => (finish = resolve));
+  const delivered: string[] = [];
+
+  provider.run = async (ctx, prompt) => {
+    if (!context) {
+      context = ctx;
+
+      ctx.acceptSteers((steer) => {
+        delivered.push(steer.text);
+
+        return true;
+      });
+
+      await finished;
+    }
+
+    return run(ctx, prompt);
+  };
+
+  const { c, store, repo } = await setup(provider);
+  await writeFile(join(repo, "notes.md"), "before\n");
+  const t = await c.start("alice", input(repo));
+  await until(() => !!context);
+  const folder = c.attachments.folder(t.id);
+
+  // The worker can read a steer's attachments, though the task had none.
+  assert.equal(context?.attachments, folder);
+  await access(folder);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: `${text}.`,
+    format: "text" as const,
+    text,
+  });
+
+  await c.send("alice", t.id, "First", "user", { attachments: [note("A")] });
+  const [first] = c.attachments.list(t.id);
+  assert.ok(first);
+
+  assert.ok(
+    delivered.includes(
+      `First\n\nAttachments, read them as needed:\n- Note (1 line): A.\n  ${join(folder, first.file)}`,
+    ),
+  );
+
+  // Approval is checked before the project is read, so a missing file fails on
+  // approval first, and again as the send saves.
+  c.workspaces.allowedRoots = [];
+  c.projects = new Projects(store.database, c.workspaces);
+
+  await assert.rejects(
+    c.send("alice", t.id, "Third", "user", {
+      attachments: [{ source: "file", path: "missing.md", summary: "S." }],
+    }),
+    /outside allowed roots/,
+  );
+
+  const { repository } = await c.projects.register(repo);
+  const prepare = c.attachments.prepare.bind(c.attachments);
+
+  c.attachments.prepare = (...args) => {
+    c.projects?.remove(repository, true);
+
+    return prepare(...args);
+  };
+
+  await assert.rejects(
+    c.send("alice", t.id, "Third", "user", { attachments: [note("C")] }),
+    /outside allowed roots/,
+  );
+
+  c.attachments.prepare = prepare;
+  await c.projects.register(repo);
+
+  const queued = await c.send("alice", t.id, "Later", "user", {
+    delivery: "queue",
+    attachments: [{ source: "file", path: "notes.md", summary: "Notes." }],
+  });
+
+  // The snapshot holds what the sender saw, and undo restores it intact.
+  await writeFile(join(repo, "notes.md"), "after\n");
+  c.removeQueued("alice", t.id, queued.message_id, "user");
+
+  c.restoreQueued("alice", t.id, [{ message_id: queued.message_id, index: 0 }]);
+
+  finish();
+  await until(() => store.get(t.id, "alice").turn === 2);
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const [snapshot] = c.attachments.list(t.id, queued.message_id);
+  assert.ok(snapshot);
+  assert.equal(await readFile(join(folder, snapshot.file), "utf8"), "before\n");
+});
+
+test("a failed send keeps no message or snapshot, and retries match on attachments", async () => {
+  const { c, store, repo } = await setup();
+  const t = await c.start("alice", input(repo));
+  await until(() => store.get(t.id, "alice").status === "completed");
+  const messages = store.messages.count(t.id);
+  const folder = c.attachments.folder(t.id);
+
+  const note = (text: string) => ({
+    source: "inline" as const,
+    summary: "Note.",
+    format: "text" as const,
+    text,
+  });
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", {
+      attachments: [
+        note("x"),
+        { source: "file", path: "missing.md", summary: "S." },
+      ],
+    }),
+    /Attachment 2 \(missing\.md\): missing\.md doesn't exist/,
+  );
+
+  // A send that fails after its snapshot also removes it.
+  store.database.client.exec(
+    "CREATE TRIGGER reject_attachment BEFORE INSERT ON task_attachments BEGIN SELECT RAISE(ABORT, 'attachment write failed'); END",
+  );
+
+  await assert.rejects(
+    c.send("alice", t.id, "Check", "user", { attachments: [note("x")] }),
+    /attachment write failed/,
+  );
+
+  store.database.client.exec("DROP TRIGGER reject_attachment");
+  assert.equal(store.messages.count(t.id), messages);
+  assert.deepEqual(c.attachments.list(t.id), []);
+  assert.deepEqual(await readdir(folder), []);
+
+  const send = async (text: string) =>
+    (await callTool(
+      c,
+      "alice",
+      "app_send_message",
+      {
+        task_id: t.id,
+        message: "Check",
+        request_id: "retry",
+        attachments: [note(text)],
+      },
+      "user",
+    )) as { message_id: string };
+
+  const sent = await send("x");
+  assert.equal((await send("x")).message_id, sent.message_id);
+  await assert.rejects(send("y"), /different payload/);
+});

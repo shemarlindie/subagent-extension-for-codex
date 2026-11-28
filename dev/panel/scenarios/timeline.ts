@@ -7,16 +7,16 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
+import type { RunContext } from "../../../src/core/service/features/providers/types";
 import { decodedEvent } from "../../../src/core/shared/events/decode";
 import type { Event } from "../../../src/core/shared/events/types";
 import type { WrapUp } from "../../../src/core/shared/tasks/wrap-up-contract";
-import { normalizedClaudeFields } from "../../../src/providers/claude/shared/responses";
-import { claudeActivityPresentation } from "../../../src/service/features/providers/claude/events/activity";
+import { claudeActivityPresentation } from "../../../src/providers/claude/service/events/activity";
 import {
   claudeMessageNormalizer,
   type ClaudeMeasurements,
-} from "../../../src/service/features/providers/claude/events/normalize";
-import type { RunContext } from "../../../src/service/features/providers/types";
+} from "../../../src/providers/claude/service/events/normalize";
+import { normalizedClaudeFields } from "../../../src/providers/claude/shared/responses";
 import { at } from "./scenario-context";
 
 export type Data = Record<string, unknown>;

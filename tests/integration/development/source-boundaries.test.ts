@@ -78,18 +78,18 @@ const importForms = [
 test("production boundaries reject each forbidden dependency target", async () => {
   for (const [filePath, targets] of [
     [
-      "src/service/features/tasks/runtime/example.ts",
+      "src/core/service/features/tasks/runtime/example.ts",
       [
-        "../../../../panel/app/app.js",
-        "../../../../../dev/service/fixture-provider.js",
-        "../../../../../tests/support/helpers.js",
+        "../../../../../panel/app/app.js",
+        "../../../../../../dev/service/fixture-provider.js",
+        "../../../../../../tests/support/helpers.js",
         "./control.test.js",
       ],
     ],
     [
       "src/panel/features/tasks/chat/example.ts",
       [
-        "../../../../service/platform/panel/panel.js",
+        "../../../../core/service/platform/panel/panel.js",
         "../../../../../dev/panel/scenarios/fixtures.js",
         "../../../../../tests/support/helpers.js",
         "../../../app/state/controller-test-harness",
@@ -100,7 +100,7 @@ test("production boundaries reject each forbidden dependency target", async () =
     [
       "src/core/shared/tasks/example.ts",
       [
-        "../../../service/features/tasks/runtime/control.js",
+        "../../service/features/tasks/runtime/control.js",
         "../../../panel/app/state/controller.js",
         "../../../../dev/panel/scenarios/fixtures.js",
         "../../../../tests/support/helpers.js",
@@ -123,14 +123,14 @@ test("production boundaries reject each forbidden dependency target", async () =
 // Syntax dispatch and dependency ownership are independent. Exercise each
 // visitor with an allowed and forbidden target instead of their full product.
 test("every supported import syntax enforces the same ownership boundary", async () => {
-  const file = "src/service/features/tasks/runtime/example.ts";
+  const file = "src/core/service/features/tasks/runtime/example.ts";
 
   for (const form of importForms) {
     assert.equal(
-      (await boundaryMessages(file, form("../../../../panel/app/app.js")))
+      (await boundaryMessages(file, form("../../../../../panel/app/app.js")))
         .length,
       1,
-      `Must reject ${form("../../../../panel/app/app.js")}`,
+      `Must reject ${form("../../../../../panel/app/app.js")}`,
     );
 
     assert.deepEqual(await boundaryMessages(file, form("./control.js")), []);
