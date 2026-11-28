@@ -10,13 +10,10 @@ import {
 } from "../../../core/service/platform/server/tools/definition.js";
 import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import {
-  claudeMentionResource,
-  claudeMentionUri,
   composerMentionsEnabled,
   mentionSearchSchema,
-  mentionSearchToolConfig,
   mentionSearchToolName,
-  readClaudeMention,
+  registerMentions,
   searchAgentMentions,
 } from "./mentions.js";
 
@@ -86,20 +83,8 @@ export const codexHost: HostAdapter = {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
     if (!composerMentionsEnabled) return;
 
-    server.registerTool(
-      mentionSearchToolName,
-      mentionSearchToolConfig,
-      async ({ query }) => ({
-        content: [],
-        structuredContent: await searchAgentMentions(query, c.workers()),
-      }),
-    );
-
-    server.registerResource(
-      "Claude provider mention",
-      claudeMentionUri,
-      claudeMentionResource,
-      () => readClaudeMention(),
+    registerMentions(server, (query) =>
+      searchAgentMentions(query, c.workers()),
     );
   },
 };

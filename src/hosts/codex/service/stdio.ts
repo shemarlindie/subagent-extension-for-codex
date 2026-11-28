@@ -31,13 +31,10 @@ import { claudeDefinition } from "../../../providers/claude/shared/definition.js
 import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
 import { codexHost } from "./host.js";
 import {
-  claudeMentionResource,
-  claudeMentionUri,
   composerMentionsEnabled,
-  mentionSearchToolConfig,
   mentionSearchToolName,
   mentionTestModeEnv,
-  readClaudeMention,
+  registerMentions,
   resolveMentionSearchEnv,
   searchAgentMentions,
 } from "./mentions.js";
@@ -113,6 +110,18 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
   return 30000;
 }
 
+/**
+ * The encoded directory hint, or nothing for a path too long for a header.
+ * An older service with the same API version can still serve the proxy while
+ * it drains, and it reads only `X-Codex-Host-Directory`, so the proxy sends
+ * both names until the API version changes.
+ */
+function hostDirectoryHeader(directory?: string) {
+  return directory && directory.length <= 4096
+    ? encodeURIComponent(directory)
+    : undefined;
+}
+
 async function serviceTool(name: string, args: Record<string, unknown>) {
   const response = await postService(name, args, 30000);
   const body = await response.json();
@@ -143,23 +152,13 @@ if (composerMentionsEnabled) {
     }
   }
 
-  server.registerTool(
-    mentionSearchToolName,
-    mentionSearchToolConfig,
-    async ({ query }) => ({
-      content: [],
-      structuredContent:
-        mentionSearchEnv[mentionTestModeEnv] === "1"
-          ? await searchAgentMentions(query, [], mentionSearchEnv)
-          : await serviceTool(mentionSearchToolName, { query }),
-    }),
-  );
-
-  server.registerResource(
-    "Claude provider mention",
-    claudeMentionUri,
-    claudeMentionResource,
-    () => readClaudeMention(mentionSearchEnv),
+  registerMentions(
+    server,
+    (query) =>
+      mentionSearchEnv[mentionTestModeEnv] === "1"
+        ? searchAgentMentions(query, [], mentionSearchEnv)
+        : serviceTool(mentionSearchToolName, { query }),
+    mentionSearchEnv,
   );
 }
 
@@ -183,13 +182,17 @@ for (const [name, d] of Object.entries(tools)) {
 
       try {
         const hints = codexHost.hints(extra._meta);
+        const directory = hostDirectoryHeader(hints.directory);
 
         const response = await postService(
           name,
           withConversation(d.conversation, args, hints),
           serviceTimeout(name, args),
-          hints.directory
-            ? { "X-Host-Directory": encodeURIComponent(hints.directory) }
+          directory
+            ? {
+                "X-Host-Directory": directory,
+                "X-Codex-Host-Directory": directory,
+              }
             : {},
         );
 

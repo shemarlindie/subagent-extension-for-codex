@@ -238,6 +238,44 @@ test("a failed call gives the service's message and says when a send was rejecte
   );
 });
 
+test("the proxy forwards the directory hint under both header names, up to 4096 characters", async (t) => {
+  const forwarded: unknown[] = [];
+
+  const port = await stubService(t, (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    if (req.url === "/health") return answerHealth(req, res);
+
+    if (req.url?.endsWith("/get_task")) {
+      forwarded.push([
+        req.headers["x-host-directory"],
+        req.headers["x-codex-host-directory"],
+      ]);
+    }
+
+    res.end(JSON.stringify({ result: { projects: [] } }));
+  });
+
+  const { client } = await proxy(
+    t,
+    { data: await data(t), port },
+    { SUBAGENT_EXTENSION_FOR_CODEX_TOKEN: token },
+  );
+
+  for (const directory of ["file:///a b", `file:///${"a".repeat(4096)}`]) {
+    await client.callTool({
+      name: "get_task",
+      arguments: { task_id: "task" },
+      _meta: { "codex/sandbox-state-meta": { sandboxCwd: directory } },
+    });
+  }
+
+  // An older service with the same API version reads only the Codex name.
+  assert.deepEqual(forwarded, [
+    ["file%3A%2F%2F%2Fa%20b", "file%3A%2F%2F%2Fa%20b"],
+    [undefined, undefined],
+  ]);
+});
+
 test(
   "a service the proxy started outlives a killed proxy while another remains, and exits once the last one closes",
   { timeout: idleGrace * 2 + 30000 },

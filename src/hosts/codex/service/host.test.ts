@@ -25,4 +25,8 @@ test("Codex hints read only well-formed Codex metadata", () => {
     }),
     { conversation: "session", directory: "file:///project" },
   );
+
+  assert.deepEqual(codexHost.hints({ threadId: "thread" }), {
+    conversation: "thread",
+  });
 });

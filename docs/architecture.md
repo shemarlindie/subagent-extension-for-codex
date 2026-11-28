@@ -134,9 +134,10 @@ through a `HostAdapter`, defined in
 the service, and the stdio proxy uses the same adapter. The service serves one
 host.
 
-The proxy forwards the directory hint to the tool API in `X-Host-Directory`. The
-tool API also accepts `X-Codex-Host-Directory` from a proxy of the previous
-release, until the API version changes.
+The proxy forwards the directory hint to the tool API in `X-Host-Directory`.
+Until the API version changes, it also sends `X-Codex-Host-Directory` for an
+older service still draining, and the tool API accepts that name alone from a
+proxy of the previous release.
 
 ### Event payloads
 

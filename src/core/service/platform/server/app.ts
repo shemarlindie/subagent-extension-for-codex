@@ -21,8 +21,8 @@ import { callTool, isUserTool } from "./tools.js";
 
 /**
  * The host directory a stdio proxy forwards. Malformed values are ignored.
- * Proxies from before the neutral name send `X-Codex-Host-Directory` to a
- * service with the same API version. Drop it when the API version changes.
+ * Proxies from before the neutral name send only `X-Codex-Host-Directory` to
+ * a service with the same API version. Drop it when the API version changes.
  */
 function hostDirectory(headers: express.Request["headers"]) {
   const header =
