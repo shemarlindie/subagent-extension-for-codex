@@ -21,10 +21,13 @@ test("composition roots register the same providers", () => {
       "utf8",
     );
 
-    const calls = [...source.matchAll(/registerProviders\(\[([^\]]*)\]\)/g)];
-    assert.equal(calls.length, 1, `${root} registers providers once`);
+    const registered = [
+      ...source.matchAll(/registerProviders\(\[([^\]]*)\]\)/g),
+    ].map(([, list = ""]) => list.replace(/\s+/g, ""));
 
-    return calls[0][1].replace(/\s+/g, "");
+    assert.equal(registered.length, 1, `${root} registers providers once`);
+
+    return registered[0];
   });
 
   assert.deepEqual(
