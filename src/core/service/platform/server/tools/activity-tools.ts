@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { taskId, tool } from "./definition.js";
 
@@ -27,7 +28,7 @@ export function activityTools(c: Control, owner: string) {
       description:
         "User interface only: one listed file's diff for the Changes tab. Stale once the recorded changes no longer match revision. Incomplete files have no diff.",
       schema: changeScope.extend({
-        path: z.string().min(1).max(4096),
+        path: z.string().min(1).max(maxPathLength),
         revision: z.string().max(100),
       }),
       run: (a) =>

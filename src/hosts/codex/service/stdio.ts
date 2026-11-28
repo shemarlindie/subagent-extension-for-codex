@@ -5,9 +5,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { hostDirectoryFromMeta } from "../../../core/service/features/projects/chat-project.js";
 import { type Control } from "../../../core/service/features/tasks/runtime/control.js";
-import { codexContextCapability } from "../../../core/service/platform/panel/host-context.js";
+import { readHints } from "../../../core/service/platform/host/host-adapter.js";
 import { delegationPanel } from "../../../core/service/platform/panel/panel.js";
 import { productGlyphIcons } from "../../../core/service/platform/server/product-glyph.js";
 import {
@@ -31,15 +30,12 @@ import {
 import { registerProviders } from "../../../core/shared/providers/registry.js";
 import { claudeDefinition } from "../../../providers/claude/shared/definition.js";
 import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
-import { SERVER_INSTRUCTIONS } from "./instructions.js";
+import { codexHost } from "./host.js";
 import {
-  claudeMentionResource,
-  claudeMentionUri,
   composerMentionsEnabled,
-  mentionSearchToolConfig,
   mentionSearchToolName,
   mentionTestModeEnv,
-  readClaudeMention,
+  registerMentions,
   resolveMentionSearchEnv,
   searchAgentMentions,
 } from "./mentions.js";
@@ -54,7 +50,13 @@ const service = serviceClient(async () => {
 });
 
 // Definitions supply schemas only; the proxy forwards calls to the service.
-const tools: Record<string, AnyTool> = definitions({} as Control, "local");
+const tools: Record<string, AnyTool> = definitions(
+  {} as Control,
+  "local",
+  "parent",
+  undefined,
+  codexHost,
+);
 
 /** Read-only tools, which the proxy may safely send twice. */
 function readOnly(name: string) {
@@ -69,7 +71,7 @@ function postService(
   headers: Record<string, string> = {},
 ) {
   return service.post(
-    `${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
+    `${isUserTool(name, codexHost) ? "user-tools" : "tools"}/${name}`,
     body,
     { timeout, headers, readOnly: readOnly(name) },
   );
@@ -85,8 +87,8 @@ const server = new McpServer(
     icons: productGlyphIcons,
   },
   {
-    instructions: SERVER_INSTRUCTIONS,
-    capabilities: codexContextCapability,
+    instructions: codexHost.instructions,
+    capabilities: codexHost.capabilities,
   },
 );
 
@@ -107,6 +109,19 @@ function serviceTimeout(name: string, args: Record<string, unknown>) {
   }
 
   return 30000;
+}
+
+/**
+ * Forwards the directory hint. An older service with the same API version can
+ * still serve the proxy while it drains, and it reads only
+ * `X-Codex-Host-Directory`, so the proxy sends both names until the API
+ * version changes.
+ */
+function hostDirectoryHeaders(directory?: string): Record<string, string> {
+  if (!directory) return {};
+  const value = encodeURIComponent(directory);
+
+  return { "X-Host-Directory": value, "X-Codex-Host-Directory": value };
 }
 
 async function serviceTool(name: string, args: Record<string, unknown>) {
@@ -139,23 +154,13 @@ if (composerMentionsEnabled) {
     }
   }
 
-  server.registerTool(
-    mentionSearchToolName,
-    mentionSearchToolConfig,
-    async ({ query }) => ({
-      content: [],
-      structuredContent:
-        mentionSearchEnv[mentionTestModeEnv] === "1"
-          ? await searchAgentMentions(query, [], mentionSearchEnv)
-          : await serviceTool(mentionSearchToolName, { query }),
-    }),
-  );
-
-  server.registerResource(
-    "Claude provider mention",
-    claudeMentionUri,
-    claudeMentionResource,
-    () => readClaudeMention(mentionSearchEnv),
+  registerMentions(
+    server,
+    (query) =>
+      mentionSearchEnv[mentionTestModeEnv] === "1"
+        ? searchAgentMentions(query, [], mentionSearchEnv)
+        : serviceTool(mentionSearchToolName, { query }),
+    mentionSearchEnv,
   );
 }
 
@@ -164,7 +169,7 @@ for (const [name, d] of Object.entries(tools)) {
 
   server.registerTool(
     name,
-    toolRegistration(name, d),
+    toolRegistration(name, d, codexHost),
     async (
       args,
       extra: { _meta?: Record<string, unknown> },
@@ -178,15 +183,13 @@ for (const [name, d] of Object.entries(tools)) {
         );
 
       try {
-        const hostDirectory = hostDirectoryFromMeta(extra._meta);
+        const hints = readHints(codexHost, extra._meta);
 
         const response = await postService(
           name,
-          withConversation(d.conversation, args, extra._meta),
+          withConversation(d.conversation, args, hints),
           serviceTimeout(name, args),
-          hostDirectory
-            ? { "X-Codex-Host-Directory": encodeURIComponent(hostDirectory) }
-            : {},
+          hostDirectoryHeaders(hints.directory),
         );
 
         const body = await response.json();
@@ -228,6 +231,7 @@ for (const [name, d] of Object.entries(tools)) {
 }
 
 const panel = delegationPanel(
+  codexHost.panel,
   packagePath("dist/app.html"),
   undefined,
   async (args) => {
@@ -248,7 +252,9 @@ server.registerTool(
   panel.tool,
   async (args, extra): Promise<CallToolResult> => {
     try {
-      return await panel.open(withConversation("panel", args, extra._meta));
+      return await panel.open(
+        withConversation("panel", args, readHints(codexHost, extra._meta)),
+      );
     } catch (error) {
       return {
         isError: true,

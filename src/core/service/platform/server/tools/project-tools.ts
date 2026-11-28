@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import { browseProject } from "../../../features/projects/project-picker.js";
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { tool } from "./definition.js";
@@ -10,7 +11,9 @@ export function projectTools(c: Control, owner: string) {
     app_register_project: tool({
       description:
         "User interface only: approve and persist a folder selected by the user, with or without Git. Does not approve its parent or nested repositories.",
-      schema: z.strictObject({ repository: z.string().min(1).max(4096) }),
+      schema: z.strictObject({
+        repository: z.string().min(1).max(maxPathLength),
+      }),
       run: async (a) => {
         if (!c.projects) {
           throw new Error(
@@ -31,7 +34,7 @@ export function projectTools(c: Control, owner: string) {
       description:
         "User interface only: rename a registered project without changing its repository or tasks.",
       schema: z.strictObject({
-        repository: z.string().min(1).max(4096),
+        repository: z.string().min(1).max(maxPathLength),
         name: z.string().trim().min(1).max(200),
       }),
       run: (a) => {
@@ -47,7 +50,7 @@ export function projectTools(c: Control, owner: string) {
         "User interface only: remove a saved project approval. Optionally stop and delete this user's project tasks, history and task worktrees and local branches, and with delete_agent_task their provider sessions. Checkout files stay intact.",
       schema: z
         .strictObject({
-          repository: z.string().min(1).max(4096),
+          repository: z.string().min(1).max(maxPathLength),
           delete_tasks: z.boolean().default(false),
           delete_agent_task: z.boolean().default(false),
           confirmation: z

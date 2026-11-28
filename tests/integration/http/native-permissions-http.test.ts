@@ -11,6 +11,7 @@ import { Store } from "../../../src/core/service/features/tasks/storage/store.js
 import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
 import { application } from "../../../src/core/service/platform/server/app.js";
 import { Auth } from "../../../src/core/service/platform/server/auth.js";
+import { codexHost } from "../../../src/hosts/codex/service/host.js";
 import { claudeTaskPolicy } from "../../../src/providers/claude/service/configuration/task-policy.js";
 import { claudeMetadata } from "../../../src/providers/claude/shared/metadata.js";
 import { waitForListening } from "../../support/helpers.js";
@@ -45,6 +46,7 @@ async function setup(t: TestContext) {
   const app = application(
     c,
     new Auth("test-token"),
+    codexHost,
     "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   );

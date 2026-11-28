@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import type { Control } from "../../../features/tasks/runtime/control.js";
 import { setTasksArchived } from "../../../features/tasks/runtime/task-archive.js";
 import {
@@ -87,7 +88,7 @@ export function taskLifecycleTools(c: Control, owner: string) {
       schema: z
         .strictObject({
           task_ids: z.array(z.string()).min(1).max(1000).optional(),
-          repository: z.string().min(1).max(4096).optional(),
+          repository: z.string().min(1).max(maxPathLength).optional(),
           delete_agent_task: z.boolean().default(false),
         })
         .refine(

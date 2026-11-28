@@ -2,6 +2,7 @@
 // fixture worker in place of Claude, so tasks make no model calls.
 // Run with tsx; it is outside src/ and never ships.
 import { serve } from "../../src/core/service/platform/service/serve.js";
+import { codexHost } from "../../src/hosts/codex/service/host.js";
 
 import "../register-providers.js";
 
@@ -47,6 +48,7 @@ const options: FixtureProviderOptions = {
 };
 
 await serve({
+  host: codexHost,
   registrations: [
     {
       id: fixtureDefinition.id,

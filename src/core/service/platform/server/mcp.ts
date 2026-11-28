@@ -4,19 +4,9 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 
-import { SERVER_INSTRUCTIONS } from "../../../../hosts/codex/service/instructions.js";
-import {
-  claudeMentionResource,
-  claudeMentionUri,
-  composerMentionsEnabled,
-  mentionSearchToolConfig,
-  mentionSearchToolName,
-  readClaudeMention,
-  searchAgentMentions,
-} from "../../../../hosts/codex/service/mentions.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
-import { codexContextCapability } from "../panel/host-context.js";
+import { readHints, type HostAdapter } from "../host/host-adapter.js";
 import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";
 import { delegationPanel } from "../panel/panel.js";
 import { packageVersion } from "../service/runtime.js";
@@ -38,7 +28,7 @@ const errorText = (error: unknown) =>
 export function mcp(
   c: Control,
   owner: string,
-  origin: string,
+  host: HostAdapter,
   htmlPath: string,
   nativeHtmlPath = htmlPath,
 ) {
@@ -49,48 +39,28 @@ export function mcp(
       icons: productGlyphIcons,
     },
     {
-      capabilities: {
-        ...codexContextCapability,
-        tools: {},
-      },
-      instructions: SERVER_INSTRUCTIONS,
+      capabilities: { ...host.capabilities, tools: {} },
+      instructions: host.instructions,
     },
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
-  if (composerMentionsEnabled) {
-    server.registerTool(
-      mentionSearchToolName,
-      mentionSearchToolConfig,
-      async ({ query }) => ({
-        content: [],
-        structuredContent: await searchAgentMentions(query, c.workers()),
-      }),
-    );
-
-    server.registerResource(
-      "Claude provider mention",
-      claudeMentionUri,
-      claudeMentionResource,
-      () => readClaudeMention(),
-    );
-  }
-
+  host.register(server, c);
+  // The host registers its own tools above, so these are the core tools only.
   const tools: Record<string, AnyTool> = definitions(c, owner);
 
   for (const [name, d] of Object.entries(tools)) {
-    if (name === mentionSearchToolName) continue;
-
     server.registerTool(
       name,
-      toolRegistration(name, d),
+      toolRegistration(name, d, host),
       async (args, ctx: ServerContext): Promise<CallToolResult> => {
         try {
+          const hints = readHints(host, ctx.mcpReq._meta);
+
           const current: Record<string, AnyTool> = definitions(
             c,
             owner,
             "parent",
-            ctx.mcpReq._meta,
+            hints.directory,
           );
 
           const definition = current[name];
@@ -101,11 +71,7 @@ export function mcp(
               name,
               () =>
                 definition.run(
-                  withConversation(
-                    definition.conversation,
-                    args,
-                    ctx.mcpReq._meta,
-                  ),
+                  withConversation(definition.conversation, args, hints),
                 ),
               definition.readOnly === true,
             ),
@@ -129,6 +95,7 @@ export function mcp(
   }
 
   const panel = delegationPanel(
+    host.panel,
     nativeHtmlPath,
     (scope) => panelTaskList(c, owner, scope, false),
     (args) => resolvePanelContext(c, owner, args),
@@ -140,7 +107,7 @@ export function mcp(
     async (args, ctx): Promise<CallToolResult> => {
       try {
         return await panel.open(
-          withConversation("panel", args, ctx.mcpReq._meta),
+          withConversation("panel", args, readHints(host, ctx.mcpReq._meta)),
         );
       } catch (error) {
         return {

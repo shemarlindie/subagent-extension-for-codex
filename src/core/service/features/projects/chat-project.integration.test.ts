@@ -48,9 +48,7 @@ async function fixture(t: TestContext) {
   return { dir, control, projects, repo, enable };
 }
 
-const hostMeta = (directory: string) => ({
-  "codex/sandbox-state-meta": { sandboxCwd: pathToFileURL(directory).href },
-});
+const hostDirectory = (directory: string) => pathToFileURL(directory).href;
 
 test("chat project registration is enabled by default and opt-out is owner scoped", async (t) => {
   const f = await fixture(t);
@@ -64,7 +62,11 @@ test("chat project registration is enabled by default and opt-out is owner scope
   f.enable("alice", false);
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
+    await autoRegisterChatProject(
+      f.control,
+      "alice",
+      hostDirectory(repository),
+    ),
     undefined,
   );
 
@@ -74,19 +76,19 @@ test("chat project registration is enabled by default and opt-out is owner scope
 
   assert.match(
     String(
-      (await currentChatProject(f.control, "alice", hostMeta(repository)))
+      (await currentChatProject(f.control, "alice", hostDirectory(repository)))
         .next_step,
     ),
     /^Ask the user/,
   );
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "bob", hostMeta(repository)),
+    await autoRegisterChatProject(f.control, "bob", hostDirectory(repository)),
     repository,
   );
 
   assert.deepEqual(
-    await currentChatProject(f.control, "alice", hostMeta(repository)),
+    await currentChatProject(f.control, "alice", hostDirectory(repository)),
     {
       repository,
       git: "no_commits",
@@ -109,7 +111,7 @@ test("task-start registration requires the task to target the thread root", asyn
       await autoRegisterChatProject(
         f.control,
         "alice",
-        hostMeta(repository),
+        hostDirectory(repository),
         target,
       ),
       undefined,
@@ -122,7 +124,7 @@ test("task-start registration requires the task to target the thread root", asyn
     await autoRegisterChatProject(
       f.control,
       "alice",
-      hostMeta(repository),
+      hostDirectory(repository),
       join(repository, "src"),
     ),
     repository,
@@ -140,7 +142,11 @@ test("registration failures never block the task start", async (t) => {
   };
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
+    await autoRegisterChatProject(
+      f.control,
+      "alice",
+      hostDirectory(repository),
+    ),
     undefined,
   );
 });
@@ -156,7 +162,7 @@ test("opted-in trusted host directories register the canonical Git root and gran
     await autoRegisterChatProject(
       f.control,
       "alice",
-      hostMeta(join(alias, "src")),
+      hostDirectory(join(alias, "src")),
     ),
     repository,
   );
@@ -164,7 +170,11 @@ test("opted-in trusted host directories register the canonical Git root and gran
   assert.equal(await f.projects.resolve(repository), repository);
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
+    await autoRegisterChatProject(
+      f.control,
+      "alice",
+      hostDirectory(repository),
+    ),
     repository,
   );
 
@@ -174,32 +184,24 @@ test("opted-in trusted host directories register the canonical Git root and gran
   );
 });
 
-test("invalid or absent host metadata never grants access despite opt-in", async (t) => {
+test("invalid or absent host directories never grant access despite opt-in", async (t) => {
   const f = await fixture(t);
   const repository = await f.repo("project");
   const plainDirectory = join(f.dir, "plain-directory");
   await mkdir(plainDirectory);
 
-  for (const meta of [
+  for (const directory of [
     undefined,
-    {},
-    { host_directory: pathToFileURL(repository).href },
-    { repository },
-    { "codex/sandbox-state-meta": {} },
-    ...[
-      null,
-      3,
-      "relative/path",
-      repository,
-      "https://example.com/project",
-      "file://remote-host/project",
-      "file:///nonexistent-chat-project",
-      pathToFileURL(plainDirectory).href,
-      "x".repeat(4097),
-    ].map((sandboxCwd) => ({ "codex/sandbox-state-meta": { sandboxCwd } })),
+    "relative/path",
+    repository,
+    "https://example.com/project",
+    "file://remote-host/project",
+    "file:///nonexistent-chat-project",
+    pathToFileURL(plainDirectory).href,
+    "x".repeat(4097),
   ]) {
     assert.equal(
-      await autoRegisterChatProject(f.control, "alice", meta),
+      await autoRegisterChatProject(f.control, "alice", directory),
       undefined,
     );
   }
@@ -216,14 +218,14 @@ test("disabling automatic registration preserves prior approval and stops approv
   const next = await f.repo("next");
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(prior)),
+    await autoRegisterChatProject(f.control, "alice", hostDirectory(prior)),
     prior,
   );
 
   f.enable("alice", false);
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(next)),
+    await autoRegisterChatProject(f.control, "alice", hostDirectory(next)),
     undefined,
   );
 
@@ -244,7 +246,11 @@ test("automatic registration preserves existing parent grants", async (t) => {
   const nested = await f.repo("parent-project/nested");
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
+    await autoRegisterChatProject(
+      f.control,
+      "alice",
+      hostDirectory(repository),
+    ),
     repository,
   );
 
@@ -255,7 +261,7 @@ test("automatic registration preserves existing parent grants", async (t) => {
   );
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(nested)),
+    await autoRegisterChatProject(f.control, "alice", hostDirectory(nested)),
     nested,
   );
 
@@ -279,7 +285,11 @@ test("missing project registry makes automatic chat registration a graceful no-o
   f.control.projects = undefined;
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(repository)),
+    await autoRegisterChatProject(
+      f.control,
+      "alice",
+      hostDirectory(repository),
+    ),
     undefined,
   );
 });
@@ -298,7 +308,7 @@ test("an unregistered plain chat folder is reported, offered and never added", a
   const current = await currentChatProject(
     f.control,
     "alice",
-    hostMeta(folder),
+    hostDirectory(folder),
   );
 
   assert.equal(current.repository, folder);
@@ -308,7 +318,7 @@ test("an unregistered plain chat folder is reported, offered and never added", a
   assert.match(current.next_step ?? "", /Allow tasks here/);
 
   assert.equal(
-    await autoRegisterChatProject(f.control, "alice", hostMeta(folder)),
+    await autoRegisterChatProject(f.control, "alice", hostDirectory(folder)),
     undefined,
   );
 
@@ -321,13 +331,21 @@ test("a chat in a registered plain folder's subfolder resolves to that folder", 
   const child = await plainFolder(folder, "deep/inside");
   await f.projects.register(folder);
 
-  const current = await currentChatProject(f.control, "alice", hostMeta(child));
+  const current = await currentChatProject(
+    f.control,
+    "alice",
+    hostDirectory(child),
+  );
+
   assert.equal(current.repository, folder);
   assert.equal(current.registered, true);
 
-  assert.deepEqual(await withHostRepository(f.control, {}, hostMeta(child)), {
-    repository: folder,
-  });
+  assert.deepEqual(
+    await withHostRepository(f.control, {
+      host_directory: hostDirectory(child),
+    }),
+    { host_directory: hostDirectory(child), repository: folder },
+  );
 });
 
 test("a directory registration would reject is no candidate", async (t) => {
@@ -353,7 +371,7 @@ test.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     );
 
     assert.equal(
-      await autoRegisterChatProject(f.control, "alice", hostMeta(folder)),
+      await autoRegisterChatProject(f.control, "alice", hostDirectory(folder)),
       undefined,
     );
   },

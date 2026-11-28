@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { stageFileSchema } from "../../../../shared/attachments/model.js";
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
 import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
 import { workspaceFilePath } from "../../../features/changes/paths.js";
@@ -165,7 +166,7 @@ export function panelViewTools(c: Control, owner: string) {
       readOnly: true,
       description:
         "User interface only: { path }, the absolute path of a file in a task's workspace, for the host to open. path is relative to the workspace or absolute.",
-      schema: taskId.extend({ path: z.string().min(1).max(4096) }),
+      schema: taskId.extend({ path: z.string().min(1).max(maxPathLength) }),
       run: async (a) => ({
         path: await workspaceFilePath(
           c.store.get(a.task_id, owner).workspace,

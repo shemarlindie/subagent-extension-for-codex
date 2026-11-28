@@ -381,6 +381,7 @@ if (scenario === "token") {
     await import("../src/core/service/platform/server/app.ts");
 
   const { Auth } = await import("../src/core/service/platform/server/auth.ts");
+  const { codexHost } = await import("../src/hosts/codex/service/host.ts");
   const { randomBytes } = await import("node:crypto");
   const { fileURLToPath } = await import("node:url");
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
@@ -393,6 +394,7 @@ if (scenario === "token") {
   const app = application(
     control,
     new Auth(token, "verification"),
+    codexHost,
     "http://127.0.0.1:17317",
     fileURLToPath(new URL("../dist/app.html", import.meta.url)),
   );

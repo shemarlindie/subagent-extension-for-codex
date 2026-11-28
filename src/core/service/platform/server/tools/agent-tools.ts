@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { attachmentsSchema } from "../../../../shared/attachments/model.js";
+import { maxPathLength } from "../../../../shared/filesystem/path-limit.js";
 import {
   conversation,
   MESSAGE_EVENTS,
@@ -36,7 +37,12 @@ import {
 } from "./definition.js";
 
 /** Tools the parent agent calls; the panel uses some of them too. */
-export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
+export function agentTools({
+  c,
+  owner,
+  authority,
+  hostDirectory,
+}: ToolContext) {
   return {
     get_panel_context: tool({
       readOnly: true,
@@ -58,7 +64,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       description:
         "Find the current chat's project from host directory metadata: its Git root, a registered folder containing it, or the directory itself. Reports whether it is registered and its Git state. Never registers. For an unregistered project, follow next_step.",
       schema: z.strictObject({}),
-      run: () => currentChatProject(c, owner, hostMeta),
+      run: () => currentChatProject(c, owner, hostDirectory),
     }),
     get_settings: tool({
       readOnly: true,
@@ -108,7 +114,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
         .loose(),
       // Null opts out of host correlation; persisted tasks keep the optional string contract.
       run: async (a) => {
-        await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+        await autoRegisterChatProject(c, owner, hostDirectory, a.repository);
 
         return c.start(
           owner,
@@ -287,7 +293,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
       description:
         "Read a changed file's current content on disk, including later edits by anyone. path must appear in the task or latest-turn changes. state is deleted for a missing file, unavailable for a removed workspace, or binary with its size for other binary files. Images are base64. Pass next_cursor for more content.",
       schema: taskId.extend({
-        path: z.string().min(1).max(4096),
+        path: z.string().min(1).max(maxPathLength),
         cursor: z.string().max(300).optional(),
       }),
       run: (a) =>

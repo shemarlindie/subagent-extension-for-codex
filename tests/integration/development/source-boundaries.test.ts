@@ -194,18 +194,3 @@ test("production imports follow owner and runtime boundaries", async () => {
     }
   }
 });
-
-test("an exception covers its named owner and expires when unused", async () => {
-  const file = "src/core/service/platform/server/mcp.ts";
-  const permitted = 'import "../../../../hosts/codex/service/instructions.js";';
-  assert.deepEqual(await boundaryMessages(file, permitted), []);
-
-  const wrongOwner = await boundaryMessages(
-    file,
-    permitted + 'import "../../../../hosts/other/service/instructions.js";',
-  );
-
-  assert.equal(wrongOwner.length, 1);
-  const stale = await boundaryMessages(file, 'import "./types.js";');
-  assert.match(stale[0]?.message ?? "", /unused dependency exception/);
-});

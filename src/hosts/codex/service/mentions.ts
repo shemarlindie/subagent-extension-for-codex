@@ -20,7 +20,7 @@ export const composerMentionsEnabled = false;
 
 export const mentionSearchToolName = "app_search_mentions";
 
-export const mentionSearchToolConfig = {
+const mentionSearchToolConfig = {
   title: "Choose a worker",
   inputSchema: OpenAIMentionSearchParamsSchema,
   outputSchema: OpenAIMentionSearchResultSchema,
@@ -32,14 +32,13 @@ export const mentionSearchToolConfig = {
   },
 };
 
-export const claudeMentionUri =
-  "subagent-extension-for-codex://providers/claude";
+const claudeMentionUri = "subagent-extension-for-codex://providers/claude";
 
 export const mentionSearchSchema = z.strictObject({
   query: z.string().max(128),
 });
 
-export const claudeMentionResource = {
+const claudeMentionResource = {
   description:
     "Selected Claude provider hint for delegated work. Use an available profile that matches the request; code reviews use reviewer. This does not select a repository or change permission settings.",
   mimeType: "text/plain",
@@ -146,6 +145,48 @@ export async function searchAgentMentions(
   }
 
   return result;
+}
+
+type MentionSearchResult = z.infer<typeof OpenAIMentionSearchResultSchema>;
+
+/** The registration calls the service's and the proxy's MCP servers share. */
+interface MentionServer {
+  registerTool(
+    name: string,
+    config: typeof mentionSearchToolConfig,
+    handler: (args: {
+      query: string;
+    }) => Promise<{ content: []; structuredContent: MentionSearchResult }>,
+  ): unknown;
+  registerResource(
+    name: string,
+    uri: string,
+    config: typeof claudeMentionResource,
+    read: () => ReturnType<typeof readClaudeMention>,
+  ): unknown;
+}
+
+/** Registers the mention search tool and the Claude mention resource. */
+export function registerMentions(
+  server: MentionServer,
+  search: (query: string) => Promise<MentionSearchResult>,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  server.registerTool(
+    mentionSearchToolName,
+    mentionSearchToolConfig,
+    async ({ query }) => ({
+      content: [],
+      structuredContent: await search(query),
+    }),
+  );
+
+  server.registerResource(
+    "Claude provider mention",
+    claudeMentionUri,
+    claudeMentionResource,
+    () => readClaudeMention(env),
+  );
 }
 
 export async function readClaudeMention(env: NodeJS.ProcessEnv = process.env) {

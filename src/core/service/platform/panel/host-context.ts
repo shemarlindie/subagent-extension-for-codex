@@ -8,25 +8,14 @@ import type { Control } from "../../features/tasks/runtime/control.js";
 import { gitState, gitWorkTreeRoot } from "../../features/workspaces/git.js";
 import { within } from "../../features/workspaces/workspace.js";
 
-// Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
-// Panel context consumes the directory hint. Native permission inheritance
-// separately validates the host permission metadata in core/permissions.ts.
-export const codexContextCapability = {
-  experimental: { "codex/sandbox-state-meta": {} },
-};
-
+/** Fills the repository from the host directory hint when it names an approved project. */
 export async function withHostRepository(
   c: Control,
   args: Record<string, unknown>,
-  meta?: Record<string, unknown>,
 ) {
   if (args.repository !== undefined || args.task_id !== undefined) return args;
-
-  const state = meta?.["codex/sandbox-state-meta"] as
-    { sandboxCwd?: unknown } | undefined;
-
-  const directory = args.host_directory ?? state?.sandboxCwd;
-  if (typeof directory !== "string" || directory.length > 4096) return args;
+  const directory = args.host_directory;
+  if (typeof directory !== "string") return args;
 
   try {
     const candidate = await hostProjectCandidate(c, directory);
