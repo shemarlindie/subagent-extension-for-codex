@@ -7,17 +7,17 @@ import assert from "node:assert/strict";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
+import { decodeEventView } from "../../../src/core/shared/events/decode.js";
+import { eventPayloadMapSchema } from "../../../src/core/shared/events/event-contract.generated.js";
+import {
+  normalizedClaudeFields,
+  originalResponseLookup,
+} from "../../../src/providers/claude/shared/responses.js";
 import {
   claudeMessageNormalizer,
   keptMeasurements,
 } from "../../../src/service/features/providers/claude/events/normalize.js";
 import type { RunContext } from "../../../src/service/features/providers/types.js";
-import { decodeEventView } from "../../../src/shared/events/decode.js";
-import { eventPayloadMapSchema } from "../../../src/shared/events/event-contract.generated.js";
-import {
-  normalizedClaudeFields,
-  originalResponseLookup,
-} from "../../../src/shared/providers/claude/responses.js";
 import { previewEvents } from "./fixtures";
 
 type Kind<T> = T extends { type: "system"; subtype: infer S extends string }

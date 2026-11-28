@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { EventEnvelope } from "../../../src/shared/events/event-contract";
-import { startSchema, type Task } from "../../../src/shared/tasks/model";
+import type { EventEnvelope } from "../../../src/core/shared/events/event-contract";
+import { startSchema, type Task } from "../../../src/core/shared/tasks/model";
 import { leftovers, recordFixture } from "./recording";
 
 const home = "/Users/someone";

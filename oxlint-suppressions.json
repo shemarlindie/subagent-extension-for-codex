@@ -124,12 +124,12 @@
       "count": 1
     }
   },
-  "src/shared/tasks/activity/activity-status.ts": {
+  "src/core/shared/tasks/activity/activity-status.ts": {
     "complexity": {
       "count": 1
     }
   },
-  "src/shared/tasks/activity/activity-timeline.ts": {
+  "src/core/shared/tasks/activity/activity-timeline.ts": {
     "complexity": {
       "count": 1
     }

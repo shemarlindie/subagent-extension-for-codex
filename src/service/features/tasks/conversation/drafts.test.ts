@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 
 import { test } from "vitest";
 
-import { type DraftUpdate } from "../../../../shared/tasks/conversation/drafts.js";
+import { type DraftUpdate } from "../../../../core/shared/tasks/conversation/drafts.js";
 import { Drafts } from "./drafts.js";
 
 test("drafts grow by deltas, start over for another message and publish each change", () => {

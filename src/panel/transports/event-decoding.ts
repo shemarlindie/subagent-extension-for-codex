@@ -1,8 +1,8 @@
-import { decodeEventEnvelope } from "../../shared/events/decode.js";
+import { decodeEventEnvelope } from "../../core/shared/events/decode.js";
 import type {
   ObservePanelTiming,
   PanelLoadOperation,
-} from "../../shared/tasks/panel-timing.js";
+} from "../../core/shared/tasks/panel-timing.js";
 
 /**
  * Revalidates event pages at the browser boundary, including a returned

@@ -1,4 +1,4 @@
-import type { PendingTaskUpdates } from "../../../../shared/tasks/conversation/parent-updates";
+import type { PendingTaskUpdates } from "../../../../core/shared/tasks/conversation/parent-updates";
 import type { Snapshot } from "../../../app/state/types";
 
 interface PendingUpdateContext {

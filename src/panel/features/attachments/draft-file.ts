@@ -1,9 +1,9 @@
-import { fileMime } from "../../../shared/attachments/file-type";
+import { fileMime } from "../../../core/shared/attachments/file-type";
 import {
   ATTACHMENT_LIMITS,
   type StagedUploadInput,
   type UploadInput,
-} from "../../../shared/attachments/model";
+} from "../../../core/shared/attachments/model";
 import { fileFormat, type PreviewFile } from "../file-preview/file-format";
 
 export type DraftFile = {

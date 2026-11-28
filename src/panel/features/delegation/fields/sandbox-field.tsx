@@ -1,6 +1,6 @@
 import { Controller, type Control } from "react-hook-form";
 
-import type { ProviderMetadata } from "../../../../shared/providers/metadata";
+import type { ProviderMetadata } from "../../../../core/shared/providers/metadata";
 import { FormSwitch } from "../../../shared/forms/form-switch";
 import type { DelegateValues } from "../delegate-values";
 

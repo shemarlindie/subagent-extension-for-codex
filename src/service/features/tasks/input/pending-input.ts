@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
-import type { InputAuthority, Task } from "../../../../shared/tasks/model.js";
+import type {
+  InputAuthority,
+  Task,
+} from "../../../../core/shared/tasks/model.js";
 import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import type { RunContext } from "../../providers/types.js";
 import {

@@ -12,15 +12,15 @@ import {
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
-import { claudeMetadata } from "../../../../../shared/providers/metadata.js";
+import { claudeMetadata } from "../../../../../core/shared/providers/metadata.js";
 import {
   type ModelChoice,
   type ProviderReadiness,
-} from "../../../../../shared/providers/types.js";
-import type { SettingsValues } from "../../../../../shared/settings/settings-schema.js";
-import { slashCommand } from "../../../../../shared/tasks/conversation/commands.js";
-import { type Task } from "../../../../../shared/tasks/model.js";
+} from "../../../../../core/shared/providers/types.js";
+import type { SettingsValues } from "../../../../../core/shared/settings/settings-schema.js";
+import { slashCommand } from "../../../../../core/shared/tasks/conversation/commands.js";
+import { type Task } from "../../../../../core/shared/tasks/model.js";
+import { claudeOverrideDefaults } from "../../../../../providers/claude/shared/permissions.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import { RunError } from "../../run-error.js";
 import {

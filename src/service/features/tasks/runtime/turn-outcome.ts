@@ -1,6 +1,6 @@
-import type { Task } from "../../../../shared/tasks/model.js";
-import type { WrapUp } from "../../../../shared/tasks/wrap-up-contract.js";
-import { now } from "../../../../shared/time.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import type { WrapUp } from "../../../../core/shared/tasks/wrap-up-contract.js";
+import { now } from "../../../../core/shared/time.js";
 import type { Steer } from "../../providers/types.js";
 import type { PendingInput } from "../input/pending-input.js";
 import type { Store } from "../storage/store.js";

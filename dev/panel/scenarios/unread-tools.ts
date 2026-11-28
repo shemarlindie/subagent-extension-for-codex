@@ -2,7 +2,7 @@ import {
   isUnread,
   READ_EVENTS,
   type ReadMark,
-} from "../../../src/shared/tasks/conversation/unread";
+} from "../../../src/core/shared/tasks/conversation/unread";
 import { previewEvents, previewTasks } from "./fixtures";
 
 /** Read tools the browser fixtures answer by changing what the user has read in memory. */

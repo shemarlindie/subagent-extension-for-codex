@@ -1,13 +1,13 @@
 import { and, eq, inArray, max, not, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
-import type { Event } from "../../../../shared/events/types.js";
+import type { Event } from "../../../../core/shared/events/types.js";
 import {
   isUnread,
   READ_EVENTS,
   type ReadState,
-} from "../../../../shared/tasks/conversation/unread.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/conversation/unread.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Database } from "../../../platform/database/database.js";
 import { eventColumns } from "./event-records.js";
 import { events, taskArchive, taskRead, tasks } from "./schema.js";

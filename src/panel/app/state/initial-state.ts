@@ -1,4 +1,4 @@
-import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
+import { panelSettingsDefaults } from "../../../core/shared/settings/settings-schema";
 import { DEFAULT_PAGE } from "../navigation/pages";
 import { CONNECTION } from "./connection";
 import type { Snapshot } from "./types";

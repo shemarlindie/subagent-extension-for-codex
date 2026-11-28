@@ -5,7 +5,7 @@ import type { query, resolveSettings } from "@anthropic-ai/claude-agent-sdk";
 import { onTestFinished, test, vi } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
-import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
+import { claudeOverrideDefaults } from "../../../../../providers/claude/shared/permissions.js";
 import { ClaudeDiscovery } from "./discovery.js";
 
 const models = [{ value: "haiku", displayName: "Haiku", description: "" }];

@@ -1,4 +1,4 @@
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Store } from "../storage/store.js";
 import { measureTaskWrite, sendRef } from "./timing.js";
 

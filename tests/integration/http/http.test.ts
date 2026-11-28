@@ -10,6 +10,9 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { beforeEach, describe, test } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
+import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/core/shared/tasks/conversation/parent-protocol.js";
+import { startSchema } from "../../../src/core/shared/tasks/model.js";
+import { now } from "../../../src/core/shared/time.js";
 import { Projects } from "../../../src/service/features/projects/projects.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
@@ -22,9 +25,6 @@ import {
   healthProof,
   provesToken,
 } from "../../../src/service/platform/service/health-proof.js";
-import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/shared/tasks/conversation/parent-protocol.js";
-import { startSchema } from "../../../src/shared/tasks/model.js";
-import { now } from "../../../src/shared/time.js";
 import { waitForListening } from "../../support/helpers.js";
 import { until } from "../../support/until.js";
 import {

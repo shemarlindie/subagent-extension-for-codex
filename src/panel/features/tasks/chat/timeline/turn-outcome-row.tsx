@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode } from "react";
 
-import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
+import type { TurnOutcome } from "../../../../../core/shared/tasks/conversation/chat.js";
 import { useController } from "../../../../app/state/controller-context";
 import { Button } from "../../../../shared/components/button/button";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";

@@ -1,12 +1,12 @@
-import { composerMode } from "../../../src/panel/features/tasks/chat/chat-model";
-import { SendRejectedError } from "../../../src/shared/tasks/conversation/send-errors";
-import { checkWaitingLimit } from "../../../src/shared/tasks/conversation/waiting-limit";
+import { SendRejectedError } from "../../../src/core/shared/tasks/conversation/send-errors";
+import { checkWaitingLimit } from "../../../src/core/shared/tasks/conversation/waiting-limit";
 import type {
   Delivery,
   QueuedMessage,
   Task,
   TaskMessage,
-} from "../../../src/shared/tasks/model";
+} from "../../../src/core/shared/tasks/model";
+import { composerMode } from "../../../src/panel/features/tasks/chat/chat-model";
 
 /** Queue tools the browser fixtures answer by changing the task in memory. */
 export const PREVIEW_QUEUE_TOOLS = [

@@ -4,7 +4,7 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 
-import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
+import { SendRejectedError } from "../../../core/shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { codexContextCapability } from "../panel/host-context.js";
 import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";

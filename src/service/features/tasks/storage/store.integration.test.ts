@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 import { expect, test, vi } from "vitest";
 
-import { type Event } from "../../../../shared/events/types.js";
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { type Event } from "../../../../core/shared/events/types.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { useIncrementalVacuum } from "../../../platform/database/database.js";
 import * as logging from "../../../platform/logging/logger.js";
 import { Store } from "./store.js";

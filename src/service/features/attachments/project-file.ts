@@ -2,9 +2,9 @@ import { constants } from "node:fs";
 import { open, realpath, stat, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
-import { documentMime } from "../../../shared/attachments/file-type.js";
-import { isBinary } from "../../../shared/changes/changes.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
+import { documentMime } from "../../../core/shared/attachments/file-type.js";
+import { isBinary } from "../../../core/shared/changes/changes.js";
 import { changePath } from "../changes/paths.js";
 
 const CHUNK_BYTES = 64 * 1024;

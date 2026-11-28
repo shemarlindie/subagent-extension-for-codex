@@ -1,4 +1,4 @@
-import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
+import type { InputAuthority, Task } from "../../../core/shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { taskPanelContext } from "../panel/panel-context.js";
 import { panelUri } from "../panel/panel.js";

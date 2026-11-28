@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { assertSelectedProviderOptions } from "../../../../shared/providers/options.js";
-import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages.js";
+import { assertSelectedProviderOptions } from "../../../../core/shared/providers/options.js";
+import { REQUEST_ID } from "../../../../core/shared/tasks/conversation/messages.js";
 import {
   assertNoLegacyContext,
   startSchema,
   type InputAuthority,
   type Task,
-} from "../../../../shared/tasks/model.js";
-import { now } from "../../../../shared/time.js";
+} from "../../../../core/shared/tasks/model.js";
+import { now } from "../../../../core/shared/time.js";
 import type { Control } from "./control.js";
 import { logStartLimited } from "./execution-logging.js";
 import { effortRequested } from "./policy-check.js";

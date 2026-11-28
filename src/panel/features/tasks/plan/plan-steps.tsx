@@ -1,4 +1,4 @@
-import type { PlanStep } from "../../../../shared/tasks/plan-contract";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract";
 import { PlanStepIcon, type PlanStepState } from "./plan-step-icon";
 
 type PlanStepsProps = {

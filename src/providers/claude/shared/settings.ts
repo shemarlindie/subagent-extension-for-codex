@@ -3,8 +3,8 @@ import { z } from "zod";
 import type {
   SettingRow,
   SettingSection,
-} from "../../settings/document-contract.js";
-import { settingText } from "../../settings/setting-text.js";
+} from "../../../core/shared/settings/document-contract.js";
+import { settingText } from "../../../core/shared/settings/setting-text.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,

@@ -1,8 +1,8 @@
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
-import { fileMime } from "../../../shared/attachments/file-type.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
+import { fileMime } from "../../../core/shared/attachments/file-type.js";
 import { gitBytes, gitState } from "../workspaces/git.js";
 import {
   decodeText,

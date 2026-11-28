@@ -3,10 +3,10 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
-import type { EventType } from "../../../../../shared/events/event-types.js";
-import type { ActivityContent } from "../../../../../shared/providers/activity/types.js";
-import { normalizedClaudeFields } from "../../../../../shared/providers/claude/responses.js";
+import type { EventPayloadMap } from "../../../../../core/shared/events/event-contract.js";
+import type { EventType } from "../../../../../core/shared/events/event-types.js";
+import type { ActivityContent } from "../../../../../core/shared/providers/activity/types.js";
+import { normalizedClaudeFields } from "../../../../../providers/claude/shared/responses.js";
 import type { RunContext } from "../../types.js";
 import { isWorkerTool } from "../runtime/worker-tool-names.js";
 import {

@@ -1,7 +1,7 @@
 import type {
   ChatItem,
   ChatMessage,
-} from "../../../../shared/tasks/conversation/chat.js";
+} from "../../../../core/shared/tasks/conversation/chat.js";
 import type { Task } from "../../../app/state/types";
 import { completeParagraphs } from "./drafts/complete-paragraphs";
 import type { DraftState } from "./drafts/draft-state";

@@ -7,7 +7,7 @@ import type {
 import type {
   ActivityContent,
   ActivityContentBlock,
-} from "../../../../../shared/providers/activity/presentation-contract.js";
+} from "../../../../../core/shared/providers/activity/presentation-contract.js";
 
 type AssistantContentBlock = Extract<
   SDKMessage,

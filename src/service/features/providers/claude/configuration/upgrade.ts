@@ -3,7 +3,7 @@ import { access, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import type { ClaudeUpgradeInfo } from "../../../../../shared/about/types.js";
+import type { ClaudeUpgradeInfo } from "../../../../../core/shared/about/types.js";
 import { locateClaudeCli, type ClaudeCliEnvironment } from "./executable.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;

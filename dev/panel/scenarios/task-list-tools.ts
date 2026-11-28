@@ -1,6 +1,6 @@
-import type { Task } from "../../../src/shared/tasks/model";
-import type { ReplyExcerpt } from "../../../src/shared/tasks/task-list";
-import { blockedOnUser } from "../../../src/shared/tasks/wrap-up";
+import type { Task } from "../../../src/core/shared/tasks/model";
+import type { ReplyExcerpt } from "../../../src/core/shared/tasks/task-list";
+import { blockedOnUser } from "../../../src/core/shared/tasks/wrap-up";
 import { previewArchivedAt } from "./archive-tools";
 
 export const newestFirst = (tasks: Task[]) =>

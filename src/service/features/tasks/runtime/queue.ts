@@ -1,14 +1,14 @@
-import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
+import { slashCommand } from "../../../../core/shared/tasks/conversation/commands.js";
 import {
   checkWaitingLimit,
   WAITING_MESSAGE_LIMIT,
-} from "../../../../shared/tasks/conversation/waiting-limit.js";
+} from "../../../../core/shared/tasks/conversation/waiting-limit.js";
 import type {
   QueuedMessage,
   Sender,
   Task,
   TaskMessage,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
 import type { Store } from "../storage/store.js";
 
 /** The queue as `task.queue_changed` records it. */

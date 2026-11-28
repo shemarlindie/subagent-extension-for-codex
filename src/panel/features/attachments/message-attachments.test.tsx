@@ -3,7 +3,7 @@ import { cleanup, render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
 import { Controller } from "../../app/state/controller";
 import { ControllerContext } from "../../app/state/controller-context";
 import type { Transport } from "../../app/state/types";

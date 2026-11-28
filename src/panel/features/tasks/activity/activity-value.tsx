@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { scalarText } from "../../../../shared/text";
+import { scalarText } from "../../../../core/shared/text";
 import { label, MAX_ACTIVITY_DEPTH, record } from "./activity-utils";
 import { NestedContentOmitted } from "./nested-content-omitted";
 

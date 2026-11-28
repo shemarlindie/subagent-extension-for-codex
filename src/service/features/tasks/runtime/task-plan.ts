@@ -1,10 +1,10 @@
-import type { Task } from "../../../../shared/tasks/model.js";
-import type { PlanStep } from "../../../../shared/tasks/plan-contract.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract.js";
 import {
   pinnedPlan,
   planOpen,
   type TaskPlan,
-} from "../../../../shared/tasks/plan.js";
+} from "../../../../core/shared/tasks/plan.js";
 import type { Store } from "../storage/store.js";
 
 const sameSteps = (a: PlanStep[], b: PlanStep[]) =>

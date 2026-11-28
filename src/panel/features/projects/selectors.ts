@@ -1,4 +1,4 @@
-import type { GitState } from "../../../shared/tasks/model.js";
+import type { GitState } from "../../../core/shared/tasks/model.js";
 import type { Snapshot } from "../../app/state/types.js";
 import type { Project } from "./types.js";
 

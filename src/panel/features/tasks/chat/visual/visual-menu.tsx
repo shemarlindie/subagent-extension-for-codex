@@ -1,7 +1,7 @@
 import { Menu } from "@base-ui/react/menu";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatVisual } from "../../../../../core/shared/tasks/conversation/chat.js";
 import { useController } from "../../../../app/state/controller-context";
 import { buttonClass } from "../../../../shared/components/button/button";
 import { Icon } from "../../../../shared/components/icons/icons";

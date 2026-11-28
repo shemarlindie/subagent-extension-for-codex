@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { decodedEvent } from "../../../../shared/events/decode";
+import { decodedEvent } from "../../../../core/shared/events/decode";
 import type { Event } from "../../../app/state/types";
 import { responsePreview, thinkingOnly, turnStats } from "./activity-utils";
 

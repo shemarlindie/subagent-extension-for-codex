@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
+import type {
+  ModelChoice,
+  ProviderPolicy,
+} from "../../../core/shared/providers/types.js";
 import {
   settingsSections,
   type SettingRow,
-} from "../../settings/settings-document.js";
-import type { ModelChoice, ProviderPolicy } from "../types.js";
+} from "../../../core/shared/settings/settings-document.js";
 
 const policy: ProviderPolicy = {
   managed: true,

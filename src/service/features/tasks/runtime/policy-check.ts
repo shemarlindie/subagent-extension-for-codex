@@ -1,5 +1,5 @@
-import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
-import { optionsForProvider } from "../../../../shared/providers/options.js";
+import type { EventPayloadMap } from "../../../../core/shared/events/event-contract.js";
+import { optionsForProvider } from "../../../../core/shared/providers/options.js";
 import {
   aboveEffortCap,
   blockedReason,
@@ -7,9 +7,9 @@ import {
   effortCapReason,
   modelAllowed,
   resolvedModel,
-} from "../../../../shared/providers/policy.js";
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import type { Start, Task } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/providers/policy.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
+import type { Start, Task } from "../../../../core/shared/tasks/model.js";
 import { PolicyRejectedError } from "../../../platform/logging/error-metadata.js";
 import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";

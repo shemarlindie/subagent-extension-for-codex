@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { settingAt } from "../../../shared/settings/setting-path.js";
+import { settingAt } from "../../../core/shared/settings/setting-path.js";
 import {
   settingPaths,
   settingSchemaAt,
   withSetting,
-} from "../../../shared/settings/settings-schema.js";
-import { scalarText } from "../../../shared/text.js";
+} from "../../../core/shared/settings/settings-schema.js";
+import { scalarText } from "../../../core/shared/text.js";
 import { packageVersion } from "../../platform/service/runtime.js";
 import { settingsUpdateOutputSchema } from "./settings-tool-schemas.js";
 import { type Settings } from "./settings.js";

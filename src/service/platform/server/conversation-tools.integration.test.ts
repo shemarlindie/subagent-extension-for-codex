@@ -9,13 +9,13 @@ import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-h
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { copyCommittedRepository } from "../../../../tests/support/repository-test-harness.js";
 import { until } from "../../../../tests/support/until.js";
-import { panelSettingsDefaults } from "../../../shared/settings/settings-schema.js";
-import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
-import type { Task } from "../../../shared/tasks/model.js";
+import { panelSettingsDefaults } from "../../../core/shared/settings/settings-schema.js";
+import { SendRejectedError } from "../../../core/shared/tasks/conversation/send-errors.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
 import type {
   PanelTask,
   TaskSummary,
-} from "../../../shared/tasks/task-list.js";
+} from "../../../core/shared/tasks/task-list.js";
 import type { Provider, RunContext } from "../../features/providers/types.js";
 import { pendingInput } from "../../features/tasks/runtime/control-test-harness.js";
 import { Control } from "../../features/tasks/runtime/control.js";

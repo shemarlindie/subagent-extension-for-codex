@@ -1,5 +1,5 @@
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
 
 type ModelEffort = Pick<Task, "model" | "reasoning_effort">;

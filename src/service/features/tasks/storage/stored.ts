@@ -1,8 +1,8 @@
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
-import { decodedEvent } from "../../../../shared/events/decode.js";
-import type { EventEnvelope } from "../../../../shared/events/event-contract.js";
+import { decodedEvent } from "../../../../core/shared/events/decode.js";
+import type { EventEnvelope } from "../../../../core/shared/events/event-contract.js";
 import {
   approvalModeSchema,
   deliveries,
@@ -10,7 +10,7 @@ import {
   roles,
   statuses,
   type Task,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
 import {
   checkStored,
   decodeStored,

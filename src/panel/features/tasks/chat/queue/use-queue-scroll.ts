@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
-import type { QueuedMessage } from "../../../../../shared/tasks/model";
+import type { QueuedMessage } from "../../../../../core/shared/tasks/model";
 import { useAutoList } from "../../../../shared/components/motion/auto-list";
 
 /** A message queued out of view. `id` replays its cue for each one. */

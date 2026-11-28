@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { test, type TestContext } from "vitest";
 
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { Store } from "../storage/store.js";
 import { Drafts } from "./drafts.js";
 import { UpdateWaits, waitForUpdates } from "./updates.js";

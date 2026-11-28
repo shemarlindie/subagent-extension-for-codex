@@ -1,4 +1,4 @@
-import type { EventEnvelope } from "../../events/event-contract.js";
+import type { EventEnvelope } from "../../../core/shared/events/event-contract.js";
 import type { ClaudeRawResponse } from "./events.js";
 
 /** Fields consumed by normalized Activity, Chat and completion accounting. */

@@ -7,7 +7,7 @@ import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
 import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
-} from "../../../../../shared/providers/claude/permissions.js";
+} from "../../../../../providers/claude/shared/permissions.js";
 import { claudeEnvironment } from "../configuration/execution-environment.js";
 import {
   askPermission,

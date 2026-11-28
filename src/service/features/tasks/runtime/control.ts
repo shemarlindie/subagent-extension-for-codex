@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 
-import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
-import type { EventType } from "../../../../shared/events/event-types.js";
-import { eventPayload } from "../../../../shared/events/payload.js";
-import { providerMetadata } from "../../../../shared/providers/metadata.js";
-import { withSessionOption } from "../../../../shared/providers/options.js";
-import { checkWaitingLimit } from "../../../../shared/tasks/conversation/waiting-limit.js";
+import type { EventPayloadMap } from "../../../../core/shared/events/event-contract.js";
+import type { EventType } from "../../../../core/shared/events/event-types.js";
+import { eventPayload } from "../../../../core/shared/events/payload.js";
+import { providerMetadata } from "../../../../core/shared/providers/metadata.js";
+import { withSessionOption } from "../../../../core/shared/providers/options.js";
+import { checkWaitingLimit } from "../../../../core/shared/tasks/conversation/waiting-limit.js";
 import {
   pendingInputKind,
   roles,
@@ -16,8 +16,8 @@ import {
   type Sender,
   type Task,
   type TaskMessage,
-} from "../../../../shared/tasks/model.js";
-import { now } from "../../../../shared/time.js";
+} from "../../../../core/shared/tasks/model.js";
+import { now } from "../../../../core/shared/time.js";
 import { logError } from "../../../platform/logging/logger.js";
 import { Attachments } from "../../attachments/attachments.js";
 import { Changes } from "../../changes/changes.js";

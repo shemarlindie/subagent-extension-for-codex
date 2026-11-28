@@ -1,7 +1,7 @@
 import type {
   ParentUpdate,
   PendingTaskUpdates,
-} from "../../../../shared/tasks/conversation/parent-updates";
+} from "../../../../core/shared/tasks/conversation/parent-updates";
 
 export const UPDATE_LABELS: Record<ParentUpdate["kind"], string> = {
   reply: "Reply",

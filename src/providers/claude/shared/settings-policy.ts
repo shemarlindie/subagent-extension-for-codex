@@ -1,15 +1,15 @@
-import type {
-  SettingRow,
-  SettingSection,
-} from "../../settings/document-contract.js";
-import { settingAt } from "../../settings/setting-path.js";
-import { titleCase } from "../../text.js";
 import {
   blockedReason,
   withBlockedOptions,
   WORKER_DEFAULTS_HELP,
-} from "../policy.js";
-import type { ProviderPolicy } from "../types.js";
+} from "../../../core/shared/providers/policy.js";
+import type { ProviderPolicy } from "../../../core/shared/providers/types.js";
+import type {
+  SettingRow,
+  SettingSection,
+} from "../../../core/shared/settings/document-contract.js";
+import { settingAt } from "../../../core/shared/settings/setting-path.js";
+import { titleCase } from "../../../core/shared/text.js";
 import { MODE_TURNED_OFF_BY_ORG, permissionModeName } from "./permissions.js";
 import { claudeRestrictionsSection } from "./settings.js";
 

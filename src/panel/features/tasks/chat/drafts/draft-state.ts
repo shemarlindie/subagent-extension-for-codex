@@ -1,4 +1,4 @@
-import type { DraftUpdate } from "../../../../../shared/tasks/conversation/drafts.js";
+import type { DraftUpdate } from "../../../../../core/shared/tasks/conversation/drafts.js";
 
 /** The selected task's message being written, as streamed so far. */
 export type DraftState = { task: string; message_id: string; text: string };

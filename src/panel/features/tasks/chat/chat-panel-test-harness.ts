@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { createElement } from "react";
 import { onTestFinished, vi } from "vitest";
 
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Event, Task, Transport } from "../../../app/state/types";

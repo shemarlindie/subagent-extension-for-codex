@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { Store } from "../storage/store.js";
 import { queueSnapshot } from "./queue.js";
 import { commitSend } from "./send-acceptance.js";

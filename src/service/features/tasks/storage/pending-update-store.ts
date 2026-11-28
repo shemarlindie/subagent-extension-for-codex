@@ -11,8 +11,8 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import type { Event } from "../../../../shared/events/types.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Event } from "../../../../core/shared/events/types.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Database } from "../../../platform/database/database.js";
 import { eventColumns } from "./event-records.js";
 import { events, pendingUpdates, taskArchive, tasks } from "./schema.js";

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 import { test } from "vitest";
 
-import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
+import { readClaudeTaskOptions } from "../../../../../providers/claude/shared/task-options.js";
 import {
   claudeOptions,
   context,

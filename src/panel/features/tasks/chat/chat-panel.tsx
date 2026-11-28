@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 
-import type { BudgetRaise } from "../../../../shared/tasks/model";
+import type { BudgetRaise } from "../../../../core/shared/tasks/model";
 import {
   useController,
   useSnapshot,

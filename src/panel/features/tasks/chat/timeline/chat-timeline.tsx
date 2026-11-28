@@ -6,7 +6,7 @@ import {
   type RefObject,
 } from "react";
 
-import type { BudgetRaise } from "../../../../../shared/tasks/model";
+import type { BudgetRaise } from "../../../../../core/shared/tasks/model";
 import { useSnapshot } from "../../../../app/state/controller-context";
 import type { Task } from "../../../../app/state/types";
 import { LoadingSwap } from "../../../../shared/components/loading-skeleton/loading-swap";

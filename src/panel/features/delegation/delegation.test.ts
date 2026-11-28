@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { settingsDefaults } from "../../../shared/settings/settings-schema";
+import { settingsDefaults } from "../../../core/shared/settings/settings-schema";
 import { Controller } from "../../app/state/controller";
 import type { Transport } from "../../app/state/types";
 import { delegationDialog } from "./delegation";

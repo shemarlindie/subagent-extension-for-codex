@@ -1,14 +1,17 @@
 import { z } from "zod";
 
-import { attachmentsSchema } from "../../../../shared/attachments/model.js";
+import { attachmentsSchema } from "../../../../core/shared/attachments/model.js";
 import {
   conversation,
   MESSAGE_EVENTS,
-} from "../../../../shared/tasks/conversation/messages.js";
-import { PARENT_SUPERVISION_PROTOCOL } from "../../../../shared/tasks/conversation/parent-protocol.js";
-import { WAITING_MESSAGE_LIMIT } from "../../../../shared/tasks/conversation/waiting-limit.js";
-import { startSchema } from "../../../../shared/tasks/model.js";
-import { replyFrom, taskSummary } from "../../../../shared/tasks/task-list.js";
+} from "../../../../core/shared/tasks/conversation/messages.js";
+import { PARENT_SUPERVISION_PROTOCOL } from "../../../../core/shared/tasks/conversation/parent-protocol.js";
+import { WAITING_MESSAGE_LIMIT } from "../../../../core/shared/tasks/conversation/waiting-limit.js";
+import { startSchema } from "../../../../core/shared/tasks/model.js";
+import {
+  replyFrom,
+  taskSummary,
+} from "../../../../core/shared/tasks/task-list.js";
 import {
   autoRegisterChatProject,
   currentChatProject,

@@ -1,6 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 
-import type { TaskDeletionTarget } from "../../../../shared/tasks/deletion-contract.js";
+import type { TaskDeletionTarget } from "../../../../core/shared/tasks/deletion-contract.js";
 import { Chevron } from "../../../shared/components/chevron";
 import { TaskDeletionPath } from "./task-deletion-path";
 

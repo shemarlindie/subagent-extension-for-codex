@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
-import type { ActivityRateLimitWindow } from "../../../shared/providers/activity/types";
-import type { PlanUsage } from "../../../shared/providers/plan-usage";
-import { titleCase } from "../../../shared/text";
+import type { ActivityRateLimitWindow } from "../../../core/shared/providers/activity/types";
+import type { PlanUsage } from "../../../core/shared/providers/plan-usage";
+import { titleCase } from "../../../core/shared/text";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { Infotip } from "../../shared/components/infotip";
 import { useLoadingSkeletonDelay } from "../../shared/components/loading-skeleton/loading-skeleton";

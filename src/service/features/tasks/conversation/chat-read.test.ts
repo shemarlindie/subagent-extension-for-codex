@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { chatItems } from "../../../../core/shared/tasks/conversation/chat.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { Attachments } from "../../attachments/attachments.js";
 import { Store } from "../storage/store.js";
 import { chatRead } from "./chat-read.js";

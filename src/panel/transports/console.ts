@@ -1,4 +1,4 @@
-import { SendRejectedError } from "../../shared/tasks/conversation/send-errors";
+import { SendRejectedError } from "../../core/shared/tasks/conversation/send-errors";
 import { CONNECTION } from "../app/state/connection";
 import type { Transport, TransportEvents } from "../app/state/types";
 import { downloadFile } from "../shared/utils/download-file";

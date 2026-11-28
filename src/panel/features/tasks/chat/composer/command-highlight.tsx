@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 
-import type { ProviderCommand } from "../../../../../shared/providers/types";
+import type { ProviderCommand } from "../../../../../core/shared/providers/types";
 
 /** The command a draft starts with, by name or alias, if the task has it. */
 export function draftCommand(commands: ProviderCommand[], draft: string) {

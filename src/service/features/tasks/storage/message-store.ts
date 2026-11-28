@@ -1,6 +1,6 @@
 import { and, count, eq, gte, lt } from "drizzle-orm";
 
-import type { TaskMessage } from "../../../../shared/tasks/model.js";
+import type { TaskMessage } from "../../../../core/shared/tasks/model.js";
 import type { Database } from "../../../platform/database/database.js";
 import { taskMessages } from "./schema.js";
 

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { expect, onTestFinished, test } from "vitest";
 
 import { fixtureProvider } from "../../../../dev/service/fixture-provider-test-helpers.js";
-import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
-import { startSchema, type Task } from "../../../shared/tasks/model.js";
+import type { PendingTaskUpdates } from "../../../core/shared/tasks/conversation/parent-updates.js";
+import { startSchema, type Task } from "../../../core/shared/tasks/model.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";

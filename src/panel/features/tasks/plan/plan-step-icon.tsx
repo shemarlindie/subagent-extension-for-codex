@@ -1,4 +1,4 @@
-import type { PlanStepStatus } from "../../../../shared/tasks/plan-contract";
+import type { PlanStepStatus } from "../../../../core/shared/tasks/plan-contract";
 import { Icon } from "../../../shared/components/icons/icons";
 
 /**

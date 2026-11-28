@@ -5,12 +5,12 @@ import { join } from "node:path";
 
 import { test, type TestContext } from "vitest";
 
+import type { ModelChoice } from "../../../core/shared/providers/types.js";
+import { settingAt } from "../../../core/shared/settings/setting-path.js";
+import { withHelp } from "../../../core/shared/settings/settings-document.js";
+import { settingPaths } from "../../../core/shared/settings/settings-schema.js";
 import { sectionPaths } from "../../../panel/features/settings/settings-layout.js";
-import { claudeOverrideDefaults } from "../../../shared/providers/claude/permissions.js";
-import type { ModelChoice } from "../../../shared/providers/types.js";
-import { settingAt } from "../../../shared/settings/setting-path.js";
-import { withHelp } from "../../../shared/settings/settings-document.js";
-import { settingPaths } from "../../../shared/settings/settings-schema.js";
+import { claudeOverrideDefaults } from "../../../providers/claude/shared/permissions.js";
 import { Store } from "../tasks/storage/store.js";
 import {
   settingsReadOutputSchema,

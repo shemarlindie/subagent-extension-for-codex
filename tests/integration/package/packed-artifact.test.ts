@@ -30,8 +30,8 @@ import {
   type TestContext,
 } from "vitest";
 
-import type { AboutInfo } from "../../../src/shared/about/types.js";
-import type { ProviderReadiness } from "../../../src/shared/providers/types.js";
+import type { AboutInfo } from "../../../src/core/shared/about/types.js";
+import type { ProviderReadiness } from "../../../src/core/shared/providers/types.js";
 import { npmCommand } from "../../support/npm.js";
 import {
   freePort,

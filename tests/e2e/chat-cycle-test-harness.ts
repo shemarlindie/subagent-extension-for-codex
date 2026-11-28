@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { liveConversationSnapshot } from "../../dev/panel/scenarios/live-conversation";
-import { chatItems } from "../../src/shared/tasks/conversation/chat";
-import { panelTask } from "../../src/shared/tasks/task-list";
+import { chatItems } from "../../src/core/shared/tasks/conversation/chat";
+import { panelTask } from "../../src/core/shared/tasks/task-list";
 
 /** Replays cycling fixture reads against an existing console task. */
 export async function installChatCycle(

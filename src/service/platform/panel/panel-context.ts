@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import type { PanelOutput } from "../../../shared/panel/panel-contract.js";
-import type { Task } from "../../../shared/tasks/model.js";
-import { panelTask } from "../../../shared/tasks/task-list.js";
+import type { PanelOutput } from "../../../core/shared/panel/panel-contract.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
+import { panelTask } from "../../../core/shared/tasks/task-list.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import type { TaskFilters } from "../../features/tasks/storage/task-rows.js";
 import {

@@ -7,16 +7,16 @@ import {
   type Settings,
 } from "@anthropic-ai/claude-agent-sdk";
 
+import type {
+  ModelChoice,
+  ProviderPolicy,
+} from "../../../../../core/shared/providers/types.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,
   MODE_TURNED_OFF_BY_ORG,
   type ClaudeOverrides,
-} from "../../../../../shared/providers/claude/permissions.js";
-import type {
-  ModelChoice,
-  ProviderPolicy,
-} from "../../../../../shared/providers/types.js";
+} from "../../../../../providers/claude/shared/permissions.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import {

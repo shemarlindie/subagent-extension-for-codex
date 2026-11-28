@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 
-import type { SessionDeletionStatus } from "../../../../shared/providers/types.js";
+import type { SessionDeletionStatus } from "../../../../core/shared/providers/types.js";
 import type {
   TaskDeletionPreview,
   TaskDeletionTarget,
-} from "../../../../shared/tasks/deletion-contract.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/deletion-contract.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import { pathSymlinks } from "../../../platform/filesystem/path-symlinks.js";
 import type { Control } from "./control.js";
 

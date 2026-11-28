@@ -1,18 +1,18 @@
 import { access } from "node:fs/promises";
 
 import {
+  optionsForProvider,
+  withProviderOptions,
+} from "../../../../../core/shared/providers/options.js";
+import {
   exceedsPermission,
   resolveClaudePermission,
   resolveClaudePolicy,
-} from "../../../../../shared/providers/claude/permissions.js";
+} from "../../../../../providers/claude/shared/permissions.js";
 import {
   claudeStartOptionsSchema,
   readClaudeTaskOptions,
-} from "../../../../../shared/providers/claude/task-options.js";
-import {
-  optionsForProvider,
-  withProviderOptions,
-} from "../../../../../shared/providers/options.js";
+} from "../../../../../providers/claude/shared/task-options.js";
 import type { ProviderTaskPolicy } from "../../task-policy.js";
 
 type TaskPreparation = Parameters<ProviderTaskPolicy["prepareStart"]>[0];

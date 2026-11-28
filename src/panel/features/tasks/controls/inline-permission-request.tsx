@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { inputPresentation } from "../../../../shared/providers/input-presentation.js";
+import { inputPresentation } from "../../../../core/shared/providers/input-presentation.js";
 import {
   useController,
   useSnapshot,

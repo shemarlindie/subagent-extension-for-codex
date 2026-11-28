@@ -1,7 +1,7 @@
 import { access, mkdir, opendir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 
-import { type Task } from "../../../shared/tasks/model.js";
+import { type Task } from "../../../core/shared/tasks/model.js";
 import { logEvent } from "../../platform/logging/logger.js";
 import {
   git,

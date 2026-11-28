@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { PlanStep } from "../../../../shared/tasks/plan-contract.js";
-import { taskSummary } from "../../../../shared/tasks/task-list.js";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract.js";
+import { taskSummary } from "../../../../core/shared/tasks/task-list.js";
 import type { RunContext } from "../../providers/types.js";
 import { pollMessages } from "../conversation/message-poll.js";
 import {

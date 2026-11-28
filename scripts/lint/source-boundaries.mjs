@@ -1,6 +1,9 @@
 import { builtinModules } from "node:module";
 import { isAbsolute, relative, resolve } from "node:path";
 
+const runtimePath =
+  /^src\/(?:core\/|providers\/claude\/)?(service|panel|shared)\//;
+
 const builtins = new Set(
   builtinModules.map((name) => name.replace(/^node:/, "")),
 );
@@ -22,7 +25,7 @@ export const sourceBoundaries = {
     const root = context.cwd;
     const filename = context.filename;
     const localFile = relative(root, filename).replaceAll("\\", "/");
-    const owner = localFile.match(/^src\/(service|panel|shared)\//)?.[1];
+    const owner = localFile.match(runtimePath)?.[1];
 
     if (!owner || testModule.test(localFile)) return {};
 
@@ -38,7 +41,7 @@ export const sourceBoundaries = {
 
         target = testModule.test(dependency)
           ? "test code"
-          : (dependency.match(/^src\/(service|panel|shared)\//)?.[1] ??
+          : (dependency.match(runtimePath)?.[1] ??
             dependency.match(/^(dev|tests)\//)?.[1]);
       } else if (value.startsWith("node:") || builtins.has(value)) {
         target = "Node built-ins";
@@ -50,7 +53,7 @@ export const sourceBoundaries = {
           value === "@anthropic-ai/claude-agent-sdk" &&
           filename
             .replaceAll("\\", "/")
-            .endsWith("/src/shared/providers/claude/events.ts") &&
+            .endsWith("/src/providers/claude/shared/events.ts") &&
           (declaration.type === "TSImportType" ||
             declaration.importKind === "type" ||
             declaration.exportKind === "type" ||

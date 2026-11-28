@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { startSchema } from "../../../../shared/tasks/model.js";
+import { startSchema } from "../../../../core/shared/tasks/model.js";
 import {
   effectiveFilter,
   filterCounts,

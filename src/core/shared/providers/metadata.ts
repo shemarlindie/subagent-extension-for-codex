@@ -1,8 +1,8 @@
-import { reasoningLevels } from "../tasks/reasoning.js";
 import {
   claudePermissionModes,
   permissionLabel,
-} from "./claude/permissions.js";
+} from "../../../providers/claude/shared/permissions.js";
+import { reasoningLevels } from "../tasks/reasoning.js";
 
 /** Serializable presentation contract for built-in providers; no SDK objects. */
 export interface ProviderMetadata {

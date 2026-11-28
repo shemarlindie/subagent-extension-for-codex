@@ -2,8 +2,8 @@ import type {
   ModelChoice,
   ProviderPolicy,
   ProviderReadiness,
-} from "../../../../shared/providers/types.js";
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
+} from "../../../../core/shared/providers/types.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
 import type { Provider } from "../../providers/types.js";
 
 type WorkerStatus = {

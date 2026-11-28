@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 
-import type { GitState } from "../../../shared/tasks/model.js";
+import type { GitState } from "../../../core/shared/tasks/model.js";
 
 const exec = promisify(execFile);
 

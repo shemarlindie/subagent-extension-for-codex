@@ -6,8 +6,8 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type {
   SessionDeletionResource,
   SessionDeletionStatus,
-} from "../../../../../shared/providers/types.js";
-import type { Task } from "../../../../../shared/tasks/model.js";
+} from "../../../../../core/shared/providers/types.js";
+import type { Task } from "../../../../../core/shared/tasks/model.js";
 import { pathSymlinks } from "../../../../platform/filesystem/path-symlinks.js";
 
 type SessionLocation = Pick<Task, "session_id" | "session_state_ref">;

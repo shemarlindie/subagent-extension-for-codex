@@ -1,4 +1,4 @@
-import { slashCommand } from "../../../../shared/tasks/conversation/commands";
+import { slashCommand } from "../../../../core/shared/tasks/conversation/commands";
 import { MarkdownView } from "../../file-preview/markdown/markdown-view";
 import { CommandText } from "./command-text";
 

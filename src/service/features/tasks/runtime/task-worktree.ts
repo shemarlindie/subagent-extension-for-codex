@@ -1,4 +1,4 @@
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Control } from "./control.js";
 
 export type WorktreeContext = Pick<

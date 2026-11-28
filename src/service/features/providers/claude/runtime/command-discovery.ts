@@ -1,8 +1,8 @@
 import type { query, SlashCommand } from "@anthropic-ai/claude-agent-sdk";
 
-import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
-import type { ProviderCommand } from "../../../../../shared/providers/types.js";
-import type { Task } from "../../../../../shared/tasks/model.js";
+import type { ProviderCommand } from "../../../../../core/shared/providers/types.js";
+import type { Task } from "../../../../../core/shared/tasks/model.js";
+import { readClaudeTaskOptions } from "../../../../../providers/claude/shared/task-options.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import { CachedRead, READ_CACHE_MS, turnlessSession } from "./session-reads.js";

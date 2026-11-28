@@ -1,5 +1,5 @@
-import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import { chatItems } from "../../../../core/shared/tasks/conversation/chat.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
 import type { Store } from "../storage/store.js";
 

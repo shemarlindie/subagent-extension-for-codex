@@ -1,11 +1,11 @@
 /** The read and update contracts of the settings tools. */
 import { z } from "zod";
 
-import { sectionSchema } from "../../../shared/settings/settings-document.js";
+import { sectionSchema } from "../../../core/shared/settings/settings-document.js";
 import {
   settingPaths,
   settingsPatchSchema,
-} from "../../../shared/settings/settings-schema.js";
+} from "../../../core/shared/settings/settings-schema.js";
 
 // Reads leave out a disabled provider's model defaults, so values are loose.
 const valuesSchema = z.looseObject({});

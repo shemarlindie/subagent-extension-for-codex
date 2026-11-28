@@ -1,4 +1,4 @@
-import { panelTimingBatchSchema } from "../../../../shared/tasks/panel-timing.js";
+import { panelTimingBatchSchema } from "../../../../core/shared/tasks/panel-timing.js";
 import {
   recordTaskTiming,
   sendRef,

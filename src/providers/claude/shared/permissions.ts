@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { titleCase } from "../../text.js";
+import { titleCase } from "../../../core/shared/text.js";
 
 export const claudePermissionModes = [
   "default",

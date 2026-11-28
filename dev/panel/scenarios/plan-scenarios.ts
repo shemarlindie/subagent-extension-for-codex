@@ -1,15 +1,15 @@
 // Tasks whose worker shows a plan: one in progress, one made stale by a steer,
 // one finished and one that ended with its turn while it had steps left.
-import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import {
   applyPlanUpdate,
   planOpen,
   planResultLine,
   type PlanUpdateInput,
   type TaskPlan,
-} from "../../../src/shared/tasks/plan";
-import type { PlanStep } from "../../../src/shared/tasks/plan-contract";
+} from "../../../src/core/shared/tasks/plan";
+import type { PlanStep } from "../../../src/core/shared/tasks/plan-contract";
+import { workerToolNames } from "../../../src/service/features/providers/claude/runtime/worker-tool-names";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 

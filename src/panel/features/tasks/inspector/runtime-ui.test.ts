@@ -5,7 +5,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { createElement } from "react";
 import { expect, test, vi } from "vitest";
 
-import { startSchema } from "../../../../shared/tasks/model.js";
+import { startSchema } from "../../../../core/shared/tasks/model.js";
 import type { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";

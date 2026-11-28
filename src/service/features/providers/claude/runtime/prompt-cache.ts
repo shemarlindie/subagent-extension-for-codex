@@ -3,7 +3,7 @@ import type { SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk"
 import {
   readClaudeTaskOptions,
   type ClaudePromptCache,
-} from "../../../../../shared/providers/claude/task-options.js";
+} from "../../../../../providers/claude/shared/task-options.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 

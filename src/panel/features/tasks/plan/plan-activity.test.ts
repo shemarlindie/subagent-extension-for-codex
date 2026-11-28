@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
-import type { PlanStep } from "../../../../shared/tasks/plan-contract";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract";
 import { event, parseHtml } from "../activity/activity-ui-test-harness";
 import { EventList } from "../activity/event-list";
 

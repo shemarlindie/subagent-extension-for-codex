@@ -1,4 +1,4 @@
-import { settingsDefaults } from "../../../shared/settings/settings-schema";
+import { settingsDefaults } from "../../../core/shared/settings/settings-schema";
 import type {
   Defaults,
   DelegateDialog,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { PlanStep } from "../../../../shared/tasks/plan-contract.js";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,

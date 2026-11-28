@@ -3,7 +3,7 @@ import {
   type InputAuthority,
   type Start,
   type Task,
-} from "../../../shared/tasks/model.js";
+} from "../../../core/shared/tasks/model.js";
 import type { Settings } from "../settings/settings.js";
 
 interface TaskPreparation {

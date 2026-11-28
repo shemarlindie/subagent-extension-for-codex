@@ -1,11 +1,11 @@
 import { setTimeout } from "node:timers/promises";
 
+import { slashCommand } from "../../src/core/shared/tasks/conversation/commands.js";
 import type {
   RunContext,
   Steer,
   TurnOutput,
 } from "../../src/service/features/providers/types.js";
-import { slashCommand } from "../../src/shared/tasks/conversation/commands.js";
 import { readFixtureTaskOptions } from "./fixture-provider-policy.js";
 import type { FixtureProviderOptions } from "./fixture-provider.js";
 import { createFixtureRunEvents } from "./fixture-run-events.js";

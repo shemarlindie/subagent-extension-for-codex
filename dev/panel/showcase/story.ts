@@ -1,7 +1,7 @@
 // The showcase's curated collaboration: what Codex shows in its thread and
 // what the panel shows for Claude at each step. Steps are cumulative.
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { settingOptions, taskBase } from "../scenarios/scenario-context";
 import { begin, Timeline } from "../scenarios/timeline";
 

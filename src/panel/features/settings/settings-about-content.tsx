@@ -1,6 +1,6 @@
 import { Fragment, useContext, type ReactNode } from "react";
 
-import type { AboutInfo } from "../../../shared/about/types";
+import type { AboutInfo } from "../../../core/shared/about/types";
 import { useSnapshot } from "../../app/state/controller-context";
 import { CopyButton } from "../../shared/components/copy-button/copy-button";
 import { formatUserDateTime } from "../../shared/utils/user-date-time";

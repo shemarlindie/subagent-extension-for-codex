@@ -7,8 +7,8 @@ import type {
   ActivityContent,
   ActivityContentBlock,
   ActivityPresentation,
-} from "../../../../../shared/providers/activity/types.js";
-import { scalarText } from "../../../../../shared/text.js";
+} from "../../../../../core/shared/providers/activity/types.js";
+import { scalarText } from "../../../../../core/shared/text.js";
 import {
   claudeActivityBlock,
   claudeActivityContent,

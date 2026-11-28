@@ -1,4 +1,4 @@
-import { titleCase } from "../../../shared/text";
+import { titleCase } from "../../../core/shared/text";
 
 const compactLevels: Record<string, string> = {
   none: "None",

@@ -2,18 +2,18 @@ import { createHash } from "node:crypto";
 import type { BigIntStats } from "node:fs";
 import { open, type FileHandle } from "node:fs/promises";
 
-import { fileMime } from "../../../shared/attachments/file-type.js";
+import { fileMime } from "../../../core/shared/attachments/file-type.js";
 import {
   ATTACHMENT_LIMITS,
   ATTACHMENT_PAGE_BYTES,
   isBinaryFormat,
   type AttachmentPage,
   type MessageAttachment,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import {
   decodeFileCursor,
   encodeFileCursor,
-} from "../../../shared/changes/changes.js";
+} from "../../../core/shared/changes/changes.js";
 import { OPEN_FLAGS } from "./project-file.js";
 
 /**

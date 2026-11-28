@@ -7,7 +7,7 @@ import {
 } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../../shared/providers/claude/permissions";
+import { readOnlyProfile } from "../../../../providers/claude/shared/permissions";
 import {
   useController,
   useSnapshot,

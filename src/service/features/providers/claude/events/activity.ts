@@ -1,13 +1,13 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { contentText } from "../../../../../shared/providers/activity/content-text.js";
+import { contentText } from "../../../../../core/shared/providers/activity/content-text.js";
 import type {
   ActivityContent,
   ActivityPresentation,
-} from "../../../../../shared/providers/activity/types.js";
-import { decodeClaudeRateLimitWindowInfo } from "../../../../../shared/providers/claude/events.js";
-import { claudeRateLimitWindows } from "../../../../../shared/providers/claude/rate-limit-windows.js";
-import { scalarText } from "../../../../../shared/text.js";
+} from "../../../../../core/shared/providers/activity/types.js";
+import { scalarText } from "../../../../../core/shared/text.js";
+import { decodeClaudeRateLimitWindowInfo } from "../../../../../providers/claude/shared/events.js";
+import { claudeRateLimitWindows } from "../../../../../providers/claude/shared/rate-limit-windows.js";
 import { decodeClaudeActivityContent, toolBlocksOnly } from "./content.js";
 import { claudeStreamPresentation } from "./stream-presentation.js";
 import {

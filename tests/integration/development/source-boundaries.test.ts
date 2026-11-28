@@ -98,12 +98,12 @@ test("production boundaries reject each forbidden dependency target", async () =
       ],
     ],
     [
-      "src/shared/tasks/example.ts",
+      "src/core/shared/tasks/example.ts",
       [
-        "../../service/features/tasks/runtime/control.js",
-        "../../panel/app/state/controller.js",
-        "../../../dev/panel/scenarios/fixtures.js",
-        "../../../tests/support/helpers.js",
+        "../../../service/features/tasks/runtime/control.js",
+        "../../../panel/app/state/controller.js",
+        "../../../../dev/panel/scenarios/fixtures.js",
+        "../../../../tests/support/helpers.js",
         "node:path",
         "path",
         "@anthropic-ai/claude-agent-sdk",
@@ -139,7 +139,7 @@ test("every supported import syntax enforces the same ownership boundary", async
 
 test("only the Claude-owned shared contract can import SDK types, and never SDK values", async () => {
   const sdk = "@anthropic-ai/claude-agent-sdk";
-  const contract = "src/shared/providers/claude/events.ts";
+  const contract = "src/providers/claude/shared/events.ts";
 
   for (const source of [
     `import type { Thing } from "${sdk}";`,
@@ -150,7 +150,8 @@ test("only the Claude-owned shared contract can import SDK types, and never SDK 
     assert.deepEqual(await boundaryMessages(contract, source), []);
 
     assert.equal(
-      (await boundaryMessages("src/shared/events/types.ts", source)).length,
+      (await boundaryMessages("src/core/shared/events/types.ts", source))
+        .length,
       1,
     );
   }

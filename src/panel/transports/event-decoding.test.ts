@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { eventPayload } from "../../shared/events/payload.js";
+import { eventPayload } from "../../core/shared/events/payload.js";
 import type { Event } from "../app/state/types.js";
 import { decodePanelToolResult } from "./event-decoding.js";
 

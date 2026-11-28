@@ -16,7 +16,7 @@ import { test, vi } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { until } from "../../../../tests/support/until.js";
-import { taskDeletionPreviewSchema } from "../../../shared/tasks/deletion-contract.generated.js";
+import { taskDeletionPreviewSchema } from "../../../core/shared/tasks/deletion-contract.generated.js";
 import { callTool, isUserTool } from "../../platform/server/tools.js";
 import { executionTaskPolicy } from "../providers/task-policy.js";
 import { PendingInput } from "../tasks/input/pending-input.js";

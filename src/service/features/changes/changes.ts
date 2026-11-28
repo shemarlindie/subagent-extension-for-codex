@@ -16,8 +16,8 @@ import {
   type ChangeScope,
   type Changes as ChangesResult,
   type FileChange,
-} from "../../../shared/changes/changes.js";
-import type { Task } from "../../../shared/tasks/model.js";
+} from "../../../core/shared/changes/changes.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
 import { formatFileDiff } from "./compose.js";
 import { changePath } from "./paths.js";
 import { ChangeStore, hash, type RecordedChange } from "./store.js";

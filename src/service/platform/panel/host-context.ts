@@ -2,7 +2,7 @@ import { realpath } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { GitState } from "../../../shared/tasks/model.js";
+import type { GitState } from "../../../core/shared/tasks/model.js";
 import { assertPlainFolderAllowed } from "../../features/projects/projects.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { gitState, gitWorkTreeRoot } from "../../features/workspaces/git.js";

@@ -1,4 +1,4 @@
-import type { ActivityRateLimitWindow } from "../activity/types.js";
+import type { ActivityRateLimitWindow } from "../../../core/shared/providers/activity/types.js";
 import type { ClaudeRateLimitWindowInfo } from "./events.js";
 
 /** Each Claude rate-limit window's name, as the panel shows it. */

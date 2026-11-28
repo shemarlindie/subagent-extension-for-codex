@@ -2,7 +2,7 @@
  * Format detection and helpers for previewing a file: its MIME type, how it is
  * rendered, the views it offers and the source text it shows.
  */
-import { imageMime } from "../../../shared/changes/changes";
+import { imageMime } from "../../../core/shared/changes/changes";
 import { parseDiffFiles } from "./diff/diff-format";
 
 /** A file to preview. Without a format or MIME type, it comes from the path's extension. */

@@ -6,7 +6,7 @@ import compareVersions from "semver/functions/compare.js";
 import type {
   AboutInfo,
   ExtensionBuildInfo,
-} from "../../../shared/about/types.js";
+} from "../../../core/shared/about/types.js";
 import { claudeCliSupport } from "../../features/providers/claude/configuration/executable.js";
 import { claudeUpgradeInfo } from "../../features/providers/claude/configuration/upgrade.js";
 import type { Control } from "../../features/tasks/runtime/control.js";

@@ -6,11 +6,11 @@ import type {
   SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ActivityRateLimitWindow } from "../../../../../shared/providers/activity/types.js";
-import { claudeOverrideDefaults } from "../../../../../shared/providers/claude/permissions.js";
-import { claudeRateLimitLabels } from "../../../../../shared/providers/claude/rate-limit-windows.js";
-import type { PlanUsage } from "../../../../../shared/providers/plan-usage.js";
-import type { SettingsValues } from "../../../../../shared/settings/settings-schema.js";
+import type { ActivityRateLimitWindow } from "../../../../../core/shared/providers/activity/types.js";
+import type { PlanUsage } from "../../../../../core/shared/providers/plan-usage.js";
+import type { SettingsValues } from "../../../../../core/shared/settings/settings-schema.js";
+import { claudeOverrideDefaults } from "../../../../../providers/claude/shared/permissions.js";
+import { claudeRateLimitLabels } from "../../../../../providers/claude/shared/rate-limit-windows.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { PlanUsageReader } from "../../types.js";
 import type { ClaudeCli } from "../configuration/executable.js";

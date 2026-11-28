@@ -8,7 +8,7 @@ import {
   rateLimit,
   Timeline,
 } from "../../../../../dev/panel/scenarios/timeline";
-import type { ChatItem } from "../../../../shared/tasks/conversation/chat";
+import type { ChatItem } from "../../../../core/shared/tasks/conversation/chat";
 import { deferred, flush } from "../../../app/state/controller-test-harness";
 import type { Task } from "../../../app/state/types";
 import { controlledElement } from "../../../shared/utils/dom-test-harness";

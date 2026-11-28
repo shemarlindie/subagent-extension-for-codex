@@ -1,6 +1,6 @@
 import { Switch } from "@base-ui/react/switch";
 
-import type { SessionDeletionStatus } from "../../../../shared/providers/types.js";
+import type { SessionDeletionStatus } from "../../../../core/shared/providers/types.js";
 
 type AgentTaskDeletionOptionProps = {
   id: string;

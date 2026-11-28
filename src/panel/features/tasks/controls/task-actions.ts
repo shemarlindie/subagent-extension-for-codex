@@ -1,9 +1,12 @@
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors";
-import type { BudgetRaise, Delivery } from "../../../../shared/tasks/model";
+import { SendRejectedError } from "../../../../core/shared/tasks/conversation/send-errors";
+import type {
+  BudgetRaise,
+  Delivery,
+} from "../../../../core/shared/tasks/model";
 import {
   isTimedPanelOperation,
   panelTimingCorrelation,
-} from "../../../../shared/tasks/panel-timing";
+} from "../../../../core/shared/tasks/panel-timing";
 import type { Snapshot, Task } from "../../../app/state/types";
 import {
   quote,

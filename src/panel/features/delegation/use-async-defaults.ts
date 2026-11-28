@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
+import { readOnlyProfile } from "../../../providers/claude/shared/permissions";
 import type { DelegateValues } from "./delegate-values";
 import { workerChoice } from "./delegation";
 

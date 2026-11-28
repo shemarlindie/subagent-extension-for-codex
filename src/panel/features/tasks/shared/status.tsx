@@ -1,4 +1,4 @@
-import type { ActivityState } from "../../../../shared/tasks/activity/activity-events";
+import type { ActivityState } from "../../../../core/shared/tasks/activity/activity-events";
 import { statusLabel } from "../../../app/state/selectors";
 import type { Task } from "../../../app/state/types";
 import { MotionContent } from "../../../shared/components/motion/motion-content";

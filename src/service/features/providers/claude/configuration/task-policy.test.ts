@@ -5,8 +5,11 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
-import { readClaudeTaskOptions } from "../../../../../shared/providers/claude/task-options.js";
-import { startSchema, type Task } from "../../../../../shared/tasks/model.js";
+import {
+  startSchema,
+  type Task,
+} from "../../../../../core/shared/tasks/model.js";
+import { readClaudeTaskOptions } from "../../../../../providers/claude/shared/task-options.js";
 import { Settings } from "../../../settings/settings.js";
 import { Store } from "../../../tasks/storage/store.js";
 import { claudeTaskPolicy } from "./task-policy.js";

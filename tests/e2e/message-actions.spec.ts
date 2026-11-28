@@ -1,4 +1,4 @@
-import type { ChatItem } from "../../src/shared/tasks/conversation/chat";
+import type { ChatItem } from "../../src/core/shared/tasks/conversation/chat";
 import { send, startTask } from "./console-actions";
 import { firstReplyTest as test } from "./first-reply-fixtures";
 import { expect, requiredAttribute } from "./fixtures";

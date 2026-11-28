@@ -1,4 +1,4 @@
-import type { PanelTask } from "../../../shared/tasks/task-list.js";
+import type { PanelTask } from "../../../core/shared/tasks/task-list.js";
 
 export type Task = PanelTask;
 export type Tab = "chat" | "changes" | "activity" | "details";

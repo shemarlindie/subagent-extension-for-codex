@@ -1,12 +1,12 @@
+import { startSchema, type Task } from "../../src/core/shared/tasks/model.js";
+import {
+  claudeOverrideDefaults,
+  resolveClaudePolicy,
+} from "../../src/providers/claude/shared/permissions.js";
 import type {
   FileEdit,
   RunContext,
 } from "../../src/service/features/providers/types.js";
-import {
-  claudeOverrideDefaults,
-  resolveClaudePolicy,
-} from "../../src/shared/providers/claude/permissions.js";
-import { startSchema, type Task } from "../../src/shared/tasks/model.js";
 import {
   FixtureProvider,
   type FixtureProviderOptions,

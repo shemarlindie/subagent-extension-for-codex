@@ -2,11 +2,11 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useState } from "react";
 import { useController, type Control } from "react-hook-form";
 
-import { modelAllowed } from "../../../../shared/providers/policy";
+import { modelAllowed } from "../../../../core/shared/providers/policy";
 import type {
   ModelChoice,
   ProviderPolicy,
-} from "../../../../shared/providers/types";
+} from "../../../../core/shared/providers/types";
 import { FormFieldError } from "../../../shared/forms/form-field-error";
 import { descriptionIds } from "../../../shared/utils/description-ids";
 import type { DelegateValues } from "../delegate-values";

@@ -1,4 +1,4 @@
-import type { ProviderPolicy } from "../../src/shared/providers/types.js";
+import type { ProviderPolicy } from "../../src/core/shared/providers/types.js";
 import { openAdvancedTask, send, startTask } from "./console-actions";
 import { expect, test } from "./fixtures";
 

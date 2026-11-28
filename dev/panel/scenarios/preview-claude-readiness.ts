@@ -1,4 +1,4 @@
-import type { ProviderReadiness } from "../../../src/shared/providers/types";
+import type { ProviderReadiness } from "../../../src/core/shared/providers/types";
 
 const previewClaudeReady = {
   ready: true,

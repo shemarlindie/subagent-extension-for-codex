@@ -11,17 +11,17 @@ import {
   pinnedPlan,
   planProgress,
   planResultLine,
-} from "../../../../../shared/tasks/plan.js";
+} from "../../../../../core/shared/tasks/plan.js";
 import {
   MAX_VISUAL_CODE,
   VISUAL_SERIES_COUNT,
   visualTokens,
-} from "../../../../../shared/tasks/visual.js";
+} from "../../../../../core/shared/tasks/visual.js";
 import {
   MAX_ACTION_LABEL,
   MAX_ASK,
   MAX_RECAP,
-} from "../../../../../shared/tasks/wrap-up.js";
+} from "../../../../../core/shared/tasks/wrap-up.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import { visualGuide, visualKinds } from "./visual-guide.js";

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
-import { WAITING_MESSAGE_LIMIT } from "../../../../shared/tasks/conversation/waiting-limit.js";
+import { SendRejectedError } from "../../../../core/shared/tasks/conversation/send-errors.js";
+import { WAITING_MESSAGE_LIMIT } from "../../../../core/shared/tasks/conversation/waiting-limit.js";
 import type { RunContext } from "../../providers/types.js";
 import {
   eventData,

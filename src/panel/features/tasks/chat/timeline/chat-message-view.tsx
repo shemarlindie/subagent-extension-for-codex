@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, useState } from "react";
 
-import type { TurnOutcome } from "../../../../../shared/tasks/conversation/chat.js";
-import type { ConversationMessage } from "../../../../../shared/tasks/conversation/messages.js";
+import type { TurnOutcome } from "../../../../../core/shared/tasks/conversation/chat.js";
+import type { ConversationMessage } from "../../../../../core/shared/tasks/conversation/messages.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { MessageAttachments } from "../../../attachments/message-attachments";
 import { MarkdownView } from "../../../file-preview/markdown/markdown-view";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { chatItems } from "../../../../shared/tasks/conversation/chat.js";
+import { chatItems } from "../../../../core/shared/tasks/conversation/chat.js";
 import type { RunContext } from "../../providers/types.js";
 import { pollMessages } from "../conversation/message-poll.js";
 import { input, setup, TestProvider, until } from "./control-test-harness.js";

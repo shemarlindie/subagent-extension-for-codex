@@ -6,7 +6,7 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 
-import { providerMetadata } from "../../../../shared/providers/metadata";
+import { providerMetadata } from "../../../../core/shared/providers/metadata";
 import type { Worker } from "../../../app/state/types";
 import { AsyncControl } from "../../../shared/forms/async-control";
 import { FormSwitch } from "../../../shared/forms/form-switch";

@@ -1,5 +1,5 @@
-import type { TaskDeletionPreview } from "../../../src/shared/tasks/deletion-contract.js";
-import type { Task } from "../../../src/shared/tasks/model.js";
+import type { TaskDeletionPreview } from "../../../src/core/shared/tasks/deletion-contract.js";
+import type { Task } from "../../../src/core/shared/tasks/model.js";
 
 /**
  * Mirrors the service's session rule. Fixture sessions have no local files

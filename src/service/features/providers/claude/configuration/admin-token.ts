@@ -1,7 +1,7 @@
 import { realpath } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
-import { scalarText } from "../../../../../shared/text.js";
+import { scalarText } from "../../../../../core/shared/text.js";
 import { dataDirectory } from "../../../../platform/service/runtime.js";
 import { adminTokenPath } from "../../../../platform/service/token.js";
 import { within } from "../../../workspaces/workspace.js";

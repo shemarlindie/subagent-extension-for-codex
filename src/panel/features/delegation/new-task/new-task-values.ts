@@ -1,5 +1,5 @@
-import { settingAt } from "../../../../shared/settings/setting-path";
-import { scalarText } from "../../../../shared/text";
+import { settingAt } from "../../../../core/shared/settings/setting-path";
+import { scalarText } from "../../../../core/shared/text";
 import type { NewTaskState } from "../../../app/state/types";
 import type { Defaults } from "../../settings/types";
 import {

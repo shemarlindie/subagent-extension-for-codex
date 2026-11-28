@@ -14,7 +14,7 @@
     "rootDir": "src",
     "esModuleInterop": true
   },
-  "include": ["src/service", "src/shared"],
+  "include": ["src/service", "src/core/shared", "src/providers/claude/shared"],
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

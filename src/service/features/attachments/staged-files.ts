@@ -11,12 +11,12 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
 import {
   ATTACHMENT_LIMITS,
   type StagedFile,
   type StagedUploadInput,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 
 /** Content hashes, the only folder names the sweep removes. */

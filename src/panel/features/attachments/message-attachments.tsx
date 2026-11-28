@@ -1,4 +1,4 @@
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
 import { AttachmentChip, AttachmentChipContent } from "./attachment-chip";
 import { AttachmentRow } from "./attachment-row";
 import { useOpenAttachment } from "./use-open-attachment";

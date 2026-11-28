@@ -1,9 +1,9 @@
-import type { MessageAttachment } from "../../../shared/attachments/model.js";
-import type { Event } from "../../../shared/events/types.js";
-import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
-import type { PanelSettings } from "../../../shared/settings/settings-schema.js";
-import type { PendingTaskUpdates } from "../../../shared/tasks/conversation/parent-updates.js";
-import type { GitState } from "../../../shared/tasks/model.js";
+import type { MessageAttachment } from "../../../core/shared/attachments/model.js";
+import type { Event } from "../../../core/shared/events/types.js";
+import type { PlanUsage } from "../../../core/shared/providers/plan-usage.js";
+import type { PanelSettings } from "../../../core/shared/settings/settings-schema.js";
+import type { PendingTaskUpdates } from "../../../core/shared/tasks/conversation/parent-updates.js";
+import type { GitState } from "../../../core/shared/tasks/model.js";
 import type {
   ChangeCountsState,
   ChangesState,
@@ -378,7 +378,7 @@ export type UiStatePersistence = {
   flush?(): void;
 };
 
-export type { Event } from "../../../shared/events/types.js";
+export type { Event } from "../../../core/shared/events/types.js";
 
 export type {
   HostState,

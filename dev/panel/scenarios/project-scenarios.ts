@@ -1,4 +1,4 @@
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import {
   docsSite,
   mobileApp,

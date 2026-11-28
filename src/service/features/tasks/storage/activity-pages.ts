@@ -6,7 +6,7 @@ import {
   type ActivityPage,
   type DroppedSummary,
   type TurnActivityPage,
-} from "../../../../shared/tasks/activity/activity-tail.js";
+} from "../../../../core/shared/tasks/activity/activity-tail.js";
 import type { ReadWork } from "./read-metrics.js";
 import type { Store } from "./store.js";
 

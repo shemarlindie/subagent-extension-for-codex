@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type SubmitEvent } from "react";
 import { useWatch } from "react-hook-form";
 
-import { readOnlyProfile } from "../../../shared/providers/claude/permissions";
+import { readOnlyProfile } from "../../../providers/claude/shared/permissions";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import { useSessionState } from "../../app/state/session/use-session-state";
 import type { Snapshot, Task } from "../../app/state/types";

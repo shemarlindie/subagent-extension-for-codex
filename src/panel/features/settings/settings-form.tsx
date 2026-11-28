@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useWatch, type FieldErrors } from "react-hook-form";
 
-import { settingsSections } from "../../../shared/settings/settings-document";
+import { settingsSections } from "../../../core/shared/settings/settings-document";
 import { useController, useSnapshot } from "../../app/state/controller-context";
 import type { SettingsPageDialog } from "../../app/state/types";
 import { Button } from "../../shared/components/button/button";

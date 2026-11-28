@@ -1,10 +1,10 @@
-import type { PanelView } from "../../../src/panel/app/state/panel-view";
-import type { PlanUsage } from "../../../src/shared/providers/plan-usage";
+import type { PlanUsage } from "../../../src/core/shared/providers/plan-usage";
 import {
   panelSettingsDefaults,
   type PanelSettings,
-} from "../../../src/shared/settings/settings-schema";
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
+} from "../../../src/core/shared/settings/settings-schema";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
+import type { PanelView } from "../../../src/panel/app/state/panel-view";
 
 type WaitRead = { revision: string; draft?: Draft | null };
 

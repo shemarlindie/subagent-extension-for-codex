@@ -2,8 +2,8 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import express from "express";
 
-import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
-import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
+import type { DraftUpdate } from "../../../core/shared/tasks/conversation/drafts.js";
+import { SendRejectedError } from "../../../core/shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
 import { logError, logEvent } from "../logging/logger.js";
 import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";

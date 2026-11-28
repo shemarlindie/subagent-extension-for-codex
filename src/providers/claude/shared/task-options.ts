@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-import { approvalDeciderSchema, type Task } from "../../tasks/model.js";
-import { optionsForProvider } from "../options.js";
+import { optionsForProvider } from "../../../core/shared/providers/options.js";
+import {
+  approvalDeciderSchema,
+  type Task,
+} from "../../../core/shared/tasks/model.js";
 import {
   claudePermissionModeSchema,
   claudePolicySchema,

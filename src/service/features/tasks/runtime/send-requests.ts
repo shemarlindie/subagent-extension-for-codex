@@ -2,14 +2,14 @@ import { createHash } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import type { AttachmentInput } from "../../../../shared/attachments/model.js";
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
+import type { AttachmentInput } from "../../../../core/shared/attachments/model.js";
+import { SendRejectedError } from "../../../../core/shared/tasks/conversation/send-errors.js";
 import type {
   BudgetRaise,
   Delivery,
   Sender,
   Task,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
 import { sendReceipts } from "../storage/schema.js";
 import type { Store } from "../storage/store.js";
 

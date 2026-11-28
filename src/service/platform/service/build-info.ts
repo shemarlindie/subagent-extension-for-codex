@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ExtensionBuildInfo } from "../../../shared/about/types.js";
+import type { ExtensionBuildInfo } from "../../../core/shared/about/types.js";
 
 /** Also used by the bundler, so packaged SDK versions survive without node_modules. */
 export function collectBuildInfo(root: string): ExtensionBuildInfo {

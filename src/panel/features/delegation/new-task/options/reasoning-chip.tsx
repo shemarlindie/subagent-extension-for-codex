@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import { withEffortCap } from "../../../../../shared/providers/policy";
-import { titleCase } from "../../../../../shared/text";
+import { withEffortCap } from "../../../../../core/shared/providers/policy";
+import { titleCase } from "../../../../../core/shared/text";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import { useProfileChoice } from "./use-profile-choice";
 

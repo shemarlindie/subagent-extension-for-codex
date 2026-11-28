@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-import { attachmentsSchema } from "../../../../shared/attachments/model.js";
+import { attachmentsSchema } from "../../../../core/shared/attachments/model.js";
 import {
   budgetRaiseSchema,
   deliveries,
   type InputAuthority,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
 import { Control } from "../../../features/tasks/runtime/control.js";
 import { archivedFilters } from "../../../features/tasks/storage/task-rows.js";
 

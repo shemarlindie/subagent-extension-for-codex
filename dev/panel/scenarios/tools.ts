@@ -1,16 +1,16 @@
-import type { ProviderPolicy } from "../../../src/shared/providers/types";
-import { settingsSections } from "../../../src/shared/settings/settings-document";
+import type { ProviderPolicy } from "../../../src/core/shared/providers/types";
+import { settingsSections } from "../../../src/core/shared/settings/settings-document";
 import {
   settingsDefaults,
   withSetting,
-} from "../../../src/shared/settings/settings-schema";
+} from "../../../src/core/shared/settings/settings-schema";
 import {
   windowActivity,
   windowTurnActivity,
-} from "../../../src/shared/tasks/activity/activity-tail";
-import { chatItems } from "../../../src/shared/tasks/conversation/chat";
-import { budgetRaiseSchema, roles } from "../../../src/shared/tasks/model";
-import { panelTask, readFields } from "../../../src/shared/tasks/task-list";
+} from "../../../src/core/shared/tasks/activity/activity-tail";
+import { chatItems } from "../../../src/core/shared/tasks/conversation/chat";
+import { budgetRaiseSchema, roles } from "../../../src/core/shared/tasks/model";
+import * as taskList from "../../../src/core/shared/tasks/task-list";
 import { fixtureCommands } from "../../service/fixture-provider-metadata";
 import { previewAbout } from "./about";
 import {
@@ -235,7 +235,7 @@ function openPanel(args: Record<string, unknown>, options: PreviewOptions) {
             )
             .map((task) => ({
               ...task,
-              ...readFields(previewReadState(task.id)),
+              ...taskList.readFields(previewReadState(task.id)),
             })),
           { include: [context.panel_selection?.task_id] },
         )
@@ -463,7 +463,7 @@ export function previewTool(
         .map((task) => {
           const events = lightEventsFor(task.id);
 
-          return panelTask(
+          return taskList.panelTask(
             taskFor(task),
             events.slice(-200),
             events.findLast((event) => event.type === "agent.reply"),

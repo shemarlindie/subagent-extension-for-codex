@@ -3,7 +3,7 @@ import type { EventEmitter } from "node:events";
 import type {
   Draft,
   DraftUpdate,
-} from "../../../../shared/tasks/conversation/drafts.js";
+} from "../../../../core/shared/tasks/conversation/drafts.js";
 
 /** The draft a reader has: its message, and how much of its text. */
 type KnownDraft = { message_id?: string; length: number };

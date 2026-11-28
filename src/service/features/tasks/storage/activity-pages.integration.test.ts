@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 
 import { test, vi, type TestContext } from "vitest";
 
-import { type Event } from "../../../../shared/events/types.js";
+import { type Event } from "../../../../core/shared/events/types.js";
 import {
   EVENT_TAIL_SIZE,
   windowActivity,
   windowTurnActivity,
-} from "../../../../shared/tasks/activity/activity-tail.js";
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/activity/activity-tail.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { ActivityPages } from "./activity-pages.js";
 import { Store } from "./store.js";
 

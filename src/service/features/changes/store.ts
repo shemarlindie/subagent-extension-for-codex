@@ -5,8 +5,8 @@ import { and, asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
-import type { ChangeScope } from "../../../shared/changes/changes.js";
-import type { Task } from "../../../shared/tasks/model.js";
+import type { ChangeScope } from "../../../core/shared/changes/changes.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
 import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import type { FileEdit } from "../providers/types.js";
 import type { Store } from "../tasks/storage/store.js";

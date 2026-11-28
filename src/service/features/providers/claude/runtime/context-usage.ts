@@ -3,7 +3,7 @@ import type {
   SDKControlGetContextUsageResponse,
 } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClaudeContextUsage } from "../../../../../shared/providers/claude/task-options.js";
+import type { ClaudeContextUsage } from "../../../../../providers/claude/shared/task-options.js";
 import { logError, logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 

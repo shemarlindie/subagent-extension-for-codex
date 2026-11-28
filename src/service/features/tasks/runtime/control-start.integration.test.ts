@@ -4,11 +4,11 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
-import { claudeMetadata } from "../../../../shared/providers/metadata.js";
+import { claudeMetadata } from "../../../../core/shared/providers/metadata.js";
 import type {
   ModelChoice,
   ProviderPolicy,
-} from "../../../../shared/providers/types.js";
+} from "../../../../core/shared/providers/types.js";
 import { Projects } from "../../projects/projects.js";
 import { claudeTaskPolicy } from "../../providers/claude/configuration/task-policy.js";
 import type { Provider } from "../../providers/types.js";

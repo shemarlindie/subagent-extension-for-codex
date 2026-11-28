@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { panelAttachmentsSchema } from "../../../../shared/attachments/model.js";
-import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
+import { panelAttachmentsSchema } from "../../../../core/shared/attachments/model.js";
+import { budgetRaiseSchema } from "../../../../core/shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
 import { aboutInfo, openDataDirectory } from "../../service/about.js";
 import {

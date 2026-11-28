@@ -8,6 +8,9 @@ import { test, type TestContext } from "vitest";
 
 import { FixtureProvider } from "../../../../dev/service/fixture-provider.js";
 import { until } from "../../../../tests/support/until.js";
+import { claudeMetadata } from "../../../core/shared/providers/metadata.js";
+import { settingPaths } from "../../../core/shared/settings/settings-schema.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
 import { claudeTaskPolicy } from "../../../service/features/providers/claude/configuration/task-policy.js";
 import {
   type RunContext,
@@ -21,9 +24,6 @@ import {
 import { Control } from "../../../service/features/tasks/runtime/control.js";
 import { Store } from "../../../service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../service/features/workspaces/workspace.js";
-import { settingPaths } from "../../settings/settings-schema.js";
-import type { Task } from "../../tasks/model.js";
-import { claudeMetadata } from "../metadata.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,

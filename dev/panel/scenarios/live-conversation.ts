@@ -1,6 +1,6 @@
-import type { Event } from "../../../src/shared/events/types";
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Event } from "../../../src/core/shared/events/types";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { settingOptions, taskBase } from "./scenario-context";
 import { Timeline } from "./timeline";
 

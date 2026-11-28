@@ -17,11 +17,11 @@ import { dirname, extname, join } from "node:path";
 
 import { onTestFinished, test } from "vitest";
 
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
 import {
   ATTACHMENT_LIMITS,
   type AttachmentPage,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import { configureLogging, flushLogs } from "../../platform/logging/logger.js";
 import { callTool } from "../../platform/server/tools.js";
 import { Projects } from "../projects/projects.js";

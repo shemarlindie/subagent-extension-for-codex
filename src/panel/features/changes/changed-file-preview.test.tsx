@@ -349,7 +349,7 @@ test("does not reuse another task's preview when the path matches", async () => 
 
   const panel = (id: string) => (
     <ControllerContext.Provider value={controller}>
-      <ChangedFilePreview task={{ ...task, id }} path="src/shared.txt" />
+      <ChangedFilePreview task={{ ...task, id }} path="src/core/shared.txt" />
     </ControllerContext.Provider>
   );
 
@@ -357,7 +357,7 @@ test("does not reuse another task's preview when the path matches", async () => 
 
   await act(async () =>
     resolveFirst({
-      path: "src/shared.txt",
+      path: "src/core/shared.txt",
       state: "present",
       size: 15,
       content: "Task A content",
@@ -376,7 +376,7 @@ test("does not reuse another task's preview when the path matches", async () => 
 
   await act(async () =>
     resolveSecond({
-      path: "src/shared.txt",
+      path: "src/core/shared.txt",
       state: "present",
       size: 15,
       content: "Task B content",

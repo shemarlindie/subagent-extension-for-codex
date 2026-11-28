@@ -8,7 +8,7 @@ import {
 import {
   attachmentFormats,
   attachmentSources,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import { tasks } from "../tasks/storage/schema.js";
 
 /** Each attachment's metadata. Its content is a file in the task's folder. */

@@ -1,20 +1,20 @@
 import type { Settings } from "@anthropic-ai/claude-agent-sdk";
 
-import type { EventPayloadMap } from "../../../../../shared/events/event-contract.js";
-import {
-  permissionModeName,
-  type ClaudePermissionMode,
-} from "../../../../../shared/providers/claude/permissions.js";
-import {
-  readClaudeTaskOptions,
-  type ClaudeEffectiveSettings,
-} from "../../../../../shared/providers/claude/task-options.js";
+import type { EventPayloadMap } from "../../../../../core/shared/events/event-contract.js";
 import {
   FAMILY_ALIASES,
   flexibleModel,
   isModelVariant,
-} from "../../../../../shared/providers/policy.js";
-import { titleCase } from "../../../../../shared/text.js";
+} from "../../../../../core/shared/providers/policy.js";
+import { titleCase } from "../../../../../core/shared/text.js";
+import {
+  permissionModeName,
+  type ClaudePermissionMode,
+} from "../../../../../providers/claude/shared/permissions.js";
+import {
+  readClaudeTaskOptions,
+  type ClaudeEffectiveSettings,
+} from "../../../../../providers/claude/shared/task-options.js";
 import { logEvent } from "../../../../platform/logging/logger.js";
 import type { RunContext } from "../../types.js";
 import {

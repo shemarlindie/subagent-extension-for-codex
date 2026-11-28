@@ -1,9 +1,9 @@
 // A parent-started review whose request carries attachments of every kind,
 // including one whose stored file is missing, a parent follow-up with two more,
 // and a user follow-up with an uploaded image and PDF.
-import type { TaskAttachment } from "../../../src/shared/attachments/model";
-import { REQUEST_ID } from "../../../src/shared/tasks/conversation/messages";
-import type { Task } from "../../../src/shared/tasks/model";
+import type { TaskAttachment } from "../../../src/core/shared/attachments/model";
+import { REQUEST_ID } from "../../../src/core/shared/tasks/conversation/messages";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 
@@ -187,7 +187,7 @@ export const previewAttachments: Record<string, PreviewAttachment[]> = {
       summary: "The attachment count limit, as proposed in the chat.",
       format: "code",
       source: "inline",
-      path: "src/shared/attachments/attachment-count-limits-proposed-in-the-chat.ts",
+      path: "src/core/shared/attachments/attachment-count-limits-proposed-in-the-chat.ts",
       file: "request-6-attachment-count-limits-proposed-in-the-chat.ts",
       chars: snippet.length,
       lines: lines(snippet),

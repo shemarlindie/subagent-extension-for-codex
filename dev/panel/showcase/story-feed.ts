@@ -3,7 +3,7 @@
 // holds them, so a playing panel sees each change as it happens.
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import type { Draft } from "../../../src/shared/tasks/conversation/drafts";
+import type { Draft } from "../../../src/core/shared/tasks/conversation/drafts";
 import { fixtureCall } from "../host/host-helpers";
 import type { PreviewData } from "../scenarios/live-preview";
 import {

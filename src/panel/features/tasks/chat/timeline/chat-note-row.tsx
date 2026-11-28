@@ -1,6 +1,6 @@
 import { memo } from "react";
 
-import type { ChatNote } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatNote } from "../../../../../core/shared/tasks/conversation/chat.js";
 
 type ChatNoteRowProps = { note: ChatNote };
 

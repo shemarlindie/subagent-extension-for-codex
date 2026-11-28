@@ -1,5 +1,5 @@
-import type { TaskView } from "../../tasks/model.js";
-import { optionsForProvider } from "../options.js";
+import { optionsForProvider } from "../../../core/shared/providers/options.js";
+import type { TaskView } from "../../../core/shared/tasks/model.js";
 import { permissionLabel, type ClaudePermissionMode } from "./permissions.js";
 import { claudeTaskOptionsSchema } from "./task-options.js";
 

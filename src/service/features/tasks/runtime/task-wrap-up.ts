@@ -1,5 +1,5 @@
-import { planWrappedUp } from "../../../../shared/tasks/plan.js";
-import { wrapUpError } from "../../../../shared/tasks/wrap-up.js";
+import { planWrappedUp } from "../../../../core/shared/tasks/plan.js";
+import { wrapUpError } from "../../../../core/shared/tasks/wrap-up.js";
 import type { RunContext } from "../../providers/types.js";
 import type { Active } from "./turn-outcome.js";
 

@@ -1,13 +1,13 @@
 import { act } from "@testing-library/react";
 import { vi, type TestContext } from "vitest";
 
-import type { Task } from "../../../src/panel/app/state/types";
-import type { MessageAttachment } from "../../../src/shared/attachments/model.js";
-import { decodeEventEnvelope } from "../../../src/shared/events/decode.js";
+import type { MessageAttachment } from "../../../src/core/shared/attachments/model.js";
+import { decodeEventEnvelope } from "../../../src/core/shared/events/decode.js";
 import {
   chatItems,
   isChatEvent,
-} from "../../../src/shared/tasks/conversation/chat.js";
+} from "../../../src/core/shared/tasks/conversation/chat.js";
+import type { Task } from "../../../src/panel/app/state/types";
 import {
   setup,
   task,

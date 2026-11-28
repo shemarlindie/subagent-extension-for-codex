@@ -1,10 +1,13 @@
-import type { SettingSection } from "../settings/document-contract.js";
-import { inheritHelp, withClaudePolicy } from "./claude/settings-policy.js";
+import {
+  inheritHelp,
+  withClaudePolicy,
+} from "../../../providers/claude/shared/settings-policy.js";
 import {
   claudeApprovalRows,
   claudeRestrictionsSection,
   claudeSettingsSchema,
-} from "./claude/settings.js";
+} from "../../../providers/claude/shared/settings.js";
+import type { SettingSection } from "../settings/document-contract.js";
 import type { ProviderPolicy } from "./types.js";
 
 /**

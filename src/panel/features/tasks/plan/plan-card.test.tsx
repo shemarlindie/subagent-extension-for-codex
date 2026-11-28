@@ -5,9 +5,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { onTestFinished, test } from "vitest";
 
-import type { ChatPlan } from "../../../../shared/tasks/conversation/chat";
-import type { TaskPlan } from "../../../../shared/tasks/plan";
-import type { PlanStep } from "../../../../shared/tasks/plan-contract";
+import type { ChatPlan } from "../../../../core/shared/tasks/conversation/chat";
+import type { TaskPlan } from "../../../../core/shared/tasks/plan";
+import type { PlanStep } from "../../../../core/shared/tasks/plan-contract";
 import { Controller } from "../../../app/state/controller";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Transport } from "../../../app/state/types";

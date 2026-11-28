@@ -1,5 +1,5 @@
+import { claudeTaskFacts } from "../../../providers/claude/shared/presentation.js";
 import { approvalLabels, type TaskView } from "../tasks/model.js";
-import { claudeTaskFacts } from "./claude/presentation.js";
 
 /** Provider-owned presenters retain native session details without leaking SDK concepts into the inspector. */
 const presenters: Partial<

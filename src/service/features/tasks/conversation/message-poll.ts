@@ -1,9 +1,9 @@
-import type { Event } from "../../../../shared/events/types.js";
+import type { Event } from "../../../../core/shared/events/types.js";
 import {
   conversation,
   MESSAGE_EVENTS,
-} from "../../../../shared/tasks/conversation/messages.js";
-import { planSummary } from "../../../../shared/tasks/plan.js";
+} from "../../../../core/shared/tasks/conversation/messages.js";
+import { planSummary } from "../../../../core/shared/tasks/plan.js";
 import type { Store } from "../storage/store.js";
 import type { Drafts } from "./drafts.js";
 

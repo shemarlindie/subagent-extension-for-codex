@@ -1,10 +1,10 @@
-import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
+import type { ProviderMetadata } from "../../../core/shared/providers/metadata.js";
 import type {
   Capabilities,
   ModelChoice,
   ProviderPolicy,
   ProviderReadiness,
-} from "../../../shared/providers/types.js";
+} from "../../../core/shared/providers/types.js";
 
 export type Worker = {
   provider: string;

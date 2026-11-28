@@ -1,12 +1,12 @@
+import { optionsForProvider } from "../../src/core/shared/providers/options.js";
+import type { Task } from "../../src/core/shared/tasks/model.js";
+import { claudeTaskOptionsSchema } from "../../src/providers/claude/shared/task-options.js";
 import {
   claudeStartOptions,
   claudeTaskPolicy,
 } from "../../src/service/features/providers/claude/configuration/task-policy.js";
 import type { ProviderTaskPolicy } from "../../src/service/features/providers/task-policy.js";
 import { executionTaskPolicy } from "../../src/service/features/providers/task-policy.js";
-import { claudeTaskOptionsSchema } from "../../src/shared/providers/claude/task-options.js";
-import { optionsForProvider } from "../../src/shared/providers/options.js";
-import type { Task } from "../../src/shared/tasks/model.js";
 
 /** The fixture's options. Tests may start fixture tasks with partial state. */
 export function readFixtureTaskOptions(task: Task) {

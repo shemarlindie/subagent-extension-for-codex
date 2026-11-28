@@ -1,4 +1,4 @@
-import type { BudgetRaise } from "../../../../../shared/tasks/model";
+import type { BudgetRaise } from "../../../../../core/shared/tasks/model";
 import { Notice } from "../../../../shared/components/notice/notice";
 import { BudgetRaiseFields } from "../budget-raise-fields";
 import { formatCost, type SpentBudget } from "../chat-model";

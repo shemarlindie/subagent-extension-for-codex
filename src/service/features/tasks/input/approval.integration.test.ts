@@ -8,7 +8,10 @@ import { test } from "vitest";
 import { FixtureProvider } from "../../../../../dev/service/fixture-provider.js";
 import { copyCommittedRepository } from "../../../../../tests/support/repository-test-harness.js";
 import { until } from "../../../../../tests/support/until.js";
-import { approvalModes, type Task } from "../../../../shared/tasks/model.js";
+import {
+  approvalModes,
+  type Task,
+} from "../../../../core/shared/tasks/model.js";
 import { callTool } from "../../../platform/server/tools.js";
 import { type RunContext, type TurnOutput } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";

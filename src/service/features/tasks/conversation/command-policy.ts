@@ -1,5 +1,5 @@
-import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import { slashCommand } from "../../../../core/shared/tasks/conversation/commands.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
 
 /** The slash commands a task can run, for suggestions. */

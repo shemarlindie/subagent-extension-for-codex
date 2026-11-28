@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 
 import { test, type TestContext } from "vitest";
 
-import { startSchema, type Task } from "../../../shared/tasks/model.js";
+import { startSchema, type Task } from "../../../core/shared/tasks/model.js";
 import { Projects } from "../../features/projects/projects.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import { Store } from "../../features/tasks/storage/store.js";

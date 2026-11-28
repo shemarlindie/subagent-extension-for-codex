@@ -1,7 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import { join, parse, resolve, sep } from "node:path";
 
-import type { PathSymlink } from "../../../shared/filesystem/path-contract.js";
+import type { PathSymlink } from "../../../core/shared/filesystem/path-contract.js";
 
 /** Identifies links in the original path, including parents of missing files. */
 export async function pathSymlinks(path: string): Promise<PathSymlink[]> {

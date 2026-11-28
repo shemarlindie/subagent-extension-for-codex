@@ -7,16 +7,16 @@ import {
   fakeClaudePath,
   readyClaudeCli,
 } from "../../../../../../tests/support/claude-cli.js";
-import {
-  claudeOverrideDefaults,
-  resolveClaudePolicy,
-} from "../../../../../shared/providers/claude/permissions.js";
-import type { ModelChoice } from "../../../../../shared/providers/types.js";
+import type { ModelChoice } from "../../../../../core/shared/providers/types.js";
 import {
   settingsDefaults,
   withSetting,
-} from "../../../../../shared/settings/settings-schema.js";
-import type { Task } from "../../../../../shared/tasks/model.js";
+} from "../../../../../core/shared/settings/settings-schema.js";
+import type { Task } from "../../../../../core/shared/tasks/model.js";
+import {
+  claudeOverrideDefaults,
+  resolveClaudePolicy,
+} from "../../../../../providers/claude/shared/permissions.js";
 import { ClaudeAgentProvider } from "./provider.js";
 
 test("Claude model discovery coalesces requests, caches five minutes and submits no user turn", async () => {

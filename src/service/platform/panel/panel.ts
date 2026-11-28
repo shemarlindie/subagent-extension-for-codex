@@ -5,8 +5,8 @@ import type {
 } from "@openai/mcp-extensions/server";
 import { z } from "zod";
 
-import { panelOutputSchema } from "../../../shared/panel/panel-contract.generated.js";
-import type { PanelTaskList } from "../../../shared/tasks/task-list.js";
+import { panelOutputSchema } from "../../../core/shared/panel/panel-contract.generated.js";
+import type { PanelTaskList } from "../../../core/shared/tasks/task-list.js";
 import type { TaskFilters } from "../../features/tasks/storage/task-rows.js";
 import { productGlyphIcons } from "../server/product-glyph.js";
 import { panelContextInput, type PanelContextInput } from "./panel-context.js";

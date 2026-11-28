@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import { startSchema, type Task } from "../../../../shared/tasks/model.js";
+import { startSchema, type Task } from "../../../../core/shared/tasks/model.js";
 import { ArchiveStore } from "./archive-store.js";
 import { Store } from "./store.js";
 

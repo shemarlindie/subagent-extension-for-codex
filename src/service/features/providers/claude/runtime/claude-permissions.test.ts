@@ -12,7 +12,7 @@ import {
 import {
   claudeOverrideDefaults,
   resolveClaudePolicy,
-} from "../../../../../shared/providers/claude/permissions.js";
+} from "../../../../../providers/claude/shared/permissions.js";
 import { adminTokenRule } from "../configuration/admin-token.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
 import {

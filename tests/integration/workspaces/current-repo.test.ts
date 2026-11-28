@@ -8,10 +8,13 @@ import { structuredPatch } from "diff";
 import { test } from "vitest";
 
 import { fixtureProvider } from "../../../dev/service/fixture-provider-test-helpers.js";
+import {
+  startSchema,
+  type Task,
+} from "../../../src/core/shared/tasks/model.js";
 import { Control } from "../../../src/service/features/tasks/runtime/control.js";
 import { Store } from "../../../src/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../src/service/features/workspaces/workspace.js";
-import { startSchema, type Task } from "../../../src/shared/tasks/model.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 import { until } from "../../support/until.js";
 

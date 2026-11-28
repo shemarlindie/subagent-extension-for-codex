@@ -5,8 +5,8 @@ import { test } from "vitest";
 import {
   previewEvents,
   previewTasks,
-} from "../../../dev/panel/scenarios/fixtures";
-import { previewTool } from "../../../dev/panel/scenarios/tools";
+} from "../../../../dev/panel/scenarios/fixtures";
+import { previewTool } from "../../../../dev/panel/scenarios/tools";
 import { decodedEvent } from "../events/decode.js";
 import type { Event } from "../events/types.js";
 import { panelTask, type PanelTask } from "./task-list.js";

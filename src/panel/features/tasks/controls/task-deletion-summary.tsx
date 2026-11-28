@@ -1,4 +1,4 @@
-import type { TaskDeletionPreview } from "../../../../shared/tasks/deletion-contract.js";
+import type { TaskDeletionPreview } from "../../../../core/shared/tasks/deletion-contract.js";
 import { Button } from "../../../shared/components/button/button";
 import { Icon } from "../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../shared/components/tooltip";

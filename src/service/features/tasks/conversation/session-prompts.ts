@@ -3,11 +3,11 @@ import { join } from "node:path";
 import {
   isBinaryFormat,
   type TaskAttachment,
-} from "../../../../shared/attachments/model.js";
-import { eventPayload } from "../../../../shared/events/payload.js";
-import { slashCommand } from "../../../../shared/tasks/conversation/commands.js";
-import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages.js";
-import type { Task, TaskMessage } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/attachments/model.js";
+import { eventPayload } from "../../../../core/shared/events/payload.js";
+import { slashCommand } from "../../../../core/shared/tasks/conversation/commands.js";
+import { REQUEST_ID } from "../../../../core/shared/tasks/conversation/messages.js";
+import type { Task, TaskMessage } from "../../../../core/shared/tasks/model.js";
 import type { Attachments } from "../../attachments/attachments.js";
 import type { Provider } from "../../providers/types.js";
 import type { Store } from "../storage/store.js";

@@ -1,8 +1,11 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import type { MouseEvent } from "react";
 
-import type { AboutInfo, ClaudeUpgradeInfo } from "../../../shared/about/types";
-import type { ProviderReadiness } from "../../../shared/providers/types";
+import type {
+  AboutInfo,
+  ClaudeUpgradeInfo,
+} from "../../../core/shared/about/types";
+import type { ProviderReadiness } from "../../../core/shared/providers/types";
 import { useController } from "../../app/state/controller-context";
 import { Button, buttonClass } from "../../shared/components/button/button";
 import { CommandLine } from "../../shared/components/command-line/command-line";

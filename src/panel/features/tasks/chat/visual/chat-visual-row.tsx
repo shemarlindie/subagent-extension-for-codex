@@ -1,6 +1,6 @@
 import { memo, useCallback, useRef, useState, type CSSProperties } from "react";
 
-import type { ChatVisual } from "../../../../../shared/tasks/conversation/chat.js";
+import type { ChatVisual } from "../../../../../core/shared/tasks/conversation/chat.js";
 import { useAnimatedHeight } from "../../../../shared/components/motion/use-animated-height";
 import { VisualFrame } from "./visual-frame";
 import { VisualMenu } from "./visual-menu";

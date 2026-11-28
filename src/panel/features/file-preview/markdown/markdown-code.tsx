@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 
-import { scalarText } from "../../../../shared/text";
+import { scalarText } from "../../../../core/shared/text";
 import { highlightLines } from "../highlight";
 
 type MarkdownCodeProps = ComponentProps<"code"> & { node?: unknown };

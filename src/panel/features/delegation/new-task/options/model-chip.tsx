@@ -1,5 +1,5 @@
-import { modelName } from "../../../../../shared/providers/policy";
-import type { ModelChoice } from "../../../../../shared/providers/types";
+import { modelName } from "../../../../../core/shared/providers/policy";
+import type { ModelChoice } from "../../../../../core/shared/providers/types";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import { useProfileChoice } from "./use-profile-choice";
 

@@ -4,20 +4,20 @@ import { z } from "zod";
 import {
   builtinProviderMetadata,
   type ProviderMetadata,
-} from "../../../shared/providers/metadata.js";
+} from "../../../core/shared/providers/metadata.js";
 import {
   preferredSettingsProvider,
   providerModelSettingScopes,
-} from "../../../shared/providers/settings.js";
-import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js";
-import { settingAt } from "../../../shared/settings/setting-path.js";
-import { settingText } from "../../../shared/settings/setting-text.js";
+} from "../../../core/shared/providers/settings.js";
+import { resolveModelDefaults } from "../../../core/shared/settings/model-defaults.js";
+import { settingAt } from "../../../core/shared/settings/setting-path.js";
+import { settingText } from "../../../core/shared/settings/setting-text.js";
 import {
   modelScope,
   settingsSections,
   unsupportedEffortWarning,
   type ScopeInput,
-} from "../../../shared/settings/settings-document.js";
+} from "../../../core/shared/settings/settings-document.js";
 import {
   mergeSettings,
   settingPaths,
@@ -27,14 +27,14 @@ import {
   settingsSchema,
   userOnlySetting,
   type SettingsValues,
-} from "../../../shared/settings/settings-schema.js";
+} from "../../../core/shared/settings/settings-schema.js";
 import {
   modelNameSchema,
   reasoningSchema,
   roles,
   type InputAuthority,
-} from "../../../shared/tasks/model.js";
-import { scalarText } from "../../../shared/text.js";
+} from "../../../core/shared/tasks/model.js";
+import { scalarText } from "../../../core/shared/text.js";
 import { type Database } from "../../platform/database/database.js";
 import { checkStored, decodeStored } from "../../platform/database/decode.js";
 import { userSettings } from "./schema.js";

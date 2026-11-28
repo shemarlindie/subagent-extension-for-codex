@@ -1,5 +1,5 @@
-import { currentActivityStatus } from "../../../../shared/tasks/activity/activity-status";
-import { pinnedPlan } from "../../../../shared/tasks/plan";
+import { currentActivityStatus } from "../../../../core/shared/tasks/activity/activity-status";
+import { pinnedPlan } from "../../../../core/shared/tasks/plan";
 import { useSnapshot } from "../../../app/state/controller-context";
 import type { Task } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";

@@ -1,8 +1,8 @@
 import {
   parentUpdate,
   type PendingTaskUpdates,
-} from "../../../../shared/tasks/conversation/parent-updates.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/conversation/parent-updates.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { PendingUpdateStore } from "../storage/pending-update-store.js";
 import type { Store } from "../storage/store.js";
 

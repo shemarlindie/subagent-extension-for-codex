@@ -1,4 +1,4 @@
-import type { Task } from "../../../src/shared/tasks/model";
+import type { Task } from "../../../src/core/shared/tasks/model";
 import { at, settingOptions, taskBase, timestamps } from "./scenario-context";
 import { begin, lifecycle, Timeline } from "./timeline";
 

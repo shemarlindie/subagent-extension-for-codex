@@ -10,7 +10,7 @@ import type {
   ChangedFileContent,
   ChangeList,
   FileChange,
-} from "../../../src/shared/changes/changes.js";
+} from "../../../src/core/shared/changes/changes.js";
 
 const projectRoot = resolve(import.meta.dirname, "../../..");
 

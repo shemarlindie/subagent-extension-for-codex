@@ -6,12 +6,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
 import {
   fileMime,
   mimeExtension,
   OCTET_STREAM,
-} from "../../../shared/attachments/file-type.js";
+} from "../../../core/shared/attachments/file-type.js";
 import {
   ATTACHMENT_LIMITS,
   type AttachmentFormat,
@@ -19,7 +19,7 @@ import {
   type StagedUploadInput,
   type TaskAttachment,
   type UploadInput,
-} from "../../../shared/attachments/model.js";
+} from "../../../core/shared/attachments/model.js";
 import { checkStored } from "../../platform/database/decode.js";
 import { logError, logEvent } from "../../platform/logging/logger.js";
 import type { Store } from "../tasks/storage/store.js";

@@ -2,7 +2,7 @@ import {
   permissionModeName,
   resolveClaudePermission,
   type ClaudePermissionMode,
-} from "../../../shared/providers/claude/permissions";
+} from "../../../providers/claude/shared/permissions";
 import type { Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
 import { providerOptionDefaults } from "./provider-defaults";

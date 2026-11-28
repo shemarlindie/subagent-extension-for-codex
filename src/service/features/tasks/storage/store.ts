@@ -14,15 +14,15 @@ import {
   sql,
 } from "drizzle-orm";
 
-import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
+import type { EventPayloadMap } from "../../../../core/shared/events/event-contract.js";
 import type {
   EventType,
   HasNoPayload,
-} from "../../../../shared/events/event-types.js";
-import type { Event } from "../../../../shared/events/types.js";
-import type { ReadState } from "../../../../shared/tasks/conversation/unread.js";
-import { type Task } from "../../../../shared/tasks/model.js";
-import { now } from "../../../../shared/time.js";
+} from "../../../../core/shared/events/event-types.js";
+import type { Event } from "../../../../core/shared/events/types.js";
+import type { ReadState } from "../../../../core/shared/tasks/conversation/unread.js";
+import { type Task } from "../../../../core/shared/tasks/model.js";
+import { now } from "../../../../core/shared/time.js";
 import {
   openDatabase,
   type Database,

@@ -1,5 +1,5 @@
-import { AttachmentError } from "../../../shared/attachments/attachment-error.js";
-import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
+import { AttachmentError } from "../../../core/shared/attachments/attachment-error.js";
+import { SendRejectedError } from "../../../core/shared/tasks/conversation/send-errors.js";
 import { WORKTREE_NEEDS_GIT } from "../../features/workspaces/git.js";
 import {
   errorCategory,

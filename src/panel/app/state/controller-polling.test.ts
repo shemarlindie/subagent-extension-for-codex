@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { expect, test, vi } from "vitest";
 
-import { panelSettingsDefaults } from "../../../shared/settings/settings-schema";
+import { panelSettingsDefaults } from "../../../core/shared/settings/settings-schema";
 import { deferred, flush, setup, task } from "./controller-test-harness";
 import type { Task } from "./types";
 

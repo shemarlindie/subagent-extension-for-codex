@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { stageFileSchema } from "../../../../shared/attachments/model.js";
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import { MAX_UPDATE_WAIT_MS } from "../../../../shared/tasks/conversation/drafts.js";
+import { stageFileSchema } from "../../../../core/shared/attachments/model.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
+import { MAX_UPDATE_WAIT_MS } from "../../../../core/shared/tasks/conversation/drafts.js";
 import { workspaceFilePath } from "../../../features/changes/paths.js";
 import { chatRead } from "../../../features/tasks/conversation/chat-read.js";
 import { pendingUpdates } from "../../../features/tasks/conversation/parent-updates.js";

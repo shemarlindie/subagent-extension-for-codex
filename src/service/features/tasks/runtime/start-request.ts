@@ -1,10 +1,10 @@
-import { readOnlyProfile } from "../../../../shared/providers/claude/permissions.js";
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
 import type {
   InputAuthority,
   Start,
   Task,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
+import { readOnlyProfile } from "../../../../providers/claude/shared/permissions.js";
 import { logEvent } from "../../../platform/logging/logger.js";
 import type { Provider } from "../../providers/types.js";
 import { gitState, WORKTREE_NEEDS_GIT } from "../../workspaces/git.js";

@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from "vitest";
 
-import { panelSettingsDefaults } from "../../../../shared/settings/settings-schema";
+import { panelSettingsDefaults } from "../../../../core/shared/settings/settings-schema";
 import {
   deferred,
   flush,

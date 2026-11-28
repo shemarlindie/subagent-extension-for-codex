@@ -1,4 +1,4 @@
-import type { TurnActivityPage } from "../../../shared/tasks/activity/activity-tail";
+import type { TurnActivityPage } from "../../../core/shared/tasks/activity/activity-tail";
 import type { PanelView, ViewRequest } from "../../app/state/panel-view";
 import type { Snapshot } from "../../app/state/types";
 import {

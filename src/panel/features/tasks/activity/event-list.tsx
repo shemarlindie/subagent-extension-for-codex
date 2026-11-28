@@ -1,16 +1,16 @@
 import { memo, useContext } from "react";
 
-import type { MessageAttachment } from "../../../../shared/attachments/model.js";
-import { eventPayload } from "../../../../shared/events/payload";
+import type { MessageAttachment } from "../../../../core/shared/attachments/model.js";
+import { eventPayload } from "../../../../core/shared/events/payload";
 import {
   lastEvent,
   type ActivityGroup,
-} from "../../../../shared/tasks/activity/activity-events";
+} from "../../../../core/shared/tasks/activity/activity-events";
 import {
   groupActivity,
   thinkingSpan,
-} from "../../../../shared/tasks/activity/activity-timeline";
-import { REQUEST_ID } from "../../../../shared/tasks/conversation/messages";
+} from "../../../../core/shared/tasks/activity/activity-timeline";
+import { REQUEST_ID } from "../../../../core/shared/tasks/conversation/messages";
 import { ControllerContext } from "../../../app/state/controller-context";
 import type { Event, Task } from "../../../app/state/types";
 import { ScrollLatestButton } from "../../../shared/components/scroll-latest-button/scroll-latest-button";

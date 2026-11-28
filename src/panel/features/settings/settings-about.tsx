@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 
-import type { AboutInfo } from "../../../shared/about/types";
+import type { AboutInfo } from "../../../core/shared/about/types";
 import { useController } from "../../app/state/controller-context";
 import { Button } from "../../shared/components/button/button";
 import { Icon } from "../../shared/components/icons/icons";

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
-import type { Task } from "../../../shared/tasks/model.js";
+import type { Task } from "../../../core/shared/tasks/model.js";
 import { pathSymlinks } from "../../platform/filesystem/path-symlinks.js";
 import { git, gitRepositoryRoot } from "./git.js";
 

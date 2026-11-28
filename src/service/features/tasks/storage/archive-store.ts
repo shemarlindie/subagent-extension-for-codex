@@ -3,9 +3,9 @@ import { eq } from "drizzle-orm";
 import {
   archivable,
   type ArchiveResult,
-} from "../../../../shared/tasks/archive.js";
-import type { Task } from "../../../../shared/tasks/model.js";
-import { now } from "../../../../shared/time.js";
+} from "../../../../core/shared/tasks/archive.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import { now } from "../../../../core/shared/time.js";
 import { taskArchive, tasks } from "./schema.js";
 import type { Store } from "./store.js";
 import { taskFilters, type TaskFilters } from "./task-rows.js";

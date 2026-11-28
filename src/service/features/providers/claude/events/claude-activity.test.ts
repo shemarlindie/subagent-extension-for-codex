@@ -14,10 +14,10 @@ import type {
 import { test } from "vitest";
 
 import { readyClaudeCli } from "../../../../../../tests/support/claude-cli.js";
-import { decodedEvent } from "../../../../../shared/events/decode.js";
-import { currentActivityStatus } from "../../../../../shared/tasks/activity/activity-status.js";
-import { groupActivity } from "../../../../../shared/tasks/activity/activity-timeline.js";
-import { startSchema } from "../../../../../shared/tasks/model.js";
+import { decodedEvent } from "../../../../../core/shared/events/decode.js";
+import { currentActivityStatus } from "../../../../../core/shared/tasks/activity/activity-status.js";
+import { groupActivity } from "../../../../../core/shared/tasks/activity/activity-timeline.js";
+import { startSchema } from "../../../../../core/shared/tasks/model.js";
 import { type RunContext } from "../../types.js";
 import { ClaudeAgentProvider } from "../runtime/provider.js";
 import { claudeActivityPresentation } from "./activity.js";

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { Capabilities } from "../../../../shared/providers/types.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Capabilities } from "../../../../core/shared/providers/types.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { Provider } from "../../providers/types.js";
 import { raiseBudget, raisedBudget, remainingRuntime } from "./budget.js";
 

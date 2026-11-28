@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect } from "vitest";
 
-import { panelSettingsDefaults } from "../../src/shared/settings/settings-schema";
+import { panelSettingsDefaults } from "../../src/core/shared/settings/settings-schema";
 import {
   act,
   assert,

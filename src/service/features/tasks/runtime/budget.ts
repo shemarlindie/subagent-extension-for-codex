@@ -3,7 +3,7 @@ import {
   type BudgetRaise,
   type Start,
   type Task,
-} from "../../../../shared/tasks/model.js";
+} from "../../../../core/shared/tasks/model.js";
 import { RunError } from "../../providers/run-error.js";
 import type { Provider } from "../../providers/types.js";
 

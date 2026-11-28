@@ -1,11 +1,11 @@
 import { memo, useEffect } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
-import { providerMetadata } from "../../../../shared/providers/metadata";
+import { providerMetadata } from "../../../../core/shared/providers/metadata";
 import {
   allowedPermissionMode,
   withBlockedOptions,
-} from "../../../../shared/providers/policy";
+} from "../../../../core/shared/providers/policy";
 import type { Worker } from "../../../app/state/types";
 import { Presence } from "../../../shared/components/motion/presence";
 import { Field } from "../../../shared/forms/fields";

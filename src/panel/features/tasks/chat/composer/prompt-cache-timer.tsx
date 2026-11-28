@@ -2,7 +2,7 @@ import {
   promptCacheEnd,
   promptCacheLeft,
   type PromptCacheLeft,
-} from "../../../../../shared/providers/claude/prompt-cache";
+} from "../../../../../providers/claude/shared/prompt-cache";
 import type { Task } from "../../../../app/state/types";
 import { Icon } from "../../../../shared/components/icons/icons";
 import { TooltipWrapper } from "../../../../shared/components/tooltip";

@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 
-import { decodedEvent } from "../../../../shared/events/decode.js";
-import { eventPayload } from "../../../../shared/events/payload.js";
-import { isChatEvent } from "../../../../shared/tasks/conversation/chat.js";
-import { isParentUpdateEvent } from "../../../../shared/tasks/conversation/parent-updates.js";
-import { now } from "../../../../shared/time.js";
+import { decodedEvent } from "../../../../core/shared/events/decode.js";
+import { eventPayload } from "../../../../core/shared/events/payload.js";
+import { isChatEvent } from "../../../../core/shared/tasks/conversation/chat.js";
+import { isParentUpdateEvent } from "../../../../core/shared/tasks/conversation/parent-updates.js";
+import { now } from "../../../../core/shared/time.js";
 import type { Database } from "../../../platform/database/database.js";
 import type { EventStorageMetrics } from "./event-storage-metrics.js";
 import { events, pendingUpdates } from "./schema.js";

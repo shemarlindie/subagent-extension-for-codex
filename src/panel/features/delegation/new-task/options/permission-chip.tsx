@@ -1,6 +1,6 @@
 import { useController as useFieldController } from "react-hook-form";
 
-import { shortPermissionLabel } from "../../../../../shared/providers/claude/permissions";
+import { shortPermissionLabel } from "../../../../../providers/claude/shared/permissions";
 import { ChipSelect } from "../../../../shared/components/select/chip-select";
 import type { DelegateValues } from "../../delegate-values";
 

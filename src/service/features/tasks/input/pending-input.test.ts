@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test, vi } from "vitest";
 
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import type { ProviderTaskPolicy } from "../../providers/task-policy.js";
 import { captureTiming } from "../runtime/timing-test-harness.js";
 import type { Store } from "../storage/store.js";

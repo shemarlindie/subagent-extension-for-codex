@@ -1,4 +1,4 @@
-import { blockedOnUser } from "../../../../shared/tasks/wrap-up.js";
+import { blockedOnUser } from "../../../../core/shared/tasks/wrap-up.js";
 import type { Task } from "../../../app/state/types";
 
 /**

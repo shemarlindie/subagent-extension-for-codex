@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 import { test } from "vitest";
 
-import type { RunContext } from "../../service/features/providers/types.js";
-import type { Store } from "../../service/features/tasks/storage/store.js";
+import type { RunContext } from "../../../service/features/providers/types.js";
+import type { Store } from "../../../service/features/tasks/storage/store.js";
 import type { Task } from "../tasks/model.js";
 import { decodedEvent } from "./decode.js";
 import type { EventView } from "./event-types.js";

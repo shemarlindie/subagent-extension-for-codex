@@ -1,8 +1,8 @@
 // Tasks whose worker wraps up its turn: a recap alone, a question the user
 // answered with a reply button and a new one, and a question that blocks the
 // worker.
-import type { Task } from "../../../src/shared/tasks/model";
-import type { WrapUp } from "../../../src/shared/tasks/wrap-up-contract";
+import type { Task } from "../../../src/core/shared/tasks/model";
+import type { WrapUp } from "../../../src/core/shared/tasks/wrap-up-contract";
 import { at, taskBase, timestamps, worktree } from "./scenario-context";
 import { begin, Timeline } from "./timeline";
 

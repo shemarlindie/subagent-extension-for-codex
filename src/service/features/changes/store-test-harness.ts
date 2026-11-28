@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { structuredPatch } from "diff";
 import type { TestContext } from "vitest";
 
-import { startSchema, type Task } from "../../../shared/tasks/model.js";
+import { startSchema, type Task } from "../../../core/shared/tasks/model.js";
 import type { FileEdit } from "../providers/types.js";
 import { Store } from "../tasks/storage/store.js";
 import { ChangeStore } from "./store.js";

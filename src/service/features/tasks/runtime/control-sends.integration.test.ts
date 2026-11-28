@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { SendRejectedError } from "../../../../shared/tasks/conversation/send-errors.js";
+import { SendRejectedError } from "../../../../core/shared/tasks/conversation/send-errors.js";
 import type { RunContext } from "../../providers/types.js";
 import { Workspaces } from "../../workspaces/workspace.js";
 import { Store } from "../storage/store.js";

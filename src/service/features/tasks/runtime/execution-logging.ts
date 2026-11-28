@@ -1,5 +1,5 @@
-import type { EventPayloadMap } from "../../../../shared/events/event-contract.js";
-import type { Task } from "../../../../shared/tasks/model.js";
+import type { EventPayloadMap } from "../../../../core/shared/events/event-contract.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
 import {
   logError,
   logEvent,

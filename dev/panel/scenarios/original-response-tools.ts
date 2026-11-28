@@ -1,6 +1,6 @@
-import { decodedEvent } from "../../../src/shared/events/decode";
-import type { EventEnvelope } from "../../../src/shared/events/event-contract";
-import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
+import { decodedEvent } from "../../../src/core/shared/events/decode";
+import type { EventEnvelope } from "../../../src/core/shared/events/event-contract";
+import { originalResponseLookup } from "../../../src/providers/claude/shared/responses";
 
 /** Ordinary reads, which leave original responses to the details lookup. */
 export const withoutOriginalResponses = (events: readonly EventEnvelope[]) =>

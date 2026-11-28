@@ -1,6 +1,6 @@
 import { Popover } from "@base-ui/react/popover";
 
-import type { GitState } from "../../../shared/tasks/model";
+import type { GitState } from "../../../core/shared/tasks/model";
 import { CommandLine } from "../../shared/components/command-line/command-line";
 import { Icon } from "../../shared/components/icons/icons";
 import { gitInitCommand, gitTag } from "./selectors";

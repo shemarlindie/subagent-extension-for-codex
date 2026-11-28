@@ -1,6 +1,6 @@
-import type { SettingsValues } from "../../../../shared/settings/settings-schema.js";
-import type { Task } from "../../../../shared/tasks/model.js";
-import { now } from "../../../../shared/time.js";
+import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import { now } from "../../../../core/shared/time.js";
 import type { Changes } from "../../changes/changes.js";
 import type { Projects } from "../../projects/projects.js";
 import { RunError } from "../../providers/run-error.js";

@@ -1,6 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 
-import { inputPresentation } from "../../../../shared/providers/input-presentation.js";
+import { inputPresentation } from "../../../../core/shared/providers/input-presentation.js";
 import {
   useController,
   useSnapshot,

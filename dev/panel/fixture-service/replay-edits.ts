@@ -3,6 +3,9 @@ import { dirname, join } from "node:path";
 
 import { applyPatch } from "diff";
 
+import type { Event } from "../../../src/core/shared/events/types";
+import type { Task } from "../../../src/core/shared/tasks/model";
+import { originalResponseLookup } from "../../../src/providers/claude/shared/responses";
 import { changePath } from "../../../src/service/features/changes/paths";
 import { recordClaudeFileEdits } from "../../../src/service/features/providers/claude/runtime/file-edits";
 import type {
@@ -10,9 +13,6 @@ import type {
   RunContext,
 } from "../../../src/service/features/providers/types";
 import type { Control } from "../../../src/service/features/tasks/runtime/control";
-import type { Event } from "../../../src/shared/events/types";
-import { originalResponseLookup } from "../../../src/shared/providers/claude/responses";
-import type { Task } from "../../../src/shared/tasks/model";
 
 /** Populate previews only when a recorded response supplies a complete preimage. */
 function materialize(root: string, edit: FileEdit, original: unknown) {

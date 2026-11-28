@@ -3,10 +3,10 @@ import type { StructuredPatchHunk as Hunk } from "diff";
 import type {
   EventEmitter,
   OpaqueEventEmitter,
-} from "../../../shared/events/event-types.js";
-import type { ProviderMetadata } from "../../../shared/providers/metadata.js";
-import type { SessionOptionKey } from "../../../shared/providers/options.js";
-import type { PlanUsage } from "../../../shared/providers/plan-usage.js";
+} from "../../../core/shared/events/event-types.js";
+import type { ProviderMetadata } from "../../../core/shared/providers/metadata.js";
+import type { SessionOptionKey } from "../../../core/shared/providers/options.js";
+import type { PlanUsage } from "../../../core/shared/providers/plan-usage.js";
 import type {
   Capabilities,
   ModelChoice,
@@ -14,11 +14,14 @@ import type {
   ProviderPolicy,
   ProviderReadiness,
   SessionDeletionStatus,
-} from "../../../shared/providers/types.js";
-import type { SettingsValues } from "../../../shared/settings/settings-schema.js";
-import type { InputPresentation, Task } from "../../../shared/tasks/model.js";
-import type { PlanStep } from "../../../shared/tasks/plan-contract.js";
-import type { WrapUp } from "../../../shared/tasks/wrap-up-contract.js";
+} from "../../../core/shared/providers/types.js";
+import type { SettingsValues } from "../../../core/shared/settings/settings-schema.js";
+import type {
+  InputPresentation,
+  Task,
+} from "../../../core/shared/tasks/model.js";
+import type { PlanStep } from "../../../core/shared/tasks/plan-contract.js";
+import type { WrapUp } from "../../../core/shared/tasks/wrap-up-contract.js";
 import type { ProviderTaskPolicy } from "./task-policy.js";
 
 /** A message sent into a running turn. */

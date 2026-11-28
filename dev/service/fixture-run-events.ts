@@ -1,12 +1,12 @@
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
+import type { EventPayloadMap } from "../../src/core/shared/events/event-contract.js";
+import type { ActivityContent } from "../../src/core/shared/providers/activity/types.js";
 import {
   claudeActivityPresentation,
   decodeClaudeActivityContent,
 } from "../../src/service/features/providers/claude/events/activity.js";
 import type { RunContext } from "../../src/service/features/providers/types.js";
-import type { EventPayloadMap } from "../../src/shared/events/event-contract.js";
-import type { ActivityContent } from "../../src/shared/providers/activity/types.js";
 import {
   applyFixtureFieldOverrides,
   fixtureActivityPayload,

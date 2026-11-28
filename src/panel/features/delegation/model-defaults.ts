@@ -1,14 +1,14 @@
-import { providerMetadata } from "../../../shared/providers/metadata";
+import { providerMetadata } from "../../../core/shared/providers/metadata";
 import {
   aboveEffortCap,
   effortCap,
   effortCapReason,
   orgEffort,
   runtimeDefault,
-} from "../../../shared/providers/policy";
-import type { ModelChoice } from "../../../shared/providers/types";
-import { resolveModelDefaults } from "../../../shared/settings/model-defaults";
-import { reasoningLevels } from "../../../shared/tasks/reasoning";
+} from "../../../core/shared/providers/policy";
+import type { ModelChoice } from "../../../core/shared/providers/types";
+import { resolveModelDefaults } from "../../../core/shared/settings/model-defaults";
+import { reasoningLevels } from "../../../core/shared/tasks/reasoning";
 import type { Defaults, Worker } from "../../app/state/types";
 import { workerChoice } from "./delegation";
 

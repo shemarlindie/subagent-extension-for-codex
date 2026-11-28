@@ -1,5 +1,5 @@
-import type { Task } from "../../../../shared/tasks/model.js";
-import { MAX_VISUAL_CODE } from "../../../../shared/tasks/visual.js";
+import type { Task } from "../../../../core/shared/tasks/model.js";
+import { MAX_VISUAL_CODE } from "../../../../core/shared/tasks/visual.js";
 import type { Store } from "../storage/store.js";
 
 /**

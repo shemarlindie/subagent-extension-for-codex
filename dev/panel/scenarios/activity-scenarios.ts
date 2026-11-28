@@ -1,4 +1,4 @@
-import type { Task, TaskMessage } from "../../../src/shared/tasks/model";
+import type { Task, TaskMessage } from "../../../src/core/shared/tasks/model";
 import {
   at,
   settingOptions,
