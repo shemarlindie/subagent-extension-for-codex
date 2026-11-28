@@ -24,6 +24,7 @@ import {
 import { PARENT_SUPERVISION_PROTOCOL } from "../../../src/core/shared/tasks/conversation/parent-protocol.js";
 import { startSchema } from "../../../src/core/shared/tasks/model.js";
 import { now } from "../../../src/core/shared/time.js";
+import { codexHost } from "../../../src/hosts/codex/service/host.js";
 import { SERVER_INSTRUCTIONS } from "../../../src/hosts/codex/service/instructions.js";
 import { waitForListening } from "../../support/helpers.js";
 import { until } from "../../support/until.js";
@@ -787,6 +788,7 @@ async function changeService(prefix: string) {
   const server = application(
     c,
     auth,
+    codexHost,
     "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   ).listen(0, "127.0.0.1");
@@ -1035,6 +1037,7 @@ test("MCP 2.0 serves tools/resources without webhook capabilities on the authent
   const app = application(
     c,
     new Auth("token"),
+    codexHost,
     "http://127.0.0.1:17317",
     resolve("dist/app.html"),
   );

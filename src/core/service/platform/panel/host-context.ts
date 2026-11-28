@@ -7,31 +7,8 @@ import { assertPlainFolderAllowed } from "../../features/projects/projects.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
 import { gitState, gitWorkTreeRoot } from "../../features/workspaces/git.js";
 import { within } from "../../features/workspaces/workspace.js";
-import type { HostHints } from "../host/host-adapter.js";
 
-// Version-specific Codex adapter, verified in the public rust-v0.160.0 source.
-// Panel context consumes the directory hint. Native permission inheritance
-// separately validates the host permission metadata in core/permissions.ts.
-export const codexContextCapability = {
-  experimental: { "codex/sandbox-state-meta": {} },
-};
-
-/** Codex's directory and conversation hints from MCP request metadata. */
-export function codexHints(meta?: Record<string, unknown>): HostHints {
-  const state = meta?.["codex/sandbox-state-meta"] as
-    { sandboxCwd?: unknown } | undefined;
-
-  // Codex core adds threadId; ChatGPT documents its anonymized session field.
-  const session = meta?.["openai/session"] ?? meta?.threadId;
-
-  return {
-    ...(typeof state?.sandboxCwd === "string"
-      ? { directory: state.sandboxCwd }
-      : {}),
-    ...(typeof session === "string" ? { conversation: session } : {}),
-  };
-}
-
+/** Fills the repository from the host directory hint when it names an approved project. */
 export async function withHostRepository(
   c: Control,
   args: Record<string, unknown>,

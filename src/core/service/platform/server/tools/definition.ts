@@ -8,6 +8,7 @@ import {
 } from "../../../../shared/tasks/model.js";
 import { Control } from "../../../features/tasks/runtime/control.js";
 import { archivedFilters } from "../../../features/tasks/storage/task-rows.js";
+import type { HostAdapter } from "../../host/host-adapter.js";
 
 export const taskId = z.object({ task_id: z.string() });
 
@@ -80,4 +81,6 @@ export interface ToolContext {
   authority: InputAuthority;
   /** The calling chat's directory hint, which never grants access. */
   hostDirectory?: string;
+  /** Adds the host's own tools to the user tools. */
+  host?: HostAdapter;
 }

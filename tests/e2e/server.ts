@@ -16,6 +16,7 @@ import { Store } from "../../src/core/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../src/core/service/features/workspaces/workspace.js";
 import { application } from "../../src/core/service/platform/server/app.js";
 import { Auth } from "../../src/core/service/platform/server/auth.js";
+import { codexHost } from "../../src/hosts/codex/service/host.js";
 import { waitForListening } from "../support/helpers.js";
 
 export const CONSOLE_TOKEN = "e2e-disposable-console-token-000000";
@@ -64,6 +65,7 @@ export async function startConsoleService(
     app = application(
       control,
       new Auth(CONSOLE_TOKEN),
+      codexHost,
       origin,
       resolve("dist/app.html"),
     );

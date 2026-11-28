@@ -17,6 +17,7 @@ import { application } from "../../../src/core/service/platform/server/app.js";
 import { Auth } from "../../../src/core/service/platform/server/auth.js";
 import { startSchema } from "../../../src/core/shared/tasks/model.js";
 import { now } from "../../../src/core/shared/time.js";
+import { codexHost } from "../../../src/hosts/codex/service/host.js";
 import { waitForListening } from "../../support/helpers.js";
 import { copyCommittedRepository } from "../../support/repository-test-harness.js";
 
@@ -113,6 +114,7 @@ export async function httpFixture(t: TestContext) {
   const server = application(
     c,
     auth,
+    codexHost,
     "http://127.0.0.1:17317",
     resolve("dist/app.html"),
     resolve("dist/app.html"),

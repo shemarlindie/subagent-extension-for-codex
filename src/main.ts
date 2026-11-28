@@ -4,6 +4,7 @@ import { recordCrash } from "./core/service/platform/logging/crash-log.js";
 import { flushLogs, logError } from "./core/service/platform/logging/logger.js";
 import { startService } from "./core/service/platform/service/startup.js";
 import { registerProviders } from "./core/shared/providers/registry.js";
+import { codexHost } from "./hosts/codex/service/host.js";
 import { claudeRegistration } from "./providers/claude/service/registration.js";
 import { claudeDefinition } from "./providers/claude/shared/definition.js";
 import { fixtureDefinition } from "./providers/fixture/shared/definition.js";
@@ -16,6 +17,7 @@ const { values } = parseArgs({ options: { host: { type: "boolean" } } });
 
 try {
   await startService({
+    host: codexHost,
     registrations: [claudeRegistration],
     network: values.host,
   });

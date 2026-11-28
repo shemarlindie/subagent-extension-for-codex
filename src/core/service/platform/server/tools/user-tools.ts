@@ -1,11 +1,5 @@
 import { z } from "zod";
 
-import {
-  composerMentionsEnabled,
-  mentionSearchSchema,
-  mentionSearchToolName,
-  searchAgentMentions,
-} from "../../../../../hosts/codex/service/mentions.js";
 import { panelAttachmentsSchema } from "../../../../shared/attachments/model.js";
 import { budgetRaiseSchema } from "../../../../shared/tasks/model.js";
 import { autoRegisterChatProject } from "../../../features/projects/chat-project.js";
@@ -22,14 +16,16 @@ import { settingsTransferTools } from "./settings-transfer-tools.js";
 import { taskLifecycleTools } from "./task-lifecycle-tools.js";
 
 /**
- * App-only tools, named with an `app_` prefix. The panel calls them on the
- * user's behalf. `callTool` refuses them to other callers. Several extend
- * an agent tool with user authority.
+ * App-only tools, named with an `app_` prefix, including the host's own. The
+ * panel and host call them on the user's behalf. `callTool` refuses them to
+ * other callers. Several extend an agent tool with user authority.
  */
 export function userTools(
-  { c, owner, hostDirectory }: ToolContext,
+  context: ToolContext,
   tools: ReturnType<typeof agentTools>,
 ) {
+  const { c, owner, hostDirectory, host } = context;
+
   return {
     app_get_about: tool({
       readOnly: true,
@@ -44,20 +40,7 @@ export function userTools(
       schema: z.strictObject({}),
       run: () => openDataDirectory(),
     }),
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Temporary feature gate.
-    ...(composerMentionsEnabled
-      ? {
-          // The host's composer calls this. The HTTP and stdio servers register it
-          // with the mention extension metadata.
-          [mentionSearchToolName]: tool({
-            readOnly: true,
-            description:
-              "Search for the configured Claude provider in the composer mention picker.",
-            schema: mentionSearchSchema,
-            run: ({ query }) => searchAgentMentions(query, c.workers()),
-          }),
-        }
-      : {}),
+    ...host?.tools(context),
     ...projectTools(c, owner),
     app_start_task: tool({
       ...tools.start_task,

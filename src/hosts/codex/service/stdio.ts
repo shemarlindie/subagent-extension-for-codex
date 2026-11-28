@@ -6,10 +6,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { type Control } from "../../../core/service/features/tasks/runtime/control.js";
-import {
-  codexContextCapability,
-  codexHints,
-} from "../../../core/service/platform/panel/host-context.js";
 import { delegationPanel } from "../../../core/service/platform/panel/panel.js";
 import { productGlyphIcons } from "../../../core/service/platform/server/product-glyph.js";
 import {
@@ -33,7 +29,7 @@ import {
 import { registerProviders } from "../../../core/shared/providers/registry.js";
 import { claudeDefinition } from "../../../providers/claude/shared/definition.js";
 import { fixtureDefinition } from "../../../providers/fixture/shared/definition.js";
-import { SERVER_INSTRUCTIONS } from "./instructions.js";
+import { codexHost } from "./host.js";
 import {
   claudeMentionResource,
   claudeMentionUri,
@@ -56,7 +52,13 @@ const service = serviceClient(async () => {
 });
 
 // Definitions supply schemas only; the proxy forwards calls to the service.
-const tools: Record<string, AnyTool> = definitions({} as Control, "local");
+const tools: Record<string, AnyTool> = definitions(
+  {} as Control,
+  "local",
+  "parent",
+  undefined,
+  codexHost,
+);
 
 /** Read-only tools, which the proxy may safely send twice. */
 function readOnly(name: string) {
@@ -71,7 +73,7 @@ function postService(
   headers: Record<string, string> = {},
 ) {
   return service.post(
-    `${isUserTool(name) ? "user-tools" : "tools"}/${name}`,
+    `${isUserTool(name, codexHost) ? "user-tools" : "tools"}/${name}`,
     body,
     { timeout, headers, readOnly: readOnly(name) },
   );
@@ -87,8 +89,8 @@ const server = new McpServer(
     icons: productGlyphIcons,
   },
   {
-    instructions: SERVER_INSTRUCTIONS,
-    capabilities: codexContextCapability,
+    instructions: codexHost.instructions,
+    capabilities: codexHost.capabilities,
   },
 );
 
@@ -166,7 +168,7 @@ for (const [name, d] of Object.entries(tools)) {
 
   server.registerTool(
     name,
-    toolRegistration(name, d),
+    toolRegistration(name, d, codexHost),
     async (
       args,
       extra: { _meta?: Record<string, unknown> },
@@ -180,7 +182,7 @@ for (const [name, d] of Object.entries(tools)) {
         );
 
       try {
-        const hints = codexHints(extra._meta);
+        const hints = codexHost.hints(extra._meta);
 
         const response = await postService(
           name,
@@ -230,6 +232,7 @@ for (const [name, d] of Object.entries(tools)) {
 }
 
 const panel = delegationPanel(
+  codexHost.panel,
   packagePath("dist/app.html"),
   undefined,
   async (args) => {
@@ -251,7 +254,7 @@ server.registerTool(
   async (args, extra): Promise<CallToolResult> => {
     try {
       return await panel.open(
-        withConversation("panel", args, codexHints(extra._meta)),
+        withConversation("panel", args, codexHost.hints(extra._meta)),
       );
     } catch (error) {
       return {

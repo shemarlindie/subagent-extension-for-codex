@@ -15,6 +15,7 @@ import { Store } from "../../../src/core/service/features/tasks/storage/store.js
 import { Workspaces } from "../../../src/core/service/features/workspaces/workspace.js";
 import { application } from "../../../src/core/service/platform/server/app.js";
 import { Auth } from "../../../src/core/service/platform/server/auth.js";
+import { codexHost } from "../../../src/hosts/codex/service/host.js";
 import { waitForListening } from "../../support/helpers.js";
 import { sessionCookie } from "./http-test-harness.js";
 
@@ -37,6 +38,7 @@ async function fixture(t: TestContext) {
   const app = application(
     c,
     new Auth("project-test-token"),
+    codexHost,
     "http://127.0.0.1:17317",
     html,
   );

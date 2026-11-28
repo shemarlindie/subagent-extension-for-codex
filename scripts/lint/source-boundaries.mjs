@@ -8,12 +8,6 @@ const builtins = new Set(
 /** Colocated tests and the `*-test-harness` modules they share are test code; imports may omit the extension. */
 export const testModule = /(?:\.test|-test-harness)(?:\.[cm]?[jt]sx?)?$/;
 
-// Remove each exception when its owner stops importing the adapter.
-const exceptions = new Map([
-  ["src/core/service/platform/server/mcp.ts", "hosts/codex"],
-  ["src/core/service/platform/server/tools/user-tools.ts", "hosts/codex"],
-]);
-
 function sourceLocation(path) {
   if (/^src\/main(?:\.[jt]s)?$/.test(path)) {
     return { owner: "main", runtime: "service" };
@@ -45,7 +39,6 @@ export const sourceBoundaries = {
     type: "problem",
     schema: [],
     messages: {
-      stale: "Remove the unused dependency exception for {{target}}.",
       boundary:
         "{{owner}} source cannot import {{target}}. Use feature-owned shared contracts for cross-runtime data.",
     },
@@ -57,9 +50,6 @@ export const sourceBoundaries = {
 
     const source = sourceLocation(localFile);
     if (!source || testModule.test(localFile)) return {};
-
-    const exception = exceptions.get(localFile);
-    let usedException = false;
 
     function check(node, value, declaration = node) {
       if (typeof value !== "string") return;
@@ -90,8 +80,7 @@ export const sourceBoundaries = {
             destination.runtime === "shared"
           )
         ) {
-          if (destination.owner === exception) usedException = true;
-          else target = destination.owner;
+          target = destination.owner;
         }
       } else if (value.startsWith("node:") || builtins.has(value)) {
         if (source.runtime !== "service") target = "Node built-ins";
@@ -128,15 +117,6 @@ export const sourceBoundaries = {
     }
 
     return {
-      "Program:exit"(node) {
-        if (exception && !usedException) {
-          context.report({
-            node,
-            messageId: "stale",
-            data: { target: exception },
-          });
-        }
-      },
       ImportDeclaration: (node) => check(node.source, node.source.value, node),
       ExportNamedDeclaration: (node) =>
         node.source && check(node.source, node.source.value, node),

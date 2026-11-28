@@ -1,35 +1,13 @@
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
-import type {
-  OpenAIUiResourceMetadata,
-  OpenAIUiToolMetadata,
-} from "@openai/mcp-extensions/server";
 import { z } from "zod";
 
 import { panelOutputSchema } from "../../../shared/panel/panel-contract.generated.js";
 import type { PanelTaskList } from "../../../shared/tasks/task-list.js";
 import type { TaskFilters } from "../../features/tasks/storage/task-rows.js";
+import type { HostPanel } from "../host/host-adapter.js";
 import { productGlyphIcons } from "../server/product-glyph.js";
 import { panelContextInput, type PanelContextInput } from "./panel-context.js";
 import { preloadPanelHtml, readPanelHtml } from "./panel-html.js";
-
-// Bump the URI when resource metadata or the panel's tool calls change, to
-// invalidate host caches.
-export const panelUri = "ui://subagent-extension-for-codex/app-v8";
-const globalPanelToolName = "app_open_subagent_extension_for_codex_global";
-
-const entrypoints = {
-  entrypoints: [{ type: "thread" }],
-  preferredModelDisplayMode: "inline",
-} satisfies OpenAIUiToolMetadata;
-
-const resourceMeta = {
-  "openai/ui": {
-    availableDisplayModes: ["inline", "fullscreen"],
-    preferredDisplayMode: "inline",
-  } satisfies OpenAIUiResourceMetadata,
-  ui: { csp: { connectDomains: [], resourceDomains: [] } },
-  "openai/widgetCSP": { connect_domains: [], resource_domains: [] },
-};
 
 type PanelContext = {
   panel_scope: {
@@ -40,16 +18,23 @@ type PanelContext = {
   panel_selection?: { task_id: string };
 } & Record<string, unknown>;
 
+/** The panel's tools and resource, named and annotated by the host. */
 export function delegationPanel(
+  host: HostPanel,
   htmlPath: string,
   initialTasks?: (filters: TaskFilters) => PanelTaskList,
   context?: (args: PanelContextInput) => Promise<PanelContext>,
 ) {
   preloadPanelHtml(htmlPath);
 
+  const resourceMeta = {
+    ui: { csp: { connectDomains: [], resourceDomains: [] } },
+    ...host.resourceMeta,
+  };
+
   const panel = {
-    name: "open_subagent_extension_for_codex",
-    uri: panelUri,
+    name: host.name,
+    uri: host.uri,
     tool: {
       description:
         "Open the Delegated Work panel beside this chat when the host supports it. Pass task_id to show an existing task, or a registered repository and revision to prefill New task. Task tools work without the panel.",
@@ -58,10 +43,7 @@ export function delegationPanel(
       inputSchema: panelContextInput,
       outputSchema: panelOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: false },
-      _meta: {
-        ui: { resourceUri: panelUri },
-        "openai/ui": entrypoints,
-      },
+      _meta: { ui: { resourceUri: host.uri }, ...host.toolMeta },
     },
     open: async (args: PanelContextInput) => {
       const resolved = context
@@ -104,7 +86,7 @@ export function delegationPanel(
     read: async () => ({
       contents: [
         {
-          uri: panelUri,
+          uri: host.uri,
           mimeType: RESOURCE_MIME_TYPE,
           text: await readPanelHtml(htmlPath),
           _meta: resourceMeta,
@@ -118,18 +100,15 @@ export function delegationPanel(
     // Global and thread entrypoints both launch with empty arguments. Give
     // global launches their own tool so ambient chat/cwd hints cannot scope it.
     global: {
-      name: globalPanelToolName,
+      name: host.globalName,
       tool: {
         ...panel.tool,
         description:
           "Open Delegated Work across all projects and conversations.",
         inputSchema: z.strictObject({}),
         _meta: {
-          ui: { resourceUri: panelUri, visibility: ["app"] },
-          "openai/ui": {
-            entrypoints: [{ type: "global" }],
-            preferredModelDisplayMode: "inline",
-          } satisfies OpenAIUiToolMetadata,
+          ui: { resourceUri: host.uri, visibility: ["app"] },
+          ...host.globalToolMeta,
         },
       },
       open: () => panel.open({ conversation_id: null }),

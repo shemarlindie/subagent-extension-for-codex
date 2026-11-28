@@ -11,6 +11,7 @@ import {
 import { Store } from "../../features/tasks/storage/store.js";
 import { Workspaces } from "../../features/workspaces/workspace.js";
 import { useIncrementalVacuum } from "../database/database.js";
+import type { HostAdapter } from "../host/host-adapter.js";
 import {
   configureLogging,
   flushLogs,
@@ -34,6 +35,8 @@ import {
 import { adminToken } from "./token.js";
 
 export type ServeOptions = {
+  /** The host the MCP servers serve. */
+  host: HostAdapter;
   /** Opt in to an IPv4 listener reachable from other computers. */
   network?: boolean;
   registrations: ProviderRegistration[];
@@ -61,7 +64,11 @@ const idleCheck = Math.min(idleGrace / 4, 1000);
 const clientStreams = ["/api/service/presence", "/api/events"];
 
 /** Starts the HTTP service and runs it until a signal, a handoff or an idle stop. */
-export async function serve({ registrations, network = false }: ServeOptions) {
+export async function serve({
+  host,
+  registrations,
+  network = false,
+}: ServeOptions) {
   const port = Number(process.env.PORT ?? defaultPort);
 
   const origin =
@@ -162,6 +169,7 @@ export async function serve({ registrations, network = false }: ServeOptions) {
   const app = application(
     c,
     auth,
+    host,
     origin,
     packagePath("dist/app.html"),
     packagePath("dist/app.html"),

@@ -5,6 +5,7 @@ import express from "express";
 import type { DraftUpdate } from "../../../shared/tasks/conversation/drafts.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
+import type { HostAdapter } from "../host/host-adapter.js";
 import { logError, logEvent } from "../logging/logger.js";
 import { preloadPanelHtml, readPanelHtml } from "../panel/panel-html.js";
 import {
@@ -39,6 +40,7 @@ function hostDirectory(headers: express.Request["headers"]) {
 export function application(
   c: Control,
   auth: Auth,
+  host: HostAdapter,
   origin: string,
   htmlPath: string,
   nativeHtmlPath = htmlPath,
@@ -207,7 +209,7 @@ export function application(
       : undefined;
 
   const handler = createMcpHandler(() =>
-    mcp(c, auth.owner, origin, htmlPath, nativeHtmlPath),
+    mcp(c, auth.owner, host, htmlPath, nativeHtmlPath),
   );
 
   const nodeHandler = toNodeHandler(handler);
@@ -312,7 +314,7 @@ export function application(
       // app-only tool visibility; console users authenticate with a session cookie.
       const userRoute = req.path.startsWith("/api/user-tools/");
 
-      if (userRoute && !isUserTool(String(req.params.name))) {
+      if (userRoute && !isUserTool(String(req.params.name), host)) {
         throw new Error("Unknown user tool");
       }
 
@@ -325,6 +327,7 @@ export function application(
           ? "user"
           : "parent",
         bearer(req) ? hostDirectory(req.headers) : undefined,
+        host,
       );
 
       res.json({ result });
