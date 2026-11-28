@@ -4,7 +4,7 @@ import type {
 } from "../../../core/shared/settings/settings-document.js";
 import type { SettingsValues } from "../../../core/shared/settings/settings-schema.js";
 
-type ModelScopeValues = SettingsValues["models"]["providers"]["claude"];
+type ModelScopeValues = SettingsValues["models"]["providers"][string];
 
 /**
  * Saved settings as the panel reads them. Reads leave out a disabled

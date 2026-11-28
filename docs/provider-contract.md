@@ -11,7 +11,9 @@ provider owns and how it behaves across a task's lifecycle.
 Export a browser-safe `ProviderDefinition` from the provider's `shared` folder.
 It supplies the ID, discovery metadata, settings and task facts. Native
 permission metadata names the read-only mode for reviewer and researcher tasks
-and the short labels that the panel displays.
+and the short labels that the panel displays. A provider whose readiness reports
+`credential_expires_at` sets `signInCommand`, which the panel shows when the
+sign-in nears its end.
 
 Implement `Provider` in the provider's `service` folder. Its
 `ProviderRegistration.create(store, data)` constructs the worker at startup. A

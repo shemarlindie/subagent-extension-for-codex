@@ -6,6 +6,8 @@ export interface ProviderMetadata {
   displayName: string;
   /** CLI diagnostics offered in About. */
   cliName?: string;
+  /** The terminal command that signs in again when the credential ends. */
+  signInCommand?: string;
   defaultEffortLevels?: (typeof reasoningLevels)[number][];
   costBudgetHelp?: string;
   nativePermissions?: {

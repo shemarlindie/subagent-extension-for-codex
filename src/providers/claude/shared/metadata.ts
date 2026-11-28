@@ -9,6 +9,7 @@ import {
 export const claudeMetadata = {
   displayName: "Claude",
   cliName: "Claude Code",
+  signInCommand: "claude auth login",
   defaultEffortLevels: reasoningLevels.filter(
     (level) => level !== "none" && level !== "minimal",
   ),

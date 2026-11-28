@@ -5,7 +5,7 @@ import { SignInExpiryNotice } from "./sign-in-expiry-notice";
 
 /**
  * Says which workers can't start tasks and how to fix it, such as a missing
- * Claude Code CLI, and warns when Claude's sign-in ends soon.
+ * Claude Code CLI, and warns when a worker's sign-in ends soon.
  */
 export function WorkerReadinessNotice() {
   const workers = useSnapshot((state) => state.workers);
