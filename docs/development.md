@@ -427,23 +427,24 @@ rejects imports from the other runtime, development tooling and tests.
 - The entries `dist/main.js`, `dist/stdio.js` and `dist/projects-cli.js` print
   what to install when Node is older than `engines.node`.
 
-`npm run package:plugin` builds and packs the plugin. The package holds only
-what the installed plugin runs or shows: `dist/`, `migrations/`, `assets/`,
-`skills/`, `plugin.json`, `mcp.json`, the README and `LICENSE`. Guides stay on
-GitHub, so the README's links to `docs/` don't resolve inside an extracted
-package.
+Each host's plugin files live in `plugins/<host>`. Codex is the only host so
+far. After a build, `npm run release:assemble` creates each host's package in
+`release/<host>`, which the release publishes to npm. The package holds only
+what the installed plugin runs or shows: the plugin folder's files, `dist/`,
+`migrations/`, `assets/`, the README and `LICENSE`. Guides stay on GitHub, so
+the README's links to `docs/` don't resolve inside an extracted package.
 
-After a build, `npm run release:assemble` creates the package published to npm
-in `release/`. The package at the root of the repo is not published. The release
-contains the packed files, a manifest with no scripts or dependencies, and an
-`.agents/plugins/marketplace.json` that lists the plugin with source `./`. The
+The package's manifest has no scripts or dependencies. Its name, description and
+keywords come from `plugins/<host>/package.json`, and its version and other
+metadata from the root `package.json`, the version source. An
+`.agents/plugins/marketplace.json` lists the plugin with source `./`, so the
 directory is both a Codex marketplace and the plugin.
 [Install a local build](#install-a-local-build) installs it, and
 [Releasing and CI](releasing.md) publishes it.
 
 Adding the checkout itself (`codex plugin marketplace add ./`) adds `main`'s
 marketplace, which installs the version it lists from npm, so test local builds
-with `./release`.
+with `./release/codex`.
 
 The assembled marketplace takes its name and display name from `main`'s. The
 name `shemarlindie` is part of the plugin ID and its `PLUGIN_DATA` path, so it
@@ -481,9 +482,10 @@ npm run dev:plugin -- update
 npm run dev:plugin -- uninstall
 ```
 
-Install and update build and assemble `./release` before replacing the plugin
-and its `shemarlindie` marketplace. This also switches a published installation
-to the local build. Uninstall is safe to repeat and keeps task data.
+Install and update build and assemble `./release/codex` before replacing the
+plugin and its `shemarlindie` marketplace. This also switches a published
+installation to the local build. Uninstall is safe to repeat and keeps task
+data.
 
 A terminal prompt offers to stop the running plugin service, defaulting to No.
 Noninteractive runs leave it alone. Add `--stop-service` to any command to stop

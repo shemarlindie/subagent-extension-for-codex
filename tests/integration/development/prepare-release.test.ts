@@ -20,6 +20,7 @@ import { test, type TestContext } from "vitest";
 const exec = promisify(execFile);
 const script = resolve("scripts/prepare-release.mjs");
 const marketplace = ".agents/plugins/marketplace.json";
+const plugin = "plugins/codex/plugin.json";
 
 /** A main checkout at 0.1.0 with a bare origin and a fake gh that records its arguments. */
 async function fixture(t: TestContext) {
@@ -44,6 +45,7 @@ async function fixture(t: TestContext) {
     exec("git", ["-C", checkout, ...args], { env });
 
   await mkdir(join(checkout, ".agents/plugins"), { recursive: true });
+  await mkdir(join(checkout, "plugins/codex"), { recursive: true });
   await mkdir(bin);
 
   const files = {
@@ -59,7 +61,7 @@ async function fixture(t: TestContext) {
       requires: true,
       packages: { "": { name: "pkg", version: "0.1.0" } },
     },
-    "plugin.json": { name: "pkg", version: "0.1.0" },
+    [plugin]: { name: "pkg", version: "0.1.0" },
   };
 
   for (const [name, content] of Object.entries(files)) {
@@ -152,7 +154,7 @@ test.skipIf(process.platform === "win32")(
 CHANGELOG.md
 package-lock.json
 package.json
-plugin.json
+plugins/codex/plugin.json
 `,
     );
 
@@ -190,7 +192,7 @@ First.
 `,
     );
 
-    for (const path of ["package.json", "plugin.json"]) {
+    for (const path of ["package.json", plugin]) {
       assert.equal(JSON.parse(await show(path)).version, "0.2.0-beta.1");
     }
 

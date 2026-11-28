@@ -27,8 +27,8 @@ its own branch. Use the `release` skill to go through these steps with an agent.
 `release:prepare` picks the next version from the conventional commits since the
 last release: major for a breaking change, minor for a `feat` and patch
 otherwise. Before 1.0, a breaking change bumps the minor version. It sets the
-version in `package.json`, `package-lock.json`, `plugin.json` and the
-marketplace. Unless `CHANGELOG.md` already has a `## <version>` section, it
+version in `package.json`, `package-lock.json`, `plugins/codex/plugin.json` and
+the marketplace. Unless `CHANGELOG.md` already has a `## <version>` section, it
 drafts one with Features and Fixes sections from the `feat` and `fix` commits,
 writing `None` in an empty section. Breaking commits of any type go in a
 Breaking changes section first, and `perf` commits in a Performance section
@@ -89,7 +89,8 @@ The workflow (`.github/workflows/release.yml`):
 1. Runs the CI checks and installs the packed release with Codex. Checks the
    release pull request and waits for its required checks. It fails if the
    marketplace and `package.json` versions differ or the tag exists.
-2. Publishes `release/` to npm with provenance, under `next` for a prerelease.
+2. Publishes `release/codex` to npm with provenance, under `next` for a
+   prerelease.
 3. Tags the published commit, the branch's head, as `v<version>` and creates its
    GitHub release with an attested zip, marked as a prerelease when the version
    has a suffix.

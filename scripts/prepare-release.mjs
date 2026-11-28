@@ -212,7 +212,8 @@ function setVersion(path, current) {
 }
 
 const marketplace = ".agents/plugins/marketplace.json";
-const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
+const pluginPath = "plugins/codex/plugin.json";
+const plugin = JSON.parse(readFileSync(pluginPath, "utf8"));
 const listed = JSON.parse(readFileSync(marketplace, "utf8")).plugins[0].source;
 
 // Under npm, its own script runs through this Node, since Windows can't start
@@ -224,7 +225,7 @@ const branch = `chore/release-v${version}`;
 const versioned = [
   "package.json",
   "package-lock.json",
-  "plugin.json",
+  pluginPath,
   marketplace,
 ];
 
@@ -239,7 +240,7 @@ run(npm[0], [
   "--ignore-scripts",
 ]);
 
-setVersion("plugin.json", plugin.version);
+setVersion(pluginPath, plugin.version);
 setVersion(marketplace, listed.version);
 
 if (!requested) console.log(`The next version after ${since} is ${version}.`);

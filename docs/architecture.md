@@ -84,6 +84,7 @@ features and limits.
 | `src/panel/features`, `src/panel/shared` | Feature UI and reusable panel components and integrations                    |
 | `src/panel/transports`                   | Host bridge and standalone console transports                                |
 | `src/core/shared/<feature>`              | Browser-safe contracts and pure domain functions shared by service and panel |
+| `plugins/codex`                          | Codex plugin manifest, MCP server entry, skills and package name             |
 | `dev/`                                   | Development tooling, the panel dev host and fixtures                         |
 
 [Panel architecture](panel-architecture.md) covers the panel's internal layout.
