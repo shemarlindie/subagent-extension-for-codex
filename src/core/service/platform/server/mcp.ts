@@ -16,7 +16,7 @@ import {
 } from "../../../../hosts/codex/service/mentions.js";
 import { SendRejectedError } from "../../../shared/tasks/conversation/send-errors.js";
 import { type Control } from "../../features/tasks/runtime/control.js";
-import { codexContextCapability } from "../panel/host-context.js";
+import { codexContextCapability, codexHints } from "../panel/host-context.js";
 import { panelTaskList, resolvePanelContext } from "../panel/panel-context.js";
 import { delegationPanel } from "../panel/panel.js";
 import { packageVersion } from "../service/runtime.js";
@@ -86,11 +86,13 @@ export function mcp(
       toolRegistration(name, d),
       async (args, ctx: ServerContext): Promise<CallToolResult> => {
         try {
+          const hints = codexHints(ctx.mcpReq._meta);
+
           const current: Record<string, AnyTool> = definitions(
             c,
             owner,
             "parent",
-            ctx.mcpReq._meta,
+            hints.directory,
           );
 
           const definition = current[name];
@@ -101,11 +103,7 @@ export function mcp(
               name,
               () =>
                 definition.run(
-                  withConversation(
-                    definition.conversation,
-                    args,
-                    ctx.mcpReq._meta,
-                  ),
+                  withConversation(definition.conversation, args, hints),
                 ),
               definition.readOnly === true,
             ),
@@ -140,7 +138,7 @@ export function mcp(
     async (args, ctx): Promise<CallToolResult> => {
       try {
         return await panel.open(
-          withConversation("panel", args, ctx.mcpReq._meta),
+          withConversation("panel", args, codexHints(ctx.mcpReq._meta)),
         );
       } catch (error) {
         return {

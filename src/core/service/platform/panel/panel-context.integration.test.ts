@@ -284,14 +284,12 @@ test("sandbox directory hints resolve approved Git roots without granting access
   const alias = join(f.dir, "alias");
   await symlink(a, alias, "dir");
 
-  const meta = {
-    "codex/sandbox-state-meta": {
-      sandboxCwd: pathToFileURL(join(alias, "src")).href,
-      sandboxPolicy: { type: "danger-full-access" },
-    },
-  };
+  const host_directory = pathToFileURL(join(alias, "src")).href;
 
-  assert.equal((await withHostRepository(f.c, {}, meta)).repository, a);
+  assert.equal(
+    (await withHostRepository(f.c, { host_directory })).repository,
+    a,
+  );
 
   assert.deepEqual(
     await resolvePanelContext(f.c, "alice", {
@@ -302,7 +300,7 @@ test("sandbox directory hints resolve approved Git roots without granting access
     },
   );
 
-  for (const sandboxCwd of [
+  for (const directory of [
     pathToFileURL(b).href,
     "file://remote-host/repo",
     "https://host/repo",
@@ -311,15 +309,8 @@ test("sandbox directory hints resolve approved Git roots without granting access
     "file:///nonexistent",
     "x".repeat(4097),
   ]) {
-    assert.deepEqual(
-      await withHostRepository(
-        f.c,
-        {},
-        { "codex/sandbox-state-meta": { sandboxCwd } },
-      ),
-      {},
-      sandboxCwd,
-    );
+    const args = { host_directory: directory };
+    assert.deepEqual(await withHostRepository(f.c, args), args, directory);
   }
 
   assert.deepEqual(
@@ -327,10 +318,10 @@ test("sandbox directory hints resolve approved Git roots without granting access
     [a],
   );
 
-  const explicit = { repository: b };
-  assert.deepEqual(await withHostRepository(f.c, explicit, meta), explicit);
-  const selection = { task_id: "selected" };
-  assert.deepEqual(await withHostRepository(f.c, selection, meta), selection);
+  const explicit = { repository: b, host_directory };
+  assert.deepEqual(await withHostRepository(f.c, explicit), explicit);
+  const selection = { task_id: "selected", host_directory };
+  assert.deepEqual(await withHostRepository(f.c, selection), selection);
   f.seed("fallback", a, { conversation_id: "chat-a", revision: "feature" });
 
   assert.deepEqual(
@@ -354,11 +345,7 @@ test("sandbox directory hints resolve approved Git roots without granting access
 });
 
 test("host correlation honors explicit values and isolates supported tools", () => {
-  const meta = {
-    "openai/session": "session",
-    threadId: "thread",
-    "codex/sandbox-state-meta": { sandboxCwd: "file:///project" },
-  };
+  const host = { conversation: "session", directory: "file:///project" };
 
   for (const name of [
     "start_task",
@@ -368,39 +355,34 @@ test("host correlation honors explicit values and isolates supported tools", () 
     "get_panel_context",
   ]) {
     assert.equal(
-      withConversation(hints(name), {}, meta).conversation_id,
+      withConversation(hints(name), {}, host).conversation_id,
       "session",
-    );
-
-    assert.equal(
-      withConversation(hints(name), {}, { threadId: "thread" }).conversation_id,
-      "thread",
     );
 
     for (const conversation_id of ["explicit", null]) {
       assert.equal(
-        withConversation(hints(name), { conversation_id }, meta)
+        withConversation(hints(name), { conversation_id }, host)
           .conversation_id,
         conversation_id,
       );
     }
   }
 
-  for (const value of ["", "   ", "x".repeat(257), 7, null]) {
+  for (const conversation of ["", "   ", "x".repeat(257)]) {
     assert.equal(
-      withConversation(hints("list_tasks"), {}, { "openai/session": value })
+      withConversation(hints("list_tasks"), {}, { conversation })
         .conversation_id,
       undefined,
     );
   }
 
   assert.deepEqual(
-    withConversation(hints("get_task"), { task_id: "owned" }, meta),
+    withConversation(hints("get_task"), { task_id: "owned" }, host),
     { task_id: "owned" },
   );
 
   assert.equal(
-    withConversation(hints("start_task"), {}, meta).host_directory,
+    withConversation(hints("start_task"), {}, host).host_directory,
     undefined,
   );
 
@@ -409,14 +391,14 @@ test("host correlation honors explicit values and isolates supported tools", () 
     "get_panel_context",
   ]) {
     assert.deepEqual(
-      withConversation(hints(name), { conversation_id: null }, meta),
+      withConversation(hints(name), { conversation_id: null }, host),
       {
         conversation_id: null,
       },
     );
 
     assert.equal(
-      withConversation(hints(name), {}, meta).host_directory,
+      withConversation(hints(name), {}, host).host_directory,
       "file:///project",
     );
 
@@ -424,7 +406,7 @@ test("host correlation honors explicit values and isolates supported tools", () 
       withConversation(
         hints(name),
         { host_directory: "file:///explicit" },
-        meta,
+        host,
       ).host_directory,
       "file:///explicit",
     );
@@ -459,9 +441,9 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
   const f = await fixture(t);
   const repository = await f.repo("task-repo");
 
-  const meta = {
-    "openai/session": "ambient-chat",
-    "codex/sandbox-state-meta": { sandboxCwd: "file:///unrelated-project" },
+  const host = {
+    conversation: "ambient-chat",
+    directory: "file:///unrelated-project",
   };
 
   for (const selected of [
@@ -475,7 +457,7 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
       const args = withConversation(
         hints(name),
         { task_id: selected.id },
-        meta,
+        host,
       );
 
       assert.deepEqual(args, { task_id: selected.id });
@@ -495,7 +477,7 @@ test("explicit task panels ignore ambient chat and directory but reject explicit
               task_id: selected.id,
               conversation_id: "explicit-conflict",
             },
-            meta,
+            host,
           ),
         ),
         /different conversation/,

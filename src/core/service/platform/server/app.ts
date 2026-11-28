@@ -18,14 +18,19 @@ import { mcp } from "./mcp.js";
 import { authRejectionLogger, requestLogging } from "./request-logging.js";
 import { callTool, isUserTool } from "./tools.js";
 
-/** Host directory forwarded by the stdio proxy; malformed values are ignored. */
-function hostDirectoryMeta(header: unknown) {
+/**
+ * The host directory a stdio proxy forwards. Malformed values are ignored.
+ * Proxies from before the neutral name send `X-Codex-Host-Directory` to a
+ * service with the same API version. Drop it when the API version changes.
+ */
+function hostDirectory(headers: express.Request["headers"]) {
+  const header =
+    headers["x-host-directory"] ?? headers["x-codex-host-directory"];
+
   if (typeof header !== "string") return undefined;
 
   try {
-    return {
-      "codex/sandbox-state-meta": { sandboxCwd: decodeURIComponent(header) },
-    };
+    return decodeURIComponent(header);
   } catch {
     return undefined;
   }
@@ -319,9 +324,7 @@ export function application(
         userRoute || (!bearer(req) && auth.ownerFor(req.headers.cookie))
           ? "user"
           : "parent",
-        bearer(req)
-          ? hostDirectoryMeta(req.headers["x-codex-host-directory"])
-          : undefined,
+        bearer(req) ? hostDirectory(req.headers) : undefined,
       );
 
       res.json({ result });

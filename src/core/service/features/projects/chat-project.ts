@@ -7,18 +7,6 @@ import {
 import type { Control } from "../tasks/runtime/control.js";
 import { gitRepositoryRoot } from "../workspaces/git.js";
 
-/** Read transport metadata only; model tool arguments cannot supply this authority. */
-export function hostDirectoryFromMeta(meta?: Record<string, unknown>) {
-  const state = meta?.["codex/sandbox-state-meta"] as
-    { sandboxCwd?: unknown } | undefined;
-
-  const directory = state?.sandboxCwd;
-
-  return typeof directory === "string" && directory.length <= 4096
-    ? directory
-    : undefined;
-}
-
 async function gitRoot(path: string) {
   try {
     return await gitRepositoryRoot(path);
@@ -43,6 +31,8 @@ async function isApproved(c: Control, root: string) {
 /**
  * Register the thread's Git root when a task is started from that thread.
  * A folder without Git stays the user's choice.
+ * `directory` is the host's hint from transport metadata. Model tool arguments
+ * cannot supply it.
  * `repository` is the task target: an explicit target must be inside the thread
  * root, while an omitted one may use it as the task default.
  * Best-effort: a failure here never blocks the task itself.
@@ -50,7 +40,7 @@ async function isApproved(c: Control, root: string) {
 export async function autoRegisterChatProject(
   c: Control,
   owner: string,
-  meta?: Record<string, unknown>,
+  directory?: string,
   repository?: string,
 ) {
   try {
@@ -58,10 +48,7 @@ export async function autoRegisterChatProject(
       return undefined;
     }
 
-    const candidate = await hostProjectCandidate(
-      c,
-      hostDirectoryFromMeta(meta),
-    );
+    const candidate = await hostProjectCandidate(c, directory);
 
     if (!candidate || !isGitRoot(candidate)) return undefined;
     const root = candidate.repository;
@@ -86,9 +73,9 @@ export async function autoRegisterChatProject(
 export async function currentChatProject(
   c: Control,
   owner: string,
-  meta?: Record<string, unknown>,
+  directory?: string,
 ) {
-  const candidate = await hostProjectCandidate(c, hostDirectoryFromMeta(meta));
+  const candidate = await hostProjectCandidate(c, directory);
 
   if (!candidate) {
     throw new Error(

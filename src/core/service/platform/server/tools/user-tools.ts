@@ -27,7 +27,7 @@ import { taskLifecycleTools } from "./task-lifecycle-tools.js";
  * an agent tool with user authority.
  */
 export function userTools(
-  { c, owner, hostMeta }: ToolContext,
+  { c, owner, hostDirectory }: ToolContext,
   tools: ReturnType<typeof agentTools>,
 ) {
   return {
@@ -69,7 +69,7 @@ export function userTools(
       description:
         "User interface only: create a task with the user-selected native permission mode.",
       run: async (a) => {
-        await autoRegisterChatProject(c, owner, hostMeta, a.repository);
+        await autoRegisterChatProject(c, owner, hostDirectory, a.repository);
 
         return c.start(
           owner,

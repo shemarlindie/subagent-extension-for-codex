@@ -78,5 +78,6 @@ export interface ToolContext {
   c: Control;
   owner: string;
   authority: InputAuthority;
-  hostMeta?: Record<string, unknown>;
+  /** The calling chat's directory hint, which never grants access. */
+  hostDirectory?: string;
 }

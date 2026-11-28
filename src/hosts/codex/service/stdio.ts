@@ -5,9 +5,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { hostDirectoryFromMeta } from "../../../core/service/features/projects/chat-project.js";
 import { type Control } from "../../../core/service/features/tasks/runtime/control.js";
-import { codexContextCapability } from "../../../core/service/platform/panel/host-context.js";
+import {
+  codexContextCapability,
+  codexHints,
+} from "../../../core/service/platform/panel/host-context.js";
 import { delegationPanel } from "../../../core/service/platform/panel/panel.js";
 import { productGlyphIcons } from "../../../core/service/platform/server/product-glyph.js";
 import {
@@ -178,14 +180,14 @@ for (const [name, d] of Object.entries(tools)) {
         );
 
       try {
-        const hostDirectory = hostDirectoryFromMeta(extra._meta);
+        const hints = codexHints(extra._meta);
 
         const response = await postService(
           name,
-          withConversation(d.conversation, args, extra._meta),
+          withConversation(d.conversation, args, hints),
           serviceTimeout(name, args),
-          hostDirectory
-            ? { "X-Codex-Host-Directory": encodeURIComponent(hostDirectory) }
+          hints.directory
+            ? { "X-Host-Directory": encodeURIComponent(hints.directory) }
             : {},
         );
 
@@ -248,7 +250,9 @@ server.registerTool(
   panel.tool,
   async (args, extra): Promise<CallToolResult> => {
     try {
-      return await panel.open(withConversation("panel", args, extra._meta));
+      return await panel.open(
+        withConversation("panel", args, codexHints(extra._meta)),
+      );
     } catch (error) {
       return {
         isError: true,

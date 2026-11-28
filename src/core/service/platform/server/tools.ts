@@ -1,5 +1,6 @@
 import type { InputAuthority, Task } from "../../../shared/tasks/model.js";
 import type { Control } from "../../features/tasks/runtime/control.js";
+import type { HostHints } from "../host/host-adapter.js";
 import { taskPanelContext } from "../panel/panel-context.js";
 import { panelUri } from "../panel/panel.js";
 import { observeTool } from "./tool-logging.js";
@@ -15,23 +16,17 @@ import { userTools } from "./tools/user-tools.js";
 export function withConversation(
   hints: ConversationHints | undefined,
   args: Record<string, unknown>,
-  meta?: Record<string, unknown>,
+  host: HostHints = {},
 ) {
   if (
     hints === "panel" &&
     args.conversation_id !== null &&
     args.task_id === undefined &&
-    args.host_directory === undefined
+    args.host_directory === undefined &&
+    host.directory !== undefined &&
+    host.directory.length <= 4096
   ) {
-    const state = meta?.["codex/sandbox-state-meta"] as
-      { sandboxCwd?: unknown } | undefined;
-
-    if (
-      typeof state?.sandboxCwd === "string" &&
-      state.sandboxCwd.length <= 4096
-    ) {
-      args = { ...args, host_directory: state.sandboxCwd };
-    }
+    args = { ...args, host_directory: host.directory };
   }
 
   // A selected task supplies its own scope; ambient chat hints cannot constrain it.
@@ -43,11 +38,9 @@ export function withConversation(
     return args;
   }
 
-  // Codex core adds threadId; ChatGPT documents its anonymized session field.
-  // Both are optional correlation hints, never filesystem/ownership authority.
-  const session = meta?.["openai/session"] ?? meta?.threadId;
+  const session = host.conversation;
 
-  return typeof session === "string" && session.trim() && session.length <= 256
+  return session?.trim() && session.length <= 256
     ? { ...args, conversation_id: session }
     : args;
 }
@@ -56,9 +49,9 @@ export function definitions(
   c: Control,
   owner: string,
   authority: InputAuthority = "parent",
-  hostMeta?: Record<string, unknown>,
+  hostDirectory?: string,
 ) {
-  const context = { c, owner, authority, hostMeta };
+  const context = { c, owner, authority, hostDirectory };
   const agent = agentTools(context);
 
   return { ...agent, ...userTools(context, agent) };
@@ -143,9 +136,9 @@ export async function callTool(
   name: string,
   args: unknown,
   authority: InputAuthority = "parent",
-  hostMeta?: Record<string, unknown>,
+  hostDirectory?: string,
 ) {
-  const defs = definitions(c, owner, authority, hostMeta);
+  const defs = definitions(c, owner, authority, hostDirectory);
 
   return observeTool(
     Object.hasOwn(defs, name) ? name : "unknown",

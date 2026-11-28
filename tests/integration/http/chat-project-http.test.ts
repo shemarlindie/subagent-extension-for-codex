@@ -98,8 +98,8 @@ async function fixture(t: TestContext) {
   return { c, projects, base, bearer, post, cookie, repo, setAuto };
 }
 
-const hostHeader = (repository: string) => ({
-  "X-Codex-Host-Directory": encodeURIComponent(pathToFileURL(repository).href),
+const hostHeader = (repository: string, name = "X-Host-Directory") => ({
+  [name]: encodeURIComponent(pathToFileURL(repository).href),
 });
 
 const startTask = (repository: string) => ({
@@ -140,6 +140,16 @@ test("HTTP auto-registration happens only on task start for the trusted thread r
   );
 
   assert.deepEqual(registered(f), [repository]);
+
+  // A proxy from the previous release sends the old header name.
+  const legacy = await f.repo("legacy");
+
+  await f.post("/api/tools/start_task", startTask(legacy), {
+    ...f.bearer,
+    ...hostHeader(legacy, "X-Codex-Host-Directory"),
+  });
+
+  assert.deepEqual(registered(f).sort(), [legacy, repository]);
 });
 
 test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, and malformed headers", async (t) => {
@@ -170,7 +180,7 @@ test("HTTP auto-registration rejects model opt-out, body and cookie spoofing, an
 
   await f.post("/api/tools/start_task", startTask(repository), {
     ...f.bearer,
-    "X-Codex-Host-Directory": "%E0%A4%A",
+    "X-Host-Directory": "%E0%A4%A",
   });
 
   assert.deepEqual(registered(f), []);
