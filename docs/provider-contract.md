@@ -8,9 +8,17 @@ provider owns and how it behaves across a task's lifecycle.
 - [Claude execution verification](claude-verification.md) covers live execution
   checks.
 
-Implement the `Provider` interface in
-`src/core/service/features/providers/types.ts` and register the provider in
-`src/core/service/features/providers/config.ts`.
+Export a browser-safe `ProviderDefinition` from the provider's `shared` folder.
+It supplies the ID, discovery metadata, settings and task facts. Native
+permission metadata names the read-only mode for reviewer and researcher tasks
+and the short labels that the panel displays.
+
+Implement `Provider` in the provider's `service` folder. Its
+`ProviderRegistration.create(store, data)` constructs the worker at startup. A
+worker can expose `about(refresh)` to report its CLI readiness, recommended
+version and upgrade instructions under `providers.<id>` in About. Wire the
+definition and registration into the
+[composition roots](architecture.md#import-rules).
 
 | Owner                | Responsibilities                                                                                                                                   |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -166,12 +174,11 @@ checks leave permission requests open sets `nativePermissions.approvalDecider`,
 and its task policy defaults the task's decider to the `approvals.decider`
 setting.
 
-A provider's own settings form one block under `providers.<id>`, registered in
-`src/core/shared/providers/settings.ts`. Settings there are user-only. Metadata
-names the block's permission mode by path in
-`nativePermissions.permissionSetting`. A provider whose org policy changes the
-settings document also registers there how the policy applies to its sections
-and what Inherit lands on.
+A provider's own settings form one block under `providers.<id>`, registered by
+its provider definition. Settings there are user-only. Metadata names the
+block's permission mode by path in `nativePermissions.permissionSetting`. A
+provider whose org policy changes the settings document also registers there how
+the policy applies to its sections and what Inherit lands on.
 
 Use the typed `RunContext.emit` for known project events and `emitOpaque` for
 provider-owned or future event names. Keep native decoding in the provider and
@@ -258,6 +265,6 @@ identities change. Remove only the confirmed resources, including data left by
 earlier failed attempts. Succeed when those resources are already absent. A
 deletion error keeps the local task resources available for retry.
 
-The development-only fixture provider implements this contract for deterministic
-checks. Production registration and bundles exclude it. See
+The fixture definition supplies a display name and model settings scope in all
+builds. Only the development service registers its worker. See
 [Fixture scenarios](fixture-scenarios.md).
