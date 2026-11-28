@@ -1,0 +1,16 @@
+{
+  "name": "subagent-extension-for-codex",
+  "description": "Delegate to Claude without leaving Codex.",
+  "keywords": [
+    "codex",
+    "codex-cli",
+    "codex-plugin",
+    "claude-code",
+    "subagents",
+    "codex-subagents",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agents"
+  ]
+}

@@ -10,13 +10,14 @@ import { writeThirdPartyNotices } from "./third-party-notices.mjs";
 
 const outdir = "dist";
 
-// package.json is the version source. plugin.json repeats it for Codex, so a mismatch fails the build.
+// package.json is the version source. The Codex plugin.json repeats it, so a mismatch fails the build.
 const packageManifest = JSON.parse(readFileSync("package.json", "utf8"));
-const plugin = JSON.parse(readFileSync("plugin.json", "utf8"));
+const pluginPath = "plugins/codex/plugin.json";
+const plugin = JSON.parse(readFileSync(pluginPath, "utf8"));
 
 if (plugin.version !== packageManifest.version) {
   throw new Error(
-    `plugin.json version ${plugin.version} differs from package.json version ${packageManifest.version}`,
+    `${pluginPath} version ${plugin.version} differs from package.json version ${packageManifest.version}`,
   );
 }
 

@@ -25,11 +25,12 @@ const marketplace = JSON.parse(
   readFileSync(".agents/plugins/marketplace.json", "utf8"),
 ).name;
 
-const { name } = JSON.parse(readFileSync("package.json", "utf8"));
+const { name } = JSON.parse(readFileSync("plugins/codex/package.json", "utf8"));
 const plugin = `${name}@${marketplace}`;
+const release = resolve("release/codex");
 const codex = process.env.CODEX_BIN || "codex";
 
-// Under npm, its own script runs through this Node, as in assemble-release.mjs.
+// Under npm, its own script runs through this Node, as in prepare-release.mjs.
 const npmCli = process.env.npm_execpath;
 const npm = npmCli?.endsWith(".js") ? [process.execPath, npmCli] : ["npm"];
 
@@ -70,7 +71,7 @@ const removing = operation === "uninstall";
 // Build before removing anything, so a failed build preserves the installation.
 if (!removing) {
   run(npm[0], [...npm.slice(1), "run", "build"]);
-  run(process.execPath, ["scripts/assemble-release.mjs"]);
+  run(process.execPath, ["scripts/assemble-release.mjs", "--host", "codex"]);
 }
 
 // Reset the source too, allowing a switch from the published marketplace.
@@ -82,10 +83,10 @@ To return to the published plugin:
   codex plugin marketplace add shemarlindie/subagent-extension-for-codex
   codex plugin add ${plugin}`);
 } else {
-  run(codex, ["plugin", "marketplace", "add", resolve("release")]);
+  run(codex, ["plugin", "marketplace", "add", release]);
   run(codex, ["plugin", "add", plugin]);
 
-  console.log(`Installed ${plugin} from release/.
+  console.log(`Installed ${plugin} from release/codex.
 Reopen the panel and restart Codex for the new proxy and skills.
 Same-version backend changes need the running service to stop first.`);
 }

@@ -147,14 +147,22 @@ beforeAll(async () => {
   main = { data: join(root, "data"), port: await freePort() };
   repository = join(root, "repository");
 
-  // Pack the existing build (pretest builds it) instead of rebuilding through prepack.
+  // Assemble and pack the existing build (pretest builds it).
   await access(resolve("dist/main.js"));
   packedAt = Date.now();
+
+  await exec(process.execPath, [
+    "scripts/assemble-release.mjs",
+    "--host",
+    "codex",
+    "--out",
+    join(root, "release"),
+  ]);
 
   const { stdout } = await exec(
     ...npmCommand([
       "pack",
-      "--ignore-scripts",
+      join(root, "release/codex"),
       "--json",
       "--pack-destination",
       root,
@@ -193,11 +201,12 @@ afterAll(async () => {
 });
 
 describe("packed artifact", () => {
-  test("packs only the runtime files, the README and the license", () => {
+  test("packs only the runtime files, the marketplace, the README and the license", () => {
     const top = [...new Set(packedFiles.map((path) => path.split("/")[0]))];
 
     expect(top.sort()).toEqual(
       [
+        ".agents",
         "LICENSE",
         "README.md",
         "assets",

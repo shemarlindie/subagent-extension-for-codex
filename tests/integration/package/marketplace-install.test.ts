@@ -113,6 +113,8 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
 
     await exec(process.execPath, [
       "scripts/assemble-release.mjs",
+      "--host",
+      "codex",
       "--out",
       join(root, "release"),
     ]);
@@ -121,7 +123,7 @@ describe.skipIf(!codex)("marketplace install with the Codex CLI", () => {
     const { stdout } = await exec(
       ...npmCommand([
         "pack",
-        join(root, "release"),
+        join(root, "release/codex"),
         "--json",
         "--pack-destination",
         root,

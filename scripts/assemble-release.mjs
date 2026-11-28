@@ -1,16 +1,18 @@
-// Assembles the built package as a Codex marketplace that is also the plugin,
-// the package the release publishes to npm. Run after `npm run build`:
-//   node scripts/assemble-release.mjs [--out release]
-import { execFileSync } from "node:child_process";
+// Assembles each host's package from the build, the package the release
+// publishes to npm. Each one is a Codex marketplace that is also the plugin.
+// Run after `npm run build`:
+//   node scripts/assemble-release.mjs [--host codex] [--out release]
+// Writes <out>/<host> for every folder in plugins/, or only for --host.
 import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 /**
@@ -24,10 +26,11 @@ const marketplace = JSON.parse(
 );
 
 const { values } = parseArgs({
-  options: { out: { type: "string", default: "release" } },
+  options: {
+    host: { type: "string" },
+    out: { type: "string", default: "release" },
+  },
 });
-
-const out = resolve(values.out);
 
 for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"]) {
   if (!existsSync(entry)) {
@@ -35,72 +38,91 @@ for (const entry of ["dist/main.js", "dist/stdio.js", "dist/app.html"]) {
   }
 }
 
-// Under npm, its own script runs through this Node, since Windows can't start
-// the npm.cmd shim without a shell. tests/support/npm.ts does the same.
-const npmCli = process.env.npm_execpath;
-const npm = npmCli?.endsWith(".js") ? [process.execPath, npmCli] : ["npm"];
+/** What every package ships beside its plugin folder. */
+const shared = ["dist", "migrations", "assets", "README.md", "LICENSE"];
 
-// npm's file list, so the plugin and any npm package ship the same files.
-const [{ files }] = JSON.parse(
-  execFileSync(
-    npm[0],
-    [...npm.slice(1), "pack", "--dry-run", "--json", "--ignore-scripts"],
-    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-  ),
-);
+// npm leaves these out of packages, and so does the release.
+const junk = /^(\.DS_Store|\._.*|.*\.orig|\..*\.swp)$/;
 
-rmSync(out, { recursive: true, force: true });
+const copy = {
+  recursive: true,
+  filter: (path) => !junk.test(basename(path)),
+};
 
-for (const { path } of files) {
-  mkdirSync(dirname(join(out, path)), { recursive: true });
-  cpSync(path, join(out, path));
+const hosts = values.host
+  ? [values.host]
+  : readdirSync("plugins", { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+// The root package.json is the version source and holds the shared metadata.
+const rootManifest = JSON.parse(readFileSync("package.json", "utf8"));
+
+for (const host of hosts) {
+  const source = join("plugins", host);
+  const out = resolve(values.out, host);
+
+  rmSync(out, { recursive: true, force: true });
+  cpSync(source, out, copy);
+
+  for (const path of shared) {
+    cpSync(path, join(out, path), copy);
+  }
+
+  // The plugin folder's package.json names and describes the package.
+  const { name, description, keywords } = JSON.parse(
+    readFileSync(join(source, "package.json"), "utf8"),
+  );
+
+  const manifest = { ...rootManifest, name, description, keywords };
+
+  // Nothing installs dependencies or runs scripts from the release. The
+  // manifest only marks the package root and carries its metadata.
+  const slim = Object.fromEntries(
+    [
+      "name",
+      "version",
+      "description",
+      "keywords",
+      "license",
+      "author",
+      "homepage",
+      "repository",
+      "bugs",
+      "type",
+      "engines",
+    ]
+      .filter((key) => key in manifest)
+      .map((key) => [key, manifest[key]]),
+  );
+
+  writeFileSync(
+    join(out, "package.json"),
+    `${JSON.stringify(slim, null, 2)}\n`,
+  );
+
+  mkdirSync(join(out, ".agents/plugins"), { recursive: true });
+
+  writeFileSync(
+    join(out, ".agents/plugins/marketplace.json"),
+    `${JSON.stringify(
+      {
+        name: marketplace.name,
+        interface: marketplace.interface,
+        plugins: [
+          {
+            name: manifest.name,
+            source: { source: "local", path: "./" },
+            category: "Coding",
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  console.log(
+    `Release ${manifest.version} in ${out}; install as ${manifest.name}@${marketplace.name}`,
+  );
 }
-
-// Nothing installs dependencies or runs scripts from the release. The
-// manifest only marks the package root and carries its metadata.
-const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-
-const slim = Object.fromEntries(
-  [
-    "name",
-    "version",
-    "description",
-    "keywords",
-    "license",
-    "author",
-    "homepage",
-    "repository",
-    "bugs",
-    "type",
-    "engines",
-  ]
-    .filter((key) => key in manifest)
-    .map((key) => [key, manifest[key]]),
-);
-
-writeFileSync(join(out, "package.json"), `${JSON.stringify(slim, null, 2)}\n`);
-
-mkdirSync(join(out, ".agents/plugins"), { recursive: true });
-
-writeFileSync(
-  join(out, ".agents/plugins/marketplace.json"),
-  `${JSON.stringify(
-    {
-      name: marketplace.name,
-      interface: marketplace.interface,
-      plugins: [
-        {
-          name: manifest.name,
-          source: { source: "local", path: "./" },
-          category: "Coding",
-        },
-      ],
-    },
-    null,
-    2,
-  )}\n`,
-);
-
-console.log(
-  `Release ${manifest.version}: ${files.length} files in ${out}; install as ${manifest.name}@${marketplace.name}`,
-);

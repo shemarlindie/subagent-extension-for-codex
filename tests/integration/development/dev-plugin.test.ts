@@ -49,12 +49,19 @@ async function fixture(t: TestContext) {
     "scripts/dev-plugin-service.mjs",
     "scripts/assemble-release.mjs",
     ".agents/plugins/marketplace.json",
-    "plugin.json",
+    "plugins/codex/package.json",
+    "plugins/codex/plugin.json",
+    "README.md",
+    "LICENSE",
     "src/core/service/platform/service/health-proof.ts",
   ]) {
     const target = join(checkout, file);
     await mkdir(dirname(target), { recursive: true });
     await copyFile(file, target);
+  }
+
+  for (const directory of ["migrations", "assets"]) {
+    await mkdir(join(checkout, directory));
   }
 
   const { name, version } = JSON.parse(await readFile("package.json", "utf8"));
@@ -65,7 +72,6 @@ async function fixture(t: TestContext) {
       name,
       version,
       type: "module",
-      files: ["dist", "plugin.json"],
       scripts: { build: "node build.mjs" },
     }),
   );
