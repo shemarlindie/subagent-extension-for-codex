@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -161,4 +161,50 @@ test("only the Claude-owned shared contract can import SDK types, and never SDK 
       .length,
     1,
   );
+});
+
+test("production imports follow owner and runtime boundaries", async () => {
+  const core = "src/core/service/example.ts";
+  const shared = "src/core/shared/example.ts";
+  const provider = "src/providers/example/service/example.ts";
+  const other = "src/providers/other/shared/example.ts";
+  const host = "src/hosts/example/service/example.ts";
+  const panel = "src/panel/example.ts";
+  const main = "src/main.ts";
+
+  for (const [file, allowed, forbidden] of [
+    [core, [shared], [provider, host, main]],
+    [provider, [core], [host, other, main]],
+    [host, [core, provider], ["src/hosts/other/service/example.ts", main]],
+    [panel, [shared], [core, other, main]],
+    [main, [core, provider, host], [panel]],
+  ] as const) {
+    for (const target of [...allowed, ...forbidden]) {
+      const messages = await boundaryMessages(
+        file,
+        `import "./${posix.relative(posix.dirname(file), target)}";`,
+      );
+
+      assert.equal(
+        messages.length,
+        forbidden.some((path) => path === target) ? 1 : 0,
+        `${file} imports ${target}`,
+      );
+    }
+  }
+});
+
+test("an exception covers its named owner and expires when unused", async () => {
+  const file = "src/core/shared/providers/settings.ts";
+  const permitted = 'import "../../../providers/claude/shared/settings.js";';
+  assert.deepEqual(await boundaryMessages(file, permitted), []);
+
+  const wrongOwner = await boundaryMessages(
+    file,
+    permitted + 'import "../../../providers/other/shared/settings.js";',
+  );
+
+  assert.equal(wrongOwner.length, 1);
+  const stale = await boundaryMessages(file, 'import "./types.js";');
+  assert.match(stale[0]?.message ?? "", /unused dependency exception/);
 });
