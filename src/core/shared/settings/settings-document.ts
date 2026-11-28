@@ -10,11 +10,7 @@ import {
   withEffortCap,
   WORKER_DEFAULTS_HELP,
 } from "../providers/policy.js";
-import {
-  providerApprovalRows,
-  providerRestrictionSections,
-  providerSettingsPolicies,
-} from "../providers/settings.js";
+import { providerDefinitions } from "../providers/registry.js";
 import { type ModelChoice, type ProviderPolicy } from "../providers/types.js";
 import { roles } from "../tasks/model.js";
 import { reasoningLevels } from "../tasks/reasoning.js";
@@ -304,10 +300,12 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
     ({ provider }) => provider === taskProvider,
   );
 
-  const inherit = providerSettingsPolicies[taskProvider]?.inheritHelp(
-    taskCatalog?.policy,
-    runtimeDefault(taskCatalog?.models ?? []),
-  ) ?? [WORKER_DEFAULTS_HELP];
+  const inherit = providerDefinitions()
+    .find(({ id }) => id === taskProvider)
+    ?.settings?.policy.inheritHelp(
+      taskCatalog?.policy,
+      runtimeDefault(taskCatalog?.models ?? []),
+    ) ?? [WORKER_DEFAULTS_HELP];
 
   const defaultsHelp = withHelp(
     [
@@ -384,7 +382,9 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
       title: "Approvals and projects",
       help: [userOnly],
       rows: [
-        ...providerApprovalRows,
+        ...providerDefinitions().flatMap(
+          ({ settings }) => settings?.approvalRows ?? [],
+        ),
         {
           kind: "select",
           ...described("approvals.decider"),
@@ -393,7 +393,9 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
         { kind: "switch", ...described("projects.auto_register_chat") },
       ],
     },
-    ...providerRestrictionSections,
+    ...providerDefinitions().flatMap(({ settings }) =>
+      settings ? [settings.restrictionSection] : [],
+    ),
     // One section per tier keeps the many model/effort pairs in two tables.
     {
       id: "models",
@@ -439,8 +441,9 @@ export function settingsSections(input: ScopeInput): SettingSection[] {
 
   return input.catalogs.reduce(
     (applied, { provider, policy }) =>
-      providerSettingsPolicies[provider]?.apply(applied, policy, values) ??
-      applied,
+      providerDefinitions()
+        .find(({ id }) => id === provider)
+        ?.settings?.policy.apply(applied, policy, values) ?? applied,
     sections,
   );
 }

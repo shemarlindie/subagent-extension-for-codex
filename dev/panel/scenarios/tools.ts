@@ -1,3 +1,5 @@
+import "../../register-providers.js";
+
 import type { ProviderPolicy } from "../../../src/core/shared/providers/types";
 import { settingsSections } from "../../../src/core/shared/settings/settings-document";
 import {

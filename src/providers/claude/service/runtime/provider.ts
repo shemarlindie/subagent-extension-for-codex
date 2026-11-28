@@ -19,7 +19,6 @@ import {
   type TurnOutput,
 } from "../../../../core/service/features/providers/types.js";
 import * as logger from "../../../../core/service/platform/logging/logger.js";
-import { claudeMetadata } from "../../../../core/shared/providers/metadata.js";
 import {
   type ModelChoice,
   type ProviderReadiness,
@@ -27,7 +26,8 @@ import {
 import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
 import { slashCommand } from "../../../../core/shared/tasks/conversation/commands.js";
 import { type Task } from "../../../../core/shared/tasks/model.js";
-import { claudeOverrideDefaults } from "../../shared/permissions.js";
+import { claudeMetadata } from "../../shared/metadata.js";
+import { claudeSettingsSchema } from "../../shared/settings.js";
 import { ClaudeCli } from "../configuration/executable.js";
 import type { SettingsReader } from "../configuration/session-settings.js";
 import { claudeTaskPolicy } from "../configuration/task-policy.js";
@@ -182,9 +182,8 @@ export class ClaudeAgentProvider implements Provider {
    */
   private discovery(settings?: SettingsValues, repository?: string) {
     const configuration = {
-      settings_files:
-        settings?.providers.claude.settings_files ??
-        claudeOverrideDefaults.settings_files,
+      settings_files: claudeSettingsSchema.parse(settings?.providers.claude)
+        .settings_files,
     };
 
     const key = JSON.stringify([repository, configuration.settings_files]);

@@ -10,7 +10,6 @@ export const testModule = /(?:\.test|-test-harness)(?:\.[cm]?[jt]sx?)?$/;
 
 // Remove each exception when its owner stops importing the adapter.
 const exceptions = new Map([
-  ["src/core/service/features/providers/config.ts", "providers/claude"],
   [
     "src/core/service/features/tasks/runtime/start-request.ts",
     "providers/claude",
@@ -18,9 +17,6 @@ const exceptions = new Map([
   ["src/core/service/platform/server/mcp.ts", "hosts/codex"],
   ["src/core/service/platform/server/tools/user-tools.ts", "hosts/codex"],
   ["src/core/service/platform/service/about.ts", "providers/claude"],
-  ["src/core/shared/providers/metadata.ts", "providers/claude"],
-  ["src/core/shared/providers/presentation.ts", "providers/claude"],
-  ["src/core/shared/providers/settings.ts", "providers/claude"],
   ["src/panel/features/delegation/delegate-form.tsx", "providers/claude"],
   ["src/panel/features/delegation/inherited-permission.ts", "providers/claude"],
   [
@@ -114,7 +110,14 @@ export const sourceBoundaries = {
           destination.runtime !== "shared"
         ) {
           target = destination.runtime;
-        } else if (!canImportOwner(source.owner, destination.owner)) {
+        } else if (
+          !canImportOwner(source.owner, destination.owner) &&
+          !(
+            localFile === "src/panel/app/app.ts" &&
+            destination.owner.startsWith("providers/") &&
+            destination.runtime === "shared"
+          )
+        ) {
           if (destination.owner === exception) usedException = true;
           else target = destination.owner;
         }

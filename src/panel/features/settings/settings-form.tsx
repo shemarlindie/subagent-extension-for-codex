@@ -271,7 +271,7 @@ export function SettingsForm({
           ),
         };
       })
-    : loadingSections.map((section) => ({
+    : loadingSections().map((section) => ({
         id: section.id,
         title: section.title,
         content:

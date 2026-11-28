@@ -20,10 +20,10 @@ import {
 import { Control } from "../../../core/service/features/tasks/runtime/control.js";
 import { Store } from "../../../core/service/features/tasks/storage/store.js";
 import { Workspaces } from "../../../core/service/features/workspaces/workspace.js";
-import { claudeMetadata } from "../../../core/shared/providers/metadata.js";
 import { settingPaths } from "../../../core/shared/settings/settings-schema.js";
 import type { Task } from "../../../core/shared/tasks/model.js";
 import { claudeTaskPolicy } from "../service/configuration/task-policy.js";
+import { claudeMetadata } from "./metadata.js";
 import {
   claudeOverrideDefaults,
   claudePermissionModes,
@@ -97,7 +97,7 @@ test("settings default to Auto, expose only SDK permission modes, persist overri
   const settings = c.settings;
 
   assert.equal(
-    settings.values("alice").providers.claude.permission_mode,
+    settings.values("alice").providers.claude?.permission_mode,
     "auto",
   );
 
@@ -133,13 +133,16 @@ test("settings default to Auto, expose only SDK permission modes, persist overri
   const reloaded = new Settings(store.database, () => ["claude"]);
 
   assert.equal(
-    reloaded.values("alice").providers.claude.permission_mode,
+    reloaded.values("alice").providers.claude?.permission_mode,
     "dontAsk",
   );
 
   assert.equal(reloaded.values("alice").approvals.decider, "parent_agent");
 
-  assert.equal(reloaded.values("bob").providers.claude.permission_mode, "auto");
+  assert.equal(
+    reloaded.values("bob").providers.claude?.permission_mode,
+    "auto",
+  );
 });
 
 test("task-level inherit uses the saved mode", async (t) => {

@@ -1,12 +1,10 @@
-import {
-  claudeMetadata,
-  fixtureMetadata,
-  type ProviderMetadata,
-} from "../../src/core/shared/providers/metadata.js";
+import { type ProviderMetadata } from "../../src/core/shared/providers/metadata.js";
 import type {
   ModelChoice,
   ProviderCommand,
 } from "../../src/core/shared/providers/types.js";
+import { claudeMetadata } from "../../src/providers/claude/shared/metadata.js";
+import { fixtureDefinition } from "../../src/providers/fixture/shared/definition.js";
 
 export const fixtureModels: ModelChoice[] = [
   {
@@ -103,7 +101,7 @@ const fixtureEffortLevels: ProviderMetadata["defaultEffortLevels"] = [
 const fixturePermissionModes = claudeMetadata.nativePermissions;
 
 const fixtureProviderMetadata: ProviderMetadata = {
-  ...fixtureMetadata,
+  ...fixtureDefinition.metadata,
   defaultEffortLevels: fixtureEffortLevels,
   costBudgetHelp:
     "Fixture costs are deterministic and exist only to exercise budget presentation.",

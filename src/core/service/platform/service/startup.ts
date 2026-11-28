@@ -5,7 +5,7 @@ import { PortInUseError } from "./port.js";
 import { serve, type ServeOptions } from "./serve.js";
 import { writeStartupOutput } from "./startup-output.js";
 
-export async function startService(options: ServeOptions = {}) {
+export async function startService(options: ServeOptions) {
   try {
     await serve(options);
   } catch (error) {

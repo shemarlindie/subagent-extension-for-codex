@@ -2,6 +2,10 @@
 // fixture worker in place of Claude, so tasks make no model calls.
 // Run with tsx; it is outside src/ and never ships.
 import { serve } from "../../src/core/service/platform/service/serve.js";
+
+import "../register-providers.js";
+
+import { fixtureDefinition } from "../../src/providers/fixture/shared/definition.js";
 import {
   FixtureProvider,
   type FixtureProviderOptions,
@@ -43,5 +47,10 @@ const options: FixtureProviderOptions = {
 };
 
 await serve({
-  providers: () => new Map([["fixture", new FixtureProvider(options)]]),
+  registrations: [
+    {
+      id: fixtureDefinition.id,
+      create: () => new FixtureProvider(options),
+    },
+  ],
 });

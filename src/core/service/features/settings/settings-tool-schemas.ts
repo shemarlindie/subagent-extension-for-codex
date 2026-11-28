@@ -34,15 +34,16 @@ export const settingsReadOutputSchema = z.object({
 
 export const settingsUpdateOutputSchema = z.object({ values: valuesSchema });
 
-export const settingsUpdateSchema = z.strictObject({
-  set: settingsPatchSchema
-    .refine(
-      (patch) => settingPaths(patch).length > 0,
-      "Set at least one setting",
-    )
-    .meta({
-      description:
-        "Nested settings to change, using the paths get_settings returns. Omitted settings stay unchanged.",
-      minProperties: 1,
-    }),
-});
+export const settingsUpdateSchema = () =>
+  z.strictObject({
+    set: settingsPatchSchema()
+      .refine(
+        (patch) => settingPaths(patch).length > 0,
+        "Set at least one setting",
+      )
+      .meta({
+        description:
+          "Nested settings to change, using the paths get_settings returns. Omitted settings stay unchanged.",
+        minProperties: 1,
+      }),
+  });

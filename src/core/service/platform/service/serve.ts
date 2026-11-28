@@ -2,8 +2,7 @@ import { chmodSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { Projects } from "../../features/projects/projects.js";
-import { configuredProviders } from "../../features/providers/config.js";
-import type { Provider } from "../../features/providers/types.js";
+import type { ProviderRegistration } from "../../features/providers/registration.js";
 import { Control } from "../../features/tasks/runtime/control.js";
 import {
   configureTimingLog,
@@ -37,11 +36,7 @@ import { adminToken } from "./token.js";
 export type ServeOptions = {
   /** Opt in to an IPv4 listener reachable from other computers. */
   network?: boolean;
-  /**
-   * The workers to run. Defaults to the configured providers (Claude); the
-   * development demo passes its fixture worker.
-   */
-  providers?: (store: Store, data: string) => Map<string, Provider>;
+  registrations: ProviderRegistration[];
 };
 
 /** How long a draining service waits for running turns before interrupting them. */
@@ -66,10 +61,7 @@ const idleCheck = Math.min(idleGrace / 4, 1000);
 const clientStreams = ["/api/service/presence", "/api/events"];
 
 /** Starts the HTTP service and runs it until a signal, a handoff or an idle stop. */
-export async function serve({
-  providers: makeProviders,
-  network = false,
-}: ServeOptions = {}) {
+export async function serve({ registrations, network = false }: ServeOptions) {
   const port = Number(process.env.PORT ?? defaultPort);
 
   const origin =
@@ -136,11 +128,9 @@ export async function serve({
   const store = new Store(databasePath(data));
   useIncrementalVacuum(store.database);
 
-  const providers = makeProviders
-    ? makeProviders(store, data)
-    : configuredProviders(
-        process.env.SUBAGENT_EXTENSION_FOR_CODEX_FULL_EVENTS === "1",
-      );
+  const providers = new Map(
+    registrations.map(({ id, create }) => [id, create(store, data)]),
+  );
 
   const concurrency = Number(
     process.env.SUBAGENT_EXTENSION_FOR_CODEX_CONCURRENCY ?? 3,

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import { claudeTaskPolicy } from "../../../../../providers/claude/service/configuration/task-policy.js";
-import { claudeMetadata } from "../../../../shared/providers/metadata.js";
+import { claudeMetadata } from "../../../../../providers/claude/shared/metadata.js";
 import type {
   ModelChoice,
   ProviderPolicy,
@@ -64,7 +64,7 @@ test("discovery and effort validation use each owner's current settings", async 
       value: "configured-model",
       displayName: "Configured model",
       description: "",
-      supportsEffort: settings?.providers.claude.settings_files === false,
+      supportsEffort: settings?.providers.claude?.settings_files === false,
     },
   ];
 

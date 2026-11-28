@@ -71,7 +71,7 @@ export function agentTools({ c, owner, authority, hostMeta }: ToolContext) {
     update_settings: tool({
       description:
         "Change task and model defaults with a nested partial of get_settings values. Groups marked userOnly (profiles, approvals, projects and providers) need the user's settings panel. Omitted settings and existing tasks stay unchanged.",
-      schema: settingsUpdateSchema,
+      schema: settingsUpdateSchema(),
       outputSchema: settingsUpdateOutputSchema,
       run: (a) => c.settings.update(owner, a, authority),
     }),

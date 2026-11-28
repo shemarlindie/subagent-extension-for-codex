@@ -1,6 +1,5 @@
 import { settingsDefaults } from "../../../core/shared/settings/settings-schema";
 import type {
-  Defaults,
   DelegateDialog,
   DelegateLoadingDialog,
   DialogReadStatus,
@@ -38,8 +37,8 @@ export type DelegateFormState = Pick<
   (typeof DELEGATE_FORM_FIELDS)[number]
 >;
 
-// Fields wait for the settings read, so these only fill the form's shape.
-const FALLBACK_DEFAULTS: Defaults = settingsDefaults("");
+// Keep untouched fields stable while the dialog waits for its settings.
+let fallbackDefaults: ReturnType<typeof settingsDefaults> | undefined;
 
 const READY = {
   context: "ready",
@@ -63,7 +62,7 @@ export function delegateReads(dialog: DelegateFormDialog) {
     defaults:
       dialog.kind === "delegate"
         ? dialog.defaults
-        : (dialog.defaults ?? FALLBACK_DEFAULTS),
+        : (dialog.defaults ?? (fallbackDefaults ??= settingsDefaults(""))),
   };
 }
 

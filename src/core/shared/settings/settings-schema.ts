@@ -5,10 +5,7 @@
  */
 import { z } from "zod";
 
-import {
-  providerModelSettingScopes,
-  providerSettingsSchemas,
-} from "../providers/settings.js";
+import { providerDefinitions } from "../providers/registry.js";
 import {
   approvalDeciderSchema,
   approvalModeSchema,
@@ -95,158 +92,170 @@ const profileSettings = (label: string) =>
     .prefault({});
 
 // `userOnly` subtrees change only with the user's authority.
-export const settingsSchema = z.strictObject({
-  // Defaults for `start_task`, under its field names.
-  task: z.strictObject({
-    // Has no static default: see `settingsDefaults`. Updates must name an
-    // enabled provider, and reads replace one that's no longer enabled.
-    provider: z.string().meta({ title: "Provider" }),
-    worker_profile: z
-      .enum(roles)
-      .meta({ title: "Worker profile" })
-      .default("implementer"),
-    workspace_strategy: z
-      .enum(["worktree", "current_repo"])
+const panelSchema = z
+  .strictObject({
+    row_icons: z
+      .boolean()
       .meta({
-        title: "Workspace",
+        title: "Worker icons in task list",
+        description: "Show each task's worker profile icon before its title.",
+        keywords: ["profile", "researcher", "reviewer", "implementer", "row"],
+      })
+      .default(false),
+    plan_usage_meter: z
+      .boolean()
+      .meta({
+        title: "Plan usage meter",
         description:
-          "A project with no Git commit always uses the project folder, because worktrees need a commit.",
+          "Show how much of your Claude plan's usage limits you have used, beside Settings.",
+        keywords: ["usage", "limits", "rate limit", "quota", "header"],
       })
-      .default("current_repo"),
-    // Git checks the whole name when a worktree is created.
-    worktree_branch_prefix: z
-      .string()
-      .max(100)
-      .regex(
-        new RegExp(`^${branchPrefixPattern}$`),
-        "Use letters, digits, '.', '_', '-' and '/'",
-      )
+      .default(false),
+    attachment_wrap_lines: z
+      .boolean()
       .meta({
-        title: "Worktree branch prefix",
-        description: settingHelp.worktree_branch_prefix,
+        title: "Wrap lines in attachment previews",
+        description:
+          "Wrap long lines instead of scrolling sideways. Set from the preview's options menu.",
       })
-      .default("agent/"),
-    budget: z
+      .default(false),
+    changes_wrap_lines: z
+      .boolean()
+      .meta({
+        title: "Wrap lines in Changes previews",
+        description:
+          "Wrap long lines in changed files and diffs instead of scrolling sideways. Set from the preview's options menu.",
+      })
+      .default(false),
+  })
+  .meta({ userOnly: true })
+  .prefault({});
+
+const buildSchema = () =>
+  z.strictObject({
+    // Defaults for `start_task`, under its field names.
+    task: z.strictObject({
+      // Has no static default: see `settingsDefaults`. Updates must name an
+      // enabled provider, and reads replace one that's no longer enabled.
+      provider: z.string().meta({ title: "Provider" }),
+      worker_profile: z
+        .enum(roles)
+        .meta({ title: "Worker profile" })
+        .default("implementer"),
+      workspace_strategy: z
+        .enum(["worktree", "current_repo"])
+        .meta({
+          title: "Workspace",
+          description:
+            "A project with no Git commit always uses the project folder, because worktrees need a commit.",
+        })
+        .default("current_repo"),
+      // Git checks the whole name when a worktree is created.
+      worktree_branch_prefix: z
+        .string()
+        .max(100)
+        .regex(
+          new RegExp(`^${branchPrefixPattern}$`),
+          "Use letters, digits, '.', '_', '-' and '/'",
+        )
+        .meta({
+          title: "Worktree branch prefix",
+          description: settingHelp.worktree_branch_prefix,
+        })
+        .default("agent/"),
+      budget: z
+        .strictObject({
+          max_cost_usd: budget("Cost limit", "USD", 5, [
+            "spending",
+            "price",
+            "cost budget",
+          ]),
+          max_runtime_minutes: budget("Runtime limit", "minutes", 20, [
+            "timeout",
+            "time limit",
+            "duration",
+          ]),
+        })
+        .prefault({}),
+    }),
+    models: z
       .strictObject({
-        max_cost_usd: budget("Cost limit", "USD", 5, [
-          "spending",
-          "price",
-          "cost budget",
-        ]),
-        max_runtime_minutes: budget("Runtime limit", "minutes", 20, [
-          "timeout",
-          "time limit",
-          "duration",
-        ]),
+        providers: scopes(providerDefinitions().map(({ id }) => id)).prefault(
+          {},
+        ),
+        profiles: scopes(roles).prefault({}),
       })
       .prefault({}),
-  }),
-  models: z
-    .strictObject({
-      providers: scopes(providerModelSettingScopes).prefault({}),
-      profiles: scopes(roles).prefault({}),
-    })
-    .prefault({}),
-  // Instructions steer future workers, so only the user changes them.
-  profiles: z
-    .strictObject(
-      Object.fromEntries(
-        roles.map((role) => [role, profileSettings(titleCase(role))]),
-      ) as Record<(typeof roles)[number], ReturnType<typeof profileSettings>>,
-    )
-    .meta({ userOnly: true })
-    .prefault({}),
-  approvals: z
-    .strictObject({
-      decider: approvalDeciderSchema
-        .meta({
-          title: "Approval decision maker",
-          description: settingHelp.decider,
-        })
-        .default("user"),
-      execution_mode: approvalModeSchema
-        .meta({
-          title: "Execution approval mode",
-          description:
-            "Default for execution providers: ask user, delegate to the parent agent, auto-approve within the sandbox, or deny execution requests. Native permission settings are independent.",
-        })
-        .default("ask_user"),
-    })
-    .meta({ userOnly: true })
-    .prefault({}),
-  projects: z
-    .strictObject({
-      auto_register_chat: z
-        .boolean()
-        .meta({
-          title: "Automatically add chat projects",
-          description: settingHelp.auto_register_chat,
-        })
-        .default(true),
-    })
-    .meta({ userOnly: true })
-    .prefault({}),
-  providers: z
-    .strictObject(providerSettingsSchemas)
-    .meta({ userOnly: true })
-    .prefault({}),
-  // How the panel looks. It reads these with every view.
-  panel: z
-    .strictObject({
-      row_icons: z
-        .boolean()
-        .meta({
-          title: "Worker icons in task list",
-          description: "Show each task's worker profile icon before its title.",
-          keywords: ["profile", "researcher", "reviewer", "implementer", "row"],
-        })
-        .default(false),
-      plan_usage_meter: z
-        .boolean()
-        .meta({
-          title: "Plan usage meter",
-          description:
-            "Show how much of your Claude plan's usage limits you have used, beside Settings.",
-          keywords: ["usage", "limits", "rate limit", "quota", "header"],
-        })
-        .default(false),
-      attachment_wrap_lines: z
-        .boolean()
-        .meta({
-          title: "Wrap lines in attachment previews",
-          description:
-            "Wrap long lines instead of scrolling sideways. Set from the preview's options menu.",
-        })
-        .default(false),
-      changes_wrap_lines: z
-        .boolean()
-        .meta({
-          title: "Wrap lines in Changes previews",
-          description:
-            "Wrap long lines in changed files and diffs instead of scrolling sideways. Set from the preview's options menu.",
-        })
-        .default(false),
-    })
-    .meta({ userOnly: true })
-    .prefault({}),
-});
+    // Instructions steer future workers, so only the user changes them.
+    profiles: z
+      .strictObject(
+        Object.fromEntries(
+          roles.map((role) => [role, profileSettings(titleCase(role))]),
+        ) as Record<(typeof roles)[number], ReturnType<typeof profileSettings>>,
+      )
+      .meta({ userOnly: true })
+      .prefault({}),
+    approvals: z
+      .strictObject({
+        decider: approvalDeciderSchema
+          .meta({
+            title: "Approval decision maker",
+            description: settingHelp.decider,
+          })
+          .default("user"),
+        execution_mode: approvalModeSchema
+          .meta({
+            title: "Execution approval mode",
+            description:
+              "Default for execution providers: ask user, delegate to the parent agent, auto-approve within the sandbox, or deny execution requests. Native permission settings are independent.",
+          })
+          .default("ask_user"),
+      })
+      .meta({ userOnly: true })
+      .prefault({}),
+    projects: z
+      .strictObject({
+        auto_register_chat: z
+          .boolean()
+          .meta({
+            title: "Automatically add chat projects",
+            description: settingHelp.auto_register_chat,
+          })
+          .default(true),
+      })
+      .meta({ userOnly: true })
+      .prefault({}),
+    providers: z
+      .strictObject(
+        Object.fromEntries(
+          providerDefinitions().flatMap(({ id, settings }) =>
+            settings ? [[id, settings.schema] as const] : [],
+          ),
+        ),
+      )
+      .meta({ userOnly: true })
+      .prefault({}),
+    // How the panel looks. It reads these with every view.
+    panel: panelSchema,
+  });
 
-export type SettingsValues = z.infer<typeof settingsSchema>;
+let schema: ReturnType<typeof buildSchema> | undefined;
+export const settingsSchema = () => (schema ??= buildSchema());
+export type SettingsValues = z.infer<ReturnType<typeof settingsSchema>>;
 
 /** The settings the panel applies to its own display. */
 export type PanelSettings = SettingsValues["panel"];
 
 /** Panel settings before the first view brings the saved ones. */
-export const panelSettingsDefaults: PanelSettings =
-  settingsSchema.shape.panel.parse({});
+export const panelSettingsDefaults: PanelSettings = panelSchema.parse({});
 
 /** A new user's settings, with the given default provider. */
 export const settingsDefaults = (provider: string): SettingsValues =>
-  settingsSchema.parse({ task: { provider } });
+  settingsSchema().parse({ task: { provider } });
 
 /** The schema at a dotted path, or undefined when the path isn't a setting. */
 export function settingSchemaAt(path: string): z.ZodType | undefined {
-  let current: z.ZodType | undefined = settingsSchema;
+  let current: z.ZodType | undefined = settingsSchema();
 
   for (const key of path.split(".")) {
     const object = current && unwrapped(current);
@@ -342,4 +351,7 @@ function deepPartial(schema: z.ZodType): z.ZodType {
   return Object.keys(meta).length ? partial.meta(meta) : partial;
 }
 
-export const settingsPatchSchema = deepPartial(settingsSchema);
+let patch: z.ZodType | undefined;
+
+export const settingsPatchSchema = () =>
+  (patch ??= deepPartial(settingsSchema()));

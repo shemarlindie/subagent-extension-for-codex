@@ -21,6 +21,7 @@ export default defineConfig({
   test: {
     // Tests run the executables they write. In a shared process, another file's
     // spawn can briefly hold such a file open, and Linux fails with ETXTBSY.
+    setupFiles: ["./dev/register-providers.ts"],
     pool: "forks",
     fsModuleCache: true,
     environmentOptions: {

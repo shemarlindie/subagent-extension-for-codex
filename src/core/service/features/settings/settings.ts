@@ -2,13 +2,10 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
-  builtinProviderMetadata,
+  providerMetadata,
   type ProviderMetadata,
 } from "../../../shared/providers/metadata.js";
-import {
-  preferredSettingsProvider,
-  providerModelSettingScopes,
-} from "../../../shared/providers/settings.js";
+import { providerDefinitions } from "../../../shared/providers/registry.js";
 import { resolveModelDefaults } from "../../../shared/settings/model-defaults.js";
 import { settingAt } from "../../../shared/settings/setting-path.js";
 import { settingText } from "../../../shared/settings/setting-text.js";
@@ -70,9 +67,9 @@ export class Settings {
   constructor(
     private database: Database,
     providers: () => string[],
-    private metadata: (provider: string) => ProviderMetadata | undefined = (
-      provider,
-    ) => builtinProviderMetadata[provider],
+    private metadata: (
+      provider: string,
+    ) => ProviderMetadata | undefined = providerMetadata,
     /** Tells the owner's panels to read their view again. */
     private changed: (owner: string) => void = () => {},
   ) {
@@ -84,13 +81,13 @@ export class Settings {
         this.metadata(provider),
       );
 
-      return first ? [first, ...rest] : [providerModelSettingScopes[0]];
+      return first ? [first, ...rest] : [providerDefinitions()[0].id];
     };
   }
 
   /** The values a new user starts with, which resets restore. */
   defaults(): SettingsValues {
-    return settingsDefaults(preferredSettingsProvider(this.providers()));
+    return settingsDefaults(this.providers()[0]);
   }
 
   /** The owner's saved settings, with a provider that's still enabled. */
@@ -116,7 +113,7 @@ export class Settings {
       delete (stored.models as Record<string, unknown>).global;
     }
 
-    const values = checkStored(settingsSchema, stored, record);
+    const values = checkStored(settingsSchema(), stored, record);
 
     // A saved provider can disappear when the service configuration changes.
     if (!this.providers().includes(values.task.provider)) {
@@ -128,9 +125,9 @@ export class Settings {
 
   // Enabled providers with model defaults. The others stay saved but hidden.
   private modelProviders(): string[] {
-    return providerModelSettingScopes.filter((provider) =>
-      this.providers().includes(provider),
-    );
+    return providerDefinitions()
+      .map(({ id }) => id)
+      .filter((provider) => this.providers().includes(provider));
   }
 
   private shown(values: SettingsValues) {
@@ -158,11 +155,11 @@ export class Settings {
       .map(({ provider, models, policy }) => ({ provider, models, policy }));
 
     // Agents update through this schema, so it lists what an update accepts.
-    const schema = z.toJSONSchema(settingsPatchSchema) as JsonSchema;
+    const schema = z.toJSONSchema(settingsPatchSchema()) as JsonSchema;
     jsonSchemaAt(schema, "task.provider").enum = providers;
     const providerModels = jsonSchemaAt(schema, "models.providers");
 
-    for (const provider of providerModelSettingScopes) {
+    for (const { id: provider } of providerDefinitions()) {
       if (!modelProviders.includes(provider)) {
         delete providerModels.properties?.[provider];
       }
@@ -213,7 +210,7 @@ export class Settings {
   }
 
   update(owner: string, input: unknown, authority: InputAuthority = "user") {
-    const { set } = settingsUpdateSchema.parse(input);
+    const { set } = settingsUpdateSchema().parse(input);
 
     const userOnly =
       authority === "user"
@@ -237,7 +234,7 @@ export class Settings {
 
     // Synchronous read/merge/write preserves omitted fields across concurrent requests.
     const body = JSON.stringify(
-      settingsSchema.parse(
+      settingsSchema().parse(
         mergeSettings(
           this.values(owner),
           z.record(z.string(), z.unknown()).parse(set),

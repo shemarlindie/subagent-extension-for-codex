@@ -120,7 +120,7 @@ test("does not signal the verified owner unless the user confirms", async (t) =>
   const { readline } = await setup(t, "n", owner);
   const kill = vi.spyOn(process, "kill");
 
-  await startService();
+  await startService({ registrations: [] });
 
   assert.equal(
     readline.question.mock.calls[0]?.[0],
@@ -150,9 +150,17 @@ test("sends SIGTERM only after confirmation and retries startup", async (t) => {
   const { readline, stderrWrite } = await setup(t, "yes", owner);
   const kill = vi.spyOn(process, "kill").mockReturnValue(true);
 
-  await startService({ network: true });
-  expect(mocks.serve).toHaveBeenNthCalledWith(1, { network: true });
-  expect(mocks.serve).toHaveBeenNthCalledWith(2, { network: true });
+  await startService({ registrations: [], network: true });
+
+  expect(mocks.serve).toHaveBeenNthCalledWith(1, {
+    registrations: [],
+    network: true,
+  });
+
+  expect(mocks.serve).toHaveBeenNthCalledWith(2, {
+    registrations: [],
+    network: true,
+  });
 
   assert.deepEqual(kill.mock.calls, [[owner.pid, "SIGTERM"]]);
   assert.equal(mocks.serve.mock.calls.length, 2);
@@ -189,7 +197,7 @@ test("does not signal if process identity changes after confirmation", async (t)
   mocks.isSameProcess.mockReturnValue(false);
   const kill = vi.spyOn(process, "kill");
 
-  await startService();
+  await startService({ registrations: [] });
 
   assert.equal(readline.question.mock.calls.length, 1);
   assert.equal(kill.mock.calls.length, 0);
@@ -215,7 +223,7 @@ test("an interrupted prompt exits as interrupted without signaling", async (t) =
   await setup(t, undefined, owner);
   const kill = vi.spyOn(process, "kill");
 
-  await startService();
+  await startService({ registrations: [] });
 
   assert.equal(kill.mock.calls.length, 0);
   assert.equal(mocks.serve.mock.calls.length, 1);
@@ -253,7 +261,7 @@ test("offers SIGKILL when the owner outlives SIGTERM, then retries", async (t) =
     vi.useRealTimers();
   });
 
-  const started = startService();
+  const started = startService({ registrations: [] });
   // SIGTERM's wait for the process to stop runs out.
   await vi.advanceTimersByTimeAsync(6000);
   await started;

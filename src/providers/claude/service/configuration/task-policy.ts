@@ -10,6 +10,7 @@ import {
   resolveClaudePermission,
   resolveClaudePolicy,
 } from "../../shared/permissions.js";
+import { claudeSettingsSchema } from "../../shared/settings.js";
 import {
   claudeStartOptionsSchema,
   readClaudeTaskOptions,
@@ -30,7 +31,7 @@ export function claudeStartOptions(
     optionsForProvider(input.provider_options, provider),
   );
 
-  const claude = defaults.providers.claude;
+  const claude = claudeSettingsSchema.parse(defaults.providers.claude);
 
   const resolved = resolveClaudePermission(
     requested,

@@ -16,6 +16,7 @@ import type { PlanUsage } from "../../../../core/shared/providers/plan-usage.js"
 import type { SettingsValues } from "../../../../core/shared/settings/settings-schema.js";
 import { claudeOverrideDefaults } from "../../shared/permissions.js";
 import { claudeRateLimitLabels } from "../../shared/rate-limit-windows.js";
+import { claudeSettingsSchema } from "../../shared/settings.js";
 import type { ClaudeCli } from "../configuration/executable.js";
 import { turnlessSession } from "./session-reads.js";
 
@@ -296,7 +297,10 @@ export class ClaudePlanUsage implements PlanUsageReader {
 
   /** Reads load settings files as the latest caller's settings say. */
   private followSettings(settings?: SettingsValues) {
-    const settingsFiles = settings?.providers.claude.settings_files;
+    const settingsFiles =
+      settings &&
+      claudeSettingsSchema.parse(settings.providers.claude).settings_files;
+
     if (settingsFiles !== undefined) this.settingsFiles = settingsFiles;
   }
 
